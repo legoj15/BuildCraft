@@ -54,11 +54,14 @@ public final class RoboticsItemVariants {
     /** The model name of the bare robot chassis (the empty board's icon and the unknown-id fallback). */
     public static final String ROBOT_BASE_MODEL = "robot";
 
-    /** The model name of the flat red board — 7.1.x's "unknown board" PCB. */
+    /** The model name of the base board model in {@code models/item/redstone_board.json} — the
+     *  parent the tier overrides hang off. Never selected at runtime: 1.7.10 resolved unknown and
+     *  data-less stacks to the empty board, and both dispatch mechanisms mirror that, so the only
+     *  reachable board looks are the four tier chips. */
     public static final String BOARD_FALLBACK_MODEL = "redstone_board";
 
-    /** Board tier colours, ascending. Index 0 ({@code clean}) is the empty board; unknown ids fall
-     *  back to the bare flat-red board instead. */
+    /** Board tier colours, ascending. Index 0 ({@code clean}) is the empty board — and also what
+     *  unknown ids and data-less stacks read as, mirroring 1.7.10's registry fallback. */
     public static final String[] BOARD_TIER_ORDER = { "clean", "green", "blue", "red" };
 
     /** The property both items are matched on in 1.21.1 model overrides. */
@@ -140,17 +143,16 @@ public final class RoboticsItemVariants {
     }
 
     /** The {@code buildcraftunofficial:board} value for a board stack: 1 + the tier's index in
-     *  {@link #BOARD_TIER_ORDER}, 0.0 for an unknown id (the bare board's own model). */
+     *  {@link #BOARD_TIER_ORDER}. Unknown ids and data-less stacks read as {@code clean} — 1.7.10
+     *  resolved every board icon through the registry, whose fallback IS the empty board, so no
+     *  stack ever had a look of its own besides the programmed kinds. */
     public static float boardProperty(String boardId) {
-        String tier = BOARD_TIERS.get(boardId);
-        if (tier == null) {
-            return 0.0F;
-        }
+        String tier = BOARD_TIERS.getOrDefault(boardId, "clean");
         for (int i = 0; i < BOARD_TIER_ORDER.length; i++) {
             if (BOARD_TIER_ORDER[i].equals(tier)) {
                 return (float) (i + 1);
             }
         }
-        return 0.0F;
+        return 1.0F;
     }
 }

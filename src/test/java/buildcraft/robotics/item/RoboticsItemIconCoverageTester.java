@@ -100,8 +100,11 @@ public class RoboticsItemIconCoverageTester {
         collectDefinitionChain(readAsset(ASSETS + "items/redstone_board.json").getAsJsonObject("model"),
                 branches, fallback);
 
-        Assertions.assertEquals("buildcraftunofficial:item/" + RoboticsItemVariants.BOARD_FALLBACK_MODEL,
-                fallback[0], "the board definition's fallback is the bare flat-red board");
+        // No data / unknown id must land on the EMPTY board's clean chip: 1.7.10 resolved every
+        // board icon through the registry, whose fallback IS the empty board, so a bare or corrupt
+        // stack never had a look of its own.
+        Assertions.assertEquals("buildcraftunofficial:item/board_clean", fallback[0],
+                "the board definition's fallback is the empty board's clean chip");
 
         Map<String, String> expected = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : RoboticsItemVariants.boardTiers().entrySet()) {
@@ -220,8 +223,9 @@ public class RoboticsItemIconCoverageTester {
         }
         Assertions.assertEquals(Set.of(1.0F, 2.0F, 3.0F, 4.0F), boardValues,
                 "the board tiers sit at the values 1..4");
-        Assertions.assertEquals(0.0F, RoboticsItemVariants.boardProperty("buildcraftunofficial:not_a_board"),
-                "unknown ids read as the bare flat-red board");
+        Assertions.assertEquals(1.0F, RoboticsItemVariants.boardProperty("buildcraftunofficial:not_a_board"),
+                "unknown and data-less stacks read as the empty board's clean chip, as 7.1.x's "
+                        + "registry fallback resolved every unknown to the empty board");
         Assertions.assertEquals(1.0F,
                 RoboticsItemVariants.boardProperty(emptyBoardId()),
                 "the empty board reads as the first tier (clean)");

@@ -1,4 +1,6 @@
 ###### Changes since 2026.2.0-br2:
+- Fixed the "BuildCraft Robots" tab's icon: it was a data-less board stack, which rendered as the wrong blank PCB (the 1.12.2-era art) instead of the classic Empty Board chip — the same reason a plain `/give`d board looked different from the creative-tab one. The tab now shows a proper Empty Board, and boards with no or unknown board data render as the Empty Board on every Minecraft version, exactly as classic BuildCraft's registry fallback did — so there is only one Empty Board look again.
+
 - Every robot in the "BuildCraft Robots" tab wears its own colour again: each ready-made robot shows the per-kind skin it wears in the world (blue picker, red knight, and so on) instead of all stacks drawing as the same white chassis, and the empty board's clean chip is distinct again. On Minecraft 1.21.1 the redstone boards also show their tier colours (green/blue/red/clean) like they already do on the newer Minecraft versions.
 
 - The Robot Station is called "Docking Station" again, matching classic BuildCraft. Only the name changed — the item, its recipe, and existing worlds are unaffected.

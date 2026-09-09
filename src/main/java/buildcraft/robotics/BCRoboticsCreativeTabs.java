@@ -33,12 +33,20 @@ public class BCRoboticsCreativeTabs {
 
     // 7.1.10's "BuildCraft Robots" tab held exactly robots, the robot station and the redstone
     // boards, in that order; the zone planner stayed on the main tab there by constructor accident
-    // and was moved here deliberately. Icon is the plain board item, as upstream's was.
+    // and was moved here deliberately. The icon is the EMPTY board: upstream set a bare board stack
+    // and its icon code resolved that through the registry to the empty board's clean chip — a
+    // data-less stack here would instead fall through the icon dispatch to the 1.12.2-line fallback
+    // PCB and show a second, wrong "empty board" look.
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ROBOTS_TAB =
             CREATIVE_MODE_TABS.register("robots", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.robots"))
-                            .icon(() -> BCRoboticsItems.REDSTONE_BOARD.get().getDefaultInstance())
+                            .icon(() -> {
+                                RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
+                                return registry == null || registry.getEmptyRobotBoard() == null
+                                        ? BCRoboticsItems.REDSTONE_BOARD.get().getDefaultInstance()
+                                        : ItemRedstoneBoard.createStack(registry.getEmptyRobotBoard());
+                            })
                             .withTabsBefore(BCSiliconCreativeTabs.FACADE_TAB_KEY)
                             .displayItems((parameters, output) -> {
                                 // Zone Planner (deliberate deviation from 7.1.10)

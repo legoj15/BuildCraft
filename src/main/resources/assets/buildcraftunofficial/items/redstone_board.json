@@ -71,7 +71,7 @@
                                                     "predicate": "minecraft:custom_data",
                                                     "value": { "board": { "id": "buildcraftunofficial:empty_robot_board" } },
                                                     "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_clean" },
-                                                    "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/redstone_board" }
+                                                    "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_clean" }
                                                 }
                                             }
                                         }

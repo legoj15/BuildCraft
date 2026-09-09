@@ -62,6 +62,12 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
     public void robotsTabIconIsThePlainRedstoneBoard() {
         Assertions.assertSame(BCRoboticsItems.REDSTONE_BOARD.get(), robotsTab().getIconItem().getItem(),
                 "the robots tab icon is the plain redstone board item, as in 7.1.x");
+        // 7.1.x resolved its (bare) icon stack through the board registry, landing on the empty
+        // board's clean chip. The raw id must say so — a data-less default instance instead falls
+        // through the icon dispatch to the 1.12.2-line fallback PCB, which is the "wrong second
+        // empty board" bug this pins shut.
+        Assertions.assertEquals(liveEmptyBoard().getID(), ItemRobot.getBoardId(robotsTab().getIconItem()),
+                "the tab icon stack must carry the empty board's id, not be data-less");
     }
 
     @Test

@@ -12,7 +12,13 @@ issueTrackerURL="https://github.com/legoj15/BuildCraft/issues"
 modId="buildcraftunofficial"
 version="${mod_version}"
 displayName="BuildCraft (Unofficial)"
+# logoFile is the pre-26.2 property; bannerFile/iconFile are its 26.2-only replacements (NeoForge
+# #3073). All three are kept deliberately: older lines ignore the unknown keys, and 26.2 suppresses
+# its dev-only logoFile warning the moment either new key is present (#3413). icon.png is the square
+# mod-list icon (512x512 source, rendered 24x24); logo.png doubles as the wide info-panel banner.
 logoFile="logo.png"
+bannerFile="logo.png"
+iconFile="icon.png"
 credits="Created by SpaceToad"
 authors="SpaceToad, BuildCraft Team, legoj15 (1.21.1+ port)"
 description='''

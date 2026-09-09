@@ -64,7 +64,7 @@ public class BCRoboticsCreativeTabs {
                                         }
                                     }
                                 }
-                                // Robot Station — 7.1.10 showed it only on this tab, never Pluggables
+                                // Docking Station — 7.1.10 showed it only on this tab, never Pluggables
                                 output.accept(BCRoboticsItems.ROBOT_STATION.get());
                                 // Redstone Boards: the empty board, then each board as its own item
                                 // (what the Ph7 programming table will consume). Skipped entirely in

@@ -1,23 +1,8 @@
 {
-    "__comment": "Per-kind robot chassis icon: the same 8x8x8 cube as models/item/robot.json, wrapped in the textures/item/ copy of the robot_carrier entity skin (entity textures are not stitched, so the item atlas needs its own copy). Selected by the board id: items/robot.json on 1.21.10+, the buildcraftunofficial:board overrides predicate on 1.21.1. Mapping: RoboticsItemVariants.",
-    "parent": "block/block",
+    "__comment": "Per-kind robot chassis icon: the same 8x8x8 cube as the robot item, wrapped in the textures/item/ copy of the robot_carrier entity skin (entity textures are not stitched, so the item atlas needs its own copy). The chassis cube and the display sizes live in robot_chassis_base, which this model parents. Selected by the board id: items/robot.json on 1.21.10+, the buildcraftunofficial:board overrides predicate on 1.21.1. Mapping: RoboticsItemVariants.",
+    "parent": "buildcraftunofficial:item/robot_chassis_base",
     "textures": {
         "all": "buildcraftunofficial:item/robot_carrier",
         "particle": "buildcraftunofficial:item/robot_carrier"
-    },
-    "elements": [
-        {
-            "from": [4, 4, 4],
-            "to": [12, 12, 12],
-            "shade": true,
-            "faces": {
-                "up":    { "uv": [8, 0, 12, 4], "texture": "#all" },
-                "down":  { "uv": [4, 0, 8, 4], "texture": "#all" },
-                "north": { "uv": [4, 4, 8, 8], "texture": "#all" },
-                "south": { "uv": [12, 4, 16, 8], "texture": "#all" },
-                "west":  { "uv": [8, 4, 12, 8], "texture": "#all" },
-                "east":  { "uv": [0, 4, 4, 8], "texture": "#all" }
-            }
-        }
-    ]
+    }
 }

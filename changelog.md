@@ -1,4 +1,5 @@
 ###### Changes since 2026.2.0-br2:
+- Robots in your inventory, on the ground, and in item frames are drawn at their classic size again — they had been rendering far smaller than classic BuildCraft showed them. Robots held in hand and robots in the world are unchanged.
 - Minecraft 26.2: BuildCraft now shows its square gear icon in the mods list (the revamped screen expects one and previously showed none), and its classic logo as the wide banner in the mod details. The new properties are declared alongside the old one, so older Minecraft versions are unchanged.
 - Fixed the "BuildCraft Robots" tab's icon: it was a data-less board stack, which rendered as the wrong blank PCB (the 1.12.2-era art) instead of the classic Empty Board chip — the same reason a plain `/give`d board looked different from the creative-tab one. The tab now shows a proper Empty Board, and boards with no or unknown board data render as the Empty Board on every Minecraft version, exactly as classic BuildCraft's registry fallback did — so there is only one Empty Board look again.
 

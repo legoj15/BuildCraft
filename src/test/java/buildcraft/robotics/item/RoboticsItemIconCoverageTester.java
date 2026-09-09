@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -45,6 +46,11 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
  * semantics, so with ascending predicates the last-listed matching entry — the greatest predicate at
  * or below the stack's value — wins, which is exactly per-variant selection. Any other order silently
  * hands several variants the wrong icon.
+ *
+ * <p>The icon geometry itself lives in the shared parent {@code robot_chassis_base} (the 8x8x8 chassis
+ * cube plus the display section restoring 7.1.x's apparent icon sizes); every chassis model parents it
+ * and only rebinds textures. The four hand contexts must stay ABSENT there — inheriting
+ * {@code block/block}'s IS the 1.7.10 hand parity — so their absence is pinned too.
  */
 public class RoboticsItemIconCoverageTester {
 
@@ -231,7 +237,60 @@ public class RoboticsItemIconCoverageTester {
                 "the empty board reads as the first tier (clean)");
     }
 
+    // ── The shared chassis/display parent ─────────────────────────────────
+
+    @Test
+    public void robotChassisBaseCarriesTheSharedDisplay() {
+        JsonObject model = readAsset(MODELS + "robot_chassis_base.json");
+        Assertions.assertFalse(model.getAsJsonArray("elements").isEmpty(),
+                "robot_chassis_base must carry the shared 8x8x8 chassis cube");
+
+        JsonObject display = model.getAsJsonObject("display");
+        assertTransform(display, "gui",
+                new double[] {30, 225, 0}, new double[] {0, 0, 0}, new double[] {1, 1, 1});
+        assertTransform(display, "ground",
+                new double[] {0, 0, 0}, new double[] {0, 2.2, 0}, new double[] {0.3, 0.3, 0.3});
+        assertTransform(display, "fixed",
+                new double[] {0, 0, 0}, new double[] {0, 0, 0}, new double[] {1, 1, 1});
+
+        // Deliberately absent: block/block's firstperson 0.40 / thirdperson 0.375 equal 1.7.10's
+        // vanilla surround scales (0.5 * 0.40 and 0.5 * 0.375), so inheriting the hand contexts IS
+        // the hand parity. Display inheritance resolves per context up the parent chain, so a hand
+        // key defined here would freeze the hands to this file and lose that parity.
+        for (String hand : HAND_CONTEXTS) {
+            Assertions.assertFalse(display.has(hand),
+                    "robot_chassis_base must not define " + hand
+                            + " — inheriting block/block's IS the 1.7.10 hand parity");
+        }
+    }
+
+    @Test
+    public void everyRobotModelParentsTheChassisBase() {
+        String expected = "buildcraftunofficial:item/robot_chassis_base";
+        JsonObject base = readAsset(MODELS + RoboticsItemVariants.ROBOT_BASE_MODEL + ".json");
+        Assertions.assertEquals(expected, base.get("parent").getAsString(),
+                "the bare-chassis fallback model must parent robot_chassis_base");
+        Assertions.assertNull(base.getAsJsonArray("elements"),
+                "the bare-chassis fallback model must not shadow robot_chassis_base's elements");
+        for (String suffix : RoboticsItemVariants.robotVariants().values()) {
+            if (suffix.isEmpty()) {
+                continue;
+            }
+            JsonObject model = readAsset(MODELS + "robot_" + suffix + ".json");
+            Assertions.assertEquals(expected, model.get("parent").getAsString(),
+                    "robot_" + suffix + " must parent robot_chassis_base or it never sees the shared display");
+            Assertions.assertNull(model.getAsJsonArray("elements"),
+                    "robot_" + suffix + " must not shadow robot_chassis_base's elements");
+        }
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    /** The four hand contexts {@code robot_chassis_base} must NOT define — it inherits
+     *  {@code block/block}'s, and that inheritance is the 1.7.10 hand parity. */
+    private static final String[] HAND_CONTEXTS = {
+        "firstperson_righthand", "firstperson_lefthand", "thirdperson_righthand", "thirdperson_lefthand"
+    };
 
     private static String emptyBoardId() {
         for (Map.Entry<String, String> e : RoboticsItemVariants.robotVariants().entrySet()) {
@@ -364,6 +423,28 @@ public class RoboticsItemIconCoverageTester {
             return JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /** Asserts one display context matches component-for-component within 1e-6. Every context the
+     *  shared parent defines must be fully specified — display inheritance replaces a context
+     *  wholesale (no per-field merge), so a scale-only entry would silently reset rotation to 0. */
+    private static void assertTransform(JsonObject display, String context,
+            double[] rotation, double[] translation, double[] scale) {
+        Assertions.assertTrue(display.has(context), "display must define the " + context + " context");
+        JsonObject transform = display.getAsJsonObject(context);
+        assertVec(context, transform, "rotation", rotation);
+        assertVec(context, transform, "translation", translation);
+        assertVec(context, transform, "scale", scale);
+    }
+
+    private static void assertVec(String context, JsonObject transform, String key, double[] expected) {
+        JsonArray values = transform.getAsJsonArray(key);
+        Assertions.assertEquals(expected.length, values.size(),
+                context + "." + key + " must have " + expected.length + " components");
+        for (int i = 0; i < expected.length; i++) {
+            Assertions.assertEquals(expected[i], values.get(i).getAsDouble(), 1e-6,
+                    context + "." + key + "[" + i + "] drifted");
         }
     }
 }

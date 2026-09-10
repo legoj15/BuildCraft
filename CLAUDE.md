@@ -1,12 +1,6 @@
-# CLAUDE.md
+"BuildCraft Unofficial" is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-## Project Overview
-
-BuildCraft is a NeoForge mod for Minecraft 26.1.x targeting **NeoForge 26.1.x** with **Java 25**. It adds automation machinery: pipes/transport, engines/energy, builders/blueprints, quarries, factories, silicon logic gates, and robots.
-
-Java 25 is the project toolchain — used for compile, test, and the actual game runtime (NeoForge 26.1.2's `fancymodloader`, `neoform`, and friends are themselves built for Java 25 and refuse to resolve against a Java 21 consumer). The moddev plugin additionally runs its NFRT tooling tasks (`downloadAssets`, `prepareClientRun`, …) on Java 21, but that's invisible to contributors: the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains) applied in [settings.gradle](settings.gradle) auto-provisions a JDK 21 into Gradle's user home (`~/.gradle/jdks/`) on first build. The only JDK a contributor needs to install manually is **Java 25**.
+The project is a mix of Java 25 and Java 21 out of necessity.
 
 ## Build Commands
 
@@ -33,37 +27,17 @@ Java 25 is the project toolchain — used for compile, test, and the actual game
 
 ## Multi-version builds (Stonecutter)
 
-BuildCraft targets multiple MC versions from ONE source tree via the [Stonecutter](https://stonecutter.kikugie.dev) Gradle plugin (Kotlin DSL). The unit is an MC **line** (a real Java/mapping cliff), not a patch — each line is a **node** under `versions/<id>/` whose `gradle.properties` carries its `minecraft_version`, `neo_version`, `jei_version`, and `neoforge.mods.toml` ranges. **Today there are five nodes — `1.21.1`, `1.21.10`, `1.21.11`, `26.1.2`, `26.2` — and `26.2` is the primary.** The `26.1.2` node still ships as a single jar covering all of 26.1 / 26.1.1 / 26.1.2. The old branch-per-MC-line model is retired — these are nodes, not branches.
-
-Two mechanisms handle version differences, chosen by *kind*:
-- **Within a line (patch deltas, e.g. 26.1.1 vs 26.1.2) → runtime, NOT directives.** The handful of diverged APIs are absorbed at load so one compiled jar runs on every patch: GUI getters use the old names 26.1.2 still keeps, and the block-break event is resolved reflectively (`lib.misc.BreakEventCompat`) because `BreakBlockEvent` (26.1.2) replaced `BlockEvent.BreakEvent` (26.1.1). Prefer this for small within-line deltas — it keeps the jar count at one.
-- **Across a cliff (a new line, e.g. a future 1.21.11 on Java 21) → a new node + `//? if` directives.** Add a `versions(...)` entry in `settings.gradle.kts`, a `versions/<id>/gradle.properties`, and wrap the genuinely cross-cliff call sites in Stonecutter directives (`//? if >=… { … } //?} else { … }`). That line then builds its own jar, and per-node/active-switching tasks (`:<id>:runClient`, `Set active project to <id>`) come into play.
-
-- **Build scripts (all Kotlin):** `settings.gradle.kts` declares the nodes; `stonecutter.gradle.kts` is the controller (active node + moddev `apply false`); `build.gradle.kts` is the shared per-node build. `src/` lives at the tree root.
-- `./gradlew buildAndCollect` builds each node and collects the `+mc<minecraft_version>` jars into `build/libs/<mod_version>/`. Each jar's tag IS the node's `minecraft_version` (the 26.1.x node ships `+mc26.1.2`, the actively-supported patch; its `neoforge.mods.toml` range still spans the whole line). One variable drives both the build target and the filename — there is no separate jar-tag property.
-- **Kotlin DSL gotcha:** inside a `tasks.xxx { }` block, `property("p")` resolves against the *task*, not the project — read gradle.properties values into top-level `val`s (see [build.gradle.kts](build.gradle.kts)).
+Read docs\stoncutter.md before touching the Stonecutter system or when having issues with it. When and when not to cause node separation:
+- Do separate nodes if methods and functions no longer exist or are deprecated
+- Don't separate nodes if a shareable, non-deprecated solution, is available
 
 ## Architecture
 
+Avoid using deprecated functions or API systems that throw warnings. This may result in *technically* unnecessary node separation, but ideally keeps the code compatible with newer NeoForge versions/Minecraft releases.
+
 ### History — this is one mod, not eight
 
-Pre-1.13 BuildCraft was 8 separate mods (`buildcraft-core`, `buildcraft-transport`, `buildcraft-energy`, `buildcraft-builders`, `buildcraft-silicon`, `buildcraft-factory`, `buildcraft-robotics`, `buildcraft-lib`) fatjarred together at release time. Since the 1.21.11 port it is a **single mod with one mod ID** (`buildcraftunofficial`). The Java package layout still mirrors the old submod boundaries because renaming packages would be churn without benefit — but the packages are **just packages**. There is no `ModList.isLoaded` cross-mod check, no inter-mod IPC, no class-loading ordering problem to solve, no fatjar discovery, no separate API artifact. Treat package boundaries as code organisation only. If you find yourself reaching for reflection or `ModList`-style guards to call between packages, you are inventing a problem that does not exist — just call directly.
-
-### Package Layout
-
-All code lives under `src/main/java/buildcraft/` in a single source set. Packages are organised by subsystem (this layout matches the historical 1.12.2 submod boundaries):
-
-| Package | Contents |
-|---|---|
-| `api` | Public-facing interfaces and registries other mods integrate against |
-| `lib` | Shared utilities: tile base classes, GUI framework, networking, config |
-| `core` | Main `@Mod` entry point, markers, springs, world gen |
-| `transport` | Pipes, pipe flows, pipe behaviors, plugs |
-| `energy` | Engines (Redstone/Stirling/Combustion), fuel/coolant registries |
-| `factory` | Refineries, mining wells, auto-workbench |
-| `builders` | Quarries, architect table, builder, filler, snapshot/blueprint system |
-| `silicon` | Logic gates, chipsets, circuit boards |
-| `robotics` | Robots and zone planning |
+The 1.12.2 (8.0.x) and 1.7.10 (7.1.x) versions we're based on used a coremod and submod architecture. This is no longer clean in modern NeoForge (all 9 mods would show up separately), so all the submods were collapsed into subsystems of one monolithic mod. So submods such as `energy`, `silicon`, `transport`, `api`, `lib`, `factory`, `builders`and `robotics`. are all just organized compartments of the same "core" mod now.
 
 ### Initialization Pattern
 
@@ -119,7 +93,7 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 
 ## NeoForge Version Tracking
 
-NeoForge for Minecraft 26.1 is pre-release — new beta builds land daily, sometimes hourly. `neo_version` is the pin, and it is **per-node** (`versions/<node>/gradle.properties`) — each node tracks its own line independently. The version-check hook below reads every node's pin directly (it no longer depends on the root [gradle.properties](gradle.properties) mirror). Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
+NeoForge for Minecraft is constantly updating. `neo_version` is the pin, and it is **per-node** (`versions/<node>/gradle.properties`) — each node tracks its own line independently. The version-check hook below reads every node's pin directly (it no longer depends on the root [gradle.properties](gradle.properties) mirror). Two scripts under `scripts/` keep the project aware of upstream and able to cross-reference the right sources.
 
 ### Awareness — the SessionStart hook
 

@@ -9,7 +9,7 @@
 package buildcraft.robotics.boards;
 
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ItemStack;
 
 //? if >=1.21.10 {
@@ -32,7 +32,7 @@ import buildcraft.robotics.ai.AIRobotSearchEntity;
  *  broken one), then searches for hostile entities (monsters, or an angry wolf) and attacks them with
  *  {@code AIRobotAttack}. Ported from 7.1.x {@code BoardRobotKnight} (7.1.x's tool check was
  *  {@code ItemSword}; the modern equivalent is {@link RobotToolPredicates#isSword}, and the 7.1.x
- *  {@code IMob} target check is the {@link Monster} hierarchy).
+ *  {@code IMob} target check is the {@link Enemy} interface).
  *
  *  <p>Two documented divergences from 7.1.x, matching the break-board base: the fetch filter refuses a
  *  WORN sword (7.1.x would fetch a broken sword and spin forever), and the worn-hand check is guarded
@@ -54,9 +54,15 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
         return RobotToolPredicates.isSword(stack);
     }
 
-    /** The target predicate: any monster, or a wolf that is angry. */
+    /** The target predicate: anything hostile, or a wolf that is angry.
+     *
+     *  <p>"Hostile" is the {@link Enemy} INTERFACE, not the {@code Monster} base class — 7.1.x asked
+     *  {@code entity instanceof IMob}, and {@code Enemy} is IMob's modern equivalent (the same mapping
+     *  {@code EntityRobot}'s damage filter already uses). Slime, MagmaCube, Ghast, Phantom, Shulker and
+     *  the EnderDragon all implement {@code Enemy} without extending {@code Monster}, so a class-based
+     *  check quietly leaves a knight standing in a slime farm doing nothing. */
     public boolean isExpectedTarget(Entity entity) {
-        return entity instanceof Monster
+        return entity instanceof Enemy
                 || (entity instanceof Wolf wolf && wolf.isAngry());
     }
 

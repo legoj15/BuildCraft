@@ -20,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 
@@ -752,5 +753,76 @@ public class EntityRobotTester {
                         + "captured at construction resurrects drift that physics already spent");
         helper.assertTrue(robot.getDeltaMovement().y < 0, "the fall itself must continue");
         helper.succeed();
+    }
+
+    /** Losing the HOME station shuts the robot down — the documented 1.7.10 rule: a robot whose linked
+     *  station is gone is orphaned, and it lies on the ground until someone sneak-wrenches it back up.
+     *
+     *  <p>7.1.x reached that through {@code onUpdate}: every tick with a null {@code linkedDockingStation}
+     *  it tried to re-resolve one and called {@code shutdown("no docking station")} when it could not. The
+     *  port only shut down while an UNRESOLVED saved position was still pending, and cleared that position
+     *  as soon as it resolved — so {@code RobotRegistry.removeStation} -> {@code setMainStation(null)}
+     *  produced a robot that carried on running its board with no home at all. Observed in-game on 26.2: a
+     *  Picker whose station pluggable was broken kept sitting at the old dock position, still picking.
+     *
+     *  <p>The dead {@code dockingStation} reference is the second half: {@code removeStation} only undocked
+     *  a robot from a NON-main station, so a main station's robot stayed "docked" at a station that had
+     *  just been deleted.
+     *
+     *  <p>A robot that never had a station at all (summoned, or a test fixture) still just idles — that is
+     *  a deliberate port divergence, and {@link #robotPersistsAndDoesNotDespawn} pins it. */
+    public static void losingTheHomeStationShutsTheRobotDown(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pipeRel = new BlockPos(2, 2, 5);
+        BlockPos robotRel = new BlockPos(2, 3, 5);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        installStation(helper, pipeRel, Direction.UP);
+
+        // Boarded (mainAI is the AIRobotMain ladder that owns the shutdown slot) and charged well above
+        // SAFETY_POWER, so a shutdown can only have come from losing the station, never from flat power.
+        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotPickerNBT.INSTANCE);
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        robot.setPos(pos.x, pos.y, pos.z);
+        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
+        level.addFreshEntity(robot);
+
+        int[] phase = { 0 };
+        EntityArenaUtil.tickUntil(helper, 200,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null || !hasTicked(robot)) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                        station.takeAsMain(robot);
+                        robot.dock(station);
+                        helper.assertTrue(robot.getLinkedStation() == station, "precondition: linked");
+                        helper.assertTrue(robot.getDockingStation() == station, "precondition: docked");
+
+                        // A player breaks the pipe out from under it — the same removal path
+                        // RobotStationPluggableTester's player-break test uses.
+                        BlockPos abs = helper.absolutePos(pipeRel);
+                        BlockState state = level.getBlockState(abs);
+                        state.getBlock().playerWillDestroy(level, abs, state,
+                                helper.makeMockPlayer(GameType.SURVIVAL));
+                        level.removeBlock(abs, false);
+
+                        helper.assertTrue(robot.getLinkedStation() == null,
+                                "precondition: removing the station clears the robot's main station");
+                        helper.assertTrue(robot.getDockingStation() == null,
+                                "a robot must not stay docked at a station that has just been deleted — "
+                                        + "removeStation only undocked from a NON-main station");
+                        return false;
+                    }
+                    return robot.mainAI != null
+                            && robot.mainAI.getActiveAI() instanceof AIRobotShutdown;
+                },
+                () -> {
+                    robot.discard();
+                    helper.succeed();
+                },
+                "a robot whose home station was destroyed never shut down — it kept running its board "
+                        + "with no station at all");
     }
 }

@@ -25,6 +25,7 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
@@ -45,6 +46,7 @@ import buildcraft.robotics.statements.ActionStationProvideFluids;
 import buildcraft.robotics.statements.ActionStationProvideItems;
 import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 
 import org.jspecify.annotations.Nullable;
 
@@ -205,10 +207,19 @@ public class DockingStationPipe extends DockingStation {
     public IFluidHandler getFluidOutput() {
     *///?}
         IPipeHolder h = getHolder();
-        if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowFluid)) {
+        if (h == null || h.getPipe() == null
+                || !(h.getPipe().getFlow() instanceof PipeFlowFluids flow)) {
             return null;
         }
-        return h.getPipe().getFlow().getCapability(CapUtil.CAP_FLUIDS, side().getOpposite());
+        // NOT the pipe's per-face CAP_FLUIDS handler, for the same reason the item output above is not
+        // the raw PipeFlowItems: that handler's insert is gated on pipe.isConnected(face), so with the
+        // station on the UP face every unload bailed unless something happened to be connected to the
+        // pipe's DOWN face — i.e. every ordinary dead-end dock, which made a Pump or Tank robot's
+        // "unloads at a station" silently never happen. A robot docked here is a valid fluid source by
+        // virtue of being docked; getStationOutput is the force path, and unlike the pipe's own
+        // capability it honours the transaction, so the unload AIs' per-station dry runs stay
+        // observational.
+        return flow.getStationOutput(side().getOpposite());
     }
 
     @Override
@@ -266,6 +277,41 @@ public class DockingStationPipe extends DockingStation {
     @Override
     public boolean isInitialized() {
         return getHolder() != null;
+    }
+
+    /** 7.1.x's {@code getPipe(); if (pipe == null) return false;} guard: a station whose pipe is gone
+     *  cannot be reserved, and deregisters itself on the way out. Backstop only — every removal path now
+     *  runs the pluggable's {@code onRemove} — but a station that somehow outlives its pipe must not stay
+     *  a flight destination forever. */
+    @Override
+    public boolean take(EntityRobotBase robot) {
+        return !isPipeGone() && super.take(robot);
+    }
+
+    @Override
+    public boolean takeAsMain(EntityRobotBase robot) {
+        return !isPipeGone() && super.takeAsMain(robot);
+    }
+
+    /** True only when the world POSITIVELY says there is no pipe here any more.
+     *
+     *  <p>Deliberately not {@code getHolder() == null}: that also answers "gone" for a live pipe whose
+     *  {@code getPipe()} is momentarily null (a tile mid-load, a holder placed but not yet given its pipe),
+     *  and a reservation refused on that transient reading strands the robot — {@code AIRobotGotoStation}
+     *  treats a refused take as a failed move and sends the board to sleep. Measured: routing take() through
+     *  {@code getHolder()} made the sleep/wakeup gate test fail roughly two runs in five. Asking the world
+     *  whether the block entity is still an {@link IPipeHolder} has neither the false positive nor
+     *  {@code getHolder()}'s deregistering side effect. */
+    private boolean isPipeGone() {
+        if (world == null) {
+            return false;
+        }
+        if (world.getBlockEntity(getPos()) instanceof IPipeHolder) {
+            return false;
+        }
+        RobotManager.registryProvider.getRegistry(world).removeStation(this);
+        holder = null;
+        return true;
     }
 
     // take/takeAsMain/unsafeRelease deliberately do NOT nudge the renderer. They used to call

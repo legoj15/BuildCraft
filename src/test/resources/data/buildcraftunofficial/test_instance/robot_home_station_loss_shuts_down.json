@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_home_station_loss_shuts_down",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 260,
+    "setup_ticks": 0,
+    "required": true
+}

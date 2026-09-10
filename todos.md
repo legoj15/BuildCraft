@@ -1,4 +1,4 @@
-Last audited: 2026-09-08
+Last audited: 2026-09-09
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -23,6 +23,12 @@ Last audited: 2026-09-08
 - Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
 - Check robots can be named (7.2.x had it; probably free via vanilla name tags) — [notes](docs/todo-details.md#robot-naming-parity)
 - Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
+- Robots: the Planter can't plant sugar cane yet — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: a blank robot must refuse placement with a "Not programmed" message — [spec](docs/robotics-gameplay-audit.md#decided-blank-robots-and-boards)
+- Robots: blank robots and blank boards stack to 16 again, like 1.7.10 — [spec](docs/robotics-gameplay-audit.md#decided-blank-robots-and-boards)
+- Robots: close the untested behaviours the audit listed — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 
 ## 🆕 New Features (version 2026.2)
 

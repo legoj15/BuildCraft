@@ -8,6 +8,8 @@
  */
 package buildcraft.robotics.boards;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -39,6 +41,15 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
     @Override
     public boolean isExpectedBlock(BlockState state) {
         return ((WorldPropertyIsHarvestable) BuildCraftAPI.getWorldProperty("harvestable")).matches(state);
+    }
+
+    /** Overridden because "harvestable" is NOT a pure-state property: a stacking crop (cactus, sugar cane)
+     *  is ripe only relative to the block below it, so the search has to read the neighbour. The
+     *  state-only seam above answers those with an empty getter — i.e. "never" — which is why the search
+     *  must come through here. */
+    @Override
+    public boolean isExpectedBlock(BlockGetter access, BlockPos pos) {
+        return ((WorldPropertyIsHarvestable) BuildCraftAPI.getWorldProperty("harvestable")).matches(access, pos);
     }
 
     @Override

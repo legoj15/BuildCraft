@@ -81,7 +81,13 @@ public class AIRobotUnloadFluids extends AIRobot {
         if (!station.canRobotAcceptFluid(stack -> FluidStack.isSameFluid(stack, resource.toStack(1)))) {
             return 0;
         }
+        // A station whose pipe carries no fluid flow has NO fluid output, even when an Accept Fluids gate
+        // action makes canRobotAcceptFluid say yes — 7.1.x guarded exactly this with
+        // `if (fluidHandler == null) return 0;`.
         ResourceHandler<FluidResource> output = station.getFluidOutput();
+        if (output == null) {
+            return 0;
+        }
         int room = output.getCapacityAsInt(0, resource) - output.getAmountAsInt(0);
         int amount = Math.min(Math.min(carried, room), BUCKET);
         if (amount <= 0) {
@@ -110,6 +116,9 @@ public class AIRobotUnloadFluids extends AIRobot {
             return 0;
         }
         IFluidHandler output = station.getFluidOutput();
+        if (output == null) {
+            return 0;
+        }
         int room = output.getTankCapacity(0) - output.getFluidInTank(0).getAmount();
         int amount = Math.min(Math.min(carriedStack.getAmount(), room), BUCKET);
         if (amount <= 0) {

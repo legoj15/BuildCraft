@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
+import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
@@ -25,7 +26,9 @@ import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.lib.inventory.filter.AggregateFilter;
 import buildcraft.robotics.path.IBlockFilter;
+import buildcraft.robotics.statements.ActionRobotFilter;
 
 /** The planter: keeps a seed equipped (fetching one from the station when none is held), searches for
  *  a spot that is not {@code "replaceable"} and can sustain the planted seed, then plants it with
@@ -53,10 +56,19 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
         return CropManager.isSeed(stack);
     }
 
+    /** What the planter is willing to fetch: its own seed predicate AND the linked station's gate
+     *  "Filter" action (7.1.x: {@code new AggregateFilter(seedFilter,
+     *  ActionRobotFilter.getGateFilter(robot.getLinkedStation()))}), so a station filtered on pumpkin
+     *  seeds gets a pumpkin planter. An unset Filter — or no linked station — is pass-through. */
+    IStackFilter seedFetchFilter() {
+        return new AggregateFilter(this::matchesSeed,
+                ActionRobotFilter.getGateFilter(robot.getLinkedStation()));
+    }
+
     @Override
     public void update() {
         if (robot.getHeldItem().isEmpty()) {
-            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, this::matchesSeed));
+            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, seedFetchFilter()));
         } else {
             Level level = robot.level();
             ItemStack seed = robot.getHeldItem();

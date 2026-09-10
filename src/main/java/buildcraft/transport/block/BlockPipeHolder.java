@@ -763,6 +763,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TilePipeHolder tile) {
                 tile.dropPipeCargo(level, pos);
+                // Pluggables holding state outside the BE (a robot station's registry entry) must be told
+                // they are gone on this path too — see TilePipeHolder#detachPluggables.
+                tile.detachPluggables();
             }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);

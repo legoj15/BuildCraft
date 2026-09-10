@@ -362,4 +362,66 @@ public class RobotGateTester {
                 },
                 "the redirected robot never docked at station B");
     }
+
+    /** The same action with its map-location parameter LEFT EMPTY. 7.1.x defaulted {@code newStation} to
+     *  the gate's OWN station — {@code AIRobotGoAndLinkToDock(robot, station)} — so an unparameterised
+     *  Goto Station still redirected the docked robot, at its own station. The port returned early on an
+     *  empty parameter and did nothing at all.
+     *
+     *  <p>Asserted on the redirect being handed out, which is the whole of the difference: the parameter
+     *  is unset, so nothing else in the world changes. */
+    public static void gotoStationActionWithNoParameterTargetsItsOwnStation(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(2, 3, 2);
+        BlockPos robotRel = new BlockPos(3, 4, 3);
+
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+
+        PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+        // Deliberately NO action.set(0, ...): the slot holds the empty StatementParameterItemStack the
+        // action's createParameter builds, which is exactly what an untouched GUI slot looks like.
+
+        EntityRobot[] robot = { null };
+        int[] phase = { 0 };
+        EntityArenaUtil.tickUntil(helper, 300,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    // The id is assigned on the robot's first tick; robotTaking() resolves null without it.
+                    if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                        return false;
+                    }
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    station.take(robot[0]);
+                    robot[0].dock(station);
+
+                    gate.logic.resolveActions();
+                    helper.assertTrue(gate.logic.triggerOn[0],
+                            "the in-station trigger must fire while the robot is docked here");
+
+                    buildcraft.api.robots.AIRobot override = robot[0].getOverridingAI();
+                    helper.assertTrue(override != null,
+                            "a Goto Station action with an EMPTY parameter must still redirect the docked "
+                                    + "robot — 7.1.x defaulted the destination to the gate's own station");
+                    helper.assertTrue(override instanceof buildcraft.robotics.ai.AIRobotGotoStation,
+                            "the redirect must be a goto-station move, got " + override);
+                    return true;
+                },
+                () -> {
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the station never registered, or the robot never received its id");
+    }
 }

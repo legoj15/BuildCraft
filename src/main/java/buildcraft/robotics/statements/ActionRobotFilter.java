@@ -65,8 +65,13 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         return new StatementParameterItemStack();
     }
 
+    /** Null-safe: a robot with no linked station has no gate restricting its work, which reads as "no
+     *  restriction" — the same answer a linked station with no Filter action gives. */
     public static Collection<ItemStack> getGateFilterStacks(DockingStation station) {
         ArrayList<ItemStack> result = new ArrayList<>();
+        if (station == null) {
+            return result;
+        }
 
         for (StatementSlot slot : station.getActiveActions()) {
             if (slot.statement instanceof ActionRobotFilter) {

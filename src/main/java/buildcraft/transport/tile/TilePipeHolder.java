@@ -600,9 +600,31 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         super.preRemoveSideEffects(pos, state);
         if (level != null) {
             dropPipeCargo(level, pos);
+            detachPluggables();
         }
     }
     //?}
+
+    /**
+     * Tells every pluggable it is being detached, on a removal path that is NOT a player break. The player
+     * break already does this in {@link #dropPipeItems}; nothing did it for {@code /setblock}, a piston, an
+     * explosion or another mod's tool, so a pluggable holding registered state outside the block entity kept
+     * it forever. That was observable in-game: {@code /setblock <pipe> air} under a docked robot left the
+     * {@link buildcraft.robotics.DockingStationPipe} in the robot registry as a ghost at an air block.
+     * <p>
+     * Idempotent (the slots are nulled as they are notified), so running after {@code dropPipeItems} on the
+     * same removal is a no-op. Deliberately NOT called from {@code setRemoved}: that also fires on chunk
+     * unload and save, where the pluggables must keep their state.
+     */
+    public void detachPluggables() {
+        for (int i = 0; i < 6; i++) {
+            PipePluggable plug = pluggables[i];
+            if (plug != null) {
+                plug.onRemove();
+                pluggables[i] = null;
+            }
+        }
+    }
 
     // --- IPipeHolder ---
 

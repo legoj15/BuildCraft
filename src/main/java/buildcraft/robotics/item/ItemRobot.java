@@ -251,9 +251,36 @@ public class ItemRobot extends Item {
         Consumer<Component> tooltip = tooltipList::add;
         super.appendHoverText(stack, context, tooltipList, flag);*/
     //?}
-        if (!hasEmptyBoard(stack)) {
-            tooltip.accept(chargeLine(getEnergy(stack)));
+        tooltipLines(stack, flag.isAdvanced()).forEach(tooltip);
+    }
+
+    /** The hover text this item contributes, as data. Node-neutral (the three {@code appendHoverText}
+     *  signatures all funnel through here) and therefore unit-testable.
+     *
+     *  <p>7.1.x listed the BOARD's own description above the charge readout, which is what tells a shelf
+     *  of robots apart; a blank robot got nothing at all. Kept verbatim: a blank chassis with no program
+     *  is not a functional robot, so {@link #hasEmptyBoard} suppresses both the description and the
+     *  charge line for it (the port's original always-charge line was a divergence; restored 7.1.x
+     *  behaviour, user decision of the 2026-09-03 gameplay audit). */
+    public static java.util.List<Component> tooltipLines(ItemStack stack, boolean advanced) {
+        java.util.List<Component> lines = new java.util.ArrayList<>();
+
+        RedstoneBoardRobotNBT board = getRobotBoard(stack);
+        RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
+        if (board != null && registry != null && board != registry.getEmptyRobotBoard()) {
+            // The board API predates Components and writes plain strings; each is pushed as a literal so
+            // it renders like any other tooltip line (the boards translate their own text).
+            java.util.List<String> boardLines = new java.util.ArrayList<>();
+            board.addInformation(stack, null, boardLines, advanced);
+            for (String line : boardLines) {
+                lines.add(Component.literal(line));
+            }
         }
+
+        if (!hasEmptyBoard(stack)) {
+            lines.add(chargeLine(getEnergy(stack)));
+        }
+        return lines;
     }
 
     /** 7.1.x's charge readout, on honest lang keys. Board robots only — the empty-board template gets

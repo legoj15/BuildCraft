@@ -162,11 +162,9 @@ public class RobotStationPluggableTester {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
             helper.assertTrue(registry.getStation(absPos, Direction.DOWN) != null, "precondition: registered");
 
-            // pluggable.onRemove() is only wired into the player-break path (TilePipeHolder.dropPipeItems,
-            // called from BlockPipeHolder.playerWillDestroy) — a bare non-player removal (piston,
-            // /setblock, level.removeBlock) leaves hardware cleanup to DockingStationPipe.getHolder()'s
-            // lazy re-fetch-and-deregister instead (see PipeDropsTester's "non-player removal" tests for
-            // the same split). Exercise the path that actually calls onRemove() synchronously.
+            // The player-break path: playerWillDestroy -> TilePipeHolder.dropPipeItems -> onRemove().
+            // The non-player path is pinned separately by
+            // nonPlayerPipeRemovalDeregistersStation below.
             net.minecraft.world.entity.player.Player player =
                     helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
             net.minecraft.world.level.block.state.BlockState state = level.getBlockState(absPos);
@@ -175,6 +173,46 @@ public class RobotStationPluggableTester {
 
             helper.assertTrue(registry.getStation(absPos, Direction.DOWN) == null,
                     "playerWillDestroy must deregister the station synchronously (onRemove -> removeStation)");
+            helper.succeed();
+        });
+    }
+
+    /** A pipe removed by anything OTHER than a player's hand — {@code /setblock … air}, a piston, an
+     *  explosion, another mod's tool — must deregister its stations too.
+     *
+     *  <p>Observed in-game on 26.2: {@code /setblock} under a docked robot left the station registered,
+     *  and the robot went on sitting at an air block "docked" at a station that no longer had a pipe.
+     *  The player break went through {@code RobotStationPluggable.onRemove}; nothing on the non-player
+     *  path did.
+     *
+     *  <p>Also pins the 7.1.x guard in {@code DockingStationPipe.take/takeAsMain}: a station whose pipe
+     *  is gone refuses to be taken (and deregisters itself on the way out), so a robot cannot reserve a
+     *  station that no longer exists. */
+    public static void nonPlayerPipeRemovalDeregistersStation(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(3, 2, 2);
+        TilePipeHolder tile = placeItemPipe(helper, relPos);
+        install(tile, Direction.UP);
+
+        BlockPos absPos = helper.absolutePos(relPos);
+        ServerLevel level = helper.getLevel();
+        whenStationRegistered(helper, absPos, Direction.UP, () -> {
+            IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
+            DockingStationPipe station = (DockingStationPipe) registry.getStation(absPos, Direction.UP);
+            helper.assertTrue(station != null, "precondition: registered");
+
+            TestRobot robot = new TestRobot(level);
+            station.takeAsMain(robot);
+            robot.dock(station);
+
+            // No player, no playerWillDestroy — exactly what /setblock and a piston do.
+            helper.setBlock(relPos, Blocks.AIR);
+
+            helper.assertTrue(registry.getStation(absPos, Direction.UP) == null,
+                    "a non-player pipe removal must deregister the station — otherwise it lingers as a "
+                            + "ghost at an air block and robots keep flying to it");
+            helper.assertFalse(station.take(new TestRobot(level)),
+                    "a station whose pipe is gone must refuse to be taken (7.1.x's getPipe() == null "
+                            + "guard in DockingStationPipe.take)");
             helper.succeed();
         });
     }

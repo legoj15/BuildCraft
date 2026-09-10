@@ -765,10 +765,12 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             mainStation = registry.getStation(linkedStationPos, linkedStationSide);
             if (mainStation == null) {
                 shutdown("no docking station");
-            } else {
-                linkedStationPos = null;
-                linkedStationSide = null;
             }
+            // The coordinates are deliberately NOT cleared on a successful resolve: they are this robot's
+            // memory of "I have a home". 7.1.x shut down on a null linkedDockingStation regardless of the
+            // index, so a station destroyed under a running robot orphaned it on the very next tick;
+            // clearing them here meant setMainStation(null) — which is what RobotRegistry.removeStation
+            // does — left the robot happily running its board with no station at all.
         }
 
         if (mainStation != null && mainStation.robotTaking() != this) {
@@ -1185,15 +1187,26 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** Releasing the previous main station is deliberately {@code unsafeRelease}: {@code release} is a no-op on
      *  a station that is somebody's MAIN, which is exactly the case here, so the plain call would silently
-     *  leave the old station claimed forever. */
+     *  leave the old station claimed forever.
+     *
+     *  <p>The saved coordinates track the station rather than being cleared, and survive
+     *  {@code setMainStation(null)}: they are what tells {@link #resolveStations()} apart a robot that has
+     *  LOST its home (shut down, per 7.1.x) from one that never had one (summoned or test-spawned — idles,
+     *  a deliberate port divergence). 7.1.x needed no such distinction because it shut down every robot
+     *  with a null linked station. */
     @Override
     public void setMainStation(DockingStation station) {
         if (mainStation != null && mainStation != station) {
             mainStation.unsafeRelease(this);
         }
+        if (station != null) {
+            linkedStationPos = station.getPos();
+            linkedStationSide = station.side();
+        } else if (mainStation != null) {
+            linkedStationPos = mainStation.getPos();
+            linkedStationSide = mainStation.side();
+        }
         mainStation = station;
-        linkedStationPos = null;
-        linkedStationSide = null;
     }
 
     // ── Registry / identity ─────────────────────────────────────────────────

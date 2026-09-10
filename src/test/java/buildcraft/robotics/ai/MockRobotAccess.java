@@ -53,6 +53,7 @@ public class MockRobotAccess implements IRobotAccess {
     private final MjBattery battery = new MjBattery(TEST_CAPACITY);
     private Vec3 position = Vec3.ZERO;
     private DockingStation dockingStation;
+    private DockingStation linkedStation;
     private ItemStack heldItem = ItemStack.EMPTY;
     private final RobotFluidTank fluidTank = new RobotFluidTank(4000);
 
@@ -88,6 +89,12 @@ public class MockRobotAccess implements IRobotAccess {
 
     void setDockingStation(DockingStation station) {
         dockingStation = station;
+    }
+
+    /** The robot's HOME station — what {@code getLinkedStation()} reports. Public because the board tests
+     *  in {@code buildcraft.robotics.boards} drive the boards that read it. */
+    public void setLinkedStation(DockingStation station) {
+        linkedStation = station;
     }
 
     // -- energy: the live part --
@@ -198,7 +205,7 @@ public class MockRobotAccess implements IRobotAccess {
 
     @Override
     public DockingStation getLinkedStation() {
-        return null;
+        return linkedStation;
     }
 
     @Override

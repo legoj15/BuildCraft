@@ -43,16 +43,32 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
     }
 
     /** Redirects every docked, non-preempted robot on the gate's pipe to the station the map-location
-     *  parameter names, taking it as MAIN (7.1.x verbatim — no break: every docked robot is redirected). */
+     *  parameter names, taking it as MAIN (7.1.x verbatim — no break: every docked robot is redirected).
+     *
+     *  <p>With NO map location set, 7.1.x defaulted the destination to the gate's OWN station
+     *  ({@code DockingStation newStation = station;} before the parameter check), so the action still
+     *  redirected the robot — at the station it is already sitting on. That case is reproduced here.
+     *  7.1.x expressed "unset" as a literal {@code null} in the gate's parameter array; the port's gates
+     *  always hold a parameter object and express "unset" as an EMPTY stack, so both spellings count.
+     *  A parameter that IS set but names no live station still does nothing, exactly as 7.1.x — a player
+     *  pointing at a station that has since been destroyed must not be silently re-homed.
+     *
+     *  <p>Note that the destination being the robot's current station makes this mostly a re-dock:
+     *  {@code DockingStation.takeAsMain} returns early for a station the robot has already taken, so it
+     *  does not promote that station to MAIN. That is 7.1.x's behaviour too, not an omission here. */
     @Override
     public void actionActivate(IStatementContainer container, IStatementParameter[] parameters) {
-        if (parameters == null || parameters.length < 1 || parameters[0] == null) {
-            return;
-        }
+        IStatementParameter param = parameters != null && parameters.length > 0 ? parameters[0] : null;
+        boolean hasLocation = param instanceof StatementParameterItemStack stackParam
+                && !stackParam.getItemStack().isEmpty();
+
         for (DockingStation station : RobotUtils.getStations(container.getTile())) {
             if (station.robotTaking() instanceof EntityRobot robot && robot.getOverridingAI() == null) {
-                IRobotRegistry registry = RobotManager.registryProvider.getRegistry(robot.level());
-                DockingStation newStation = getStation((StatementParameterItemStack) parameters[0], registry);
+                DockingStation newStation = station;
+                if (hasLocation) {
+                    IRobotRegistry registry = RobotManager.registryProvider.getRegistry(robot.level());
+                    newStation = getStation((StatementParameterItemStack) param, registry);
+                }
                 if (newStation != null) {
                     robot.overrideAI(new AIRobotGotoStation(robot, newStation, true));
                 }

@@ -20,11 +20,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BushBlock;
+import net.minecraft.world.level.block.CactusBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
-import net.minecraft.world.level.block.FlowerBlock;
 import net.minecraft.world.level.block.MushroomBlock;
 import net.minecraft.world.level.block.NetherWartBlock;
+import net.minecraft.world.level.block.SugarCaneBlock;
 import net.minecraft.world.level.block.TallGrassBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -47,7 +48,7 @@ public enum CropHandlerPlantable implements ICropHandler {
     public boolean isSeed(ItemStack stack) {
         if (stack.getItem() instanceof BlockItem blockItem) {
             Block block = blockItem.getBlock();
-            // The plant umbrella covers CropBlock, FlowerBlock, SaplingBlock, MushroomBlock, etc.
+            // The plant umbrella covers CropBlock, flowers, SaplingBlock, MushroomBlock, etc.
             // Sugar cane extends Block directly (never a plant) — it is CropHandlerReeds territory.
             //? if >=1.21.10 {
             if (block instanceof net.minecraft.world.level.block.VegetationBlock
@@ -89,11 +90,19 @@ public enum CropHandlerPlantable implements ICropHandler {
         return seed.useOn(ctx).consumesAction();
     }
 
+    /** 7.1.x's rule set, verbatim. Note what is NOT here: there is no flower rule. In 1.7.10 a flower was
+     *  an {@code IPlantable} like any other, so it only ever reached the final "stacked on its own kind"
+     *  test and a lone poppy on grass was never mature — the Harvester left flower gardens standing. The
+     *  port had briefly promoted every {@code FlowerBlock} to always-mature, which made the Harvester strip
+     *  them.
+     *
+     *  <p>The stacking rule is the port of 7.1.x's {@code block instanceof IPlantable && below == block}.
+     *  {@code IPlantable} is gone, and the two vanilla stacking plants that are NOT bushes — cactus and
+     *  sugar cane — extend {@code Block} directly, so they are named alongside the bush umbrella. */
     @Override
     public boolean isMature(BlockGetter blockAccess, BlockState state, BlockPos pos) {
         Block block = state.getBlock();
-        if (block instanceof FlowerBlock
-            || block instanceof TallGrassBlock
+        if (block instanceof TallGrassBlock
             || block == Blocks.MELON
             || block instanceof MushroomBlock
             || block instanceof DoublePlantBlock
@@ -103,8 +112,9 @@ public enum CropHandlerPlantable implements ICropHandler {
             return cropBlock.isMaxAge(state);
         } else if (block instanceof NetherWartBlock) {
             return state.getValue(NetherWartBlock.AGE) == 3;
-        } else if (block instanceof BushBlock) {
-            // For stacking plants like sugar cane: if the block below is the same, it's "mature"
+        } else if (block instanceof BushBlock || block instanceof CactusBlock
+            || block instanceof SugarCaneBlock) {
+            // For stacking plants like sugar cane and cactus: if the block below is the same, it's "mature"
             if (blockAccess.getBlockState(pos.below()).getBlock() == block) {
                 return true;
             }

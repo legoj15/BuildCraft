@@ -351,6 +351,227 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         return toAdd;
     }
 
+    // ── Station-side output ────────────────────────────────────────────────
+    // The fluid twin of PipeFlowItems.insertItemsForce. The per-face capability's insert is gated on
+    // pipe.isConnected(face), which is right for a neighbouring block pushing fluid in but wrong for a
+    // ROBOT: a robot docked at a station is a valid fluid source by virtue of being docked, exactly as
+    // the item side already documents in DockingStationPipe. With the connection gate in play, every
+    // ordinary dead-end dock refused the unload, so a Pump or Tank robot's "unloads at a station"
+    // silently never happened unless something happened to be connected opposite the station.
+
+    /** Fills {@code face}'s section (then the centre) WITHOUT requiring a connection on that face.
+     *
+     * @param simulate When true nothing is mutated and the return value is what WOULD be accepted.
+     * @return The mB accepted. */
+    public int insertFluidForce(FluidStack fluid, Direction face, boolean simulate) {
+        if (fluid == null || fluid.isEmpty() || face == null) {
+            return 0;
+        }
+        if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
+            return 0;
+        }
+        Section section = sections.get(EnumPipePart.fromFacing(face));
+        Section middle = sections.get(EnumPipePart.CENTER);
+
+        // Measure first: setFluid() rebuilds every section's `incoming` array, so it must only ever run
+        // when something is actually going to land (and never on a dry run).
+        int room = section.fillInternal(fluid.getAmount(), false);
+        room += middle.fillInternal(fluid.getAmount() - room, false);
+        if (room <= 0 || simulate) {
+            return Math.max(room, 0);
+        }
+
+        if (currentFluid.isEmpty()) {
+            setFluid(fluid.copyWithAmount(room));
+        }
+        int filled = section.fillInternal(fluid.getAmount(), true);
+        filled += middle.fillInternal(fluid.getAmount() - filled, true);
+        if (filled > 0) {
+            section.ticksInDirection = COOLDOWN_INPUT;
+        }
+        return filled;
+    }
+
+    //? if >=1.21.10 {
+    /** The complete fill state, so a station-side insert made inside an UNCOMMITTED transaction leaves no
+     *  trace. The pipe's own per-face capability deliberately does not roll back (its state re-normalises
+     *  every tick); this seam must, because the unload AIs dry-run it once per candidate station while
+     *  choosing where to fly — a committing dry run would mint a bucket per station scanned. */
+    private final class FlowSnapshot {
+        private final FluidStack fluid = currentFluid.copy();
+        private final int delay = currentDelay;
+        private final Map<EnumPipePart, int[]> incoming = new EnumMap<>(EnumPipePart.class);
+        private final Map<EnumPipePart, int[]> scalars = new EnumMap<>(EnumPipePart.class);
+
+        FlowSnapshot() {
+            for (Map.Entry<EnumPipePart, Section> entry : sections.entrySet()) {
+                Section s = entry.getValue();
+                incoming.put(entry.getKey(), s.incoming.clone());
+                scalars.put(entry.getKey(),
+                        new int[] { s.amount, s.incomingTotalCache, s.currentTime, s.ticksInDirection });
+            }
+        }
+
+        void restore() {
+            currentFluid = fluid;
+            currentDelay = delay;
+            for (Map.Entry<EnumPipePart, Section> entry : sections.entrySet()) {
+                Section s = entry.getValue();
+                s.incoming = incoming.get(entry.getKey()).clone();
+                int[] values = scalars.get(entry.getKey());
+                s.amount = values[0];
+                s.incomingTotalCache = values[1];
+                s.currentTime = values[2];
+                s.ticksInDirection = values[3];
+            }
+        }
+    }
+
+    private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<FlowSnapshot> stationJournal =
+            new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<>() {
+                @Override
+                protected FlowSnapshot createSnapshot() {
+                    return new FlowSnapshot();
+                }
+
+                @Override
+                protected void revertToSnapshot(FlowSnapshot snapshot) {
+                    snapshot.restore();
+                }
+            };
+
+    /** A fluid handler a docking station on {@code face} hands to a docked robot. */
+    public ResourceHandler<FluidResource> getStationOutput(Direction face) {
+        return new StationOutput(face);
+    }
+
+    private final class StationOutput implements ResourceHandler<FluidResource> {
+        private final Direction face;
+
+        StationOutput(Direction face) {
+            this.face = face;
+        }
+
+        /** The station's own face section plus the centre — the two the force insert fills. */
+        private int stored() {
+            return sections.get(EnumPipePart.fromFacing(face)).amount
+                    + sections.get(EnumPipePart.CENTER).amount;
+        }
+
+        @Override
+        public int size() {
+            return 1;
+        }
+
+        @Override
+        public FluidResource getResource(int index) {
+            return index == 0 && !currentFluid.isEmpty() && stored() > 0
+                    ? FluidResource.of(currentFluid)
+                    : FluidResource.EMPTY;
+        }
+
+        @Override
+        public long getAmountAsLong(int index) {
+            return index == 0 ? stored() : 0;
+        }
+
+        @Override
+        public long getCapacityAsLong(int index, FluidResource resource) {
+            return index == 0 ? capacity * 2L : 0;
+        }
+
+        @Override
+        public boolean isValid(int index, FluidResource resource) {
+            if (index != 0 || resource.isEmpty()) {
+                return false;
+            }
+            return currentFluid.isEmpty()
+                    || FluidStack.isSameFluidSameComponents(currentFluid, resource.toStack(1));
+        }
+
+        @Override
+        public int insert(int index, FluidResource resource, int amount,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            if (index != 0 || amount <= 0) {
+                return 0;
+            }
+            int accepted = insertFluidForce(resource.toStack(amount), face, true);
+            if (accepted <= 0) {
+                return 0;
+            }
+            stationJournal.updateSnapshots(transaction);
+            return insertFluidForce(resource.toStack(accepted), face, false);
+        }
+
+        @Override
+        public int extract(int index, FluidResource resource, int amount,
+                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+            // A station never drains the pipe through this seam — a robot LOADS from getFluidInput, the
+            // block the wooden pipe is pointed at, not from the pipe's own contents.
+            return 0;
+        }
+    }
+    //?} else {
+    /*/^* A fluid handler a docking station on {@code face} hands to a docked robot. *^/
+    public IFluidHandler getStationOutput(Direction face) {
+        return new StationOutput(face);
+    }
+
+    private final class StationOutput implements IFluidHandler {
+        private final Direction face;
+
+        StationOutput(Direction face) {
+            this.face = face;
+        }
+
+        private int stored() {
+            return sections.get(EnumPipePart.fromFacing(face)).amount
+                    + sections.get(EnumPipePart.CENTER).amount;
+        }
+
+        @Override
+        public int getTanks() {
+            return 1;
+        }
+
+        @Override
+        public FluidStack getFluidInTank(int tank) {
+            return tank == 0 && !currentFluid.isEmpty() && stored() > 0
+                    ? currentFluid.copyWithAmount(stored())
+                    : FluidStack.EMPTY;
+        }
+
+        @Override
+        public int getTankCapacity(int tank) {
+            return tank == 0 ? capacity * 2 : 0;
+        }
+
+        @Override
+        public boolean isFluidValid(int tank, FluidStack stack) {
+            if (tank != 0 || stack.isEmpty()) {
+                return false;
+            }
+            return currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, stack);
+        }
+
+        @Override
+        public int fill(FluidStack resource, FluidAction action) {
+            // The classic API carries its own simulate flag, so no snapshot journal is needed here.
+            return insertFluidForce(resource, face, action.simulate());
+        }
+
+        @Override
+        public FluidStack drain(FluidStack resource, FluidAction action) {
+            return FluidStack.EMPTY;
+        }
+
+        @Override
+        public FluidStack drain(int maxDrain, FluidAction action) {
+            return FluidStack.EMPTY;
+        }
+    }*/
+    //?}
+
     @Override
     public Object tryExtractFluidAdv(int millibuckets, Direction from, IFluidFilter filter, boolean simulate) {
         // No filter: fall back to basic extraction (extract whatever is present).

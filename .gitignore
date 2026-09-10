@@ -72,7 +72,10 @@ rendertypes.txt
 sheets.txt
 unbaked.txt
 Dump.class
-/.claude
+# .claude is machine-local (settings, worktrees) EXCEPT the project skills, which are
+# version-controlled procedure docs referenced from CLAUDE.md.
+/.claude/*
+!/.claude/skills/
 decompiled.java
 gametest_output*.log
 

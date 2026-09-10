@@ -4,68 +4,68 @@
         "property": "minecraft:component",
         "predicate": "minecraft:custom_data",
         "value": { "board": { "id": "buildcraftunofficial:boardRobotPicker" } },
-        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_picker" },
+        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_picker", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
         "on_false": {
             "type": "minecraft:condition",
             "property": "minecraft:component",
             "predicate": "minecraft:custom_data",
             "value": { "board": { "id": "buildcraftunofficial:boardRobotCarrier" } },
-            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_carrier" },
+            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_carrier", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
             "on_false": {
                 "type": "minecraft:condition",
                 "property": "minecraft:component",
                 "predicate": "minecraft:custom_data",
                 "value": { "board": { "id": "buildcraftunofficial:boardRobotFluidCarrier" } },
-                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_fluid_carrier" },
+                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_fluid_carrier", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                 "on_false": {
                     "type": "minecraft:condition",
                     "property": "minecraft:component",
                     "predicate": "minecraft:custom_data",
                     "value": { "board": { "id": "buildcraftunofficial:boardRobotLumberjack" } },
-                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_lumberjack" },
+                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_lumberjack", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                     "on_false": {
                         "type": "minecraft:condition",
                         "property": "minecraft:component",
                         "predicate": "minecraft:custom_data",
                         "value": { "board": { "id": "buildcraftunofficial:boardRobotHarvester" } },
-                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_harvester" },
+                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_harvester", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                         "on_false": {
                             "type": "minecraft:condition",
                             "property": "minecraft:component",
                             "predicate": "minecraft:custom_data",
                             "value": { "board": { "id": "buildcraftunofficial:boardRobotMiner" } },
-                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_miner" },
+                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_miner", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                             "on_false": {
                                 "type": "minecraft:condition",
                                 "property": "minecraft:component",
                                 "predicate": "minecraft:custom_data",
                                 "value": { "board": { "id": "buildcraftunofficial:boardRobotPlanter" } },
-                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_planter" },
+                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_planter", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                                 "on_false": {
                                     "type": "minecraft:condition",
                                     "property": "minecraft:component",
                                     "predicate": "minecraft:custom_data",
                                     "value": { "board": { "id": "buildcraftunofficial:boardRobotFarmer" } },
-                                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_farmer" },
+                                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_farmer", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                                     "on_false": {
                                         "type": "minecraft:condition",
                                         "property": "minecraft:component",
                                         "predicate": "minecraft:custom_data",
                                         "value": { "board": { "id": "buildcraftunofficial:boardRobotPump" } },
-                                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_pump" },
+                                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_pump", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                                         "on_false": {
                                             "type": "minecraft:condition",
                                             "property": "minecraft:component",
                                             "predicate": "minecraft:custom_data",
                                             "value": { "board": { "id": "buildcraftunofficial:boardRobotButcher" } },
-                                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_butcher" },
+                                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_butcher", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
                                             "on_false": {
                                                 "type": "minecraft:condition",
                                                 "property": "minecraft:component",
                                                 "predicate": "minecraft:custom_data",
                                                 "value": { "board": { "id": "buildcraftunofficial:boardRobotKnight" } },
-                                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_knight" },
-                                                "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot" }
+                                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_knight", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
+                                                "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] }
                                             }
                                         }
                                     }

@@ -42,6 +42,7 @@ import buildcraft.api.robots.RobotManager;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.robotics.BCRoboticsItems;
+import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.entity.EntityRobot;
@@ -146,6 +147,18 @@ public class ItemRobot extends Item {
         return board instanceof RedstoneBoardRobotNBT robotBoard ? robotBoard : registry.getEmptyRobotBoard();
     }
 
+    /** True when the stack is the board-less template: no board sub-compound at all (the bare or corrupt
+     *  stack, which {@link #getRobotBoard} also resolves to the empty board), or the empty board's own id.
+     *
+     *  <p>The template is not a functional robot — there is no program to power — so every charge readout
+     *  is suppressed for it: the tooltip line, the inventory bar, and the icon's glowing eyes. 7.1.x hid
+     *  its charge line too. Keyed on the id rather than resolved through the registry so the rule stays
+     *  put even if a test or addon swaps the empty board out from under {@code setEmptyRobotBoard}. */
+    public static boolean hasEmptyBoard(ItemStack stack) {
+        String id = getBoardId(stack);
+        return id == null || BoardRobotEmptyNBT.ID.equals(id);
+    }
+
     // ── Placement ───────────────────────────────────────────────────────────
 
     /** Places a robot onto the {@code RobotStationPluggable} on the clicked face.
@@ -238,12 +251,16 @@ public class ItemRobot extends Item {
         Consumer<Component> tooltip = tooltipList::add;
         super.appendHoverText(stack, context, tooltipList, flag);*/
     //?}
-        tooltip.accept(chargeLine(getEnergy(stack)));
+        if (!hasEmptyBoard(stack)) {
+            tooltip.accept(chargeLine(getEnergy(stack)));
+        }
     }
 
-    /** 7.1.x's charge readout, on honest lang keys. Unlike 7.1.x this is shown for the empty board too — up
-     *  there the line was suppressed for the empty board because an empty-board robot could not be placed and
-     *  therefore could not hold charge; here it can. */
+    /** 7.1.x's charge readout, on honest lang keys. Board robots only — the empty-board template gets
+     *  nothing, as in 7.1.x: a blank chassis with no program is not a functional robot, so a charge
+     *  readout on it is noise. (Up there the suppression fell out of the empty board being
+     *  unplaceable and therefore unable to hold charge; here {@link #hasEmptyBoard} states the rule
+     *  directly. The caller gates.) */
     private static Component chargeLine(long energy) {
         long max = EntityRobotBase.MAX_POWER;
         int pct = (int) (energy * 100 / max);
@@ -270,5 +287,77 @@ public class ItemRobot extends Item {
         } else {
             return ChatFormatting.DARK_RED;
         }
+    }
+
+    // ── Charge display: the icon's eye LED and the inventory bar ────────────
+
+    /** The charge-ramp colours as literal ARGB, mirroring the {@code ChatFormatting} palette
+     *  {@code chargeLine} styles the tooltip with. Kept as literals because the 26.2 line stripped
+     *  {@code ChatFormatting} of its RGB data ({@code getColor} is gone there), and a tint int must
+     *  be node-stable regardless — the thresholds themselves live only in {@code chargeColour}, which
+     *  this maps through. This is the readout ramp (tooltip text and inventory bar), exactly as
+     *  7.1.x coloured its charge readout — the eye decal never used it. */
+    private static final int TINT_DARK_RED = 0xFFAA0000;
+    private static final int TINT_RED = 0xFFFF5555;
+    private static final int TINT_GOLD = 0xFFFFAA00;
+    private static final int TINT_YELLOW = 0xFFFFFF55;
+    private static final int TINT_GREEN = 0xFF55FF55;
+
+    /** The inventory bar's colour for a stored charge, as an opaque ARGB int: the same ramp
+     *  {@code chargeLine} styles the tooltip with (dark red empty &rarr; green full), so the bar
+     *  and the text always agree. Clamps to {@code [0, MAX_POWER]} first — corrupt overcharged
+     *  blobs ramp, not crash. (The eye decal is deliberately NOT this: 7.1.x's eyes were always
+     *  red, fading with charge — see {@code chargeEyeTintArgb}.) */
+    public static int chargeTintArgb(long energy) {
+        long max = EntityRobotBase.MAX_POWER;
+        long clamped = Math.max(0L, Math.min(max, energy));
+        int pct = (int) (clamped * 100 / max);
+        return switch (chargeColour(pct)) {
+            case DARK_RED -> TINT_DARK_RED;
+            case RED -> TINT_RED;
+            case GOLD -> TINT_GOLD;
+            case YELLOW -> TINT_YELLOW;
+            case GREEN -> TINT_GREEN;
+            default -> TINT_DARK_RED;
+        };
+    }
+
+    /** The eye decal's tint for a stored charge: a neutral (grayscale) multiplier at the charge
+     *  fraction. 7.1.x's decal pass drew {@code overlay_side.png} with {@code alpha = storagePercent}
+     *  and lighting disabled, so the eyes read as pure red intensity — invisible-dark at 0%, the
+     *  decal's own red at full. Item quads bake onto an alpha-cutout sheet with no blending, so the
+     *  fade is made by multiplying the red decal toward black instead: same read, same endpoints.
+     *  Clamps to {@code [0, MAX_POWER]} first. */
+    public static int chargeEyeTintArgb(long energy) {
+        long max = EntityRobotBase.MAX_POWER;
+        long clamped = Math.max(0L, Math.min(max, energy));
+        int v = (int) (255 * clamped / max);
+        return 0xFF000000 | v << 16 | v << 8 | v;
+    }
+
+    /** The vanilla bar width (0..13 px) for a stored charge: empty shows the bare trough, and only an
+     *  exactly-full blob draws all 13 px. */
+    public static int chargeBarWidth(long energy) {
+        long max = EntityRobotBase.MAX_POWER;
+        return (int) (Math.max(0L, Math.min(max, energy)) * 13 / max);
+    }
+
+    /** Visible for board robots only, matching the tooltip: a robot that can hold a charge shows the
+     *  trough even when empty — the unfilled trough IS the "no charge" state at a glance. The
+     *  empty-board template shows nothing at all: no bar, no charge line, and the tint source keeps
+     *  its eyes dark ({@link #hasEmptyBoard} is the shared rule). */
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return !hasEmptyBoard(stack);
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return chargeBarWidth(getEnergy(stack));
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return chargeTintArgb(getEnergy(stack));
     }
 }

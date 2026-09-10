@@ -10,8 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
@@ -19,11 +21,14 @@ import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 
 import buildcraft.lib.client.model.plug.PlugBakerSimple;
 
+import buildcraft.robotics.BCRobotics;
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
+import buildcraft.robotics.client.model.RobotChargeTintSource;
 import buildcraft.robotics.client.model.RobotStationModel;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
 import buildcraft.robotics.client.render.PlugRobotStationRenderer;
@@ -62,6 +67,27 @@ public class BCRoboticsClient {
     /*@SubscribeEvent
     public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
         event.enqueueWork(buildcraft.robotics.client.model.RoboticsBoardItemProperties::register);
+    }*/
+    //?}
+
+    /** The robot icon's charge-faded eye decals: {@code RobotChargeTintSource} reads the stack's
+     *  energy and returns a neutral multiplier at the charge fraction, tinting the red eye decal
+     *  (tintindex 0) of {@code robot_chassis_base.json} — 7.1.x's decal pass, which faded the same
+     *  art by alpha. Registered per node family — data-driven tint source id on 1.21.10+ (referenced
+     *  by the {@code tints} of every {@code items/robot.json} model leaf; the always-on cyan
+     *  under-port is a vanilla constant there), classic per-item {@code ItemColor} on 1.21.1, which
+     *  has no tint-source registry and answers both tintindexes from this one class. */
+    //? if >=1.21.10 {
+    @SubscribeEvent
+    public static void registerItemTintSources(RegisterColorHandlersEvent.ItemTintSources event) {
+        event.register(Identifier.fromNamespaceAndPath(BCRobotics.MODID, "robot_charge"),
+                RobotChargeTintSource.MAP_CODEC);
+    }
+    //?}
+    //? if <1.21.10 {
+    /*@SubscribeEvent
+    public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register(RobotChargeTintSource.INSTANCE, BCRoboticsItems.ROBOT.get());
     }*/
     //?}
 

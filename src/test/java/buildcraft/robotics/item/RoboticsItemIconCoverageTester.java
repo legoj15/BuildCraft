@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics.item;
 
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -23,6 +24,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -48,9 +51,14 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
  * hands several variants the wrong icon.
  *
  * <p>The icon geometry itself lives in the shared parent {@code robot_chassis_base} (the 8x8x8 chassis
- * cube plus the display section restoring 7.1.x's apparent icon sizes); every chassis model parents it
- * and only rebinds textures. The four hand contexts must stay ABSENT there — inheriting
- * {@code block/block}'s IS the 1.7.10 hand parity — so their absence is pinned too.
+ * cube plus the 7.1.x eye/port decal pass and the display section restoring 7.1.x's apparent icon
+ * sizes); every chassis model parents it and only rebinds textures. The four hand contexts must stay
+ * ABSENT there — inheriting {@code block/block}'s IS the 1.7.10 hand parity — so their absence is
+ * pinned too. The decals are the stack's charge readout: 7.1.x's own overlay art
+ * ({@code robot_overlay_side.png}, the red eyes, tintindex 0, faded by charge through the
+ * {@code buildcraftunofficial:robot_charge} tint source declared on every {@code items/robot.json}
+ * model leaf, and {@code robot_overlay_bottom.png}, the pale-cyan under-port, tintindex 1, always on
+ * — a vanilla {@code minecraft:constant} there; 1.21.1 tints per item instead, no JSON).
  */
 public class RoboticsItemIconCoverageTester {
 
@@ -76,7 +84,7 @@ public class RoboticsItemIconCoverageTester {
         Map<String, String> branches = new LinkedHashMap<>();
         String[] fallback = new String[1];
         collectDefinitionChain(readAsset(ASSETS + "items/robot.json").getAsJsonObject("model"),
-                branches, fallback);
+                branches, fallback, ROBOT_CHARGE_TINT);
 
         // The empty board needs no branch: the base chassis IS the fallback, and 7.1.x drew unknown
         // boards with the same base skin.
@@ -104,7 +112,7 @@ public class RoboticsItemIconCoverageTester {
         Map<String, String> branches = new LinkedHashMap<>();
         String[] fallback = new String[1];
         collectDefinitionChain(readAsset(ASSETS + "items/redstone_board.json").getAsJsonObject("model"),
-                branches, fallback);
+                branches, fallback, null);
 
         // No data / unknown id must land on the EMPTY board's clean chip: 1.7.10 resolved every
         // board icon through the registry, whose fallback IS the empty board, so a bare or corrupt
@@ -173,6 +181,66 @@ public class RoboticsItemIconCoverageTester {
             assertAssetExists(MODELS + "robot_" + suffix + ".json");
             assertAssetExists(TEXTURES + "robot_" + suffix + ".png");
         }
+        assertAssetExists(TEXTURES + "robot_overlay_side.png");
+        assertAssetExists(TEXTURES + "robot_overlay_bottom.png");
+    }
+
+    /** The decal textures must be 7.1.x's overlay art, exact in layout and colour:
+     *  {@code robot_overlay_side.png} is exactly the four 2x2 pure-red eye marks (strip rows 11-12,
+     *  centred in each 8px panel — the same texels every skin paints its eyes at) and
+     *  {@code robot_overlay_bottom.png} exactly the pale-cyan 2x2 under-port. A stray opaque texel
+     *  would smear the charge tint onto the body; a recolour would stop being the classic decal
+     *  the tint multiplies. */
+    @Test
+    public void robotDecalTexturesAreTheSevenOneXOverlayArt() throws IOException {
+        Set<Long> eyes = new TreeSet<>();
+        for (int y = 11; y <= 12; y++) {
+            for (int x : new int[] {3, 4, 11, 12, 19, 20, 27, 28}) {
+                eyes.add(key(x, y));
+            }
+        }
+        assertDecalArt("robot_overlay_side.png", eyes, 0xFFFF0000,
+                "the eye decal must be 7.1.x's overlay_side art: exactly the four 2x2 pure-red eye marks");
+
+        Set<Long> port = new TreeSet<>();
+        for (int y = 3; y <= 4; y++) {
+            for (int x = 11; x <= 12; x++) {
+                port.add(key(x, y));
+            }
+        }
+        assertDecalArt("robot_overlay_bottom.png", port, 0xFF9DFFFF,
+                "the under-port must be 7.1.x's overlay_bottom art: exactly the pale-cyan 2x2 port mark");
+    }
+
+    /** Pins one decal texture: 32x32 like the skins, opaque on exactly the expected texels, and
+     *  every opaque texel exactly the expected colour — the tint multiplies, so the art's colour
+     *  IS the rendered colour at full charge. */
+    private static void assertDecalArt(String fileName, Set<Long> expectedOpaque, int expectedArgb,
+            String message) throws IOException {
+        try (InputStream in = open(TEXTURES + fileName)) {
+            Assertions.assertNotNull(in, "missing " + TEXTURES + fileName);
+            BufferedImage image = ImageIO.read(in);
+            Assertions.assertEquals(32, image.getWidth(), fileName + " must share the skins' 32x32 net");
+            Assertions.assertEquals(32, image.getHeight(), fileName + " must share the skins' 32x32 net");
+
+            Set<Long> opaque = new TreeSet<>();
+            for (int y = 0; y < 32; y++) {
+                for (int x = 0; x < 32; x++) {
+                    int argb = image.getRGB(x, y);
+                    if ((argb >>> 24) == 0) {
+                        continue;
+                    }
+                    opaque.add(key(x, y));
+                    Assertions.assertEquals(expectedArgb, argb,
+                            fileName + " texel " + x + "," + y + " drifted from the 7.1.x art");
+                }
+            }
+            Assertions.assertEquals(expectedOpaque, opaque, message);
+        }
+    }
+
+    private static long key(int x, int y) {
+        return ((long) y << 32) | x;
     }
 
     @Test
@@ -242,8 +310,41 @@ public class RoboticsItemIconCoverageTester {
     @Test
     public void robotChassisBaseCarriesTheSharedDisplay() {
         JsonObject model = readAsset(MODELS + "robot_chassis_base.json");
-        Assertions.assertFalse(model.getAsJsonArray("elements").isEmpty(),
-                "robot_chassis_base must carry the shared 8x8x8 chassis cube");
+        JsonArray elements = model.getAsJsonArray("elements");
+        Assertions.assertEquals(2, elements.size(),
+                "robot_chassis_base must carry exactly the chassis cube and the eye/port decal overlay");
+
+        JsonObject cube = elements.get(0).getAsJsonObject();
+        assertElementVec(cube, "from", new double[] {4, 4, 4});
+        assertElementVec(cube, "to", new double[] {12, 12, 12});
+        Assertions.assertTrue(cube.get("shade").getAsBoolean(),
+                "the chassis cube must stay shaded — only 7.1.x's decal pass drew unlit");
+        Map<String, String> bodyTextures = new LinkedHashMap<>();
+        for (String face : CHASSIS_FACE_UVS.keySet()) {
+            bodyTextures.put(face, "#all");
+        }
+        assertElementFaces(cube, bodyTextures, Map.of(), "chassis cube");
+
+        JsonObject decals = elements.get(1).getAsJsonObject();
+        assertElementVec(decals, "from", new double[] {3.99, 3.99, 3.99});
+        assertElementVec(decals, "to", new double[] {12.01, 12.01, 12.01});
+        Assertions.assertFalse(decals.get("shade").getAsBoolean(),
+                "the decal pass must be unshaded — 1.7.10 drew it with lighting disabled, and a "
+                        + "charge eye that dims with the face it sits on stops reading as a charge eye");
+        Map<String, String> decalTextures = new LinkedHashMap<>();
+        Map<String, Integer> decalTints = new LinkedHashMap<>();
+        for (String face : CHASSIS_FACE_UVS.keySet()) {
+            boolean port = "down".equals(face);
+            decalTextures.put(face, port ? "#port" : "#eye");
+            decalTints.put(face, port ? 1 : 0);
+        }
+        assertElementFaces(decals, decalTextures, decalTints, "eye/port decal overlay");
+
+        JsonObject textures = model.getAsJsonObject("textures");
+        Assertions.assertEquals("buildcraftunofficial:item/robot_overlay_side", textures.get("eye").getAsString(),
+                "robot_chassis_base must bind the 7.1.x eye decal as #eye (children inherit it)");
+        Assertions.assertEquals("buildcraftunofficial:item/robot_overlay_bottom", textures.get("port").getAsString(),
+                "robot_chassis_base must bind the 7.1.x under-port decal as #port (children inherit it)");
 
         JsonObject display = model.getAsJsonObject("display");
         assertTransform(display, "gui",
@@ -292,6 +393,60 @@ public class RoboticsItemIconCoverageTester {
         "firstperson_righthand", "firstperson_lefthand", "thirdperson_righthand", "thirdperson_lefthand"
     };
 
+    /** The tint source id every {@code items/robot.json} model leaf must tint through. */
+    private static final String ROBOT_CHARGE_TINT = "buildcraftunofficial:robot_charge";
+
+    /** The skin-net UV table both chassis elements share, face &rarr; [u1, v1, u2, v2]. The overlay's
+     *  faces must sample the same rectangles as the cube's or its LEDs land off the painted marks. */
+    private static final Map<String, int[]> CHASSIS_FACE_UVS = new LinkedHashMap<>();
+    static {
+        CHASSIS_FACE_UVS.put("up", new int[] {8, 0, 12, 4});
+        CHASSIS_FACE_UVS.put("down", new int[] {4, 0, 8, 4});
+        CHASSIS_FACE_UVS.put("north", new int[] {4, 4, 8, 8});
+        CHASSIS_FACE_UVS.put("south", new int[] {12, 4, 16, 8});
+        CHASSIS_FACE_UVS.put("west", new int[] {8, 4, 12, 8});
+        CHASSIS_FACE_UVS.put("east", new int[] {0, 4, 4, 8});
+    }
+
+    /** Pins one element's from/to against the exact triple. */
+    private static void assertElementVec(JsonObject element, String key, double[] expected) {
+        JsonArray values = element.getAsJsonArray(key);
+        Assertions.assertEquals(3, values.size(), "element." + key + " must have 3 components");
+        for (int i = 0; i < 3; i++) {
+            Assertions.assertEquals(expected[i], values.get(i).getAsDouble(), 1e-6,
+                    "element." + key + "[" + i + "] drifted");
+        }
+    }
+
+    /** Pins one chassis element's six faces against the shared UV table, with per-face texture refs
+     *  and tintindexes (a missing tint entry asserts the face carries none — only the decal pass is
+     *  tinted; a tinted body would recolor the whole skin per charge). */
+    private static void assertElementFaces(JsonObject element, Map<String, String> textures,
+            Map<String, Integer> tints, String what) {
+        JsonObject faces = element.getAsJsonObject("faces");
+        for (Map.Entry<String, int[]> face : CHASSIS_FACE_UVS.entrySet()) {
+            String name = face.getKey();
+            Assertions.assertTrue(faces.has(name), what + " must define its " + name + " face");
+            JsonObject jsonFace = faces.getAsJsonObject(name);
+            Assertions.assertEquals(textures.get(name), jsonFace.get("texture").getAsString(),
+                    what + "'s " + name + " face must sample " + textures.get(name));
+            JsonArray uv = jsonFace.getAsJsonArray("uv");
+            Assertions.assertEquals(4, uv.size(), what + "'s " + name + " uv must have 4 components");
+            for (int i = 0; i < 4; i++) {
+                Assertions.assertEquals(face.getValue()[i], uv.get(i).getAsDouble(), 1e-6,
+                        what + "'s " + name + " uv[" + i + "] drifted off the shared skin net");
+            }
+            Integer tint = tints.get(name);
+            if (tint == null) {
+                Assertions.assertFalse(jsonFace.has("tintindex"),
+                        what + "'s " + name + " face must not carry a tintindex — only the decal pass is tinted");
+            } else {
+                Assertions.assertEquals(tint.intValue(), jsonFace.get("tintindex").getAsInt(),
+                        what + "'s " + name + " face has the wrong tintindex");
+            }
+        }
+    }
+
     private static String emptyBoardId() {
         for (Map.Entry<String, String> e : RoboticsItemVariants.robotVariants().entrySet()) {
             if (e.getValue().isEmpty()) {
@@ -315,8 +470,11 @@ public class RoboticsItemIconCoverageTester {
     /** Flattens a nested {@code minecraft:condition} chain into id &rarr; {@code on_true} model, with the
      *  terminal {@code minecraft:model} in {@code fallback[0]}. Every condition node is asserted to key on
      *  the stack's CUSTOM_DATA board id — a branch silently retargeted to another component would other-
-     *  wise select on the wrong data while this test stayed green. */
-    private static void collectDefinitionChain(JsonObject node, Map<String, String> branches, String[] fallback) {
+     *  wise select on the wrong data while this test stayed green. {@code expectedTintSourceId} pins the
+     *  two-entry {@code tints} of every {@code minecraft:model} leaf (charge-faded eyes at index 0, the
+     *  vanilla constant under-port at index 1); null asserts the leaves carry no tints at all. */
+    private static void collectDefinitionChain(JsonObject node, Map<String, String> branches, String[] fallback,
+            String expectedTintSourceId) {
         String type = node.get("type").getAsString();
         if ("minecraft:condition".equals(type)) {
             Assertions.assertEquals("minecraft:component", node.get("property").getAsString(),
@@ -329,8 +487,31 @@ public class RoboticsItemIconCoverageTester {
             String id = node.getAsJsonObject("value").getAsJsonObject("board").get("id").getAsString();
             Assertions.assertFalse(branches.containsKey(id), "duplicate condition branch for " + id);
             branches.put(id, node.getAsJsonObject("on_true").get("model").getAsString());
-            collectDefinitionChain(node.getAsJsonObject("on_false"), branches, fallback);
+            collectDefinitionChain(node.getAsJsonObject("on_false"), branches, fallback, expectedTintSourceId);
         } else if ("minecraft:model".equals(type)) {
+            if (expectedTintSourceId == null) {
+                Assertions.assertFalse(node.has("tints"),
+                        "this definition's model leaves must not declare tints");
+            } else {
+                JsonArray tints = node.getAsJsonArray("tints");
+                Assertions.assertEquals(2, tints.size(),
+                        "each model leaf needs the charge tint (index 0, the eyes) and the constant "
+                                + "port tint (index 1, the always-on under-port)");
+                JsonObject charge = tints.get(0).getAsJsonObject();
+                Assertions.assertEquals(expectedTintSourceId, charge.get("type").getAsString(),
+                        "model leaves must tint through " + expectedTintSourceId
+                                + " or the eye decals render untinted");
+                Assertions.assertEquals(1, charge.entrySet().size(),
+                        "the charge tint entry must be type-only");
+                JsonObject constant = tints.get(1).getAsJsonObject();
+                Assertions.assertEquals("minecraft:constant", constant.get("type").getAsString(),
+                        "the under-port must tint through the vanilla constant — 7.1.x drew it at "
+                                + "full alpha whenever the robot was awake");
+                Assertions.assertEquals(2, constant.entrySet().size(),
+                        "the constant tint entry must be type + value");
+                Assertions.assertEquals(16777215, constant.get("value").getAsInt(),
+                        "the port tint must be opaque white so the decal art's own pale cyan shows");
+            }
             fallback[0] = node.get("model").getAsString();
         } else {
             Assertions.fail("unexpected item-definition node type: " + type);

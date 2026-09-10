@@ -1,6 +1,10 @@
 {
-    "__comment": "Shared robot chassis cube + the display section restoring 7.1.x apparent sizes. All 12 robot chassis models (the bare fallback + 11 per-kind variants; robot_station is the docking station's own model and does NOT parent this) parent this file and only rebind textures. Provenance of each display value (verified against upstream/7.1.x RenderRobot.java and the Forge 1.7.10 surround): gui scale 1.0 draws the true-size 0.5-block cube in the standard block iso pose — 1.7.10 drew the same cube via BC glScaled(1.5) inside Forge's 10x isometric INVENTORY_BLOCK surround (~10.6px of the 16px slot; scale 1.0 at 30/225 reproduces that within a pixel, and 1.5 would clip: an iso cube projects 1.41x side wide, 1.57x tall). ground scale 0.3 / translation [0,2.2,0] = 1.7.10's dropped size (Forge glScalef(0.5) * BC glScaled(0.6) = 0.15 apparent) with the same +1/16 seat offset a vanilla block drop has. fixed scale 1.0 = true size in item frames, consistent with the inherited on_shelf context. The four hand contexts are deliberately ABSENT: block/block's firstperson 0.40 / thirdperson 0.375 equal 1.7.10's vanilla surround scales exactly (0.5*0.40=0.2 fp, 0.5*0.375=0.1875 tp), so inheritance IS hand parity. Display inheritance is per-context wholesale: every context present here must stay fully specified (a scale-only gui entry would reset rotation to 0).",
+    "__comment": "Shared robot chassis cube + the 7.1.x eye/port decals + the display section restoring 7.1.x apparent sizes. All 12 robot chassis models (the bare fallback + 11 per-kind variants; robot_station is the docking station's own model and does NOT parent this) parent this file and only rebind textures. Provenance of each display value (verified against upstream/7.1.x RenderRobot.java and the Forge 1.7.10 surround): gui scale 1.0 draws the true-size 0.5-block cube in the standard block iso pose — 1.7.10 drew the same cube via BC glScaled(1.5) inside Forge's 10x isometric INVENTORY_BLOCK surround (~10.6px of the 16px slot; scale 1.0 at 30/225 reproduces that within a pixel, and 1.5 would clip: an iso cube projects 1.41x side wide, 1.57x tall). ground scale 0.3 / translation [0,2.2,0] = 1.7.10's dropped size (Forge glScalef(0.5) * BC glScaled(0.6) = 0.15 apparent) with the same +1/16 seat offset a vanilla block drop has. fixed scale 1.0 = true size in item frames, consistent with the inherited on_shelf context. The four hand contexts are deliberately ABSENT: block/block's firstperson 0.40 / thirdperson 0.375 equal 1.7.10's vanilla surround scales exactly (0.5*0.40=0.2 fp, 0.5*0.375=0.1875 tp), so inheritance IS hand parity. Display inheritance is per-context wholesale: every context present here must stay fully specified (a scale-only gui entry would reset rotation to 0). The second element is 7.1.x's decal pass: RenderRobot.doRenderRobot drew this same box two extra times, bound to overlay_side.png (the red eye marks) and overlay_bottom.png (the pale-cyan under-port); here the item copies of those exact textures land as the tintindex-0 #eye quads on the four sides (charge-tinted — 7.1.x modulated the decal's alpha by charge; the item sheet is alpha-cutout, so the tint multiplies the red toward black instead, same read) and the tintindex-1 #port quad underneath (always on, exactly as 7.1.x drew it at full alpha whenever the robot was awake). shade false keeps the decals equally bright on every face — 1.7.10's decal pass disabled lighting outright.",
     "parent": "block/block",
+    "textures": {
+        "eye": "buildcraftunofficial:item/robot_overlay_side",
+        "port": "buildcraftunofficial:item/robot_overlay_bottom"
+    },
     "elements": [
         {
             "from": [4, 4, 4],
@@ -13,6 +17,19 @@
                 "south": { "uv": [12, 4, 16, 8], "texture": "#all" },
                 "west":  { "uv": [8, 4, 12, 8], "texture": "#all" },
                 "east":  { "uv": [0, 4, 4, 8], "texture": "#all" }
+            }
+        },
+        {
+            "from": [3.99, 3.99, 3.99],
+            "to": [12.01, 12.01, 12.01],
+            "shade": false,
+            "faces": {
+                "up":    { "uv": [8, 0, 12, 4], "texture": "#eye", "tintindex": 0 },
+                "down":  { "uv": [4, 0, 8, 4], "texture": "#port", "tintindex": 1 },
+                "north": { "uv": [4, 4, 8, 8], "texture": "#eye", "tintindex": 0 },
+                "south": { "uv": [12, 4, 16, 8], "texture": "#eye", "tintindex": 0 },
+                "west":  { "uv": [8, 4, 12, 8], "texture": "#eye", "tintindex": 0 },
+                "east":  { "uv": [0, 4, 4, 8], "texture": "#eye", "tintindex": 0 }
             }
         }
     ],

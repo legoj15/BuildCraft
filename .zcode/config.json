@@ -6,7 +6,13 @@
       "SessionStart": [
         {
           "hooks": [
-            { "type": "command", "command": "bash scripts/neoforge-version-check.sh" }
+            {
+              "type": "command",
+              "command": "bash scripts/neoforge-version-check.sh",
+              "enabled": true,
+              "async": true,
+              "timeout": 60
+            }
           ]
         }
       ]

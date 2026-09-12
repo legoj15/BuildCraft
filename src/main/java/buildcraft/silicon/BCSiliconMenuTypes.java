@@ -15,7 +15,6 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import buildcraft.lib.BCLib;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.silicon.container.ContainerIntegrationTable;
@@ -27,14 +26,9 @@ public class BCSiliconMenuTypes {
     public static final Supplier<MenuType<ContainerAssemblyTable>> ASSEMBLY_TABLE =
         MENU_TYPES.register("assembly_table", () -> IMenuTypeExtension.create(ContainerAssemblyTable::new));
 
-    // Dev-only — mirrors BCSiliconBlocks.INTEGRATION_TABLE. Null in public releases.
-    public static final Supplier<MenuType<ContainerIntegrationTable>> INTEGRATION_TABLE;
-
-    static {
-        INTEGRATION_TABLE = BCLib.DEV
-            ? MENU_TYPES.register("integration_table", () -> IMenuTypeExtension.create(ContainerIntegrationTable::new))
-            : null;
-    }
+    // Shipped alongside the Programming Table since Ph7 registered the robot integration recipe.
+    public static final Supplier<MenuType<ContainerIntegrationTable>> INTEGRATION_TABLE =
+        MENU_TYPES.register("integration_table", () -> IMenuTypeExtension.create(ContainerIntegrationTable::new));
 
     public static final Supplier<MenuType<ContainerAdvancedCraftingTable>> ADVANCED_CRAFTING_TABLE =
         MENU_TYPES.register("advanced_crafting_table", () -> IMenuTypeExtension.create(ContainerAdvancedCraftingTable::new));

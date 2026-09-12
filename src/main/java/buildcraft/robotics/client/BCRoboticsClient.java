@@ -48,6 +48,8 @@ public class BCRoboticsClient {
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
+        event.register(BCRoboticsMenuTypes.PROGRAMMING_TABLE.get(),
+                buildcraft.robotics.client.gui.GuiProgrammingTable::new);
     }
 
     /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen") and the
@@ -129,7 +131,21 @@ public class BCRoboticsClient {
         }
     }
 
+    /** Game-bus listeners (the mod bus is the default {@code @SubscribeEvent} surface above; these need
+     *  the other bus, so they live in their own class — the BCSiliconClient.GameBus pattern). */
+    public static final class GameBus {
+        /** Table recipes are registered at ServerAboutToStartEvent on servers; a multiplayer client (where
+         *  that event never fires) needs the programming recipe before its GUI can rebuild the option grid,
+         *  so it registers here — same reason BCSiliconRecipes has its own LoggingIn hook. Once-per-JVM via
+         *  the ensureInitialized guard. */
+        @SubscribeEvent
+        public static void onClientLoggingIn(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn event) {
+            buildcraft.robotics.BCRoboticsRecipes.ensureInitialized();
+        }
+    }
+
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCRoboticsClient.class);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }
 }

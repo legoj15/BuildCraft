@@ -86,6 +86,11 @@ public class BCRoboticsCreativeTabs {
                                         }
                                     }
                                 }
+                                // The two robot tables (Ph7) — 7.1.x kept them on the Silicon tab by module
+                                // boundary; this port consolidates robot content here, where the player
+                                // looking for boards finds the machines that make them.
+                                output.accept(buildcraft.silicon.BCSiliconItems.PROGRAMMING_TABLE.get());
+                                output.accept(buildcraft.silicon.BCSiliconItems.INTEGRATION_TABLE.get());
                             })
                             .build());
 

@@ -13,7 +13,6 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
-import buildcraft.lib.BCLib;
 import buildcraft.silicon.item.ItemGateCopier;
 import buildcraft.silicon.item.ItemPluggableFacade;
 import buildcraft.silicon.item.ItemPluggableGate;
@@ -33,14 +32,12 @@ public class BCSiliconItems {
     public static final DeferredItem<BlockItem> ADVANCED_CRAFTING_TABLE =
             ITEMS.registerSimpleBlockItem(BCSiliconBlocks.ADVANCED_CRAFTING_TABLE);
 
-    // Dev-only — mirrors BCSiliconBlocks.INTEGRATION_TABLE. Null in public releases.
-    public static final DeferredItem<BlockItem> INTEGRATION_TABLE;
+    public static final DeferredItem<BlockItem> PROGRAMMING_TABLE =
+            ITEMS.registerSimpleBlockItem(BCSiliconBlocks.PROGRAMMING_TABLE);
 
-    static {
-        INTEGRATION_TABLE = (BCLib.DEV && BCSiliconBlocks.INTEGRATION_TABLE != null)
-                ? ITEMS.registerSimpleBlockItem(BCSiliconBlocks.INTEGRATION_TABLE)
-                : null;
-    }
+    // Shipped alongside the Programming Table since Ph7 registered the robot integration recipe.
+    public static final DeferredItem<BlockItem> INTEGRATION_TABLE =
+            ITEMS.registerSimpleBlockItem(BCSiliconBlocks.INTEGRATION_TABLE);
 
     // Chipsets — each variant is a separate item (replacing 1.12.2 metadata sub-items).
     // Naming: chipset_<material>, matching the pipe_<material>_<flow> role-prefix scheme.

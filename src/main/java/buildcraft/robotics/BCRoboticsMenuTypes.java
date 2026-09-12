@@ -14,6 +14,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.ContainerZonePlanner;
 
 public class BCRoboticsMenuTypes {
@@ -27,6 +28,11 @@ public class BCRoboticsMenuTypes {
         ZONE_PLANNER = MENU_TYPES.register("zone_planner",
                 () -> IMenuTypeExtension.create(ContainerZonePlanner::new));
     }
+
+    // The robot Programming Table's menu — the tile is silicon's, the GUI is robotics content (8.0.x placement).
+    public static final Supplier<MenuType<ContainerProgrammingTable>> PROGRAMMING_TABLE =
+            MENU_TYPES.register("programming_table",
+                    () -> IMenuTypeExtension.create(ContainerProgrammingTable::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "": {
+            "model": "buildcraftunofficial:block/table/programming",
+            "render_type": "minecraft:cutout"
+        }
+    }
+}

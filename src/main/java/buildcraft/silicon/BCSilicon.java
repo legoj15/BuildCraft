@@ -89,11 +89,10 @@ public class BCSilicon {
         // Item handlers — lets item pipes connect to and exchange items with the laser tables.
         event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ASSEMBLY_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
-        // Integration Table is dev-only — absent from public builds.
-        if (BCSiliconBlockEntities.INTEGRATION_TABLE != null) {
-            event.registerBlockEntity(itemCap, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
-                (table, direction) -> table.getItemHandler(direction));
-        }
+        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.INTEGRATION_TABLE.get(),
+            (table, direction) -> table.getItemHandler(direction));
+        event.registerBlockEntity(itemCap, BCSiliconBlockEntities.PROGRAMMING_TABLE.get(),
+            (table, direction) -> table.getItemHandler(direction));
         event.registerBlockEntity(itemCap, BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE.get(),
             (table, direction) -> table.getItemHandler(direction));
     }

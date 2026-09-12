@@ -12,7 +12,6 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import buildcraft.lib.BCLib;
 import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.block.BlockLaserTable;
 
@@ -35,20 +34,18 @@ public class BCSiliconBlocks {
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.ADVANCED_CRAFTING_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    // Dev-only — the Integration Table has no registered integration recipes, so it is
-    // non-functional in survival and should not ship in public builds. Gated behind
-    // -Dbuildcraft.dev=true; null in public releases.
-    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE;
+    // The robot Programming Table (Ph7) — board crafting, driven by lasers like its siblings.
+    public static final DeferredBlock<BlockLaserTable> PROGRAMMING_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
+            "programming_table",
+            props -> new BlockLaserTable(props,
+                BCSiliconBlockEntities.PROGRAMMING_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    static {
-        INTEGRATION_TABLE = BCLib.DEV
-                ? RegistrationUtilBC.registerBlock(BLOCKS,
-                    "integration_table",
-                    props -> new BlockLaserTable(props,
-                        BCSiliconBlockEntities.INTEGRATION_TABLE),
-                    () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops())
-                : null;
-    }
+    // Shipped since Ph7 registered the robot integration recipe — the "no registered integration recipes" reason
+    // for the old dev gate is gone. The table programs robots: robot + board in, laser MJ, programmed robot out.
+    public static final DeferredBlock<BlockLaserTable> INTEGRATION_TABLE = RegistrationUtilBC.registerBlock(BLOCKS,
+            "integration_table",
+            props -> new BlockLaserTable(props,
+                BCSiliconBlockEntities.INTEGRATION_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_builder_board_supplies_builder",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 500,
+    "setup_ticks": 0,
+    "required": true
+}

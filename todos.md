@@ -27,11 +27,10 @@ Last audited: 2026-09-12
 - Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: a blank robot must refuse placement with a "Not programmed" message — [spec](docs/robotics-gameplay-audit.md#decided-blank-robots-and-boards)
-- Robots: close the untested behaviours the audit listed — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
+- Robots: sweep the last untested behaviours (reservation exclusivity between two robots, the goto-station chain, charging-latch rules, the registry removal paths) — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 
 ## 🆕 New Features (version 2026.2)
 
-- Bring robots back — Ph9 (Builder robot + advanced boards) is what remains — [plan](docs/robotics-resurrection.md)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

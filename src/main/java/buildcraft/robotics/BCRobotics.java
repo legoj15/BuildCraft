@@ -48,6 +48,7 @@ import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoStation;
 import buildcraft.robotics.ai.AIRobotSearchBlock;
 import buildcraft.robotics.ai.AIRobotSearchEntity;
+import buildcraft.robotics.ai.AIRobotSearchRandomGroundBlock;
 import buildcraft.robotics.ai.AIRobotSearchStackRequest;
 import buildcraft.robotics.ai.AIRobotSearchStation;
 import buildcraft.robotics.ai.AIRobotShutdown;
@@ -58,6 +59,10 @@ import buildcraft.robotics.ai.AIRobotUnloadFluids;
 import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
 import buildcraft.robotics.boards.BoardRobotButcher;
 import buildcraft.robotics.boards.BoardRobotButcherNBT;
+import buildcraft.robotics.boards.BoardRobotBomber;
+import buildcraft.robotics.boards.BoardRobotBomberNBT;
+import buildcraft.robotics.boards.BoardRobotBuilder;
+import buildcraft.robotics.boards.BoardRobotBuilderNBT;
 import buildcraft.robotics.boards.BoardRobotCarrier;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotDelivery;
@@ -71,6 +76,8 @@ import buildcraft.robotics.boards.BoardRobotHarvester;
 import buildcraft.robotics.boards.BoardRobotHarvesterNBT;
 import buildcraft.robotics.boards.BoardRobotKnight;
 import buildcraft.robotics.boards.BoardRobotKnightNBT;
+import buildcraft.robotics.boards.BoardRobotLeaveCutter;
+import buildcraft.robotics.boards.BoardRobotLeaveCutterNBT;
 import buildcraft.robotics.boards.BoardRobotLumberjack;
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.boards.BoardRobotMiner;
@@ -81,6 +88,10 @@ import buildcraft.robotics.boards.BoardRobotPlanter;
 import buildcraft.robotics.boards.BoardRobotPlanterNBT;
 import buildcraft.robotics.boards.BoardRobotPump;
 import buildcraft.robotics.boards.BoardRobotPumpNBT;
+import buildcraft.robotics.boards.BoardRobotShovelman;
+import buildcraft.robotics.boards.BoardRobotShovelmanNBT;
+import buildcraft.robotics.boards.BoardRobotStripes;
+import buildcraft.robotics.boards.BoardRobotStripesNBT;
 
 /**
  * BuildCraft Robotics initializer. No longer a separate @Mod — called from BCCore.
@@ -227,6 +238,11 @@ public class BCRobotics {
         RobotManager.registerAIRobot(AIRobotDisposeItems.class, "aiRobotDisposeItems",
                 "buildcraft.core.robots.AIRobotDisposeItems");
 
+        // Ph9 board-catalog AIs. 7.1.x never registered AIRobotStripesHandler (the stripes board
+        // constructs it directly and never saves through it by name) — kept verbatim.
+        RobotManager.registerAIRobot(AIRobotSearchRandomGroundBlock.class, "aiRobotSearchRandomGroundBlock",
+                "buildcraft.core.robots.AIRobotSearchRandomGroundBlock");
+
         RobotManager.registerAIRobot(BoardRobotEmpty.class, "boardRobotEmpty");
         RobotManager.registerAIRobot(BoardRobotPicker.class, "boardRobotPicker",
                 "buildcraft.core.robots.boards.BoardRobotPicker");
@@ -256,6 +272,19 @@ public class BCRobotics {
         RobotManager.registerAIRobot(BoardRobotDelivery.class, "boardRobotDelivery",
                 "buildcraft.core.robots.boards.BoardRobotDelivery");
 
+        // Ph9 advanced boards (7.1.x registered them all with legacy names; the builder board was
+        // Builders-mod-gated there, but the port is one mod — always registered).
+        RobotManager.registerAIRobot(BoardRobotLeaveCutter.class, "boardRobotLeaveCutter",
+                "buildcraft.core.robots.boards.BoardRobotLeaveCutter");
+        RobotManager.registerAIRobot(BoardRobotShovelman.class, "boardRobotShovelman",
+                "buildcraft.core.robots.boards.BoardRobotShovelman");
+        RobotManager.registerAIRobot(BoardRobotBomber.class, "boardRobotBomber",
+                "buildcraft.core.robots.boards.BoardRobotBomber");
+        RobotManager.registerAIRobot(BoardRobotStripes.class, "boardRobotStripes",
+                "buildcraft.core.robots.boards.BoardRobotStripes");
+        RobotManager.registerAIRobot(BoardRobotBuilder.class, "boardRobotBuilder",
+                "buildcraft.core.robots.boards.BoardRobotBuilder");
+
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
         // The fluid carrier sits in 7.1.x's green tier beside the item carrier (8000 RF, chosen not derived).
@@ -273,5 +302,14 @@ public class BCRobotics {
         // The delivery board is 7.1.x's odd one out: green-tier chip, but priced in the "even more
         // expensive" 128000 RF tier beside the knight (multi-step board, 7.1.x registration verbatim).
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotDeliveryNBT.INSTANCE, 12_800_000_000L);
+
+        // Ph9 boards: leave cutter and shovelman join 7.1.x's blue break-board tier; the bomber is red
+        // at the knight's price; stripes and the builder are 7.1.x's YELLOW chip (the fifth tier colour)
+        // at 128000 and 512000 RF respectively — the builder is the most expensive board 7.1.x shipped.
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLeaveCutterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotShovelmanNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotBomberNBT.INSTANCE, 12_800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotStripesNBT.INSTANCE, 12_800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotBuilderNBT.INSTANCE, 51_200_000_000L);
     }
 }

@@ -5,9 +5,35 @@
         "layer0": "buildcraftunofficial:item/redstone_board"
     },
     "overrides": [
-        { "predicate": { "buildcraftunofficial:board": 1.0 }, "model": "buildcraftunofficial:item/board_clean" },
-        { "predicate": { "buildcraftunofficial:board": 2.0 }, "model": "buildcraftunofficial:item/board_green" },
-        { "predicate": { "buildcraftunofficial:board": 3.0 }, "model": "buildcraftunofficial:item/board_blue" },
-        { "predicate": { "buildcraftunofficial:board": 4.0 }, "model": "buildcraftunofficial:item/board_red" }
+        {
+            "predicate": {
+                "buildcraftunofficial:board": 1
+            },
+            "model": "buildcraftunofficial:item/board_clean"
+        },
+        {
+            "predicate": {
+                "buildcraftunofficial:board": 2
+            },
+            "model": "buildcraftunofficial:item/board_green"
+        },
+        {
+            "predicate": {
+                "buildcraftunofficial:board": 3
+            },
+            "model": "buildcraftunofficial:item/board_blue"
+        },
+        {
+            "predicate": {
+                "buildcraftunofficial:board": 4
+            },
+            "model": "buildcraftunofficial:item/board_red"
+        },
+        {
+            "predicate": {
+                "buildcraftunofficial:board": 5
+            },
+            "model": "buildcraftunofficial:item/board_yellow"
+        }
     ]
 }

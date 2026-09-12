@@ -289,14 +289,14 @@ public class RoboticsItemIconCoverageTester {
                 "unknown ids read as the base chassis, never a variant");
 
         // Board values are per-TIER and deliberately shared — 7.1.x kinds sharing a tier shared an
-        // icon — so the assertion is that the tiers collapse to exactly the four tier values, not
-        // that the twelve boards differ.
+        // icon — so the assertion is that the tiers collapse to exactly the five tier values, not
+        // that the seventeen boards differ.
         Set<Float> boardValues = new TreeSet<>();
         for (String id : RoboticsItemVariants.boardTiers().keySet()) {
             boardValues.add(RoboticsItemVariants.boardProperty(id));
         }
-        Assertions.assertEquals(Set.of(1.0F, 2.0F, 3.0F, 4.0F), boardValues,
-                "the board tiers sit at the values 1..4");
+        Assertions.assertEquals(Set.of(1.0F, 2.0F, 3.0F, 4.0F, 5.0F), boardValues,
+                "the board tiers sit at the values 1..5 (yellow, 7.1.x's fifth colour, joined with Ph9)");
         Assertions.assertEquals(1.0F, RoboticsItemVariants.boardProperty("buildcraftunofficial:not_a_board"),
                 "unknown and data-less stacks read as the empty board's clean chip, as 7.1.x's "
                         + "registry fallback resolved every unknown to the empty board");

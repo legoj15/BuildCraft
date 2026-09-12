@@ -139,4 +139,13 @@ public class AIRobotCostTableTest {
         Assertions.assertEquals(MjAPI.MJ / 10, new AIRobotGotoStationAndUnloadFluids(robot).getPowerCost(),
                 "goto-station-and-unload-fluids inherits the default 1 RF");
     }
+
+    @Test
+    public void thePh9AIsCarryTheirSevenOneXCosts() {
+        Assertions.assertEquals(200_000, new AIRobotSearchRandomGroundBlock(robot).getPowerCost(),
+                "the random ground search is 7.1.x's 2 RF");
+        Assertions.assertEquals(1_500_000,
+                new AIRobotStripesHandler(robot, BlockPos.ZERO).getPowerCost(),
+                "the stripes handler cycle is 7.1.x's 15 RF");
+    }
 }

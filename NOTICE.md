@@ -10,7 +10,8 @@ This project ships code under three licences. Which one applies to a given file 
   `buildcraft.api` packages are *not* MIT — they are in the MMPL list below. The package is genuinely
   mixed; the header is authoritative, never the directory.
 - **93 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
-  License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header.
+  License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header. (The count
+  below is live: Ph9's ports added to it.)
 
 Upstream BuildCraft has never relicensed these files away from MMPL — every upstream branch, up to and
 including `master`, still ships MMPL as its root licence — so this fork does not either. The root
@@ -20,10 +21,11 @@ MPL-2.0 grant does not override a file's own header.
 
 Textures carry no copyright header, so upstream lineage is recorded here instead:
 
-- `src/main/resources/assets/buildcraftunofficial/textures/item/board_blue|green|red|clean.png` are
-  verbatim copies of 7.1.x's `buildcraft_resources/assets/buildcraftrobotics/textures/items/board/`
-  textures of the same names — upstream art ported unchanged (they arrived labelled as new Ph5 work;
-  the git blob hashes say otherwise).
+- `src/main/resources/assets/buildcraftunofficial/textures/item/board_blue|green|red|clean.png` (and
+  `board_yellow.png`, added with Ph9) are verbatim copies of 7.1.x's
+  `buildcraft_resources/assets/buildcraftrobotics/textures/items/board/` textures of the same names —
+  upstream art ported unchanged (they arrived labelled as new Ph5 work; the git blob hashes say
+  otherwise).
 - `src/main/resources/assets/buildcraftunofficial/textures/gui/requester.png` is a verbatim copy of 7.1.x/8.0.x `textures/gui/requester_gui.png` — upstream art ported unchanged.
 - `src/main/resources/assets/buildcraftunofficial/textures/item/robot_<kind>.png` — and the base
   `textures/item/robot.png` — are byte-copies of the in-tree `textures/entity/robot_<kind>.png` skins —
@@ -32,13 +34,14 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
 
 ## Files under the Minecraft Mod Public License 1.0.1
 
-Two of them carry **two** notices, upstream's first, because they are original work built on top of
+Three of them carry **two** notices, upstream's first, because they are original work built on top of
 carried-over code:
 
 - `src/main/java/buildcraft/api/robots/DockingStation.java`
 - `src/main/java/buildcraft/robotics/item/ItemRedstoneBoard.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotBuilder.java`
 
-The remaining 91 carry the upstream notice alone:
+The remaining 97 carry the upstream notice alone:
 
 - `src/main/java/buildcraft/api/core/IFluidFilter.java`
 - `src/main/java/buildcraft/api/core/IStackFilter.java`
@@ -89,15 +92,17 @@ The remaining 91 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchBlock.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchEntity.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchStation.java`
+- `src/main/java/buildcraft/robotics/ai/AIRobotSearchRandomGroundBlock.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchStackRequest.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotShutdown.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSleep.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotStraightMoveTo.java`
+- `src/main/java/buildcraft/robotics/ai/AIRobotStripesHandler.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotUnload.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotUnloadFluids.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotUseToolOnBlock.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotBomber.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotButcher.java`
-PLACEHOLDER_CONTAINER
 - `src/main/java/buildcraft/robotics/boards/BoardRobotCarrier.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotDelivery.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotFarmer.java`
@@ -106,11 +111,14 @@ PLACEHOLDER_CONTAINER
 - `src/main/java/buildcraft/robotics/boards/BoardRobotGenericSearchBlock.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotHarvester.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotKnight.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotLeaveCutter.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotLumberjack.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotMiner.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPicker.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPlanter.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPump.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotShovelman.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotStripes.java`
 - `src/main/java/buildcraft/robotics/container/ContainerRequester.java`
 - `src/main/java/buildcraft/robotics/entity/EntityRobot.java`
 - `src/main/java/buildcraft/robotics/item/ItemRobot.java`

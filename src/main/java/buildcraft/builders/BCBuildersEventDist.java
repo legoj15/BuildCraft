@@ -129,6 +129,27 @@ public enum BCBuildersEventDist {
         }
     }
 
+    /** Every live Builder machine in the given level — the server-side search set for the robot
+     *  builder board (the modern stand-in for 7.1.x's {@code TileConstructionMarker.currentMarkers}
+     *  static set). Purges cleared weak references on the way through; invalidated (removed) tiles are
+     *  dropped from the result but stay in the deque until their reference clears or their invalidate
+     *  pass removes them. */
+    public synchronized java.util.List<TileBuilder> getLoadedBuilders(Level level) {
+        java.util.List<TileBuilder> out = new java.util.ArrayList<>();
+        Deque<WeakReference<TileBuilder>> builders = allBuilders.get(level);
+        if (builders == null) return out;
+        Iterator<WeakReference<TileBuilder>> iter = builders.iterator();
+        while (iter.hasNext()) {
+            TileBuilder b = iter.next().get();
+            if (b == null) {
+                iter.remove();
+            } else if (!b.isRemoved()) {
+                out.add(b);
+            }
+        }
+        return out;
+    }
+
     public synchronized void validateQuarry(TileQuarry quarry) {
         Deque<WeakReference<TileQuarry>> quarries =
             allQuarries.computeIfAbsent(quarry.getLevel(), k -> new LinkedList<>());

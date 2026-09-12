@@ -41,7 +41,9 @@ public class AIRobotPumpBlock extends AIRobot {
 
     private BlockPos blockToPump;
     private long waited = 0;
-    private int pumped = 0;
+    /** mB moved on the completing cycle — package-private so the Ph9 action-AI game test can pin the
+     *  exactly-one-bucket contract. */
+    int pumped = 0;
 
     public AIRobotPumpBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -75,9 +77,19 @@ public class AIRobotPumpBlock extends AIRobot {
                 int room = robot.getFluidHandler().getCapacityAsInt(0, resource)
                         - robot.getFluidHandler().getAmountAsInt(0);
                 if (room >= BUCKET) {
-                    robot.getFluidHandler().insert(0, resource, BUCKET, null);
-                    BlockUtil.drainBlock(serverLevel, blockToPump, true);
-                    pumped = BUCKET;
+                    // The robot's tank journals through SnapshotJournal on this line, and a journalling
+                    // handler REQUIRES a live transaction — the bare (…, null) insert threw NPE on every
+                    // pump cycle (a production bug the Ph9 pump game test caught). Commit only when the
+                    // bucket actually moved; drain the world source on the same commit.
+                    try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                            net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+                        int inserted = robot.getFluidHandler().insert(0, resource, BUCKET, tx);
+                        if (inserted >= BUCKET) {
+                            tx.commit();
+                            BlockUtil.drainBlock(serverLevel, blockToPump, true);
+                            pumped = BUCKET;
+                        }
+                    }
                 }
                 //?} else {
                 /*int room = robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.SIMULATE);

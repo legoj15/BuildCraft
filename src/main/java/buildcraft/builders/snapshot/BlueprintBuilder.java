@@ -48,6 +48,13 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     private List<ItemStack>[] remainingDisplayRequiredBlocks;
     private List<ItemStack> remainingDisplayRequiredBlocksConcat = Collections.emptyList();
     public List<ItemStack> remainingDisplayRequired = new ArrayList<>();
+    /** The merged, still-missing ITEM requirements (no fluid buckets), block placements plus the
+     *  to-spawn entities' items — the same content as {@link #remainingDisplayRequired} minus the
+     *  fluid-as-filled-bucket display artefacts. Server-only in practice (the client never has a
+     *  building info); read by the robot builder board to decide what to fetch next. */
+    public final List<ItemStack> remainingRequiredItems = new ArrayList<>();
+    private List<ItemStack>[] remainingRequiredItemBlocks;
+    private List<ItemStack> remainingRequiredItemBlocksConcat = Collections.emptyList();
     private final Map<Pair<List<ItemStack>, List<FluidStack>>, Optional<List<ItemStack>>> extractRequiredCache =
         new HashMap<>();
 
@@ -98,6 +105,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // noinspection unchecked
         remainingDisplayRequiredBlocks = (List<ItemStack>[]) new List<?>[getBuildingInfo().getSnapshot().getDataSize()];
         Arrays.fill(remainingDisplayRequiredBlocks, Collections.emptyList());
+        // noinspection unchecked
+        remainingRequiredItemBlocks = (List<ItemStack>[]) new List<?>[getBuildingInfo().getSnapshot().getDataSize()];
+        Arrays.fill(remainingRequiredItemBlocks, Collections.emptyList());
     }
 
     @Override
@@ -128,8 +138,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                         getBuildingInfo().toPlaceRequiredItems[i],
                         getBuildingInfo().toPlaceRequiredFluids[i]
                 ).collect(Collectors.toList());
+                remainingRequiredItemBlocks[i] = getRequiredItems(i);
             } else {
                 remainingDisplayRequiredBlocks[i] = Collections.emptyList();
+                remainingRequiredItemBlocks[i] = Collections.emptyList();
             }
         }
         afterChecks();
@@ -139,6 +151,8 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     public void cancel() {
         super.cancel();
         remainingDisplayRequiredBlocks = null;
+        remainingRequiredItemBlocks = null;
+        remainingRequiredItems.clear();
     }
 
     private Stream<ItemStack> getDisplayRequired(List<ItemStack> requiredItems, List<FluidStack> requiredFluids) {
@@ -494,6 +508,18 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         }
         remainingDisplayRequired.addAll(StackUtil.mergeSameItems(displayRequiredConcat));
 
+        // The items-only twin: block requirements from afterChecks() plus the to-spawn entities' item
+        // costs (no fluid buckets — the robot supply line fetches items, the tanks are pipe-fed).
+        remainingRequiredItems.clear();
+        List<ItemStack> requiredItemsConcat = new ArrayList<>(remainingRequiredItemBlocksConcat);
+        for (ISchematicEntity schematicEntity : toSpawn) {
+            List<ItemStack> entityItems = getBuildingInfo().entitiesRequiredItems.get(schematicEntity);
+            if (entityItems != null) {
+                requiredItemsConcat.addAll(entityItems);
+            }
+        }
+        remainingRequiredItems.addAll(StackUtil.mergeSameItems(requiredItemsConcat));
+
         // Kill entities that shouldn't be there
         // ⚡ Bolt: Use standard for loops and distanceToSqr to avoid Stream overhead and square roots
         List<Entity> toKill = new ArrayList<>();
@@ -569,16 +595,35 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                         getBuildingInfo().toPlaceRequiredFluids[posToIndex(blockPos)]
                     ).collect(Collectors.toList())
                     : Collections.emptyList();
+            remainingRequiredItemBlocks[posToIndex(blockPos)] =
+                checkResults[posToIndex(blockPos)] != CHECK_RESULT_CORRECT
+                    ? getRequiredItems(posToIndex(blockPos))
+                    : Collections.emptyList();
             return true;
         } else {
             return false;
         }
     }
 
+    /** The items-only requirement list for one position: {@code toPlaceRequiredItems} verbatim (fluid
+     *  costs live in their own array and are not the robot supply line's business). */
+    private List<ItemStack> getRequiredItems(int index) {
+        List<ItemStack> items = getBuildingInfo().toPlaceRequiredItems[index];
+        return items == null ? Collections.emptyList() : new ArrayList<>(items);
+    }
+
     @Override
     protected void afterChecks() {
         remainingDisplayRequiredBlocksConcat = StackUtil.mergeSameItems(
             Arrays.stream(remainingDisplayRequiredBlocks)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList())
+        );
+        if (remainingRequiredItemBlocks == null) {
+            return;
+        }
+        remainingRequiredItemBlocksConcat = StackUtil.mergeSameItems(
+            Arrays.stream(remainingRequiredItemBlocks)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList())
         );

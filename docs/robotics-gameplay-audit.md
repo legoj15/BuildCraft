@@ -71,7 +71,7 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 | B10 | MED | items | Robot item tooltip lost the board's description line (7.1.x `boardNBT.addInformation` + charge line; port: charge line only). | FIXING (batch 2) |
 | B11 | LOW | movement | `AIRobotGotoStation(takeAsMain)` flies to `station + side×1`; 7.1.x's `AIRobotGoAndLinkToDock` used `×2` (plain goto-station was ×1 in both). | FIXING (batch 1, optional) |
 | B12 | LOW | statements | "Goto Station" with an empty map parameter: 7.1.x re-took the robot's current station as MAIN (redock); port returns early and does nothing. | FIXING (batch 2) |
-| B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | OPEN (Lists exist in the port; wearables are Ph9) |
+| B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | HALF-FIXED (Ph9 landed wearable acceptance + matching; List matching still open) |
 | B14 | LOW | station | Fluid output is the pipe's sided capability on the face opposite the station; the item output was made dead-end-proof (`insertItemsForce`) after the same shape refused unconnected faces. `PipeFlowFluids.getCapability` behaviour at a dead-end dock decides — needs a red-first game test. | FIXING (batch 2: test first) |
 | B16 | MED | entity | Home-station loss no longer shuts the robot down (7.1.x re-resolved the linked station every tick and called `shutdown("no docking station")`; port only checks the unresolved-after-load case) and `removeStation` leaves a main-station robot holding a dead `dockingStation`; `setblock air` under a station leaves it registered. Reproduced in-game on 26.2 (V3). | FIXING (batch 2, added) |
 | B15 | LOW | render | Energy exhaust is a vanilla white CLOUD; 7.1.x drew a red, size-scaled smoke puff (`EntityRobotEnergyParticle`) and scaled its rate with the particle setting. Cosmetic but the most visible robot effect. | OPEN — follow-up |
@@ -228,18 +228,20 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
    Still open from this item's test list: "a blank stack of 16 loses exactly one on a successful placement"
    — rides with item 1 (the placement-refusal flip), since both live in `ItemRobot.useOn`.
 
-- **`StatementParameterRobot` accepts only robot stacks**; 7.1.x also took a List (match robots by list) or a
-  wearable. Lists exist in the port; wearables are Ph9.
+- **`StatementParameterRobot` accepts robot stacks and (since Ph9's wearable acceptance) worn items**;
+  7.1.x also took a List (match robots by list). Lists exist in the port; still unwired.
 - **`boards.blacklist` config** (7.1.x let servers hide boards) not ported. Only if asked for.
 - **`AIRobotDisposeItems`** (spill undeliverable cargo) is unported — belongs with the Delivery board (Ph8).
 - **Approach cell for home links is ×2 again (batch 1, fix 6):** a home-station link now needs two clear cells in
   front of the station, exactly 7.1.x's constraint; plain visits stay at ×1. Revert `f23935eb3` if that ever bites.
-- **Untested behaviours the slices listed** (the strongest candidates): `AIRobotBreak` progress/durability/drops;
-  `AIRobotAttack` cadence + damage; harvest/plant/use-tool action layer; station policy overrides
-  (`canRobotExtractItem` & co.) with a gateless negative case; two-robot reservation exclusivity; `AIRobotSearchEntity`;
-  the goto-station chain and straight-move arrival; charging-latch rules; `removeStation`/`killRobot`/`unloadRobot`
-  registry paths; board `writeSelfToNBT` round-trips; robot item tooltip; creative sub-items; the fluid-side gate
-  filter helpers. Batch 1/2 added tests for everything they touched; the rest is a coverage sweep.
+- **Untested behaviours the slices listed** (the strongest candidates): ~~`AIRobotBreak` progress/durability/drops;
+  `AIRobotAttack` cadence + damage; harvest/plant/use-tool action layer; `AIRobotSearchEntity`; board
+  `writeSelfToNBT` round-trips; robot item tooltip~~ — all pinned with Ph9 (see the resurrection doc).
+  Still open: two-robot reservation exclusivity; station policy overrides
+  (`canRobotExtractItem` & co.) with a gateless negative case; the goto-station chain and
+  straight-move arrival; charging-latch rules; `removeStation`/`killRobot`/`unloadRobot` registry
+  paths; creative sub-items; the fluid-side gate filter helpers. Batch 1/2 added tests for everything
+  they touched; the rest is a coverage sweep.
 - **Reference-client wishes for McDevBridge:** port `/screenclick` to the 1.12.2 module; an `/entitydata`-style read
   for 1.7.10 entities (only position/health is visible today, so robot battery/cargo on the reference side had to be
   inferred from behaviour); `pauseOnLostFocus:false` default in the legacy run dirs.

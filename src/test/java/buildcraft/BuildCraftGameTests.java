@@ -836,5 +836,20 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:requester_accepts_only_templated_items", () -> buildcraft.robotics.DeliveryRequesterTester::requesterAcceptsOnlyTemplatedItems);
         reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsARequesterOrder);
         reg.accept("buildcraftunofficial:requester_stack_request_nbt_round_trip", () -> buildcraft.robotics.DeliveryRequesterTester::stackRequestNbtRoundTripsAgainstALiveRegistry);
+        // Robotics Ph9 — the advanced boards + the representative world-action AIs the gameplay audit
+        // listed as untested (break progress formula, harvest/plant/pump/use-tool one each, melee
+        // formula + cadence, search-entity) + wearable acceptance + the rewritten Builder board.
+        reg.accept("buildcraftunofficial:robot_board_registry_sweep_ph9", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh9BoardResolvesAndRoundTrips);
+        reg.accept("buildcraftunofficial:robot_break_progress_formula", () -> buildcraft.robotics.ai.RobotActionAIsTester::breakProgressFormulaMatchesToolAndHardness);
+        reg.accept("buildcraftunofficial:robot_harvest_reaps_mature_wheat", () -> buildcraft.robotics.ai.RobotActionAIsTester::harvestReapsMatureWheat);
+        reg.accept("buildcraftunofficial:robot_plant_sows_seed_on_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::plantSowsSeedOnFarmland);
+        reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
+        reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
+        reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
+        reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
+        reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);
+        reg.accept("buildcraftunofficial:robot_wears_equips_and_peels", () -> buildcraft.robotics.entity.RobotWearablesTester::wearsEquipsAndPeelsWearables);
+        reg.accept("buildcraftunofficial:robot_builder_board_state_machine", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardStateMachine);
+        reg.accept("buildcraftunofficial:robot_builder_board_supplies_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSuppliesBuilderMachine);
     }
 }

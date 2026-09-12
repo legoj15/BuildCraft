@@ -43,8 +43,10 @@ import buildcraft.core.marker.VolumeCache;
 import buildcraft.core.properties.WorldPropertyIsDirt;
 import buildcraft.core.properties.WorldPropertyIsFluidSource;
 import buildcraft.core.properties.WorldPropertyIsHarvestable;
+import buildcraft.core.properties.WorldPropertyIsLeaf;
 import buildcraft.core.properties.WorldPropertyIsOre;
 import buildcraft.core.properties.WorldPropertyIsReplaceable;
+import buildcraft.core.properties.WorldPropertyIsShoveled;
 import buildcraft.core.properties.WorldPropertyIsSoft;
 import buildcraft.core.properties.WorldPropertyIsWood;
 import buildcraft.lib.BCLibItems;
@@ -302,6 +304,11 @@ public class BCCore {
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("dirt", new WorldPropertyIsDirt());
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("replaceable", new WorldPropertyIsReplaceable());
         buildcraft.api.core.BuildCraftAPI.registerWorldProperty("fluidSource", new WorldPropertyIsFluidSource());
+
+        // The Ph9 board world properties: leaves for the leave cutter, shoveled ground for the
+        // shovelman.
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("leaves", new WorldPropertyIsLeaf());
+        buildcraft.api.core.BuildCraftAPI.registerWorldProperty("shoveled", new WorldPropertyIsShoveled());
 
         MarkerCache.registerCache(VolumeCache.INSTANCE);
         MarkerCache.registerCache(PathCache.INSTANCE);

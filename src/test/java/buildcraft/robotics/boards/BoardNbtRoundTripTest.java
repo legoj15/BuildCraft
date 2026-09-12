@@ -121,6 +121,24 @@ public class BoardNbtRoundTripTest extends VanillaSetupBaseTester {
         }
     }
 
+    // Ph9: the five advanced boards — the generic sweep above already covers them, this pins each by
+    // name so a registration typo fails naming the board that broke.
+
+    @Test
+    public void ph9BoardsResolveBackToThemselves() {
+        RedstoneBoardRobotNBT[] ph9 = {
+                BoardRobotLeaveCutterNBT.INSTANCE,
+                BoardRobotShovelmanNBT.INSTANCE,
+                BoardRobotBomberNBT.INSTANCE,
+                BoardRobotStripesNBT.INSTANCE,
+                BoardRobotBuilderNBT.INSTANCE,
+        };
+        for (RedstoneBoardRobotNBT board : ph9) {
+            Assertions.assertSame(board, roundTrip(board),
+                    "a " + board.getID() + " stack survives a write→read cycle");
+        }
+    }
+
     @Test
     public void createBoardWritesTheIdTag() {
         CompoundTag nbt = new CompoundTag();

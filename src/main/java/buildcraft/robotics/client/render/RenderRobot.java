@@ -294,6 +294,19 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         poseStack.scale(SLOT_SCALE, SLOT_SCALE, SLOT_SCALE);
     }
 
+    /** Height above the cube's top face the first worn item floats at, the per-item spacing up the
+     *  column, and the item scale. 7.1.x drew each wearable as an armour box wrapped around the head
+     *  (superimposed — several wearables were unreadable); the modern reading is a legible item-model
+     *  column, first-worn lowest. */
+    private static final float WEARABLE_BASE_Y = 4 / 16F;
+    private static final float WEARABLE_SPACING = 0.3F;
+    private static final float WEARABLE_SCALE = 0.4F;
+
+    private static void applyWearableTransform(PoseStack poseStack, int index) {
+        poseStack.translate(0, WEARABLE_BASE_Y + WEARABLE_SPACING * index, 0);
+        poseStack.scale(WEARABLE_SCALE, WEARABLE_SCALE, WEARABLE_SCALE);
+    }
+
     /**
      * Draws the robot's laser beam. <b>Dormant for the whole of Ph3</b> and deliberately kept wired: the
      * 7.1.x laser DataWatcher slots are ported as API only (the three setters exist on
@@ -376,6 +389,14 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             this.itemModelResolver.updateForTopItem(state.inventory[slot], stack,
                 ItemDisplayContext.NONE, level, null, seed + 1 + slot);
         }
+        // The worn column. getWearables() is the live client list kept current by the WEARABLES_TAG sync.
+        for (int i = 0; i < state.wearables.length; i++) {
+            ItemStack stack = i < robot.getWearables().size()
+                ? orEmpty(robot.getWearables().get(i))
+                : ItemStack.EMPTY;
+            this.itemModelResolver.updateForTopItem(state.wearables[i], stack,
+                ItemDisplayContext.NONE, level, null, seed + 5 + i);
+        }
 
         state.laserVisible = false;
         state.laserEnd = Vec3.ZERO;
@@ -408,6 +429,15 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             poseStack.pushPose();
             applySlotTransform(poseStack, slot);
             state.inventory[slot].submit(poseStack, collector, state.lightCoords,
+                OverlayTexture.NO_OVERLAY, 0);
+            poseStack.popPose();
+        }
+
+        for (int i = 0; i < state.wearables.length; i++) {
+            if (state.wearables[i].isEmpty()) continue;
+            poseStack.pushPose();
+            applyWearableTransform(poseStack, i);
+            state.wearables[i].submit(poseStack, collector, state.lightCoords,
                 OverlayTexture.NO_OVERLAY, 0);
             poseStack.popPose();
         }
@@ -485,6 +515,19 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             applySlotTransform(poseStack, slot);
             itemRenderer.renderStatic(stack, ItemDisplayContext.NONE, packedLight,
                 OverlayTexture.NO_OVERLAY, poseStack, bufferSource, level, seed + 1 + slot);
+            poseStack.popPose();
+        }
+
+        // The worn column (classic-renderer twin of the state-driven path above). The list itself is
+        // capped at MAX_WEARABLES by the acceptance path, so its size is the whole bound.
+        java.util.List<ItemStack> worn = robot.getWearables();
+        for (int i = 0; i < worn.size(); i++) {
+            ItemStack stack = worn.get(i);
+            if (stack == null || stack.isEmpty()) continue;
+            poseStack.pushPose();
+            applyWearableTransform(poseStack, i);
+            itemRenderer.renderStatic(stack, ItemDisplayContext.NONE, packedLight,
+                OverlayTexture.NO_OVERLAY, poseStack, bufferSource, level, seed + 5 + i);
             poseStack.popPose();
         }
 

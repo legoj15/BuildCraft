@@ -3,81 +3,245 @@
         "type": "minecraft:condition",
         "property": "minecraft:component",
         "predicate": "minecraft:custom_data",
-        "value": { "board": { "id": "buildcraftunofficial:boardRobotPicker" } },
-        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_green" },
+        "value": {
+            "board": {
+                "id": "buildcraftunofficial:boardRobotPicker"
+            }
+        },
+        "on_true": {
+            "type": "minecraft:model",
+            "model": "buildcraftunofficial:item/board_green"
+        },
         "on_false": {
             "type": "minecraft:condition",
             "property": "minecraft:component",
             "predicate": "minecraft:custom_data",
-            "value": { "board": { "id": "buildcraftunofficial:boardRobotCarrier" } },
-            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_green" },
+            "value": {
+                "board": {
+                    "id": "buildcraftunofficial:boardRobotCarrier"
+                }
+            },
+            "on_true": {
+                "type": "minecraft:model",
+                "model": "buildcraftunofficial:item/board_green"
+            },
             "on_false": {
                 "type": "minecraft:condition",
                 "property": "minecraft:component",
                 "predicate": "minecraft:custom_data",
-                "value": { "board": { "id": "buildcraftunofficial:boardRobotFluidCarrier" } },
-                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_green" },
+                "value": {
+                    "board": {
+                        "id": "buildcraftunofficial:boardRobotFluidCarrier"
+                    }
+                },
+                "on_true": {
+                    "type": "minecraft:model",
+                    "model": "buildcraftunofficial:item/board_green"
+                },
                 "on_false": {
                     "type": "minecraft:condition",
                     "property": "minecraft:component",
                     "predicate": "minecraft:custom_data",
-                    "value": { "board": { "id": "buildcraftunofficial:boardRobotLumberjack" } },
-                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                    "value": {
+                        "board": {
+                            "id": "buildcraftunofficial:boardRobotLumberjack"
+                        }
+                    },
+                    "on_true": {
+                        "type": "minecraft:model",
+                        "model": "buildcraftunofficial:item/board_blue"
+                    },
                     "on_false": {
                         "type": "minecraft:condition",
                         "property": "minecraft:component",
                         "predicate": "minecraft:custom_data",
-                        "value": { "board": { "id": "buildcraftunofficial:boardRobotHarvester" } },
-                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                        "value": {
+                            "board": {
+                                "id": "buildcraftunofficial:boardRobotHarvester"
+                            }
+                        },
+                        "on_true": {
+                            "type": "minecraft:model",
+                            "model": "buildcraftunofficial:item/board_blue"
+                        },
                         "on_false": {
                             "type": "minecraft:condition",
                             "property": "minecraft:component",
                             "predicate": "minecraft:custom_data",
-                            "value": { "board": { "id": "buildcraftunofficial:boardRobotMiner" } },
-                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                            "value": {
+                                "board": {
+                                    "id": "buildcraftunofficial:boardRobotMiner"
+                                }
+                            },
+                            "on_true": {
+                                "type": "minecraft:model",
+                                "model": "buildcraftunofficial:item/board_blue"
+                            },
                             "on_false": {
                                 "type": "minecraft:condition",
                                 "property": "minecraft:component",
                                 "predicate": "minecraft:custom_data",
-                                "value": { "board": { "id": "buildcraftunofficial:boardRobotPlanter" } },
-                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                                "value": {
+                                    "board": {
+                                        "id": "buildcraftunofficial:boardRobotPlanter"
+                                    }
+                                },
+                                "on_true": {
+                                    "type": "minecraft:model",
+                                    "model": "buildcraftunofficial:item/board_blue"
+                                },
                                 "on_false": {
                                     "type": "minecraft:condition",
                                     "property": "minecraft:component",
                                     "predicate": "minecraft:custom_data",
-                                    "value": { "board": { "id": "buildcraftunofficial:boardRobotFarmer" } },
-                                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                                    "value": {
+                                        "board": {
+                                            "id": "buildcraftunofficial:boardRobotFarmer"
+                                        }
+                                    },
+                                    "on_true": {
+                                        "type": "minecraft:model",
+                                        "model": "buildcraftunofficial:item/board_blue"
+                                    },
                                     "on_false": {
                                         "type": "minecraft:condition",
                                         "property": "minecraft:component",
                                         "predicate": "minecraft:custom_data",
-                                        "value": { "board": { "id": "buildcraftunofficial:boardRobotPump" } },
-                                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                                        "value": {
+                                            "board": {
+                                                "id": "buildcraftunofficial:boardRobotPump"
+                                            }
+                                        },
+                                        "on_true": {
+                                            "type": "minecraft:model",
+                                            "model": "buildcraftunofficial:item/board_blue"
+                                        },
                                         "on_false": {
                                             "type": "minecraft:condition",
                                             "property": "minecraft:component",
                                             "predicate": "minecraft:custom_data",
-                                            "value": { "board": { "id": "buildcraftunofficial:boardRobotButcher" } },
-                                            "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_blue" },
+                                            "value": {
+                                                "board": {
+                                                    "id": "buildcraftunofficial:boardRobotButcher"
+                                                }
+                                            },
+                                            "on_true": {
+                                                "type": "minecraft:model",
+                                                "model": "buildcraftunofficial:item/board_blue"
+                                            },
                                             "on_false": {
                                                 "type": "minecraft:condition",
                                                 "property": "minecraft:component",
                                                 "predicate": "minecraft:custom_data",
-                                                "value": { "board": { "id": "buildcraftunofficial:boardRobotKnight" } },
-                                                "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_red" },
+                                                "value": {
+                                                    "board": {
+                                                        "id": "buildcraftunofficial:boardRobotKnight"
+                                                    }
+                                                },
+                                                "on_true": {
+                                                    "type": "minecraft:model",
+                                                    "model": "buildcraftunofficial:item/board_red"
+                                                },
                                                 "on_false": {
                                                     "type": "minecraft:condition",
                                                     "property": "minecraft:component",
                                                     "predicate": "minecraft:custom_data",
-                                                    "value": { "board": { "id": "buildcraftunofficial:boardRobotDelivery" } },
-                                                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_green" },
+                                                    "value": {
+                                                        "board": {
+                                                            "id": "buildcraftunofficial:boardRobotDelivery"
+                                                        }
+                                                    },
+                                                    "on_true": {
+                                                        "type": "minecraft:model",
+                                                        "model": "buildcraftunofficial:item/board_green"
+                                                    },
                                                     "on_false": {
                                                         "type": "minecraft:condition",
                                                         "property": "minecraft:component",
                                                         "predicate": "minecraft:custom_data",
-                                                        "value": { "board": { "id": "buildcraftunofficial:empty_robot_board" } },
-                                                        "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_clean" },
-                                                        "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/board_clean" }
+                                                        "value": {
+                                                            "board": {
+                                                                "id": "buildcraftunofficial:boardRobotLeaveCutter"
+                                                            }
+                                                        },
+                                                        "on_true": {
+                                                            "type": "minecraft:model",
+                                                            "model": "buildcraftunofficial:item/board_blue"
+                                                        },
+                                                        "on_false": {
+                                                            "type": "minecraft:condition",
+                                                            "property": "minecraft:component",
+                                                            "predicate": "minecraft:custom_data",
+                                                            "value": {
+                                                                "board": {
+                                                                    "id": "buildcraftunofficial:boardRobotShovelman"
+                                                                }
+                                                            },
+                                                            "on_true": {
+                                                                "type": "minecraft:model",
+                                                                "model": "buildcraftunofficial:item/board_blue"
+                                                            },
+                                                            "on_false": {
+                                                                "type": "minecraft:condition",
+                                                                "property": "minecraft:component",
+                                                                "predicate": "minecraft:custom_data",
+                                                                "value": {
+                                                                    "board": {
+                                                                        "id": "buildcraftunofficial:boardRobotBomber"
+                                                                    }
+                                                                },
+                                                                "on_true": {
+                                                                    "type": "minecraft:model",
+                                                                    "model": "buildcraftunofficial:item/board_red"
+                                                                },
+                                                                "on_false": {
+                                                                    "type": "minecraft:condition",
+                                                                    "property": "minecraft:component",
+                                                                    "predicate": "minecraft:custom_data",
+                                                                    "value": {
+                                                                        "board": {
+                                                                            "id": "buildcraftunofficial:boardRobotStripes"
+                                                                        }
+                                                                    },
+                                                                    "on_true": {
+                                                                        "type": "minecraft:model",
+                                                                        "model": "buildcraftunofficial:item/board_yellow"
+                                                                    },
+                                                                    "on_false": {
+                                                                        "type": "minecraft:condition",
+                                                                        "property": "minecraft:component",
+                                                                        "predicate": "minecraft:custom_data",
+                                                                        "value": {
+                                                                            "board": {
+                                                                                "id": "buildcraftunofficial:boardRobotBuilder"
+                                                                            }
+                                                                        },
+                                                                        "on_true": {
+                                                                            "type": "minecraft:model",
+                                                                            "model": "buildcraftunofficial:item/board_yellow"
+                                                                        },
+                                                                        "on_false": {
+                                                                            "type": "minecraft:condition",
+                                                                            "property": "minecraft:component",
+                                                                            "predicate": "minecraft:custom_data",
+                                                                            "value": {
+                                                                                "board": {
+                                                                                    "id": "buildcraftunofficial:empty_robot_board"
+                                                                                }
+                                                                            },
+                                                                            "on_true": {
+                                                                                "type": "minecraft:model",
+                                                                                "model": "buildcraftunofficial:item/board_clean"
+                                                                            },
+                                                                            "on_false": {
+                                                                                "type": "minecraft:model",
+                                                                                "model": "buildcraftunofficial:item/board_clean"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }

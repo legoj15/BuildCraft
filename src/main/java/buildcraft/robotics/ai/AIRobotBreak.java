@@ -79,6 +79,19 @@ public class AIRobotBreak extends AIRobot {
         // its main hand so getDestroyProgress sees the tool speed and the efficiency bonus.
         FakePlayer player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
         player.setItemInHand(InteractionHand.MAIN_HAND, robot.getHeldItem());
+        //? if >=1.21.10 {
+        // 1.21.10 split the player's equipment table off the Inventory: setItemInHand now writes the
+        // table, while Player.getDestroySpeed still reads inventory.getSelectedItem(). Real players
+        // bridge the two while ticking; a never-ticked fake player bridges nowhere, and without this
+        // line every robot mined at hand speed — the tool's speed never entered the formula at all
+        // (found by the Ph9 break-progress game test).
+        player.getInventory().setSelectedItem(robot.getHeldItem());
+        //?}
+        // The same never-ticked-player trap, part two: vanilla's getDestroySpeed divides by 5 for a
+        // miner that is not on the ground, and a fresh fake player's flag is false — a diamond pickaxe
+        // read 1.6 instead of 8, and stone needed 151 cycles instead of 6. 7.1.x read the tool's dig
+        // speed directly, with no player-standing penalty at all, so the flag is pinned instead.
+        player.setOnGround(true);
 
         if (hardness != 0) {
             blockDamage += state.getDestroyProgress(player, serverLevel, blockToBreak);

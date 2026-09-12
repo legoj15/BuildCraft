@@ -35,6 +35,8 @@ public final class RobotToolPredicates {
             Items.WOODEN_SWORD, Items.STONE_SWORD, Items.IRON_SWORD, Items.DIAMOND_SWORD, Items.NETHERITE_SWORD);
     private static final Set<Item> HOES = Set.of(
             Items.WOODEN_HOE, Items.STONE_HOE, Items.IRON_HOE, Items.DIAMOND_HOE, Items.NETHERITE_HOE);
+    private static final Set<Item> SHOVELS = Set.of(
+            Items.WOODEN_SHOVEL, Items.STONE_SHOVEL, Items.IRON_SHOVEL, Items.DIAMOND_SHOVEL, Items.NETHERITE_SHOVEL);
     /** The 7.1.x harvest levels of the vanilla pickaxes; everything else (an empty hand, or a
      *  tag-detected modded pickaxe) is tier 0. */
     private static final Map<Item, Integer> PICKAXE_TIERS = Map.of(
@@ -61,6 +63,18 @@ public final class RobotToolPredicates {
 
     public static boolean isHoe(ItemStack stack) {
         return !stack.isEmpty() && (HOES.contains(stack.getItem()) || stack.is(ItemTags.HOES));
+    }
+
+    public static boolean isShovel(ItemStack stack) {
+        return !stack.isEmpty() && (SHOVELS.contains(stack.getItem()) || stack.is(ItemTags.SHOVELS));
+    }
+
+    /** Shears are identity-only: unlike the axe/sword/hoe/shovel families, vanilla ships no shears item
+     *  tag on any active node, so there is no tag to fall back to — modded shears are simply not
+     *  recognised (a data-driven {@code Tool} component cannot tell shears from a pickaxe with the same
+     *  rules, so guessing from components would be worse). */
+    public static boolean isShears(ItemStack stack) {
+        return stack.is(Items.SHEARS);
     }
 
     /** The 7.1.x harvest level of the held pickaxe (0 for an empty hand or an unrecognised tool). */

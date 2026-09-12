@@ -30,11 +30,30 @@ public class BoardRegistrySweepTester {
             "buildcraftunofficial:boardRobotButcher",
     };
 
+    /** The Ph9 advanced boards — the two break-board twins, the bomber, stripes, and the rewritten
+     *  builder (7.1.x gated the builder behind the Builders sub-mod; the port is one mod, so it is
+     *  always registered). */
+    private static final String[] PH9_BOARD_IDS = {
+            "buildcraftunofficial:boardRobotLeaveCutter",
+            "buildcraftunofficial:boardRobotShovelman",
+            "buildcraftunofficial:boardRobotBomber",
+            "buildcraftunofficial:boardRobotStripes",
+            "buildcraftunofficial:boardRobotBuilder",
+    };
+
     public static void everyPh5BoardResolvesAndRoundTrips(GameTestHelper helper) {
+        sweepBoards(helper, PH5_BOARD_IDS);
+    }
+
+    public static void everyPh9BoardResolvesAndRoundTrips(GameTestHelper helper) {
+        sweepBoards(helper, PH9_BOARD_IDS);
+    }
+
+    private static void sweepBoards(GameTestHelper helper, String[] ids) {
         RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
         helper.assertTrue(registry != null, "the board registry must be wired by the mod load");
 
-        for (String id : PH5_BOARD_IDS) {
+        for (String id : ids) {
             RedstoneBoardNBT<?> boardNBT = registry.getRedstoneBoard(id);
             helper.assertTrue(boardNBT != null, "board " + id + " must be registered");
             helper.assertTrue(boardNBT instanceof RedstoneBoardRobotNBT,

@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import buildcraft.robotics.boards.BoardRobotBomberNBT;
+import buildcraft.robotics.boards.BoardRobotBuilderNBT;
 import buildcraft.robotics.boards.BoardRobotButcherNBT;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotDeliveryNBT;
@@ -17,11 +19,14 @@ import buildcraft.robotics.boards.BoardRobotFarmerNBT;
 import buildcraft.robotics.boards.BoardRobotFluidCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotHarvesterNBT;
 import buildcraft.robotics.boards.BoardRobotKnightNBT;
+import buildcraft.robotics.boards.BoardRobotLeaveCutterNBT;
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.boards.BoardRobotMinerNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.boards.BoardRobotPlanterNBT;
 import buildcraft.robotics.boards.BoardRobotPumpNBT;
+import buildcraft.robotics.boards.BoardRobotShovelmanNBT;
+import buildcraft.robotics.boards.BoardRobotStripesNBT;
 
 /**
  * The single id-to-icon mapping behind every per-board item icon, on every node.
@@ -58,12 +63,13 @@ public final class RoboticsItemVariants {
     /** The model name of the base board model in {@code models/item/redstone_board.json} — the
      *  parent the tier overrides hang off. Never selected at runtime: 1.7.10 resolved unknown and
      *  data-less stacks to the empty board, and both dispatch mechanisms mirror that, so the only
-     *  reachable board looks are the four tier chips. */
+     *  reachable board looks are the five tier chips. */
     public static final String BOARD_FALLBACK_MODEL = "redstone_board";
 
     /** Board tier colours, ascending. Index 0 ({@code clean}) is the empty board — and also what
-     *  unknown ids and data-less stacks read as, mirroring 1.7.10's registry fallback. */
-    public static final String[] BOARD_TIER_ORDER = { "clean", "green", "blue", "red" };
+     *  unknown ids and data-less stacks read as, mirroring 1.7.10's registry fallback. {@code yellow}
+     *  is 7.1.x's fifth colour, worn by the Ph9 stripes and builder boards. */
+    public static final String[] BOARD_TIER_ORDER = { "clean", "green", "blue", "red", "yellow" };
 
     /** The property both items are matched on in 1.21.1 model overrides. */
     public static final String BOARD_PROPERTY = "buildcraftunofficial:board";
@@ -90,6 +96,11 @@ public final class RoboticsItemVariants {
         robots.put(BoardRobotButcherNBT.ID, "butcher");
         robots.put(BoardRobotKnightNBT.ID, "knight");
         robots.put(BoardRobotDeliveryNBT.ID, "delivery");
+        robots.put(BoardRobotLeaveCutterNBT.ID, "leave_cutter");
+        robots.put(BoardRobotShovelmanNBT.ID, "shovelman");
+        robots.put(BoardRobotBomberNBT.ID, "bomber");
+        robots.put(BoardRobotStripesNBT.ID, "stripes");
+        robots.put(BoardRobotBuilderNBT.ID, "builder");
 
         Map<String, String> boards = new LinkedHashMap<>();
         boards.put(BoardRobotEmptyNBT.ID, "clean");
@@ -104,9 +115,16 @@ public final class RoboticsItemVariants {
         boards.put(BoardRobotFarmerNBT.ID, "blue");
         boards.put(BoardRobotPumpNBT.ID, "blue");
         boards.put(BoardRobotButcherNBT.ID, "blue");
+        boards.put(BoardRobotLeaveCutterNBT.ID, "blue");
+        boards.put(BoardRobotShovelmanNBT.ID, "blue");
         boards.put(BoardRobotKnightNBT.ID, "red");
+        boards.put(BoardRobotBomberNBT.ID, "red");
         // 7.1.x gave the delivery board the GREEN chip even at its 128000 RF price — kept verbatim.
         boards.put(BoardRobotDeliveryNBT.ID, "green");
+        // 7.1.x's yellow tier: the stripes board at 128000 RF and the builder at 512000 RF — the
+        // only two boards that ever wore it.
+        boards.put(BoardRobotStripesNBT.ID, "yellow");
+        boards.put(BoardRobotBuilderNBT.ID, "yellow");
 
         ROBOT_VARIANTS = Collections.unmodifiableMap(robots);
         BOARD_TIERS = Collections.unmodifiableMap(boards);

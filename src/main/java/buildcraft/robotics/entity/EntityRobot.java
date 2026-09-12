@@ -21,8 +21,11 @@ import org.joml.Vector3fc;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -33,11 +36,13 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -65,6 +70,7 @@ import buildcraft.api.mj.MjBattery;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRobotOverlayItem;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
@@ -75,6 +81,7 @@ import buildcraft.lib.inventory.filter.StackFilter;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.EntityUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
@@ -193,6 +200,21 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
             SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK));
 
+    /** The wearables, synched as up-to-{@link #MAX_WEARABLES} individual ItemStack slots through the same
+     *  {@link #pushStack} gate as the transfer inventory (a list serializer would need COMPOUND_TAG, which
+     *  every node from 1.21.10 up removed). The server-side {@code wearables} list stays authoritative;
+     *  {@link #getWearables()} reads the accessors on the client. Ph3 shipped the list itself (field, NBT,
+     *  spawn payload, drop path); Ph9 added ACCEPTANCE (the interact branch) and this live sync. */
+    private static final List<EntityDataAccessor<ItemStack>> WEARABLE_INV = List.of(
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK),
+            SynchedEntityData.defineId(EntityRobot.class, EntityDataSerializers.ITEM_STACK));
+
     /** The steam/exhaust direction a robot points at when it is not docked: straight down. */
     private static final Vector3f STEAM_DIR_DEFAULT = new Vector3f(0, -1, 0);
 
@@ -282,6 +304,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         builder.define(HURT_TIME, 0);
         builder.define(STEAM_DIR, new Vector3f(STEAM_DIR_DEFAULT));
         for (EntityDataAccessor<ItemStack> slot : INV) {
+            builder.define(slot, ItemStack.EMPTY);
+        }
+        for (EntityDataAccessor<ItemStack> slot : WEARABLE_INV) {
             builder.define(slot, ItemStack.EMPTY);
         }
     }
@@ -640,7 +665,61 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             }
             return InteractionResult.SUCCESS;
         }
+
+        if (wearables.size() < MAX_WEARABLES && isWearable(stack)) {
+            // 7.1.x's interact: a helmet-slot piece of armour, a robot overlay item, or a skull is WORN,
+            // one unit per click, up to MAX_WEARABLES. The next server tick's push block publishes it.
+            if (!level().isClientSide()) {
+                wearables.add(stack.split(1));
+            } else {
+                player.swing(hand);
+            }
+            return InteractionResult.SUCCESS;
+        }
         return InteractionResult.PASS;
+    }
+
+    /** 7.1.x equipped anything {@code isValidArmor(stack, 0, ...)} (the HEAD slot — robots only have a
+     *  head), any {@link IRobotOverlayItem} that accepts, and every skull. The modern head-slot check is
+     *  the {@code equipable/equippable} component's slot (the same fork {@code ListMatchHandlerArmor}
+     *  carries); the skull family is a fixed item set — vanilla ships no "skull" tag. 7.1.x also
+     *  completed name-only SkullOwner profiles through the session service on equip
+     *  ({@code initSkullItem}); modern heads carry complete profiles in their component already, so
+     *  there is nothing to complete. */
+    private static boolean isWearable(ItemStack stack) {
+        if (stack.getItem() instanceof IRobotOverlayItem overlay) {
+            return overlay.isValidRobotOverlay(stack);
+        }
+        //? if >=1.21.10 {
+        net.minecraft.world.item.equipment.Equippable equippable =
+                stack.get(DataComponents.EQUIPPABLE);
+        return (equippable != null && equippable.slot() == EquipmentSlot.HEAD)
+                || SKULLS.contains(stack.getItem());
+        //?} else {
+        /*net.minecraft.world.item.Equipable equipable = net.minecraft.world.item.Equipable.get(stack);
+        return (equipable != null && equipable.getEquipmentSlot() == EquipmentSlot.HEAD)
+                || SKULLS.contains(stack.getItem());*/
+        //?}
+    }
+
+    /** Vanilla's head items — 7.1.x's {@code ItemSkull} family, block-for-block. */
+    private static final Set<Item> SKULLS = Set.of(
+            Items.PLAYER_HEAD, Items.ZOMBIE_HEAD, Items.SKELETON_SKULL,
+            Items.WITHER_SKELETON_SKULL, Items.CREEPER_HEAD, Items.DRAGON_HEAD, Items.PIGLIN_HEAD);
+
+    /** Server: publish the wearables list to the tracking clients' sync slots. Called from the per-tick
+     *  push block — {@link #pushStack} gates on {@code ItemStack.matches}, so an unchanged list costs
+     *  eight comparisons and no network, exactly like the transfer inventory beside it. Side-guarded
+     *  because the client's {@code wearables} field is stale by design there (the accessors are the
+     *  truth); pushing it back would overwrite the server's data with the stale copy. */
+    private void onWearablesChanged() {
+        if (level().isClientSide()) {
+            return;
+        }
+        for (int i = 0; i < WEARABLE_INV.size(); i++) {
+            pushStack(WEARABLE_INV.get(i),
+                    i < wearables.size() ? wearables.get(i) : ItemStack.EMPTY);
+        }
     }
 
     //? if <1.21.10 {
@@ -730,6 +809,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         for (int slot = 0; slot < INVENTORY_SIZE; slot++) {
             pushStack(INV.get(slot), inv[slot]);
         }
+        onWearablesChanged();
     }
 
     private void clientTick() {
@@ -1488,10 +1568,22 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         return mainAI.getActiveAI().receiveItem(stack);
     }
 
-    /** Ph9 — the list, its NBT, its spawn-sync and its drop path all land in Ph3 so the save format never
-     *  changes, but nothing can put a wearable on a robot until Ph9. */
+    /** Ph9 — the wearable list. Its NBT, spawn-sync and drop path landed in Ph3 so the save format never
+     *  changed; Ph9 added ACCEPTANCE (the interact branch) and the live sync. On the server this is the
+     *  authoritative list; on the client it rebuilds from the synced ItemStack accessors (the field is
+     *  only trustworthy at spawn). */
     public List<ItemStack> getWearables() {
-        return Collections.unmodifiableList(wearables);
+        if (!level().isClientSide()) {
+            return Collections.unmodifiableList(wearables);
+        }
+        List<ItemStack> client = new ArrayList<>(MAX_WEARABLES);
+        for (EntityDataAccessor<ItemStack> accessor : WEARABLE_INV) {
+            ItemStack stack = entityData.get(accessor);
+            if (!stack.isEmpty()) {
+                client.add(stack);
+            }
+        }
+        return client;
     }
 
     // ── Pathing hints ───────────────────────────────────────────────────────

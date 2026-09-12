@@ -57,6 +57,14 @@ public class WorldPropertyTester {
         helper.setBlock(rel(0, 2), Blocks.SHORT_GRASS);
         // rel(1, 2) is deliberately left air.
 
+        // The Ph9 pair: a leaf for the leave cutter, and shovel-ground samples for the shovelman.
+        // All read in the same tick they are placed, so the oak leaves have had no random tick to
+        // decay in (they are distance-7 from any log) and the snow layer has not melted.
+        helper.setBlock(rel(2, 2), Blocks.OAK_LEAVES);
+        helper.setBlock(rel(3, 2), Blocks.SAND);
+        helper.setBlock(rel(4, 2), Blocks.GRAVEL);
+        helper.setBlock(rel(5, 2), Blocks.SNOW);
+
         IWorldProperty wood = property(helper, "wood");
         helper.assertTrue(wood.get(level, helper.absolutePos(rel(0, 0))), "oak log is wood");
         helper.assertTrue(wood.get(level, helper.absolutePos(rel(1, 0))), "crimson stem is wood");
@@ -94,6 +102,20 @@ public class WorldPropertyTester {
         IWorldProperty fluidSource = property(helper, "fluidSource");
         helper.assertTrue(fluidSource.get(level, helper.absolutePos(rel(5, 0))), "standing water is a source");
         helper.assertFalse(fluidSource.get(level, helper.absolutePos(rel(1, 2))), "air is not a fluid source");
+
+        IWorldProperty leaves = property(helper, "leaves");
+        helper.assertTrue(leaves.get(level, helper.absolutePos(rel(2, 2))), "oak leaves are leaves");
+        helper.assertFalse(leaves.get(level, helper.absolutePos(rel(0, 0))), "an oak log is not leaves");
+        helper.assertFalse(leaves.get(level, helper.absolutePos(rel(2, 0))), "stone is not leaves");
+
+        IWorldProperty shoveled = property(helper, "shoveled");
+        helper.assertTrue(shoveled.get(level, helper.absolutePos(rel(3, 0))), "dirt is shoveled");
+        helper.assertTrue(shoveled.get(level, helper.absolutePos(rel(4, 0))), "grass block is shoveled");
+        helper.assertTrue(shoveled.get(level, helper.absolutePos(rel(3, 2))), "sand is shoveled");
+        helper.assertTrue(shoveled.get(level, helper.absolutePos(rel(4, 2))), "gravel is shoveled");
+        helper.assertTrue(shoveled.get(level, helper.absolutePos(rel(5, 2))), "the snow layer is shoveled");
+        helper.assertFalse(shoveled.get(level, helper.absolutePos(rel(2, 0))), "stone is not shoveled");
+        helper.assertFalse(shoveled.get(level, helper.absolutePos(rel(2, 2))), "leaves are not shoveled");
 
         helper.succeed();
     }

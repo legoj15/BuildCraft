@@ -66,6 +66,16 @@ public class RobotRenderState extends EntityRenderState {
         new ItemStackRenderState(), new ItemStackRenderState()
     };
 
+    /** Pre-resolved models for the worn items, drawn as a small item-model column above the cube (the
+     *  modern reading of 7.1.x's armor-box-around-the-head render — see {@code RenderRobot}). Fixed at
+     *  {@code EntityRobot.MAX_WEARABLES} entries; unused tail entries stay empty. */
+    public final ItemStackRenderState[] wearables = {
+        new ItemStackRenderState(), new ItemStackRenderState(),
+        new ItemStackRenderState(), new ItemStackRenderState(),
+        new ItemStackRenderState(), new ItemStackRenderState(),
+        new ItemStackRenderState(), new ItemStackRenderState()
+    };
+
     /** Laser beam visibility. Dormant for the whole of Ph3 — see {@code RenderRobot.extractRenderState}. */
     public boolean laserVisible;
 

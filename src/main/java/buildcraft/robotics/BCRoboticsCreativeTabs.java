@@ -54,7 +54,8 @@ public class BCRoboticsCreativeTabs {
                                 // Requester (Ph8) — the request-network endpoint
                                 output.accept(BCRoboticsItems.REQUESTER.get());
                                 // Robots: the empty-board chassis at flat charge, then a drained and
-                                // a full stack for every other registered board. When nothing has
+                                // a full stack for every other registered board, in the pinned 1.7.10
+                                // enumeration order (see BCRobotics). When nothing has
                                 // registered an empty board (a partially-initialised or stripped-down
                                 // build) fall back to the bare stack, which reads as "empty board, no
                                 // charge" anyway.

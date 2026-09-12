@@ -7,6 +7,7 @@ package buildcraft.robotics.boards;
 
 import java.util.List;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -35,7 +36,7 @@ public class BoardRobotFluidCarrierNBT extends RedstoneBoardRobotNBT {
 
     @Override
     public void addInformation(ItemStack stack, Player player, List<String> list, boolean advanced) {
-        list.add(Component.translatable("buildcraft.boardRobotFluidCarrier").getString());
+        list.add(ChatFormatting.BOLD + Component.translatable("buildcraft.boardRobotFluidCarrier").getString());
         list.add(Component.translatable("buildcraft.boardRobotFluidCarrier.desc").getString());
     }
 

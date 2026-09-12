@@ -19,6 +19,10 @@ public abstract class RedstoneBoardNBT<T> {
 
     public abstract String getID();
 
+    /** Hover text contributed for stacks carrying this board, one string per tooltip line. 7.1.x pushed
+     *  formatting through {@code EnumChatFormatting} prefixes inside these strings (its robot boards led the
+     *  name line with {@code BOLD}); those legacy codes render correctly from the literal components the
+     *  tooltip consumers wrap these in, so that mechanism is kept verbatim rather than restyled. */
     public abstract void addInformation(ItemStack stack, Player player, List<String> list, boolean advanced);
 
     public abstract String getDisplayName();

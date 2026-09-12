@@ -11,6 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -77,6 +78,35 @@ public class ItemRobotTooltipTest extends VanillaSetupBaseTester {
                 fullLines.get(fullLines.size() - 1).getString(),
                 flatLines.get(flatLines.size() - 1).getString(),
                 "the last line is the charge readout, and a full robot must not read like a flat one");
+    }
+
+    @Test
+    public void theBoardNameLineIsBoldWithoutTheWordBoard() {
+        // 1.7.10 parity, verified against a live 1.7.10 client (2026-09-12): the tooltip's first board line
+        // was EnumChatFormatting.BOLD + the localized name, and no board name carried a "Board" suffix.
+        for (RedstoneBoardRobotNBT board : allRobotBoards()) {
+            ItemStack stack = ItemRobot.createRobotStack(board.getID(), 0);
+            List<Component> lines = ItemRobot.tooltipLines(stack, false);
+
+            Assertions.assertFalse(lines.isEmpty(), board.getID() + " contributes tooltip lines");
+            Assertions.assertEquals(ChatFormatting.BOLD + board.getDisplayName(), lines.get(0).getString(),
+                    board.getID() + " must lead its tooltip with the bold board name, as 7.1.x did");
+            Assertions.assertFalse(board.getDisplayName().endsWith("Board"),
+                    "1.7.10's board names carried no \"Board\" suffix (got \"" + board.getDisplayName() + "\" for "
+                            + board.getID() + ")");
+        }
+    }
+
+    private static List<RedstoneBoardRobotNBT> allRobotBoards() {
+        RedstoneBoardRobotNBT empty = RedstoneBoardRegistry.instance.getEmptyRobotBoard();
+        List<RedstoneBoardRobotNBT> boards = new ArrayList<>();
+        for (buildcraft.api.boards.RedstoneBoardNBT<?> candidate : RedstoneBoardRegistry.instance.getAllBoardNBTs()) {
+            if (candidate instanceof RedstoneBoardRobotNBT robot && robot != empty) {
+                boards.add(robot);
+            }
+        }
+        Assertions.assertFalse(boards.isEmpty(), "precondition: the robot boards are registered");
+        return boards;
     }
 
     @Test

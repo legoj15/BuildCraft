@@ -285,31 +285,31 @@ public class BCRobotics {
         RobotManager.registerAIRobot(BoardRobotBuilder.class, "boardRobotBuilder",
                 "buildcraft.core.robots.boards.BoardRobotBuilder");
 
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
+        // Registration order = enumeration order (LinkedHashMap registry). 7.1.x registered its boards in
+        // cost tiers but stored them in a HashMap, so its creative tab actually enumerated the JVM's bucket
+        // order — which is the order players saw there and the one this port matches. The list below pins
+        // that 7.1.10 tab order verbatim (verified slot-by-slot against a 1.7.10 client); the chip tier of
+        // each board is noted beside it. Keep it exactly as it is unless 1.7.10 itself changes.
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLumberjackNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPlanterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotButcherNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotShovelmanNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotKnightNBT.INSTANCE, 12_800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLeaveCutterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotHarvesterNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotStripesNBT.INSTANCE, 12_800_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
         // The fluid carrier sits in 7.1.x's green tier beside the item carrier (8000 RF, chosen not derived).
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotFluidCarrierNBT.INSTANCE, 800_000_000L);
-
-        // 7.1.x board costs: the seven blue boards at 32000 RF, the red knight at 128000 RF.
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLumberjackNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotHarvesterNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotMinerNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPlanterNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotFarmerNBT.INSTANCE, 3_200_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPumpNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotButcherNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotKnightNBT.INSTANCE, 12_800_000_000L);
-        // The delivery board is 7.1.x's odd one out: green-tier chip, but priced in the "even more
-        // expensive" 128000 RF tier beside the knight (multi-step board, 7.1.x registration verbatim).
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotDeliveryNBT.INSTANCE, 12_800_000_000L);
-
-        // Ph9 boards: leave cutter and shovelman join 7.1.x's blue break-board tier; the bomber is red
-        // at the knight's price; stripes and the builder are 7.1.x's YELLOW chip (the fifth tier colour)
-        // at 128000 and 512000 RF respectively — the builder is the most expensive board 7.1.x shipped.
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotLeaveCutterNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotShovelmanNBT.INSTANCE, 3_200_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotBomberNBT.INSTANCE, 12_800_000_000L);
-        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotStripesNBT.INSTANCE, 12_800_000_000L);
+        // 7.1.x's odd one out: green-tier chip, but priced in the "even more expensive" 128000 RF tier beside
+        // the knight (multi-step board, 7.1.x cost verbatim); the builder is the most expensive board 7.1.x
+        // shipped (yellow chip, 512000 RF — Builders-gated there, always registered here).
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotBuilderNBT.INSTANCE, 51_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotFarmerNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotDeliveryNBT.INSTANCE, 12_800_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotMinerNBT.INSTANCE, 3_200_000_000L);
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotBomberNBT.INSTANCE, 12_800_000_000L);
     }
 }

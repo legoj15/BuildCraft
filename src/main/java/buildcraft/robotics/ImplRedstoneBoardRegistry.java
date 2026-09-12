@@ -8,7 +8,7 @@ package buildcraft.robotics;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import net.minecraft.nbt.CompoundTag;
@@ -33,7 +33,11 @@ public class ImplRedstoneBoardRegistry extends RedstoneBoardRegistry {
         long microJoules;
     }
 
-    private final Map<String, BoardFactory> boards = new HashMap<>();
+    // Insertion-ordered on purpose. 7.1.x used a HashMap, so what its creative tab actually showed was the
+    // JVM's bucket order — an accident we now pin deliberately: BCRobotics registers the board types in that
+    // observed 1.7.10 order, and every enumeration (tab rows, programming-table lists) replays it stably
+    // instead of drifting with the id hash.
+    private final Map<String, BoardFactory> boards = new LinkedHashMap<>();
     private RedstoneBoardRobotNBT emptyRobotBoardNBT;
 
     /** Seeds the empty robot board.

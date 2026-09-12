@@ -575,6 +575,10 @@ public class BuildCraftGameTests {
         // once — the dropsHandled guard keeps the loot path from double-dropping over the code path.
         reg.accept("buildcraftunofficial:pipe_command_break_drops_pipe", () -> buildcraft.transport.PipeDropsTester::testCommandBreakDropsPipeViaLoot);
         reg.accept("buildcraftunofficial:pipe_player_break_no_double_drop", () -> buildcraft.transport.PipeDropsTester::testPlayerBreakNoDoubleDrop);
+        // Force insertion (robot stations / obsidian / stripes pipes) must give items a real entry leg
+        // and deliver them end-to-end — the zero-length leg was the server-side half of the
+        // robot-cargo-invisible-in-pipes bug (see PipeFlowForceInsertTester javadoc).
+        reg.accept("buildcraftunofficial:pipe_force_insert_entry_leg", () -> buildcraft.transport.pipe.flow.PipeFlowForceInsertTester::forceInsertEntryLegAndDelivery);
         // Waterlogging — pipes are floodable (partial collision + dynamicShape ⇒ blocksMotion()==false),
         // so without SimpleWaterloggedBlock flowing water would delete them with no drop. Guards: the
         // coexist (placeLiquid) branch waterlogs rather than destroys, and a real water source floods.

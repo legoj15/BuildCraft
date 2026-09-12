@@ -652,11 +652,16 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         item.toCenter = true;
         item.speed = speed;
         item.colour = colour;
-        item.genTimings(now, 0);
+        // 7.1.x parity: force-injected items visibly crossed the pipe on the way to the center, and
+        // sendTravelerPacket announced them to clients like every other entry path. genTimings(now, 0)
+        // plus the missing sendItemDataToClient left robot station unloads (and the obsidian/stripes
+        // pipes, the other force callers) with an invisible, zero-length entry leg.
+        item.genTimings(now, getPipeLength(item.side));
         if (from != null) {
             item.tried.add(from);
         }
         items.add(item.timeToDest, item);
+        sendItemDataToClient(item);
     }
 
     private void insertItemEvents(@Nonnull ItemStack toInsert, DyeColor colour, double speed, Direction from) {

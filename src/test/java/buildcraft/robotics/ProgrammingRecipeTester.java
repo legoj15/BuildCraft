@@ -136,4 +136,24 @@ public class ProgrammingRecipeTester extends VanillaSetupBaseTester {
         Assertions.assertEquals(before, ProgrammingRecipeRegistry.INSTANCE.getRecipes().size(),
                 "a duplicate id is warned about and dropped, not added");
     }
+
+    @Test
+    public void blankBoardsStackToSixteenProgrammedStayAtOne() {
+        // 7.1.x: getItemStackLimit = getBoardNBT(stack) != emptyRobotBoard ? 1 : 16 — the audit-decided
+        // port: the item stacks to 16, every programmed stack carries MAX_STACK_SIZE 1.
+        Assertions.assertEquals(16, ItemRedstoneBoard.createStack(null).getMaxStackSize(),
+                "a bare board stack is the blank template and stacks to 16");
+        Assertions.assertEquals(16, ItemRedstoneBoard.createStack(BoardRobotEmptyNBT.INSTANCE).getMaxStackSize(),
+                "the empty board's own stack is blank and stacks to 16");
+        Assertions.assertEquals(1, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE).getMaxStackSize(),
+                "a programmed board stays at 1");
+        Assertions.assertEquals(16, new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get()).getMaxStackSize(),
+                "the bare item default is the blank template's 16");
+        for (ItemStack option : recipe.getOptions(6, 4)) {
+            boolean blank = ItemRedstoneBoard.getBoardNBT(option)
+                    == RedstoneBoardRegistry.instance.getEmptyRobotBoard();
+            Assertions.assertEquals(blank ? 16 : 1, option.getMaxStackSize(),
+                    "every table option follows the blank/programmed stacking rule");
+        }
+    }
 }

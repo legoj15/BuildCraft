@@ -105,11 +105,11 @@ public class ItemRobot extends Item {
         }
         blob.putLong(TAG_ENERGY, energy);
         writeBlob(stack, blob);
-        if (hasEmptyBoard(stack)) {
-            // 7.1.x's stacking rule, restored per the gameplay audit: a blank robot stacks to 16, a
-            // programmed one stays at 1. Distinct charges still refuse to merge (components must match
-            // exactly), which is what old-NBT behaviour amounted to anyway.
-            stack.set(DataComponents.MAX_STACK_SIZE, 16);
+        if (!hasEmptyBoard(stack)) {
+            // 7.1.x's stacking rule, restored per the gameplay audit: the item stacks to 16 and a
+            // programmed robot carries MAX_STACK_SIZE 1. Distinct charges still refuse to merge
+            // (components must match exactly), which is what old-NBT behaviour amounted to anyway.
+            stack.set(DataComponents.MAX_STACK_SIZE, 1);
         }
         return stack;
     }

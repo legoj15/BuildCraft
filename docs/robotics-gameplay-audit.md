@@ -197,6 +197,16 @@ Tracked as one-liners in todos.md; the detail lives here.
   sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's
   friendlier behaviour unless asked; `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget,
   dead code today).
+- **Ph7 (Programming Table) deviations, 2026-09-12:** craft consumes via `power -= target` instead of 7.1.x's
+  zero-on-craft (the port-wide laser-table convention; unreachable in practice because `receiveLaserPower`
+  clamps at exactly the target); the option-select RPC clamps bounds (7.1.x's could NPE on a stale select);
+  both tables sit on the *robots* creative tab rather than 7.1.x's silicon tab (the port consolidates robot
+  content there); the +8-light-while-working nicety is dropped (modern light emission is blockstate-static);
+  the integration table's precise-extract means the expansion grid must hold exactly robot + one board
+  (extras pause the craft instead of being ignored, as 7.1.x's first-board-only consumption effectively
+  allowed). Landing the first integration recipe also fixed two latent `TileIntegrationTable` bugs: the
+  component-era `StackUtil.contains` centre-stack guard (data-carrying targets could never craft) and the
+  ignored `extract` return (output could spawn without consuming inputs).
 
 ### Decided: blank robots and boards
 
@@ -210,14 +220,13 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
    (overlay) message, not a chat line, sent from the server side of `useOn` when the guard trips; new lang key
    (e.g. `buildcraft.robot.not_programmed`) in `en_us.json` AND `zh_cn.json` (the translation-leak sweep watches
    both); return `InteractionResult` consume/fail so the hand does not swing a placement that never happens.
-3. **Blank robots and blank boards stack to 16 again; programmed ones stay at 1** — 7.1.x
-   `ItemRobot.getItemStackLimit` / `ItemRedstoneBoard.getItemStackLimit` returned `boardNBT != empty ? 1 : 16`.
-   Port today: both items are `stacksTo(1)` in `BCRoboticsItems`. Modern items have no per-stack limit
-   override; the way to get "16 unless programmed" is `stacksTo(16)` on the item plus a `MAX_STACK_SIZE`
-   component of 1 written onto every programmed stack (the same CUSTOM_DATA write path that stores the board in
-   `ItemRobot.createStack` / `ItemRedstoneBoard.createStack`), and the placement/board code must keep working with
-   stacks of blanks (consume one). Tests: blank stacks merge to 16, a programmed stack reports max 1, a blank
-   stack of 16 loses exactly one on a successful placement.
+3. **Blank robots and blank boards stack to 16 again; programmed ones stay at 1** — **DONE with Ph7
+   (2026-09-12)**, in exactly the shape prescribed here: both items `stacksTo(16)` in `BCRoboticsItems`,
+   `MAX_STACK_SIZE` 1 written by `ItemRobot.createRobotStack` / `ItemRedstoneBoard.createStack` on every
+   programmed stack. Pinned by `ProgrammingRecipeTester` / `RobotIntegrationRecipeTester` (blank merge-16,
+   programmed max-1, table options follow the rule) and the `robot_survival_recipes_resolve` crafting smoke.
+   Still open from this item's test list: "a blank stack of 16 loses exactly one on a successful placement"
+   — rides with item 1 (the placement-refusal flip), since both live in `ItemRobot.useOn`.
 
 - **`StatementParameterRobot` accepts only robot stacks**; 7.1.x also took a List (match robots by list) or a
   wearable. Lists exist in the port; wearables are Ph9.

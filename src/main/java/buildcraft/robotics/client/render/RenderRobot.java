@@ -388,8 +388,13 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
 
         // 7.2.x robot naming: a name-tagged robot shows its name. The base extractRenderState fills
         // state.nameTag (custom names only), so this is a pure draw hook — the same call vanilla's own
-        // non-living renderers (item frame, boat, minecart) make.
+        // non-living renderers (item frame, boat, minecart) make. The submit helper grew an explicit
+        // pixel-offset parameter and renamed at 26.1 (submitNameTag → submitNameDisplay).
+        //? if >=26.1 {
         submitNameDisplay(state, poseStack, collector, cameraState, 0);
+        //?} else {
+        /*submitNameTag(state, poseStack, collector, cameraState);*/
+        //?}
 
         // Drawn before the body yaw is applied: the destination is a world-axis offset, not a
         // body-relative one.

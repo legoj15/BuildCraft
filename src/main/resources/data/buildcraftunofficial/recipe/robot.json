@@ -12,9 +12,6 @@
     "C": "buildcraftunofficial:chipset_diamond"
   },
   "result": {
-    "id": "buildcraftunofficial:robot",
-    "components": {
-      "minecraft:max_stack_size": 16
-    }
+    "id": "buildcraftunofficial:robot"
   }
 }

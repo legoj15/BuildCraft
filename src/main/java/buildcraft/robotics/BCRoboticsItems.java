@@ -40,10 +40,12 @@ public class BCRoboticsItems {
         ROBOT_STATION = RegistrationUtilBC.registerItem(ITEMS, "robot_station",
             props -> new ItemPluggableSimple(props, BCRoboticsPlugs.robotStation, null,
                 buildcraft.robotics.RobotStationPluggable::boundingBoxFor));
+        // Both stack to 16 as the BLANK template (7.1.x's getItemStackLimit rule, audit-decided): every
+        // PROGRAMMED stack carries MAX_STACK_SIZE 1, stamped by the create*Stack factories.
         ROBOT = RegistrationUtilBC.registerItem(ITEMS, "robot", ItemRobot::new,
-            props -> props.stacksTo(1));
+            props -> props.stacksTo(16));
         REDSTONE_BOARD = RegistrationUtilBC.registerItem(ITEMS, "redstone_board", ItemRedstoneBoard::new,
-            props -> props.stacksTo(1));
+            props -> props.stacksTo(16));
     }
 
     public static void init(IEventBus modEventBus) {

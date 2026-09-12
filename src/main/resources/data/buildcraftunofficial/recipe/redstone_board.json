@@ -11,9 +11,6 @@
     "R": "#c:dusts/redstone"
   },
   "result": {
-    "id": "buildcraftunofficial:redstone_board",
-    "components": {
-      "minecraft:max_stack_size": 16
-    }
+    "id": "buildcraftunofficial:redstone_board"
   }
 }

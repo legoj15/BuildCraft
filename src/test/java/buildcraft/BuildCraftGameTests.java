@@ -818,5 +818,17 @@ public class BuildCraftGameTests {
         // WorldPropertySweepTest): wood/harvestable/ore@0..3/dirt/replaceable/fluidSource pinned against
         // an arena of placed blocks, through the registry the boards query.
         reg.accept("buildcraftunofficial:world_properties_match", () -> buildcraft.core.properties.WorldPropertyTester::matchTheArenaBlocks);
+
+        // Robotics Ph7 — the Programming Table + shipped Integration Table: the craft loop (blank board
+        // in, laser MJ, programmed board out), the blocked-output pause, a live laser finding a working
+        // table, robot integration with charge preservation + the SAFETY top-up, the four survival
+        // crafting recipes, and the robot-naming data path (7.2.x parity).
+        reg.accept("buildcraftunofficial:programming_table_crafts_selected_board", () -> buildcraft.robotics.ProgrammingTableTester::craftsSelectedBoard);
+        reg.accept("buildcraftunofficial:programming_table_blocked_output_does_not_craft", () -> buildcraft.robotics.ProgrammingTableTester::blockedOutputDoesNotCraft);
+        reg.accept("buildcraftunofficial:laser_targets_programming_table", () -> buildcraft.robotics.ProgrammingTableTester::laserTargetsProgrammingTable);
+        reg.accept("buildcraftunofficial:integration_table_programs_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableProgramsRobot);
+        reg.accept("buildcraftunofficial:integration_table_tops_up_drained_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableTopsUpDrainedRobot);
+        reg.accept("buildcraftunofficial:robot_survival_recipes_resolve", () -> buildcraft.robotics.ProgrammingTableTester::robotSurvivalRecipesResolve);
+        reg.accept("buildcraftunofficial:robot_name_tag_data_round_trip", () -> buildcraft.robotics.ProgrammingTableTester::robotNameTagDataRoundTrip);
     }
 }

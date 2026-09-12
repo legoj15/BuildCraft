@@ -126,4 +126,22 @@ public class RobotIntegrationRecipeTester extends VanillaSetupBaseTester {
                 "the centre requirement matches a robot");
         Assertions.assertFalse(centre.ingredient.test(board), "and not a board");
     }
+
+    @Test
+    public void blankRobotsStackToSixteenProgrammedStayAtOne() {
+        Assertions.assertEquals(16, ItemRobot.createRobotStack(null, 0).getMaxStackSize(),
+                "a bare robot stack is blank and stacks to 16");
+        Assertions.assertEquals(16, ItemRobot.createRobotStack(BoardRobotEmptyNBT.ID, 100).getMaxStackSize(),
+                "an empty-board robot is blank and stacks to 16");
+        Assertions.assertEquals(1, ItemRobot.createRobotStack(BoardRobotPickerNBT.ID, 100).getMaxStackSize(),
+                "a programmed robot stays at 1");
+        Assertions.assertEquals(1,
+                output(ItemRobot.createRobotStack(null, 1L),
+                        ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE)).getMaxStackSize(),
+                "integrating a real board produces a single-stack robot");
+        Assertions.assertEquals(16,
+                output(ItemRobot.createRobotStack(null, 1L),
+                        ItemRedstoneBoard.createStack(BoardRobotEmptyNBT.INSTANCE)).getMaxStackSize(),
+                "integrating the empty board produces a stackable blank robot");
+    }
 }

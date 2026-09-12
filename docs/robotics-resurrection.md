@@ -2,7 +2,7 @@
 
 Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, Ph5, and Ph6 are complete. Next up: Ph7 — Programming Table.**
+**Status: Ph0 (seams b, c), Ph1, Ph2, Ph3, Ph4, Ph5, Ph6, and Ph7 are complete. Next up: Ph8 — Requester network.**
 
 **2026-09-03 gameplay audit** against the live 7.1.27 reference client (record: [robotics-gameplay-audit.md](robotics-gameplay-audit.md)): numeric parity complete; 16 deviations fixed tests-first, the remaining ones listed there as follow-ups/decisions.
 
@@ -107,11 +107,15 @@ All 22 robot/station triggers+actions and the 2 parameter widgets (board-picker,
 
 _Tests:_ 7 JUnit classes (filter truth tables, provide-items extract, forbid matching + invert, work-area math, blanket registration/serialization sweep, param widgets, provider discovery) + 3 gate GameTests (sleep+wakeup through a live `PluggableGate`, the forbid refusal through the live station, the goto-station redirect).
 
-### Ph7 — Programming Table
+### Ph7 — Programming Table (COMPLETE 2026-09-12)
 
-Block/tile/menu (reuse `RenderLaser` beam) + `BoardProgrammingRecipe`/`RobotIntegrationRecipe` (mind the CustomRecipe cross-node cliff).
+The recipe core is a bespoke registry, deliberately outside vanilla `RecipeType`s — that is how the CustomRecipe cross-node serializer cliff is avoided, exactly as the test plan prescribed. `IProgrammingRecipe`/`IProgrammingRecipeManager` (API ports of the 7.1.x interfaces, energy as long µMJ) + `lib/recipe/ProgrammingRecipeRegistry` + the `BuildcraftRecipeRegistry.programmingTable` handle; populated by `BCRoboticsRecipes.ensureInitialized()` at `ServerAboutToStartEvent` (servers) and `LoggingIn` (MP clients — the `BCSiliconRecipes` idiom), because the recipe objects build `Ingredient`s in their constructors. `BoardProgrammingRecipe` offers every registered board (empty board included, at cost 0 — addons appear automatically) sorted cost-then-id; `RobotIntegrationRecipe` programs robot + 1 board at a flat 5000 MJ, preserving the robot's charge and topping a zero-charge robot up to `SAFETY_POWER`.
 
-_Tests:_ board crafting-cost tiers (8k/32k/128k/512k — distinct from per-tick leaf cost); Programming/Integration recipe math as **pure JUnit via a bespoke recipe-manager** (sidesteps the vanilla `CustomRecipe` cross-node serializer cliff); board-sorter determinism; robot energy preserved through integration. McDevBridge: table GUI + energy-fill animation.
+The table itself: `TileProgrammingTable` (silicon) + `ContainerProgrammingTable`/`GuiProgrammingTable` (robotics — 8.0.x file placement), two slots (board in / board out) and a 6×4 option grid hit-tested through `clickMenuButton`, laser-driven through the stock `TileLaserTableBase`. Block model + GUI texture recovered from `8.0.x-1.12.2` (the `transparent.png` pane, cutout render). The Integration Table's `BCLib.DEV` gates came down — their stated reason ("no registered integration recipes") is void now — and landing the first real recipe exposed two latent bugs in `TileIntegrationTable`: the 1.12-era centre-stack check compared against a component-less `new ItemStack`, which `StackUtil.contains` rejects in the components era (a data-carrying target like a robot could never craft), and `serverTick` ignored `extract`'s return (a guard failure would emit the output without consuming the inputs — a dupe). Survival chain shipped: table recipes verbatim from 7.1.x (programming: obsidian + emerald + redstone chipset + diamond gear; integration: obsidian + crafting table + redstone chipset + gold gear), blank board (8 paper + redstone) and robot (5 iron + redstone + 2 diamond chipsets; "crystalRedstone" was just ore-dict vanilla redstone — Decision 8 resolved to no new item). Ride-alongs: the audit-decided stacking rule (items `stacksTo(16)`, every programmed stack carries `MAX_STACK_SIZE` 1) and robot naming (7.2.x parity, upstream `795c08681`) — the nametag renders through `submitNameDisplay`/`renderNameTag` on both renderer generations.
+
+Deliberate deviations from 7.1.x, recorded in the audit doc: craft consumes via `power -= target` (the port-wide laser-table convention; 7.1.x zeroed the buffer) — theoretical only, since `receiveLaserPower`'s clamp keeps power at exactly the target; the option-select RPC clamps bounds (7.1.x's could NPE on a stale select); both tables live on the *robots* creative tab (the port consolidates robot content there) rather than 7.1.x's silicon tab; and the +8-light-while-working nicety is dropped (modern light emission is blockstate-static).
+
+_Tests:_ 16 JUnit across `ProgrammingRecipeTester` + `RobotIntegrationRecipeTester` (cost-tier pins at the µMJ bridge, option-order determinism, `canCraft` truth table, charge preservation + SAFETY floor, flat-cost pin, registry duplicate-drop, blank/programmed stacking on both items) + 7 game tests (`ProgrammingTableTester`, suite 424→431): the craft E2E (blank board in → select → laser MJ → programmed board out, input consumed), the blocked-output pause, a live laser finding a working table (gated on observed delivery, never a fixed tick), integration E2E with charge preservation, the drained-robot SAFETY top-up, a four-recipe crafting smoke (including the component-carried results), and the robot-naming data round-trip.
 
 ### Ph8 — Requester network
 

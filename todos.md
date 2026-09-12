@@ -1,4 +1,4 @@
-Last audited: 2026-09-09
+Last audited: 2026-09-12
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -11,6 +11,7 @@ Last audited: 2026-09-09
 - Make the Electronic Library's snapshot list scrollable — [notes](docs/todo-details.md#electronic-library-scrolling)
 - Real goggles art — [quick notes](docs/todo-details.md#quick-notes)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
+- JEI category for the Programming Table's board grid (the assembly-table category is the pattern)
 - Unify button implementation (native buttons over custom background images)
 - Collapse duplicate fluid textures on the atlas (low value) — [notes](docs/todo-details.md#fluid-atlas-de-duplication)
 - Stop creating a fresh fake player for every machine permission check — [notes](docs/todo-details.md#fake-player-churn)
@@ -21,18 +22,16 @@ Last audited: 2026-09-09
 - Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)
 - Turn on Gradle's configuration cache for faster builds — [notes](docs/todo-details.md#gradle-configuration-cache)
 - Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
-- Check robots can be named (7.2.x had it; probably free via vanilla name tags) — [notes](docs/todo-details.md#robot-naming-parity)
 - Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
 - Robots: the Planter can't plant sugar cane yet — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: a blank robot must refuse placement with a "Not programmed" message — [spec](docs/robotics-gameplay-audit.md#decided-blank-robots-and-boards)
-- Robots: blank robots and blank boards stack to 16 again, like 1.7.10 — [spec](docs/robotics-gameplay-audit.md#decided-blank-robots-and-boards)
 - Robots: close the untested behaviours the audit listed — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 
 ## 🆕 New Features (version 2026.2)
 
-- Bring robots back — the programming table (survival board crafting) is next — [plan](docs/robotics-resurrection.md)
+- Bring robots back — the requester network + Delivery robot is next — [plan](docs/robotics-resurrection.md)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

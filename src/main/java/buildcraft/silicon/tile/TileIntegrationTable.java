@@ -57,7 +57,11 @@ public class TileIntegrationTable extends TileLaserTableBase {
     private boolean extract(IngredientStack item, ImmutableList<IngredientStack> items, boolean simulate) {
         ItemStack targetStack = invTarget.getStackInSlot(0);
         if (targetStack.isEmpty()) return false;
-        if (!StackUtil.contains(new ItemStack(targetStack.getItem(), item.count), targetStack)) return false;
+        // Count check only: the 1.12-era idiom compared against a fresh component-less stack of the same
+        // item, which StackUtil.contains now (correctly, for the components era) rejects against a stack
+        // carrying data — so any data-carrying target (a robot's board+charge) could never craft. The
+        // ingredient test below already decides identity.
+        if (targetStack.getCount() < item.count) return false;
         if (!item.ingredient.test(targetStack)) return false;
         if (!extract(invToIntegrate, items, simulate, true)) return false;
         if (!simulate) {
@@ -100,16 +104,20 @@ public class TileIntegrationTable extends TileLaserTableBase {
 
         if (getTarget() > 0 && power >= getTarget()) {
             ItemStack output = getOutput();
-            extract(recipe.getCenterStack(), recipe.getRequirements(output), false);
-            ItemStack result = invResult.getStackInSlot(0);
-            if (!result.isEmpty()) {
-                result = result.copy();
-                result.setCount(result.getCount() + output.getCount());
-            } else {
-                result = output.copy();
+            // Gate the whole craft on the consumption actually succeeding — the return value used to be
+            // ignored, which could emit the output while leaving every input where it was (a dupe,
+            // reachable through any extract guard failing mid-tick).
+            if (extract(recipe.getCenterStack(), recipe.getRequirements(output), false)) {
+                ItemStack result = invResult.getStackInSlot(0);
+                if (!result.isEmpty()) {
+                    result = result.copy();
+                    result.setCount(result.getCount() + output.getCount());
+                } else {
+                    result = output.copy();
+                }
+                invResult.setStackInSlot(0, result);
+                power -= getTarget();
             }
-            invResult.setStackInSlot(0, result);
-            power -= getTarget();
         }
     }
 

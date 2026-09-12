@@ -56,3 +56,4 @@ Last audited: 2026-09-09
 - Re-verify the REI integration — no REI release for MC 26.1 exists yet — [notes](docs/todo-details.md#rei-recompile)
 - Dedicated pipe-texture atlas — vanilla render internals forbid it today — [why + reopen trigger](docs/todo-details.md#pipe-atlas-split-blocked)
 - Fluid viscosity — floating gases and swim effects need vanilla support — [quick notes](docs/todo-details.md#quick-notes)
+- Bump the 26.2 node past NeoForge 26.2.0.84 — .87's access transformer breaks the dev recompile for everyone — [diagnosis](docs/todo-details.md#neoforge-262087-recompile-break)

@@ -129,3 +129,11 @@ One-line technical breadcrumbs for bullets that don't need a full section:
 - **Cauldron as tank** — NeoForge already exposes `IFluidHandler` capabilities for cauldrons; wire that into BC's fluid pipe connection logic (drain water/lava/powder-snow, fill to the appropriate level).
 - **Builder can't-place flags** — e.g. a red box overlay on the resource list or the build area for blocks that can't be placed yet (floating torches, flowers on stone).
 - **Fluid viscosity (blocked)** — flow speed is already moddable, but negative density (floating gases) is not native and traversal/swimming modifications aren't possible.
+
+## NeoForge 26.2.0.87 recompile break
+
+Bumping the 26.2 node to NeoForge 26.2.0.87 fails in `:26.2:createMinecraftArtifacts` — NeoForm's recompile of the patched MC sources dies with `contents() in <anonymous net.minecraft.core.HolderSet$1> cannot override contents() in net.minecraft.core.HolderSet.Named; attempting to assign weaker access privileges; was public` (line 44 = the `emptyNamed` anonymous-class override in `net/minecraft/core/HolderSet.java`).
+
+Diagnosed 2026-09-11: [PR #3451](https://github.com/neoforged/NeoForge/pull/3451) (registry-based-conditions fix, in .87 only) added two accesstransformer.cfg lines widening `HolderSet$Named contents()` and `HolderSet$1 contents()` to public. ModDevGradle's recompile classpath carries the AT-applied binary while the decompiled sources still declare both methods `protected`, so javac rejects the override. Verified the patched-sources zip for .87 is clean (`protected` everywhere) — it is purely the AT/binary-vs-source mismatch. Breaks `createMinecraftArtifacts` for every ModDevGradle user on .87; 26.1.2.109 does not carry the AT change and builds fine.
+
+**Unblock:** bump the pin once NeoForge ships a fix (drop the two `HolderSet` AT lines or patch the sources to match). The SessionStart hook will re-flag the node; file/check an upstream issue at that point if still broken.

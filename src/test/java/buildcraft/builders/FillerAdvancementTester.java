@@ -16,7 +16,7 @@ import buildcraft.builders.tile.TileFiller;
 /**
  * Coverage for the {@code building_for_the_future} advancement wiring on the Filler.
  * <p>
- * Per {@code CLAUDE.md}'s "Player-state testing limitation" — {@code makeMockPlayer}
+ * Per {@code AGENTS.md}'s "Player-state testing limitation" — {@code makeMockPlayer}
  * returns a plain {@code Player}, not a {@code ServerPlayer}, so the actual award call
  * inside {@link buildcraft.lib.misc.AdvancementUtil} short-circuits. These tests instead
  * pin the predicates and wiring around the award: the advancement JSON exists with the

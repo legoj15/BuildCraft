@@ -53,7 +53,7 @@ unrecoverable. Do not spend time hunting for it. What survives is the *outcome*:
 `waitedCycles` field, its increment and its `> 40` threshold sit on **identical line numbers** in our file
 and `upstream/7.1.x:common/buildcraft/robotics/ai/AIRobotLoad.java` (32, 52, 54), with the same
 `ANY_QUANTITY = -1`. The diff is imports and type names. That is not convergent reimplementation; it is one
-file with its vocabulary substituted — which is precisely what CLAUDE.md's "the header tracks the FILE's
+file with its vocabulary substituted — which is precisely what AGENTS.md's "the header tracks the FILE's
 text" rule is about.
 
 **4. Rewriting the thin files to shed MMPL is blocked on substance, not effort.** `RobotManager` registers
@@ -83,7 +83,7 @@ purely to change a word in its header, while keeping its behaviour, is notice-st
 
 `api/robots/DockingStation.java` (the four D1 station-policy methods are ours, on top of upstream's class)
 and `robotics/item/ItemRedstoneBoard.java` (a new file that absorbed upstream's `"id"`-key fallback and its
-`createStack`/`getBoardNBT` shape). CLAUDE.md's **Mixed** category: both notices, upstream's first.
+`createStack`/`getBoardNBT` shape). AGENTS.md's **Mixed** category: both notices, upstream's first.
 
 `ItemRedstoneBoard` shipped inside the Ph4 range with upstream's notice *missing* entirely and a green test
 suite — see the guard gap below.
@@ -105,7 +105,7 @@ files is ported.
 
 Second instance, caught the day after this doc was written: `core/properties/WorldPropertyIsSoft.java` —
 a javadoc-acknowledged 7.1.x port — shipped with the **api-package MIT boilerplate cloned onto it** (the
-exact reflex the CLAUDE.md rule forbids), so it carried *a* notice and passed every check while claiming
+exact reflex the AGENTS.md rule forbids), so it carried *a* notice and passed every check while claiming
 the wrong licence. The Ph4 final review's fidelity lens found it by diffing every ported file's header
 against its actual upstream source. It now carries the verbatim MMPL block and is NOTICE-listed (38
 files). Wrong-header files are strictly harder to catch than headerless ones: nothing about an MIT claim

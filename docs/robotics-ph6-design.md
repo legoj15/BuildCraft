@@ -189,7 +189,7 @@ port time, never assume from the directory). `CopyrightHeaderTester` re-validate
 `common/buildcraft/robotics/statements/`) ship bare upstream and are ported bare, so they silently
 inherit the root MPL-2.0 default. They CANNOT be recorded in NOTICE.md: its list is machine-validated
 both ways, and `CopyrightHeaderTester.noticeFileListsEveryMmplFile` treats any listed path without an
-MMPL notice as a stale legal claim (CLAUDE.md's "record headerless ports in NOTICE.md" predates that
+MMPL notice as a stale legal claim (AGENTS.md's "record headerless ports in NOTICE.md" predates that
 reverse check and no longer applies to them). This paragraph is their provenance record.
 
 ## Out of scope

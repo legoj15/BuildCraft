@@ -590,7 +590,7 @@ public class EngineTester {
     /**
      * The {@code clearOverheat} helper resets heat to MIN_HEAT and recomputes the power stage.
      * Called with {@code null} player to avoid the ServerPlayer-only advancement award path
-     * (see CLAUDE.md "Player-state testing limitation").
+     * (see AGENTS.md "Player-state testing limitation").
      */
     public static void testEngineClearOverheatApi(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);

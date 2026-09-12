@@ -12,8 +12,8 @@ gradle.properties mirror).
 
 ## Awareness — the SessionStart hook
 
-`.claude/settings.json` registers a `SessionStart` hook that runs
-`scripts/neoforge-version-check.sh`: it enumerates every `versions/<node>/gradle.properties`,
+`.claude/settings.json` (Claude Code) and the tracked `.zcode/config.json` (ZCode) each register a
+`SessionStart` hook that runs `scripts/neoforge-version-check.sh`: it enumerates every `versions/<node>/gradle.properties`,
 derives that node's NeoForge line from its pinned `neo_version` by stripping the trailing
 `.<build>` (deriving the line from `minecraft_version` would only line up for the 26.1.2 node —
 the MC→NeoForge mapping is non-uniform across the CalVer cliff: MC `1.21.1`→NeoForge `21.1.x`,
@@ -93,3 +93,7 @@ are). Recreate it after a fresh clone:
   }
 }
 ```
+
+ZCode needs no recreation — its `.zcode/config.json` hook registration is tracked — but its
+skill copies are a machine-local mirror: run `bash scripts/zcode-skills-sync.sh` once after a
+fresh clone (and after any edit to a tracked skill).

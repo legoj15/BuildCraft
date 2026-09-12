@@ -14,7 +14,7 @@ Every finding was read against the source and adversarially checked; the cited f
 
 ## THE HEADLINE SPLIT — Block-entity base classes
 
-> **Doc/reality gap:** CLAUDE.md:75 states *"All block entities extend `TileBC_Neptune`."* This is **false** for ~10 tiles: `TileTank`, `TileHeatExchange`, `TileDistiller_BC8`, `TileFloodGate`, `TileSpringOil`, `TileLaser`, `TilePipeHolder`, `TileMarker`, and `TileEngineBase_BC8` (+ all engine subclasses + `TileDynamoMJ`) extend vanilla `BlockEntity` directly. Each carries a self-documenting *"Platform bridge … extends BlockEntity directly (not TileBC_Neptune)"* comment — the authors knew, but the top-level doc was never updated.
+> **Doc/reality gap:** AGENTS.md:75 states *"All block entities extend `TileBC_Neptune`."* This is **false** for ~10 tiles: `TileTank`, `TileHeatExchange`, `TileDistiller_BC8`, `TileFloodGate`, `TileSpringOil`, `TileLaser`, `TilePipeHolder`, `TileMarker`, and `TileEngineBase_BC8` (+ all engine subclasses + `TileDynamoMJ`) extend vanilla `BlockEntity` directly. Each carries a self-documenting *"Platform bridge … extends BlockEntity directly (not TileBC_Neptune)"* comment — the authors knew, but the top-level doc was never updated.
 
 ### Why these tiles diverge (JUSTIFIED at the hierarchy level)
 Engines store owner differently and have their own abstract hierarchy; pipes use a `CompoundTag`-based save cache; markers have their own cache load/unload lifecycle; the fluid tiles need bespoke column/balancing/client-sync logic. Forcing them onto `TileBC_Neptune` would drag in unused item-handler/owner/player-tracking machinery. **So skipping the heavyweight base is legitimate.**
@@ -169,7 +169,7 @@ The object↔NBT concept is spelled several ways: `writeData/readData` (tiles), 
 - **`StatementParameterItemStackExact` is dead** — never registered, only its own gametest references it; `getParameterReader("buildcraft:stackExact")` returns null (a latent footgun if anything ever emitted one). It was left half-wired by the same "completeness audit" commit. **Delete-or-finish.**
 - **Two fluid triggers share the `buildcraft:fluid.` prefix** (the inventory pair correctly uses distinct prefixes). Non-colliding today (disjoint enum names) but a future `FULL`-style level value would silently overwrite. Rename to `buildcraft:fluidlevel.` with a legacy alias (BCStatement varargs already supports this) — best bundled with the trigger-base unification.
 - **Silicon redundantly re-registers 7 already-self-registered statements** (`BCStatement` ctor self-registers; silicon is the only module that *also* calls `registerStatement`). **Quick win: delete the 7 calls.**
-- **JUSTIFIED — do not change:** the statement system is a hand-rolled static `StatementManager` registry, NOT `DeferredRegister`. That is correct (statements aren't registry content). Add a one-line CLAUDE.md carve-out.
+- **JUSTIFIED — do not change:** the statement system is a hand-rolled static `StatementManager` registry, NOT `DeferredRegister`. That is correct (statements aren't registry content). Add a one-line AGENTS.md carve-out.
 
 ---
 
@@ -181,7 +181,7 @@ The object↔NBT concept is spelled several ways: `writeData/readData` (tiles), 
 - **Three empty stub classes** (`ConfigUtil`, `RegistryConfig`, `EnumRestartRequirement` — the last an enum with zero constants) — **delete.**
 - **Orphan lang key `bptStoreExternalThreshold`** (en_us.json:666) whose option was removed in commit 5129e2ae0 — **delete the line.**
 - **7 near-identical `list→Set<Identifier>` getters** in `BCEnergyConfig.java:262-288` — extract one `toIdSet` helper.
-- **`BCEnergyConfig` straddles COMMON/WORLDGEN/CLIENT scopes** and the CLIENT display section aggregates two subsystem classes. This is **JUSTIFIED** (COMMON/CLIENT split is correct; worldgen-with-energy is sensible). **Doc fix only:** CLAUDE.md still says "Single BCUnifiedConfig wraps all config" — there are now two specs (`BCUnifiedConfig` COMMON + `BCUnifiedClientConfig` CLIENT).
+- **`BCEnergyConfig` straddles COMMON/WORLDGEN/CLIENT scopes** and the CLIENT display section aggregates two subsystem classes. This is **JUSTIFIED** (COMMON/CLIENT split is correct; worldgen-with-energy is sensible). **Doc fix only:** AGENTS.md still says "Single BCUnifiedConfig wraps all config" — there are now two specs (`BCUnifiedConfig` COMMON + `BCUnifiedClientConfig` CLIENT).
 
 ---
 
@@ -206,13 +206,13 @@ The object↔NBT concept is spelled several ways: `writeData/readData` (tiles), 
 
 ---
 
-## Consolidated DOC/REALITY gaps in CLAUDE.md
+## Consolidated DOC/REALITY gaps in AGENTS.md
 
 Three stale claims actively mislead future agents into mis-modeling the architecture or "fixing" load-bearing divergence:
 
-1. **CLAUDE.md:75** — *"All block entities extend `TileBC_Neptune`."* False for ~10 tiles. → "most; a documented set extend vanilla `BlockEntity` and re-implement the BC idioms by hand (and note the absence of a shared block base)."
-2. **CLAUDE.md (Config)** — *"Single `BCUnifiedConfig` wraps all per-subsystem configs into one `ModConfigSpec`."* There are now **two** specs (COMMON `BCUnifiedConfig` + CLIENT `BCUnifiedClientConfig`).
-3. **CLAUDE.md (Statements)** — implies statements ride the "always `DeferredRegister`" convention. They use the static `StatementManager` registry; `BCStatement` self-registers in its constructor. Add a carve-out.
+1. **AGENTS.md:75** — *"All block entities extend `TileBC_Neptune`."* False for ~10 tiles. → "most; a documented set extend vanilla `BlockEntity` and re-implement the BC idioms by hand (and note the absence of a shared block base)."
+2. **AGENTS.md (Config)** — *"Single `BCUnifiedConfig` wraps all per-subsystem configs into one `ModConfigSpec`."* There are now **two** specs (COMMON `BCUnifiedConfig` + CLIENT `BCUnifiedClientConfig`).
+3. **AGENTS.md (Statements)** — implies statements ride the "always `DeferredRegister`" convention. They use the static `StatementManager` registry; `BCStatement` self-registers in its constructor. Add a carve-out.
 
 Also worth a line: the networking story omits the BC generic-tunnel payload style (`MessageContainerPayload`/`MessagePipePayload` carrying an `IPayloadWriter`/`IWriter` callback) alongside the dedicated payload records, and `lib.net.MessageManager` is a dead stub.
 
@@ -221,7 +221,7 @@ Also worth a line: the networking story omits the BC generic-tunnel payload styl
 ## Prioritized plan
 
 ### Do now (quick wins + the two real bugs)
-The 16 items in the quick-wins list — most importantly the **engine `setChanged()` owner-loss fix**, the **RF kinesis invisible-flow NBT fix**, the **missing `CAP_CONNECTOR` for builders machines**, the **three CLAUDE.md doc fixes**, and the dead-code deletions. All small, safe, high signal-to-noise.
+The 16 items in the quick-wins list — most importantly the **engine `setChanged()` owner-loss fix**, the **RF kinesis invisible-flow NBT fix**, the **missing `CAP_CONNECTOR` for builders machines**, the **three AGENTS.md doc fixes**, and the dead-code deletions. All small, safe, high signal-to-noise.
 
 ### Stage deliberately (large refactors, in order)
 1. **Thin `AbstractBCBlockEntity` intermediary + `OwnerData` helper** — foundational; unblocks the container and networking dedups and fixes the engine bug structurally.

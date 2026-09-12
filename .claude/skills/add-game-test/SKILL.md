@@ -101,5 +101,5 @@ verification.
   components bind only during server resource load, so a bare test dies with "Components not
   bound yet" on 26.x nodes while passing on 1.21.x.
 - Shared TEST sources with Stonecutter directives: only ONE branch may be live, and it must be
-  the active-node's (see the Testing section of CLAUDE.md for the convention and the violation
+  the active-node's (see the Testing section of AGENTS.md for the convention and the violation
   symptom).

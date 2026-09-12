@@ -73,9 +73,13 @@ sheets.txt
 unbaked.txt
 Dump.class
 # .claude is machine-local (settings, worktrees) EXCEPT the project skills, which are
-# version-controlled procedure docs referenced from CLAUDE.md.
+# version-controlled procedure docs referenced from AGENTS.md.
 /.claude/*
 !/.claude/skills/
+# .zcode: config.json (SessionStart version-check hook) is shared; skills/ is a
+# machine-local mirror of .claude/skills/ made by scripts/zcode-skills-sync.sh.
+/.zcode/*
+!/.zcode/config.json
 decompiled.java
 gametest_output*.log
 

@@ -22,7 +22,7 @@
 #              behind. Silent when all current or on any error.
 #   --plain    human-readable per-node status, for manual runs.
 #
-# Wired to a SessionStart hook via .claude/settings.json (see CLAUDE.md ->
+# Wired to a SessionStart hook via .claude/settings.json (see AGENTS.md ->
 # "NeoForge version tracking"). The hook must never block a session, so every
 # exit path returns 0.
 
@@ -141,6 +141,6 @@ ctx="NeoForge version check: one or more Stonecutter nodes are behind upstream."
 for frag in "${behind_ctx[@]}"; do
     ctx="$ctx\\n  - $frag"
 done
-ctx="$ctx\\nFor each node: read the cumulative changelog entries above the pinned build, cross-reference todos.md, classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version). See CLAUDE.md -> 'NeoForge version tracking'."
+ctx="$ctx\\nFor each node: read the cumulative changelog entries above the pinned build, cross-reference todos.md, classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version). See AGENTS.md -> 'NeoForge version tracking'."
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$ctx"
 exit 0

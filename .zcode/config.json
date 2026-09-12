@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "enabled": true,
+    "timeoutMs": 15000,
+    "events": {
+      "SessionStart": [
+        {
+          "hooks": [
+            { "type": "command", "command": "bash scripts/neoforge-version-check.sh" }
+          ]
+        }
+      ]
+    }
+  }
+}

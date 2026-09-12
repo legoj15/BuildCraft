@@ -27,7 +27,7 @@ import buildcraft.builders.BCBuildersBlocks;
  * shape, not the final advancement award — {@code GameTestHelper.makeMockPlayer} returns a
  * plain {@code Player}, not a {@code ServerPlayer}, and {@code AdvancementUtil.unlockAdvancement}
  * short-circuits silently when handed a non-server player (see the limitation note in
- * {@code CLAUDE.md}). The award step itself needs in-client verification.
+ * {@code AGENTS.md}). The award step itself needs in-client verification.
  */
 public class BuilderAdvancementsTester {
 

@@ -14,7 +14,7 @@ import net.minecraft.resources.Identifier;
 
 /**
  * Pins the JSON contract for the four-criterion {@code buildcraftunofficial:paper}
- * advancement. Per {@code CLAUDE.md}'s "Player-state testing limitation",
+ * advancement. Per {@code AGENTS.md}'s "Player-state testing limitation",
  * {@code makeMockPlayer} returns a plain {@code Player}, not a {@code ServerPlayer},
  * so the actual award calls inside {@link buildcraft.lib.misc.AdvancementUtil} short-
  * circuit — this test instead pins the wiring around the award: the JSON keys match

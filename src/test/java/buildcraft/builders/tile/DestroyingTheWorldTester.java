@@ -22,7 +22,7 @@ import buildcraft.builders.BCBuildersEventDist;
  * {@code destroying_the_world} advancement scan. The full grant path
  * ({@link BCBuildersEventDist#onServerTick} → {@link buildcraft.lib.misc.AdvancementUtil#unlockAdvancement})
  * requires a {@code ServerPlayer}, which {@link GameTestHelper#makeMockPlayer} cannot
- * produce (see CLAUDE.md "Player-state testing limitation"), so the award itself is
+ * produce (see AGENTS.md "Player-state testing limitation"), so the award itself is
  * verified in-client. Here we cover the predicate's four eligibility rules — same
  * owner, both 64×64+, both within the freshness window, non-null owner — by stamping
  * tile state directly via the package-private {@link TileQuarry#lastFullSpeedTick}.

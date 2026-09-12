@@ -1,9 +1,9 @@
 # Architecture — long-form reference
 
 This file is the detailed companion to the compressed Architecture section in
-[CLAUDE.md](../CLAUDE.md): the full prose, reasoning, and trap explanations behind the bullet
-rules. CLAUDE.md holds the rules an agent needs in every session; this file holds the why.
-When the architecture changes, update CLAUDE.md's rules (and the relevant class javadocs);
+[AGENTS.md](../AGENTS.md): the full prose, reasoning, and trap explanations behind the bullet
+rules. AGENTS.md holds the rules an agent needs in every session; this file holds the why.
+When the architecture changes, update AGENTS.md's rules (and the relevant class javadocs);
 update this file when the reasoning itself changes.
 
 ---

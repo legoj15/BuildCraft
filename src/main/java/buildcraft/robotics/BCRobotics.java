@@ -15,8 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import buildcraft.api.boards.RedstoneBoardRegistry;
+import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
+import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.robotics.ai.AIRobotAttack;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
@@ -122,6 +124,12 @@ public class BCRobotics {
         // port originally dropped. Without it, UUIDs leaked by an interrupted fetch (chunk unload mid-fetch
         // drops the FetchItem without end()) would blacklist their items for the whole JVM session.
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.onServerStart());
+
+        // Ph7: the Programming Table + Integration Table recipes. Registered per-server-start (and per MP-client
+        // login) because the recipe objects build Ingredients in their constructors, which requires items to be
+        // bound — not yet true at this constructor-time init. The API handle is safe to wire now.
+        BuildcraftRecipeRegistry.programmingTable = ProgrammingRecipeRegistry.INSTANCE;
+        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BCRoboticsRecipes.ensureInitialized());
 
         LOGGER.info("BuildCraft Robotics initialized");
     }

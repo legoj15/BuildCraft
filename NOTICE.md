@@ -56,6 +56,7 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/lib/inventory/filter/StatementParameterStackFilter.java`
 - `src/main/java/buildcraft/robotics/IEntityFilter.java`
 - `src/main/java/buildcraft/robotics/IStationFilter.java`
+- `src/main/java/buildcraft/robotics/RobotIntegrationRecipe.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotAttack.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotBreak.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotFetchAndEquipItemStack.java`

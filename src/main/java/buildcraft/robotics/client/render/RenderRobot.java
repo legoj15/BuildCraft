@@ -66,11 +66,16 @@ import buildcraft.robotics.entity.EntityRobot;
  * generation-specific methods, and the laser wrapper (which forks at <b>26.1</b>, not 1.21.10 — 26.1 is
  * where immediate-mode rendering was removed).
  *
- * <p><b>Geometry provenance.</b> The UV net is 8.0.x's, not 7.1.x's: the robot skins shipped in this repo
- * are 8.0.x's 32&times;32 re-cut of 7.1.x's 64&times;32 originals, so 7.1.x UV maths does not fit them.
- * Faces are emitted straight through {@link ModelUtil#createFace} with <b>raw 0..1 UVs</b> — these are
- * standalone entity textures bound as whole files, never atlas sprites, so there is no sprite
- * interpolation to apply (and {@code SpriteHolderRegistry} must not be used on them).
+ * <p><b>Geometry provenance.</b> The face rectangles are 8.0.x's — the shipped skins are its 32&times;32
+ * re-cut of 7.1.x's 64&times;32 originals (a left-half crop, so the rectangles keep their coordinates) —
+ * but the per-face <b>orientation</b> is 7.1.x's. 7.1.x's robot renderer is a plain {@code Render} (no
+ * {@code RenderLiving} flip), so it drew the raw 1.7.10 {@code ModelBox} mapping; 8.0.x re-expressed the
+ * same net as a model JSON, and the vanilla JSON pipeline's face conventions 180&deg;-rotate every side
+ * face and V-mirror the top relative to that — drawing the JSON numbers here through {@code createFace}
+ * is what made the robot read as "off" next to a 7.1.x build. Faces are emitted straight through
+ * {@link ModelUtil#createFace} with <b>raw 0..1 UVs</b> — these are standalone entity textures bound as
+ * whole files, never atlas sprites, so there is no sprite interpolation to apply (and
+ * {@code SpriteHolderRegistry} must not be used on them).
  *
  * <p><b>Render types.</b> Never call vanilla's {@code entityCutout} directly: it culls back faces on
  * &le;1.21.11 but does <em>not</em> on 26.x. {@link BCLibRenderTypes#entityCutoutCull} is the
@@ -117,19 +122,29 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     private static final Direction[] FACES = Direction.values();
 
     /**
-     * The 8.0.x skin net, in 32&times;32 texels, indexed by {@link Direction#ordinal()}. Identical to
-     * 8.0.x's {@code models/robot.json} (whose numbers are the same net expressed in model-JSON 0..16
-     * UV units) — which is why {@code models/item/robot.json} can reuse it verbatim.
+     * The robot skin net, in 32&times;32 texels, indexed by {@link Direction#ordinal()}. The rectangles
+     * are 8.0.x's, but the <b>orientation</b> is 7.1.x's: the U/V reversals steer {@code createFace}'s
+     * fixed corner conventions onto the raw 1.7.10 {@code ModelBox} mapping (see the class javadoc). Two
+     * authentic oddities this pins: 7.1.x drew the top strip's LEFT half on the bottom face, so the eye
+     * decal at (8,0)-(16,8) is on the robot's underside, and it drew region (0,8)-(8,16) on &minus;X and
+     * (16,8)-(24,16) on +X — the opposite of 8.0.x's east/west assignment. The item model
+     * ({@code robot_chassis_base.json}) shows this same art through the vanilla model-JSON pipeline,
+     * whose face conventions differ from {@code createFace}'s, so its uv arrays are NOT these numbers.
      */
     private static final ModelUtil.UvFaceData[] UVS = new ModelUtil.UvFaceData[FACES.length];
 
     static {
+        // Up and down already match 7.1.x as-is (both run U->+X, V->-Z).
         UVS[Direction.UP.ordinal()] = texels(16, 0, 24, 8);
         UVS[Direction.DOWN.ordinal()] = texels(8, 0, 16, 8);
-        UVS[Direction.NORTH.ordinal()] = texels(8, 8, 16, 16);
-        UVS[Direction.SOUTH.ordinal()] = texels(24, 8, 32, 16);
-        UVS[Direction.WEST.ordinal()] = texels(16, 8, 24, 16);
-        UVS[Direction.EAST.ordinal()] = texels(0, 8, 8, 16);
+        // All four sides run V upward in 7.1.x (minV at the cube's bottom edge, so each side's
+        // transparent band hugs the cube's TOP); south and west are additionally U-mirrored.
+        // South's maxU sits exactly on the texture's u=1.0 edge: 7.1.x sampled texel column 32 of its
+        // 64-wide sheet, which the 32-wide re-cut doesn't have, so that one column shows column 31.
+        UVS[Direction.NORTH.ordinal()] = texels(8, 16, 16, 8);
+        UVS[Direction.SOUTH.ordinal()] = texels(32, 16, 24, 8);
+        UVS[Direction.WEST.ordinal()] = texels(8, 16, 0, 8);
+        UVS[Direction.EAST.ordinal()] = texels(16, 16, 24, 8);
     }
 
     /** Corner offsets (x, z) for the four transfer slots, in 8.0.x's slot order. */

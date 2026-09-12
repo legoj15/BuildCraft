@@ -397,15 +397,20 @@ public class RoboticsItemIconCoverageTester {
     private static final String ROBOT_CHARGE_TINT = "buildcraftunofficial:robot_charge";
 
     /** The skin-net UV table both chassis elements share, face &rarr; [u1, v1, u2, v2]. The overlay's
-     *  faces must sample the same rectangles as the cube's or its LEDs land off the painted marks. */
+     *  faces must sample the same rectangles as the cube's or its LEDs land off the painted marks.
+     *  The orientation is 7.1.x's, not the vanilla-JSON default: 7.1.x drew the raw 1.7.10 ModelBox
+     *  mapping (every side face V-up, south and west U-mirrored), so several arrays carry deliberately
+     *  reversed ranges — the vanilla conventions would show every side face 180&deg;-rotated from what a
+     *  7.1.x build shows, and 8.0.x's robot.json numbers (which bake those vanilla conventions in) are
+     *  the wrong ones here. */
     private static final Map<String, int[]> CHASSIS_FACE_UVS = new LinkedHashMap<>();
     static {
-        CHASSIS_FACE_UVS.put("up", new int[] {8, 0, 12, 4});
+        CHASSIS_FACE_UVS.put("up", new int[] {8, 4, 12, 0});
         CHASSIS_FACE_UVS.put("down", new int[] {4, 0, 8, 4});
-        CHASSIS_FACE_UVS.put("north", new int[] {4, 4, 8, 8});
-        CHASSIS_FACE_UVS.put("south", new int[] {12, 4, 16, 8});
-        CHASSIS_FACE_UVS.put("west", new int[] {8, 4, 12, 8});
-        CHASSIS_FACE_UVS.put("east", new int[] {0, 4, 4, 8});
+        CHASSIS_FACE_UVS.put("north", new int[] {8, 8, 4, 4});
+        CHASSIS_FACE_UVS.put("south", new int[] {16, 8, 12, 4});
+        CHASSIS_FACE_UVS.put("west", new int[] {4, 8, 0, 4});
+        CHASSIS_FACE_UVS.put("east", new int[] {12, 8, 8, 4});
     }
 
     /** Pins one element's from/to against the exact triple. */

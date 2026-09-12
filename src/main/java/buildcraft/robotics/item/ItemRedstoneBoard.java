@@ -15,6 +15,7 @@ package buildcraft.robotics.item;
 import java.util.List;
 import java.util.function.Consumer;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -121,10 +122,12 @@ public class ItemRedstoneBoard extends Item {
             List<String> lines = new java.util.ArrayList<>();
             // The board's addInformation writes into a plain string list (the API predates components); each
             // line is pushed as a Component so the tooltip is localised like any other BC text. The board
-            // implementations do not consult the player, so null is an honest stand-in here.
+            // implementations do not consult the player, so null is an honest stand-in here. 1.7.10's
+            // renderToolTip prepended GRAY to every line after the item's own name; modern MC dropped that
+            // default, so it is restored here (see ItemRobot.tooltipLines).
             board.addInformation(stack, null, lines, flag.isAdvanced());
             for (String line : lines) {
-                tooltip.accept(Component.literal(line));
+                tooltip.accept(Component.literal(line).withStyle(ChatFormatting.GRAY));
             }
         }
     }

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.VanillaSetupBaseTester;
@@ -94,6 +95,27 @@ public class ItemRobotTooltipTest extends VanillaSetupBaseTester {
             Assertions.assertFalse(board.getDisplayName().endsWith("Board"),
                     "1.7.10's board names carried no \"Board\" suffix (got \"" + board.getDisplayName() + "\" for "
                             + board.getID() + ")");
+        }
+    }
+
+    @Test
+    public void theBoardLinesRenderInThe1710TooltipGray() {
+        // 1.7.10's RenderItem.renderToolTip prepended GRAY to every tooltip line after the item's own
+        // name — the bold board name read as gray-bold, the description as plain gray (both measured
+        // #AAAAAA against a live 1.7.10 client, 2026-09-12). Modern MC renders unstyled lines white, so
+        // the consumers restore the shade; the charge line keeps its own colour, as its explicit colour
+        // code did back then.
+        Style gray = Component.literal("").withStyle(ChatFormatting.GRAY).getStyle();
+        for (RedstoneBoardRobotNBT board : allRobotBoards()) {
+            ItemStack stack = ItemRobot.createRobotStack(board.getID(), 0);
+            List<Component> lines = ItemRobot.tooltipLines(stack, false);
+
+            for (int i = 0; i < lines.size() - 1; i++) {
+                Assertions.assertEquals(gray, lines.get(i).getStyle(),
+                        board.getID() + ": board line " + i + " renders in the 1.7.10 tooltip gray");
+            }
+            Assertions.assertNotEquals(gray, lines.get(lines.size() - 1).getStyle(),
+                    board.getID() + ": the charge line keeps its own charge colour");
         }
     }
 

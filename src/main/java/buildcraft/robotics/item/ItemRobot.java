@@ -276,11 +276,15 @@ public class ItemRobot extends Item {
         RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
         if (board != null && registry != null && board != registry.getEmptyRobotBoard()) {
             // The board API predates Components and writes plain strings; each is pushed as a literal so
-            // it renders like any other tooltip line (the boards translate their own text).
+            // it renders like any other tooltip line (the boards translate their own text). 1.7.10's
+            // RenderItem.renderToolTip prepended GRAY to every line after the item's own name — the bold
+            // board name read as gray-bold, the description as plain gray (both #AAAAAA) — and modern MC
+            // dropped that default, so it is restored here (the ItemSnapshot pattern). The charge line
+            // below keeps its own colour, as its explicit colour code did back then.
             java.util.List<String> boardLines = new java.util.ArrayList<>();
             board.addInformation(stack, null, boardLines, advanced);
             for (String line : boardLines) {
-                lines.add(Component.literal(line));
+                lines.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
             }
         }
 

@@ -22,7 +22,9 @@ public abstract class RedstoneBoardNBT<T> {
     /** Hover text contributed for stacks carrying this board, one string per tooltip line. 7.1.x pushed
      *  formatting through {@code EnumChatFormatting} prefixes inside these strings (its robot boards led the
      *  name line with {@code BOLD}); those legacy codes render correctly from the literal components the
-     *  tooltip consumers wrap these in, so that mechanism is kept verbatim rather than restyled. */
+     *  tooltip consumers wrap these in, so that mechanism is kept verbatim rather than restyled. The
+     *  consumers also style every board line with {@code GRAY}: 1.7.10's {@code RenderItem.renderToolTip}
+     *  applied it to all lines past the item's name, and modern MC dropped that default. */
     public abstract void addInformation(ItemStack stack, Player player, List<String> list, boolean advanced);
 
     public abstract String getDisplayName();

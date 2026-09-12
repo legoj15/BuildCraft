@@ -53,7 +53,9 @@ public class ItemRedstoneBoard extends Item {
     }
 
     /** Builds a board stack for the given board. {@code boardNBT.createBoard} stamps the id, so the blob is
-     *  {@code {board:{id: <id>}}}. */
+     *  {@code {board:{id: <id>}}}. A bare stack (null board) and the empty board's own stack are the
+     *  <em>blank</em> template, which 7.1.x let stack to 16 — the per-stack component is how that survives
+     *  an item that is otherwise {@code stacksTo(1)} (programmed boards stay at 1, exactly as before). */
     public static ItemStack createStack(RedstoneBoardNBT<?> boardNBT) {
         ItemStack stack = new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get());
         CompoundTag blob = new CompoundTag();
@@ -63,7 +65,17 @@ public class ItemRedstoneBoard extends Item {
             blob.put(TAG_BOARD, board);
         }
         writeBlob(stack, blob);
+        if (isBlank(boardNBT)) {
+            stack.set(DataComponents.MAX_STACK_SIZE, 16);
+        }
         return stack;
+    }
+
+    /** 7.1.x's stacking rule: {@code getBoardNBT(stack) != emptyRobotBoard ? 1 : 16} — identity against
+     *  the registry's empty-board singleton, so a null argument (the bare stack) counts as blank too. */
+    private static boolean isBlank(RedstoneBoardNBT<?> boardNBT) {
+        RedstoneBoardRegistry registry = RedstoneBoardRegistry.instance;
+        return boardNBT == null || (registry != null && boardNBT == registry.getEmptyRobotBoard());
     }
 
     /** Resolves the stack's board through the registry, falling back to the empty board for an absent or

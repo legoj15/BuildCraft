@@ -386,6 +386,11 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
                        CameraRenderState cameraState) {
         super.submit(state, poseStack, collector, cameraState);
 
+        // 7.2.x robot naming: a name-tagged robot shows its name. The base extractRenderState fills
+        // state.nameTag (custom names only), so this is a pure draw hook — the same call vanilla's own
+        // non-living renderers (item frame, boat, minecart) make.
+        submitNameDisplay(state, poseStack, collector, cameraState, 0);
+
         // Drawn before the body yaw is applied: the destination is a world-axis offset, not a
         // body-relative one.
         drawLaser(poseStack, collector, state.laserVisible, state.laserEnd);
@@ -447,6 +452,11 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     public void render(EntityRobot robot, float entityYaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight) {
         super.render(robot, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+
+        // 7.2.x robot naming, classic-renderer branch — see the submit() counterpart above.
+        if (this.shouldShowName(robot)) {
+            this.renderNameTag(robot, robot.getDisplayName(), poseStack, bufferSource, packedLight, entityYaw);
+        }
 
         Identifier skin = getTextureLocation(robot);
         float bodyYaw = Mth.rotLerp(partialTick, robot.yRotO, robot.getYRot());

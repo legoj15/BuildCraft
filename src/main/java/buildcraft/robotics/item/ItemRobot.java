@@ -63,8 +63,9 @@ import buildcraft.robotics.entity.EntityRobot;
  * expensive mistake.
  *
  * <p>Also deliberately dropped from 7.1.x: the {@code IEnergyContainerItem} implementation (RF, which main has
- * no equivalent item-level capability for) and the stack-to-16-while-empty nicety (board and charge make two
- * robot stacks almost never interchangeable, so the item is flatly {@code stacksTo(1)}).
+ * no equivalent item-level capability for). The stack-to-16-while-blank nicety was initially dropped too, then
+ * restored with the Programming Table (Ph7): {@link #createRobotStack} stamps a {@code MAX_STACK_SIZE} component
+ * on blank robots, and since component equality governs merging, only same-charge blanks actually stack.
  */
 // Item.appendHoverText carries Mojang's "override, don't call" @Deprecated marker on >=1.21.10 — the same
 // suppression every other BC item with a tooltip carries (see ItemList_BC8).
@@ -104,6 +105,12 @@ public class ItemRobot extends Item {
         }
         blob.putLong(TAG_ENERGY, energy);
         writeBlob(stack, blob);
+        if (hasEmptyBoard(stack)) {
+            // 7.1.x's stacking rule, restored per the gameplay audit: a blank robot stacks to 16, a
+            // programmed one stays at 1. Distinct charges still refuse to merge (components must match
+            // exactly), which is what old-NBT behaviour amounted to anyway.
+            stack.set(DataComponents.MAX_STACK_SIZE, 16);
+        }
         return stack;
     }
 

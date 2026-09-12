@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:requester_delivery_robot_fulfils_order",
+    "environment": "buildcraftunofficial:robot_delivery",
+    "structure": "minecraft:empty",
+    "max_ticks": 460,
+    "setup_ticks": 0,
+    "required": true
+}

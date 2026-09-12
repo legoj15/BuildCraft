@@ -51,6 +51,8 @@ public class BCRoboticsCreativeTabs {
                             .displayItems((parameters, output) -> {
                                 // Zone Planner (deliberate deviation from 7.1.10)
                                 output.accept(BCRoboticsItems.ZONE_PLANNER.get());
+                                // Requester (Ph8) — the request-network endpoint
+                                output.accept(BCRoboticsItems.REQUESTER.get());
                                 // Robots: the empty-board chassis at flat charge, then a drained and
                                 // a full stack for every other registered board. When nothing has
                                 // registered an empty board (a partially-initialised or stripped-down

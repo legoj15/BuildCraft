@@ -830,5 +830,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:integration_table_tops_up_drained_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableTopsUpDrainedRobot);
         reg.accept("buildcraftunofficial:robot_survival_recipes_resolve", () -> buildcraft.robotics.ProgrammingTableTester::robotSurvivalRecipesResolve);
         reg.accept("buildcraftunofficial:robot_name_tag_data_round_trip", () -> buildcraft.robotics.ProgrammingTableTester::robotNameTagDataRoundTrip);
+        // Ph8: the request network (Requester block, virtual gate provider, delivery loop).
+        reg.accept("buildcraftunofficial:requester_station_neighbour_scan", () -> buildcraft.robotics.DeliveryRequesterTester::stationFindsRequesterThroughNeighbourScan);
+        reg.accept("buildcraftunofficial:requester_gate_request_items_provider", () -> buildcraft.robotics.DeliveryRequesterTester::gateRequestItemsActionMakesTheStationAProvider);
+        reg.accept("buildcraftunofficial:requester_accepts_only_templated_items", () -> buildcraft.robotics.DeliveryRequesterTester::requesterAcceptsOnlyTemplatedItems);
+        reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsARequesterOrder);
+        reg.accept("buildcraftunofficial:requester_stack_request_nbt_round_trip", () -> buildcraft.robotics.DeliveryRequesterTester::stackRequestNbtRoundTripsAgainstALiveRegistry);
     }
 }

@@ -230,7 +230,7 @@ public class MockRobotAccess implements IRobotAccess {
     /** A registry stub: no stations, no resolved station, no resources — enough for a search AI to unwind
      *  instead of null-dereferencing. Named (not anonymous) so a test can subclass it and override just the
      *  one or two methods its scenario exercises. */
-    static class InertRobotRegistry implements IRobotRegistry {
+    public static class InertRobotRegistry implements IRobotRegistry {
         @Override
         public Collection<DockingStation> getStations() {
             return Collections.emptyList();

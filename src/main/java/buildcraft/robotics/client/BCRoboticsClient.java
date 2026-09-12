@@ -50,6 +50,8 @@ public class BCRoboticsClient {
         event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
         event.register(BCRoboticsMenuTypes.PROGRAMMING_TABLE.get(),
                 buildcraft.robotics.client.gui.GuiProgrammingTable::new);
+        event.register(BCRoboticsMenuTypes.REQUESTER.get(),
+                buildcraft.robotics.client.gui.GuiRequester::new);
     }
 
     /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen") and the

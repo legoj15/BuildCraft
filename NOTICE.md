@@ -9,7 +9,7 @@ This project ships code under three licences. Which one applies to a given file 
   header, so other mods can compile against the API freely. Seven files that live in the
   `buildcraft.api` packages are *not* MIT — they are in the MMPL list below. The package is genuinely
   mixed; the header is authoritative, never the directory.
-- **86 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
+- **93 files carried over from BuildCraft for Minecraft 1.7.10 / 1.12.2** — Minecraft Mod Public
   License 1.0.1, see [LICENSE.MMPL](LICENSE.MMPL). Each one states this in its own header.
 
 Upstream BuildCraft has never relicensed these files away from MMPL — every upstream branch, up to and
@@ -24,6 +24,7 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
   verbatim copies of 7.1.x's `buildcraft_resources/assets/buildcraftrobotics/textures/items/board/`
   textures of the same names — upstream art ported unchanged (they arrived labelled as new Ph5 work;
   the git blob hashes say otherwise).
+- `src/main/resources/assets/buildcraftunofficial/textures/gui/requester.png` is a verbatim copy of 7.1.x/8.0.x `textures/gui/requester_gui.png` — upstream art ported unchanged.
 - `src/main/resources/assets/buildcraftunofficial/textures/item/robot_<kind>.png` — and the base
   `textures/item/robot.png` — are byte-copies of the in-tree `textures/entity/robot_<kind>.png` skins —
   themselves byte-identical to upstream 7.1.x/8.0.x art — duplicated only because entity textures are
@@ -37,7 +38,7 @@ carried-over code:
 - `src/main/java/buildcraft/api/robots/DockingStation.java`
 - `src/main/java/buildcraft/robotics/item/ItemRedstoneBoard.java`
 
-The remaining 84 carry the upstream notice alone:
+The remaining 91 carry the upstream notice alone:
 
 - `src/main/java/buildcraft/api/core/IFluidFilter.java`
 - `src/main/java/buildcraft/api/core/IStackFilter.java`
@@ -57,8 +58,11 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/IEntityFilter.java`
 - `src/main/java/buildcraft/robotics/IStationFilter.java`
 - `src/main/java/buildcraft/robotics/RobotIntegrationRecipe.java`
+- `src/main/java/buildcraft/robotics/block/BlockRequester.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotAttack.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotBreak.java`
+- `src/main/java/buildcraft/robotics/ai/AIRobotDeliverRequested.java`
+- `src/main/java/buildcraft/robotics/ai/AIRobotDisposeItems.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotFetchAndEquipItemStack.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotFetchItem.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotGoto.java`
@@ -85,6 +89,7 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchBlock.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchEntity.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSearchStation.java`
+- `src/main/java/buildcraft/robotics/ai/AIRobotSearchStackRequest.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotShutdown.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotSleep.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotStraightMoveTo.java`
@@ -92,7 +97,9 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/ai/AIRobotUnloadFluids.java`
 - `src/main/java/buildcraft/robotics/ai/AIRobotUseToolOnBlock.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotButcher.java`
+PLACEHOLDER_CONTAINER
 - `src/main/java/buildcraft/robotics/boards/BoardRobotCarrier.java`
+- `src/main/java/buildcraft/robotics/boards/BoardRobotDelivery.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotFarmer.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotFluidCarrier.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotGenericBreakBlock.java`
@@ -104,6 +111,7 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPicker.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPlanter.java`
 - `src/main/java/buildcraft/robotics/boards/BoardRobotPump.java`
+- `src/main/java/buildcraft/robotics/container/ContainerRequester.java`
 - `src/main/java/buildcraft/robotics/entity/EntityRobot.java`
 - `src/main/java/buildcraft/robotics/item/ItemRobot.java`
 - `src/main/java/buildcraft/robotics/statements/ActionRobotFilter.java`
@@ -124,6 +132,7 @@ The remaining 84 carry the upstream notice alone:
 - `src/main/java/buildcraft/robotics/statements/TriggerRobotInStation.java`
 - `src/main/java/buildcraft/robotics/statements/TriggerRobotLinked.java`
 - `src/main/java/buildcraft/robotics/statements/TriggerRobotSleep.java`
+- `src/main/java/buildcraft/robotics/tile/TileRequester.java`
 
 This list is not maintained by hand: `CopyrightHeaderTester.noticeFileListsEveryMmplFile` fails the
 build if it drifts from the headers actually present in the tree.

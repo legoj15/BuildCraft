@@ -16,6 +16,7 @@
         { "predicate": { "buildcraftunofficial:board": 8.0 }, "model": "buildcraftunofficial:item/robot_farmer" },
         { "predicate": { "buildcraftunofficial:board": 9.0 }, "model": "buildcraftunofficial:item/robot_pump" },
         { "predicate": { "buildcraftunofficial:board": 10.0 }, "model": "buildcraftunofficial:item/robot_butcher" },
-        { "predicate": { "buildcraftunofficial:board": 11.0 }, "model": "buildcraftunofficial:item/robot_knight" }
+        { "predicate": { "buildcraftunofficial:board": 11.0 }, "model": "buildcraftunofficial:item/robot_knight" },
+        { "predicate": { "buildcraftunofficial:board": 12.0 }, "model": "buildcraftunofficial:item/robot_delivery" }
     ]
 }

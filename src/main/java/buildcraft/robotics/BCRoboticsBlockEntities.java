@@ -14,6 +14,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
+import buildcraft.robotics.tile.TileRequester;
 import buildcraft.robotics.tile.TileZonePlanner;
 
 public class BCRoboticsBlockEntities {
@@ -23,9 +24,14 @@ public class BCRoboticsBlockEntities {
     // Block entity for the Zone Planner — mirrors BCRoboticsBlocks.ZONE_PLANNER.
     public static final Supplier<BlockEntityType<TileZonePlanner>> ZONE_PLANNER;
 
+    // Block entity for the Requester — mirrors BCRoboticsBlocks.REQUESTER.
+    public static final Supplier<BlockEntityType<TileRequester>> REQUESTER;
+
     static {
         ZONE_PLANNER = BLOCK_ENTITIES.register("zone_planner",
                 () -> BlockEntityTypeUtilBC.create(TileZonePlanner::new, BCRoboticsBlocks.ZONE_PLANNER.get()));
+        REQUESTER = BLOCK_ENTITIES.register("requester",
+                () -> BlockEntityTypeUtilBC.create(TileRequester::new, BCRoboticsBlocks.REQUESTER.get()));
     }
 
     public static void init(IEventBus modEventBus) {

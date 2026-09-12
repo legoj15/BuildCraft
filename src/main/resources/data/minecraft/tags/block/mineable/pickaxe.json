@@ -34,6 +34,7 @@
     { "id": "buildcraftunofficial:integration_table", "required": false },
     "buildcraftunofficial:filtered_buffer",
     "buildcraftunofficial:pipe_holder",
-    { "id": "buildcraftunofficial:zone_planner", "required": false }
+    { "id": "buildcraftunofficial:zone_planner", "required": false },
+    { "id": "buildcraftunofficial:requester", "required": false }
   ]
 }

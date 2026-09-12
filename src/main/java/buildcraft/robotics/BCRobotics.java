@@ -21,6 +21,8 @@ import buildcraft.core.BCCore;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.robotics.ai.AIRobotAttack;
 import buildcraft.robotics.ai.AIRobotBreak;
+import buildcraft.robotics.ai.AIRobotDeliverRequested;
+import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.ai.AIRobotGoto;
@@ -46,6 +48,7 @@ import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoStation;
 import buildcraft.robotics.ai.AIRobotSearchBlock;
 import buildcraft.robotics.ai.AIRobotSearchEntity;
+import buildcraft.robotics.ai.AIRobotSearchStackRequest;
 import buildcraft.robotics.ai.AIRobotSearchStation;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
@@ -57,6 +60,8 @@ import buildcraft.robotics.boards.BoardRobotButcher;
 import buildcraft.robotics.boards.BoardRobotButcherNBT;
 import buildcraft.robotics.boards.BoardRobotCarrier;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
+import buildcraft.robotics.boards.BoardRobotDelivery;
+import buildcraft.robotics.boards.BoardRobotDeliveryNBT;
 import buildcraft.robotics.boards.BoardRobotEmpty;
 import buildcraft.robotics.boards.BoardRobotFarmer;
 import buildcraft.robotics.boards.BoardRobotFarmerNBT;
@@ -109,6 +114,20 @@ public class BCRobotics {
         BCRoboticsEntities.init(modEventBus);
         BCRoboticsMenuTypes.init(modEventBus);
         BCRoboticsCreativeTabs.init(modEventBus);
+
+        // Ph8: the Requester's item handler — lets pipes and hoppers deliver into (and drain) the
+        // request slots' paired delivery slots, each face gated by the template-matching checker.
+        modEventBus.addListener((net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
+            //? if >=1.21.10 {
+            event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK,
+                BCRoboticsBlockEntities.REQUESTER.get(),
+                (tile, direction) -> tile.getItemHandler(direction));
+            //?} else {
+            /*event.registerBlockEntity(net.neoforged.neoforge.capabilities.Capabilities.ItemHandler.BLOCK,
+                BCRoboticsBlockEntities.REQUESTER.get(),
+                (tile, direction) -> tile.getItemHandler(direction));*/
+            //?}
+        });
 
         // Register client-side extensions on the mod event bus
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
@@ -200,6 +219,14 @@ public class BCRobotics {
         RobotManager.registerAIRobot(AIRobotGotoStationAndUnloadFluids.class, "aiRobotGotoStationAndUnloadFluids",
                 "buildcraft.core.robots.AIRobotGotoStationAndUnloadFluids");
 
+        // Ph8 request-network AIs (7.1.x registered these alongside the board catalog).
+        RobotManager.registerAIRobot(AIRobotSearchStackRequest.class, "aiRobotSearchStackRequest",
+                "buildcraft.core.robots.AIRobotSearchStackRequest");
+        RobotManager.registerAIRobot(AIRobotDeliverRequested.class, "aiRobotDeliverRequested",
+                "buildcraft.core.robots.AIRobotDeliverRequested");
+        RobotManager.registerAIRobot(AIRobotDisposeItems.class, "aiRobotDisposeItems",
+                "buildcraft.core.robots.AIRobotDisposeItems");
+
         RobotManager.registerAIRobot(BoardRobotEmpty.class, "boardRobotEmpty");
         RobotManager.registerAIRobot(BoardRobotPicker.class, "boardRobotPicker",
                 "buildcraft.core.robots.boards.BoardRobotPicker");
@@ -226,6 +253,8 @@ public class BCRobotics {
                 "buildcraft.core.robots.boards.BoardRobotKnight");
         RobotManager.registerAIRobot(BoardRobotButcher.class, "boardRobotButcher",
                 "buildcraft.core.robots.boards.BoardRobotButcher");
+        RobotManager.registerAIRobot(BoardRobotDelivery.class, "boardRobotDelivery",
+                "buildcraft.core.robots.boards.BoardRobotDelivery");
 
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPickerNBT.INSTANCE, 800_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotCarrierNBT.INSTANCE, 800_000_000L);
@@ -241,5 +270,8 @@ public class BCRobotics {
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotPumpNBT.INSTANCE, 3_200_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotButcherNBT.INSTANCE, 3_200_000_000L);
         RedstoneBoardRegistry.instance.registerBoardType(BoardRobotKnightNBT.INSTANCE, 12_800_000_000L);
+        // The delivery board is 7.1.x's odd one out: green-tier chip, but priced in the "even more
+        // expensive" 128000 RF tier beside the knight (multi-step board, 7.1.x registration verbatim).
+        RedstoneBoardRegistry.instance.registerBoardType(BoardRobotDeliveryNBT.INSTANCE, 12_800_000_000L);
     }
 }

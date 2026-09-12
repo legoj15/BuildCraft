@@ -65,7 +65,14 @@
                                                 "predicate": "minecraft:custom_data",
                                                 "value": { "board": { "id": "buildcraftunofficial:boardRobotKnight" } },
                                                 "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_knight", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
-                                                "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] }
+                                                "on_false": {
+                                                    "type": "minecraft:condition",
+                                                    "property": "minecraft:component",
+                                                    "predicate": "minecraft:custom_data",
+                                                    "value": { "board": { "id": "buildcraftunofficial:boardRobotDelivery" } },
+                                                    "on_true": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot_delivery", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] },
+                                                    "on_false": { "type": "minecraft:model", "model": "buildcraftunofficial:item/robot", "tints": [{ "type": "buildcraftunofficial:robot_charge" }, { "type": "minecraft:constant", "value": 16777215 }] }
+                                                }
                                             }
                                         }
                                     }

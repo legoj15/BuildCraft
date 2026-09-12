@@ -15,6 +15,7 @@ import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.robotics.container.ContainerProgrammingTable;
+import buildcraft.robotics.container.ContainerRequester;
 import buildcraft.robotics.container.ContainerZonePlanner;
 
 public class BCRoboticsMenuTypes {
@@ -33,6 +34,11 @@ public class BCRoboticsMenuTypes {
     public static final Supplier<MenuType<ContainerProgrammingTable>> PROGRAMMING_TABLE =
             MENU_TYPES.register("programming_table",
                     () -> IMenuTypeExtension.create(ContainerProgrammingTable::new));
+
+    // The Requester's menu (Ph8).
+    public static final Supplier<MenuType<ContainerRequester>> REQUESTER =
+            MENU_TYPES.register("requester",
+                    () -> IMenuTypeExtension.create(ContainerRequester::new));
 
     public static void init(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

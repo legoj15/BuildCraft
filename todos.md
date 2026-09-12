@@ -31,7 +31,7 @@ Last audited: 2026-09-12
 
 ## 🆕 New Features (version 2026.2)
 
-- Bring robots back — the requester network + Delivery robot is next — [plan](docs/robotics-resurrection.md)
+- Bring robots back — Ph9 (Builder robot + advanced boards) is what remains — [plan](docs/robotics-resurrection.md)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

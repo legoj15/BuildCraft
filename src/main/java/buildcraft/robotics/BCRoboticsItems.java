@@ -21,6 +21,9 @@ public class BCRoboticsItems {
     // BlockItem for the Zone Planner — mirrors BCRoboticsBlocks.ZONE_PLANNER.
     public static final DeferredItem<?> ZONE_PLANNER;
 
+    // BlockItem for the Requester — mirrors BCRoboticsBlocks.REQUESTER.
+    public static final DeferredItem<?> REQUESTER;
+
     /** Docking Station Plug — the simple {@link PluggableDefinition.IPluggableCreator} path suffices
      *  (the pluggable itself writes no persistent NBT; the {@code DockingStationPipe} it registers is
      *  tracked separately by the {@code RobotRegistry}), so no bespoke {@code ItemRobotStation} class
@@ -37,6 +40,7 @@ public class BCRoboticsItems {
 
     static {
         ZONE_PLANNER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.ZONE_PLANNER);
+        REQUESTER = ITEMS.registerSimpleBlockItem(BCRoboticsBlocks.REQUESTER);
         ROBOT_STATION = RegistrationUtilBC.registerItem(ITEMS, "robot_station",
             props -> new ItemPluggableSimple(props, BCRoboticsPlugs.robotStation, null,
                 buildcraft.robotics.RobotStationPluggable::boundingBoxFor));

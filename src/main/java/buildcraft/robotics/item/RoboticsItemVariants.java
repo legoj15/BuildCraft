@@ -11,6 +11,7 @@ import java.util.Map;
 
 import buildcraft.robotics.boards.BoardRobotButcherNBT;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
+import buildcraft.robotics.boards.BoardRobotDeliveryNBT;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotFarmerNBT;
 import buildcraft.robotics.boards.BoardRobotFluidCarrierNBT;
@@ -88,6 +89,7 @@ public final class RoboticsItemVariants {
         robots.put(BoardRobotPumpNBT.ID, "pump");
         robots.put(BoardRobotButcherNBT.ID, "butcher");
         robots.put(BoardRobotKnightNBT.ID, "knight");
+        robots.put(BoardRobotDeliveryNBT.ID, "delivery");
 
         Map<String, String> boards = new LinkedHashMap<>();
         boards.put(BoardRobotEmptyNBT.ID, "clean");
@@ -103,6 +105,8 @@ public final class RoboticsItemVariants {
         boards.put(BoardRobotPumpNBT.ID, "blue");
         boards.put(BoardRobotButcherNBT.ID, "blue");
         boards.put(BoardRobotKnightNBT.ID, "red");
+        // 7.1.x gave the delivery board the GREEN chip even at its 128000 RF price — kept verbatim.
+        boards.put(BoardRobotDeliveryNBT.ID, "green");
 
         ROBOT_VARIANTS = Collections.unmodifiableMap(robots);
         BOARD_TIERS = Collections.unmodifiableMap(boards);

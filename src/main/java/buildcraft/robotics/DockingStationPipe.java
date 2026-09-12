@@ -26,6 +26,7 @@ import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
@@ -61,7 +62,7 @@ import org.jspecify.annotations.Nullable;
  * and the D1 policy methods consult them — so a station refuses item/fluid interaction unless its gates
  * hold the matching provide/accept actions, exactly as 7.1.x refused gateless stations.
  */
-public class DockingStationPipe extends DockingStation {
+public class DockingStationPipe extends DockingStation implements IRequestProvider {
 
     private @Nullable IPipeHolder holder;
 
@@ -272,6 +273,95 @@ public class DockingStationPipe extends DockingStation {
     public boolean providesPower() {
         IPipeHolder h = getHolder();
         return h != null && h.getPipe() != null && h.getPipe().getFlow() instanceof IFlowPower;
+    }
+
+    // ── Request network (Ph8) ─────────────────────────────────────────────
+    // 7.1.x's two-half discovery, ported whole. The physical half: a Requester block beside the pipe is
+    // found by scanning the host pipe's six neighbours (7.1.x scanned the pipe tile's neighbours for an
+    // IRequestProvider — identity, not capability — and so does this). The virtual half: EVERY station is
+    // itself a provider whose requests are the gate-side "Request Needed Items" actions, which is what
+    // makes that Ph6 statement actually do something. The fallback keeps getRequestProvider() non-null,
+    // exactly as 7.1.x returned `this` — the delivery search polls every station as a provider.
+
+    @Override
+    public IRequestProvider getRequestProvider() {
+        IPipeHolder h = getHolder();
+        if (h != null && h.getPipe() != null) {
+            for (Direction dir : Direction.values()) {
+                if (world.getBlockEntity(getPos().relative(dir)) instanceof IRequestProvider provider) {
+                    return provider;
+                }
+            }
+        }
+        return this;
+    }
+
+    /** 7.1.x's slot encoding, verbatim: {@code side} in bits 4-6, the gate's action-slot index in bits
+     *  2-3, the action's parameter index in bits 0-1. The count 127 covers the encoding space (sides
+     *  6-7 are dead rows no direction ever fills). */
+    @Override
+    public int getRequestsCount() {
+        return 127;
+    }
+
+    @Override
+    public ItemStack getRequest(int slot) {
+        int sideIndex = (slot & 0x70) >> 4;
+        // 7.1.x's ForgeDirection had a 7th UNKNOWN entry, so its dead encoding rows (side bits 6-7)
+        // resolved to a gate that could never exist; Direction has exactly 6, so guard those rows here.
+        if (sideIndex >= Direction.values().length) {
+            return ItemStack.EMPTY;
+        }
+        Direction gateSide = Direction.values()[sideIndex];
+        int action = (slot & 0xc) >> 2;
+        int param = slot & 0x3;
+
+        IPipeHolder h = getHolder();
+        if (h == null || h.getPipe() == null
+                || !(h.getPluggable(gateSide) instanceof PluggableGate gate)) {
+            return ItemStack.EMPTY;
+        }
+
+        var actions = gate.logic.getActions();
+        if (actions.size() <= action) {
+            return ItemStack.EMPTY;
+        }
+
+        if (actions.get(action) != BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS) {
+            return ItemStack.EMPTY;
+        }
+
+        StatementSlot slotStmt = null;
+        for (StatementSlot stmt : gate.logic.getActiveActions()) {
+            if (stmt.statement == actions.get(action)) {
+                slotStmt = stmt;
+                break;
+            }
+        }
+        if (slotStmt == null) {
+            return ItemStack.EMPTY;
+        }
+        if (slotStmt.parameters.length <= param) {
+            return ItemStack.EMPTY;
+        }
+
+        if (slotStmt.parameters[param] == null) {
+            return ItemStack.EMPTY;
+        }
+
+        return slotStmt.parameters[param].getItemStack();
+    }
+
+    /** 7.1.x's virtual offer pushed the stack straight into the pipe transport; this routes through the
+     *  same force-path station output the unload AIs use. The injectable claims full acceptance (the
+     *  force path has no backpressure), so the excess is always empty here. */
+    @Override
+    public ItemStack offerItem(int slot, ItemStack stack) {
+        IInjectable output = getItemOutput();
+        if (output == null) {
+            return stack;
+        }
+        return output.injectItem(stack, true, side().getOpposite(), null, 0.0);
     }
 
     @Override

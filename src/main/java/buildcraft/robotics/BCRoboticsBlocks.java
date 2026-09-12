@@ -13,6 +13,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
+import buildcraft.robotics.block.BlockRequester;
 import buildcraft.robotics.block.BlockZonePlanner;
 
 public class BCRoboticsBlocks {
@@ -24,8 +25,14 @@ public class BCRoboticsBlocks {
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockZonePlanner> ZONE_PLANNER;
 
+    // The Requester block (Ph8): the request-network endpoint a delivery robot services.
+    // 7.1.x Material.iron → same pickaxe rule as the planner.
+    public static final DeferredBlock<BlockRequester> REQUESTER;
+
     static {
         ZONE_PLANNER = RegistrationUtilBC.registerBlock(BLOCKS, "zone_planner", BlockZonePlanner::new,
+                () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+        REQUESTER = RegistrationUtilBC.registerBlock(BLOCKS, "requester", BlockRequester::new,
                 () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
     }
 

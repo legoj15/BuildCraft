@@ -1,0 +1,13 @@
+{
+    "__comment": "7.1.x requester cube, re-expressed on the zone-planner convention (model front on north + the standard facing rotations; 7.1.x's own default_cube put front on south with inverted rotations — same final orientation). Textures: upstream 8.0.x art, already in-tree.",
+    "parent": "block/cube",
+    "textures": {
+        "particle": "buildcraftunofficial:block/requester/side",
+        "down": "buildcraftunofficial:block/requester/bottom",
+        "up": "buildcraftunofficial:block/requester/top",
+        "north": "buildcraftunofficial:block/requester/front",
+        "east": "buildcraftunofficial:block/requester/side",
+        "south": "buildcraftunofficial:block/requester/back",
+        "west": "buildcraftunofficial:block/requester/side"
+    }
+}

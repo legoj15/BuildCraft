@@ -35,15 +35,23 @@ public class ZoneMapCamera {
     /** Floor on the camera-to-point distance so terrain at or above the camera can't blow up the
      *  magnification (divide-by-near-zero). */
     private static final double MIN_DIST = 8.0;
-    /** Raymarch budget for terrain picking, and how far below the reference plane to keep searching. */
-    private static final int PICK_MAX_STEPS = 768;
+    /** How far below the reference plane terrain picking keeps searching. Also scales the raymarch
+     *  budget: a ray that reaches the plane at length {@code len} can still dip into terrain up to
+     *  this far below it, so the step budget is {@code len * (CAM_HEIGHT + this) / CAM_HEIGHT}. */
     private static final int PICK_SEARCH_DOWN = 80;
+    /** Hard ceiling on the terrain-pick raymarch, so a pathological zoom can't stall a frame. */
+    private static final int PICK_MAX_STEPS = 32768;
     /** Depth-ordering weight for height: negative so taller terrain (nearer the overhead camera) sorts
      *  in front. Kept small so {@code depth * poseScale} stays within the PiP ortho clip. Sign verified
      *  in-client. */
     public static final double DEPTH_PER_HEIGHT = -0.03;
 
-    public static final double MIN_PX_PER_BLOCK = 1.5;
+    /** Survey-range zoom floor: at 0.125 px/block (8 blocks per pixel, 1.7.10's planner limit) the
+     *  213-px viewport spans about 1,700 blocks. Below 1 px/block the renderer LOD-samples the world
+     *  (see {@code ZoneMapGeometry}), so the low floor costs bounded vertices, not columns. */
+    public static final double MIN_PX_PER_BLOCK = 0.125;
+    /** Zoom crossover between the per-column near path and the per-pixel-strided far path. */
+    public static final double FAR_MODE_PX_PER_BLOCK = 1.0;
     public static final double MAX_PX_PER_BLOCK = 16.0;
     public static final double DEFAULT_PX_PER_BLOCK = 4.0;
 
@@ -122,9 +130,16 @@ public class ZoneMapCamera {
         dirY /= len;
         dirZ /= len;
 
+        // The hit lands at or before the ground plane, but the search also dips up to PICK_SEARCH_DOWN
+        // below it, so the budget scales with the ray's ground length — at survey zoom that ground point
+        // is hundreds of blocks out, far beyond a fixed step count. Single ray per frame, so the cost is
+        // bounded by this one loop.
+        long budget = (long) Math.ceil(len * (CAM_HEIGHT + PICK_SEARCH_DOWN) / CAM_HEIGHT) + 8;
+        budget = Math.min(budget, PICK_MAX_STEPS);
+
         double x = camX, y = camY + CAM_HEIGHT, z = camZ;
         double floorY = camY - PICK_SEARCH_DOWN;
-        for (int i = 0; i < PICK_MAX_STEPS && y > floorY; i++) {
+        for (int i = 0; i < budget && y > floorY; i++) {
             x += dirX;
             y += dirY;
             z += dirZ;
@@ -165,6 +180,18 @@ public class ZoneMapCamera {
         double overscan = CAM_HEIGHT / Math.max(MIN_DIST, CAM_HEIGHT - 48); // worst-case de-magnification
         double halfW = (viewportWidthPx / 2.0) / pxPerBlock * overscan + pad;
         double halfH = (viewportHeightPx / 2.0) / pxPerBlock * overscan + pad;
+        return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};
+    }
+
+    /**
+     * Exact ground-plane world-XZ bounds of a viewport — everything {@link #pickGround} can reach, with
+     * no perspective overscan. The far-zoom LOD path samples this (not {@link #visibleWorldBounds}) so
+     * what it renders is precisely what picking and painting address, and the sample count stays tied to
+     * the viewport pixels rather than the perspective frustum.
+     */
+    public double[] visibleGroundBounds(int viewportWidthPx, int viewportHeightPx, int pad) {
+        double halfW = (viewportWidthPx / 2.0) / pxPerBlock + pad;
+        double halfH = (viewportHeightPx / 2.0) / pxPerBlock + pad;
         return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};
     }
 }

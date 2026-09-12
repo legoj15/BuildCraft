@@ -23,10 +23,15 @@ import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
 import buildcraft.lib.gui.GuiBC8;
+import buildcraft.lib.gui.GuiElementSimple;
 import buildcraft.lib.gui.GuiIcon;
-import buildcraft.lib.gui.help.DummyHelpElement;
+import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import buildcraft.lib.misc.LocaleUtil;
+
+import java.util.List;
 
 //? if >=1.21.10 {
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -63,8 +68,11 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final GuiRectangle RECT_PROGRESS_INPUT = new GuiRectangle(44, 128, 28, 9);
     private static final GuiRectangle RECT_PROGRESS_OUTPUT = new GuiRectangle(236, 45, 9, 28);
 
-    /** Zoom step per scroll notch. */
-    private static final double ZOOM_STEP = 1.15;
+    /** Zoom step per scroll notch. Zooming out steps harder (1.35×) than zooming in (1.15×) so the
+     *  survey range (down to 0.125 px/block, ~1,700 blocks across — 1.7.10's limit) is a comfortable
+     *  handful of notches away, while close-up work keeps its fine control. */
+    private static final double ZOOM_STEP_IN = 1.15;
+    private static final double ZOOM_STEP_OUT = 1.35;
 
     private final ZoneMapCamera camera;
     private boolean panning = false;
@@ -122,14 +130,64 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     protected void initGuiElements() {
         // Terrain is rebuilt from the player's current surroundings each time the screen opens.
         ZonePlannerMapDataClient.INSTANCE.clear();
-        // Invisible help region over the map window: documents the screen in the help ledger and keeps the
-        // ledger's hover highlight aligned with the viewport. It is not an IInteractionElement, so it never
-        // intercepts the viewport's drag/paint mouse input.
-        mainGui.shownElements.add(new DummyHelpElement(
-                new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H).offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
-                        "buildcraft.help.zone_planner.map.desc1",
-                        "buildcraft.help.zone_planner.map.desc2")));
+        addHelpRegions();
+    }
+
+    /** Documents the screen in the help ledger: one highlighted, hoverable region per functional zone
+     *  (map viewport, brush rack, input row, output column), each with a short hover tooltip. The
+     *  elements are {@link GuiElementSimple}s — tooltip/help carriers only, never
+     *  {@code IInteractionElement}s — so the viewport's drag/paint mouse input passes through untouched. */
+    private void addHelpRegions() {
+        // The map window itself: gestures and the survey range.
+        mainGui.shownElements.add(helpRegion(
+                new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H),
+                "tip.zone_planner.map",
+                "buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
+                "buildcraft.help.zone_planner.map.desc1",
+                "buildcraft.help.zone_planner.map.desc2",
+                "buildcraft.help.zone_planner.map.desc3"));
+
+        // The 4×4 paintbrush rack.
+        mainGui.shownElements.add(helpRegion(
+                new GuiRectangle(8, 146, 70, 70),
+                "tip.zone_planner.brushes",
+                "buildcraft.help.zone_planner.brushes.title", 0xFF_FF_BB_33,
+                "buildcraft.help.zone_planner.brushes.desc"));
+
+        // Input row: brush + written map location, progress arrow, blank-map result.
+        mainGui.shownElements.add(helpRegion(
+                new GuiRectangle(8, 125, 82, 16),
+                "tip.zone_planner.input",
+                "buildcraft.help.zone_planner.input.title", 0xFF_66_AA_FF,
+                "buildcraft.help.zone_planner.input.desc1",
+                "buildcraft.help.zone_planner.input.desc2"));
+
+        // Output column: brush + blank map location, progress bar, written-map result.
+        mainGui.shownElements.add(helpRegion(
+                new GuiRectangle(233, 9, 16, 82),
+                "tip.zone_planner.output",
+                "buildcraft.help.zone_planner.output.title", 0xFF_DD_66_FF,
+                "buildcraft.help.zone_planner.output.desc1",
+                "buildcraft.help.zone_planner.output.desc2"));
+    }
+
+    /** A tooltip + help carrier over the given GUI-local area. */
+    private GuiElementSimple helpRegion(GuiRectangle area, String tipKey, String titleKey, int colour,
+                                        String... descKeys) {
+        IGuiArea rootArea = area.offset(mainGui.rootElement);
+        return new GuiElementSimple(mainGui, rootArea) {
+            @Override
+            public void addToolTips(List<ToolTip> tooltips) {
+                if (contains(mainGui.mouse)) {
+                    tooltips.add(new ToolTip(LocaleUtil.localize(tipKey)));
+                }
+            }
+
+            @Override
+            public void addHelpElements(List<ElementHelpInfo.HelpPosition> elements) {
+                elements.add(new ElementHelpInfo(titleKey, colour, descKeys).target(this));
+            }
+        };
     }
 
     /** Draws the live map for this frame. On &gt;=1.21.10 it submits a PiP render state (painted into an
@@ -285,7 +343,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (inMap(mouseX, mouseY) && scrollY != 0) {
-            camera.zoomBy(scrollY > 0 ? ZOOM_STEP : 1.0 / ZOOM_STEP);
+            double step = scrollY > 0 ? ZOOM_STEP_IN : 1.0 / ZOOM_STEP_OUT;
+            camera.zoomBy(step);
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

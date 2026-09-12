@@ -56,19 +56,43 @@ public final class ZoneMapGeometry {
     private static final float HOVER_BORDER = 0.16f;
     /** How far a map-edge column's skirt drops when it has no neighbour to step down to. */
     private static final int EDGE_SKIRT = 2;
-    /** Safety cap on the chunk grid scanned per frame (low zoom shows a lot of world). */
-    private static final int MAX_CHUNK_SPAN = 48;
+    /** Safety cap on the chunk grid scanned per frame. 128 covers the survey zoom-out (0.125 px/block
+     *  spans ~110 chunks across the 213-px viewport); the sampled-column cost is bounded by the stride
+     *  below, so the cap only bounds the cheap null-chunk scan. */
+    private static final int MAX_CHUNK_SPAN = 128;
     /** Extra world-block padding around the visible box so tall terrain entering from a screen edge isn't clipped. */
     private static final int RELIEF_PAD = 64;
+    /** Padding used by the far-zoom ground-plane bounds (smaller: the LOD grid needs no relief overscan). */
+    private static final int FAR_PAD = 16;
 
     // ── Terrain ─────────────────────────────────────────────────────────────────────────
 
-    /** Emits the visible terrain columns for a viewport of {@code wPx}x{@code hPx} pixels. */
+    /** Emits the visible terrain columns for a viewport of {@code wPx}x{@code hPx} pixels.
+     *
+     *  <p>Below 1 px/block ({@code farMode}) the world is LOD-sampled on a stride grid — one merged
+     *  cuboid per {@code ceil(1/pxPerBlock)} world blocks, so the sample count tracks the viewport's
+     *  pixel count instead of the world area, and sub-pixel blocks can't alias. Bounds use the ground
+     *  plane exactly (the area picking addresses), so render and paint always agree about what is
+     *  where; deep terrain beyond that plane can be clipped at the extreme edges, which is invisible
+     *  in practice at survey zoom. */
     public static void emitTerrain(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                    int wPx, int hPx, Level level) {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
 
-        double[] b = cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
+        boolean farMode = cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK;
+        // Power-of-two strides (1, 2, 4, 8; the survey floor is 0.125 px/block) keep the sample grid
+        // world-aligned across chunk borders — chunk origins are multiples of 16 and 16 % stride == 0,
+        // so adjacent chunks never double-cover or gap.
+        int stride = 1;
+        if (farMode) {
+            int need = (int) Math.ceil(1.0 / cam.pxPerBlock);
+            while (stride < need && stride < 8) {
+                stride <<= 1;
+            }
+        }
+        double[] b = farMode
+                ? cam.visibleGroundBounds(wPx, hPx, FAR_PAD)
+                : cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
         int minCX = (int) Math.floor(b[0]) >> 4;
         int minCZ = (int) Math.floor(b[1]) >> 4;
         int maxCX = (int) Math.floor(b[2]) >> 4;
@@ -83,8 +107,8 @@ public final class ZoneMapGeometry {
                 if (chunk == null) {
                     continue;
                 }
-                for (int lx = 0; lx < 16; lx++) {
-                    for (int lz = 0; lz < 16; lz++) {
+                for (int lx = 0; lx < 16; lx += stride) {
+                    for (int lz = 0; lz < 16; lz += stride) {
                         if (!chunk.hasData(lx, lz)) {
                             continue;
                         }
@@ -92,15 +116,19 @@ public final class ZoneMapGeometry {
                         int wz = (cz << 4) + lz;
                         int top = chunk.getSurfaceY(lx, lz);
                         int colour = chunk.getColour(lx, lz);
-                        emitColumn(vc, mat, cam, level, data, wx, wz, top, colour);
+                        emitColumn(vc, mat, cam, level, data, wx, wz, top, colour, stride);
                     }
                 }
             }
         }
     }
 
+    /** Emits one terrain cell: a stride&times;stride top face at the sampled surface, with skirt faces
+     *  where the strided neighbour steps down (or the map ends). {@code stride == 1} is the near-mode
+     *  per-column cell. */
     private static void emitColumn(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam, Level level,
-                                   ZonePlannerMapDataClient data, int wx, int wz, int top, int colour) {
+                                   ZonePlannerMapDataClient data, int wx, int wz, int top, int colour,
+                                   int stride) {
         float r = ((colour >> 16) & 0xFF) / 255f;
         float g = ((colour >> 8) & 0xFF) / 255f;
         float bl = (colour & 0xFF) / 255f;
@@ -108,26 +136,26 @@ public final class ZoneMapGeometry {
         // Top face at the surface.
         quad(vc, mat, cam, SHADE_TOP, r, g, bl, 255,
                 wx, top + 1, wz,
-                wx + 1, top + 1, wz,
-                wx + 1, top + 1, wz + 1,
-                wx, top + 1, wz + 1);
+                wx + stride, top + 1, wz,
+                wx + stride, top + 1, wz + stride,
+                wx, top + 1, wz + stride);
 
         // Skirt faces only where a neighbour steps down (or the map ends), so the relief reads as clean
-        // contour steps instead of full-height pillars.
-        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_NS, wx, wz, top, /*dx*/ 0, /*dz*/ -1);
-        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_NS, wx, wz, top, 0, 1);
-        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_EW, wx, wz, top, -1, 0);
-        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_EW, wx, wz, top, 1, 0);
+        // contour steps instead of full-height pillars. Neighbours are the adjacent strided samples.
+        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_NS, wx, wz, top, /*dx*/ 0, /*dz*/ -1, stride);
+        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_NS, wx, wz, top, 0, 1, stride);
+        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_EW, wx, wz, top, -1, 0, stride);
+        emitSkirt(vc, mat, cam, data, level, r, g, bl, SHADE_EW, wx, wz, top, 1, 0, stride);
     }
 
-    /** Draws the vertical face on the (dx,dz) side of a column, dropping from {@code top} to the
-     *  neighbour's surface (or {@link #EDGE_SKIRT} below if the neighbour is missing). Skipped when the
-     *  neighbour is at least as high (face hidden). */
+    /** Draws the vertical face on the (dx,dz) side of a strided cell, dropping from {@code top} to the
+     *  adjacent sample's surface (or {@link #EDGE_SKIRT} below if the neighbour is missing). Skipped when
+     *  the neighbour is at least as high (face hidden). */
     private static void emitSkirt(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                   ZonePlannerMapDataClient data, Level level,
                                   float r, float g, float bl, float shade,
-                                  int wx, int wz, int top, int dx, int dz) {
-        int neighbour = surfaceAt(data, level, wx + dx, wz + dz);
+                                  int wx, int wz, int top, int dx, int dz, int stride) {
+        int neighbour = surfaceAt(data, level, wx + dx * stride, wz + dz * stride);
         int bottom;
         if (neighbour == ZonePlannerMapChunk.NO_DATA) {
             bottom = top - EDGE_SKIRT;
@@ -137,23 +165,22 @@ public final class ZoneMapGeometry {
             bottom = neighbour;
         }
         int t = top + 1;
-        // The face lives on the edge of the [wx,wx+1]x[wz,wz+1] footprint in the (dx,dz) direction.
-        int x0 = dx > 0 ? wx + 1 : wx;
-        int z0 = dz > 0 ? wz + 1 : wz;
-        if (dx != 0) {
-            // East/West face: spans Z, vertical from bottom..t at fixed X.
+        if (dz != 0) {
+            // North/South face: spans X [wx, wx+stride] at fixed Z.
+            int z0 = dz > 0 ? wz + stride : wz;
             quad(vc, mat, cam, shade, r, g, bl, 255,
-                    x0, t, z0,
-                    x0, t, z0 == wz ? wz + 1 : wz,
-                    x0, bottom, z0 == wz ? wz + 1 : wz,
-                    x0, bottom, z0);
+                    wx, t, z0,
+                    wx + stride, t, z0,
+                    wx + stride, bottom, z0,
+                    wx, bottom, z0);
         } else {
-            // North/South face: spans X, vertical from bottom..t at fixed Z.
+            // East/West face: spans Z [wz, wz+stride] at fixed X.
+            int x0 = dx > 0 ? wx + stride : wx;
             quad(vc, mat, cam, shade, r, g, bl, 255,
-                    x0, t, z0,
-                    x0 == wx ? wx + 1 : wx, t, z0,
-                    x0 == wx ? wx + 1 : wx, bottom, z0,
-                    x0, bottom, z0);
+                    x0, t, wz,
+                    x0, t, wz + stride,
+                    x0, bottom, wz + stride,
+                    x0, bottom, wz);
         }
     }
 

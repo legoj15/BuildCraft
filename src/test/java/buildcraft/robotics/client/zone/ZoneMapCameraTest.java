@@ -137,6 +137,57 @@ public class ZoneMapCameraTest {
     }
 
     @Test
+    void surveyZoomPicksReachViewportCorners() {
+        // At the 7.1.x survey floor (0.125 px/block) a viewport corner maps to ~850 blocks from the
+        // camera, and the ray needs that many steps to descend to the plane — beyond the old fixed
+        // march budget, which silently returned null there. The budget must scale with zoom.
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
+        int h = 64; // flat world at the reference plane
+        ZoneMapCamera.SurfaceQuery flat = (x, z) -> h;
+        // Half-extents of the real 213x100 viewport, swept coarsely.
+        for (int px = -106; px <= 106; px += 53) {
+            for (int py = -50; py <= 50; py += 25) {
+                int[] hit = cam.pickTerrain(px, py, flat);
+                Assertions.assertNotNull(hit, "far pick reached at px " + px + "," + py);
+                double gx = px / cam.pxPerBlock;
+                double gz = py / cam.pxPerBlock;
+                // The flat top face sits 1 block above the plane, so the ray hits ~95/96 of the way out.
+                Assertions.assertEquals(gx * 95 / 96.0, hit[0], 3.0, "far pick X at px " + px + "," + py);
+                Assertions.assertEquals(gz * 95 / 96.0, hit[2], 3.0, "far pick Z at px " + px + "," + py);
+                Assertions.assertEquals(h, hit[1], "far pick surface height");
+            }
+        }
+    }
+
+    @Test
+    void groundBoundsSpanExactlyTheViewport() {
+        // The far-zoom LOD samples the ground plane with no perspective overscan, so its bounds are the
+        // plain viewport span in blocks: (pixels/2)/pxPerBlock, plus any requested padding.
+        ZoneMapCamera cam = new ZoneMapCamera(10, 64, -10);
+        cam.pxPerBlock = 0.5;
+        double[] b = cam.visibleGroundBounds(213, 100, 0);
+        Assertions.assertEquals(10 - 213, b[0], EPS, "west edge");
+        Assertions.assertEquals(-10 - 100, b[1], EPS, "north edge");
+        Assertions.assertEquals(10 + 213, b[2], EPS, "east edge");
+        Assertions.assertEquals(-10 + 100, b[3], EPS, "south edge");
+
+        double[] padded = cam.visibleGroundBounds(213, 100, 16);
+        Assertions.assertEquals(10 - 213 - 16, padded[0], EPS, "padded west edge");
+    }
+
+    @Test
+    void groundBoundsStayInsidePerspectiveBounds() {
+        // The LOD grid is a subset of the conservative frustum box, so near-mode culling can't regress.
+        ZoneMapCamera cam = new ZoneMapCamera(200, 64, -300);
+        cam.pxPerBlock = 0.75;
+        double[] ground = cam.visibleGroundBounds(213, 100, 0);
+        double[] full = cam.visibleWorldBounds(213, 100, 0);
+        Assertions.assertTrue(ground[0] >= full[0] && ground[2] <= full[2], "X span nested");
+        Assertions.assertTrue(ground[1] >= full[1] && ground[3] <= full[3], "Z span nested");
+    }
+
+    @Test
     void visibleBoundsContainCameraCentre() {
         ZoneMapCamera cam = new ZoneMapCamera(200.0, 64, -300.0);
         cam.pxPerBlock = 3.0;

@@ -43,9 +43,11 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class PipeFlowForceInsertTester {
 
     /** Rig: a chest under pipe B, pipe B east of pipe A. The item is force-inserted into pipe A from
-     *  BELOW — the robot-station parity geometry, where {@code AIRobotUnload} injects through the face
-     *  opposite the station pluggable. Path: A entry leg (below → center) → A exit (center → east)
-     *  → B entry (west → center) → B exit (center → down) → chest. */
+     *  ABOVE — the robot-station parity geometry, where a station pluggable sits on the UP face and
+     *  {@code DockingStationPipe} injects through its own face ({@code getItemOutputSide()}), with
+     *  nothing registered as connected there (pluggable faces are not connections). Path: A entry leg
+     *  (above → center) → A exit (center → east) → B entry (west → center) → B exit (center → down)
+     *  → chest. */
     public static void forceInsertEntryLegAndDelivery(GameTestHelper helper) {
         BlockPos chestPos = new BlockPos(2, 1, 1);
         BlockPos pipeBPos = new BlockPos(2, 2, 1);
@@ -70,7 +72,7 @@ public class PipeFlowForceInsertTester {
             "pipe B should be tile-connected down into the chest");
 
         PipeFlowItems flowA = (PipeFlowItems) tileA.getPipe().getFlow();
-        flowA.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.DOWN, null, 0.04);
+        flowA.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.UP, null, 0.04);
 
         List<TravellingItem> inFlight = flowA.getAllItemsForRender();
         helper.assertTrue(inFlight.size() == 1, "force insert must register the item in the pipe's flow");

@@ -840,6 +840,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:requester_accepts_only_templated_items", () -> buildcraft.robotics.DeliveryRequesterTester::requesterAcceptsOnlyTemplatedItems);
         reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsARequesterOrder);
         reg.accept("buildcraftunofficial:requester_stack_request_nbt_round_trip", () -> buildcraft.robotics.DeliveryRequesterTester::stackRequestNbtRoundTripsAgainstALiveRegistry);
+        // Station cargo enters the pipe through the station's OWN face (7.1.x spawned it just under
+        // the station) — the opposite-face translation made top-mounted stations eject from thin air.
+        reg.accept("buildcraftunofficial:robot_station_cargo_entry_face", () -> buildcraft.robotics.DeliveryRequesterTester::stationCargoEntersThroughTheStationFace);
         // Robotics Ph9 — the advanced boards + the representative world-action AIs the gameplay audit
         // listed as untested (break progress formula, harvest/plant/pump/use-tool one each, melee
         // formula + cadence, search-entity) + wearable acceptance + the rewritten Builder board.

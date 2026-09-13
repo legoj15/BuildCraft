@@ -230,6 +230,72 @@ public class DeliveryRequesterTester {
         helper.succeed();
     }
 
+    // ---------- station injection face ----------
+
+    /** Cargo a station injects must enter the pipe through the STATION's own face: 7.1.x spawned it at
+     *  centre + 0.2 toward the station and moved it inward (its readjustPosition only clamps, never
+     *  relocates to the input face), so a top-mounted station's items visibly dropped DOWN to the pipe
+     *  centre. The port translated 7.1.x's motion-direction parameter straight into the modern
+     *  entry-face parameter (TravellingItem.side), so the item started on the far side — out of thin
+     *  air once the entry leg had real animation. Pins both halves of the fix: the station reports its
+     *  own face as its item output side (what {@code AIRobotUnload} passes back in), and an offered
+     *  stack starts above centre travelling downward (a toCentre item renders at its entry face). */
+    public static void stationCargoEntersThroughTheStationFace(GameTestHelper helper) {
+        BlockPos offerPipeRel = new BlockPos(2, 3, 2);
+        BlockPos unloadPipeRel = new BlockPos(4, 3, 2);
+
+        installStation(helper, offerPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        installStation(helper, unloadPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
+
+        EntityArenaUtil.tickUntil(helper, 120,
+                () -> stationAt(helper, offerPipeRel, Direction.UP) != null
+                        && stationAt(helper, unloadPipeRel, Direction.UP) != null,
+                () -> {
+                    // The unload chain: AIRobotUnload asks for the output side and passes it straight back.
+                    DockingStationPipe unload = stationAt(helper, unloadPipeRel, Direction.UP);
+                    helper.assertTrue(unload.getItemOutputSide().face == Direction.UP,
+                            "a station on the UP face must report UP as its item output side, got "
+                                    + unload.getItemOutputSide().face);
+                    buildcraft.api.transport.IInjectable output = unload.getItemOutput();
+                    helper.assertTrue(output != null, "the pipe station must expose an item output");
+                    output.injectItem(new ItemStack(Items.IRON_INGOT), true,
+                            unload.getItemOutputSide().face, null, 0);
+
+                    // The delivery hand-off: offerItem goes through the same force-path output.
+                    DockingStationPipe offer = stationAt(helper, offerPipeRel, Direction.UP);
+                    ItemStack leftover = offer.offerItem(0, new ItemStack(Items.DIAMOND, 2));
+                    helper.assertTrue(leftover.isEmpty(), "the force-path output accepts the whole offer");
+
+                    // Both pipes must hold one item that starts above centre heading down — an item
+                    // entering through the OPPOSITE (buggy) face would start below centre heading up.
+                    long now = helper.getLevel().getGameTime();
+                    assertEntersFromAbove(helper, unloadPipeRel, now);
+                    assertEntersFromAbove(helper, offerPipeRel, now);
+                    helper.succeed();
+                },
+                "the stations never registered");
+    }
+
+    private static void assertEntersFromAbove(GameTestHelper helper, BlockPos pipeRel, long now) {
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pipeRel, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipeRel);*/
+        //?}
+        buildcraft.transport.pipe.flow.PipeFlowItems flow =
+                (buildcraft.transport.pipe.flow.PipeFlowItems) tile.getPipe().getFlow();
+        var items = flow.getAllItemsForRender();
+        helper.assertTrue(items.size() == 1, "the injected item must be in flight, got " + items.size());
+        buildcraft.transport.pipe.flow.TravellingItem item = items.get(0);
+        // Rendered relative to BlockPos.ZERO's centre (y 0.5): an unconnected face is 0.25 out, so
+        // entering from above puts the start at y 0.75 — never below.
+        Vec3 renderPos = item.getRenderPosition(BlockPos.ZERO, now, 0.0f, flow);
+        helper.assertTrue(renderPos.y > 0.6,
+                "station cargo must start above the pipe centre (entering from the station above), got " + renderPos);
+        helper.assertTrue(item.getRenderDirection(now, 0.0f) == Direction.DOWN,
+                "station cargo must travel downward toward the pipe centre");
+    }
+
     // ---------- delivery E2E ----------
 
     /** The full Ph8 loop against a live {@link EntityRobot}: the Requester beside a pipe-station asks for

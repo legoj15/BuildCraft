@@ -152,7 +152,17 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
 
     @Override
     public EnumPipePart getItemOutputSide() {
-        return EnumPipePart.fromFacing(side().getOpposite());
+        // The face the cargo crosses the pipe's boundary through — the station's own face, so a
+        // station on TOP visibly injects from above. 7.1.x passed side.getOpposite() into
+        // PipeTransportItems.injectItem, but that parameter was the item's MOTION direction: 7.1.x
+        // spawned it at centre + 0.2 toward the station and moved it inward (readjustPosition only
+        // clamps, it never relocates to the input face). The modern injectItem/insertItemsForce
+        // parameter instead means "the face the item starts from" (TravellingItem.side), so the
+        // opposite-face translation inverted the visual — cargo appearing out of thin air on the far
+        // side once the entry leg gained real animation. It also wrongly pre-tried the opposite face,
+        // forbidding legitimate downward exits under a top-mounted station; 7.1.x blacklisted the
+        // STATION face (input.getOpposite()), exactly what tried.add(side()) now does.
+        return EnumPipePart.fromFacing(side());
     }
 
     @Override
@@ -353,15 +363,17 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     }
 
     /** 7.1.x's virtual offer pushed the stack straight into the pipe transport; this routes through the
-     *  same force-path station output the unload AIs use. The injectable claims full acceptance (the
-     *  force path has no backpressure), so the excess is always empty here. */
+     *  same force-path station output the unload AIs use. The injection face is the station's own face
+     *  (see {@link #getItemOutputSide()}), so delivered orders enter the pipe from the station side. The
+     *  injectable claims full acceptance (the force path has no backpressure), so the excess is always
+     *  empty here. */
     @Override
     public ItemStack offerItem(int slot, ItemStack stack) {
         IInjectable output = getItemOutput();
         if (output == null) {
             return stack;
         }
-        return output.injectItem(stack, true, side().getOpposite(), null, 0.0);
+        return output.injectItem(stack, true, side(), null, 0.0);
     }
 
     @Override

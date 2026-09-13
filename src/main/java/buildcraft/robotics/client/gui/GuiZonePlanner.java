@@ -23,15 +23,10 @@ import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
 import buildcraft.lib.gui.GuiBC8;
-import buildcraft.lib.gui.GuiElementSimple;
 import buildcraft.lib.gui.GuiIcon;
-import buildcraft.lib.gui.elem.ToolTip;
+import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.GuiRectangle;
-import buildcraft.lib.misc.LocaleUtil;
-
-import java.util.List;
 
 //? if >=1.21.10 {
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -134,14 +129,13 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     /** Documents the screen in the help ledger: one highlighted, hoverable region per functional zone
-     *  (map viewport, brush rack, input row, output column), each with a short hover tooltip. The
-     *  elements are {@link GuiElementSimple}s — tooltip/help carriers only, never
-     *  {@code IInteractionElement}s — so the viewport's drag/paint mouse input passes through untouched. */
+     *  (map viewport, brush rack, input row, output column). The elements are {@link DummyHelpElement}s —
+     *  help carriers only, never {@code IInteractionElement}s — so the viewport's drag/paint mouse input
+     *  passes through untouched. */
     private void addHelpRegions() {
         // The map window itself: gestures and the survey range.
         mainGui.shownElements.add(helpRegion(
                 new GuiRectangle(MAP_X, MAP_Y, MAP_W, MAP_H),
-                "tip.zone_planner.map",
                 "buildcraft.help.zone_planner.map.title", 0xFF_88_CC_88,
                 "buildcraft.help.zone_planner.map.desc1",
                 "buildcraft.help.zone_planner.map.desc2",
@@ -150,14 +144,12 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         // The 4×4 paintbrush rack.
         mainGui.shownElements.add(helpRegion(
                 new GuiRectangle(8, 146, 70, 70),
-                "tip.zone_planner.brushes",
                 "buildcraft.help.zone_planner.brushes.title", 0xFF_FF_BB_33,
                 "buildcraft.help.zone_planner.brushes.desc"));
 
         // Input row: brush + written map location, progress arrow, blank-map result.
         mainGui.shownElements.add(helpRegion(
                 new GuiRectangle(8, 125, 82, 16),
-                "tip.zone_planner.input",
                 "buildcraft.help.zone_planner.input.title", 0xFF_66_AA_FF,
                 "buildcraft.help.zone_planner.input.desc1",
                 "buildcraft.help.zone_planner.input.desc2"));
@@ -165,29 +157,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         // Output column: brush + blank map location, progress bar, written-map result.
         mainGui.shownElements.add(helpRegion(
                 new GuiRectangle(233, 9, 16, 82),
-                "tip.zone_planner.output",
                 "buildcraft.help.zone_planner.output.title", 0xFF_DD_66_FF,
                 "buildcraft.help.zone_planner.output.desc1",
                 "buildcraft.help.zone_planner.output.desc2"));
     }
 
-    /** A tooltip + help carrier over the given GUI-local area. */
-    private GuiElementSimple helpRegion(GuiRectangle area, String tipKey, String titleKey, int colour,
-                                        String... descKeys) {
-        IGuiArea rootArea = area.offset(mainGui.rootElement);
-        return new GuiElementSimple(mainGui, rootArea) {
-            @Override
-            public void addToolTips(List<ToolTip> tooltips) {
-                if (contains(mainGui.mouse)) {
-                    tooltips.add(new ToolTip(LocaleUtil.localize(tipKey)));
-                }
-            }
-
-            @Override
-            public void addHelpElements(List<ElementHelpInfo.HelpPosition> elements) {
-                elements.add(new ElementHelpInfo(titleKey, colour, descKeys).target(this));
-            }
-        };
+    /** A help-ledger carrier over the given GUI-local area — ledger info only, no hover tooltip. */
+    private DummyHelpElement helpRegion(GuiRectangle area, String titleKey, int colour, String... descKeys) {
+        return new DummyHelpElement(area.offset(mainGui.rootElement), new ElementHelpInfo(titleKey, colour, descKeys));
     }
 
     /** Draws the live map for this frame. On &gt;=1.21.10 it submits a PiP render state (painted into an

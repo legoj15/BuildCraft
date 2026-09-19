@@ -6,12 +6,8 @@ Last audited: 2026-09-12
 
 - Sweep every registered item for a missing client item definition (the Requester shipped without one and rendered missing-textured) — [notes](docs/todo-details.md#client-item-definition-coverage)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
-- Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)
-- New Filler mode icons (fresh art — see [quick notes](docs/todo-details.md#quick-notes))
 - Let facades survive flowing water, like pipes now do — [notes](docs/todo-details.md#waterlogging-facades)
 - Make the Electronic Library's snapshot list scrollable — [notes](docs/todo-details.md#electronic-library-scrolling)
-- Real goggles art — [quick notes](docs/todo-details.md#quick-notes)
-- Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - JEI category for the Programming Table's board grid (the assembly-table category is the pattern)
 - Unify button implementation (native buttons over custom background images)
 - Collapse duplicate fluid textures on the atlas (low value) — [notes](docs/todo-details.md#fluid-atlas-de-duplication)
@@ -32,6 +28,7 @@ Last audited: 2026-09-12
 
 ## 🆕 New Features (version 2026.2)
 
+- Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
@@ -50,6 +47,9 @@ Last audited: 2026-09-12
 - Quarry item transport visualization
 - Alternate recipe input/output pickers on the Advanced Crafting Table (different woods, stones, stairs, doors)
 - Enchantable Quarry and Mining Well
+- Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)
+- New Filler mode icons (fresh art — see [quick notes](docs/todo-details.md#quick-notes))
+- Real goggles art — [quick notes](docs/todo-details.md#quick-notes)
 
 ## 🚫 Blocked
 

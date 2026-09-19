@@ -281,7 +281,7 @@ Ph4/5); follow the post-61caeb0a3 tab wiring in BCRoboticsItems.
 Item model: ship BOTH `items/robot.json` (minecraft:model selector) AND a hand-authored
 elements-based `models/item/robot.json` UNCONDITIONALLY — there is no per-node resource mechanism;
 the 1.21.1 `generateOldItemModels1211` task skips items/ and never clobbers a hand-authored classic
-model (build.gradle.kts:272-317, robot_station precedent). The cube model's texture must live under a
+model (buildSrc/src/main/kotlin/buildcraft/gradle/DataDownport1211.kt, robot_station precedent). The cube model's texture must live under a
 LISTED atlas source dir — the planned copy at `textures/item/robot.png` qualifies via vanilla's
 `item` source (the alternative — adding an `entity` directory source to atlases/blocks.json — would
 stitch 25 unused sprites; the single duplicate PNG is the cheaper call).

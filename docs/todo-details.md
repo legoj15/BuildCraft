@@ -115,6 +115,10 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 
 **Cheap escape hatch if a low-spec-GPU compat report comes in:** ~1 hour revert of commit `5a6cdb5ac` — remove the 25 `dye_replace` entries from `assets/minecraft/atlases/blocks.json`, flip `PipeBaseModelGenStandard.ensureDyedSprites` to return null, restore the three fallback branches. Painted fluid pipes drop from 1-layer dyed-sprite rendering to 2-layer base+mask-overlay; atlas shrinks back to ~1024×1024.
 
+## Dev-only item files in release jars
+
+The item-definition coverage guard compares against the DEV registry (`tasks.test` sets `-Dbuildcraft.dev=true` like every run env), so the 7 dev-gated items' definitions/models are permanently invisible to it — and those files ship in release jars where the items never register. Excluding dev assets from the jar (or re-deciding the allow-list route) is the open question, not a decided task.
+
 ## Quick notes
 
 One-line technical breadcrumbs for bullets that don't need a full section:
@@ -133,7 +137,3 @@ Bumping the 26.2 node to NeoForge 26.2.0.87 fails in `:26.2:createMinecraftArtif
 Diagnosed 2026-09-11: [PR #3451](https://github.com/neoforged/NeoForge/pull/3451) (registry-based-conditions fix, in .87 only) added two accesstransformer.cfg lines widening `HolderSet$Named contents()` and `HolderSet$1 contents()` to public. ModDevGradle's recompile classpath carries the AT-applied binary while the decompiled sources still declare both methods `protected`, so javac rejects the override. Verified the patched-sources zip for .87 is clean (`protected` everywhere) — it is purely the AT/binary-vs-source mismatch. Breaks `createMinecraftArtifacts` for every ModDevGradle user on .87; 26.1.2.109 does not carry the AT change and builds fine.
 
 **Unblock:** bump the pin once NeoForge ships a fix (drop the two `HolderSet` AT lines or patch the sources to match). The SessionStart hook will re-flag the node; file/check an upstream issue at that point if still broken.
-
-## Client item definition coverage
-
-The Requester shipped in Ph8 with `models/item/requester.json` present but no `assets/buildcraftunofficial/items/requester.json` — on 1.21.10+ (client item definitions required) the stack rendered the missing-texture checkerboard everywhere while the block itself looked fine, and nothing caught it: the only coverage is `RoboticsItemIconCoverageTester`, which pins the robot/board *variants* but never asserts that every registered item HAS a definition. Fixed for the Requester 2026-09-12; the sweep is the follow-up: enumerate `BuiltInRegistries.ITEM` for buildcraft namespaces and assert each id has a client item definition file (1.21.10+ nodes only — 1.21.1 still uses classic models), mirroring how `GameTestManifestTester` guards its own wiring. Watch for deliberate exceptions (none known today; facades generate their definitions at build time — check how the facade items/ files are produced before asserting on them).

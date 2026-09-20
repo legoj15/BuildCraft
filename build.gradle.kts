@@ -302,6 +302,15 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.test {
     useJUnitPlatform()
 
+    // The unit-test JVM is a dev workspace, like every other BC run env: client, server and
+    // gameTestServer all set -Dbuildcraft.dev=true, so they register the dev-gated content (the
+    // BCCoreItems/BCCoreBlocks/BCCoreBlockEntities static{} gates read BCLib.DEV). Without the
+    // flag here those items are absent from the live registry while their client item definitions
+    // still exist and ship (they are required content for dev runs), which reads as phantom
+    // orphans to ClientItemDefinitionCoverageTester. Keep the test registry identical to the envs
+    // the mod actually runs in.
+    systemProperty("buildcraft.dev", "true")
+
     // CopyrightHeaderTester reads the .java files themselves off disk, so its real inputs are the
     // source TEXT — not the compiled classes Gradle normally tracks. A header edit is comment-only,
     // produces byte-identical bytecode, and would otherwise leave `test` UP-TO-DATE: the guard would

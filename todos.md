@@ -4,7 +4,7 @@ Last audited: 2026-09-12
 
 ## 🔧 Outstanding work
 
-- Sweep every registered item for a missing client item definition (the Requester shipped without one and rendered missing-textured) — [notes](docs/todo-details.md#client-item-definition-coverage)
+- Decide what happens to the dev-only item files that ship in release jars — [question](docs/todo-details.md#dev-only-item-files-in-release-jars)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - Let facades survive flowing water, like pipes now do — [notes](docs/todo-details.md#waterlogging-facades)
 - Make the Electronic Library's snapshot list scrollable — [notes](docs/todo-details.md#electronic-library-scrolling)

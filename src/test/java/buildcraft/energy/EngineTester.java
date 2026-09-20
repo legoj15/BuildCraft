@@ -174,15 +174,11 @@ public class EngineTester {
      * Regression for "stored energy doesn't release unless fueled" (RC4 feedback): a redstone-powered
      * Stirling engine with a charged MJ buffer but NO fuel (burnTime stays 0, so isBurning()==false)
      * must still deliver its stored buffer to an adjacent receiver. Under the pre-fix isBurning() send
-     * gate the buffer froze; the isActive() gate (base default true) releases it. The sink is the
-     * dev-only {@link TilePowerConsumerTester} (gated on -Dbuildcraft.dev=true), placed directly above
+     * gate the buffer froze; the isActive() gate (base default true) releases it. The sink is a
+     * {@link TilePowerConsumerTester}, placed directly above
      * the upward-facing engine so the engine's MJ capability query connects without any pipe bookkeeping.
      */
     public static void testStirlingEngineReleasesStoredPowerWithoutFuel(GameTestHelper helper) {
-        if (BCCoreBlocks.POWER_TESTER == null) {
-            throw new IllegalStateException(
-                    "POWER_TESTER block not registered — test JVM was launched without -Dbuildcraft.dev=true.");
-        }
         BlockPos redstonePos = new BlockPos(2, 1, 2);
         BlockPos enginePos   = new BlockPos(2, 2, 2);
         BlockPos testerPos   = new BlockPos(2, 3, 2);

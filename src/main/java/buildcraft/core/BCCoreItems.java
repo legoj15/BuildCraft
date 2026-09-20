@@ -92,6 +92,10 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_OIL = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.SPRING_OIL);
 
+        // Debug block item — sinks MJ power; useful next to an engine in creative.
+        public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER = ITEMS
+                        .registerSimpleBlockItem(BCCoreBlocks.POWER_TESTER);
+
         // ─── Dev-only items — gated behind -Dbuildcraft.dev=true ─────────────
         // Registered only in a dev workspace so unfinished/experimental content isn't lost,
         // but kept out of public releases. BCCoreClient tags them with a red "Dev only"
@@ -99,9 +103,6 @@ public class BCCoreItems {
 
         // The 1.12.2 goggles headpiece was never finished.
         public static final DeferredItem<ItemGoggles> GOGGLES;
-
-        // Debug block that sinks MJ power — mirrors BCCoreBlocks.POWER_TESTER.
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER;
 
         static {
                 //? if >=1.21.10 {
@@ -115,9 +116,6 @@ public class BCCoreItems {
                                                 props -> props.stacksTo(1).durability(0))
                                 : null;*/
                 //?}
-                POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.POWER_TESTER)
-                                : null;
                 DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)
                                 ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_DESTROY)
                                 : null;

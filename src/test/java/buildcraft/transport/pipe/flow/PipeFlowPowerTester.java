@@ -34,9 +34,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  *  (engine→pipe / pipe→pipe / pipe→tile) can't silently break power transport
  *  without anyone noticing.
  *
- *  <p>Sink is the dev-only {@link TilePowerConsumerTester}, gated on {@code BCLib.DEV}.
- *  The {@code gameTestServer} run config in {@code build.gradle} sets
- *  {@code -Dbuildcraft.dev=true} so the tester block is registered for tests; it
+ *  <p>Sink is a {@link TilePowerConsumerTester}; it
  *  beats a bounded sink (e.g. Dynamo MJ) because the dynamo's MAX_MJ battery fills
  *  in ~4 ticks at 256 MJ/t and the chain stops, making the assertion race-sensitive
  *  to pipe tick ordering. */
@@ -53,11 +51,6 @@ public class PipeFlowPowerTester {
         BlockPos diamondPipePos = new BlockPos(2, 4, 2);
         BlockPos testerPos      = new BlockPos(2, 5, 2);
 
-        if (BCCoreBlocks.POWER_TESTER == null) {
-            throw new IllegalStateException(
-                    "POWER_TESTER block not registered — test JVM was launched without -Dbuildcraft.dev=true. "
-                            + "Check build.gradle gameTestServer run config.");
-        }
         helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
         TilePipeHolder diamondPipe = placePowerPipe(helper, diamondPipePos, BCTransportItems.PIPE_DIAMOND_POWER.get());
         TilePipeHolder woodPipe    = placePowerPipe(helper, woodPipePos,    BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
@@ -119,9 +112,6 @@ public class PipeFlowPowerTester {
         BlockPos stonePos    = new BlockPos(2, 4, 2);
         BlockPos testerPos   = new BlockPos(2, 5, 2);
 
-        if (BCCoreBlocks.POWER_TESTER == null) {
-            throw new IllegalStateException("POWER_TESTER not registered — need -Dbuildcraft.dev=true");
-        }
         helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
         TilePipeHolder stone = placePowerPipe(helper, stonePos, BCTransportItems.PIPE_STONE_POWER.get());
         TilePipeHolder wood  = placePowerPipe(helper, woodPos,  BCTransportItems.PIPE_WOOD_POWER.get());

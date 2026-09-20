@@ -49,10 +49,8 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCLibItems.GUIDE.get());
                                 // Debugger
                                 output.accept(BCLibItems.DEBUGGER.get());
-                                // Dev-only Power Tester (only when launched with -Dbuildcraft.dev=true)
-                                if (BCCoreItems.POWER_TESTER != null) {
-                                    output.accept(BCCoreItems.POWER_TESTER.get());
-                                }
+                                // Power Tester — MJ sink; handy next to an engine in creative
+                                output.accept(BCCoreItems.POWER_TESTER.get());
                                 // Dev-only Goggles (only when launched with -Dbuildcraft.dev=true)
                                 if (BCCoreItems.GOGGLES != null) {
                                     output.accept(BCCoreItems.GOGGLES.get());

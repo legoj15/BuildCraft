@@ -4,7 +4,6 @@ Last audited: 2026-09-12
 
 ## 🔧 Outstanding work
 
-- Decide what happens to the dev-only item files that ship in release jars — [question](docs/todo-details.md#dev-only-item-files-in-release-jars)
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - Let facades survive flowing water, like pipes now do — [notes](docs/todo-details.md#waterlogging-facades)
 - Make the Electronic Library's snapshot list scrollable — [notes](docs/todo-details.md#electronic-library-scrolling)
@@ -49,6 +48,7 @@ Last audited: 2026-09-12
 - Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)
 - New Filler mode icons (fresh art — see [quick notes](docs/todo-details.md#quick-notes))
 - Real goggles art — [quick notes](docs/todo-details.md#quick-notes)
+- Decide what happens to the dev-only item files that ship in release jars — [question](docs/todo-details.md#dev-only-item-files-in-release-jars)
 
 ## 🚫 Blocked
 

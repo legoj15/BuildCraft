@@ -98,10 +98,6 @@ public class WrenchTagTester {
     }
 
     public static void testForeignWrenchRotatesEngine(GameTestHelper helper) {
-        if (BCCoreBlocks.POWER_TESTER == null) {
-            throw new IllegalStateException(
-                    "POWER_TESTER block not registered — test JVM was launched without -Dbuildcraft.dev=true.");
-        }
         BlockPos enginePos = new BlockPos(2, 2, 2);
 
         BlockState engineState = BCEnergyBlocks.ENGINE_STONE.get().defaultBlockState()

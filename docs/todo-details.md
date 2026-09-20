@@ -117,7 +117,7 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 
 ## Dev-only item files in release jars
 
-The item-definition coverage guard compares against the DEV registry (`tasks.test` sets `-Dbuildcraft.dev=true` like every run env), so the 7 dev-gated items' definitions/models are permanently invisible to it — and those files ship in release jars where the items never register. Excluding dev assets from the jar (or re-deciding the allow-list route) is the open question, not a decided task.
+The item-definition coverage guard compares against the DEV registry (`tasks.test` sets `-Dbuildcraft.dev=true` like every run env), so the 6 dev-gated items' definitions/models are permanently invisible to it — and those files ship in release jars where the items never register. (The Power Tester left the dev-gated set on 2026-09-20 and registers publicly.) Excluding dev assets from the jar (or re-deciding the allow-list route) is the open question, not a decided task.
 
 ## Quick notes
 

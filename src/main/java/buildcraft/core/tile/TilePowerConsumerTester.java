@@ -25,7 +25,7 @@ import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.core.BCCoreBlockEntities;
 
 /**
- * Dev-only debug receiver. Accepts up to 100,000 MJ/tick on any side and reports
+ * Debug MJ receiver. Accepts up to 100,000 MJ/tick on any side and reports
  * the running tally via {@link IDebuggable} (visible on the F3 debug overlay while
  * looking at the block, see {@code DebugOverlayRenderer}).
  */

@@ -13,7 +13,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
-import buildcraft.lib.BCLib;
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.core.tile.TileMarkerPath;
 import buildcraft.core.tile.TileMarkerVolume;
@@ -41,15 +40,9 @@ public class BCCoreBlockEntities {
             "engine_creative",
             () -> BlockEntityTypeUtilBC.create(TileEngineCreative::new, BCCoreBlocks.ENGINE_CREATIVE.get()));
 
-    // Dev-only — mirrors BCCoreBlocks.POWER_TESTER. Null when -Dbuildcraft.dev is unset.
-    public static final Supplier<BlockEntityType<TilePowerConsumerTester>> POWER_TESTER;
-
-    static {
-        POWER_TESTER = (BCLib.DEV && BCCoreBlocks.POWER_TESTER != null)
-                ? BLOCK_ENTITIES.register("power_tester",
-                        () -> BlockEntityTypeUtilBC.create(TilePowerConsumerTester::new, BCCoreBlocks.POWER_TESTER.get()))
-                : null;
-    }
+    public static final Supplier<BlockEntityType<TilePowerConsumerTester>> POWER_TESTER = BLOCK_ENTITIES.register(
+            "power_tester",
+            () -> BlockEntityTypeUtilBC.create(TilePowerConsumerTester::new, BCCoreBlocks.POWER_TESTER.get()));
 
     public static void init(IEventBus modEventBus) {
         BLOCK_ENTITIES.register(modEventBus);

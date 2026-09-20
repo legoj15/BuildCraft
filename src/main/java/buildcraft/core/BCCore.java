@@ -482,14 +482,12 @@ public class BCCore {
             (engine, direction) -> engine.getMjConnector()
         );
 
-        // Dev-only power tester: the tile itself implements IMjReceiver on every side.
-        if (BCCoreBlockEntities.POWER_TESTER != null) {
-            event.registerBlockEntity(
-                buildcraft.api.mj.MjAPI.CAP_RECEIVER,
-                BCCoreBlockEntities.POWER_TESTER.get(),
-                (tester, direction) -> tester
-            );
-        }
+        // The power tester's tile implements IMjReceiver on every side.
+        event.registerBlockEntity(
+            buildcraft.api.mj.MjAPI.CAP_RECEIVER,
+            BCCoreBlockEntities.POWER_TESTER.get(),
+            (tester, direction) -> tester
+        );
     }
 
     private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {

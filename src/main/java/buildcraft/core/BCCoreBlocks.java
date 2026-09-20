@@ -70,17 +70,14 @@ public class BCCoreBlocks {
             "engine_creative",
             BlockEngineCreative::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    // Dev-only debug block — registered only when launched with -Dbuildcraft.dev=true.
-    // 1.12.2 Material.IRON → pickaxe-required, metal sounds.
-    public static final DeferredBlock<BlockPowerConsumerTester> POWER_TESTER;
+    // Debug block that sinks MJ power — also the standard MJ sink in the engine/pipe
+    // game tests. 1.12.2 Material.IRON → pickaxe-required, metal sounds.
+    public static final DeferredBlock<BlockPowerConsumerTester> POWER_TESTER = RegistrationUtilBC.registerBlock(BLOCKS,
+            "power_tester",
+            BlockPowerConsumerTester::new,
+            () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
     static {
-        POWER_TESTER = BCLib.DEV
-                ? RegistrationUtilBC.registerBlock(BLOCKS, "power_tester",
-                        BlockPowerConsumerTester::new,
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops())
-                : null;
-
         DECORATED_DESTROY = BCLib.DEV
                 ? BLOCKS.registerSimpleBlock("decorated_destroy",
                         //? if >=1.21.10 {

@@ -8,9 +8,11 @@
  */
 package buildcraft.robotics.boards;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+
+import net.minecraft.world.entity.Entity;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -23,20 +25,54 @@ import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
 
 /** Picks up dropped items within 250 blocks and carries them to a station to unload. When nothing to fetch and
- *  nothing held it goes to sleep. The "this item is being fetched" set keys on {@code ItemEntity.getUUID()}
+ *  nothing held it goes to sleep. The "this item is being fetched" table keys on {@code ItemEntity.getUUID()}
  *  (D4) rather than 7.1.x's recycled {@code int} ids. */
 public class BoardRobotPicker extends RedstoneBoardRobot {
 
-    /** Items currently being fetched by some picker, keyed by the dropped item's UUID — globally unique where
-     *  7.1.x's {@code int} entity ids were not. Cleared on server start. */
-    public static final Set<UUID> targettedItems = new HashSet<>();
+    /** Items currently being fetched, keyed by the dropped item's UUID (globally unique, so one table serves
+     *  every dimension), mapped to the fetch that claimed it. 7.1.x kept a bare id SET, released only by the
+     *  fetch's {@code end()} — which never runs when the robot's chunk unloads mid-fetch or the robot is
+     *  killed, so such a drop stayed untouchable for every robot until the server restarted (the reloaded
+     *  robot included: its fetch AI is not saved). Remembering the claimant lets a claim die with its robot.
+     *  Server-thread only. Cleared on server start. */
+    private static final Map<UUID, AIRobotFetchItem> TARGETS = new HashMap<>();
 
     public BoardRobotPicker(IRobotAccess iRobot) {
         super(iRobot);
     }
 
+    /** @return true if a robot that is still in the world is fetching the item with this UUID. */
+    public static boolean isTargetted(UUID item) {
+        AIRobotFetchItem claimant = TARGETS.get(item);
+        if (claimant == null) {
+            return false;
+        }
+        if (isStale(claimant)) {
+            TARGETS.remove(item);
+            return false;
+        }
+        return true;
+    }
+
+    /** Claims {@code item} for {@code claimant}, dropping every claim whose robot has left the world so the
+     *  table cannot accumulate dead robots. */
+    public static void claimTarget(UUID item, AIRobotFetchItem claimant) {
+        TARGETS.values().removeIf(BoardRobotPicker::isStale);
+        TARGETS.put(item, claimant);
+    }
+
+    /** Releases {@code item} only if {@code claimant} still holds it — a fetch whose stale claim was taken over
+     *  by another robot must not free the new holder's lock when it finally ends. */
+    public static void releaseTarget(UUID item, AIRobotFetchItem claimant) {
+        TARGETS.remove(item, claimant);
+    }
+
+    private static boolean isStale(AIRobotFetchItem claimant) {
+        return claimant.robot instanceof Entity robot && robot.isRemoved();
+    }
+
     public static void onServerStart() {
-        targettedItems.clear();
+        TARGETS.clear();
     }
 
     private void fetchNewItem() {

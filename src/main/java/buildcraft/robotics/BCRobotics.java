@@ -149,10 +149,9 @@ public class BCRobotics {
         // registered by the name its NBT saves, with the 7.1.x legacy class name for old-save migration.
         registerAIsAndBoards();
 
-        // The picker's shared targettedItems set is cleared on every server start — the 7.1.x wiring
+        // The picker's shared fetch-target table is cleared on every server start — the 7.1.x wiring
         // (BuildCraftRobotics called BoardRobotPicker.onServerStart from its server-start handler) that the
-        // port originally dropped. Without it, UUIDs leaked by an interrupted fetch (chunk unload mid-fetch
-        // drops the FetchItem without end()) would blacklist their items for the whole JVM session.
+        // port originally dropped. (Claims held by robots that have left the world already expire on their own.)
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.onServerStart());
 
         // Ph7: the Programming Table + Integration Table recipes. Registered per-server-start (and per MP-client

@@ -18,7 +18,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.boards.BoardRobotPicker;
 
-/** Flies to a nearby dropped item and picks it up. The shared "this item is being fetched" set keys on
+/** Flies to a nearby dropped item and picks it up. The shared "this item is being fetched" table ({@link BoardRobotPicker#isTargetted}) keys on
  *  {@code ItemEntity.getUUID()} (D4) — 7.1.x keyed it on recycled {@code int} entity ids, which collide across
  *  dimensions; UUIDs are globally unique. */
 public class AIRobotFetchItem extends AIRobot {
@@ -103,7 +103,7 @@ public class AIRobotFetchItem extends AIRobot {
     @Override
     public void end() {
         if (target != null) {
-            BoardRobotPicker.targettedItems.remove(target.getUUID());
+            BoardRobotPicker.releaseTarget(target.getUUID(), this);
         }
     }
 
@@ -113,7 +113,7 @@ public class AIRobotFetchItem extends AIRobot {
 
         for (ItemEntity item : robot.level().getEntitiesOfClass(ItemEntity.class, box)) {
             if (item.isRemoved()
-                    || BoardRobotPicker.targettedItems.contains(item.getUUID())
+                    || BoardRobotPicker.isTargetted(item.getUUID())
                     || robot.isKnownUnreachable(item)
                     || (zone != null && !zone.contains(item.position()))) {
                 continue;
@@ -153,7 +153,7 @@ public class AIRobotFetchItem extends AIRobot {
         }
 
         if (target != null) {
-            BoardRobotPicker.targettedItems.add(target.getUUID());
+            BoardRobotPicker.claimTarget(target.getUUID(), this);
             if (Math.floor(target.getX()) != Math.floor(robot.position().x)
                     || Math.floor(target.getY()) != Math.floor(robot.position().y)
                     || Math.floor(target.getZ()) != Math.floor(robot.position().z)) {

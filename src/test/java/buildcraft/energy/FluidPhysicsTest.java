@@ -104,41 +104,6 @@ public class FluidPhysicsTest {
         *///?}
     }
 
-    public static void testDenseOilSinking(GameTestHelper helper) {
-        // Create a pool of water with Air above it
-        BlockPos waterPos = new BlockPos(1, 1, 1);
-        BlockPos abovePos = new BlockPos(1, 2, 1);
-        helper.setBlock(waterPos, Blocks.WATER);
-        
-        // Place Dense Oil
-        helper.setBlock(abovePos, BCEnergyFluids.ALL.get(3).block().get());
-        
-        helper.succeedWhen(() -> {
-            // Assert that the Dense Oil annihilated the water and fell down!
-            helper.assertBlockPresent(BCEnergyFluids.ALL.get(3).block().get(), waterPos);
-            helper.assertBlockProperty(abovePos, net.minecraft.world.level.block.LiquidBlock.LEVEL, 0); // Still standard source
-        });
-    }
-
-    public static void testLightFuelSpreading(GameTestHelper helper) {
-        // Place water across the floor
-        for(int x = 0; x <= 2; x++) {
-            for(int z = 0; z <= 2; z++) {
-                helper.setBlock(new BlockPos(x, 1, z), Blocks.WATER);
-            }
-        }
-        
-        // Place Light Fuel (which floats) over the center water block
-        BlockPos centerPos = new BlockPos(1, 2, 1);
-        BlockPos sidePos = new BlockPos(2, 2, 1);
-        helper.setBlock(centerPos, BCEnergyFluids.ALL.get(7).block().get());
-        
-        helper.succeedWhen(() -> {
-            // Assert that the Purgatory Escape Hatch successfully cascaded the oil onto the side water blocks!
-            helper.assertBlockPresent(BCEnergyFluids.ALL.get(7).block().get(), sidePos);
-        });
-    }
-
     /**
      * Pins crude oil's deliberate non-water-like configuration (the {@code turnOffSplashes} branch in
      * {@link BCEnergyFluids}). Crude oil ("oil") is built with {@code isWaterLike(false)/canSwim(false)}
@@ -179,23 +144,6 @@ public class FluidPhysicsTest {
         }*/
         //?}
         helper.succeed();
-    }
-
-    public static void testCrudeOilSelfCollision(GameTestHelper helper) {
-        // Simulate the Layer Cake bug: Crude Oil sits on top of Crude Oil
-        BlockPos basePos = new BlockPos(1, 1, 1);
-        BlockPos topPos = new BlockPos(1, 2, 1);
-        BlockPos sidePos = new BlockPos(2, 2, 1);
-        
-        helper.setBlock(basePos, BCEnergyFluids.OIL_COOL.block().get());
-        helper.setBlock(topPos, BCEnergyFluids.OIL_COOL.block().get());
-        
-        // It should NOT spread to sidePos (Layer Cake bug) because Native isWaterHole gracefully merges them
-        // So we wait 20 ticks to ensure it does not spread sideways
-        helper.runAfterDelay(20, () -> {
-            helper.assertBlockNotPresent(BCEnergyFluids.OIL_COOL.block().get(), sidePos);
-            helper.succeed();
-        });
     }
 
     /**

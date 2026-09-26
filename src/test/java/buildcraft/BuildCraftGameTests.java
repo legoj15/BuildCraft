@@ -801,6 +801,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_fetch_item_removed_target_guard", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemRemovedTargetIsNotPicked);
         reg.accept("buildcraftunofficial:robot_fetch_item_partial_fit_targets", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemPartialFitStillTargets);
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
+        reg.accept("buildcraftunofficial:robot_fetch_item_lock_dies_with_robot", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemLockDiesWithItsRobot);
 
         // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
         // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),

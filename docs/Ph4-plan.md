@@ -94,6 +94,11 @@ dimensions (ids are recycled). Modern `ItemEntity.getUUID()` is globally unique,
 `level.getEntitiesOfClass(ItemEntity.class, ...)` (replaces the raw `loadedEntityList` iteration),
 reads `getUUID()`, and the goto uses the item's block.
 
+*Amended 2026-09-26:* the set became a `Map<UUID, AIRobotFetchItem>` (`BoardRobotPicker.isTargetted` /
+`claimTarget` / `releaseTarget`). A claim counts only while its robot entity is not removed, and a release
+only frees the claimant's own entry: a robot unloaded or killed mid-fetch never runs `end()`, which in
+7.1.x (and the port until then) stranded that drop for every robot until server restart.
+
 ---
 
 ## Scope

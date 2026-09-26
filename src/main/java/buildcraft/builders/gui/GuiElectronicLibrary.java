@@ -305,7 +305,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
     }
 
-    /** Selects the snapshot under the cursor. @return true if a list row was clicked. */
+    /** Selects the snapshot under the cursor (left button only). @return true if a list row was clicked. */
     private boolean clickList(double mouseX, double mouseY) {
         if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W) {
             return false;
@@ -330,8 +330,10 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         double x = mouseX - leftPos, y = mouseY - topPos;
         if (x >= LIST_HELP_X && x < SCROLL_X + SCROLL_W && y >= SCROLL_Y && y < SCROLL_Y + SCROLL_H) {
             refreshList();
-            scroll.scrollBy(ScrollWindow.wheelRows(scrollY));
-            return true;
+            if (scroll.isScrollable()) {
+                scroll.scrollBy(ScrollWindow.wheelRows(scrollY));
+                return true;
+            }
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
@@ -339,12 +341,12 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        return clickList(event.x(), event.y()) || super.mouseClicked(event, doubleClick);
+        return (event.button() == 0 && clickList(event.x(), event.y())) || super.mouseClicked(event, doubleClick);
     }
     //?} else {
     /*@Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return clickList(mouseX, mouseY) || super.mouseClicked(mouseX, mouseY, button);
+        return (button == 0 && clickList(mouseX, mouseY)) || super.mouseClicked(mouseX, mouseY, button);
     }*/
     //?}
 }

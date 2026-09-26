@@ -477,8 +477,10 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 // Take the world's bucket BEFORE crediting the tank: a pickup can refuse
                 // (a modded BucketPickup), and crediting first would mint fluid every pass.
-                // Skip a refusing cell rather than stalling on it until the next rebuild.
+                // Skip a refusing cell rather than stalling on it until the next rebuild; the
+                // power spent on the refused attempt is gone, so the next cell pays in full.
                 if (!isInfiniteWaterSource && BlockUtil.drainBlock(level, currentPos, true) == null) {
+                    progress = 0;
                     paths.remove(currentPos);
                     nextPos();
                     return;

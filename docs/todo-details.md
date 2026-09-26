@@ -109,12 +109,16 @@ Found during the 2026-09-26 fake-player cache work (`buildcraft.lib.misc.FakePla
 
 ## Electronic Library list cost
 
-`GlobalSavedDataSnapshots.getList()` re-reads and decompresses every snapshot file on the render thread once per second while the library GUI is open (1 s `SingleCache`, called every frame from `drawForegroundLayer`) — large libraries will hitch. Cache headers/keys and invalidate on add/remove. The list order is `File.listFiles` order of hash-named files, so it looks random; sort by name, then date. (Scrolling itself landed 2026-09-26 via `ScrollWindow` / `GuiElementScrollbar` / `SelectionFollower`.)
+`GlobalSavedDataSnapshots.getList()` re-reads and decompresses every snapshot file on the render thread once per second while the library GUI is open (1 s `SingleCache`, called every frame from `drawForegroundLayer`) — large libraries will hitch. Cache headers/keys and invalidate on add/remove. The list order is `File.listFiles` order of hash-named files, so it looks random; sort by name, then date. Minor (GLM review 2026-09-26): a server selection-sync landing in the same frame as a click can scroll the window inside `clickList` before the row is computed, selecting a neighbouring row. (Scrolling itself landed 2026-09-26 via `ScrollWindow` / `GuiElementScrollbar` / `SelectionFollower`.)
 
 ## Flaky and dead tests
 
 - `robot_fetch_item_partial_fit_targets` (AIRobotFetchItemTester) failed once in a full 26.1.2 suite and passed on rerun. Likely: `AIRobotFetchItem` scans a 16-block radius that crosses neighbouring arenas (6 apart), and the `targettedItems` UUID set is static, so another test's robot can claim this test's drop. Fix: restrict the scan to the arena (zone) or position-pin the target.
 - `FluidPhysicsTest.testLightFuelSpreading` and `testCrudeOilSelfCollision` were never registered in `BuildCraftGameTests`, so they never run (`testDenseOilSinking` is now covered by `dense_oil_sinks_through_plain_water`). Register them in a contained basin or delete them — their layouts leak fluid out of the arena.
+
+## Fake player cache hardening
+
+Low-priority notes from the 2026-09-26 GLM review of `FakePlayerUtil` (none reachable from BC's own callers): the per-fetch reset doesn't restore FoodData, hurt/invulnerable timers, death state or portal timers; the public `fetch()` path (unlike `lease()`) sets no reservation; a `Lease` dropped without `close()` reserves its player forever with no warning (all in-tree sites use try-with-resources). Also: a modded `BucketPickup` that reports a source but refuses `pickupBlock` makes `TilePump` re-queue that cell on every 30-tick rebuild (no dupe and no free drain, since the refusal now resets progress; just a wasted BFS).
 
 ## Robot stripes stack loss
 

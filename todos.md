@@ -13,6 +13,7 @@ Last audited: 2026-09-26
 - Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
 - Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
 - Close the machine-protection gaps: stripes pipes and robots skip claim checks, and the check itself pings lasers — [notes](docs/todo-details.md#machine-protection-gaps)
+- Harden the shared fake player against misuse by addons (low priority) — [notes](docs/todo-details.md#fake-player-cache-hardening)
 - Stripes-pipe advancements never reach the owner on 1.21.1 and 26.2 — [notes](docs/todo-details.md#stripes-advancements-on-fake-players)
 - Builders needlessly hold off placing pipes and markers next to water — [notes](docs/todo-details.md#builder-fluid-defer-on-waterloggables)
 - Electronic Library rereads every snapshot from disk each second and lists them in random order — [notes](docs/todo-details.md#electronic-library-list-cost)

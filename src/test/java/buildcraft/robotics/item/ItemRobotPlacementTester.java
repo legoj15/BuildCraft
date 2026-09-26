@@ -5,13 +5,21 @@
  */
 package buildcraft.robotics.item;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
+
+import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
@@ -21,6 +29,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -37,6 +46,8 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.boards.BoardRobotEmptyNBT;
+import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -49,11 +60,10 @@ import buildcraft.transport.tile.TilePipeHolder;
  * FACE has to carry an untaken {@code RobotStationPluggable}, the cancellable {@code RobotEvent.Place} has to
  * be posted before anything is committed, the robot has to take the station as its MAIN station (so it is
  * linked, not merely reserved) and dock at the face centre, and the stack has to be consumed for a
- * non-creative player.
- *
- * <p>Deliberately NOT ported from 7.1.x: the empty-board placement rejection. Ph3 ships only the empty board,
- * so copying that guard would make the item unplaceable and nothing here could ever pass — see
- * {@link #emptyBoardRobotStillPlaces}.
+ * non-creative player. A blank (empty-board) robot is refused before any of that, exactly as 7.1.x refused it,
+ * with an action-bar "Not programmed" message on top — see {@link #blankRobotRefusesPlacement}. Every other
+ * test here therefore places a PROGRAMMED robot ({@link #programmedRobot}), or it would be exercising the
+ * refusal instead of the path it names.
  *
  * <p><b>Arena discipline, same as {@code RobotStationPluggableTester} and {@code EntityRobotTester}.</b> The
  * framework spaces arenas 6 blocks apart in X and 8 in Z, so every relative position here stays inside that
@@ -74,6 +84,12 @@ public class ItemRobotPlacementTester {
     private static volatile boolean vetoPlacement = false;
 
     // ---------- fixtures ----------
+
+    /** A robot stack carrying a real (non-empty) board — the only kind that places. The Picker is arbitrary:
+     *  every placed robot is discarded in the tick it appears, before its board ever acts. */
+    private static ItemStack programmedRobot(long charge) {
+        return ItemRobot.createRobotStack(BoardRobotPickerNBT.ID, charge);
+    }
 
     private static void installStation(GameTestHelper helper, BlockPos relPos, Direction side) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
@@ -170,9 +186,12 @@ public class ItemRobotPlacementTester {
                     "Ph3 must register an empty robot board — the robot's skin, its creative-tab entry and "
                             + "every board-id round trip resolve through it");
             long charge = 3000L * MjAPI.MJ;
-            ItemStack stack = ItemRobot.createRobotStack(board.getID(), charge);
+            ItemStack stack = programmedRobot(charge);
             helper.assertFalse(stack.isEmpty(),
                     "createRobotStack must build a real robot stack carrying the board id and charge");
+            // A programmed robot stacks to 1, so a pair is unreachable in play — it is here only so "the
+            // placement consumes EXACTLY one" is observable rather than just "the hand ends up empty".
+            stack.setCount(2);
 
             Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
 
@@ -205,8 +224,12 @@ public class ItemRobotPlacementTester {
             helper.assertTrue(robot.getBattery().getStored() == charge,
                     "the placed robot must carry the stack's charge: expected " + charge + " got "
                             + robot.getBattery().getStored());
-            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty(),
-                    "a survival player must have the robot item consumed by a successful placement");
+            helper.assertTrue(robot.getBoard() != null
+                            && BoardRobotPickerNBT.ID.equals(robot.getBoard().getNBTHandler().getID()),
+                    "the placed robot must run the stack's board");
+            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
+                    "a survival placement must consume exactly one robot, leaving "
+                            + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of 2");
             // The placed robot is outside the framework's pass-time cleanup bounds (the empty structure
             // only covers the arena corner), so it survives into the NEXT batch's reuse of these very
             // coordinates and inflates that test's robot count — discard it before succeeding.
@@ -243,7 +266,7 @@ public class ItemRobotPlacementTester {
                 4,
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT.get());
+                    ItemStack stack = programmedRobot(0L);
                     Player player = clickStationWith(helper, pipeRel, Direction.UP, stack);
 
                     List<EntityRobot> dockedHere = robotsNear(helper, pipeRel, 3.0);
@@ -281,7 +304,7 @@ public class ItemRobotPlacementTester {
                     event.setCanceled(true);
                 }
             };
-            ItemStack stack = new ItemStack(BCRoboticsItems.ROBOT.get());
+            ItemStack stack = programmedRobot(0L);
             Player player;
             vetoPlacement = true;
             NeoForge.EVENT_BUS.addListener(RobotEvent.Place.class, veto);
@@ -308,35 +331,78 @@ public class ItemRobotPlacementTester {
         });
     }
 
-    /** A bare robot stack — no CUSTOM_DATA blob at all, i.e. the empty board at zero charge — still places.
-     *  7.1.x refused exactly this case; Ph3 has no other board, so keeping that guard would make the item
-     *  permanently unplaceable. An empty-board robot places, docks and idles: that is the Ph3 MVP. */
-    public static void emptyBoardRobotStillPlaces(GameTestHelper helper) {
-        // z=6, not the old z=7: with the empty structure the grid rows are spaced 7 apart, so z=7 is
-        // already the NEXT row's first block — the pipe physically sat in a neighbour's arena.
+    /** A {@link FakePlayer} (a real {@code ServerPlayer}, unlike {@code makeMockPlayer}'s bare {@code Player})
+     *  that keeps every action-bar message it is sent, so the refusal's "Not programmed" line is observable.
+     *  The overlay entry point is {@code displayClientMessage(msg, true)} below 26.1 and
+     *  {@code sendOverlayMessage} from 26.1 on — the same split {@code MessageUtil.sendOverlayMessage} hides. */
+    private static final class RecordingPlayer extends FakePlayer {
+        final List<Component> overlay = new ArrayList<>();
+
+        RecordingPlayer(ServerLevel level) {
+            super(level, new GameProfile(UUID.fromString("5c7c0c9e-2b1f-4b8e-9a51-0b1d3c10e0aa"),
+                    "[BC robot tester]"));
+        }
+
+        //? if >=26.1 {
+        @Override
+        public void sendOverlayMessage(Component message) {
+            overlay.add(message);
+        }
+        //?} else {
+        /*@Override
+        public void displayClientMessage(Component message, boolean actionBar) {
+            if (actionBar) {
+                overlay.add(message);
+            }
+        }*/
+        //?}
+    }
+
+    /** A blank robot — the bare no-blob stack AND a stack naming the empty board outright — is refused, as
+     *  7.1.x refused it ({@code getRobotNBT(stack) == getEmptyRobotBoard()} returned before any spawn): no
+     *  robot, the station stays free, the whole stack of 16 stays in hand, and {@code useOn} answers
+     *  {@code FAIL} so the hand does not swing a placement that never happened. The port's addition over
+     *  7.1.x's silent refusal: one action-bar "Not programmed" message per click. */
+    public static void blankRobotRefusesPlacement(GameTestHelper helper) {
+        // z=6, not z=7: with the empty structure the grid rows are spaced 7 apart, so z=7 is already the
+        // NEXT row's first block.
         BlockPos pipeRel = new BlockPos(4, 2, 6);
         EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+            BlockHitResult hit = new BlockHitResult(faceCentre(helper, pipeRel, Direction.UP), Direction.UP,
+                    helper.absolutePos(pipeRel), false);
 
-            ItemStack bare = new ItemStack(BCRoboticsItems.ROBOT.get());
-            helper.assertTrue(ItemRobot.getEnergy(bare) == 0,
-                    "a bare robot stack reads as zero charge, not as a malformed stack");
-            Player player = clickStationWith(helper, pipeRel, Direction.UP, bare);
+            ItemStack bare = new ItemStack(BCRoboticsItems.ROBOT.get(), 16);
+            ItemStack namedEmpty = ItemRobot.createRobotStack(BoardRobotEmptyNBT.ID, 3000L * MjAPI.MJ);
+            namedEmpty.setCount(16);
+            helper.assertTrue(bare.getCount() == 16 && namedEmpty.getCount() == 16,
+                    "precondition: blank robots stack to 16");
 
-            List<EntityRobot> placed = robotsNear(helper, pipeRel, 2.0);
-            placed.removeIf(r -> r.getDockingStation() != station);
-            helper.assertTrue(placed.size() == 1,
-                    "an empty-board robot must PLACE — the 7.1.x empty-board rejection is deliberately "
-                            + "dropped in Ph3, found " + placed.size() + " robots docked to this station"
-                            + describe(placed));
-            helper.assertTrue(placed.get(0).getDockingStation() == station,
-                    "an empty-board robot docks like any other");
-            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).isEmpty(),
-                    "a successful empty-board placement still consumes the item");
-            placed.get(0).discard(); // outside the framework's cleanup bounds — see the happy path
+            for (ItemStack blank : new ItemStack[] { bare, namedEmpty }) {
+                RecordingPlayer player = new RecordingPlayer(helper.getLevel());
+                player.setItemInHand(InteractionHand.MAIN_HAND, blank);
+                InteractionResult result = BCRoboticsItems.ROBOT.get()
+                        .useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+
+                helper.assertTrue(result == InteractionResult.FAIL,
+                        "a blank robot's click must FAIL (handled, no arm swing), got " + result);
+                List<EntityRobot> placed = robotsNear(helper, pipeRel, 2.0);
+                placed.removeIf(r -> r.getDockingStation() != station);
+                helper.assertTrue(placed.isEmpty(),
+                        "a blank robot must not place — 7.1.x refused it" + describe(placed));
+                helper.assertFalse(station.isTaken(), "a refused placement must leave the station free");
+                helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 16,
+                        "a refused placement must consume nothing, leaving "
+                                + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of 16");
+                helper.assertTrue(player.overlay.size() == 1,
+                        "exactly one action-bar message per refused click, got " + player.overlay);
+                helper.assertTrue(player.overlay.get(0).getContents() instanceof TranslatableContents tc
+                                && ItemRobot.NOT_PROGRAMMED_KEY.equals(tc.getKey()),
+                        "the refusal must say 'Not programmed', got " + player.overlay.get(0));
+            }
             helper.succeed();
         });
     }

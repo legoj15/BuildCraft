@@ -228,8 +228,10 @@ public class BCCore {
         // Fake players for every subsystem: cached per (level, profile) and reset on each fetch — see FakePlayerUtil.
         buildcraft.api.core.BuildCraftAPI.fakePlayerProvider = buildcraft.lib.misc.FakePlayerUtil.PROVIDER;
 
-        // Initialize the default crop handler for the CropManager API
+        // The CropManager handlers, as 1.12.2's BCLibRegistries set them: the plant-umbrella default, plus
+        // sugar cane, which is not a plant block and so needs its own handler.
         buildcraft.api.crops.CropManager.setDefaultHandler(buildcraft.lib.crops.CropHandlerPlantable.INSTANCE);
+        buildcraft.api.crops.CropManager.registerHandler(buildcraft.lib.crops.CropHandlerReeds.INSTANCE);
 
         // The "soft" world property the robotics pathfinder queries via BuildCraftAPI.isSoftBlock. 7.1.x
         // registered this in BuildCraftCore's postInit (FMLPostInitializationEvent); the port kept the API

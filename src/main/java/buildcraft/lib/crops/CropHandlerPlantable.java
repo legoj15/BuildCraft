@@ -48,15 +48,15 @@ public enum CropHandlerPlantable implements ICropHandler {
     public boolean isSeed(ItemStack stack) {
         if (stack.getItem() instanceof BlockItem blockItem) {
             Block block = blockItem.getBlock();
-            // The plant umbrella covers CropBlock, flowers, SaplingBlock, MushroomBlock, etc.
-            // Sugar cane extends Block directly (never a plant) — it is CropHandlerReeds territory.
+            // The plant umbrella covers CropBlock, flowers, SaplingBlock, MushroomBlock, etc. Sugar cane
+            // extends Block directly on every line, so it never matches here — CropHandlerReeds (registered
+            // ahead of this default in CropManager) is what plants it.
             //? if >=1.21.10 {
-            if (block instanceof net.minecraft.world.level.block.VegetationBlock
-                    && block != Blocks.SUGAR_CANE) {
+            if (block instanceof net.minecraft.world.level.block.VegetationBlock) {
                 return true;
             }
             //?} else {
-            /*if (block instanceof BushBlock && block != Blocks.SUGAR_CANE) {
+            /*if (block instanceof BushBlock) {
                 return true;
             }*/
             //?}

@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:robot_item_empty_board_places",
+    "function": "buildcraftunofficial:robot_item_blank_robot_refuses_placement",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 100,

@@ -40,6 +40,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.lib.misc.MessageUtil;
 
 import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
@@ -56,11 +57,9 @@ import buildcraft.robotics.entity.EntityRobot;
  * {@code NbtApiUtil} — the plain {@code CompoundTag} getters return {@code Optional}s from 1.21.10 onward and
  * raw values before that.
  *
- * <p>Unlike 7.1.x this item does <em>not</em> refuse to place an empty-board robot: Ph3 ships only the empty
- * board, so that guard would make the item unplaceable and there would be nothing to test. An empty-board robot
- * places, docks and idles — that is the Ph3 minimum. Ph4 revisits it once real boards exist. The item also
- * ships recipe-less on purpose: boards arrive in Ph4, and a craftable do-nothing robot would just be an
- * expensive mistake.
+ * <p>As in 7.1.x, a blank (empty-board) robot refuses placement — it has no program to run. Unlike 7.1.x's
+ * silent refusal, the player is told so on the action bar ({@link #NOT_PROGRAMMED_KEY}); the user decision of
+ * the 2026-09-03 gameplay audit.
  *
  * <p>Also deliberately dropped from 7.1.x: the {@code IEnergyContainerItem} implementation (RF, which main has
  * no equivalent item-level capability for). The stack-to-16-while-blank nicety was initially dropped too, then
@@ -78,6 +77,9 @@ public class ItemRobot extends Item {
     /** The board sub-compound's own id key. Written by {@link RedstoneBoardNBT#createBoard} and read back by
      *  the board registry, so it is not this item's to rename. */
     private static final String TAG_BOARD_ID = "id";
+
+    /** The action-bar line a blank robot answers a placement click with. */
+    public static final String NOT_PROGRAMMED_KEY = "buildcraft.robot.not_programmed";
 
     public ItemRobot(Item.Properties properties) {
         super(properties);
@@ -167,8 +169,10 @@ public class ItemRobot extends Item {
 
     /** Places a robot onto the {@code RobotStationPluggable} on the clicked face.
      *
-     * <p>Order is load-bearing and matches 7.1.x: the face has to carry an untaken station, the cancellable
-     * {@code RobotEvent.Place} is posted before <em>anything</em> is committed, the id comes from the registry
+     * <p>Order is load-bearing and matches 7.1.x: the face has to carry a station (anything else PASSes), a
+     * blank robot is then refused ("Not programmed" on the action bar, {@code FAIL} so the hand does not
+     * swing — checked before the taken test, as the more useful answer), the station must be untaken, the
+     * cancellable {@code RobotEvent.Place} is posted before <em>anything</em> is committed, the id comes from the registry
      * before the entity reaches the world, the robot is positioned at the station's face centre, and the
      * station is taken as MAIN (a plain {@code take} would leave the robot with no linked station and it would
      * shut itself down on its next tick). {@code level.addFreshEntity} is used deliberately rather than
@@ -179,25 +183,40 @@ public class ItemRobot extends Item {
         Direction face = context.getClickedFace();
         BlockEntity tile = level.getBlockEntity(context.getClickedPos());
 
+        ItemStack stack = context.getItemInHand();
+
         if (level.isClientSide()) {
             // The client's copy of a RobotStationPluggable never resolves a DockingStation (onTick is
             // server-only), so it cannot tell a free station from a taken one. All it can honestly answer is
-            // "there is a station on that face at all", which is enough to decide whether to swing the arm.
+            // "there is a station on that face at all", which is enough to decide whether to swing the arm —
+            // and the board rides in the synced CUSTOM_DATA, so it knows a blank robot will be refused.
             boolean isStationFace = tile instanceof IPipeHolder holder
                     && holder.getPluggable(face) instanceof RobotStationPluggable;
-            return isStationFace ? InteractionResult.SUCCESS : InteractionResult.PASS;
+            if (!isStationFace) {
+                return InteractionResult.PASS;
+            }
+            return hasEmptyBoard(stack) ? InteractionResult.FAIL : InteractionResult.SUCCESS;
         }
 
         DockingStation station = stationOnFace(tile, face);
         if (station == null) {
             return InteractionResult.PASS;
         }
+        if (hasEmptyBoard(stack)) {
+            // 7.1.x refused a blank robot before anything else (getRobotNBT(stack) == getEmptyRobotBoard()),
+            // silently. The port says why, on the action bar, and answers FAIL: handled (nothing else runs for
+            // this click) but no arm swing, since nothing was placed and nothing is consumed.
+            Player player = context.getPlayer();
+            if (player != null) {
+                MessageUtil.sendOverlayMessage(player, Component.translatable(NOT_PROGRAMMED_KEY));
+            }
+            return InteractionResult.FAIL;
+        }
         if (station.isTaken()) {
             // Handled — do NOT fall through to some other use — but nothing is placed and nothing consumed.
             return InteractionResult.SUCCESS;
         }
 
-        ItemStack stack = context.getItemInHand();
         Player player = context.getPlayer();
 
         EntityRobot robot = new EntityRobot(level, getRobotBoard(stack));

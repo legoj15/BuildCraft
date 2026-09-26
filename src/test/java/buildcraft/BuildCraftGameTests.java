@@ -805,12 +805,12 @@ public class BuildCraftGameTests {
 
         // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
         // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),
-        // the taken-station refusal, the cancellable RobotEvent.Place, and the deliberate DROP of 7.1.x's
-        // empty-board placement rejection.
+        // the taken-station refusal, the cancellable RobotEvent.Place, and 7.1.x's blank-robot refusal (with the
+        // port's "Not programmed" action-bar message on top).
         reg.accept("buildcraftunofficial:robot_item_places_docked_robot", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacesDockedRobotOnFreeStation);
         reg.accept("buildcraftunofficial:robot_item_rejected_when_station_taken", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemRejectedWhenStationAlreadyTaken);
         reg.accept("buildcraftunofficial:robot_item_place_event_cancellable", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacementIsCancellableViaRobotEventPlace);
-        reg.accept("buildcraftunofficial:robot_item_empty_board_places", () -> buildcraft.robotics.item.ItemRobotPlacementTester::emptyBoardRobotStillPlaces);
+        reg.accept("buildcraftunofficial:robot_item_blank_robot_refuses_placement", () -> buildcraft.robotics.item.ItemRobotPlacementTester::blankRobotRefusesPlacement);
 
         // Robotics Ph3 — the robot item's CUSTOM_DATA blob: the 7.1.x 'board'/'energy' key names, a bare
         // stack reading as empty-board-at-zero, the two keys being independent, an id-less board compound
@@ -905,6 +905,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_progress_formula", () -> buildcraft.robotics.ai.RobotActionAIsTester::breakProgressFormulaMatchesToolAndHardness);
         reg.accept("buildcraftunofficial:robot_harvest_reaps_mature_wheat", () -> buildcraft.robotics.ai.RobotActionAIsTester::harvestReapsMatureWheat);
         reg.accept("buildcraftunofficial:robot_plant_sows_seed_on_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::plantSowsSeedOnFarmland);
+        // Sugar cane: the ported 7.1.x reeds crop handler — sand/dirt beside water only, never cane on cane.
+        reg.accept("buildcraftunofficial:robot_plant_sugar_cane_beside_water", () -> buildcraft.lib.crops.CropHandlerReedsTester::planterPlantsSugarCaneOnlyOnSandBesideWater);
         reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
         reg.accept("buildcraftunofficial:robot_pump_keeps_waterlogged_marker", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpKeepsWaterloggedMarker);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);

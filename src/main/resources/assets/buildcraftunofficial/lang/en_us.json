@@ -264,6 +264,7 @@
     "item.buildcraftunofficial.robot": "Robot",
     "item.buildcraftunofficial.redstone_board": "Redstone Board",
     "entity.buildcraftunofficial.robot": "Robot",
+    "buildcraft.robot.not_programmed": "Not programmed",
     "buildcraft.boardRobotEmpty": "Empty Board",
     "buildcraft.boardRobotPicker": "Picker",
     "buildcraft.boardRobotPicker.desc": "Picks up dropped items within 250 blocks and carries them to a station",

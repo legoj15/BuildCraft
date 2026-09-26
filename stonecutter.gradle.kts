@@ -17,8 +17,10 @@ stonecutter active "26.1.2" /* [SC] DO NOT EDIT */
 // Registered on the ROOT — it's a cross-version stage, so it runs exactly ONCE (fullTestSuite, also a
 // root task, depends on it directly). The harness under testing/ is machine-specific and gitignored, so
 // this stage SELF-SKIPS when the script is absent (e.g. a third-party clone) instead of failing.
-val releaseMatrixScript = rootProject.file("testing/Invoke-ReleaseTests.ps1")
 tasks.register<Exec>("runReleaseMatrix") {
+    // Task-local, not a script-level val: the configuration cache cannot serialize a closure that
+    // reaches back into the build script object (a top-level val or the script's logger).
+    val releaseMatrixScript = rootProject.file("testing/Invoke-ReleaseTests.ps1")
     group = "verification"
     description = "Production boot+connect matrix (testing/Invoke-ReleaseTests.ps1, PowerShell 7). Skipped if the harness isn't checked out."
     workingDir = rootProject.projectDir
@@ -27,10 +29,8 @@ tasks.register<Exec>("runReleaseMatrix") {
     // project lock). The harness still wipes each server's mods/ and copies the fresh jar every run.
     // (Run the script directly — `Invoke-ReleaseTests.ps1` without -SkipBuild — for a standalone rebuild.)
     commandLine("pwsh", "-NoProfile", "-File", releaseMatrixScript.absolutePath, "-SkipBuild")
-    onlyIf {
-        val present = releaseMatrixScript.exists()
-        if (!present) logger.lifecycle("runReleaseMatrix: testing/Invoke-ReleaseTests.ps1 not present — skipping the production boot+connect stage.")
-        present
+    onlyIf("testing/Invoke-ReleaseTests.ps1 is present (the production boot+connect harness)") {
+        releaseMatrixScript.exists()
     }
 }
 

@@ -195,8 +195,7 @@ Tracked as one-liners in todos.md; the detail lives here.
   tables that could pin a stopped server's levels.
 - **Small robot nits (2026-09-26):** the Stripes robot loops forever on an item no handler can use (7.1.x did too —
   could stash it or sleep); a robot stack with an unregistered board id refuses placement but its tooltip doesn't say
-  why ("Unknown board" hint); `AIRobotGotoStation.writeSelfToNBT` dereferences `stationIndex` without the null guard
-  `loadSelfFromNBT` has; `AIRobotStraightMoveTo` arrival never snaps position onto the target (7.1.x set posX/Y/Z;
+  why ("Unknown board" hint); `AIRobotStraightMoveTo` arrival never snaps position onto the target (7.1.x set posX/Y/Z;
   `IRobotAccess` has no setPos), so non-station users stop up to 0.1 blocks off.
 - **Decided 2026-09-03 (user):** see "Decided: blank robots and boards" below. Still open from the same list:
   sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's

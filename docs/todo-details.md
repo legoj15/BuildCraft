@@ -74,11 +74,13 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 
 Stripes pipes, robot breaking/harvesting and the probe-pings-lasers issue were fixed 2026-09-26 (`BreakEventCompat.isProbe`, `buildcraft.robotics.RobotProtection`). Still open:
 - **Pumps** (`TilePump`, `AIRobotPumpBlock`) drain fluids inside claims without asking; 1.12.2 didn't ask either, so it's a design call — probably gate draining behind the same `canMachineBreak` probe as the owner / station owner.
+- **Stripes pipe on a refused block** retries it forever: the refusal resets progress but keeps the direction, so the pipe re-accumulates power and re-probes once per cycle (1.12.2 parity, but an endless MJ drain). Consider backing off or treating the pose as done.
+- **Robot search probes per candidate**: `BoardRobotGenericSearchBlock.isSearchCandidate` calls `RobotProtection.canBreak` (a real probe BreakEvent) for every candidate the BFS visits, each search tick. Correct, but a big work zone inside a claim spams every BreakEvent listener; consider probing only the chosen target (as `AIRobotBreak` does) and remembering refusals.
 - **Robot placing and tool use** (`AIRobotPlant`, `AIRobotUseToolOnBlock`) still run as the generic `[BuildCraft]` fake player. Switch to `FakePlayerUtil.lease(level, RobotProtection.ownerOf(robot), null)` so claim mods judge the station owner and advancements route to them.
 
 ## Fake player cache hardening
 
-The reset gaps, the fetch/lease split and leaked-lease detection were done 2026-09-26. One item left: a modded `BucketPickup` that reports a source but refuses `pickupBlock` makes `TilePump` re-queue that cell on every 30-tick rebuild. No dupe and no free drain (the refusal resets progress); each pass just wastes one 10 MJ attempt and the tube extension. Cheap fix: in `TilePump`, keep a transient map of refused cell → `BlockState` and skip the cell in `buildQueue`/`buildQueue0` while its state is unchanged. Needs a test-only registered block (no vanilla `BucketPickup` refuses a source). Same for `AIRobotPumpBlock`.
+The reset gaps, the fetch/lease split and leaked-lease detection were done 2026-09-26. One item left: a modded `BucketPickup` that reports a source but refuses `pickupBlock` makes `TilePump` re-queue that cell on every 30-tick rebuild. No dupe and no free drain (the refusal resets progress); each pass just wastes one 10 MJ attempt and the tube extension. Cheap fix: in `TilePump`, keep a transient map of refused cell → `BlockState` and skip the cell in `buildQueue`/`buildQueue0` while its state is unchanged. Needs a test-only registered block (no vanilla `BucketPickup` refuses a source). Same for `AIRobotPumpBlock`. Also low priority (2026-09-26 GLM review): the leaked-lease sweep runs in `ServerTickEvent.Post`, so a lease opened earlier in that same Post phase by another listener is force-released mid-use (no in-tree caller does this); and `AIRobotStripesHandler.takeBackFrom` picks the remainder by `isSameItem` only, so a third-party stripes handler that swaps the hand stack for a same-item stack of another count gets the used stack dropped instead of kept.
 
 ## Modded fluid textures
 
@@ -108,10 +110,6 @@ Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `se
 
 Robot + board → programmed robot, flat 5000 MJ (`RobotIntegrationRecipe`). No JEI presence at all. Pattern: a JEI-free collector like `robotics/compat/jei/ProgrammingRecipeCollector`; `RoboticsJeiSubtypes` already keys robots and boards. Optional extra for the Programming Table: a JEI '+' transfer — `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.
 
-## Guide overlay click-through
-
-`GuiGuide.mouseClicked` with `showingContentsMenu`: `currentPage.mouseClicked` runs before the overlay swallows the click, so the contents page's search tab and sort buttons beneath the open small-screen chapter overlay still take clicks. Check the overlay before delegating to the page.
-
 ## Flaky marker tests
 
 `marker_orientation`, `marker_volume_los` and `marker_volume_triangulation_3d` failed together once in a full 26.1.2 game-test run (2026-09-26) and passed on every later run. Likely arena/concurrency interference — see the game-test arena-geometry and batch-isolation memories.
@@ -122,7 +120,7 @@ Found in passing on 2026-09-26; none is a bug today.
 - `TileEngineStone_BC8` (26.x branch) still calls the deprecated item-level `Item#getCraftingRemainder()` under a narrow suppression: NeoForge #3157 moved the stack-sensitive call mid-26.1.x. Switch to `consumed.getCraftingRemainder()` once the 26.1 floor passes that build (check 26.2's first build too).
 - `StatementParameterItemStackExact.readFromNbt` defaults `availableSlots` to 0 when the key is missing; upstream kept -1 (unlimited up to 64). Only hand-edited/foreign NBT. Default to -1 + unit test.
 - `BCEnergyFluids`' "layer cake" guard (`if (targetFluidState.getType().isSame(this)) continue;` in both `getSpread` overrides) looks redundant with `FlowingFluid.canBeReplacedWith`.
-- Five tests keep private `repoRoot()` copies (ClientItemDefinitionCoverageTester, GameTestManifestTester, FakePlayerProfileTester, CopyrightHeaderTester, BlockStateVariantCoverageTester) — use `TestHelper.repoRoot()`.
+- The Programming Table's GUI geometry (slots, 6x4 grid pitch, selection cell, energy bar) is restated in `ContainerProgrammingTable`/`GuiProgrammingTable`, `ProgrammingTableCategory`'s crop maths and `BCRoboticsJeiPlugin`'s click area; expose shared constants so a GUI change can't silently desync JEI.
 - `GuiGate`'s connector hit-test is duplicated between the `>=1.21.10` and 1.21.1 `mouseClicked` bodies and repeats `drawBackgroundTexture`'s layout maths — one helper.
 - Not re-audited: method-level `@SuppressWarnings("deprecation")` on Lens/Gate/FacadeItemModel, QuadItemBakedModel and the four FragileFluidShardModel getters.
 - Optional wording (user call): upstream 7.1.27 `b84395c85` renamed the emerald-pipe tips Whitelist/Blacklist to "Limit (Only Filtered)"/"Exclude (Except Filtered)"; the Diamond-Wood GUI still uses `tip.PipeItemsEmerald.*`.
@@ -133,6 +131,9 @@ Found in passing on 2026-09-26; none is a bug today.
 Verified in a live 26.1.2 client on 2026-09-26 (McDevBridge): kinesis MJ flow, tank/distiller/heat-exchanger fluids, laser beam, Builder/Auto Workbench/Diamond-wood/Emzuli/Tank/List/Filler GUIs (placement, vanilla-face buttons, pressed-in modes, ledgers), the red exhaust particle and its size-bound command error; no BuildCraft render errors in the log. (JEI's quick-play "hasn't started yet / missing TagsUpdatedEvent" line also appears in 2026-08 logs and BC has no listener for that event, so it's JEI quick-play timing, not ours.) Still owed:
 - 1.21.1 and 26.2: a quick look at the same render sites and GUIs (1.21.1's blueprint GUI renderer especially), plus the pipe-preview pluggables, filler-planner addon box, gate plugs, stripes-pipe renderer, LED variable models, painted fluid-pipe item models.
 - Guide book (needs mouse clicks): cover arrows/back/tooltips/sort radio; Filler Planner invert; Emzuli right/middle click; button hover tooltips.
+- 1.21.1 JEI: an item bookmark (facade/gate/lens) made before this round still resolves after the subtype migration; board/robot bookmarks from older builds are expected to break once (new per-program keys).
+- Volume-marker addon icons (`AddonDefaultRenderer` now binds the sprite's own atlas page).
+- Guide contents page: clicking a left chapter tab near the sort buttons opens the chapter (the tabs now win).
 - Water gel break speed and sounds; TNT beside an obsidian-faced pipe (the facade shields that side).
 - A working robot's smoke rate (fewer on Decreased/Minimal); a blank robot on a station shows "Not programmed" with no arm swing (SP and dedicated server).
 - Cosmetic, maybe older than this round: on the Filler GUI, JEI's page-left arrow sits over the owner ledger at the window's top-right (JEI avoids ledgers for its item grid, not its nav bar).

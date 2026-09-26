@@ -15,7 +15,6 @@ Last audited: 2026-09-26
 - Pumps and robot planting/tool use still skip claim protection — [notes](docs/todo-details.md#machine-protection-gaps)
 - Stop pumps retrying a modded fluid block that refuses to be drained (low priority) — [notes](docs/todo-details.md#fake-player-cache-hardening)
 - JEI category for the Integration Table — [notes](docs/todo-details.md#integration-table-jei)
-- Guide book: the small-screen chapter overlay lets clicks through to the page beneath — [notes](docs/todo-details.md#guide-overlay-click-through)
 - Three marker game tests flaked together once on 26.1.2 — [notes](docs/todo-details.md#flaky-marker-tests)
 - Robots: make sure every reservation is released when a robot unloads or dies — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: decide whether "Request Needed Items" does something or leaves the gate menu — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)

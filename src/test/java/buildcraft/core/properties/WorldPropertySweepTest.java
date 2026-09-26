@@ -10,7 +10,9 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.NetherWartBlock;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import buildcraft.VanillaSetupBaseTester;
 
@@ -61,5 +63,27 @@ public class WorldPropertySweepTest extends VanillaSetupBaseTester {
                 "standing lava is a source");
         Assertions.assertFalse(fluidSource.matches(Blocks.AIR.defaultBlockState()), "air is not a fluid");
         Assertions.assertFalse(fluidSource.matches(Blocks.STONE.defaultBlockState()), "stone is not a fluid");
+    }
+
+    /** The pump board only targets what {@code BlockUtil.drainBlock} can actually take, the way a bucket
+     *  would: a waterlogged block (drained by un-waterlogging it) counts, an always-waterlogged plant does
+     *  not — a robot sent to kelp would drain nothing and retarget it forever. */
+    @Test
+    public void fluidSourceMatchesOnlyDrainableSources() {
+        WorldPropertyIsFluidSource fluidSource = new WorldPropertyIsFluidSource();
+
+        Assertions.assertTrue(Blocks.KELP.defaultBlockState().getFluidState().isSource(),
+                "sanity: kelp reports a water source, or the next check is vacuous");
+        Assertions.assertFalse(fluidSource.matches(Blocks.KELP.defaultBlockState()),
+                "kelp gives up no water to a bucket, so it is no pumpable source");
+        Assertions.assertFalse(fluidSource.matches(Blocks.SEAGRASS.defaultBlockState()),
+                "seagrass gives up no water to a bucket, so it is no pumpable source");
+        Assertions.assertTrue(fluidSource.matches(Blocks.OAK_STAIRS.defaultBlockState()
+                .setValue(BlockStateProperties.WATERLOGGED, true)),
+                "waterlogged stairs hold a pumpable water source");
+        Assertions.assertFalse(fluidSource.matches(Blocks.OAK_STAIRS.defaultBlockState()),
+                "dry stairs hold no fluid");
+        Assertions.assertFalse(fluidSource.matches(Blocks.WATER.defaultBlockState()
+                .setValue(LiquidBlock.LEVEL, 3)), "flowing water is not a source");
     }
 }

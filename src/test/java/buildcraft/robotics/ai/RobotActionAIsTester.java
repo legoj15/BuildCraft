@@ -208,6 +208,34 @@ public class RobotActionAIsTester {
         helper.succeed();
     }
 
+    /** A waterlogged block is pumped like a bucket empties it: the robot takes the bucket of water and the
+     *  block stays, dry. Draining used to set the cell to air, deleting the marker with no drop. */
+    public static void pumpKeepsWaterloggedMarker(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos wellRel = new BlockPos(2, 1, 2);
+        helper.setBlock(wellRel.below(), Blocks.STONE);
+        helper.setBlock(wellRel, buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
+                .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));
+        var marker = level.getBlockEntity(helper.absolutePos(wellRel));
+        helper.assertTrue(marker != null, "the marker has a block entity");
+
+        EntityRobot robot = unaddedRobot(helper, wellRel.above());
+        AIRobotPumpBlock pumper = new AIRobotPumpBlock(robot, helper.absolutePos(wellRel));
+        int cycles = 0;
+        while (EntityArenaUtil.tankAmount(robot.getFluidHandler()) < 1000 && cycles < 120
+                && level.getBlockEntity(helper.absolutePos(wellRel)) == marker) {
+            pumper.cycle();
+            cycles++;
+        }
+        helper.assertBlockPresent(buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get(), wellRel);
+        helper.assertTrue(level.getBlockEntity(helper.absolutePos(wellRel)) == marker,
+                "the pumped marker's block entity survives");
+        helper.assertTrue(pumper.pumped == 1000, "the marker's water is pumped, got " + pumper.pumped);
+        helper.assertTrue(level.getFluidState(helper.absolutePos(wellRel)).isEmpty(),
+                "the marker is left dry");
+        helper.succeed();
+    }
+
     /** The use-tool action layer: a hoe through the fake-player {@code useOn} path tills dirt into
      *  farmland (and wears the hoe by one, exactly as a player's would). */
     public static void useToolHoesDirtIntoFarmland(GameTestHelper helper) {

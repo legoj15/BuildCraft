@@ -26,6 +26,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BucketPickup;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -208,22 +209,51 @@ public class BlockUtil {
     }
 
     /**
-     * Drains a fluid source block from the world.
+     * The source fluid {@link #drainBlock} can take from this state, or null. Drainable means what a bucket
+     * could take: the state holds a source fluid AND its block is a {@link BucketPickup} — a fluid block, or
+     * a waterlogged block (drained by un-waterlogging it, never by deleting it). A source fluid state on any
+     * other block (kelp, seagrass: always-waterlogged plants a bucket cannot empty) is not drainable. Pumps
+     * and the robot pump board must pick their targets with this, or they would stall on (or, before this
+     * existed, delete) such a block.
+     */
+    @Nullable
+    public static Fluid getDrainableFluid(BlockState state) {
+        FluidState fluidState = state.getFluidState();
+        if (fluidState.isEmpty() || !fluidState.isSource() || !(state.getBlock() instanceof BucketPickup)) {
+            return null;
+        }
+        return fluidState.getType();
+    }
+
+    /** {@link #getDrainableFluid(BlockState)} at a world position. */
+    @Nullable
+    public static Fluid getDrainableFluid(Level world, BlockPos pos) {
+        return getDrainableFluid(world.getBlockState(pos));
+    }
+
+    /**
+     * Drains one bucket of source fluid from the world, as a bucket would: a fluid block becomes air, a
+     * waterlogged block is un-waterlogged and kept (block entity, contents and all). Anything
+     * {@link #getDrainableFluid(BlockState)} rejects is left untouched.
      *
      * @param world    the level
      * @param pos      the position to drain
-     * @param doDrain  if true, actually removes the block; if false, simulates only
-     * @return a FluidStack of 1000mB if a source block was present, or null
+     * @param doDrain  if true, actually takes the fluid; if false, simulates only
+     * @return a FluidStack of 1000mB if a drainable source was present, or null
      */
     @Nullable
     public static FluidStack drainBlock(Level world, BlockPos pos, boolean doDrain) {
-        FluidState fluidState = world.getFluidState(pos);
-        if (fluidState.isEmpty() || !fluidState.isSource()) {
+        BlockState state = world.getBlockState(pos);
+        Fluid fluid = getDrainableFluid(state);
+        if (fluid == null) {
             return null;
         }
-        Fluid fluid = fluidState.getType();
         if (doDrain) {
-            world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            if (state.getBlock() instanceof LiquidBlock) {
+                world.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            } else if (((BucketPickup) state.getBlock()).pickupBlock(null, world, pos, state).isEmpty()) {
+                return null;
+            }
         }
         return new FluidStack(fluid, 1000);
     }

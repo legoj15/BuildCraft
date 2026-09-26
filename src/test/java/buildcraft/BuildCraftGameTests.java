@@ -603,6 +603,9 @@ public class BuildCraftGameTests {
         // Heavy oil sinks through plain water by deleting it; a waterlogged block must not be deleted with it.
         reg.accept("buildcraftunofficial:waterlogged_pipe_survives_dense_oil", () -> buildcraft.lib.block.BlockWaterloggingTester::testWaterloggedPipeSurvivesDenseOil);
         reg.accept("buildcraftunofficial:dense_oil_sinks_through_plain_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testDenseOilStillSinksThroughPlainWater);
+        // Pumps and robots drain a waterlogged block like a bucket (un-waterlog it), never delete it; kelp is not drainable.
+        reg.accept("buildcraftunofficial:drain_keeps_waterlogged_blocks", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockKeepsWaterloggedBlocks);
+        reg.accept("buildcraftunofficial:pump_keeps_waterlogged_marker", () -> buildcraft.lib.block.BlockWaterloggingTester::testPumpKeepsWaterloggedMarker);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
         // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).
@@ -870,6 +873,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_harvest_reaps_mature_wheat", () -> buildcraft.robotics.ai.RobotActionAIsTester::harvestReapsMatureWheat);
         reg.accept("buildcraftunofficial:robot_plant_sows_seed_on_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::plantSowsSeedOnFarmland);
         reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
+        reg.accept("buildcraftunofficial:robot_pump_keeps_waterlogged_marker", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpKeepsWaterloggedMarker);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);

@@ -29,8 +29,14 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.factory.tile.TilePump;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -246,7 +252,14 @@ public class BlockWaterloggingTester {
     }
 
     /** The other half of the dense-oil rule: a PLAIN water block is still displaced, so heavy oil keeps
-     *  sinking through water. One-cell pit (the basin with its channel filled), water in it, oil above. */
+     *  sinking through water. One-cell pit (the basin with its channel filled), water in it, oil above.
+     *
+     *  <p>This discriminates {@code BCEnergyFluids.displaceWaterBelow} from vanilla: vanilla does let a
+     *  non-water fluid falling DOWN replace water ({@code WaterFluid.canBeReplacedWith}), but every BuildCraft
+     *  oil is in the {@code minecraft:water} fluid tag (for NeoForge's swim/physics hooks), so vanilla alone
+     *  never sinks it — without the displacement the oil sits on top and this test fails (verified by
+     *  no-op'ing the method). The precondition below pins that; if it ever flips, vanilla sinks oil by
+     *  itself and {@code displaceWaterBelow} has become redundant. */
     public static void testDenseOilStillSinksThroughPlainWater(GameTestHelper helper) {
         buildBasin(helper);
         helper.setBlock(WEST_SOURCE, Blocks.STONE);
@@ -260,6 +273,11 @@ public class BlockWaterloggingTester {
 
         BCEnergyFluids.FluidEntry heavy = BCEnergyFluids.ALL.stream()
             .filter(e -> e.baseName().equals("oil_heavy") && e.heat() == 0).findFirst().orElseThrow();
+        BlockPos subjectAbs = helper.absolutePos(SUBJECT);
+        helper.assertFalse(helper.getLevel().getFluidState(subjectAbs)
+                .canBeReplacedWith(helper.getLevel(), subjectAbs, heavy.flowing().get(), Direction.DOWN),
+            "precondition: vanilla must NOT sink heavy oil into water by itself (the oils are water-tagged), "
+                + "or this test cannot tell whether displaceWaterBelow works");
         placeSource(helper, oilPos, heavy.block().get(), heavy.source().get());
 
         helper.succeedWhen(() -> {
@@ -267,6 +285,120 @@ public class BlockWaterloggingTester {
             helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(SUBJECT)).getType().isSame(heavy.source().get()),
                 "heavy oil must have sunk into the plain water's cell");
         });
+    }
+
+    // ---------- Draining: pumps and robots take the water, never the block ----------
+
+    /** {@code BlockUtil.drainBlock} is the one drain path of the Pump and the robot pump board. A waterlogged
+     *  block reports a water <em>source</em> fluid state, and draining it used to set the cell to air —
+     *  deleting the marker or pipe (cargo, plugs, facades) with no drop. It must be un-waterlogged instead,
+     *  exactly as a player's bucket does. Always-waterlogged plants (kelp) give up no water to a bucket, so
+     *  they are not drainable at all; a plain water block still drains to air. */
+    public static void testDrainBlockKeepsWaterloggedBlocks(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos markerRel = new BlockPos(1, 2, 4);
+        BlockPos pipeRel = new BlockPos(2, 2, 4);
+        BlockPos kelpRel = new BlockPos(3, 2, 4);
+        BlockPos waterRel = new BlockPos(4, 2, 4);
+        for (int x = 1; x <= 4; x++) {
+            helper.setBlock(new BlockPos(x, 1, 4), Blocks.STONE);
+        }
+        helper.setBlock(markerRel, BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
+            .setValue(BlockStateProperties.WATERLOGGED, true));
+        helper.setBlock(pipeRel, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState()
+            .setValue(BlockStateProperties.WATERLOGGED, true));
+        TilePipeHolder pipe = (TilePipeHolder) level.getBlockEntity(helper.absolutePos(pipeRel));
+        pipe.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+        helper.setBlock(kelpRel, Blocks.KELP);
+        helper.setBlock(waterRel, Blocks.WATER);
+        helper.assertTrue(level.getFluidState(helper.absolutePos(kelpRel)).isSource(),
+            "sanity: kelp must report a water source (or the kelp case below is vacuous)");
+
+        for (BlockPos rel : new BlockPos[] { markerRel, pipeRel }) {
+            BlockPos abs = helper.absolutePos(rel);
+            Block block = helper.getBlockState(rel).getBlock();
+            BlockEntity before = level.getBlockEntity(abs);
+            helper.assertTrue(before != null, block + " must have a block entity");
+
+            FluidStack simulated = BlockUtil.drainBlock(level, abs, false);
+            helper.assertTrue(simulated != null && simulated.getFluid() == Fluids.WATER && simulated.getAmount() == 1000,
+                "a waterlogged " + block + " must offer one bucket of water, got " + simulated);
+            helper.assertTrue(helper.getBlockState(rel).getValue(BlockStateProperties.WATERLOGGED),
+                "a simulated drain must not touch the " + block);
+
+            FluidStack drained = BlockUtil.drainBlock(level, abs, true);
+            helper.assertTrue(drained != null && drained.getFluid() == Fluids.WATER && drained.getAmount() == 1000,
+                "draining a waterlogged " + block + " must yield one bucket of water, got " + drained);
+            helper.assertBlockPresent(block, rel);
+            helper.assertTrue(level.getBlockEntity(abs) == before,
+                "draining must keep the " + block + "'s block entity (contents and all)");
+            helper.assertFalse(helper.getBlockState(rel).getValue(BlockStateProperties.WATERLOGGED),
+                "a drained " + block + " must be dry");
+            helper.assertTrue(level.getFluidState(abs).isEmpty(), "a drained " + block + " must hold no fluid");
+        }
+        helper.assertTrue(pipe.getPipe() != null, "the drained pipe must still be a pipe");
+
+        helper.assertTrue(BlockUtil.drainBlock(level, helper.absolutePos(kelpRel), false) == null,
+            "kelp gives up no water to a bucket, so it must not be drainable");
+        helper.assertTrue(BlockUtil.drainBlock(level, helper.absolutePos(kelpRel), true) == null,
+            "kelp must not be drainable");
+        helper.assertBlockPresent(Blocks.KELP, kelpRel);
+
+        FluidStack water = BlockUtil.drainBlock(level, helper.absolutePos(waterRel), true);
+        helper.assertTrue(water != null && water.getFluid() == Fluids.WATER && water.getAmount() == 1000,
+            "a plain water source must drain one bucket, got " + water);
+        helper.assertTrue(helper.getBlockState(waterRel).isAir(), "a drained water source must leave air");
+
+        // Kelp keeps its water: remove it so nothing flows out of this arena cell after the test.
+        helper.setBlock(kelpRel, Blocks.AIR);
+        helper.succeed();
+    }
+
+    /** The Pump end to end: a finite channel of [water][waterlogged marker][kelp]. The pump must drain the
+     *  marker's water and the plain water, and leave the marker (dry) and the kelp in place. Before, it
+     *  deleted the kelp and then the marker. Drives the pump's own tick synchronously, so no fluid flows
+     *  mid-test; stops on observed state, never a fixed tick count. */
+    public static void testPumpKeepsWaterloggedMarker(GameTestHelper helper) {
+        buildBasin(helper);
+        ServerLevel level = helper.getLevel();
+        helper.setBlock(WEST_SOURCE, Blocks.WATER);
+        helper.setBlock(SUBJECT, BCCoreBlocks.MARKER_PATH.get().defaultBlockState()
+            .setValue(BlockStateProperties.WATERLOGGED, true));
+        helper.setBlock(EAST_SOURCE, Blocks.KELP);
+        BlockEntity marker = level.getBlockEntity(helper.absolutePos(SUBJECT));
+        helper.assertTrue(marker != null, "path marker must have a block entity");
+
+        BlockPos pumpRel = WEST_SOURCE.above();
+        helper.setBlock(pumpRel, BCFactoryBlocks.PUMP.get());
+        TilePump pump = (TilePump) level.getBlockEntity(helper.absolutePos(pumpRel));
+        helper.assertTrue(pump != null, "the pump must have a block entity");
+
+        BlockPos westAbs = helper.absolutePos(WEST_SOURCE);
+        for (int i = 0; i < 200; i++) {
+            BlockState markerState = helper.getBlockState(SUBJECT);
+            if (!markerState.is(BCCoreBlocks.MARKER_PATH.get())) {
+                break; // deleted: fail below with the precise message
+            }
+            if (!markerState.getValue(BlockStateProperties.WATERLOGGED) && level.getFluidState(westAbs).isEmpty()) {
+                break;
+            }
+            pump.getBattery().addPowerChecking(10 * MjAPI.MJ, false);
+            pump.serverTick();
+        }
+
+        helper.assertBlockPresent(BCCoreBlocks.MARKER_PATH.get(), SUBJECT);
+        helper.assertTrue(level.getBlockEntity(helper.absolutePos(SUBJECT)) == marker,
+            "the pumped marker's block entity must survive");
+        helper.assertFalse(helper.getBlockState(SUBJECT).getValue(BlockStateProperties.WATERLOGGED),
+            "the pump must have drained the marker's water");
+        helper.assertTrue(level.getFluidState(westAbs).isEmpty(), "the pump must have drained the plain water");
+        helper.assertBlockPresent(Blocks.KELP, EAST_SOURCE);
+        helper.assertTrue(pump.getTank().getAmountMb(0) == 2000,
+            "exactly two buckets (marker + plain water) must be pumped, got " + pump.getTank().getAmountMb(0));
+
+        // Kelp keeps its water: remove it so the basin is dry when the test ends.
+        helper.setBlock(EAST_SOURCE, Blocks.AIR);
+        helper.succeed();
     }
 
     // ---------- Placement: placing into a water source keeps the water ----------

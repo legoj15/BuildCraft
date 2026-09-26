@@ -192,7 +192,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         nextPosesToCheck.add(seed);
         paths.put(seed, new FluidPath(seed, null));
         checked.add(seed.asLong());
-        if (BlockUtil.getFluid(level, seed) != null) {
+        if (BlockUtil.getDrainableFluid(level, seed) != null) {
             queue.add(seed);
         }
 
@@ -313,7 +313,9 @@ public class TilePump extends TileMiner implements IDebuggable {
                             FluidPath oldPath = paths.get(posToCheck);
                             FluidPath path = new FluidPath(offsetPos, oldPath);
                             paths.put(offsetPos, path);
-                            if (BlockUtil.getFluid(level, offsetPos) != null) {
+                            // Queue only what drainBlock can take; the path still runs through
+                            // non-drainable wet cells (kelp) so fluid beyond them is reachable.
+                            if (BlockUtil.getDrainableFluid(level, offsetPos) != null) {
                                 queue.add(offsetPos);
                             }
                             nextPosesToCheck.add(offsetPos);
@@ -358,7 +360,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     private boolean canDrain(BlockPos blockPos) {
-        Fluid fluid = BlockUtil.getFluid(level, blockPos);
+        Fluid fluid = BlockUtil.getDrainableFluid(level, blockPos);
         if (tank.getAmountMb(0) == 0) {
             return fluid != null;
         }

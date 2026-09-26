@@ -35,7 +35,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.AxisDirection;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,6 +55,7 @@ import buildcraft.factory.tile.TileHeatExchange.EnumProgressState;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 //? if >=1.21.10 {
 import buildcraft.lib.client.render.tile.BCRenderState;
 //?}
@@ -269,14 +269,10 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         int capacity = smoother.getCapacity();
         if (capacity <= 0) return;
 
-        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
-        if (stillTexture == null) return;
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
+        if (sprite == null) return;
 
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
-
-        int color = FluidUtilBC.getFluidColor(fluid);
+        int color = FluidSprites.tint(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
@@ -336,14 +332,10 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
     //?}
         if (fluid.isEmpty()) return;
 
-        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
-        if (stillTexture == null) return;
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
+        if (sprite == null) return;
 
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
-
-        int color = FluidUtilBC.getFluidColor(fluid);
+        int color = FluidSprites.tint(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;

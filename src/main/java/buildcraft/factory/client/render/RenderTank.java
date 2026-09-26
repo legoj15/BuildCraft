@@ -30,7 +30,6 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.util.profiling.Profiler;
 //?}
@@ -45,6 +44,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.client.render.fluid.FluidRenderer;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 //? if >=1.21.10 {
 import buildcraft.lib.client.render.tile.BCRenderState;
 //?}
@@ -117,14 +117,10 @@ public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> 
         int capacity = tile.smoothedTank.getCapacity();
         if (amount <= 0 || capacity <= 0) return;
 
-        Identifier stillTexture = FluidUtilBC.getFluidTexture(fluid);
-        if (stillTexture == null) return;
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
+        if (sprite == null) return;
 
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
-
-        int color = FluidUtilBC.getFluidColor(fluid);
+        int color = FluidSprites.tint(fluid);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;

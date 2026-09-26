@@ -8,35 +8,25 @@ package buildcraft.core.client;
 
 import com.mojang.serialization.MapCodec;
 
-import net.minecraft.client.Minecraft;
 //? if >=1.21.10 {
 import net.minecraft.client.color.item.ItemTintSource;
 //?}
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-//? if >=1.21.10 {
-import net.minecraft.data.AtlasIds;
-//?}
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.core.BCCore;
-import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 
 /**
- * ItemTintSource for fragile fluid shards. Samples the average pixel color from
- * the fluid's still sprite to produce a representative tint color for the
- * grayscale shard overlay texture (layer1).
- *
- * Delegates sprite lookup to {@link FluidUtilBC#getFluidTexture(FluidStack)}
- * which correctly resolves both vanilla and BuildCraft pre-recolored fluid sprites.
+ * ItemTintSource for fragile fluid shards. Averages the fluid's still sprite and
+ * multiplies in the fluid's tint (both from {@link FluidSprites}) to produce a
+ * representative tint color for the grayscale shard overlay texture (layer1).
  */
 //? if >=1.21.10 {
 public final class FluidShardTintSource implements ItemTintSource {
@@ -61,23 +51,17 @@ public final class FluidShardTintSource implements ItemTintSource {
             return 0xFFFFFFFF;
         }
 
-        // For water, return the standard blue tint directly
-        if (fluid.getFluid().isSame(Fluids.WATER)) {
-            return 0xFF3F76E4;
-        }
+        // The shard shows what a tank would: the fluid's own sprite times its tint. Many fluids
+        // (water, Mekanism's) ship a grayscale sprite and get all their colour from the tint.
+        return multiply(averageSpriteColor(FluidSprites.stillSprite(fluid)), FluidSprites.tint(fluid));
+    }
 
-        // Delegate to FluidUtilBC for correct sprite path resolution
-        Identifier stillTex = FluidUtilBC.getFluidTexture(fluid);
-
-        //? if >=1.21.10 {
-        TextureAtlas atlas = Minecraft.getInstance()
-                .getAtlasManager().getAtlasOrThrow(AtlasIds.BLOCKS);
-        //?} else {
-        /*TextureAtlas atlas = Minecraft.getInstance()
-                .getModelManager().getAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS);*/
-        //?}
-        TextureAtlasSprite sprite = atlas.getSprite(stillTex);
-        return averageSpriteColor(sprite);
+    /** Channel-wise product of two RGB colours, fully opaque (a tint's alpha is ignored — some fluids report 0). */
+    private static int multiply(int a, int b) {
+        int r = ((a >> 16) & 0xFF) * ((b >> 16) & 0xFF) / 255;
+        int g = ((a >> 8) & 0xFF) * ((b >> 8) & 0xFF) / 255;
+        int bl = (a & 0xFF) * (b & 0xFF) / 255;
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
     }
 
     //? if >=1.21.10 {

@@ -32,7 +32,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -55,6 +54,7 @@ import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.transport.client.model.ModelPipe;
@@ -262,18 +262,12 @@ public final class BlueprintGuiRenderer {
         Fluid fluid = fluidState.getType();
         FluidStack stack = new FluidStack(fluid, 1);
 
-        Identifier stillTexture = FluidUtilBC.getFluidTexture(stack);
-        if (stillTexture == null) {
-            return;
-        }
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
         if (sprite == null) {
             return;
         }
 
-        int color = FluidUtilBC.getFluidColor(stack);
+        int color = FluidSprites.tint(stack);
         float a = ((color >> 24) & 0xFF) / 255.0f;
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;

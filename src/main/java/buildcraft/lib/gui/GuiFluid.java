@@ -7,19 +7,14 @@
 
 package buildcraft.lib.gui;
 
-import net.minecraft.client.Minecraft;
-import buildcraft.lib.gui.BCGraphics;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.Identifier;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
-import buildcraft.lib.misc.FluidUtilBC;
-import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 
 /**
  * An {@link ISimpleDrawable} that renders a {@link FluidStack} as a 16x16 fluid icon —
@@ -54,13 +49,9 @@ public class GuiFluid implements ISimpleDrawable {
         if (currentGraphics == null || stack == null || stack.isEmpty()) {
             return;
         }
-        Identifier stillTexture = FluidUtilBC.getFluidTexture(stack);
-        if (stillTexture == null) return;
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
         if (sprite == null) return;
-        int color = FluidUtilBC.getFluidColor(stack);
+        int color = FluidSprites.tint(stack);
         //? if >=1.21.10 {
         currentGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, (int) x, (int) y, 16, 16, color);
         //?} else {

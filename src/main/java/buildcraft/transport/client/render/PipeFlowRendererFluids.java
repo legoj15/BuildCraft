@@ -32,6 +32,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.transport.pipe.IPipeFlowRenderer;
 
+import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.misc.FluidUtilBC;
 
 import buildcraft.transport.pipe.Pipe;
@@ -294,8 +295,8 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         Fluid current = fluidStack.getFluid();
         if (current == flow.renderCacheFluid) return;
         flow.renderCacheFluid = current;
-        flow.renderCacheSpriteId = FluidUtilBC.getFluidTexture(fluidStack);
-        int color = FluidUtilBC.getFluidColor(fluidStack);
+        flow.renderCacheSpriteId = FluidSprites.stillTexture(fluidStack);
+        int color = FluidSprites.tint(fluidStack);
         flow.renderCacheTintR = (color >> 16) & 0xFF;
         flow.renderCacheTintG = (color >> 8) & 0xFF;
         flow.renderCacheTintB = color & 0xFF;

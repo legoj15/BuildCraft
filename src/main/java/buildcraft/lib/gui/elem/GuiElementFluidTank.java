@@ -8,14 +8,13 @@ package buildcraft.lib.gui.elem;
 
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.gui.BCGraphics;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.Identifier;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -92,14 +91,10 @@ public class GuiElementFluidTank implements IInteractionElement {
     }
 
     private void drawFluid(BCGraphics graphics, FluidStack fluid, int amount, int capacity) {
-        Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(fluid);
-        if (stillTexture == null) return;
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
+        if (sprite == null) return;
 
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
-
-        int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(fluid);
+        int tintColor = FluidSprites.tint(fluid);
 
         int x = (int) area.getX();
         int y = (int) area.getY();

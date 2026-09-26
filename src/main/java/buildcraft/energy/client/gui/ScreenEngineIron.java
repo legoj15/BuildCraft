@@ -7,9 +7,8 @@ package buildcraft.energy.client.gui;
 
 import java.util.List;
 
-import net.minecraft.client.Minecraft;
+import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.gui.BCGraphics;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -124,21 +123,15 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
 
     /**
      * Render the fluid's still texture tiled into the given rectangle.
-     * Uses NeoForge's IClientFluidTypeExtensions for the texture location
-     * and tint color (fluid textures are grayscale; color comes from tinting).
+     * Texture and tint come from the fluid itself via {@link FluidSprites}
+     * (many fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(BCGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
         net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid, 1);
-        Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(stack);
-        if (stillTexture == null) {
-            stillTexture = Identifier.withDefaultNamespace("block/water_still");
-        }
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(stack);
+        if (sprite == null) return;
 
-        TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
-        TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
-
-        int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(stack);
+        int tintColor = FluidSprites.tint(stack);
 
         // Enable scissor to clip to the tank area
         graphics.enableScissor(x, y, x + width, y + height);

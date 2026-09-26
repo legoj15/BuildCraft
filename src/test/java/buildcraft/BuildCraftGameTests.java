@@ -368,6 +368,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_tick_reconciles_stale_mining_floor", () -> buildcraft.builders.tile.TileQuarryMiningDepthTester::testTickReconcilesStaleMiningFloor);
         // Drill-descent fluid gate: water passable, lava blocks (1.12.2 parity, matching the Mining Well)
         reg.accept("buildcraftunofficial:quarry_lava_blocks_drill", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testLavaBlocksDrillButWaterDoesNot);
+        // A waterlogged block on the frame line is broken (with drops) before the frame goes in, never framed over.
+        reg.accept("buildcraftunofficial:quarry_frame_breaks_waterlogged_block", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testFrameLineWaterloggedBlockIsBrokenNotOverwritten);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);

@@ -377,7 +377,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return minY;
     }
 
-    private boolean canMine(BlockPos blockPos) {
+    // package-private for TileQuarryFluidPassabilityTester (waterlogged cells must stay mineable).
+    boolean canMine(BlockPos blockPos) {
         BlockState state = level.getBlockState(blockPos);
         if (state.getDestroySpeed(level, blockPos) < 0) {
             return false;
@@ -435,8 +436,14 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return true;
     }
 
-    private boolean canIgnoreInFrameBox(BlockPos blockPos) {
-        return !level.getBlockState(blockPos).isAir() && BlockUtil.getFluidWithFlowing(level, blockPos) == null;
+    // True when the frame-box cell holds a real block that must be broken before the frame can go in (false for
+    // air and bare fluid, which the frame is simply placed over). A waterlogged block counts as a block: classing
+    // it by its fluid had the frame task overwrite it with no drops. Package-private for
+    // TileQuarryFluidPassabilityTester.
+    boolean canIgnoreInFrameBox(BlockPos blockPos) {
+        BlockState state = level.getBlockState(blockPos);
+        return !state.isAir()
+            && (BlockUtil.isFluidloggedBlock(state) || BlockUtil.getFluidWithFlowing(level, blockPos) == null);
     }
 
     private void check(BlockPos blockPos) {

@@ -7,7 +7,11 @@ package buildcraft.factory.tile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.factory.BCFactoryBlocks;
 
@@ -28,15 +32,27 @@ import buildcraft.factory.BCFactoryBlocks;
  * {@code canMine()}), so {@code nextPos()} skips low-viscosity fluid and the well either
  * reaches the solid below or settles as complete.
  *
- * <p>Both tests drive {@link TileMiningWell#mine()} once on a freshly-placed well
+ * <p>Each test drives {@link TileMiningWell#mine()} on a freshly-placed well
  * (initial {@code currentPos == null}, {@code shouldCheck == true}), which runs a single
  * downward scan, then inspect the chosen target {@code currentPos} (a package-visible
- * {@code TileMiner} field). No power is needed — only the scan/targeting is under test.
+ * {@code TileMiner} field). Only the waterlogged-block test powers the well, to drive a real break.
  */
 public class TileMiningWellFluidTester {
 
     private static void assertTrue(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
+    }
+
+    private static boolean chestHolds(GameTestHelper helper, BlockPos chestLocal, Item item) {
+        if (!(helper.getLevel().getBlockEntity(helper.absolutePos(chestLocal)) instanceof ChestBlockEntity chest)) {
+            return false;
+        }
+        for (int i = 0; i < chest.getContainerSize(); i++) {
+            if (chest.getItem(i).is(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -84,7 +100,10 @@ public class TileMiningWellFluidTester {
      * A waterlogged block (a slab in an ocean ruin, stairs, …) is still a block: the well must mine it
      * rather than slide its tube past it as if it were plain water. Breaking it leaves the water behind,
      * which the next scan then passes like any other water. Under the old code the well treated the
-     * whole cell as passable fluid and targeted the stone below, leaving the slab in the bore.
+     * whole cell as passable fluid and targeted the stone below, leaving the slab in the bore. The test
+     * drives the whole cycle: target the slab, mine it (drop into the chest), then pass the leftover water
+     * and re-target the stone beneath it. (That breaking a waterlogged block leaves its water is pinned by
+     * TileQuarryFluidPassabilityTester, which shares the break helper; here the tube fills the cell at once.)
      */
     public static void testWellMinesWaterloggedBlock(GameTestHelper helper) {
         try {
@@ -92,12 +111,14 @@ public class TileMiningWellFluidTester {
             BlockPos slabLocal = new BlockPos(2, 3, 2);  // directly below the well
             BlockPos stoneLocal = new BlockPos(2, 2, 2); // below the slab
             BlockPos baseLocal = new BlockPos(2, 1, 2);
+            BlockPos chestLocal = new BlockPos(3, 4, 2); // beside the well
 
             helper.setBlock(baseLocal, Blocks.STONE);
             helper.setBlock(stoneLocal, Blocks.STONE);
             helper.setBlock(slabLocal, Blocks.OAK_SLAB.defaultBlockState()
                     .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));
             helper.setBlock(wellLocal, BCFactoryBlocks.MINING_WELL.get());
+            helper.setBlock(chestLocal, Blocks.CHEST); // catches the slab drop (no loose item entities)
 
             //? if >=1.21.10 {
             TileMiningWell well = helper.getBlockEntity(wellLocal, TileMiningWell.class);
@@ -107,10 +128,28 @@ public class TileMiningWellFluidTester {
             assertTrue(well != null, "mining well block-entity must be present");
 
             BlockPos slabAbs = helper.absolutePos(slabLocal);
+            BlockPos stoneAbs = helper.absolutePos(stoneLocal);
             well.mine();
             assertTrue(slabAbs.equals(well.currentPos),
                     "well must target the waterlogged slab, not drill past it. Expected " + slabAbs
                             + ", got " + well.currentPos);
+
+            // Rest of the cycle: power the well and drive mine() (synchronous — no tick timing involved)
+            // until it moves off the slab. mine() re-scans (nextPos) straight after a break, so the very
+            // next target must be the stone under the leftover water — the water cell is passed, and the
+            // tube extends through it exactly as it does through any water column.
+            for (int i = 0; i < 64 && slabAbs.equals(well.currentPos); i++) {
+                well.getBattery().setStored(well.getBattery().getCapacity());
+                well.mine();
+            }
+            assertTrue(chestHolds(helper, chestLocal, Items.OAK_SLAB),
+                    "the waterlogged slab must be mined and drop (routed into the chest beside the well)");
+            assertTrue(stoneAbs.equals(well.currentPos),
+                    "after the slab is mined the well must pass the leftover water and target the stone below. "
+                            + "Expected " + stoneAbs + ", got " + well.currentPos);
+            BlockState slabCell = helper.getLevel().getBlockState(slabAbs);
+            assertTrue(slabCell.is(BCFactoryBlocks.TUBE.get()),
+                    "the tube must extend through the old slab cell to the stone, got " + slabCell);
 
             helper.succeed();
         } catch (Throwable t) {

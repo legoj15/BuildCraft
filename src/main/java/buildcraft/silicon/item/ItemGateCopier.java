@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
-@SuppressWarnings("deprecation")
 public class ItemGateCopier extends Item {
     private static final String NBT_DATA = "gate_data";
 
@@ -29,6 +28,10 @@ public class ItemGateCopier extends Item {
         super(properties.stacksTo(1));
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {

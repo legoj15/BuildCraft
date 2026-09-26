@@ -326,6 +326,17 @@ tasks.test {
     // UP-TO-DATE and the guard silent until this line existed.
     inputs.file(rootProject.file("NOTICE.md"))
         .withPropertyName("licenceNotice").withPathSensitivity(PathSensitivity.NONE)
+
+    // Code-inspecting tests (ForRemovalApiGuardTester, BlocksAtlasIdTester, via buildcraft.lib.test.MainSourceSet)
+    // must read THIS node's view of the main code: the active node compiles src/main/java raw, every other node a
+    // Stonecutter-generated copy. Resolved here while the task is configured, as plain strings — the configuration
+    // cache cannot carry a closure back to the script. The classes dirs are already test inputs (runtime classpath);
+    // the generated sources derive from src/main/java, which the sourceHeaders input above covers.
+    val mainSet = sourceSets["main"]
+    systemProperty("buildcraft.test.mainSourceDirs",
+        mainSet.java.srcDirs.joinToString(File.pathSeparator) { it.absolutePath })
+    systemProperty("buildcraft.test.mainClassesDirs",
+        mainSet.output.classesDirs.files.joinToString(File.pathSeparator) { it.absolutePath })
 }
 
 tasks.processResources {

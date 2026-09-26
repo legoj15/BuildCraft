@@ -67,9 +67,6 @@ import buildcraft.robotics.entity.EntityRobot;
  * restored with the Programming Table (Ph7): {@link #createRobotStack} stamps a {@code MAX_STACK_SIZE} component
  * on blank robots, and since component equality governs merging, only same-charge blanks actually stack.
  */
-// Item.appendHoverText carries Mojang's "override, don't call" @Deprecated marker on >=1.21.10 — the same
-// suppression every other BC item with a tooltip carries (see ItemList_BC8).
-@SuppressWarnings("deprecation")
 public class ItemRobot extends Item {
 
     /** The CUSTOM_DATA sub-compound holding the board, keyed exactly as 7.1.x did. */
@@ -245,6 +242,10 @@ public class ItemRobot extends Item {
 
     // ── Tooltip ─────────────────────────────────────────────────────────────
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

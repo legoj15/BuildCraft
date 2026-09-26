@@ -51,9 +51,8 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
             Slot slot = container.slots.get(i);
             if (slot instanceof IPhantomSlot) {
                 final int slotIndex = i;
-                // Old getter names work on every 26.1.x (26.1.2 retains them), so one jar covers all.
-                int x = gui.getGuiLeft() + slot.x;
-                int y = gui.getGuiTop() + slot.y;
+                int x = gui.windowLeft() + slot.x;
+                int y = gui.windowTop() + slot.y;
                 targets.add(new PhantomSlotTarget<>(container, slotIndex, x, y));
             }
         }

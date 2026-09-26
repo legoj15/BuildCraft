@@ -31,7 +31,6 @@ import net.minecraft.world.level.Level;
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
-@SuppressWarnings("deprecation")
 public final class CraftingUtil {
 
     private CraftingUtil() {

@@ -20,7 +20,6 @@ import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.LocaleUtil;
 
-@SuppressWarnings("deprecation")
 public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
 
     public static final int MAX_FLUID_HELD = 500;
@@ -42,6 +41,10 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
         }
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

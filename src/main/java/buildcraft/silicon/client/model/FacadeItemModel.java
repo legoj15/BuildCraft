@@ -6,9 +6,9 @@
 
 package buildcraft.silicon.client.model;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -58,12 +58,12 @@ public class FacadeItemModel implements ItemModel {
 
     // Cache for hand/3rd-person rendering (EAST facing, includes plug connector)
     private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> cache = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> PlugBakerFacade.INSTANCE.bake(key)));
 
     // Cache for GUI/inventory rendering (NORTH facing, centered in slot)
     private static final LoadingCache<KeyPlugFacade, List<BakedQuad>> guiCache = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
             List<BakedQuad> quads = new ArrayList<>();
             float offsetZ = (16 - buildcraft.silicon.plug.PluggableFacade.SIZE) / 2f / 16f;

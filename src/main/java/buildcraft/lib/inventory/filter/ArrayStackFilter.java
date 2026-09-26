@@ -21,7 +21,6 @@ import buildcraft.api.recipes.StackDefinition;
 import buildcraft.lib.misc.StackUtil;
 
 /** Returns true if the stack matches any one one of the filter stacks. */
-@SuppressWarnings("deprecation")
 public class ArrayStackFilter implements IStackFilter {
 
     protected NonNullList<ItemStack> stacks;

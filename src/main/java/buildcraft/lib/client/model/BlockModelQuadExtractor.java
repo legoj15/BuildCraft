@@ -53,7 +53,6 @@ import net.minecraft.world.level.block.state.BlockState;
  * one — is what keeps every call site's quad set (and its order) byte-identical to the pre-hoist code; the
  * facade texture-fingerprint depends on that stability.
  */
-@SuppressWarnings("deprecation")
 public final class BlockModelQuadExtractor {
 
     private BlockModelQuadExtractor() {}
@@ -64,6 +63,10 @@ public final class BlockModelQuadExtractor {
      * contribute (the shape the facade system bakes/compares); on 1.21.1 the real {@code state} is
      * forwarded into {@code BakedModel.getQuads} (see the class note).
      */
+    // The context-free collectParts / getQuads are deprecated in favour of NeoForge's level-aware overloads, but a
+    // model is sampled here in the abstract (facade dedup, blueprint previews) — there is no level or position, and
+    // 26.x ships no empty BlockAndTintGetter to stand in (the level-aware default just delegates back here anyway).
+    @SuppressWarnings("deprecation")
     //? if >=1.21.10 {
     public static List<BakedQuad> getQuadsFromModel(BlockState state, BlockStateModel model, Direction side, RandomSource random) {
     //?} else {
@@ -109,6 +112,7 @@ public final class BlockModelQuadExtractor {
      * bakes to another part type would preview with missing geometry. 26.1+ only: below the cliff the
      * preview uses {@code BlockRenderDispatcher.renderSingleBlock} instead, so no quad list is built there.
      */
+    @SuppressWarnings("deprecation") // context-free collectParts: see getQuadsFromModel
     public static List<BakedQuad> getAllQuads(BlockStateModel model, RandomSource random) {
         List<BlockStateModelPart> parts = new ArrayList<>();
         model.collectParts(random, parts);

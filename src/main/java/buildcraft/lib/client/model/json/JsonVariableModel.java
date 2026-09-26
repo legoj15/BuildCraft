@@ -41,9 +41,10 @@ import buildcraft.lib.client.model.ResourceLoaderContext;
 import buildcraft.lib.expression.FunctionContext;
 import buildcraft.lib.json.JsonVariableObject;
 import buildcraft.lib.misc.JsonUtil;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /** {@link JsonModel} but any element can change depending on variables. */
-@SuppressWarnings({"this-escape", "deprecation"})
+@SuppressWarnings("this-escape")
 public class JsonVariableModel extends JsonVariableObject {
     // Never allow ao or textures to be variable - they need to be hardcoded so that we can stitch them
     public final boolean ambientOcclusion;
@@ -218,7 +219,7 @@ public class JsonVariableModel extends JsonVariableObject {
         }
         lookup = texture.location;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         sprite = atlas.getSprite(Identifier.parse(lookup));
         TexturedFace face = new TexturedFace();
         face.sprite = sprite;

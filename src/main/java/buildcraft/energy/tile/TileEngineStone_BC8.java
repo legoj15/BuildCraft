@@ -31,7 +31,6 @@ import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 
-@SuppressWarnings("deprecation")
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:powering_up");
@@ -229,11 +228,17 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
 
                 // Handle container items (e.g., empty bucket from lava bucket)
                 //? if >=26.1 {
+                // The item-level remainder is deprecated in favour of the stack-sensitive one, but NeoForge moved
+                // that from IItemStackExtension to ItemInstanceExtension mid-26.1.x (neoforged/NeoForge#3157,
+                // 2026-05), so no stack-sensitive call links across the single 26.1.x jar's whole [26.1.0,26.2)
+                // range. Deprecated, not for removal; switch once the 26.1 floor passes that build.
+                @SuppressWarnings("deprecation")
                 net.minecraft.world.item.ItemStackTemplate containerTemplate = consumed.getItem().getCraftingRemainder();
                 ItemStack container = containerTemplate != null ? containerTemplate.create() : ItemStack.EMPTY;
                 //?} elif >=1.21.10 {
-                /*// 1.21.10 / 1.21.11 Item.getCraftingRemainder() returns an ItemStack directly (EMPTY if none).
-                ItemStack container = consumed.getItem().getCraftingRemainder();*/
+                /*// 1.21.10 / 1.21.11: NeoForge's stack-sensitive remainder (EMPTY if none); Item#getCraftingRemainder()
+                // is the deprecated item-level form.
+                ItemStack container = consumed.getCraftingRemainder();*/
                 //?} else {
                 /*// 1.21.1 has no Item.getCraftingRemainder(); use NeoForge's ItemStack-sensitive remainder.
                 ItemStack container = consumed.getCraftingRemainingItem();*/

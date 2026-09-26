@@ -43,7 +43,6 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.EnumAssemblyRecipeState;
 
-@SuppressWarnings("deprecation")
 public class TileAssemblyTable extends TileLaserTableBase {
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:precision_crafting");
 

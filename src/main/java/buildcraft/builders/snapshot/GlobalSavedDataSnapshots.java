@@ -6,6 +6,7 @@
 
 package buildcraft.builders.snapshot;
 
+import java.time.Duration;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -46,7 +47,7 @@ public class GlobalSavedDataSnapshots {
 
     private static final Map<Side, GlobalSavedDataSnapshots> INSTANCES = new EnumMap<>(Side.class);
     private final LoadingCache<Snapshot.Key, Optional<Snapshot>> snapshotsCache = CacheBuilder.newBuilder()
-        .expireAfterAccess(10, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(10))
         .build(CacheLoader.from(key -> Optional.ofNullable(readSnapshot(key)).map(Pair::getLeft)));
     private final SingleCache<List<Snapshot.Key>> listCache = new SingleCache<>(
         this::readList,

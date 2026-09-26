@@ -20,11 +20,6 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.render.ISprite;
 
-// TextureAtlas.LOCATION_BLOCKS / LOCATION_ITEMS are @Deprecated in 26.1 but vanilla has not
-// shipped a non-deprecated replacement Identifier — Sheets.java only exposes GUI_SHEET as a
-// public Identifier; the block/item-atlas SpriteMappers there wrap the same deprecated
-// constants. Suppress here; revisit once NeoForge surfaces a stable replacement.
-@SuppressWarnings("deprecation")
 public class SpriteHolderRegistry {
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -59,6 +54,11 @@ public class SpriteHolderRegistry {
      *  blocks.json therefore declares ONLY directories outside {@code textures/block/}
      *  ({@code pipes/}, {@code lasers/}, …) — never add a {@code block/…} source there;
      *  vanilla already covers the whole tree on every supported line. */
+    // TextureAtlas.LOCATION_BLOCKS / LOCATION_ITEMS are @Deprecated with no non-deprecated successor on any line
+    // (Sheets exposes only GUI_SHEET). Kept deliberately: the lookup order mirrors vanilla's own atlas ids, so a
+    // vanilla path change reaches it directly. Everything else uses BCLibRenderTypes.BLOCKS_ATLAS_ID, which
+    // BlocksAtlasIdTester pins to the vanilla constant.
+    @SuppressWarnings("deprecation")
     private static final class AtlasLookup {
         static final Identifier[] ORDER = {
             TextureAtlas.LOCATION_BLOCKS,
@@ -117,7 +117,7 @@ public class SpriteHolderRegistry {
          *  when the sprite can't be resolved yet (early init / dedicated server). */
         public Identifier getAtlasLocation() {
             TextureAtlasSprite sprite = getSprite();
-            return sprite != null ? sprite.atlasLocation() : TextureAtlas.LOCATION_BLOCKS;
+            return sprite != null ? sprite.atlasLocation() : AtlasLookup.ORDER[0];
         }
 
         /** Walk {@link AtlasLookup#ORDER} and return the first atlas that has this

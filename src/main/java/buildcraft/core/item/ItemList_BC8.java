@@ -31,7 +31,6 @@ import buildcraft.lib.list.ListHandler;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
-@SuppressWarnings("deprecation")
 public class ItemList_BC8 extends Item implements IList {
 
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:list");
@@ -112,6 +111,10 @@ public class ItemList_BC8 extends Item implements IList {
         return InteractionResult.SUCCESS;
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

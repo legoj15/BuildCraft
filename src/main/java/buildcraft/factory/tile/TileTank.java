@@ -52,7 +52,6 @@ import buildcraft.api.tiles.IDebuggable;
  * Each individual tank holds 16 buckets (16,000 mB).
  * Ported from 1.12.2 TileTank.
  */
-@SuppressWarnings("deprecation")
 public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
 
     public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
@@ -281,6 +280,8 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
      * {@code tank.serialize} writes; on 1.21.1 {@link buildcraft.lib.fluid.BCFluidTank} writes
      * per-slot {@code "fluid<i>"}/{@code "amount<i>"} keys instead, so those are discarded there.
      */
+    // Mojang's override-only @Deprecated marker (not for removal) — vanilla block entities override it the same way.
+    @SuppressWarnings("deprecation")
     //? if >=1.21.10 {
     @Override
     public void removeComponentsFromTag(ValueOutput output) {

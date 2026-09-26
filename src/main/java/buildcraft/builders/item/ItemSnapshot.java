@@ -29,7 +29,6 @@ import buildcraft.builders.snapshot.Snapshot.Header;
  * In 1.12.2 these were 4 metadata sub-types of a single item {@code buildcraftbuilders:snapshot}.
  * In 1.21.11 they are registered as 4 separate items.
  */
-@SuppressWarnings("deprecation")
 public class ItemSnapshot extends Item {
     private final EnumSnapshotType snapshotType;
     private final boolean used;
@@ -77,6 +76,10 @@ public class ItemSnapshot extends Item {
         return null;
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

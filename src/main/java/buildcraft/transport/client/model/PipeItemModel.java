@@ -68,7 +68,6 @@ import buildcraft.transport.BCTransportItems;
  * <p>On 26.1 this reflects internal fields out of CuboidItemModelWrapper; on 1.21.11 the sibling
  * BlockModelWrapper exposes {@code properties} publicly, so its branch needs no reflection.
  */
-@SuppressWarnings("deprecation")
 //? if >=1.21.10 {
 public class PipeItemModel implements ItemModel {
 
@@ -157,7 +156,7 @@ public class PipeItemModel implements ItemModel {
             // Fluid pipes: render with the dye_replace-generated sprite variant.
             // ensureDyedSprites throws on missing — no silent fallback, per design.
             TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
-            int itemTexIndex = definition.itemTextureTop;
+            int itemTexIndex = definition.itemModelTop.getTexture(0); // itemTextureTop (deprecated) mirrors this
             TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
                     ? dyedSprites[itemTexIndex] : dyedSprites[0];
             var layer = renderState.newLayer();
@@ -209,7 +208,7 @@ public class PipeItemModel implements ItemModel {
         if (definition.flowType == PipeApi.flowFluids) {
             // Fluid pipes: replace the base with the dye_replace-generated sprite variant.
             TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
-            int itemTexIndex = definition.itemTextureTop;
+            int itemTexIndex = definition.itemModelTop.getTexture(0); // itemTextureTop (deprecated) mirrors this
             TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
                     ? dyedSprites[itemTexIndex] : dyedSprites[0];
             List<BakedQuad> quads = generatePipeQuads(dyedSprite);
@@ -378,10 +377,12 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     @Override public boolean isGui3d() { return vanillaDelegate.isGui3d(); }
     @Override public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
     @Override public boolean isCustomRenderer() { return false; }
-    @Override public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return vanillaDelegate.getParticleIcon();
+    // Both getters are abstract on 1.21.1's BakedModel yet deprecated there (NeoForge's ModelData/applyTransform
+    // hooks are the real ones); getTransforms is still what ItemEntityRenderer reads for the ground bob.
+    @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+        return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
     }
-    @Override public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+    @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
         return vanillaDelegate.getTransforms();
     }
     @Override public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {
@@ -411,7 +412,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         if (definition.flowType == PipeApi.flowFluids) {
             // Fluid pipes: dye_replace sprite variant (colour baked into the texture), opaque cutout.
             TextureAtlasSprite[] dyedSprites = PipeBaseModelGenStandard.ensureDyedSprites(definition, colour);
-            int itemTexIndex = definition.itemTextureTop;
+            int itemTexIndex = definition.itemModelTop.getTexture(0); // itemTextureTop (deprecated) mirrors this
             TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length ? dyedSprites[itemTexIndex] : dyedSprites[0];
             return new PaintedPipeModel(generatePipeQuads(dyedSprite),
                     net.minecraft.client.renderer.Sheets.cutoutBlockSheet());
@@ -462,10 +463,11 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         @Override public boolean isGui3d() { return vanillaDelegate.isGui3d(); }
         @Override public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
         @Override public boolean isCustomRenderer() { return false; }
-        @Override public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-            return vanillaDelegate.getParticleIcon();
+        // Same as the outer model: abstract-yet-deprecated 1.21.1 BakedModel getters.
+        @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
+            return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
         }
-        @Override public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
+        @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
             return vanillaDelegate.getTransforms();
         }
         @Override public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {

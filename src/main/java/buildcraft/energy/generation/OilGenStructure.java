@@ -28,7 +28,6 @@ import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.energy.tile.TileSpringOil;
 
-@SuppressWarnings("deprecation")
 public abstract class OilGenStructure {
     /**
      * Block-update flags for all worldgen placement in this class. Oil normally generates inside a
@@ -628,7 +627,11 @@ public abstract class OilGenStructure {
                 if (BlockUtil.getFluidWithFlowing(state.getBlock()) != null) {
                     break;
                 }
-                if (state.blocksMotion()) {
+                // blocksMotion() is deprecated but is vanilla's own "solid enough to stand on" test (the
+                // MOTION_BLOCKING heightmap and FlowingFluid use it); the spout should stop where vanilla's surface is.
+                @SuppressWarnings("deprecation")
+                boolean surface = state.blocksMotion();
+                if (surface) {
                     break;
                 }
             }

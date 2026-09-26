@@ -6,7 +6,6 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.pos.IGuiArea;
@@ -53,9 +52,9 @@ public class BuildCraftGui {
         lowerRightLedgerPos = screenElement.offset(5, 5);
     }
 
-    public static IGuiArea createWindowedArea(AbstractContainerScreen<?> gui) {
-        // Old getter names (present on every 26.1.x; 26.1.2 keeps them alongside getLeftPos/...) so one jar runs on all.
-        return IGuiArea.create(gui::getGuiLeft, gui::getGuiTop, gui::getXSize, gui::getYSize);
+    /** The live window rectangle of {@code gui} — tracks the screen as it re-centres on resize. */
+    public static IGuiArea createWindowedArea(GuiBC8<?> gui) {
+        return IGuiArea.create(gui::windowLeft, gui::windowTop, gui::windowWidth, gui::windowHeight);
     }
 
     public final float getLastPartialTicks() {

@@ -66,8 +66,8 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
     /**
      * @param guiClass    the screen class this plugin handles.
      * @param workstation the block/item that hosts the recipes (the REI catalyst / workstation).
-     * @param clickX      click-area rectangle, relative to the screen's top-left ({@code getGuiLeft()}/
-     * @param clickY      {@code getGuiTop()}): x-offset, y-offset, width, height. Clicking it opens the
+     * @param clickX      click-area rectangle, relative to the screen's top-left ({@code windowLeft()}/
+     * @param clickY      {@code windowTop()}): x-offset, y-offset, width, height. Clicking it opens the
      * @param clickW      crafting recipe category.
      * @param clickH      —
      */
@@ -109,7 +109,7 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
 
     public void registerScreens(ScreenRegistry registry) {
         registry.registerClickArea(
-                screen -> new Rectangle(screen.getGuiLeft() + clickX, screen.getGuiTop() + clickY, clickW, clickH),
+                screen -> new Rectangle(screen.windowLeft() + clickX, screen.windowTop() + clickY, clickW, clickH),
                 guiClass,
                 CRAFTING);
         registry.registerDraggableStackVisitor(new PhantomSlotDragVisitor<>(guiClass));
@@ -143,8 +143,8 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
             for (int i = 0; i < container.slots.size(); i++) {
                 Slot slot = container.slots.get(i);
                 if (slot instanceof IPhantomSlot) {
-                    int x = gui.getGuiLeft() + slot.x;
-                    int y = gui.getGuiTop() + slot.y;
+                    int x = gui.windowLeft() + slot.x;
+                    int y = gui.windowTop() + slot.y;
                     targets.add(BoundsProvider.ofRectangle(new Rectangle(x, y, 16, 16)));
                 }
             }
@@ -167,8 +167,8 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
             for (int i = 0; i < container.slots.size(); i++) {
                 Slot slot = container.slots.get(i);
                 if (slot instanceof IPhantomSlot) {
-                    int x = gui.getGuiLeft() + slot.x;
-                    int y = gui.getGuiTop() + slot.y;
+                    int x = gui.windowLeft() + slot.x;
+                    int y = gui.windowTop() + slot.y;
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
                         String itemId = BuiltInRegistries.ITEM.getKey(itemStack.getItem()).toString();
                         final int slotIdx = i;

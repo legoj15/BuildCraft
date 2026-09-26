@@ -60,7 +60,6 @@ import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.transport.client.model.ModelPipe;
 import buildcraft.transport.client.model.key.PipeModelKey;
 
-@SuppressWarnings("deprecation")
 public final class BlueprintGuiRenderer {
 
     private BlueprintGuiRenderer() {}
@@ -181,10 +180,10 @@ public final class BlueprintGuiRenderer {
                             // Cull render types: the pipe model emits coplanar front/inside quad pairs and
                             // relies on back-face culling to drop the inside quad (NO_CULL would z-fight).
                             ModelPipe.renderDirect(pipeKey, pipePose,
-                                    buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
+                                    buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)),
                                     FULL_BRIGHT);
                             ModelPipe.renderMaskOverlay(pipeKey, pipePose,
-                                    buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
+                                    buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
                             // Pluggables captured on this pipe — reconstructed offline, rendered like the body.
                             PipePreviewPluggables.render(schBlock.getTileNbtForRender(), pose, buffers, FULL_BRIGHT);
@@ -268,7 +267,7 @@ public final class BlueprintGuiRenderer {
             return;
         }
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
         if (sprite == null) {
             return;
@@ -293,8 +292,8 @@ public final class BlueprintGuiRenderer {
 
         VertexConsumer vc = buffers.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                        ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                        : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS));
+                        ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID)
+                        : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID));
 
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);

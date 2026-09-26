@@ -110,7 +110,6 @@ import buildcraft.transport.client.model.key.PipeModelKey;
  *       {@code scale(1, -1, -1)} pattern for the same reason.</li>
  * </ul>
  */
-@SuppressWarnings("deprecation")
 public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipRenderState> {
 
     private static final Logger LOGGER = LogManager.getLogger("BCBlueprintPipRenderer");
@@ -453,10 +452,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             CompoundTag pipeTileNbt = schBlock.getTileNbtForRender();
                             //? if >=26.2 {
                             /*collector.submitCustomGeometry(poseStack,
-                                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                                    BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                                     (pose, vc) -> ModelPipe.renderDirect(pipeKey, pose, vc, FULL_BRIGHT));
                             collector.submitCustomGeometry(poseStack,
-                                    BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS),
+                                    BCLibRenderTypes.entityTranslucentCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                                     (pose, vc) -> ModelPipe.renderMaskOverlay(pipeKey, pose, vc,
                                             FULL_BRIGHT, PIPE_PAINT_ALPHA));
                             // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
@@ -466,11 +465,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             PoseStack.Pose pipePose = poseStack.last();
                             ModelPipe.renderDirect(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
-                                            BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)),
+                                            BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)),
                                     FULL_BRIGHT);
                             ModelPipe.renderMaskOverlay(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
-                                            BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)),
+                                            BCLibRenderTypes.entityTranslucentCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)),
                                     FULL_BRIGHT, PIPE_PAINT_ALPHA);
                             // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
                             // pipe — reconstructed offline and rendered like the body.
@@ -649,7 +648,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
         if (sprite == null) return;
 
@@ -685,8 +684,8 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // so the alpha is clamped to binary and doesn't bleed the background through. `var` keeps the
         // RenderType import out of this file (its package diverges below 26.1) — see header.
         var fluidRenderType = FluidUtilBC.shouldRenderTranslucent(fluid)
-                ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-                : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+                ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID)
+                : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
 
         // final copies so the >=26.2 deferred lambda can capture them.
         final float rr = r, gg = g, bb = b, aa = a, hh = h;

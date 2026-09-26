@@ -8,8 +8,8 @@ package buildcraft.lib.client.model;
 
 import net.minecraft.resources.Identifier;
 
+import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -29,7 +29,7 @@ public class ModelCache<K> implements IModelCache<K> {
     private final LoadingCache<K, List<BakedQuad>> modelCache;
 
     public ModelCache(IModelGenerator<K> generator) {
-        modelCache = CacheBuilder.newBuilder().expireAfterAccess(1, TimeUnit.MINUTES).build(CacheLoader.from(generator::generate));
+        modelCache = CacheBuilder.newBuilder().expireAfterAccess(Duration.ofMinutes(1)).build(CacheLoader.from(generator::generate));
     }
 
     @Override

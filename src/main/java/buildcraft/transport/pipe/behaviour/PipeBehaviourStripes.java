@@ -47,7 +47,6 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.transport.BCTransportStatements;
 
-@SuppressWarnings("deprecation")
 public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
     // The behaviour must itself be an IMjRedstoneReceiver (the pulsar plug + power-adaptor placement test

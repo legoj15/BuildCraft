@@ -17,13 +17,14 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.core.render.ISprite;
 
-@SuppressWarnings("deprecation") // TextureAtlas.LOCATION_BLOCKS — same pattern used across BC renderers
+import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+
 public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer<T> {
     private ISprite sprite;
 
@@ -39,18 +40,24 @@ public class AddonDefaultRenderer<T extends Addon> implements IFastAddonRenderer
     public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, SubmitNodeCollector collector) {
         AABB bb = addon.getBoundingBox();
         collector.submitCustomGeometry(poseStack,
-                BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS),
+                BCLibRenderTypes.entityTranslucent(atlas()),
                 (pose, builder) -> emitFaces(builder, pose.pose(), bb));
     }
     //?} else {
     /*@Override
     public void renderAddonFast(T addon, Player player, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource) {
-        VertexConsumer builder = bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+        VertexConsumer builder = bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(atlas()));
         AABB bb = addon.getBoundingBox();
         Matrix4f pose = poseStack.last().pose();
         emitFaces(builder, pose, bb);
     }*/
     //?}
+
+    /** The atlas page the sprite's UVs index into — its own page for a {@link SpriteHolder} (addon icons need not
+     *  live on the blocks atlas), else the blocks atlas that every other {@link ISprite} here maps against. */
+    private Identifier atlas() {
+        return sprite instanceof SpriteHolder holder ? holder.getAtlasLocation() : BCLibRenderTypes.BLOCKS_ATLAS_ID;
+    }
 
     private void emitFaces(VertexConsumer builder, Matrix4f pose, AABB bb) {
         // Map raw 0-1 UV to atlas-relative UV via the sprite. Without this, vertices use the entire

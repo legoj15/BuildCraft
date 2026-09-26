@@ -36,7 +36,6 @@ import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.GateVariant;
 import buildcraft.silicon.plug.PluggableGate;
 
-@SuppressWarnings("deprecation")
 public class ItemPluggableGate extends Item implements IItemPluggable {
     public ItemPluggableGate(Item.Properties properties) {
         super(properties);
@@ -76,6 +75,10 @@ public class ItemPluggableGate extends Item implements IItemPluggable {
         return getVariant(stack).getLocalizedName();
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> tooltip, TooltipFlag flag) {

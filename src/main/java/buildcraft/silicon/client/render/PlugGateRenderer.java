@@ -29,6 +29,7 @@ import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.misc.SpriteUtil;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 import buildcraft.silicon.gate.EnumGateMaterial;
 import buildcraft.silicon.gate.EnumGateModifier;
@@ -57,7 +58,6 @@ import buildcraft.silicon.plug.PluggableGate;
  * Static-parts geometry is cached per {@link GateVariant}; the dynamic overlay is cached
  * once for ON and once for OFF. Both caches are populated lazily on first render.
  */
-@SuppressWarnings("deprecation")
 public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
     INSTANCE;
 
@@ -132,7 +132,7 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
     private static TextureAtlasSprite getMcSprite(String path) {
         net.minecraft.client.renderer.texture.TextureAtlas atlas =
             (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(Identifier.parse(path));
         return sprite != null ? sprite : SpriteUtil.missingSprite();
     }

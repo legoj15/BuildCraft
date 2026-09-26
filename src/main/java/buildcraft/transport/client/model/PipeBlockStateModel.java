@@ -51,7 +51,6 @@ import buildcraft.transport.tile.TilePipeHolder;
  * populated by TilePipeHolder.getModelData() and refreshed whenever
  * pipe connections or paint change.
  */
-@SuppressWarnings("deprecation")
 //? if >=1.21.10 {
 public class PipeBlockStateModel implements DynamicBlockStateModel {
     private final BlockStateModel vanillaDelegate;
@@ -73,15 +72,15 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         TilePipeHolder tile = modelData.get(TilePipeHolder.PIPE_MODEL_DATA);
         if (tile == null || tile.getPipe() == null) {
             // No pipe data — fall back to vanilla delegate (particle texture only)
-            vanillaDelegate.collectParts(random, parts);
+            vanillaDelegate.collectParts(level, pos, state, random, parts);
             return;
         }
 
         // Particle source: 26.1 exposes a Material.Baked, 1.21.11 a TextureAtlasSprite.
         //? if >=26.1 {
-        Material.Baked particle = vanillaDelegate.particleMaterial();
+        Material.Baked particle = vanillaDelegate.particleMaterial(level, pos, state);
         //?} else {
-        /*TextureAtlasSprite particle = vanillaDelegate.particleIcon();*/
+        /*TextureAtlasSprite particle = vanillaDelegate.particleIcon(level, pos, state);*/
         //?}
 
         // Cutout pass — pipe body geometry with pipe-specific textures
@@ -133,13 +132,17 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
         return new PipeModelCacheAll.PipeAllCutoutKey(tile);
     }
 
+    // The context-free particle/material-flag getters are deprecated in favour of NeoForge's level-aware ones, but
+    // BlockStateModel still declares them abstract, so a model must implement them (and can only delegate in kind).
     //? if >=26.1 {
+    @SuppressWarnings("deprecation")
     @Override
     public Material.Baked particleMaterial() {
         return vanillaDelegate.particleMaterial();
     }
     //?} else {
-    /*@Override
+    /*@SuppressWarnings("deprecation")
+    @Override
     public TextureAtlasSprite particleIcon() {
         return vanillaDelegate.particleIcon();
     }*/
@@ -147,6 +150,7 @@ public class PipeBlockStateModel implements DynamicBlockStateModel {
 
     // materialFlags() exists only on 26.1's BlockStateModel; 1.21.11 has no such method.
     //? if >=26.1 {
+    @SuppressWarnings("deprecation")
     @Override
     public int materialFlags() {
         return vanillaDelegate.materialFlags();
@@ -209,9 +213,15 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
     public boolean usesBlockLight() { return vanillaDelegate.usesBlockLight(); }
     @Override
     public boolean isCustomRenderer() { return false; }
+    // Abstract on 1.21.1's BakedModel yet deprecated there; NeoForge's ModelData overload is the real hook.
+    @SuppressWarnings("deprecation")
     @Override
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return vanillaDelegate.getParticleIcon();
+        return vanillaDelegate.getParticleIcon(ModelData.EMPTY);
+    }
+    @Override
+    public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon(ModelData data) {
+        return vanillaDelegate.getParticleIcon(data);
     }
     @Override
     public net.minecraft.client.renderer.block.model.ItemOverrides getOverrides() {

@@ -73,7 +73,6 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * full rationale and the rejected alternatives (server-side JSON resolution, shipped
  * data table).
  */
-@SuppressWarnings("deprecation")
 public class FacadeDeduplicator {
     private static final boolean DEBUG = BCDebugging.shouldDebugLog("silicon.facade");
     private static final RandomSource RANDOM = RandomSource.create(42L);

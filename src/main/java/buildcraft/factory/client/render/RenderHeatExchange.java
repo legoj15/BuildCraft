@@ -62,6 +62,7 @@ import buildcraft.lib.client.render.tile.BCRenderState;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /**
  * Block entity renderer for the heat exchanger. Renders fluid in the four
@@ -69,7 +70,6 @@ import buildcraft.lib.misc.FluidUtilBC;
  * end output top) and animated flow between start and end sections.
  * Ported from 1.12.2 RenderHeatExchange.
  */
-@SuppressWarnings("deprecation")
 //? if >=1.21.10 {
 public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange, BCRenderState> {
 //?} else {
@@ -273,7 +273,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int color = FluidUtilBC.getFluidColor(fluid);
@@ -309,13 +309,13 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         //? if >=1.21.10 {
         collector.submitCustomGeometry(poseStack,
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS),
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                 (pose, buffer) -> FluidRenderer.fluidBox(pose, buffer, sprite,
                         minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, fa, light));
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID));
         FluidRenderer.fluidBox(poseStack.last(), buffer, sprite,
                 minX, minZ, maxX, maxZ, fluidTop, fluidBottom, r, g, b, a, light);*/
         //?}
@@ -340,7 +340,7 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int color = FluidUtilBC.getFluidColor(fluid);
@@ -354,11 +354,11 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
         //? if >=1.21.10 {
         final RenderType renderType =
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));*/
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID));*/
         //?}
 
         Level level = Minecraft.getInstance().level;

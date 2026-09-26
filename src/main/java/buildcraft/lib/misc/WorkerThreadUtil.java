@@ -24,15 +24,12 @@ import java.util.concurrent.TimeoutException;
 
 import com.google.common.base.Throwables;
 
-import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-
 import buildcraft.api.core.BCDebugging;
 import buildcraft.api.core.BCLog;
 
 /** Provides a pool of worker threads that can execute tasks. Each task should take no longer than (ideally) 20ms or at
  * a push 100ms. Each task is watched to make sure that it takes less time to complete that that, and if it takes longer
  * then a warning is logged. */
-@SuppressWarnings("deprecation")
 public class WorkerThreadUtil {
     private static final ExecutorService WORKING_POOL, DEPENDANT_WORKING_POOL, MONITORING_POOL;
     private static final boolean DEBUG = BCDebugging.shouldDebugLog("lib.threads");
@@ -44,21 +41,26 @@ public class WorkerThreadUtil {
             BCLog.logger.info("[lib.threads] Creating 2 thread pools with up to " + max + " threads each.");
         }
 
-        ThreadFactory factory = new BasicThreadFactory.Builder().daemon(false)//
-                .namingPattern("BuildCraft Worker Thread %d")//
+        // JDK thread builders (Java 21+, every node) rather than commons-lang3's BasicThreadFactory, whose Builder
+        // constructor is deprecated from 3.18 while its replacement is missing from the older lines' bundled copy.
+        // Explicit priority: a platform-thread builder inherits the creating thread's, which may be the render thread.
+        ThreadFactory factory = Thread.ofPlatform().daemon(false).priority(Thread.NORM_PRIORITY)
+                .name("BuildCraft Worker Thread ", 1)
                 .uncaughtExceptionHandler((thread, e) -> {
                     BCLog.logger.error("Uncaught exception in BuildCraft worker thread", e);
                     throw new IllegalStateException(e);
-                })//
-                .build();
+                })
+                .factory();
         RejectedExecutionHandler rejectHandler = new CallerRunsPolicy();
         WORKING_POOL = new ThreadPoolExecutor(0, max, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), factory, rejectHandler);
 
-        factory = new BasicThreadFactory.Builder().daemon(false).namingPattern("BuildCraft Dependant Worker Thread %d").build();
+        factory = Thread.ofPlatform().daemon(false).priority(Thread.NORM_PRIORITY)
+                .name("BuildCraft Dependant Worker Thread ", 1).factory();
         DEPENDANT_WORKING_POOL = new ThreadPoolExecutor(0, max, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), factory, rejectHandler);
 
         if (DEBUG) {
-            factory = new BasicThreadFactory.Builder().daemon(false).namingPattern("BuildCraft Monitoring Thread %d").build();
+            factory = Thread.ofPlatform().daemon(false).priority(Thread.NORM_PRIORITY)
+                    .name("BuildCraft Monitoring Thread ", 1).factory();
             MONITORING_POOL = Executors.newCachedThreadPool(factory);
         } else {
             MONITORING_POOL = null;
@@ -94,7 +96,7 @@ public class WorkerThreadUtil {
             return executeWorkTask(task).get();
         } catch (ExecutionException e) {
             // Something went wrong- this is NOT meant to happen.
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -159,7 +161,8 @@ public class WorkerThreadUtil {
                 return result;
             } catch (Throwable t) {
                 BCLog.logger.info("[lib.threads] A task failed! [" + taskType + "]", t);
-                throw Throwables.propagate(t);
+                Throwables.throwIfUnchecked(t);
+                throw new RuntimeException(t);
             } finally {
                 end.countDown();
             }

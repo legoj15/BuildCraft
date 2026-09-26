@@ -6,10 +6,10 @@
 
 package buildcraft.silicon.client.model;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -94,7 +94,7 @@ public class LensItemModel implements ItemModel {
     private record CacheKey(LensKey lensKey, ItemDisplayContext context) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
             ContextXform xform = XFORMS.getOrDefault(key.context(), DEFAULT_XFORM);
             LensKey lk = key.lensKey();

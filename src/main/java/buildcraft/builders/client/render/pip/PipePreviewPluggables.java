@@ -24,7 +24,6 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?} else {
 import net.minecraft.client.renderer.MultiBufferSource;
 //?}
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -64,7 +63,6 @@ import buildcraft.transport.client.model.PipeModelCachePluggable.PluggableKey;
  * renderers. Any reconstruction/baking failure (e.g. a facade whose camouflage model isn't
  * available) is swallowed so a bad pluggable degrades to "pipe body only" rather than crashing.
  */
-@SuppressWarnings("deprecation")
 public final class PipePreviewPluggables {
 
     private PipePreviewPluggables() {}
@@ -133,10 +131,10 @@ public final class PipePreviewPluggables {
                     PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder));
             //? if >=26.2 {
             /*collector.submitCustomGeometry(poseStack,
-                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                    BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                     (pose, vc) -> renderQuads(cutoutQuads, pose, vc, light));
             collector.submitCustomGeometry(poseStack,
-                    BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS),
+                    BCLibRenderTypes.entityTranslucentCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                     (pose, vc) -> renderQuads(translucentQuads, pose, vc, light));
             // Dynamic-renderer pluggables (gates, pulsars) contribute ZERO static quads — in-world a
             // registered per-frame renderer draws them (so toggling one doesn't force a chunk re-mesh).
@@ -145,7 +143,7 @@ public final class PipePreviewPluggables {
             // poseStack is already popped by the time the deferred lambda runs). Offline there's no live
             // world, so PlugGateRenderer falls back to full-bright.
             collector.submitCustomGeometry(poseStack,
-                    BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS),
+                    BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                     (pose, vc) -> {
                         PoseStack localStack = new PoseStack();
                         localStack.last().set(pose);
@@ -162,15 +160,15 @@ public final class PipePreviewPluggables {
             //?} else {
             PoseStack.Pose pose = poseStack.last();
             renderQuads(cutoutQuads,
-                    pose, buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS)), light);
+                    pose, buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)), light);
             renderQuads(translucentQuads,
-                    pose, buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS)), light);
+                    pose, buffers.getBuffer(BCLibRenderTypes.entityTranslucentCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)), light);
             // Dynamic-renderer pluggables (gates, pulsars) contribute ZERO static quads — in-world a
             // registered per-frame renderer draws them (so toggling one doesn't force a chunk re-mesh).
             // Drive that same renderer here. It applies its own per-side rotation (hence the PoseStack),
             // and offline there's no live world so PlugGateRenderer falls back to full-bright.
             VertexConsumer dynBuffer =
-                    buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS));
+                    buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID));
             for (PipePluggable plug : holder.plugs) {
                 if (plug == null) {
                     continue;

@@ -31,7 +31,6 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.transport.BCTransportItems;
 
 /** An item that, when placed, creates a pipe block with the associated {@link PipeDefinition}. */
-@SuppressWarnings("deprecation")
 public class ItemPipeHolder extends BlockItem implements IItemPipe {
     /** Wraps an already-localized flow string ("20 MJ/s") with the per-face qualifier. Format key so
      *  languages that don't put the qualifier last can reorder it. */
@@ -89,6 +88,10 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
         return definition.identifier != null && definition.identifier.endsWith("_rf");
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

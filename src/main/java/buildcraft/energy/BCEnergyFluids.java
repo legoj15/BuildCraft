@@ -49,7 +49,7 @@ import buildcraft.lib.misc.RegistrationUtilBC;
  *   <li>gaseous   = density &lt; 0 (lighter than air → upside-down bucket)</li>
  * </ul>
  */
-@SuppressWarnings({"deprecation", "unchecked", "rawtypes"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class BCEnergyFluids {
 
     // ─── Deferred Registers ───────────────────────────────────────────
@@ -511,7 +511,7 @@ public class BCEnergyFluids {
 
         @Override
         protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid fluidIn, Direction direction) {
-            if (fluidIn.is(FluidTags.WATER)) {
+            if (fluidIn.defaultFluidState().is(FluidTags.WATER)) {
                 return false;
             }
             return super.canBeReplacedWith(state, level, pos, fluidIn, direction);

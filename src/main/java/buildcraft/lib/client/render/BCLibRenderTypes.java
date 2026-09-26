@@ -41,6 +41,20 @@ import net.minecraft.resources.Identifier;
  */
 public final class BCLibRenderTypes {
     /**
+     * The blocks-atlas <em>texture</em> id ({@code minecraft:textures/atlas/blocks.png}) — what to bind for
+     * geometry UV-mapped from a blocks-atlas sprite, and what {@code getTextureManager().getTexture(...)} takes to
+     * fetch that atlas. Value-identical to vanilla's {@code TextureAtlas.LOCATION_BLOCKS} on every supported line
+     * (1.21.1 aliases it to {@code InventoryMenu.BLOCK_ATLAS}); that constant is {@code @Deprecated} with no
+     * non-deprecated successor anywhere, so BuildCraft names the id once here instead. {@code BlocksAtlasIdTester}
+     * pins the equality per node, so a vanilla path change fails a test instead of rendering the missing texture.
+     * <p>
+     * <b>Not</b> {@code AtlasIds.BLOCKS} ({@code minecraft:blocks}) — that is the atlas-manager key, a different id
+     * space; binding it as a texture draws nothing. And for a sprite that may live on another page (items, GUI),
+     * bind {@code SpriteHolder#getAtlasLocation()} rather than assuming this atlas.
+     */
+    public static final Identifier BLOCKS_ATLAS_ID = Identifier.withDefaultNamespace("textures/atlas/blocks.png");
+
+    /**
      * Untextured, unlit, vertex-coloured QUADs with proper depth ordering.
      * <p>
      * Inherits {@code core/position_color} shaders + {@link com.mojang.blaze3d.vertex.DefaultVertexFormat#POSITION_COLOR}
@@ -280,7 +294,7 @@ public final class BCLibRenderTypes {
      */
     public static RenderType cutoutBlockSheet() {
         //? if >=26.2 {
-        /*return RenderTypes.entityCutoutCull(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);*/
+        /*return RenderTypes.entityCutoutCull(BLOCKS_ATLAS_ID);*/
         //?} else {
         return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
         //?}

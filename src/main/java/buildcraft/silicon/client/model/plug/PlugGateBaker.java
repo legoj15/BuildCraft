@@ -28,9 +28,9 @@ import net.minecraft.world.phys.AABB;
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.silicon.client.model.key.KeyPlugGate;
 
-@SuppressWarnings("deprecation")
 public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
     public static final PlugGateBaker INSTANCE = new PlugGateBaker();
 
@@ -42,7 +42,7 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
 
     private TextureAtlasSprite getSprite(String path) {
         net.minecraft.client.renderer.texture.TextureAtlas atlas = (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         return atlas.getSprite(Identifier.parse(path));
     }
 

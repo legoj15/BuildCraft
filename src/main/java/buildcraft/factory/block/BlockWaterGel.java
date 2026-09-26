@@ -36,10 +36,13 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
+import net.neoforged.neoforge.common.util.DeferredSoundType;
+import net.neoforged.neoforge.event.EventHooks;
+
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.factory.BCFactoryItems;
 
-@SuppressWarnings({"this-escape", "deprecation"})
+@SuppressWarnings("this-escape")
 public class BlockWaterGel extends Block {
     public static final MapCodec<BlockWaterGel> CODEC = simpleCodec(BlockWaterGel::new);
 
@@ -60,14 +63,15 @@ public class BlockWaterGel extends Block {
         public final float hardness;
 
         GelStage(float pitch, boolean spreading, float hardness) {
-            this.soundType = new SoundType(
+            // NeoForge's supplier-backed SoundType (the raw SoundType constructor is deprecated in its favour).
+            this.soundType = new DeferredSoundType(
                 SoundType.SLIME_BLOCK.volume,
                 pitch,
-                SoundEvents.SLIME_BLOCK_BREAK,
-                SoundEvents.SLIME_BLOCK_STEP,
-                SoundEvents.SLIME_BLOCK_PLACE,
-                SoundEvents.SLIME_BLOCK_HIT,
-                SoundEvents.SLIME_BLOCK_FALL
+                () -> SoundEvents.SLIME_BLOCK_BREAK,
+                () -> SoundEvents.SLIME_BLOCK_STEP,
+                () -> SoundEvents.SLIME_BLOCK_PLACE,
+                () -> SoundEvents.SLIME_BLOCK_HIT,
+                () -> SoundEvents.SLIME_BLOCK_FALL
             );
             this.spreading = spreading;
             this.hardness = hardness;
@@ -197,6 +201,10 @@ public class BlockWaterGel extends Block {
 
     // Misc
 
+    // The context-free overload is deprecated in favour of IBlockExtension#getSoundType(state, level, pos, entity),
+    // but that one defaults to this — overriding the base keeps every caller (vanilla, NeoForge, other mods, and
+    // SoundUtil) on the per-stage sound. Deprecated, not for removal.
+    @SuppressWarnings("deprecation")
     @Override
     public SoundType getSoundType(BlockState state) {
         GelStage stage = state.getValue(PROP_STAGE);
@@ -216,9 +224,14 @@ public class BlockWaterGel extends Block {
         if (hardness < 0) {
             return 0.0F;
         }
-        // Replicate vanilla logic: 1 / (hardness * 30) if canHarvest, else 1 / (hardness * 100)
-        float speed = player.getDestroySpeed(state);
-        boolean canHarvest = player.hasCorrectToolForDrops(state);
+        // Replicate vanilla logic: 1 / (hardness * 30) if canHarvest, else 1 / (hardness * 100) — with the same
+        // position-aware calls NeoForge's BlockBehaviour#getDestroyProgress makes (BreakSpeed / HarvestCheck events).
+        //? if >=1.21.10 {
+        float speed = player.getDestroySpeed(state, pos);
+        //?} else {
+        /*float speed = player.getDigSpeed(state, pos);*/
+        //?}
+        boolean canHarvest = EventHooks.doPlayerHarvestCheck(player, state, level, pos);
         if (canHarvest) {
             return speed / hardness / 30.0F;
         } else {

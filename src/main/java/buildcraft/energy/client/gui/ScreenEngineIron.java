@@ -28,12 +28,12 @@ import buildcraft.lib.gui.ledger.LedgerEngine;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /**
  * Screen (GUI) for the combustion engine. Displays 3 fluid tanks
  * (fuel, coolant, residue) with actual fluid textures, glass overlays, and tooltips.
  */
-@SuppressWarnings("deprecation")
 public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/combustion_engine_gui.png");
     private static final int SIZE_X = 176, SIZE_Y = 177;
@@ -128,14 +128,14 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
      * and tint color (fluid textures are grayscale; color comes from tinting).
      */
     private void drawFluidTexture(BCGraphics graphics, int x, int y, int width, int height, Fluid fluid) {
-        net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid.builtInRegistryHolder(), 1);
+        net.neoforged.neoforge.fluids.FluidStack stack = new net.neoforged.neoforge.fluids.FluidStack(fluid, 1);
         Identifier stillTexture = buildcraft.lib.misc.FluidUtilBC.getFluidTexture(stack);
         if (stillTexture == null) {
             stillTexture = Identifier.withDefaultNamespace("block/water_still");
         }
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(stack);
@@ -160,7 +160,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 //? if >=1.21.10 {
                 graphics.blit(
                     net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
-                    TextureAtlas.LOCATION_BLOCKS,
+                    BCLibRenderTypes.BLOCKS_ATLAS_ID,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
                     drawW, drawH,
@@ -172,7 +172,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
                 // region-blit overload; without them it binds to blit(…,int textureSize) and tintColor is
                 // consumed as the texture size (garbage UVs, no tint → water invisible, fluids grey).
                 graphics.blit(
-                    TextureAtlas.LOCATION_BLOCKS,
+                    BCLibRenderTypes.BLOCKS_ATLAS_ID,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
                     drawW, drawH,

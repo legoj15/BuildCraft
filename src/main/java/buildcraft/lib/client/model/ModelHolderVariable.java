@@ -28,13 +28,13 @@ import buildcraft.lib.client.model.json.JsonTexture;
 import buildcraft.lib.client.model.json.JsonVariableModel;
 import buildcraft.lib.expression.FunctionContext;
 import buildcraft.lib.expression.node.value.ITickableNode;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /** Holds a model that can be changed by variables. Models are defined in this way by firstly creating a
  * {@link FunctionContext}, and then defining all of the variables with FunctionContext.getOrAddX(). It is recommended
  * that you define all models inside of static initializer block. <br>
  * The json model definition of a variable model matches the vanilla format, except that any of the static numbers may
  * be replaced with an expression, that may use any of the variables you have defined. */
-@SuppressWarnings("deprecation")
 public class ModelHolderVariable extends ModelHolder {
     public final Map<String, TextureAtlasSprite> customSprites = new HashMap<>();
     private final FunctionContext context;
@@ -104,7 +104,7 @@ public class ModelHolderVariable extends ModelHolder {
         }
         lookup = texture.location;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         if (lookup.startsWith("~")) {
             sprite = customSprites.get(lookup.substring(1));
             if (sprite == null) {

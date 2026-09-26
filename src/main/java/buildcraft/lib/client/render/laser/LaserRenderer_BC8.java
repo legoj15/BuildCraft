@@ -21,7 +21,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import buildcraft.lib.client.render.BCLibRenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -33,7 +32,6 @@ import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
  * Renders textured laser beams between two points using quads.
  * Restores the 1.12.2 3D beam appearance with tiled texture patterns.
  */
-@SuppressWarnings("deprecation")
 public class LaserRenderer_BC8 {
     private static final Map<LaserType, CompiledLaserType> COMPILED_LASER_TYPES = new HashMap<>();
 
@@ -93,7 +91,7 @@ public class LaserRenderer_BC8 {
             SubmitNodeCollector collector) {
         // Use entityTranslucent with the block atlas so laser sprites render with transparency
         collector.submitCustomGeometry(poseStack,
-                BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS),
+                BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                 (pose, buffer) -> renderLaser(poseStack, buffer, data, cameraPos));
     }
     //?} else {
@@ -105,7 +103,7 @@ public class LaserRenderer_BC8 {
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         // Use entityTranslucent with the block atlas so laser sprites render with transparency
         VertexConsumer consumer = bufferSource.getBuffer(
-                BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID));
         renderLaser(poseStack, consumer, data, cameraPos);
         bufferSource.endBatch();
     }*/

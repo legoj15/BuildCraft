@@ -16,8 +16,8 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.client.model.json.JsonVariableModel.ITextureGetter;
 import buildcraft.lib.expression.FunctionContext;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
-@SuppressWarnings("deprecation")
 public class VariablePartLed extends VariablePartCuboidBase {
     private static final VariableFaceData FACE_DATA = new VariableFaceData();
 
@@ -38,7 +38,7 @@ public class VariablePartLed extends VariablePartCuboidBase {
     protected VariableFaceData getFaceData(Direction side, ITextureGetter spriteLookup) {
         if (FACE_DATA.sprite == null) {
             TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                    .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                    .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
             FACE_DATA.sprite = atlas.getSprite(MissingTextureAtlasSprite.getLocation());
         }
         FACE_DATA.uvs.minU = 1 / 16.0f;

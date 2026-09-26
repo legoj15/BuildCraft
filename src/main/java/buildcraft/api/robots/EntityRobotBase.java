@@ -204,7 +204,9 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
 
         DamageSource source = serverLevel.damageSources().source(DamageTypes.MOB_ATTACK, this);
         //? if >=1.21.10 {
-        target.hurtOrSimulate(source, attackDamage);
+        // hurtServer, not the deprecated hurtOrSimulate: this runs server-side only (serverLevel is in hand), which
+        // is exactly the branch hurtOrSimulate would have dispatched to.
+        target.hurtServer(serverLevel, source, attackDamage);
         //?} else {
         /*target.hurt(source, attackDamage);*/
         //?}

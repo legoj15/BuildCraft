@@ -29,7 +29,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Holds all of the information necessary to make a {@link BakedQuad}. This provides a variety of methods to quickly
  * set or get different elements. This currently holds 4 {@link MutableVertex}. */
-@SuppressWarnings({"this-escape", "deprecation"})
+@SuppressWarnings("this-escape")
 public class MutableQuad {
     public static final MutableQuad[] EMPTY_ARRAY = new MutableQuad[0];
 
@@ -153,7 +153,7 @@ public class MutableQuad {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
             net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
-            tintIndex, shade, lightEmission
+            tintIndex, shade, lightEmission, true // ambientOcclusion: what the deprecated 6-arg form defaulted to
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
@@ -211,7 +211,7 @@ public class MutableQuad {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
             net.minecraft.client.renderer.Sheets.translucentBlockItemSheet(),
-            tintIndex, shade, lightEmission
+            tintIndex, shade, lightEmission, true // ambientOcclusion: what the deprecated 6-arg form defaulted to
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),

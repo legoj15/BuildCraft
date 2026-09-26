@@ -35,7 +35,6 @@ import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.client.model.key.KeyPlugFacade;
 
-@SuppressWarnings("deprecation")
 public class PluggableFacade extends PipePluggable implements IFacade {
 
     private static final AABB[] BOXES = new AABB[6];
@@ -142,7 +141,10 @@ public class PluggableFacade extends PipePluggable implements IFacade {
 
     @Override
     public float getExplosionResistance(@Nullable Entity exploder, Explosion explosion) {
-        return states.phasedStates[activeState].stateInfo.state.getBlock().getExplosionResistance();
+        // NeoForge's context-aware resistance (Block#getExplosionResistance() is deprecated in its favour); the
+        // facade's block is asked as if it stood at the pipe, which is where the blast actually meets it.
+        return states.phasedStates[activeState].stateInfo.state
+            .getExplosionResistance(holder.getPipeWorld(), holder.getPipePos(), explosion);
     }
 
     @Override

@@ -21,7 +21,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.phys.Vec3;
@@ -34,7 +33,6 @@ import buildcraft.lib.misc.data.Box;
 /**
  * Renders a laser box — 12 edges of a bounding box drawn as laser beams.
  */
-@SuppressWarnings("deprecation")
 public class LaserBoxRenderer {
     private static final double RENDER_SCALE = 1 / 16.05;
 
@@ -56,7 +54,7 @@ public class LaserBoxRenderer {
         // poseStack is unchanged when the collector flushes, so renderLaser can keep writing from
         // poseStack.last().
         collector.submitCustomGeometry(poseStack,
-                BCLibRenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS),
+                BCLibRenderTypes.entitySolid(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                 (pose, buffer) -> {
                     for (LaserData_BC8 data : datas) {
                         LaserRenderer_BC8.renderLaser(poseStack, buffer, data, cameraPos);
@@ -77,7 +75,7 @@ public class LaserBoxRenderer {
 
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer consumer = bufferSource.getBuffer(
-                BCLibRenderTypes.entitySolid(TextureAtlas.LOCATION_BLOCKS));
+                BCLibRenderTypes.entitySolid(BCLibRenderTypes.BLOCKS_ATLAS_ID));
         for (LaserData_BC8 data : datas) {
             LaserRenderer_BC8.renderLaser(poseStack, consumer, data, cameraPos);
         }

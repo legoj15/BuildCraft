@@ -48,6 +48,32 @@ public abstract class GuiBC8<C extends AbstractContainerMenu & BCContainer> exte
         this.mainGui = new BuildCraftGui(this, rootArea);
     }
 
+    // ─── Window rectangle ────────────────────────────────────────────────────
+    // Read straight from vanilla's protected fields, which every supported line (and every 26.1.x patch) keeps
+    // under the same names. NeoForge's public getGuiLeft/getGuiTop/getXSize/getYSize are deprecated FOR REMOVAL
+    // from 26.1.2, and their replacements getLeftPos/getTopPos/getImageWidth/getImageHeight do not exist on
+    // 26.1/26.1.1 — which the single 26.1.x jar must still run on — so neither name is safe; the fields are.
+
+    /** Screen x of the window's left edge. */
+    public int windowLeft() {
+        return leftPos;
+    }
+
+    /** Screen y of the window's top edge. */
+    public int windowTop() {
+        return topPos;
+    }
+
+    /** Window width in GUI pixels. */
+    public int windowWidth() {
+        return imageWidth;
+    }
+
+    /** Window height in GUI pixels. */
+    public int windowHeight() {
+        return imageHeight;
+    }
+
     /** Subclasses should add their elements to mainGui.shownElements here. Called from init(). */
     protected abstract void initGuiElements();
 

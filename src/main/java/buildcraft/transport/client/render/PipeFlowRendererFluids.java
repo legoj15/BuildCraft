@@ -67,7 +67,6 @@ import buildcraft.transport.pipe.flow.PipeFlowFluids;
  * mirror {@link buildcraft.lib.client.model.ModelUtil#createFace} after
  * inlining {@code getPointsForFace} + {@code addOrNegate}, and the per-face
  * UV mapping mirrors {@code ModelUtil.mapBoxToUvs}). */
-@SuppressWarnings("deprecation")
 public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> {
     INSTANCE;
 
@@ -94,8 +93,8 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
      *  pixels); cutout for BC fluids (which reuse water as a tint base but should be opaque). */
     private static RenderType fluidRenderType(boolean translucent) {
         return translucent
-            ? BCLibRenderTypes.entityTranslucent(TextureAtlas.LOCATION_BLOCKS)
-            : BCLibRenderTypes.entityCutout(TextureAtlas.LOCATION_BLOCKS);
+            ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID)
+            : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
     }
 
     //? if >=1.21.10 {
@@ -147,7 +146,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         Identifier stillTexture = flow.renderCacheSpriteId;
         if (stillTexture == null) return;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int tR = flow.renderCacheTintR;

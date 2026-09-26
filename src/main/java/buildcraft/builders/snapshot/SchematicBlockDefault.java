@@ -58,7 +58,6 @@ import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.lib.misc.NBTUtilBC;
 
-@SuppressWarnings("deprecation")
 public class SchematicBlockDefault implements ISchematicBlock {
     /** Directions a fluid can flow from to reach this position: the four horizontals plus the
      *  block above (water at the same Y level flows horizontally, water above flows down). The
@@ -414,7 +413,12 @@ public class SchematicBlockDefault implements ISchematicBlock {
         requiredBlockOffsets.stream()
             .map(blockPos -> blockPos.rotate(rotation))
             .forEach(schematicBlock.requiredBlockOffsets::add);
-        schematicBlock.blockState = blockState.rotate(rotation);
+        // A blueprint rotates in the abstract — no level, no position — so NeoForge's level-aware
+        // IBlockStateExtension#rotate(LevelAccessor, BlockPos, Rotation) has nothing to be handed (its default
+        // delegates straight back here anyway). The context-free form is deprecated, not for removal.
+        @SuppressWarnings("deprecation")
+        BlockState rotated = blockState.rotate(rotation);
+        schematicBlock.blockState = rotated;
         schematicBlock.ignoredProperties.addAll(ignoredProperties);
         schematicBlock.tileNbt = tileNbt;
         schematicBlock.tileRotation = tileRotation.getRotated(rotation);

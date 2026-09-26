@@ -52,12 +52,16 @@ public class HiddenShapelessRecipe extends ShapelessRecipe {
 
     public static final MapCodec<ShapelessRecipe> MAP_CODEC =
             RecipeSerializer.SHAPELESS_RECIPE.codec().<ShapelessRecipe>xmap(HiddenShapelessRecipe::new, r -> r);
+    // Vanilla's shapeless stream codec by name: RecipeSerializer#streamCodec() is deprecated on this line.
     public static final StreamCodec<RegistryFriendlyByteBuf, ShapelessRecipe> STREAM_CODEC =
-            RecipeSerializer.SHAPELESS_RECIPE.streamCodec().<ShapelessRecipe>map(HiddenShapelessRecipe::new, r -> r);
+            ShapelessRecipe.Serializer.STREAM_CODEC.<ShapelessRecipe>map(HiddenShapelessRecipe::new, r -> r);
     public static final RecipeSerializer<ShapelessRecipe> SERIALIZER = new Serializer();
 
     public static final class Serializer implements RecipeSerializer<ShapelessRecipe> {
         @Override public MapCodec<ShapelessRecipe> codec() { return MAP_CODEC; }
+        // The interface still declares streamCodec() (deprecated, not for removal) and gives it no default, so
+        // implementing it is mandatory until the 26.1 record replaces the whole interface.
+        @SuppressWarnings("deprecation")
         @Override public StreamCodec<RegistryFriendlyByteBuf, ShapelessRecipe> streamCodec() { return STREAM_CODEC; }
     }*/
     //?} else {

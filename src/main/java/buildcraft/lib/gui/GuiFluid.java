@@ -19,6 +19,7 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /**
  * An {@link ISimpleDrawable} that renders a {@link FluidStack} as a 16x16 fluid icon —
@@ -29,7 +30,6 @@ import buildcraft.lib.misc.FluidUtilBC;
  * this draws via a static {@link BCGraphics} context that the surrounding
  * Screen pushes once per frame.
  */
-@SuppressWarnings("deprecation")
 public class GuiFluid implements ISimpleDrawable {
     private final FluidStack stack;
 
@@ -57,7 +57,7 @@ public class GuiFluid implements ISimpleDrawable {
         Identifier stillTexture = FluidUtilBC.getFluidTexture(stack);
         if (stillTexture == null) return;
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
         if (sprite == null) return;
         int color = FluidUtilBC.getFluidColor(stack);

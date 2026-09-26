@@ -37,7 +37,6 @@ import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadePhasedState;
 import buildcraft.silicon.plug.FacadeStateManager;
 
-@SuppressWarnings("deprecation")
 public class FacadeAssemblyRecipes extends AssemblyRecipe implements IRecipeViewable.IRecipePowered {
     public static final FacadeAssemblyRecipes INSTANCE = new FacadeAssemblyRecipes();
 

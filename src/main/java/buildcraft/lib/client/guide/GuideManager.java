@@ -76,7 +76,6 @@ import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.search.ISuffixArray;
 import buildcraft.lib.misc.search.SimpleSuffixArray;
 
-@SuppressWarnings("deprecation")
 public enum GuideManager {
     INSTANCE;
 
@@ -1033,6 +1032,9 @@ public enum GuideManager {
         return null;
     }
 
+    // GuidePageStandInRecipes carries upstream's (1.12.2) @Deprecated, yet it is still the only fallback page for an
+    // item without a guide entry — upstream used it exactly like this and never shipped a successor.
+    @SuppressWarnings("deprecation")
     @Nonnull
     public GuidePageFactory getPageFor(@Nonnull ItemStack stack) {
         Identifier entry = getEntryFor(stack);

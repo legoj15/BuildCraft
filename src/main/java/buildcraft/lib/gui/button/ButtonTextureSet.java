@@ -10,6 +10,8 @@ import net.minecraft.resources.Identifier;
 
 import net.minecraft.world.InteractionResult;
 
+// IButtonTextureSet is upstream-deprecated (1.12.2); the implements clause can only be suppressed here.
+// This whole package has no users left — it goes with the button-unification todo.
 @SuppressWarnings("deprecation")
 public class ButtonTextureSet implements IButtonTextureSet {
     private final Identifier texture;

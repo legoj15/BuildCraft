@@ -6,6 +6,7 @@
 
 package buildcraft.builders.snapshot;
 
+import java.time.Duration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -15,7 +16,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.google.common.cache.CacheBuilder;
@@ -65,7 +65,7 @@ public class RulesLoader {
     @SuppressWarnings("ConstantConditions")
     private static final LoadingCache<Pair<BlockState, CompoundTag>, Set<JsonRule>>
         BLOCK_RULES_CACHE = CacheBuilder.newBuilder()
-        .expireAfterAccess(5, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(5))
         .build(CacheLoader.from(pair -> getBlockRulesInternal(pair.getLeft(), pair.getRight())));
 
     public static void loadAll() {

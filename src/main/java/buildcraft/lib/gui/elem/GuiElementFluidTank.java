@@ -25,12 +25,12 @@ import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IInteractionElement;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /**
  * A GUI element that renders a fluid tank (fill level + overlay) and handles
  * click interaction via the associated {@link WidgetFluidTank} widget.
  */
-@SuppressWarnings("deprecation")
 public class GuiElementFluidTank implements IInteractionElement {
 
     private final BuildCraftGui gui;
@@ -96,7 +96,7 @@ public class GuiElementFluidTank implements IInteractionElement {
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int tintColor = buildcraft.lib.misc.FluidUtilBC.getFluidColor(fluid);
@@ -132,7 +132,7 @@ public class GuiElementFluidTank implements IInteractionElement {
                 //? if >=1.21.10 {
                 graphics.blit(
                     RenderPipelines.GUI_TEXTURED,
-                    TextureAtlas.LOCATION_BLOCKS,
+                    BCLibRenderTypes.BLOCKS_ATLAS_ID,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
                     drawW, drawH,
@@ -146,7 +146,7 @@ public class GuiElementFluidTank implements IInteractionElement {
                 // it binds to the (…,int color) region overload: sample drawW×drawH px from the sprite and
                 // tint by the fluid colour. Matches the modern path above.
                 graphics.blit(
-                    TextureAtlas.LOCATION_BLOCKS,
+                    BCLibRenderTypes.BLOCKS_ATLAS_ID,
                     tileX, tileY,
                     sprite.getU0() * atlasWidth, sprite.getV0() * atlasHeight,
                     drawW, drawH,

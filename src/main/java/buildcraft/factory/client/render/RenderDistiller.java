@@ -52,6 +52,7 @@ import buildcraft.lib.client.render.tile.BCRenderState;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /**
  * Block entity renderer for the distiller. Renders the fluid inside the three
@@ -59,7 +60,6 @@ import buildcraft.lib.misc.FluidUtilBC;
  * power indicator cubes that bob up/down when the distiller is active.
  * Ported from 1.12.2 RenderDistiller.
  */
-@SuppressWarnings("deprecation")
 //? if >=1.21.10 {
 public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, BCRenderState> {
 //?} else {
@@ -207,7 +207,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         if (stillTexture == null) return;
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(stillTexture);
 
         int color = FluidUtilBC.getFluidColor(fluid);
@@ -244,7 +244,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         // Translucent for vanilla water, cutout for BC fluids (reuse water texture opaquely)
         //? if >=1.21.10 {
         RenderType renderType = FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         final float fa = a; // 'a' is reassigned above, so capture an effectively-final copy for the lambda
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) ->
                 FluidRenderer.fluidBox(pose, buffer, sprite, minX, minZ, maxX, maxZ, fluidTop, fluidBottom,
@@ -252,7 +252,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         //?} else {
         /*VertexConsumer buffer = bufferSource.getBuffer(
                 FluidUtilBC.shouldRenderTranslucent(fluid)
-                    ? net.minecraft.client.renderer.RenderType.entityTranslucent(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS) : net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+                    ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID));
         FluidRenderer.fluidBox(poseStack.last(), buffer, sprite, minX, minZ, maxX, maxZ, fluidTop, fluidBottom,
                 r, g, b, a, light);*/
         //?}
@@ -295,7 +295,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         }
 
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-                .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+                .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite sprite = atlas.getSprite(POWER_TEXTURES[texIndex]);
         boolean topHalf = POWER_TOP_HALF[texIndex];
 
@@ -304,7 +304,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
         int overlay = OverlayTexture.NO_OVERLAY;
 
         //? if >=1.21.10 {
-        RenderType renderType = net.minecraft.client.renderer.rendertype.RenderTypes.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS);
+        RenderType renderType = BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             // Right power cube
             renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerRight, y1, r, g, b, a, light, overlay);
@@ -312,7 +312,7 @@ public class RenderDistiller implements BlockEntityRenderer<TileDistiller_BC8, B
             renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerLeft, y2, r, g, b, a, light, overlay);
         });
         //?} else {
-        /*VertexConsumer buffer = bufferSource.getBuffer(net.minecraft.client.renderer.RenderType.entityCutout(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_BLOCKS));
+        /*VertexConsumer buffer = bufferSource.getBuffer(BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID));
         PoseStack.Pose pose = poseStack.last();
         // Right power cube
         renderPowerCube(pose, buffer, sprite, topHalf, sizes.powerRight, y1, r, g, b, a, light, overlay);

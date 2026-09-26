@@ -10,9 +10,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /** Sprite utility stubs. */
-@SuppressWarnings("deprecation")
 public class SpriteUtil {
     private static final Identifier MISSING = Identifier.withDefaultNamespace("missingno");
 
@@ -33,6 +33,6 @@ public class SpriteUtil {
 
     private static TextureAtlas getBlockAtlas() {
         return (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
     }
 }

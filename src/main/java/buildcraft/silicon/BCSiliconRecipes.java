@@ -40,7 +40,6 @@ import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
 import buildcraft.transport.BCTransportItems;
 
-@SuppressWarnings("deprecation")
 public class BCSiliconRecipes {
 
     private static boolean initialized = false;

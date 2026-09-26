@@ -27,9 +27,9 @@ import buildcraft.api.core.BCLog;
 import buildcraft.lib.client.model.json.JsonModel;
 import buildcraft.lib.client.model.json.JsonModelPart;
 import buildcraft.lib.client.model.json.JsonQuad;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 
 /** Holds a model that will never change except if the json file it is defined from is changed. */
-@SuppressWarnings("deprecation")
 public class ModelHolderStatic extends ModelHolder {
     private final ImmutableMap<String, String> textureLookup;
     private final boolean allowTextureFallthrough;
@@ -139,7 +139,7 @@ public class ModelHolderStatic extends ModelHolder {
 
     private MutableQuad[] bakePart(JsonModelPart[] a) {
         TextureAtlas atlas = (TextureAtlas) Minecraft.getInstance()
-            .getTextureManager().getTexture(TextureAtlas.LOCATION_BLOCKS);
+            .getTextureManager().getTexture(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         TextureAtlasSprite missingSprite = atlas.getSprite(MissingTextureAtlasSprite.getLocation());
         List<MutableQuad> list = new ArrayList<>();
         for (JsonModelPart part : a) {

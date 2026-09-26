@@ -28,7 +28,6 @@ import buildcraft.lib.misc.ParticleUtil;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.VecUtil;
 
-@SuppressWarnings("deprecation")
 public class ItemPaintbrush_BC8 extends Item {
     private static final int MAX_USES = 64;
 
@@ -111,6 +110,10 @@ public class ItemPaintbrush_BC8 extends Item {
         return super.getName(stack);
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display,

@@ -21,6 +21,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.ModelUtil.UvFaceData;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.BCLibRenderTypes;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.VecUtil;
 
@@ -41,17 +42,11 @@ import buildcraft.transport.pipe.flow.AbstractPipeFlowPower.Section;
  * unchanged.
  */
 public final class PipeFlowRendererKinesis {
-    /** The BLOCKS atlas texture-manager id — the value vanilla's deprecated TextureAtlas.LOCATION_BLOCKS
-     *  holds on every supported line (InventoryMenu.BLOCK_ATLAS on 1.21.1, the same literal from 1.21.10 on;
-     *  vanilla ships no non-deprecated constant for it past 1.21.10). */
-    private static final net.minecraft.resources.Identifier BLOCKS_ATLAS_ID =
-        net.minecraft.resources.Identifier.withDefaultNamespace("textures/atlas/blocks.png");
-
     private PipeFlowRendererKinesis() {}
 
     /** The render type both kinesis flows draw into — translucent entity quads on the block atlas. */
     static net.minecraft.client.renderer.rendertype.RenderType kinesisRenderType() {
-        return net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(BLOCKS_ATLAS_ID);
+        return BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID);
     }
 
     static double computeCentrePower(AbstractPipeFlowPower flow) {

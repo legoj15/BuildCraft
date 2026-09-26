@@ -36,9 +36,6 @@ import buildcraft.robotics.BCRoboticsItems;
  *  charge; the board id rides in {@code CUSTOM_DATA} exactly as {@link ItemRobot} carries board+charge, and
  *  every accessor reads through {@code NbtApiUtil}-style guards. Ph4 ships no board recipe (D5): the item is
  *  reachable through the creative tab and game tests only. */
-// Item.appendHoverText carries Mojang's "override, don't call" @Deprecated marker on >=1.21.10 — the same
-// suppression every other BC item with a tooltip carries.
-@SuppressWarnings("deprecation")
 public class ItemRedstoneBoard extends Item {
 
     /** The board id sub-compound, keyed after 7.1.x's {@code ItemRobot} blob ({board:{id:...}}) — 7.1.x's
@@ -106,6 +103,10 @@ public class ItemRedstoneBoard extends Item {
         stack.update(DataComponents.CUSTOM_DATA, CustomData.EMPTY, existing -> CustomData.of(blob));
     }
 
+    // Item#appendHoverText is @Deprecated (not for removal) from 1.21.10: Mojang prefers TooltipProvider data
+    // components, but vanilla's own items still override it and neither vanilla nor NeoForge offers a per-item
+    // successor hook.
+    @SuppressWarnings("deprecation")
     @Override
     //? if >=1.21.10 {
     public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display,

@@ -6,10 +6,10 @@
 
 package buildcraft.silicon.client.model;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -86,7 +86,7 @@ public class GateItemModel implements ItemModel {
     private record CacheKey(GateVariant variant, ItemDisplayContext context) {}
 
     private static final LoadingCache<CacheKey, List<BakedQuad>> cache = CacheBuilder.newBuilder()
-        .expireAfterAccess(1, TimeUnit.MINUTES)
+        .expireAfterAccess(Duration.ofMinutes(1))
         .build(CacheLoader.from(key -> {
             ContextXform x = XFORMS.getOrDefault(key.context(), DEFAULT_XFORM);
             List<BakedQuad> quads = new ArrayList<>();

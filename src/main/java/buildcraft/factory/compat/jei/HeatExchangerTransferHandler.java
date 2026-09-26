@@ -8,8 +8,12 @@ package buildcraft.factory.compat.jei;
 
 import java.util.List;
 
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
+//? if >=1.21.10 {
+import mezz.jei.api.recipe.types.IRecipeType;
+//?} else {
+/*import mezz.jei.api.recipe.RecipeType;*/
+//?}
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.container.ContainerHeatExchange;
@@ -29,7 +33,11 @@ public class HeatExchangerTransferHandler
     }
 
     @Override
-    public RecipeType<HeatExchangerRecipePair> getRecipeType() {
+    //? if >=1.21.10 {
+    public IRecipeType<HeatExchangerRecipePair> getRecipeType() {
+    //?} else {
+    /*public RecipeType<HeatExchangerRecipePair> getRecipeType() {*/
+    //?}
         return HeatExchangerRecipeTypes.PAIR;
     }
 

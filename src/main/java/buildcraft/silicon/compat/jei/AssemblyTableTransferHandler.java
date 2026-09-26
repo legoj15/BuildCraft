@@ -16,7 +16,11 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
-import mezz.jei.api.recipe.RecipeType;
+//? if >=1.21.10 {
+import mezz.jei.api.recipe.types.IRecipeType;
+//?} else {
+/*import mezz.jei.api.recipe.RecipeType;*/
+//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -58,7 +62,11 @@ public class AssemblyTableTransferHandler implements IRecipeTransferHandler<Cont
     }
 
     @Override
-    public RecipeType<AssemblyRecipeJei> getRecipeType() {
+    //? if >=1.21.10 {
+    public IRecipeType<AssemblyRecipeJei> getRecipeType() {
+    //?} else {
+    /*public RecipeType<AssemblyRecipeJei> getRecipeType() {*/
+    //?}
         return AssemblyRecipeJeiTypes.ASSEMBLY;
     }
 

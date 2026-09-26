@@ -8,8 +8,12 @@ package buildcraft.factory.compat.jei;
 
 import java.util.List;
 
-import mezz.jei.api.recipe.RecipeType;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
+//? if >=1.21.10 {
+import mezz.jei.api.recipe.types.IRecipeType;
+//?} else {
+/*import mezz.jei.api.recipe.RecipeType;*/
+//?}
 
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.factory.BCFactoryMenuTypes;
@@ -28,7 +32,11 @@ public class DistillerTransferHandler extends AbstractBucketTransferHandler<Cont
     }
 
     @Override
-    public RecipeType<IDistillationRecipe> getRecipeType() {
+    //? if >=1.21.10 {
+    public IRecipeType<IDistillationRecipe> getRecipeType() {
+    //?} else {
+    /*public RecipeType<IDistillationRecipe> getRecipeType() {*/
+    //?}
         return DistillerRecipeTypes.DISTILLER;
     }
 

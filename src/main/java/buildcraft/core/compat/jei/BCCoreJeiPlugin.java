@@ -16,6 +16,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemFragileFluidContainer;
+import buildcraft.lib.compat.jei.JeiSubtypes;
 import buildcraft.lib.gui.GuiBC8;
 
 /**
@@ -43,17 +44,10 @@ public class BCCoreJeiPlugin implements IModPlugin {
                 BCCore.BRUSH_COLOR.get()
         );
         //?} else {
-        /*// 1.21.1 JEI has no registerFromDataComponentTypes — hand-write the equivalent
-        // interpreter, keying the paintbrush stack on its brush_color (DyeColor) component.
-        registration.registerSubtypeInterpreter(
-                BCCoreItems.PAINTBRUSH.get(),
-                (stack, context) -> {
-                    net.minecraft.world.item.DyeColor color = stack.get(BCCore.BRUSH_COLOR.get());
-                    return color == null
-                            ? mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter.NONE
-                            : color.toString();
-                }
-        );*/
+        /*// 1.21.1 JEI has no registerFromDataComponentTypes — key the paintbrush stack on its
+        // brush_color (DyeColor) component by hand; an uncoloured brush has no subtype.
+        JeiSubtypes.register(registration, BCCoreItems.PAINTBRUSH.get(),
+                stack -> stack.get(BCCore.BRUSH_COLOR.get()));*/
         //?}
 
         // Differentiate fragile fluid shards by their stored fluid type, but
@@ -63,20 +57,10 @@ public class BCCoreJeiPlugin implements IModPlugin {
         // alias (a 500 mB shard, see FluidContainerAliases) would only match
         // exactly-full shards. Keying on the fluid resource location alone keeps
         // alias matching robust regardless of how full the player's shard is.
-        registration.registerSubtypeInterpreter(
-                BCCoreItems.FRAGILE_FLUID_CONTAINER.get(),
-                (stack, context) -> {
-                    FluidStack fluid = ItemFragileFluidContainer.getFluid(stack);
-                    if (fluid.isEmpty()) {
-                        return null;
-                    }
-                    //? if >=1.21.10 {
-                    return BuiltInRegistries.FLUID.getKey(fluid.getFluid());
-                    //?} else {
-                    /*return BuiltInRegistries.FLUID.getKey(fluid.getFluid()).toString();*/
-                    //?}
-                }
-        );
+        JeiSubtypes.register(registration, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), stack -> {
+            FluidStack fluid = ItemFragileFluidContainer.getFluid(stack);
+            return fluid.isEmpty() ? null : BuiltInRegistries.FLUID.getKey(fluid.getFluid());
+        });
     }
 
     @Override

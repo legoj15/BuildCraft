@@ -21,6 +21,7 @@ import net.minecraft.world.item.DyeColor;
 
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
+import buildcraft.lib.compat.jei.JeiSubtypes;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
@@ -68,37 +69,26 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         // recipe lookup.
 
         // Lens / Filter: colour × mode (lens or filter). "clear" stands in for the no-colour case.
-        registration.registerSubtypeInterpreter(
-                BCSiliconItems.PLUG_LENS.get(),
-                (stack, context) -> {
-                    DyeColor colour = ItemPluggableLens.getColour(stack);
-                    boolean isFilter = ItemPluggableLens.isFilter(stack);
-                    return (colour == null ? "clear" : colour.getName()) + ":" + isFilter;
-                }
-        );
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_LENS.get(), stack -> {
+            DyeColor colour = ItemPluggableLens.getColour(stack);
+            boolean isFilter = ItemPluggableLens.isFilter(stack);
+            return (colour == null ? "clear" : colour.getName()) + ":" + isFilter;
+        });
 
         // Gate: material + logic + modifier as already encoded by GateVariant.getVariantName()
         // (the same key the item model dispatch uses, so two gates with the same key render
         // identically and should share a JEI entry).
-        registration.registerSubtypeInterpreter(
-                BCSiliconItems.PLUG_GATE.get(),
-                (stack, context) -> ItemPluggableGate.getVariant(stack).getVariantName()
-        );
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_GATE.get(),
+                stack -> ItemPluggableGate.getVariant(stack).getVariantName());
 
         // Facade: the entire "facade" NBT compound — encodes the wrapped block state(s), phased
-        // colour mappings, and the hollow flag. CompoundTag has structural equals/hashCode in
-        // 26.1, so two facades wrapping the same state(s) collapse to one JEI entry while two
+        // colour mappings, and the hollow flag. CompoundTag has structural equals/hashCode on
+        // every node, so two facades wrapping the same state(s) collapse to one JEI entry while two
         // wrapping different states get separate entries (and therefore separate recipe lookups).
         // For the bulk Basic-facade case there's a single state, so the compound is small and
         // comparisons are cheap; the Phased case keys on the multi-state list and isHollow bit.
-        registration.registerSubtypeInterpreter(
-                BCSiliconItems.PLUG_FACADE.get(),
-                //? if >=1.21.10 {
-                (stack, context) -> NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "facade")
-                //?} else {
-                /*(stack, context) -> NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "facade").toString()*/
-                //?}
-        );
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_FACADE.get(),
+                stack -> NBTUtilBC.getCompound(NBTUtilBC.getItemData(stack), "facade"));
     }
 
     @Override

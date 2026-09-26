@@ -6,13 +6,18 @@
 
 package buildcraft.energy.compat.jei;
 
-import mezz.jei.api.recipe.RecipeType;
+//? if >=1.21.10 {
+import mezz.jei.api.recipe.types.IRecipeType;
+//?} else {
+/*import mezz.jei.api.recipe.RecipeType;*/
+//?}
 
 import buildcraft.api.fuels.IFuel;
 
 /**
- * Holds the JEI {@link RecipeType}s for the energy module's engine fuel/coolant
- * recipe-holder categories.
+ * Holds the JEI recipe types for the energy module's engine fuel/coolant
+ * recipe-holder categories. ({@code IRecipeType} on the JEI 20+ nodes, where
+ * {@code RecipeType} is deprecated for removal; 1.21.1's JEI 19.x predates it.)
  *
  * <ul>
  * <li>{@link #COMBUSTION_FUEL} — one entry per registered {@link IFuel} (the combustion
@@ -24,14 +29,25 @@ import buildcraft.api.fuels.IFuel;
  * </ul>
  */
 public final class EngineFuelJeiTypes {
-    public static final RecipeType<IFuel> COMBUSTION_FUEL = RecipeType.create(
+    //? if >=1.21.10 {
+    public static final IRecipeType<IFuel> COMBUSTION_FUEL = IRecipeType.create(
+            "buildcraftunofficial", "combustion_engine_fuel", IFuel.class);
+
+    public static final IRecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = IRecipeType.create(
+            "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolantJei.class);
+
+    public static final IRecipeType<StirlingFuelJei> STIRLING_FUEL = IRecipeType.create(
+            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);
+    //?} else {
+    /*public static final RecipeType<IFuel> COMBUSTION_FUEL = RecipeType.create(
             "buildcraftunofficial", "combustion_engine_fuel", IFuel.class);
 
     public static final RecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = RecipeType.create(
             "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolantJei.class);
 
     public static final RecipeType<StirlingFuelJei> STIRLING_FUEL = RecipeType.create(
-            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);
+            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);*/
+    //?}
 
     private EngineFuelJeiTypes() {}
 }

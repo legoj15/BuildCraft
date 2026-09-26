@@ -36,8 +36,27 @@ import org.slf4j.Logger;
  * <p>For one entry — a fluid and a frame ({@code still}/{@code flow}) — this
  * emits the three heat-tier sprites
  * {@code <output>_heat_0_<frame>}, {@code _heat_1_}, {@code _heat_2_}. All
- * three share the same recolored pixels and differ only in animation
- * {@code frametime} (3 / 2 / 1), which is the per-heat speed cue.
+ * three share the same recolored pixels and differ only in animation timing:
+ * {@code frametime} 3 / 2 / 1 (the per-heat speed cue — hotter flows faster),
+ * with frame interpolation on the two slower tiers only, exactly as upstream
+ * 1.12.2's {@code heat_<n>_<frame>.png.mcmeta} shipped it.
+ *
+ * <p><b>Why three sprites and not one.</b> The tiers are pixel-identical, so
+ * the atlas looks like it holds 40 redundant fluid sprites, but they cannot be
+ * collapsed without losing the speed cue. Every heat tier is a placeable world
+ * fluid, and world fluids are chunk-meshed with the sprite's atlas UVs baked
+ * in; vanilla animates a sprite by rewriting its atlas region every tick
+ * (CPU upload on 1.21.1/1.21.10, a GPU blit from per-frame textures on
+ * 1.21.11+). One region shows one frame at a time, so three speeds visible at
+ * once need three regions — no fluid renderer, client fluid extension or UV
+ * trick changes that short of remeshing every tick. Upstream 1.12.2 carried
+ * the same three sprites per fluid. What is duplicated is memory, not atlas
+ * space: each sprite keeps its own frame strip plus mipmaps (~218 KB per
+ * still+flow pair at the default 4 mip levels), so the 40 extra sprites cost
+ * about 4.4 MB of native RAM, plus as much again in per-frame GPU textures on
+ * 1.21.11+. Sharing that would mean subclassing {@code SpriteContents} to
+ * refcount a shared image through overridden {@code close}/{@code increaseMipLevel},
+ * and still leaves the GPU copies; judged not worth the upkeep (2026-09).
  *
  * <p>The recolor is the 1.12.2 per-channel intensity lerp: for each base pixel
  * {@code W} and the fluid's {@code light}/{@code dark} endpoints,
@@ -60,7 +79,7 @@ import org.slf4j.Logger;
  *   "output": "buildcraftunofficial:block/fluids/oil",
  *   "frame":  "still",
  *   "light":  5263440,
- *   "dark":   328197
+ *   "dark":   328965
  * }
  * </pre>
  */
@@ -84,6 +103,23 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
 
     /** Per-heat-tier animation frametime — heat 0 is slowest, heat 2 is the vanilla default. */
     private static final int[] HEAT_FRAMETIMES = { 3, 2, 1 };
+
+    /** Heat tiers emitted per entry — one sprite each; mirrors the 1.12.2 heat range 0..2. */
+    static final int HEAT_TIERS = HEAT_FRAMETIMES.length;
+
+    /** Ticks each animation frame of heat tier {@code heat} is held for. */
+    static int frametime(int heat) {
+        return HEAT_FRAMETIMES[heat];
+    }
+
+    /**
+     * Whether a tier holding each frame for {@code frametime} ticks blends between frames. A
+     * one-tick frame has no in-between ticks to blend (upstream's searing tier never interpolated),
+     * so asking for it would only cost blend buffers or the two-texture animation shader.
+     */
+    static boolean interpolates(int frametime) {
+        return frametime > 1;
+    }
 
     /**
      * Recolors one grayscale heat-base pixel into a fluid pixel via the 1.12.2
@@ -119,11 +155,11 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
         }
 
         // One shared base image, consumed once per heat tier (release on get or discard).
-        LazyLoadedImage baseImage = new LazyLoadedImage(sourceTexId, sourceRes.get(), HEAT_FRAMETIMES.length);
+        LazyLoadedImage baseImage = new LazyLoadedImage(sourceTexId, sourceRes.get(), HEAT_TIERS);
 
-        for (int heat = 0; heat < HEAT_FRAMETIMES.length; heat++) {
+        for (int heat = 0; heat < HEAT_TIERS; heat++) {
             Identifier outputId = output.withSuffix("_heat_" + heat + "_" + frame);
-            spriteOutput.add(outputId, new Loader(baseImage, light, dark, HEAT_FRAMETIMES[heat], outputId));
+            spriteOutput.add(outputId, new Loader(baseImage, light, dark, frametime(heat), outputId));
         }
     }
 
@@ -172,10 +208,10 @@ public record FluidLerpSpriteSource(Identifier source, Identifier output, String
                 FrameSize frameSize = new FrameSize(w, w);
                 //? if >=1.21.10 {
                 AnimationMetadataSection animation = new AnimationMetadataSection(
-                    Optional.empty(), Optional.empty(), Optional.empty(), frametime, true);
+                    Optional.empty(), Optional.empty(), Optional.empty(), frametime, interpolates(frametime));
                 //?} else {
                 /*AnimationMetadataSection animation = new AnimationMetadataSection(
-                    java.util.List.of(), -1, -1, frametime, true);*/
+                    java.util.List.of(), -1, -1, frametime, interpolates(frametime));*/
                 //?}
                 //? if >=1.21.11 {
                 SpriteContents result = new SpriteContents(

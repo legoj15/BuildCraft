@@ -121,9 +121,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * Returns true if the schematic block at {@code blockPos} is "fragile" — i.e. its
-     * BlockBehaviour reports {@code canBeReplaced(state, fluid)} = true (snow_layer, carpet,
-     * button, redstone wire, sapling, torch, sign, lever, …). Used by the REPLACE-mode place-
+     * Returns true if the schematic block at {@code blockPos} is "fragile" — i.e. fluid flowing
+     * into it would wash it away (snow_layer, carpet, button, redstone wire, sapling, torch, …;
+     * see {@link SchematicBlockDefault#isWashedAwayBy}). Used by the REPLACE-mode place-
      * task-add filter to defer fragile placements when the area has any fluid; the per-build
      * fragile defer catches most cases but has a blind spot for fluid 2+ cells away that flows
      * in over a few ticks (timing race), and the visible symptom is a bouncing inventory slot

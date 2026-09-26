@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BucketPickup;
 import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -172,6 +173,24 @@ public class BlockUtil {
             }
         }
         return null;
+    }
+
+    /** Fluids at or below this viscosity (water, light fuel, …) are passable to miners — the Mining Well's tube and
+     *  the Quarry's drill go straight through them; thicker fluids (lava, oil) stop them. 1.12.2 parity. */
+    public static final int PASSABLE_FLUID_MAX_VISCOSITY = 1000;
+
+    /** True for a fluid thin enough that miners pass through it; see {@link #PASSABLE_FLUID_MAX_VISCOSITY}. */
+    public static boolean isPassableFluid(Fluid fluid) {
+        return fluid.getFluidType().getViscosity() <= PASSABLE_FLUID_MAX_VISCOSITY;
+    }
+
+    /**
+     * True for a real block sharing its cell with a fluid — a waterlogged slab or stairs, kelp, seagrass: any
+     * {@link LiquidBlockContainer} whose fluid state is not empty. {@link #getFluidWithFlowing(Level, BlockPos)}
+     * reports such a cell as fluid, but miners should see the block: breaking it leaves the fluid behind.
+     */
+    public static boolean isFluidloggedBlock(BlockState state) {
+        return state.getBlock() instanceof LiquidBlockContainer && !state.getFluidState().isEmpty();
     }
 
     /** Returns the fluid at a world position, including flowing fluids, or null if none. */

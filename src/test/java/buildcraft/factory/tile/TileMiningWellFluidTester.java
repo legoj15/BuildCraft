@@ -81,6 +81,44 @@ public class TileMiningWellFluidTester {
     }
 
     /**
+     * A waterlogged block (a slab in an ocean ruin, stairs, …) is still a block: the well must mine it
+     * rather than slide its tube past it as if it were plain water. Breaking it leaves the water behind,
+     * which the next scan then passes like any other water. Under the old code the well treated the
+     * whole cell as passable fluid and targeted the stone below, leaving the slab in the bore.
+     */
+    public static void testWellMinesWaterloggedBlock(GameTestHelper helper) {
+        try {
+            BlockPos wellLocal = new BlockPos(2, 4, 2);
+            BlockPos slabLocal = new BlockPos(2, 3, 2);  // directly below the well
+            BlockPos stoneLocal = new BlockPos(2, 2, 2); // below the slab
+            BlockPos baseLocal = new BlockPos(2, 1, 2);
+
+            helper.setBlock(baseLocal, Blocks.STONE);
+            helper.setBlock(stoneLocal, Blocks.STONE);
+            helper.setBlock(slabLocal, Blocks.OAK_SLAB.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));
+            helper.setBlock(wellLocal, BCFactoryBlocks.MINING_WELL.get());
+
+            //? if >=1.21.10 {
+            TileMiningWell well = helper.getBlockEntity(wellLocal, TileMiningWell.class);
+            //?} else {
+            /*TileMiningWell well = helper.getBlockEntity(wellLocal);*/
+            //?}
+            assertTrue(well != null, "mining well block-entity must be present");
+
+            BlockPos slabAbs = helper.absolutePos(slabLocal);
+            well.mine();
+            assertTrue(slabAbs.equals(well.currentPos),
+                    "well must target the waterlogged slab, not drill past it. Expected " + slabAbs
+                            + ", got " + well.currentPos);
+
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
      * Water standing on an unbreakable floor — the "already mined to the bottom, then
      * water flooded the shaft" case. The well must scan past the water, hit the
      * impassable floor, and settle as complete ({@code currentPos == null}), not latch

@@ -36,6 +36,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -44,6 +45,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 //? if >=1.21.10 {
@@ -66,6 +68,24 @@ public class SchematicBlockDefault implements ISchematicBlock {
     private static final Direction[] FRAGILE_FLUID_NEIGHBOUR_DIRS = {
         Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP
     };
+
+    /**
+     * Would {@code fluid} flowing into this state's cell wash the block away? True for the "fragile" blocks
+     * ({@code canBeReplaced(fluid)}: snow layers, carpet, torches, redstone wire, …) — but never for a
+     * {@link LiquidBlockContainer} (every {@code SimpleWaterloggedBlock}, e.g. pipes and markers, plus kelp and
+     * seagrass). Vanilla's {@code FlowingFluid} routes those through {@code canPlaceLiquid}/{@code placeLiquid}:
+     * the fluid either waterlogs the block or is held back, and the block survives either way. Without the
+     * carve-out every non-solid waterloggable counted as fragile and the Builder deferred placing it beside any
+     * fluid, forever.
+     */
+    public static boolean isWashedAwayBy(BlockState state, Fluid fluid) {
+        return !(state.getBlock() instanceof LiquidBlockContainer) && state.canBeReplaced(fluid);
+    }
+
+    /** {@link #isWashedAwayBy} with water as the representative fluid. */
+    public static boolean isWashedAwayByFluid(BlockState state) {
+        return isWashedAwayBy(state, Fluids.WATER);
+    }
 
     @SuppressWarnings("WeakerAccess")
     protected final Set<BlockPos> requiredBlockOffsets = new HashSet<>();
@@ -531,15 +551,15 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // the *current* world state, not the future state after fluid flow. Without the defer the
         // user sees a place→destroy→place loop (item consumed once per cycle until the inventory
         // drains) when REPLACE-ing snow into a leaky pool. Solid blocks aren't fragile
-        // (canBeReplaced returns false) and waterlogged blocks coexist with their fluid, so both
-        // skip the check naturally.
+        // (canBeReplaced returns false) and waterloggable blocks — waterlogged or dry — coexist
+        // with fluid, so isWashedAwayBy excludes both.
         if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
             boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
                     && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
             if (!placedAsWaterlogged) {
                 for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
                     FluidState neighbour = level.getFluidState(blockPos.relative(dir));
-                    if (!neighbour.isEmpty() && newBlockState.canBeReplaced(neighbour.getType())) {
+                    if (!neighbour.isEmpty() && isWashedAwayBy(newBlockState, neighbour.getType())) {
                         return false;
                     }
                 }

@@ -378,11 +378,17 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     }
 
     private boolean canMine(BlockPos blockPos) {
-        if (level.getBlockState(blockPos).getDestroySpeed(level, blockPos) < 0) {
+        BlockState state = level.getBlockState(blockPos);
+        if (state.getDestroySpeed(level, blockPos) < 0) {
             return false;
         }
-        Fluid fluid = BlockUtil.getFluidWithFlowing(level, blockPos);
-        if (fluid != null) {
+        // A waterlogged block (slab, stairs, kelp, …) is a block, not water: mine it and leave the
+        // water behind (the Mining Well does the same). Blocks logged with a thick fluid stay put.
+        if (BlockUtil.isFluidloggedBlock(state)) {
+            if (!BlockUtil.isPassableFluid(state.getFluidState().getType())) {
+                return false;
+            }
+        } else if (BlockUtil.getFluidWithFlowing(level, blockPos) != null) {
             return false;
         }
         // Respects player-protection mods via BCCoreConfig.minePlayerProtected.
@@ -398,15 +404,21 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     // package-private for TileQuarryFluidPassabilityTester (drill-descent viscosity gate).
     boolean canMoveThrough(BlockPos blockPos) {
-        if (level.getBlockState(blockPos).isAir()) {
+        BlockState state = level.getBlockState(blockPos);
+        if (state.isAir()) {
             return true;
+        }
+        // A waterlogged block is solid to the drill: it gets mined first (canMine), then the water it
+        // leaves is passable.
+        if (BlockUtil.isFluidloggedBlock(state)) {
+            return false;
         }
         Fluid fluid = BlockUtil.getFluidWithFlowing(level, blockPos);
         // 1.12.2 parity: the drill descends through LOW-viscosity fluids (water, light fuel, …) but
         // high-viscosity fluids (lava, oil) block it — matching the Mining Well (TileMiningWell.nextPos).
         // Without the viscosity gate the drill bored through lava to mine the block beneath, letting the
         // lava cascade into the pit.
-        return fluid != null && fluid.getFluidType().getViscosity() <= 1000;
+        return fluid != null && BlockUtil.isPassableFluid(fluid);
     }
 
     // NB: this O(column-height) scan is deliberately NOT cached/memoized. It is the lava/oil-cascade

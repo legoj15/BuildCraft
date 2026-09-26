@@ -129,6 +129,12 @@ public class TileMiningWell extends TileMiner {
         // computeBlockBreakPower), the column re-flooded ~5 ticks later, and it re-targeted the
         // water forever — shooting its tube down and retracting it in place instead of staying
         // finished.
+        // A waterlogged block (slab, stairs, kelp, …) is a block, not water: mine it. Breaking it
+        // leaves the water, which the next scan passes like any other. A block logged with a thick
+        // fluid stays unbreakable so the well stops there, as it does at lava or oil.
+        if (BlockUtil.isFluidloggedBlock(state)) {
+            return BlockUtil.isPassableFluid(state.getFluidState().getType());
+        }
         return BlockUtil.getFluidWithFlowing(level, currentPos) == null;
     }
 
@@ -155,8 +161,7 @@ public class TileMiningWell extends TileMiner {
             }
             // Skip air, tubes, and low-viscosity fluids (water, light fuel, etc.)
             FluidState fluidState = level.getFluidState(currentPos);
-            boolean isPassable = !fluidState.isEmpty()
-                    && fluidState.getFluidType().getViscosity() <= 1000;
+            boolean isPassable = !fluidState.isEmpty() && BlockUtil.isPassableFluid(fluidState.getType());
             if (level.isEmptyBlock(currentPos)
                     || level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())
                     || isPassable) {

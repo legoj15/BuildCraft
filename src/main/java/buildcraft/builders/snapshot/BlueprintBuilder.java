@@ -351,12 +351,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         ISchematicBlock schematic = getSchematicBlock(blockPos);
         if (!(schematic instanceof SchematicBlockDefault def)) return false;
         if (def.blockState == null) return false;
-        // canBeReplaced is fluid-type-aware; passing WATER as the representative fluid is fine
-        // because every block whose canBeReplaced returns true for water (snow_layer, carpet,
-        // button, redstone wire, sapling, torch, sign, lever, …) is exactly the set of fragile
-        // blocks that can be displaced by fluid flow. The fluid-type sensitivity matters for
-        // LiquidBlocks-replacing-LiquidBlocks edge cases that don't apply here.
-        return def.blockState.canBeReplaced(net.minecraft.world.level.material.Fluids.WATER);
+        // Water stands in for every fluid: the blocks it washes away (snow_layer, carpet, button,
+        // redstone wire, sapling, torch, …) are the ones any fluid flow displaces. Waterloggables
+        // (pipes, markers, …) are excluded — fluid waterlogs them or is held back.
+        return SchematicBlockDefault.isWashedAwayByFluid(def.blockState);
     }
 
     @Override

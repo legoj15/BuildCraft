@@ -431,6 +431,33 @@ public class FluidHandlingModeTester {
             assertTrue(atPos.getBlock() == Blocks.OAK_FENCE, "fence should be present");
             assertTrue(atPos.getValue(BlockStateProperties.WATERLOGGED),
                     "fence should be waterlogged (REPLACE preserved the source by setting WATERLOGGED instead of destroying)");
+
+            // Dry placement next to water. A marker (like a pipe) is non-solid, so the old
+            // canBeReplaced(WATER) predicate called it fragile and deferred it forever beside any
+            // fluid — but it is a LiquidBlockContainer, so flowing fluid either waterlogs it or is
+            // held back; it is never washed away. Both REPLACE and CLEAR must place it.
+            BlockState marker = buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState();
+            assertTrue(!SchematicBlockDefault.isWashedAwayByFluid(marker),
+                    "a dry waterloggable marker is never washed away by fluid, so it is not fragile");
+            assertTrue(SchematicBlockDefault.isWashedAwayByFluid(Blocks.SNOW.defaultBlockState()),
+                    "snow is still fragile");
+            assertTrue(!SchematicBlockDefault.isWashedAwayByFluid(Blocks.STONE.defaultBlockState()),
+                    "stone is not fragile");
+            BlockState dryPipe = buildcraft.transport.BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState();
+            assertTrue(!SchematicBlockDefault.isWashedAwayByFluid(dryPipe),
+                    "a dry pipe holder is never washed away by fluid, so it is not fragile");
+
+            EnumFluidHandlingMode[] modes = {EnumFluidHandlingMode.REPLACE, EnumFluidHandlingMode.CLEAR};
+            for (int i = 0; i < modes.length; i++) {
+                BlockPos markerAbs = helper.absolutePos(new BlockPos(2, 2, 4 + 2 * i));
+                helper.getLevel().setBlock(markerAbs.below(), Blocks.STONE.defaultBlockState(), 3);
+                helper.getLevel().setBlock(markerAbs.east(), Blocks.WATER.defaultBlockState(), 3);
+                boolean markerPlaced = schem(marker).build(helper.getLevel(), markerAbs, modes[i]);
+                assertTrue(markerPlaced, "a dry marker next to water must not be deferred under " + modes[i]);
+                BlockState markerAt = helper.getLevel().getBlockState(markerAbs);
+                assertTrue(markerAt.is(buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get()),
+                        "marker should be present under " + modes[i]);
+            }
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());

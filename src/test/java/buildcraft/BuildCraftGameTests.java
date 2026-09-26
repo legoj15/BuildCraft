@@ -526,6 +526,7 @@ public class BuildCraftGameTests {
         // oscillation). canBreak() now refuses all fluids, matching the Quarry's canMine().
         reg.accept("buildcraftunofficial:mining_well_drills_past_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellDrillsPastWaterToSolidBelow);
         reg.accept("buildcraftunofficial:mining_well_stays_complete_over_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testFinishedWellStaysCompleteOverWater);
+        reg.accept("buildcraftunofficial:mining_well_mines_waterlogged_block", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellMinesWaterloggedBlock);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);

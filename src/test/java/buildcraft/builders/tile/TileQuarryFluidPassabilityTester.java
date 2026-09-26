@@ -34,11 +34,14 @@ public class TileQuarryFluidPassabilityTester {
             BlockPos waterLocal = new BlockPos(3, 3, 2);
             BlockPos lavaLocal = new BlockPos(1, 3, 2);
             BlockPos solidLocal = new BlockPos(2, 2, 2);
+            BlockPos loggedLocal = new BlockPos(2, 3, 3);
 
             helper.setBlock(quarryLocal, BCBuildersBlocks.QUARRY.get());
             helper.setBlock(waterLocal, Blocks.WATER); // default state == source, viscosity 1000
             helper.setBlock(lavaLocal, Blocks.LAVA);   // default state == source, viscosity 6000
             helper.setBlock(solidLocal, Blocks.STONE);
+            helper.setBlock(loggedLocal, Blocks.OAK_SLAB.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));
 
             //? if >=1.21.10 {
             TileQuarry quarry = helper.getBlockEntity(quarryLocal, TileQuarry.class);
@@ -60,6 +63,8 @@ public class TileQuarryFluidPassabilityTester {
                     "the drill must be BLOCKED by lava (high viscosity) — was the bore-through-lava regression");
             assertTrue(!quarry.canMoveThrough(solidAbs),
                     "the drill must be blocked by a solid block");
+            assertTrue(!quarry.canMoveThrough(helper.absolutePos(loggedLocal)),
+                    "a waterlogged slab is a block, not water: the drill must mine it, not slide past it");
 
             helper.succeed();
         } catch (Throwable t) {

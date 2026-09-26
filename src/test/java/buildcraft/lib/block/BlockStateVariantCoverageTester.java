@@ -11,7 +11,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
+
+import buildcraft.TestHelper;
 
 /**
  * Every state of every BuildCraft block must be matched by a variant in its blockstate JSON.
@@ -48,22 +49,9 @@ public class BlockStateVariantCoverageTester {
     private static final String NAMESPACE = "buildcraftunofficial";
     private static final String BLOCKSTATE_DIR = "src/main/resources/assets/" + NAMESPACE + "/blockstates";
 
-    /** Walks up from the working directory to the repo root — tests run from a Stonecutter node
-     *  directory, not the root (same approach as CopyrightHeaderTester). */
-    private static Path repoRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (Files.isDirectory(dir.resolve("src/main/java/buildcraft"))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException("could not locate the repo root from " + Paths.get("").toAbsolutePath());
-    }
-
     @Test
     void everyBlockStateMatchesAVariant() {
-        Path dir = repoRoot().resolve(BLOCKSTATE_DIR);
+        Path dir = TestHelper.repoRoot().resolve(BLOCKSTATE_DIR);
         Assertions.assertTrue(Files.isDirectory(dir), "blockstate directory missing: " + dir);
 
         Map<String, String> failures = new TreeMap<>();

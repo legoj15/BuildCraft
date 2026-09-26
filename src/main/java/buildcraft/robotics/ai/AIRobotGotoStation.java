@@ -94,6 +94,13 @@ public class AIRobotGotoStation extends AIRobot {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
+        // A goto reloaded from a save that carried no station can still have its approach leg reloaded under it;
+        // there is nothing to fly onto, and the registry's station key rejects a null position.
+        if (stationIndex == null) {
+            setSuccess(false);
+            terminate();
+            return;
+        }
         DockingStation station = robot.getRegistry().getStation(stationIndex, stationSide);
 
         if (station == null) {
@@ -129,6 +136,11 @@ public class AIRobotGotoStation extends AIRobot {
 
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
+        // Stationless (a summoned robot, or one loaded from a save with no station): write nothing, which
+        // loadSelfFromNBT reads back as stationless and start() fails cleanly.
+        if (stationIndex == null) {
+            return;
+        }
         nbt.putIntArray("stationIndex",
                 new int[] { stationIndex.getX(), stationIndex.getY(), stationIndex.getZ() });
         nbt.putByte("stationSide", (byte) stationSide.ordinal());

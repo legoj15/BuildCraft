@@ -162,6 +162,11 @@ public class GuiGuide extends Screen {
     /** Small-screen only: when the window is too narrow for side tabs, a "Chapters" tab at the
      *  top of the right page toggles this centered overlay menu (restores 1.12.2 behavior). */
     private boolean showingContentsMenu = false;
+    /** Whether the last frame had something drawn over the page content under the mouse: the small-screen chapter
+     *  overlay, or a chapter tab that would take a click there. See {@link #isPageCoveredAtMouse()}. */
+    private boolean pageCoveredAtMouse = false;
+    /** A mouse coordinate no widget can contain. */
+    private static final int OFF_SCREEN = -10_000;
 
     /** Float between -90 and 90 */
     private float openingAngleLast = -90, openingAngleNext = -90;
@@ -372,7 +377,8 @@ public class GuiGuide extends Screen {
     private void drawPageButton(BCButton button, float partialTicks) {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics != null && button.visible) {
-            graphics.widget(button, (int) mouse.getX(), (int) mouse.getY(), partialTicks);
+            // Chapter tabs and the overlay take a click before these buttons do, so they don't light up under them.
+            graphics.widget(button, pageWidgetMouseX(), pageWidgetMouseY(), partialTicks);
         }
     }
 
@@ -638,6 +644,8 @@ public class GuiGuide extends Screen {
                 chapterIndex += chapter.draw(chapterIndex, partialTicks, smallScreen);
             }
         }
+        // Measured once the chapters are laid out, with the same hit-test the click path uses.
+        pageCoveredAtMouse = (smallScreen && showingContentsMenu) || chapterUnderMouse() != null;
 
         // Back button (page history) and page-turn arrows; each is shown only when it applies (layoutPageButtons).
         drawPageButton(historyBackButton, partialTicks);
@@ -684,24 +692,86 @@ public class GuiGuide extends Screen {
         currentPage.setFontRenderer(currentFont);
     }
 
+    /** The chapter tab (or overlay entry) under the mouse, or null. Chapters only take clicks where they are drawn:
+     *  as side tabs on a wide screen, or inside the centred overlay while it is open on a small one. The side tabs
+     *  are hidden on a small screen, so an invisible tab must not catch a click in the middle of the page. */
+    @Nullable
+    private GuideChapter chapterUnderMouse() {
+        if (isSmallScreen() && !showingContentsMenu) {
+            return null;
+        }
+        for (GuideChapter chapter : chapters) {
+            if (chapter.isMouseOver()) {
+                return chapter;
+            }
+        }
+        return null;
+    }
+
+    /** Whether the page content under the mouse is covered by something drawn above it (the small-screen chapter
+     *  overlay, or a chapter tab) as of the last frame. Page widgets use it to drop their hover highlight, so what
+     *  lights up is what a click there would actually hit. */
+    public boolean isPageCoveredAtMouse() {
+        return pageCoveredAtMouse;
+    }
+
+    /** The mouse position to render a page widget with: the real one, or a point off-screen while the page under
+     *  the mouse is covered ({@link #isPageCoveredAtMouse()}), so the widget draws un-hovered and shows no tooltip. */
+    public int pageWidgetMouseX() {
+        return pageCoveredAtMouse ? OFF_SCREEN : (int) mouse.getX();
+    }
+
+    /** @see #pageWidgetMouseX() */
+    public int pageWidgetMouseY() {
+        return pageCoveredAtMouse ? OFF_SCREEN : (int) mouse.getY();
+    }
+
     //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (currentPage != null && currentPage.mouseClicked(event, doubleClick)) {
-            return true;
-        }
         double mouseX = event.x();
         double mouseY = event.y();
         int mouseButton = event.button();
     //?} else {
     /*@Override
     public boolean mouseClicked(double mouseX, double mouseY, int mouseButton) {
-        boolean doubleClick = false; // 1.21.1 mouseClicked has no double-click signal
-        if (currentPage != null && currentPage.mouseClicked(mouseX, mouseY, mouseButton)) {
-            return true;
-        }*/
+        boolean doubleClick = false; // 1.21.1 mouseClicked has no double-click signal*/
     //?}
         mouse.setMousePosition((int) mouseX, (int) mouseY);
+
+        if (isOpen) {
+            // Topmost first, as drawn: the small-screen chapter overlay and the chapter tabs, then the page's own
+            // widgets (search box, sort-order buttons). The side tabs overhang the left page's edge where the
+            // contents page's sort-order buttons sit, so offering the click to the page first let a button under a
+            // tab steal it; likewise page widgets under the open overlay took clicks through it.
+            boolean overlayOpen = isSmallScreen() && showingContentsMenu;
+            if (mouseButton == 0) {
+                GuideChapter chapter = chapterUnderMouse();
+                int clickResult = chapter == null ? 0 : chapter.handleClick();
+                if (clickResult > 0) {
+                    // Selecting a chapter (result 1, not an expand-arrow toggle 2) closes the overlay menu.
+                    if (overlayOpen && clickResult == 1) {
+                        showingContentsMenu = false;
+                    }
+                    return true;
+                }
+            }
+            if (overlayOpen) {
+                // A click outside the menu closes it; clicks inside are swallowed so they don't fall through to
+                // the page content beneath.
+                if (!FLOATING_CHAPTER_MENU.contains(mouse)) {
+                    showingContentsMenu = false;
+                }
+                return true;
+            }
+            //? if >=1.21.10 {
+            if (currentPage != null && currentPage.mouseClicked(event, doubleClick)) {
+            //?} else {
+            /*if (currentPage != null && currentPage.mouseClicked(mouseX, mouseY, mouseButton)) {*/
+            //?}
+                return true;
+            }
+        }
 
         if (mouseButton == 0) {
             if (isOpen) {
@@ -715,38 +785,12 @@ public class GuiGuide extends Screen {
                 GuidePageBase current = currentPage;
                 current.setFontRenderer(currentFont);
 
-                // Check chapter clicks. On a small screen the side tabs are hidden, so only
-                // hit-test chapters when the centered menu is actually open — otherwise a click
-                // in the middle of the page could trigger an invisible central tab.
-                boolean chaptersInteractive = !isSmallScreen() || showingContentsMenu;
-                if (chaptersInteractive) {
-                    for (GuideChapter chapter : chapters) {
-                        int clickResult = chapter.handleClick();
-                        if (clickResult > 0) {
-                            // Selecting a chapter (result 1, not an expand-arrow toggle 2)
-                            // closes the overlay menu.
-                            if (showingContentsMenu && clickResult == 1) {
-                                showingContentsMenu = false;
-                            }
-                            return true;
-                        }
-                    }
-                }
-
-                // Small-screen "Chapters" tab / overlay menu toggle (1.12.2 behavior).
-                if (isSmallScreen()) {
-                    if (showingContentsMenu) {
-                        // A click outside the menu closes it; clicks inside are swallowed so
-                        // they don't fall through to the page content beneath.
-                        if (!FLOATING_CHAPTER_MENU.contains(mouse)) {
-                            showingContentsMenu = false;
-                        }
-                        return true;
-                    } else if (new GuiRectangle(
-                        minX + PAGE_LEFT.width + (int) PAGE_RIGHT_TEXT.getX(), minY, 80, 10).contains(mouse)) {
-                        showingContentsMenu = true;
-                        return true;
-                    }
+                // Small-screen "Chapters" tab that opens the overlay menu (1.12.2 behavior); the open overlay was
+                // handled above.
+                if (isSmallScreen() && new GuiRectangle(
+                    minX + PAGE_LEFT.width + (int) PAGE_RIGHT_TEXT.getX(), minY, 80, 10).contains(mouse)) {
+                    showingContentsMenu = true;
+                    return true;
                 }
 
                 // Page-turn and back buttons: dispatched here, not left to super.mouseClicked, so they keep their

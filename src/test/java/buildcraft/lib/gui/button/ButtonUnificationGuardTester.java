@@ -5,20 +5,15 @@
  */
 package buildcraft.lib.gui.button;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import buildcraft.TestHelper;
+import buildcraft.lib.test.MainSourceSet;
 
 /**
  * Keeps BuildCraft on ONE button implementation. A button is either vanilla's own {@code Button}/{@code ImageButton}
@@ -27,6 +22,9 @@ import buildcraft.TestHelper;
  * button (the guide book). A source scan cannot prove the absence of every hand-painted hotspot; it rejects
  * the three fingerprints the unification removed: a screen playing the click sound by hand, a hover-variant
  * {@code GuiIcon} swapped on mouse-over, and a button widget subclassed outside the shared package.
+ * <p>
+ * The scan reads this node's own view of the main sources ({@link MainSourceSet}) with comments and literal contents
+ * blanked, so prose, strings and Stonecutter's commented-out branches for other lines never match.
  */
 public class ButtonUnificationGuardTester {
 
@@ -55,35 +53,44 @@ public class ButtonUnificationGuardTester {
         "the trigger-row connectors are part of the gate's wiring diagram: the wire itself is the control, "
             + "there is no button art to replace");
 
-    private static Map<String, List<String>> mainSources() throws IOException {
-        Path base = TestHelper.repoRoot().resolve("src/main/java");
-        Map<String, List<String>> sources = new TreeMap<>();
-        try (Stream<Path> files = Files.walk(base)) {
-            for (Path p : (Iterable<Path>) files.filter(f -> f.toString().endsWith(".java"))::iterator) {
-                sources.put(base.relativize(p).toString().replace('\\', '/'), Files.readAllLines(p, StandardCharsets.UTF_8));
-            }
+    /** A main source file as this node compiled it: its lines, and the same lines with comments and literal
+     *  contents blanked ({@link MainSourceSet#codeOnly}). Line {@code i} of both lists is the same source line. */
+    private record Source(List<String> lines, List<String> code) {}
+
+    /** This node's main sources, keyed by path relative to the source root. */
+    private static Map<String, Source> mainSources() {
+        Map<String, Source> sources = new TreeMap<>();
+        for (MainSourceSet.SourceFile f : MainSourceSet.javaFiles()) {
+            sources.put(f.relativePath(),
+                new Source(f.text().lines().toList(), MainSourceSet.codeOnly(f.text()).lines().toList()));
         }
         return sources;
     }
 
+    /** Every line of {@code src} whose live code matches {@code pattern}, as {@code "\n  path: line"} entries. */
+    private static String matches(String path, Source src, Pattern pattern) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < src.code().size(); i++) {
+            if (pattern.matcher(src.code().get(i)).find()) {
+                out.append("\n  ").append(path).append(": ").append(src.lines().get(i).trim());
+            }
+        }
+        return out.toString();
+    }
+
     @Test
-    public void theScanSeesTheSourceTree() throws IOException {
-        Map<String, List<String>> sources = mainSources();
+    public void theScanSeesTheSourceTree() {
+        Map<String, Source> sources = mainSources();
         Assertions.assertTrue(sources.containsKey(BUTTON_PACKAGE + "BCButton.java"), "scan missed BCButton.java");
         Assertions.assertTrue(sources.size() > 500, "scan found only " + sources.size() + " files");
     }
 
     @Test
-    public void onlyTheSharedPackageSubclassesButtonWidgets() throws IOException {
+    public void onlyTheSharedPackageSubclassesButtonWidgets() {
         StringBuilder offenders = new StringBuilder();
-        for (Map.Entry<String, List<String>> e : mainSources().entrySet()) {
-            if (e.getKey().startsWith(BUTTON_PACKAGE)) {
-                continue;
-            }
-            for (String line : e.getValue()) {
-                if (!line.trim().startsWith("//") && !line.trim().startsWith("*") && EXTENDS_BUTTON.matcher(line).find()) {
-                    offenders.append("\n  ").append(e.getKey()).append(": ").append(line.trim());
-                }
+        for (Map.Entry<String, Source> e : mainSources().entrySet()) {
+            if (!e.getKey().startsWith(BUTTON_PACKAGE)) {
+                offenders.append(matches(e.getKey(), e.getValue(), EXTENDS_BUTTON));
             }
         }
         Assertions.assertEquals("", offenders.toString(),
@@ -92,16 +99,11 @@ public class ButtonUnificationGuardTester {
     }
 
     @Test
-    public void noScreenHandRollsAButtonClick() throws IOException {
+    public void noScreenHandRollsAButtonClick() {
         StringBuilder offenders = new StringBuilder();
-        for (Map.Entry<String, List<String>> e : mainSources().entrySet()) {
-            if (HAND_ROLLED_CLICK_ALLOWED.containsKey(e.getKey())) {
-                continue;
-            }
-            for (String line : e.getValue()) {
-                if (HAND_ROLLED_CLICK.matcher(line).find()) {
-                    offenders.append("\n  ").append(e.getKey()).append(": ").append(line.trim());
-                }
+        for (Map.Entry<String, Source> e : mainSources().entrySet()) {
+            if (!HAND_ROLLED_CLICK_ALLOWED.containsKey(e.getKey())) {
+                offenders.append(matches(e.getKey(), e.getValue(), HAND_ROLLED_CLICK));
             }
         }
         Assertions.assertEquals("", offenders.toString(),
@@ -110,15 +112,10 @@ public class ButtonUnificationGuardTester {
     }
 
     @Test
-    public void noScreenPaintsHoverVariantButtons() throws IOException {
+    public void noScreenPaintsHoverVariantButtons() {
         StringBuilder offenders = new StringBuilder();
-        for (Map.Entry<String, List<String>> e : mainSources().entrySet()) {
-            for (String line : e.getValue()) {
-                String t = line.trim();
-                if (!t.startsWith("//") && !t.startsWith("*") && HOVER_VARIANT_ICON.matcher(line).find()) {
-                    offenders.append("\n  ").append(e.getKey()).append(": ").append(line.trim());
-                }
-            }
+        for (Map.Entry<String, Source> e : mainSources().entrySet()) {
+            offenders.append(matches(e.getKey(), e.getValue(), HOVER_VARIANT_ICON));
         }
         Assertions.assertEquals("", offenders.toString(),
             "a hover-variant GuiIcon means the screen paints and hit-tests its own button — use "
@@ -126,13 +123,13 @@ public class ButtonUnificationGuardTester {
     }
 
     @Test
-    public void everyAllowedExceptionStillExists() throws IOException {
+    public void everyAllowedExceptionStillExists() {
         // An exception whose file stopped hand-rolling (or vanished) must be dropped, not left to excuse a newcomer.
-        Map<String, List<String>> sources = mainSources();
+        Map<String, Source> sources = mainSources();
         for (String allowed : HAND_ROLLED_CLICK_ALLOWED.keySet()) {
-            List<String> lines = sources.get(allowed);
-            Assertions.assertNotNull(lines, "allowlisted file is gone: " + allowed);
-            Assertions.assertTrue(lines.stream().anyMatch(l -> HAND_ROLLED_CLICK.matcher(l).find()),
+            Source src = sources.get(allowed);
+            Assertions.assertNotNull(src, "allowlisted file is gone: " + allowed);
+            Assertions.assertFalse(matches(allowed, src, HAND_ROLLED_CLICK).isEmpty(),
                 "allowlisted file no longer plays the click sound itself; drop it from the allowlist: " + allowed);
         }
     }

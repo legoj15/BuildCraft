@@ -402,6 +402,11 @@ public abstract class GuideChapter extends GuidePart {
         return MAX_HOVER_DISTANCE;
     }
 
+    /** Whether the mouse is over this chapter's tab (or its expand arrow), as last laid out. */
+    public boolean isMouseOver() {
+        return getMousePart() != 0;
+    }
+
     public int handleClick() {
         int part = getMousePart();
         if (part == 1) {

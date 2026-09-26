@@ -241,14 +241,16 @@ public class GuidePageContents extends GuidePageBase {
             }
 
             // Sort-order radio buttons in the left margin of every content spread (not the title spread). Their
-            // place and visibility are refreshed here each frame; mouseClicked hands them the click.
+            // place and visibility are refreshed here each frame; mouseClicked hands them the click. The left chapter
+            // tabs overhang this margin and take a click first (GuiGuide.mouseClicked), so under a tab the buttons
+            // draw un-hovered.
             boolean showSort = index != 0;
             for (int j = 0; j < sortButtons.length; j++) {
                 BCButton button = sortButtons[j];
                 button.setPosition(x + ORDER_OFFSET_X, y + ORDER_OFFSET_Y + 14 * j);
                 button.visible = showSort;
                 if (showSort && GuiIcon.getGuiGraphics() != null) {
-                    GuiIcon.getGuiGraphics().widget(button, (int) gui.mouse.getX(), (int) gui.mouse.getY(),
+                    GuiIcon.getGuiGraphics().widget(button, gui.pageWidgetMouseX(), gui.pageWidgetMouseY(),
                         gui.getLastPartialTicks());
                 }
             }

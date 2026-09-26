@@ -13,7 +13,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -76,20 +75,6 @@ public class ClientItemDefinitionCoverageTester {
      * source tree again, never the Stonecutter copy under {@code versions/<node>/}. */
     private static final String MODEL_DIR = "src/main/resources/assets/buildcraftunofficial/models";
 
-    /** Walks up from the working directory to the repo root. Tests run from a Stonecutter node
-     * directory, not the root, so the location cannot be assumed (same approach as
-     * GameTestManifestTester). */
-    private static Path repoRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (Files.isDirectory(dir.resolve("src/main/java/buildcraft"))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException("could not locate the repo root from " + Paths.get("").toAbsolutePath());
-    }
-
     /** The path part of every registered {@code buildcraftunofficial} item id, straight from the
      * live registry the mod load populated. */
     private static Set<String> registeredItemIds() {
@@ -109,7 +94,7 @@ public class ClientItemDefinitionCoverageTester {
     /** Every {@code items/*.json} definition's id (file name minus the extension; slashes kept for
      * nested ids), sorted, from the raw source tree. */
     private static Set<String> definitionIds() {
-        Path dir = repoRoot().resolve(DEFINITION_DIR);
+        Path dir = TestHelper.repoRoot().resolve(DEFINITION_DIR);
         Assertions.assertTrue(Files.isDirectory(dir),
             DEFINITION_DIR + " not found - if the definitions moved, update"
                 + " ClientItemDefinitionCoverageTester.DEFINITION_DIR");
@@ -192,7 +177,7 @@ public class ClientItemDefinitionCoverageTester {
     @Test
     public void everyRegisteredItemHasADefinition() {
         requireDevRegistry();
-        Path dir = repoRoot().resolve(DEFINITION_DIR);
+        Path dir = TestHelper.repoRoot().resolve(DEFINITION_DIR);
         List<String> missing = new ArrayList<>();
         for (String id : registeredItemIds()) {
             if (!Files.isRegularFile(dir.resolve(id + ".json"))) {
@@ -241,8 +226,8 @@ public class ClientItemDefinitionCoverageTester {
      *  TOTAL: zero targets across every definition means the walker itself broke. */
     @Test
     public void everyDefinitionModelResolves() {
-        Path definitionDir = repoRoot().resolve(DEFINITION_DIR);
-        Path modelDir = repoRoot().resolve(MODEL_DIR);
+        Path definitionDir = TestHelper.repoRoot().resolve(DEFINITION_DIR);
+        Path modelDir = TestHelper.repoRoot().resolve(MODEL_DIR);
         Set<String> total = new TreeSet<>();
         List<String> unresolvable = new ArrayList<>();
         List<String> modelLess = new ArrayList<>();

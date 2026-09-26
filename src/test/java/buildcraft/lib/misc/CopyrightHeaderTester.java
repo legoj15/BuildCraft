@@ -11,7 +11,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +20,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import buildcraft.TestHelper;
 
 /** Guards the copyright headers on every source file in the tree.
  *
@@ -102,25 +103,11 @@ public class CopyrightHeaderTester {
         return s;
     }
 
-    /** Walks up from the working directory to the repo root. Tests run from a Stonecutter node
-     *  directory ({@code versions/<id>}), not the root, so the location cannot be assumed. */
-    private static Path repoRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (Files.isDirectory(dir.resolve("src/main/java/buildcraft"))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException(
-            "could not locate the repo root from " + Paths.get("").toAbsolutePath());
-    }
-
     private record Header(Path file, String claim) {}
 
     /** Every source file that carries a copyright notice, paired with its normalised claim. */
     private static List<Header> collect() {
-        Path root = repoRoot();
+        Path root = TestHelper.repoRoot();
         List<Header> found = new ArrayList<>();
         for (String set : new String[] { "src/main/java", "src/test/java" }) {
             Path base = root.resolve(set);
@@ -203,7 +190,7 @@ public class CopyrightHeaderTester {
      * {@code ItemRedstoneBoard} shipped with upstream's notice dropped and a green test suite. */
     @Test
     public void noticeFileListsEveryMmplFile() {
-        Path root = repoRoot();
+        Path root = TestHelper.repoRoot();
         Set<String> inTree = new java.util.TreeSet<>();
         for (String set : new String[] { "src/main/java", "src/test/java" }) {
             Path base = root.resolve(set);

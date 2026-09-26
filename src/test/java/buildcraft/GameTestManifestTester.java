@@ -11,7 +11,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -53,20 +52,6 @@ public class GameTestManifestTester {
     private static final Pattern FUNCTION_FIELD =
         Pattern.compile("\"function\"\\s*:\\s*\"buildcraftunofficial:([a-z0-9_/]+)\"");
 
-    /** Walks up from the working directory to the repo root. Tests run from a Stonecutter node
-     * directory, not the root, so the location cannot be assumed (same approach as
-     * CopyrightHeaderTester). */
-    private static Path repoRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (Files.isDirectory(dir.resolve("src/main/java/buildcraft"))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException("could not locate the repo root from " + Paths.get("").toAbsolutePath());
-    }
-
     private static String read(Path file) {
         try {
             return Files.readString(file, StandardCharsets.UTF_8);
@@ -77,7 +62,7 @@ public class GameTestManifestTester {
 
     /** The registered ids (path part only, without the namespace), in file order. */
     private static List<String> registeredIds() {
-        Path registrar = repoRoot().resolve(REGISTRAR);
+        Path registrar = TestHelper.repoRoot().resolve(REGISTRAR);
         Assertions.assertTrue(Files.isRegularFile(registrar),
             REGISTRAR + " not found - if BuildCraftGameTests moved, update GameTestManifestTester.REGISTRAR");
         List<String> ids = new ArrayList<>();
@@ -111,7 +96,7 @@ public class GameTestManifestTester {
      * runs, and nothing complains. */
     @Test
     public void everyRegisteredTestHasAManifest() {
-        Path dir = repoRoot().resolve(MANIFEST_DIR);
+        Path dir = TestHelper.repoRoot().resolve(MANIFEST_DIR);
         List<String> missing = new ArrayList<>();
         List<String> wrongFunction = new ArrayList<>();
         for (String id : registeredIds()) {
@@ -140,7 +125,7 @@ public class GameTestManifestTester {
      * registration was renamed or deleted while the JSON was left behind. */
     @Test
     public void everyManifestBacksARegisteredTest() {
-        Path dir = repoRoot().resolve(MANIFEST_DIR);
+        Path dir = TestHelper.repoRoot().resolve(MANIFEST_DIR);
         Assertions.assertTrue(Files.isDirectory(dir),
             MANIFEST_DIR + " not found - if the manifests moved, update GameTestManifestTester.MANIFEST_DIR");
         LinkedHashSet<String> registered = new LinkedHashSet<>(registeredIds());

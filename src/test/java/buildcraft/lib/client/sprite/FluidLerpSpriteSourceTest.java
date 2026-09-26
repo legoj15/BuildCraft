@@ -11,7 +11,6 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +24,7 @@ import com.mojang.serialization.JsonOps;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.TestHelper;
 import buildcraft.energy.BCEnergyFluids;
 
 /**
@@ -135,21 +135,8 @@ public class FluidLerpSpriteSourceTest {
     }
 
     private static Iterable<JsonElement> atlasSources() throws IOException {
-        try (Reader in = Files.newBufferedReader(repoRoot().resolve(BLOCKS_ATLAS), StandardCharsets.UTF_8)) {
+        try (Reader in = Files.newBufferedReader(TestHelper.repoRoot().resolve(BLOCKS_ATLAS), StandardCharsets.UTF_8)) {
             return new Gson().fromJson(in, JsonObject.class).getAsJsonArray("sources");
         }
-    }
-
-    /** Walks up from the working directory to the repo root — tests run from a Stonecutter node
-     * directory, and the classpath also carries vanilla's own {@code atlases/blocks.json}. */
-    private static Path repoRoot() {
-        Path dir = Paths.get("").toAbsolutePath();
-        for (int i = 0; i < 6 && dir != null; i++) {
-            if (Files.isRegularFile(dir.resolve(BLOCKS_ATLAS))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException("could not locate the repo root from " + Paths.get("").toAbsolutePath());
     }
 }

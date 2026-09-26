@@ -28,12 +28,14 @@ public final class ScrolledList<K> {
     }
 
     /** Adopt the current list for display: resize the window to it and scroll to a selection that changed from
-     *  outside. Call once per tick/frame before drawing. @return {@code list}, for chaining. */
+     *  outside. Call once per tick/frame before drawing. The list is snapshotted ({@link List#copyOf}, a no-op for
+     *  a {@code List.of}/{@code copyOf} list), so a caller mutating its own list afterwards cannot move the rows a
+     *  click is resolved against. @return the snapshot now shown, for chaining. */
     public List<K> refresh(List<K> list, @Nullable K selected) {
-        shown = list;
-        window.setTotal(list.size());
-        follower.follow(window, list, selected);
-        return list;
+        shown = List.copyOf(list);
+        window.setTotal(shown.size());
+        follower.follow(window, shown, selected);
+        return shown;
     }
 
     /** The list as of the last {@link #refresh}. */

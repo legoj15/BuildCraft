@@ -6,6 +6,7 @@
 package buildcraft.robotics.ai;
 
 import java.util.Collections;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -197,6 +198,63 @@ public class AIRobotGotoStationTest {
         Assertions.assertTrue(robot.docks.isEmpty(), "and nothing is docked to a station that no longer exists");
     }
 
+    // ── save/load: a stationless goto (a summoned robot, or one loaded from a save with no station) ──────
+
+    @Test
+    public void aStationlessGotoSavesAndReloadsAsStationless() {
+        TrackedGotoStation ai = new TrackedGotoStation(robot, null);
+        CompoundTag tag = new CompoundTag();
+
+        Assertions.assertDoesNotThrow(() -> ai.writeSelfToNBT(tag), "saving a stationless goto must not crash the robot's save");
+        Assertions.assertFalse(tag.contains("stationIndex"), "no station, no station key");
+        Assertions.assertFalse(tag.contains("stationSide"), "and no side key either");
+
+        TrackedGotoStation reloaded = new TrackedGotoStation(robot, null);
+        reloaded.loadSelfFromNBT(tag);
+        reloaded.start();
+        Assertions.assertTrue(reloaded.ended, "the reloaded goto still ends at once");
+        Assertions.assertFalse(reloaded.success(), "…as a failure");
+    }
+
+    @Test
+    public void aGotoLoadedWithoutAStationSavesAgainWithoutCrashing() {
+        // A robot migrated from a save whose goto carried no station (e.g. the 7.1.x legacy name) loads with no
+        // station; the next entity save must not NPE on it.
+        TrackedGotoStation ai = new TrackedGotoStation(robot, null);
+        ai.loadSelfFromNBT(new CompoundTag());
+
+        CompoundTag again = new CompoundTag();
+        Assertions.assertDoesNotThrow(() -> ai.writeSelfToNBT(again));
+        Assertions.assertFalse(again.contains("stationIndex"));
+    }
+
+    @Test
+    public void aStationlessGotoWhoseApproachEndsFailsInsteadOfCrashing() {
+        TrackedGotoStation ai = new TrackedGotoStation(robot, null);
+
+        Assertions.assertDoesNotThrow(() -> ai.delegateAIEnded(new AIRobotGotoBlock(robot, 0, 0, 0)));
+
+        Assertions.assertTrue(ai.ended, "a reloaded leg with no station to fly onto ends the goto");
+        Assertions.assertFalse(ai.success());
+        Assertions.assertTrue(robot.docks.isEmpty());
+    }
+
+    @Test
+    public void aStationGotoRoundTripsItsStation() {
+        StubStation station = new StubStation(STATION, Direction.WEST);
+        registry.station = station;
+        TrackedGotoStation ai = new TrackedGotoStation(robot, station);
+        CompoundTag tag = new CompoundTag();
+        ai.writeSelfToNBT(tag);
+
+        TrackedGotoStation reloaded = new TrackedGotoStation(robot, null);
+        reloaded.loadSelfFromNBT(tag);
+        reloaded.delegateAIEnded(new AIRobotGotoBlock(robot, 0, 0, 0));
+
+        assertTarget(reloaded.getDelegateAI(), STATION.getX() + 0.5 - 0.5, STATION.getY() + 0.5,
+                STATION.getZ() + 0.5, "the reloaded goto still flies onto the station's west face");
+    }
+
     private static void assertTarget(AIRobot ai, double x, double y, double z, String message) {
         CompoundTag tag = new CompoundTag();
         ai.writeSelfToNBT(tag);
@@ -227,12 +285,16 @@ public class AIRobotGotoStationTest {
         }
     }
 
-    /** A registry that resolves exactly one station (or none), whatever pos/side is asked for. */
+    /** A registry that resolves exactly one station (or none), whatever pos/side is asked for; like the live one, it
+     *  refuses a null pos or side. */
     private static final class StationRegistry extends MockRobotAccess.InertRobotRegistry {
         DockingStation station;
 
         @Override
         public DockingStation getStation(BlockPos pos, Direction side) {
+            // The live RobotRegistry keys on a StationIndex, which rejects a null pos or side.
+            Objects.requireNonNull(pos, "pos");
+            Objects.requireNonNull(side, "side");
             return station != null && station.getPos().equals(pos) && station.side() == side ? station : null;
         }
     }

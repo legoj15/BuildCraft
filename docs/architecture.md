@@ -81,7 +81,11 @@ place of the face — GUI-atlas sprites `<name>` + `<name>_highlighted` (+ `<nam
 `textures/gui/sprites/` — and keeps everything else (tooltip-as-narration, sound, keyboard). A
 screen that paints everything itself draws such widgets in its own order with
 `BCGraphics.widget(...)` and registers them with `addWidget` (input/narration only); a guide page,
-which is not a screen, forwards clicks to them from its `mouseClicked`. Screens should not paint
+which is not a screen, forwards clicks to them from its `mouseClicked`. `GuiGuide` offers a
+click topmost-first — small-screen chapter overlay and chapter tabs, then the page's widgets
+(search box, sort-order buttons, which sit under the left tabs' overhang), then its own page-turn
+buttons, then page content — and page widgets render with `pageWidgetMouseX/Y()` so they draw
+un-hovered where a tab or the overlay would take the click. Screens should not paint
 buttons from their background sheet, hit-test them, or play the click sound themselves.
 `ButtonUnificationGuardTester` is a source scan and only catches the fingerprints of that
 pattern: a screen playing `UI_BUTTON_CLICK` (the gate's wiring-diagram connectors are the one

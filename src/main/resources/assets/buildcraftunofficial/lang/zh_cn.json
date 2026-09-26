@@ -784,6 +784,8 @@
     "gui.jei.category.buildcraftunofficial.distiller": "蒸馏器",
     "gui.jei.category.buildcraftunofficial.distiller.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.heat_exchanger": "热交换器",
+    "gui.jei.category.buildcraftunofficial.programming_table": "程控台",
+    "gui.jei.category.buildcraftunofficial.programming_table.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel": "斯特林引擎燃料",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.burn": "燃烧：%s 秒",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.rate": "≤ %s",

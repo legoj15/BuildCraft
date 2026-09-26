@@ -93,3 +93,18 @@ COMMON/CLIENT split is load-bearing (client-only render/display options must liv
 spec).
 
 **Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
+
+**JEI**: one `@JeiPlugin` per subsystem under `<subsystem>/compat/jei` (core, energy, factory,
+silicon, robotics), shared machinery in `lib/compat/jei`. Each category follows the Assembly Table
+shape: a JEI-free record + collector (unit-testable — `ProgrammingRecipeCollectorTester` is the
+model), a `*JeiTypes` holder, and a category that crops the machine's own GUI texture and prints the
+MJ cost through `JeiMjLabel`. Cross-node API rules, all enforced by a clean
+`-PbcLint=deprecation` sweep since 2026-09-26: recipe types are `IRecipeType` on the JEI 20+ nodes
+(`>=1.21.10`) and `RecipeType` only on 1.21.1 (its JEI 19.x predates `IRecipeType`) — one
+`//? if >=1.21.10` directive per holder/handler; hand-written item subtype keys register only
+through `JeiSubtypes.register(registration, item, stack -> key)` (it hides the 1.21.1
+`ISubtypeInterpreter` fork; return null for "no subtype"; the key needs structural `equals`),
+while a key that is exactly one data component uses `registerFromDataComponentTypes` on the JEI 20+
+nodes (the paintbrush — with `JeiSubtypes` as its 1.21.1 fallback); put single stacks in slots with
+`addItemStacks(List.of(stack))` — `addItemStack` is deprecated for removal on JEI 20+ and its
+`add(ItemStack)` successor does not exist on 19.x.

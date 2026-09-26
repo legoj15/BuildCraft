@@ -1048,6 +1048,8 @@
     "gui.jei.category.buildcraftunofficial.distiller.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.assembly_table": "Assembly Table",
     "gui.jei.category.buildcraftunofficial.assembly_table.power": "%s %s",
+    "gui.jei.category.buildcraftunofficial.programming_table": "Programming Table",
+    "gui.jei.category.buildcraftunofficial.programming_table.power": "%s %s",
     "gui.jei.category.buildcraftunofficial.combustion_engine_fuel": "Combustion Engine Fuel",
     "gui.jei.category.buildcraftunofficial.combustion_engine_fuel.burn": "Burn: %s t",
     "gui.jei.category.buildcraftunofficial.combustion_engine_coolant": "Combustion Engine Coolant",

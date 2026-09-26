@@ -15,14 +15,12 @@ import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-import buildcraft.api.mj.MjAPI;
+import buildcraft.lib.compat.jei.JeiMjLabel;
+import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.silicon.BCSiliconItems;
 
@@ -63,7 +61,6 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
     // Power label sits two pixels below the cropped texture, in the extra
     // strip JEI fills with the recipe-pane background.
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
-    private static final int POWER_COLOR = 0xFF404040;
 
     private static final int WIDTH = OUTPUT_X + 24;  // 129
     private static final int HEIGHT = TEX_H + 12;    // 98
@@ -91,14 +88,8 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
-        // Cast through double so sub-MJ recipes don't render as "0 MJ".
-        double mj = recipe.microJoules() / (double) MjAPI.MJ;
-        String powerStr = Component.translatable(
-                "gui.jei.category.buildcraftunofficial.assembly_table.power",
-                buildcraft.lib.misc.LocaleUtil.formatDouble(mj, 1),
-                buildcraft.lib.misc.LocaleUtil.mjUnit()).getString();
-        Font font = Minecraft.getInstance().font;
-        new buildcraft.lib.gui.BCGraphics(graphics).text(font, powerStr, POWER_X, POWER_Y, POWER_COLOR, false);
+        JeiMjLabel.draw(new BCGraphics(graphics), "gui.jei.category.buildcraftunofficial.assembly_table.power",
+                recipe.microJoules(), POWER_X, POWER_Y);
     }
 
     @Override

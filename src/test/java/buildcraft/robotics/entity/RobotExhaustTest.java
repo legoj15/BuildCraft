@@ -70,6 +70,55 @@ public class RobotExhaustTest {
         Assertions.assertFalse(acc.tick(0, 100F), "an idle robot (spend 0) never puffs");
     }
 
+    @Test
+    public void accumulatorFiresExactlyAtTheThreshold() {
+        RobotExhaust.Accumulator acc = new RobotExhaust.Accumulator();
+        Assertions.assertFalse(acc.tick(99, 100F));
+        Assertions.assertFalse(acc.tick(0, 100F));
+        Assertions.assertTrue(new RobotExhaust.Accumulator().tick(100, 100F), "7.1.x compared with >=, not >");
+    }
+
+    // ── The particle setting ───────────────────────────────────────────────
+
+    @Test
+    public void particleSettingMapsByConstantName() {
+        Assertions.assertEquals(0, RobotExhaust.particleSettingId("ALL"));
+        Assertions.assertEquals(1, RobotExhaust.particleSettingId("DECREASED"));
+        Assertions.assertEquals(2, RobotExhaust.particleSettingId("MINIMAL"));
+        Assertions.assertEquals(0, RobotExhaust.particleSettingId("SOMETHING_NEW"), "unknown settings read as All");
+    }
+
+    /** Tripwire for a Minecraft update: the client maps the live {@code ParticleStatus} by constant name, so a
+     *  renamed or added constant must fail here rather than silently read as All. The enum lives in
+     *  {@code net.minecraft.client} on 1.21.1 and {@code net.minecraft.server.level} from 1.21.10, hence the
+     *  by-name lookup instead of a Stonecutter directive in shared test source. */
+    @Test
+    public void vanillaParticleStatusStillHasExactlyTheThreeKnownConstants() throws Exception {
+        Class<?> status;
+        try {
+            status = Class.forName("net.minecraft.server.level.ParticleStatus");
+        } catch (ClassNotFoundException e) {
+            status = Class.forName("net.minecraft.client.ParticleStatus");
+        }
+        List<String> names = new ArrayList<>();
+        for (Object constant : status.getEnumConstants()) {
+            names.add(((Enum<?>) constant).name());
+        }
+        Assertions.assertEquals(List.of("ALL", "DECREASED", "MINIMAL"), names);
+    }
+
+    @Test
+    public void particleSettingSeamReadsTheInstalledSource() {
+        java.util.function.IntSupplier serverDefault = () -> 0; // no client in the unit-test JVM
+        try {
+            RobotExhaust.setParticleSettingSource(() -> 2);
+            Assertions.assertEquals(2, RobotExhaust.particleSetting());
+            Assertions.assertEquals(1600F, RobotExhaust.particleThreshold(RobotExhaust.particleSetting()));
+        } finally {
+            RobotExhaust.setParticleSettingSource(serverDefault);
+        }
+    }
+
     // ── Size: 7.1.x's max(1, spend * 0.075) ────────────────────────────────
 
     @Test

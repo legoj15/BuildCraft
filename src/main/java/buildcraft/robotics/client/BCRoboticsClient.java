@@ -162,11 +162,12 @@ public class BCRoboticsClient {
         modEventBus.register(BCRoboticsClient.class);
         // The exhaust thins itself by the particle setting (7.1.x's rule); the common-side robot reads it
         // through this seam so EntityRobot never names a client class. The ParticleStatus enum moved
-        // package at 1.21.10 and lost getId() by 26.1, so it is read through the option by ordinal
-        // (ALL, DECREASED, MINIMAL on every line) rather than imported.
+        // package at 1.21.10 and lost getId() by 26.1, so it is read through the option by constant name
+        // rather than imported.
         RobotExhaust.setParticleSettingSource(() -> {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-            return mc == null || mc.options == null ? 0 : mc.options.particles().get().ordinal();
+            return mc == null || mc.options == null
+                    ? 0 : RobotExhaust.particleSettingId(mc.options.particles().get().name());
         });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }

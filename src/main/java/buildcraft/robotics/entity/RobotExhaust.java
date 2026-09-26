@@ -47,6 +47,17 @@ public final class RobotExhaust {
         return Mth.clamp(energySpend * SIZE_PER_SPEND, 1F, MAX_PARTICLE_SIZE);
     }
 
+    /** Maps a {@code ParticleStatus} constant name to 7.1.x's setting id. By name, not ordinal: the enum has
+     *  already moved package and lost {@code getId()} across the supported lines, and a constant inserted in
+     *  future must not silently shift Minimal onto the All rate. Unknown names read as All. */
+    public static int particleSettingId(String particleStatusName) {
+        return switch (particleStatusName) {
+            case "DECREASED" -> 1;
+            case "MINIMAL" -> 2;
+            default -> 0;
+        };
+    }
+
     /** The current client particle setting id (0 All, 1 Decreased, 2 Minimal). */
     public static int particleSetting() {
         return particleSetting.getAsInt();

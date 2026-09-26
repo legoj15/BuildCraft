@@ -5,11 +5,15 @@
  */
 package buildcraft.robotics.client.particle;
 
+import java.util.List;
+
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.BaseAshSmokeParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.robotics.particle.RobotEnergyParticleOptions;
 
@@ -44,7 +48,11 @@ public class RobotEnergyParticle extends BaseAshSmokeParticle {
     }
 
     /** 7.1.x's {@code onUpdate}, verbatim in effect: vanilla's tick would also damp the vertical motion (so a
-     *  downward exhaust would stall instead of carrying to the ground) and speed up on a blocked ceiling. */
+     *  downward exhaust would stall instead of carrying to the ground) and speed up on a blocked ceiling.
+     *
+     *  <p>Note on size: the random per-puff size variation this inherits ({@code Particle}'s {@code quadSize}
+     *  seed of 1..2x) is 7.1.x-faithful — 1.7.10's {@code EntityFX} seeded {@code particleScale} with the
+     *  same {@code (rand * 0.5 + 0.5) * 2} before the robot particle multiplied it. */
     @Override
     public void tick() {
         this.xo = this.x;
@@ -62,6 +70,40 @@ public class RobotEnergyParticle extends BaseAshSmokeParticle {
         if (this.onGround) {
             this.xd *= 0.7;
             this.zd *= 0.7;
+        }
+    }
+
+    /** 1.7.10's {@code Entity.moveEntity} semantics: a blocked axis loses its velocity and the puff keeps
+     *  going on the others. Vanilla's {@code Particle.move} instead latches a private "stopped by collision"
+     *  flag the first time a vertical move is fully blocked and never moves again — the (default, downward)
+     *  exhaust would freeze where it lands instead of skidding and lifting off on its slow rise, and an
+     *  upward one would stick to a ceiling. The null collision source compiles against every line (26.2 added
+     *  a {@code CollisionContext} overload; the cast picks the {@code @Nullable Entity} one). */
+    @Override
+    public void move(double xa, double ya, double za) {
+        double wantX = xa;
+        double wantY = ya;
+        double wantZ = za;
+        if (this.hasPhysics && (xa != 0.0 || ya != 0.0 || za != 0.0)) {
+            Vec3 allowed = Entity.collideBoundingBox((Entity) null, new Vec3(xa, ya, za), this.getBoundingBox(),
+                    this.level, List.of());
+            xa = allowed.x;
+            ya = allowed.y;
+            za = allowed.z;
+        }
+        if (xa != 0.0 || ya != 0.0 || za != 0.0) {
+            this.setBoundingBox(this.getBoundingBox().move(xa, ya, za));
+            this.setLocationFromBoundingbox();
+        }
+        this.onGround = wantY != ya && wantY < 0.0;
+        if (wantX != xa) {
+            this.xd = 0.0;
+        }
+        if (wantY != ya) {
+            this.yd = 0.0;
+        }
+        if (wantZ != za) {
+            this.zd = 0.0;
         }
     }
 

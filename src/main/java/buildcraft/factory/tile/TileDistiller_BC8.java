@@ -50,6 +50,7 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
@@ -334,63 +335,12 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         if (level == null || level.isClientSide()) return;
 
         if (level.getGameTime() % 5 == 0) {
-            // Slot 0: Input container -> drain into tankIn
-            //? if >=1.21.10 {
-            net.minecraft.world.item.ItemStack inStack = containerSlots.getResource(0).toStack(containerSlots.getAmountAsInt(0));
-            //?} else {
-            /*net.minecraft.world.item.ItemStack inStack = containerSlots.getStackInSlot(0);*/
-            //?}
-            if (!inStack.isEmpty()) {
-                @SuppressWarnings("removal")
-                net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
-                    //? if >=1.21.10 {
-                    inStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankIn), Integer.MAX_VALUE, null, true
-                    //?} else {
-                    /*inStack, tankIn, Integer.MAX_VALUE, null, true*/
-                    //?}
-                );
-                if (result.isSuccess()) {
-                    containerSlots.setStackInSlot(0, result.getResult());
-                }
-            }
-            // Slot 1: Output container gas -> fill from tankGasOut
-            //? if >=1.21.10 {
-            net.minecraft.world.item.ItemStack gasStack = containerSlots.getResource(1).toStack(containerSlots.getAmountAsInt(1));
-            //?} else {
-            /*net.minecraft.world.item.ItemStack gasStack = containerSlots.getStackInSlot(1);*/
-            //?}
-            if (!gasStack.isEmpty()) {
-                @SuppressWarnings("removal")
-                net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
-                    //? if >=1.21.10 {
-                    gasStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankGasOut), Integer.MAX_VALUE, null, true
-                    //?} else {
-                    /*gasStack, tankGasOut, Integer.MAX_VALUE, null, true*/
-                    //?}
-                );
-                if (result.isSuccess()) {
-                    containerSlots.setStackInSlot(1, result.getResult());
-                }
-            }
-            // Slot 2: Output container liquid -> fill from tankLiquidOut
-            //? if >=1.21.10 {
-            net.minecraft.world.item.ItemStack liqStack = containerSlots.getResource(2).toStack(containerSlots.getAmountAsInt(2));
-            //?} else {
-            /*net.minecraft.world.item.ItemStack liqStack = containerSlots.getStackInSlot(2);*/
-            //?}
-            if (!liqStack.isEmpty()) {
-                @SuppressWarnings("removal")
-                net.neoforged.neoforge.fluids.FluidActionResult result = net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
-                    //? if >=1.21.10 {
-                    liqStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tankLiquidOut), Integer.MAX_VALUE, null, true
-                    //?} else {
-                    /*liqStack, tankLiquidOut, Integer.MAX_VALUE, null, true*/
-                    //?}
-                );
-                if (result.isSuccess()) {
-                    containerSlots.setStackInSlot(2, result.getResult());
-                }
-            }
+            // Slot 0: input container -> drain into tankIn
+            FluidUtilBC.drainContainerSlot(containerSlots, 0, tankIn);
+            // Slot 1: gas output container <- fill from tankGasOut
+            FluidUtilBC.fillContainerSlot(containerSlots, 1, tankGasOut);
+            // Slot 2: liquid output container <- fill from tankLiquidOut
+            FluidUtilBC.fillContainerSlot(containerSlots, 2, tankLiquidOut);
         }
 
         mjBattery.tick(level, worldPosition);
@@ -498,9 +448,9 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     @Override
     public void getDebugInfo(java.util.List<String> left, java.util.List<String> right, Direction side) {
         // We use fluid stacks here to represent the contents
-        left.add("In = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankIn.getFluidStack(0)));
-        left.add("GasOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankGasOut.getFluidStack(0)));
-        left.add("LiquidOut = " + buildcraft.lib.misc.FluidUtilBC.getDebugString(tankLiquidOut.getFluidStack(0)));
+        left.add("In = " + FluidUtilBC.getDebugString(tankIn.getFluidStack(0)));
+        left.add("GasOut = " + FluidUtilBC.getDebugString(tankGasOut.getFluidStack(0)));
+        left.add("LiquidOut = " + FluidUtilBC.getDebugString(tankLiquidOut.getFluidStack(0)));
         left.add("Battery = " + mjBattery.getDebugString());
         left.add("Progress = " + MjAPI.formatMj(distillPower));
         left.add("Rate = " + buildcraft.lib.misc.LocaleUtil.localizeMjFlow(powerAvgClient));

@@ -22,22 +22,26 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import buildcraft.lib.fluid.BCFluidTank;*/
+/*import net.neoforged.neoforge.fluids.FluidActionResult;
+import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public class FluidUtilBC {
 
@@ -154,7 +158,7 @@ public class FluidUtilBC {
             int amountToTry = (int) Math.min(tank.getAmountAsLong(0), 1000);
 
             try (Transaction tx = Transaction.openRoot()) {
-                int accepted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                int accepted = ResourceHandlerUtil.move(
                         tank, neighbor, r -> true, amountToTry, tx);
                 if (accepted > 0) {
                     tx.commit();
@@ -245,7 +249,7 @@ public class FluidUtilBC {
 
             if (firstAvailable.isEmpty()) return null;
 
-            int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(from, to, r -> true, max, tx);
+            int moved = ResourceHandlerUtil.move(from, to, r -> true, max, tx);
             if (moved > 0) {
                 tx.commit();
                 return firstAvailable.toStack(moved);
@@ -307,7 +311,7 @@ public class FluidUtilBC {
             // First try draining tank -> item (filling bucket)
             try (Transaction tx = Transaction.openRoot()) {
                 FluidResource tankFluid = fluidHandler.size() > 0 ? fluidHandler.getResource(0) : FluidResource.EMPTY;
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                int moved = ResourceHandlerUtil.move(
                         fluidHandler, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
                 );
                 if (moved > 0) {
@@ -331,7 +335,7 @@ public class FluidUtilBC {
             // Next try item -> tank (emptying bucket)
             try (Transaction tx = Transaction.openRoot()) {
                 FluidResource itemFluid = itemHandlerIn.size() > 0 ? itemHandlerIn.getResource(0) : FluidResource.EMPTY;
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
+                int moved = ResourceHandlerUtil.move(
                         itemHandlerIn, fluidHandler, r -> true, Integer.MAX_VALUE, tx
                 );
                 if (moved > 0) {
@@ -363,6 +367,105 @@ public class FluidUtilBC {
         if (world.isClientSide()) return true;
         return FluidUtil.interactWithFluidHandler(player, hand, fluidHandler);
     }*/
+    //?}
+
+    // ---- Item fluid containers -------------------------------------------------------------------------------
+    // NeoForge deprecated the classic net.neoforged.neoforge.fluids.FluidUtil (and IFluidHandler / FluidActionResult)
+    // for removal at 1.21.9. These four helpers are the single seam every BuildCraft call site uses to read, fill or
+    // empty a fluid container item, so the call sites stay directive-free: on 1.21.10+ they ride the Transfer API
+    // (Capabilities.Fluid.ITEM through an ItemAccess); on 1.21.1 the classic helpers are still current and are used
+    // as-is. FluidContainerHelperTest pins that both halves behave the same.
+
+    /**
+     * The fluid held by ONE item of the given stack (the stack's count is ignored), or {@link FluidStack#EMPTY} for
+     * an empty container, a non-container or the empty stack. Never modifies {@code stack}.
+     */
+    public static FluidStack getFluidContained(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return FluidStack.EMPTY;
+        }
+        //? if >=1.21.10 {
+        // Reads through a one-by-one ItemAccess over the stack: getResource/getAmount only, nothing is extracted.
+        return net.neoforged.neoforge.transfer.fluid.FluidUtil.getFirstStackContained(stack);
+        //?} else {
+        /*return FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);*/
+        //?}
+    }
+
+    /** Whether the item exposes an item fluid handler at all — empty containers (e.g. an empty bucket) included. */
+    public static boolean isFluidContainer(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        //? if >=1.21.10 {
+        return ItemAccess.forStack(stack).oneByOne().getCapability(Capabilities.Fluid.ITEM) != null;
+        //?} else {
+        /*return FluidUtil.getFluidHandler(stack.copyWithCount(1)).isPresent();*/
+        //?}
+    }
+
+    /**
+     * Empties the single fluid container sitting in {@code slots[slot]} into {@code tank}, swapping it in place for
+     * whatever the container becomes (an empty bucket, or nothing for a consumable one). A stack of more than one
+     * container is left alone — there is nowhere to put the emptied item, and swapping the whole stack for one
+     * result would delete the rest.
+     *
+     * @return true if any fluid moved.
+     */
+    public static boolean drainContainerSlot(ItemHandlerSimple slots, int slot, BCFluidTank tank) {
+        ItemStack stack = slots.getStackInSlot(slot);
+        if (stack.getCount() != 1) {
+            return false; // an empty slot, or a stack with nowhere to put the swapped container
+        }
+        //? if >=1.21.10 {
+        ResourceHandler<FluidResource> container =
+                ItemAccess.forHandlerIndexStrict(slots, slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+        return container != null && moveAll(container, tank);
+        //?} else {
+        /*FluidActionResult result = FluidUtil.tryEmptyContainer(stack, tank, Integer.MAX_VALUE, null, true);
+        if (result.isSuccess()) {
+            slots.setStackInSlot(slot, result.getResult());
+        }
+        return result.isSuccess();*/
+        //?}
+    }
+
+    /**
+     * Fills the single fluid container sitting in {@code slots[slot]} from {@code tank}, swapping it in place for the
+     * filled item. A stack of more than one container is left alone, as in {@link #drainContainerSlot}.
+     *
+     * @return true if any fluid moved.
+     */
+    public static boolean fillContainerSlot(ItemHandlerSimple slots, int slot, BCFluidTank tank) {
+        ItemStack stack = slots.getStackInSlot(slot);
+        if (stack.getCount() != 1) {
+            return false; // an empty slot, or a stack with nowhere to put the swapped container
+        }
+        //? if >=1.21.10 {
+        ResourceHandler<FluidResource> container =
+                ItemAccess.forHandlerIndexStrict(slots, slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
+        return container != null && moveAll(tank, container);
+        //?} else {
+        /*FluidActionResult result = FluidUtil.tryFillContainer(stack, tank, Integer.MAX_VALUE, null, true);
+        if (result.isSuccess()) {
+            slots.setStackInSlot(slot, result.getResult());
+        }
+        return result.isSuccess();*/
+        //?}
+    }
+
+    //? if >=1.21.10 {
+    // The container handlers above come from a STRICT slot access: the filled/emptied item replaces the container in
+    // that same slot, never overflowing into the tile's other slots. Everything moves in one root transaction.
+    private static boolean moveAll(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
+        try (Transaction tx = Transaction.openRoot()) {
+            if (ResourceHandlerUtil.move(from, to, r -> true, Integer.MAX_VALUE, tx) > 0) {
+                tx.commit();
+                return true;
+            }
+        }
+        return false;
+    }
     //?}
 
     public static ItemStack getFilledBucket(FluidStack fluidStack) {

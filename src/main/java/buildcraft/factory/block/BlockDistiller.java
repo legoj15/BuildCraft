@@ -139,15 +139,12 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
         // and the two output tanks reject external inserts. So the bucket "lands"
         // on whichever tank the held item is compatible with — a distillable bucket
         // empties into tankIn, an empty bucket fills from gasOut (then liquidOut).
-        @SuppressWarnings("removal")
         boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankIn());
         if (!didChange) {
-            @SuppressWarnings("removal")
             boolean drainedGas = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankGasOut());
             didChange = drainedGas;
         }
         if (!didChange) {
-            @SuppressWarnings("removal")
             boolean drainedLiquid = FluidUtilBC.onTankActivated(player, pos, hand, distiller.getTankLiquidOut());
             didChange = drainedLiquid;
         }

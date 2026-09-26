@@ -33,7 +33,6 @@ import buildcraft.lib.misc.FluidUtilBC;
  * behaviour-identical.
  */
 //? if >=1.21.10 {
-@SuppressWarnings("removal")
 public class TankColumnResourceHandler implements ResourceHandler<FluidResource> {
 
     private final TileTank owner;

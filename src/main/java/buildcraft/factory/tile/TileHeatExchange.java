@@ -22,7 +22,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -789,7 +788,6 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
          * (END not yet linked) are skipped — items just sit in the slot until the
          * structure completes.
          */
-        @SuppressWarnings("removal")
         private void processContainerSlots() {
             TileHeatExchange tile = getTile();
             if (tile == null || tile.level == null) return;
@@ -797,70 +795,16 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
 
             // Slot 0: filled bucket → END.tankInput (hot fluid)
             if (endSection != null) {
-                drainSlotIntoTank(tile, 0, endSection.tankInput);
+                FluidUtilBC.drainContainerSlot(tile.containerSlots, 0, endSection.tankInput);
             }
             // Slot 1: filled bucket → START.tankInput (cold fluid)
-            drainSlotIntoTank(tile, 1, this.tankInput);
+            FluidUtilBC.drainContainerSlot(tile.containerSlots, 1, this.tankInput);
             // Slot 2: empty bucket ← END.tankOutput (heated fluid)
             if (endSection != null) {
-                fillSlotFromTank(tile, 2, endSection.tankOutput);
+                FluidUtilBC.fillContainerSlot(tile.containerSlots, 2, endSection.tankOutput);
             }
             // Slot 3: empty bucket ← START.tankOutput (cooled fluid)
-            fillSlotFromTank(tile, 3, this.tankOutput);
-        }
-
-        @SuppressWarnings("removal")
-        private static void drainSlotIntoTank(TileHeatExchange tile, int slot, BCFluidTank tank) {
-            //? if >=1.21.10 {
-            ItemStack stack = tile.containerSlots.getResource(slot)
-                    .toStack(tile.containerSlots.getAmountAsInt(slot));
-            //?} else {
-            /*ItemStack stack = tile.containerSlots.getStackInSlot(slot);*/
-            //?}
-            if (stack.isEmpty()) return;
-            // Defensive: tryEmptyContainer copies the input down to count 1 and returns a
-            // single empty container. Calling setStackInSlot with that result on a >1 stack
-            // would silently delete the rest. With ItemHandlerSimple's slot capacity now
-            // pinned at 1 this shouldn't happen, but bail out anyway in case some other
-            // path puts a larger stack in.
-            if (stack.getCount() > 1) return;
-            net.neoforged.neoforge.fluids.FluidActionResult result =
-                    net.neoforged.neoforge.fluids.FluidUtil.tryEmptyContainer(
-                            stack,
-                            //? if >=1.21.10 {
-                            net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tank),
-                            //?} else {
-                            /*tank,*/
-                            //?}
-                            Integer.MAX_VALUE, null, true);
-            if (result.isSuccess()) {
-                tile.containerSlots.setStackInSlot(slot, result.getResult());
-            }
-        }
-
-        @SuppressWarnings("removal")
-        private static void fillSlotFromTank(TileHeatExchange tile, int slot, BCFluidTank tank) {
-            //? if >=1.21.10 {
-            ItemStack stack = tile.containerSlots.getResource(slot)
-                    .toStack(tile.containerSlots.getAmountAsInt(slot));
-            //?} else {
-            /*ItemStack stack = tile.containerSlots.getStackInSlot(slot);*/
-            //?}
-            if (stack.isEmpty()) return;
-            // See drainSlotIntoTank — same data-loss risk if a >1 stack ever sneaks in.
-            if (stack.getCount() > 1) return;
-            net.neoforged.neoforge.fluids.FluidActionResult result =
-                    net.neoforged.neoforge.fluids.FluidUtil.tryFillContainer(
-                            stack,
-                            //? if >=1.21.10 {
-                            net.neoforged.neoforge.fluids.capability.IFluidHandler.of(tank),
-                            //?} else {
-                            /*tank,*/
-                            //?}
-                            Integer.MAX_VALUE, null, true);
-            if (result.isSuccess()) {
-                tile.containerSlots.setStackInSlot(slot, result.getResult());
-            }
+            FluidUtilBC.fillContainerSlot(tile.containerSlots, 3, this.tankOutput);
         }
 
         @Override

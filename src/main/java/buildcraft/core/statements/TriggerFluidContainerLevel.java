@@ -17,14 +17,14 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?} else {
-/*import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
+import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.core.BCCoreSprites;
@@ -73,10 +73,7 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
-            ResourceHandler<FluidResource> itemHandler = stack.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forStack(stack));
-            if (itemHandler != null && itemHandler.size() > 0) {
-                searchedFluid = itemHandler.getResource(0);
-            }
+            searchedFluid = FluidResource.of(FluidUtilBC.getFluidContained(stack));
         }
 
         int tanks = handler.size();
@@ -125,7 +122,7 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
         if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
             net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
-            searchedFluid = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+            searchedFluid = FluidUtilBC.getFluidContained(stack);
         }
 
         int tanks = handler.getTanks();

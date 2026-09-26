@@ -15,7 +15,6 @@ import java.util.Set;
 
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.core.IFluidFilter;
@@ -31,6 +30,7 @@ import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
 import buildcraft.lib.inventory.filter.ArrayStackOrListFilter;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.inventory.filter.StatementParameterStackFilter;
+import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
 
@@ -112,7 +112,7 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         }
         Set<Fluid> fluids = new HashSet<>();
         for (ItemStack stack : stacks) {
-            FluidStack contained = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+            FluidStack contained = FluidUtilBC.getFluidContained(stack);
             if (!contained.isEmpty()) {
                 fluids.add(contained.getFluid());
             }
@@ -144,7 +144,7 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
                     return true;
                 }
                 for (ItemStack stack : param.getStacks()) {
-                    FluidStack fluid = FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+                    FluidStack fluid = FluidUtilBC.getFluidContained(stack);
                     if (!fluid.isEmpty() && filter.matches(fluid)) {
                         return true;
                     }

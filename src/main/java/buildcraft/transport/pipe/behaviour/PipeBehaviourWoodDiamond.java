@@ -20,7 +20,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidUtil;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
@@ -30,6 +29,7 @@ import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 
+import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -229,11 +229,7 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
 
     /** The fluid represented by the filter item in the given slot (e.g. a bucket's contents), or empty. */
     private FluidStack getFilterFluid(int slot) {
-        ItemStack stack = filters.getStackInSlot(slot);
-        if (stack.isEmpty()) {
-            return FluidStack.EMPTY;
-        }
-        return FluidUtil.getFluidContained(stack).orElse(FluidStack.EMPTY);
+        return FluidUtilBC.getFluidContained(filters.getStackInSlot(slot));
     }
 
     private void advanceFilter() {

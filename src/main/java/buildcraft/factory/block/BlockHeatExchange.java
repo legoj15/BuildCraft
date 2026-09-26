@@ -209,10 +209,8 @@ public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> imp
         TileHeatExchange.ExchangeSection section = exchange.getSection();
         if (section != null) {
             // Try bucket/fluid container interaction with section tanks
-            @SuppressWarnings("removal")
             boolean didChange = FluidUtilBC.onTankActivated(player, pos, hand, section.tankInput);
             if (!didChange) {
-                @SuppressWarnings("removal")
                 boolean didChangeOutput = FluidUtilBC.onTankActivated(player, pos, hand, section.tankOutput);
                 didChange = didChangeOutput;
             }

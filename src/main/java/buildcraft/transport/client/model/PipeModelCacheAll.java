@@ -23,7 +23,6 @@ import buildcraft.lib.client.model.ModelCacheJoiner.ModelKeyWrapper;
 import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseCutoutKey;
 import buildcraft.transport.client.model.PipeModelCacheBase.PipeBaseTranslucentKey;
 import buildcraft.transport.client.model.PipeModelCachePluggable.PluggableKey;
-import buildcraft.transport.client.model.key.PipeModelKey;
 import buildcraft.transport.tile.TilePipeHolder;
 
 public class PipeModelCacheAll {
@@ -48,16 +47,6 @@ public class PipeModelCacheAll {
 
     public static List<BakedQuad> getTranslucentModel(TilePipeHolder tile) {
         return cacheTranslucent.bake(new PipeAllTranslucentKey(tile));
-    }
-
-    /** Returns translucent overlay quads as MutableQuads (for AddSectionGeometryEvent rendering).
-     *  These quads have vertex colours pre-set but need lighti() before rendering. */
-    public static List<buildcraft.lib.client.model.MutableQuad> getTranslucentMutableModel(TilePipeHolder tile) {
-        if (tile.getPipe() == null) return java.util.Collections.emptyList();
-        PipeModelKey modelKey = tile.getPipe().getModel();
-        PipeBaseTranslucentKey key = new PipeBaseTranslucentKey(modelKey);
-        if (!key.shouldRender()) return java.util.Collections.emptyList();
-        return PipeModelCacheBase.generator.generateTranslucentMutable(key);
     }
 
     public static void clearModels() {

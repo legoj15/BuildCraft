@@ -12,7 +12,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +41,6 @@ public class BCEnergy {
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             buildcraft.energy.client.BCEnergyClient.initClient(modEventBus);
         }
-
-        // Creative tab
-        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (BuildCreativeModeTabContentsEvent event) -> {
-            addCreativeTabItems(event);
-        });
 
         // Register NeoForge capabilities for engines
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
@@ -148,9 +142,6 @@ public class BCEnergy {
                 return dynamo.energyStorage;
             }
         );
-    }
-
-    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

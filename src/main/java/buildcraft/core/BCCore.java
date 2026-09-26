@@ -18,7 +18,6 @@ import net.minecraft.core.registries.Registries;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.item.DyeColor;
 import buildcraft.core.item.ItemPaintbrush_BC8;
@@ -115,7 +114,6 @@ public class BCCore {
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
-        modEventBus.addListener(this::buildCreativeTabContents);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::onConfigChanged);
 
@@ -488,9 +486,6 @@ public class BCCore {
             BCCoreBlockEntities.POWER_TESTER.get(),
             (tester, direction) -> tester
         );
-    }
-
-    private void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
     }
 
 }

@@ -562,7 +562,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
      *  Uses mask sprites (which have alpha=0 over the frame, alpha=255 over
      *  the glass area) so the tint only colours the see-through parts.
      *  Alpha=76 gives the same semi-transparency as overlay_stained.png. */
-    public List<MutableQuad> generateTranslucentMutable(PipeBaseTranslucentKey key) {
+    private List<MutableQuad> generateTranslucentMutable(PipeBaseTranslucentKey key) {
         if (!key.shouldRender()) return ImmutableList.of();
         List<MutableQuad> quads = new ArrayList<>();
 

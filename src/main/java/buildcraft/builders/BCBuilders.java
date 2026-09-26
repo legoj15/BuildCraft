@@ -12,7 +12,6 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.filler.FillerManager;
@@ -67,9 +66,6 @@ public class BCBuilders {
         });
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
-        });
-        modEventBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            buildCreativeTabContents(event);
         });
 
         // Per-server-tick driver for BCBuildersEventDist.onServerTick, which throttles
@@ -137,8 +133,6 @@ public class BCBuilders {
             (architect, direction) -> architect.getItemHandler(direction));
     }
 
-    private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
-    }
 
 
 }

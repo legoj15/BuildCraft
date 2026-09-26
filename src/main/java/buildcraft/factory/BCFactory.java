@@ -10,7 +10,6 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,12 +46,9 @@ public class BCFactory {
             buildcraft.factory.client.BCFactoryClient.initClient(modEventBus);
         }
 
-        // Register capabilities and creative tab
+        // Register capabilities
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
-        });
-        modEventBus.addListener((BuildCreativeModeTabContentsEvent event) -> {
-            addCreativeTabItems(event);
         });
 
         // Notify TilePump when COMMON config reloads so running pumps re-evaluate
@@ -199,8 +195,5 @@ public class BCFactory {
         //?}
         event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
             (heatExchange, direction) -> heatExchange.getFluidTankForDirection(direction));
-    }
-
-    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
     }
 }

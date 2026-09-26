@@ -61,14 +61,6 @@ Neither 1.12.2 nor the modern port wires up scrolling on the [GuiElectronicLibra
 
 Use `FakePlayerFactory.get` instead of `new FakePlayer(...)`. [BCCore.java:224/230/237](../src/main/java/buildcraft/core/BCCore.java) allocates a full `ServerPlayer` on *every* fake-player request, including the per-block `BlockUtil.canMachineBreak` check in quarry/mining-well/builder scan loops (default `minePlayerProtected=false` means that path is live). Pure GC churn; all five nodes. While there: the unowned fake-player `GameProfile` is defined twice with identical values ([BCCore.java:215-219](../src/main/java/buildcraft/core/BCCore.java) and [BlockUtil.java:142-145](../src/main/java/buildcraft/lib/misc/BlockUtil.java)) — collapse to one constant.
 
-## Dead AddSectionGeometryEvent remnants
-
-`PipeModelCacheAll.getTranslucentMutableModel` has no callers and its javadoc claims BC renders through `AddSectionGeometryEvent`, which is false and actively misleading (BC never used the event; pipe translucent overlays go through the ordinary block-model pipeline). Check whether `IPipeBaseModelGen.generateTranslucentMutable` can go with it — its override is still reached from `PipeBaseModelGenStandard`, so only the cache-level entry point is cleanly dead.
-
-## Dead empty creative-tab listeners
-
-Four subsystems register a `BuildCreativeModeTabContentsEvent` listener whose handler body is empty — dead wiring from an earlier tab-fill strategy (the live strategy is `displayItems` lambdas on the tab builders, plus real event feeds in `BCTransport` and `BCSilicon`): `BCCore.buildCreativeTabContents` (~line 488), `BCFactory.addCreativeTabItems` (~204), `BCEnergy.addCreativeTabItems` (~153), `BCBuilders.buildCreativeTabContents` (~140). Delete each method, its `addListener` registration, and the now-unused imports. `BCRobotics`' identical dead listener was already removed when its items moved to the dedicated robots tab.
-
 ## Deprecated FluidUtil helper
 
 Migrate off deprecated `FluidUtil.getFluidContained`. [PipeBehaviourWoodDiamond.java:230](../src/main/java/buildcraft/transport/pipe/behaviour/PipeBehaviourWoodDiamond.java) calls `net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ItemStack)`, which NeoForge has marked deprecated-for-removal (2 build warnings surfaced on the 26.2 node). Swap to the fluid-handler item capability (`Capabilities.FluidHandler.ITEM` → `getFluidInTank(0)`) before NeoForge drops the helper.

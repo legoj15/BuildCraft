@@ -136,7 +136,7 @@ Verified in a live 26.1.2 client on 2026-09-26 (McDevBridge): kinesis MJ flow, t
 - TNT beside an obsidian-faced pipe (the facade shields that side — the resistance itself is game-tested; this is the look of the blast).
 - A working robot's smoke rate (fewer on Decreased/Minimal).
 - Cosmetic, maybe older than this round: on the Filler GUI, JEI's page-left arrow sits over the owner ledger at the window's top-right (JEI avoids ledgers for its item grid, not its nav bar).
-- McDevBridge lacks a `/screenclick` endpoint (mouse button + GUI coords); that is what blocks the mouse-driven checks headless.
+- The mouse-driven checks can now run headless: McDevBridge `4f0b536` added `/screenclick` (list widgets, click by text/slot/GUI coords/fractions, any mouse button) and `/screenhover` (tooltips) on all five nodes. Next: a scripted per-node smoke run that collects screenshots for review.
 
 Moved from this list into tests (2026-09-26): water gel's per-stage break speed and sounds (`WaterGelBlockTester`, via the same state calls the client digs with); the client's no-swing prediction for a blank robot (`ItemRobotPlacementTester.clientPredictsNoSwingForBlankRobot`; the server-side refusal and message were already pinned); the facade/gate/lens/fragile-shard JEI keys, identity and exact legacy text (`JeiSubtypeKeysTest`). The 1.21.1 JEI bookmark worry is narrower than first written: JEI 19.27's `BookmarkJsonConfig` saves the full stack through the ingredient codec, so bookmarks resolve by stack; only the pre-JSON `LegacyBookmarkConfig` import matches the legacy subtype text, which the key test now pins.
 

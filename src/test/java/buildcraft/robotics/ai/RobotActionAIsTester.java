@@ -342,27 +342,34 @@ public class RobotActionAIsTester {
             mob.setNoGravity(true);
         }
 
-        try {
-            EntityRobot robot = unaddedRobot(helper, new BlockPos(1, 2, 2));
-            IEntityFilter hostiles = entity -> entity instanceof Enemy;
-            AIRobotSearchEntity search = new AIRobotSearchEntity(robot, hostiles, 8F, null);
-            search.start();
-            helper.assertTrue(search.success(), "the search finds a hostile in range");
-            helper.assertTrue(search.target == near,
-                    "the nearest hostile wins, got " + search.target);
+        // The scan is a synchronous getEntitiesOfClass: a mob whose entity section isn't accessible yet is in
+        // the world but invisible to it, so scanning on tick 0 flaked. Force-load the arena and scan on the
+        // first tick every mob is visible to the same kind of query the AI makes.
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 2, 3));
+        EntityArenaUtil.tickUntil(helper, 60, () -> java.util.Arrays.stream(spawned).allMatch(mob -> helper.getLevel()
+                        .getEntitiesOfClass(Mob.class, AABB.ofSize(mob.position(), 1, 1, 1)).contains(mob)), () -> {
+            try {
+                EntityRobot robot = unaddedRobot(helper, new BlockPos(1, 2, 2));
+                IEntityFilter hostiles = entity -> entity instanceof Enemy;
+                AIRobotSearchEntity search = new AIRobotSearchEntity(robot, hostiles, 8F, null);
+                search.start();
+                helper.assertTrue(search.success(), "the search finds a hostile in range");
+                helper.assertTrue(search.target == near,
+                        "the nearest hostile wins, got " + search.target);
 
-            near.discard();
-            far.discard();
-            AIRobotSearchEntity empty = new AIRobotSearchEntity(robot, hostiles, 8F, null);
-            empty.start();
-            helper.assertTrue(!empty.success(),
-                    "no hostiles left in range — the search reports nothing (the cow never matched)");
-        } finally {
-            for (Mob mob : spawned) {
-                mob.discard();
+                near.discard();
+                far.discard();
+                AIRobotSearchEntity empty = new AIRobotSearchEntity(robot, hostiles, 8F, null);
+                empty.start();
+                helper.assertTrue(!empty.success(),
+                        "no hostiles left in range — the search reports nothing (the cow never matched)");
+            } finally {
+                for (Mob mob : spawned) {
+                    mob.discard();
+                }
             }
-        }
-        helper.succeed();
+            helper.succeed();
+        }, "the spawned mobs never became visible to entity scans");
     }
 
     // ---------- knight E2E: SearchEntity → Attack through the live tick loop ----------

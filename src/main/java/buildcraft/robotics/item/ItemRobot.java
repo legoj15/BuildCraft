@@ -165,13 +165,28 @@ public class ItemRobot extends Item {
         return id == null || BoardRobotEmptyNBT.ID.equals(id);
     }
 
+    /** True when a robot placed from this stack would carry no program — the placement guard, broader than
+     *  {@link #hasEmptyBoard}. Besides the board-less template it covers a board id that resolves to the empty
+     *  board through the registry: an id nothing registers (a removed addon's board, one renamed between
+     *  releases, hand-edited data) or a registered board that is not a robot board. 7.1.x refused on the
+     *  RESOLVED board ({@code getRobotNBT(stack) == getEmptyRobotBoard()}), so such a stack never placed an
+     *  idle robot that squats on a station. {@link #hasEmptyBoard} stays keyed on the id for the tooltip,
+     *  charge bar and stacking, where an unknown board's stored data is still worth showing and keeping. */
+    public static boolean isUnprogrammed(ItemStack stack) {
+        if (hasEmptyBoard(stack)) {
+            return true;
+        }
+        RedstoneBoardRobotNBT board = getRobotBoard(stack);
+        return board == null || board == RedstoneBoardRegistry.instance.getEmptyRobotBoard();
+    }
+
     // ── Placement ───────────────────────────────────────────────────────────
 
     /** Places a robot onto the {@code RobotStationPluggable} on the clicked face.
      *
      * <p>Order is load-bearing and matches 7.1.x: the face has to carry a station (anything else PASSes), a
-     * blank robot is then refused ("Not programmed" on the action bar, {@code FAIL} so the hand does not
-     * swing — checked before the taken test, as the more useful answer), the station must be untaken, the
+     * blank robot ({@link #isUnprogrammed}) is then refused ("Not programmed" on the action bar, {@code FAIL}
+     * so the hand does not swing — checked before the taken test, as the more useful answer), the station must be untaken, the
      * cancellable {@code RobotEvent.Place} is posted before <em>anything</em> is committed, the id comes from the registry
      * before the entity reaches the world, the robot is positioned at the station's face centre, and the
      * station is taken as MAIN (a plain {@code take} would leave the robot with no linked station and it would
@@ -195,14 +210,14 @@ public class ItemRobot extends Item {
             if (!isStationFace) {
                 return InteractionResult.PASS;
             }
-            return hasEmptyBoard(stack) ? InteractionResult.FAIL : InteractionResult.SUCCESS;
+            return isUnprogrammed(stack) ? InteractionResult.FAIL : InteractionResult.SUCCESS;
         }
 
         DockingStation station = stationOnFace(tile, face);
         if (station == null) {
             return InteractionResult.PASS;
         }
-        if (hasEmptyBoard(stack)) {
+        if (isUnprogrammed(stack)) {
             // 7.1.x refused a blank robot before anything else (getRobotNBT(stack) == getEmptyRobotBoard()),
             // silently. The port says why, on the action bar, and answers FAIL: handled (nothing else runs for
             // this click) but no arm swing, since nothing was placed and nothing is consumed.

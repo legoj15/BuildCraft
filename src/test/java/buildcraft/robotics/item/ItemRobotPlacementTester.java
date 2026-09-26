@@ -358,9 +358,10 @@ public class ItemRobotPlacementTester {
         //?}
     }
 
-    /** A blank robot — the bare no-blob stack AND a stack naming the empty board outright — is refused, as
-     *  7.1.x refused it ({@code getRobotNBT(stack) == getEmptyRobotBoard()} returned before any spawn): no
-     *  robot, the station stays free, the whole stack of 16 stays in hand, and {@code useOn} answers
+    /** A blank robot — the bare no-blob stack, a stack naming the empty board outright, AND a stack naming a
+     *  board id nothing registers (which the registry resolves to the empty board) — is refused, as 7.1.x
+     *  refused it ({@code getRobotNBT(stack) == getEmptyRobotBoard()}, a comparison of the RESOLVED board,
+     *  returned before any spawn): no robot, the station stays free, the whole stack stays in hand, and {@code useOn} answers
      *  {@code FAIL} so the hand does not swing a placement that never happened. The port's addition over
      *  7.1.x's silent refusal: one action-bar "Not programmed" message per click. */
     public static void blankRobotRefusesPlacement(GameTestHelper helper) {
@@ -380,8 +381,15 @@ public class ItemRobotPlacementTester {
             namedEmpty.setCount(16);
             helper.assertTrue(bare.getCount() == 16 && namedEmpty.getCount() == 16,
                     "precondition: blank robots stack to 16");
+            // A board id nothing registers (a removed addon's board, a board renamed between releases,
+            // hand-edited data) resolves to the empty board through the registry, so the robot it would
+            // place is just as blank -- 7.1.x compared the RESOLVED board and refused it too. The id is not
+            // the empty board's, so the stack carries MAX_STACK_SIZE 1: its expected count is 1, not 16.
+            ItemStack unknownBoard = ItemRobot.createRobotStack("buildcraftunofficial:no_such_board",
+                    3000L * MjAPI.MJ);
 
-            for (ItemStack blank : new ItemStack[] { bare, namedEmpty }) {
+            for (ItemStack blank : new ItemStack[] { bare, namedEmpty, unknownBoard }) {
+                int count = blank.getCount();
                 RecordingPlayer player = new RecordingPlayer(helper.getLevel());
                 player.setItemInHand(InteractionHand.MAIN_HAND, blank);
                 InteractionResult result = BCRoboticsItems.ROBOT.get()
@@ -394,9 +402,9 @@ public class ItemRobotPlacementTester {
                 helper.assertTrue(placed.isEmpty(),
                         "a blank robot must not place — 7.1.x refused it" + describe(placed));
                 helper.assertFalse(station.isTaken(), "a refused placement must leave the station free");
-                helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 16,
+                helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == count,
                         "a refused placement must consume nothing, leaving "
-                                + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of 16");
+                                + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of " + count);
                 helper.assertTrue(player.overlay.size() == 1,
                         "exactly one action-bar message per refused click, got " + player.overlay);
                 helper.assertTrue(player.overlay.get(0).getContents() instanceof TranslatableContents tc

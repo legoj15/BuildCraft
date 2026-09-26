@@ -39,23 +39,61 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     implements IItemHandlerAdv, INBTSerializable<CompoundTag> {
 
     //? if >=1.21.10 {
-    private final SnapshotJournal<ItemStack[]> journal = new SnapshotJournal<>() {
-        @Override
-        protected ItemStack[] createSnapshot() {
-            ItemStack[] snap = new ItemStack[stacks.size()];
-            for (int i = 0; i < snap.length; i++) {
-                snap[i] = stacks.get(i).copy();
-            }
-            return snap;
+    /**
+     * One journal per slot, created lazily (a slot only needs one once a transaction touches it). The change callback
+     * fires from {@link SlotJournal#onRootCommit}, i.e. once per slot per committed root transaction and only if the
+     * slot really differs from its pre-transaction contents — never mid-transaction, where a later rollback would
+     * leave the tile told about a change that never happened (and dirtied for nothing). Mirrors NeoForge's own
+     * {@code StacksResourceHandler}, and matches the 1.21.1 classic path, which never fires for a simulation.
+     */
+    @Nullable
+    private SlotJournal[] journals;
+
+    private final class SlotJournal extends SnapshotJournal<ItemStack> {
+        private final int index;
+
+        SlotJournal(int index) {
+            this.index = index;
         }
 
         @Override
-        protected void revertToSnapshot(ItemStack[] snapshot) {
-            for (int i = 0; i < snapshot.length; i++) {
-                stacks.set(i, snapshot[i] != null ? snapshot[i] : StackUtil.EMPTY);
+        protected ItemStack createSnapshot() {
+            return stacks.get(index).copy();
+        }
+
+        @Override
+        protected void revertToSnapshot(ItemStack snapshot) {
+            stacks.set(index, asValid(snapshot));
+        }
+
+        @Override
+        protected void onRootCommit(ItemStack originalState) {
+            ItemStack now = stacks.get(index);
+            if (callback != null && !ItemStack.matches(originalState, now)) {
+                callback.onStackChange(ItemHandlerSimple.this, index, asValid(originalState), now);
             }
         }
-    };
+    }
+
+    /** Snapshot {@code index} into {@code tx} before changing it; without a transaction, report the change now. */
+    private void changeSlot(int index, ItemStack before, ItemStack after, @Nullable TransactionContext tx) {
+        if (tx == null) {
+            setStackInternal(index, after);
+            if (callback != null) {
+                callback.onStackChange(this, index, before, asValid(after));
+            }
+            return;
+        }
+        if (journals == null) {
+            journals = new SlotJournal[stacks.size()];
+        }
+        SlotJournal journal = journals[index];
+        if (journal == null) {
+            journal = journals[index] = new SlotJournal(index);
+        }
+        journal.updateSnapshots(tx);
+        setStackInternal(index, after);
+    }
     //?}
 
 
@@ -67,7 +105,6 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     public final NonNullList<ItemStack> stacks;
 
-    private int firstUsed = Integer.MAX_VALUE;
     /** Per-slot capacity reported by {@link #getCapacityAsLong} and {@link #getSlotLimit},
      * consulted by {@link buildcraft.lib.gui.slot.SlotBase#getMaxStackSize} when vanilla decides
      * how many items a click or shift-click may deposit. Defaults to 64; the
@@ -254,13 +291,7 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         
         int inserted = amount - result.toReturn.getCount();
         if (inserted > 0) {
-            if (tx != null) {
-                journal.updateSnapshots(tx);
-            }
-            setStackInternal(index, result.toSet);
-            if (callback != null) {
-                callback.onStackChange(this, index, current, result.toSet);
-            }
+            changeSlot(index, current, result.toSet, tx);
         }
         return inserted;
     }
@@ -273,18 +304,10 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
         int toExtract = Math.min(amount, current.getCount());
         if (toExtract > 0) {
-            ItemStack before = current.copy();
             ItemStack after = current.copy();
             after.shrink(toExtract);
             if (after.getCount() <= 0) after = StackUtil.EMPTY;
-
-            if (tx != null) {
-                journal.updateSnapshots(tx);
-            }
-            setStackInternal(index, after);
-            if (callback != null) {
-                callback.onStackChange(this, index, before, after);
-            }
+            changeSlot(index, current, after, tx);
         }
         return toExtract;
     }
@@ -310,19 +333,6 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
 
     private void setStackInternal(int slot, @Nonnull ItemStack stack) {
         stacks.set(slot, asValid(stack));
-        if (stack.isEmpty() && firstUsed == slot) {
-            for (int s = firstUsed; s < size(); s++) {
-                if (!stacks.get(s).isEmpty()) {
-                    firstUsed = s;
-                    break;
-                }
-            }
-            if (firstUsed == slot) {
-                firstUsed = Integer.MAX_VALUE;
-            }
-        } else if (!stack.isEmpty() && firstUsed > slot) {
-            firstUsed = slot;
-        }
     }
 
     //? if >=1.21.10 {

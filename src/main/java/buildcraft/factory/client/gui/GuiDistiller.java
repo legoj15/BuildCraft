@@ -18,7 +18,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 
 import buildcraft.factory.container.ContainerDistiller;
 import buildcraft.lib.gui.GuiBC8;

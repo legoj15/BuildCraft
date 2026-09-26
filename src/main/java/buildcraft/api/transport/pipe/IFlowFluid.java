@@ -7,7 +7,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.core.Direction;
 
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
@@ -35,13 +34,13 @@ public interface IFlowFluid {
     }
 
     /** Advanced version of {@link #tryExtractFluid(int, Direction, FluidStack, boolean)}. Note that this only works for
-     * instances of {@link IFluidHandler} that ALSO extends {@link IFluidHandlerAdv}
+     * fluid handlers that ALSO extend {@link IFluidHandlerAdv}
      * 
      * @param millibuckets
      * @param from
      * @param filter A filter to try and match fluids.
      * @return The fluidstack extracted and inserted into the pipe. If {@link ActionResult#getType()} equals
-     *         {@link InteractionResult#PASS} then it means that the {@link IFluidHandler} didn't implement
+     *         {@link InteractionResult#PASS} then it means that the fluid handler didn't implement
      *         {@link IFluidHandlerAdv} and you should call the basic version, if you can. */
     Object tryExtractFluidAdv(int millibuckets, Direction from, IFluidFilter filter, boolean simulate);
 

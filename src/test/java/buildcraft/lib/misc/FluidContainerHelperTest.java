@@ -5,6 +5,9 @@
  */
 package buildcraft.lib.misc;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -265,5 +268,54 @@ public class FluidContainerHelperTest extends VanillaSetupBaseTester {
         assertFluid(tank.getFluidStack(0), Fluids.WATER, 2000, "no fluid may vanish into a refused transfer");
         Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.BUCKET, 2), slots.stacks.get(0)),
                 "both empty buckets must survive, got " + slots.stacks.get(0));
+    }
+
+    // ---- a stalled machine must not touch its tile ---------------------------------------------------------------
+    // The Distiller / Heat Exchanger retry their container slots every few ticks. When the move cannot happen (tank
+    // full, bucket already full) the slot's change callback — the tile's setChanged(), which dirties the chunk and
+    // pings comparators — must not fire; a real swap fires it exactly once, as setStackInSlot did on the old path.
+
+    private static ItemHandlerSimple watchedSlot(ItemStack contents, List<ItemStack> changes) {
+        ItemHandlerSimple slots = slot(contents, 1);
+        slots.setCallback((handler, slot, before, after) -> changes.add(after.copy()));
+        return slots;
+    }
+
+    @Test
+    public void stalledDrainDoesNotReportASlotChange() {
+        List<ItemStack> changes = new ArrayList<>();
+        ItemHandlerSimple slots = watchedSlot(new ItemStack(Items.WATER_BUCKET), changes);
+        BCFluidTank full = tank(1000, new FluidStack(Fluids.WATER, 1000));
+
+        Assertions.assertFalse(FluidUtilBC.drainContainerSlot(slots, 0, full), "a full tank takes no bucket");
+        Assertions.assertEquals(List.of(), changes, "a refused drain changed nothing, so the tile must not be dirtied");
+    }
+
+    @Test
+    public void stalledFillDoesNotReportASlotChange() {
+        List<ItemStack> changes = new ArrayList<>();
+        ItemHandlerSimple slots = watchedSlot(new ItemStack(Items.WATER_BUCKET), changes);
+        BCFluidTank source = tank(4000, new FluidStack(Fluids.WATER, 2000));
+
+        Assertions.assertFalse(FluidUtilBC.fillContainerSlot(slots, 0, source), "a full bucket takes no more");
+        Assertions.assertEquals(List.of(), changes, "a refused fill changed nothing, so the tile must not be dirtied");
+    }
+
+    @Test
+    public void successfulSwapReportsExactlyOneSlotChange() {
+        List<ItemStack> drained = new ArrayList<>();
+        ItemHandlerSimple drainSlot = watchedSlot(new ItemStack(Items.WATER_BUCKET), drained);
+        Assertions.assertTrue(FluidUtilBC.drainContainerSlot(drainSlot, 0, tank(4000, FluidStack.EMPTY)), "drain");
+        Assertions.assertEquals(1, drained.size(), "one swap, one callback — got " + drained);
+        Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.BUCKET), drained.get(0)),
+                "the callback must report the final empty bucket, got " + drained.get(0));
+
+        List<ItemStack> filled = new ArrayList<>();
+        ItemHandlerSimple fillSlot = watchedSlot(new ItemStack(Items.BUCKET), filled);
+        Assertions.assertTrue(FluidUtilBC.fillContainerSlot(fillSlot, 0,
+                tank(4000, new FluidStack(Fluids.WATER, 1000))), "fill");
+        Assertions.assertEquals(1, filled.size(), "one swap, one callback — got " + filled);
+        Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.WATER_BUCKET), filled.get(0)),
+                "the callback must report the final water bucket, got " + filled.get(0));
     }
 }

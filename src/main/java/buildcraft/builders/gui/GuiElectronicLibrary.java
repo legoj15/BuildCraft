@@ -20,7 +20,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementScrollbar;
 import buildcraft.lib.gui.elem.ScrollWindow;
-import buildcraft.lib.gui.elem.SelectionFollower;
+import buildcraft.lib.gui.elem.ScrolledList;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -90,8 +90,9 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     /** Scroll position of the snapshot list. Lives on the screen (not on an element) so it survives the
      *  element rebuild that {@code init()} does on every window resize. */
     private final ScrollWindow scroll = new ScrollWindow(LIST_MAX_ROWS);
-    /** Scrolls the list to a selection that changed from outside (GUI open, server sync) — see {@link #refreshList()}. */
-    private final SelectionFollower<Snapshot.Key> selectionFollower = new SelectionFollower<>();
+    /** The list as last shown: follows a selection that changed from outside (GUI open, server sync) and hit-tests
+     *  clicks against the rows the player saw — see {@link #refreshList()} and {@link #clickList}. */
+    private final ScrolledList<Snapshot.Key> rows = new ScrolledList<>(scroll);
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_X, SIZE_Y);
@@ -184,30 +185,26 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
      *  <p>
      *  When the selection changes by any route other than a click in the visible rows (the GUI opening on a
      *  saved selection, the server syncing a new one) the list scrolls just far enough to show it. It does
-     *  not re-follow an unchanged selection, so the player can freely scroll away from it. */
+     *  not re-follow an unchanged selection, so the player can freely scroll away from it. The list read never
+     *  touches disk (a cached index, refreshed in the background). */
     private List<Snapshot.Key> refreshList() {
-        List<Snapshot.Key> list = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).getList();
-        scroll.setTotal(list.size());
-        selectionFollower.follow(scroll, list, menu.tile != null ? menu.tile.selected : null);
-        return list;
+        return rows.refresh(GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).getList(),
+                menu.tile != null ? menu.tile.selected : null);
     }
 
     /** Enable/disable the delete button based on whether a snapshot is currently selected
-     *  and present in the local client library. */
+     *  and present in the local client library (checked against the cached list, not the disk). */
     private void updateDeleteButtonActive() {
         if (deleteButton == null) return;
         Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
-        boolean canDelete = selected != null
-                && GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT)
-                        .getSnapshot(selected) != null;
-        deleteButton.active = canDelete;
+        deleteButton.active = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).isListed(selected);
     }
 
     private void onDeletePressed() {
         GlobalSavedDataSnapshots clientSnapshots =
                 GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
         Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
-        if (selected == null || clientSnapshots.getSnapshot(selected) == null) return;
+        if (!clientSnapshots.isListed(selected)) return;
 
         clientSnapshots.removeSnapshot(selected);
         menu.sendSelectedToServer(null);
@@ -310,16 +307,15 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W) {
             return false;
         }
-        List<Snapshot.Key> list = refreshList();
-        int index = scroll.indexAt(mouseY - (topPos + LIST_Y), LIST_ROW_H);
-        if (index < 0) return false;
-        Snapshot.Key key = list.get(index);
+        // Hit-test the rows as last drawn. No refresh here: a selection sync or a list change that arrived since
+        // the frame would otherwise scroll or reshuffle the rows under the cursor before the click resolves.
+        Snapshot.Key key = rows.pick(mouseY - (topPos + LIST_Y), LIST_ROW_H);
+        if (key == null) return false;
         menu.sendSelectedToServer(key);
         // Optimistic client-side update for immediate visual feedback
         if (menu.tile != null) {
             menu.tile.selected = key;
         }
-        selectionFollower.markShown(key); // already on screen, nothing to follow
         updateDeleteButtonActive();
         return true;
     }

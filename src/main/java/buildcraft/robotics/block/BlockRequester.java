@@ -58,6 +58,12 @@ public class BlockRequester extends BlockBCTile_Directional<TileRequester> {
         return RenderShape.MODEL;
     }
 
+    /** 7.1.x comparator output (the base reads {@code TileRequester.getComparatorLevel}). */
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
     /** Drops the delivery slots' contents (the phantom templates are excluded by the itemManager and are
      *  never real items). The block itself drops via its loot table. */
     @Override

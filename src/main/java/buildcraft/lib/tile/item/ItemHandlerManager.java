@@ -59,6 +59,11 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
         if (parts == null) {
             parts = new EnumPipePart[0];
         }
+        // A handler built outside the manager (e.g. an ItemHandlerFiltered) would otherwise change silently: no
+        // setChanged(), so no chunk-dirty mark and no comparator update. An explicitly wired callback is kept.
+        if (handler instanceof ItemHandlerSimple simple && !simple.hasCallback()) {
+            simple.setCallback(callback);
+        }
         IBCItemHandler external = handler;
         if (access == EnumAccess.NONE || access == EnumAccess.PHANTOM) {
             external = null;

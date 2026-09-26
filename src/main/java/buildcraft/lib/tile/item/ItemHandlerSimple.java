@@ -153,6 +153,10 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         this.callback = callback;
     }
 
+    public boolean hasCallback() {
+        return callback != null;
+    }
+
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();

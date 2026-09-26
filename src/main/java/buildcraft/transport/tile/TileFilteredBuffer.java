@@ -21,7 +21,9 @@ import buildcraft.api.core.EnumPipePart;
 import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.InventoryUtil;
 
+import buildcraft.lib.tile.IComparatorOutputTile;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerFiltered;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
@@ -35,7 +37,7 @@ import buildcraft.transport.container.ContainerFilteredBuffer;
  * contains a matching item sample.
  * Ported from 1.12.2 TileFilteredBuffer.
  */
-public class TileFilteredBuffer extends TileBC_Neptune implements IBCMenuProvider {
+public class TileFilteredBuffer extends TileBC_Neptune implements IBCMenuProvider, IComparatorOutputTile {
     public final ItemHandlerSimple invFilter;
     public final ItemHandlerFiltered invMain;
 
@@ -52,6 +54,12 @@ public class TileFilteredBuffer extends TileBC_Neptune implements IBCMenuProvide
 
         invMain = new ItemHandlerFiltered(invFilter, false);
         itemManager.addInvHandler("main", invMain, EnumAccess.BOTH, EnumPipePart.VALUES);
+    }
+
+    /** 7.1.x {@code BlockFilteredBuffer.doesSlotCountComparator}: only filtered slots count. */
+    @Override
+    public int getComparatorLevel() {
+        return InventoryUtil.getComparatorLevel(invMain, slot -> !invFilter.getStackInSlot(slot).isEmpty());
     }
 
     // --- MenuProvider ---

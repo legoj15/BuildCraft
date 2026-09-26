@@ -160,6 +160,12 @@ public class BlockChute extends BlockBCTile_Neptune<TileChute> {
         return RenderShape.MODEL;
     }
 
+    /** Comparator output like the vanilla hopper and 7.1.x (the base reads {@code TileChute.getComparatorLevel}). */
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
     /** Drops the 4-slot internal inventory regardless of the tool used to break the
      *  block. The block-self drop is gated by the loot table + requiresCorrectToolForDrops,
      *  so an empty hand still returns the items the player had stored without giving back

@@ -48,6 +48,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.tile.IComparatorOutputTile;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -57,7 +58,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * inserts them into adjacent inventories. Powered by MJ.
  * Ported from 1.12.2 TileChute.
  */
-public class TileChute extends TileBC_Neptune implements IBCMenuProvider {
+public class TileChute extends TileBC_Neptune implements IBCMenuProvider, IComparatorOutputTile {
 
     private static final int PICKUP_MAX = 3;
     private static final long PROGRESS_TARGET = 100_000;
@@ -93,6 +94,12 @@ public class TileChute extends TileBC_Neptune implements IBCMenuProvider {
 
     public ItemHandlerSimple getInv() {
         return inv;
+    }
+
+    /** Like the vanilla hopper (and 7.1.x {@code BlockHopper.doesSlotCountComparator}): every slot counts. */
+    @Override
+    public int getComparatorLevel() {
+        return InventoryUtil.getComparatorLevel(inv, slot -> true);
     }
 
     // --- Ticking ---

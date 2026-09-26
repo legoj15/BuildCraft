@@ -18,7 +18,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.lib.gui.IBCMenuProvider;
+import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.tile.IComparatorOutputTile;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -37,7 +39,7 @@ import buildcraft.robotics.container.ContainerRequester;
  *  into it. The templates are an {@link ItemHandlerManager.EnumAccess#PHANTOM} handler: GUI-owned, never
  *  pipe-exposed, and excluded from break drops (a template is configuration, not an item — dropping it
  *  would mint items out of nothing). */
-public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IRequestProvider {
+public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IRequestProvider, IComparatorOutputTile {
     public static final int NB_ITEMS = 20;
 
     /** Where deliveries land. Free extraction (the goods are yours once delivered), checked insertion. */
@@ -71,6 +73,12 @@ public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IR
 
     public ItemStack getRequestTemplate(int index) {
         return invRequests.getStackInSlot(index);
+    }
+
+    /** 7.1.x {@code BlockRequester.doesSlotCountComparator}: only delivery slots with a request template count. */
+    @Override
+    public int getComparatorLevel() {
+        return InventoryUtil.getComparatorLevel(invDeliveries, slot -> !invRequests.getStackInSlot(slot).isEmpty());
     }
 
     /** 7.1.x {@code isItemValidForSlot}: a slot takes an item only when a template exists for it and the

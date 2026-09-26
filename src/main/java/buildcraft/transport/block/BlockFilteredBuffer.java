@@ -58,6 +58,12 @@ public class BlockFilteredBuffer extends BlockBCTile_Neptune<TileFilteredBuffer>
         return RenderShape.MODEL;
     }
 
+    /** 7.1.x comparator output (the base reads {@code TileFilteredBuffer.getComparatorLevel}). */
+    @Override
+    protected boolean hasAnalogOutputSignal(BlockState state) {
+        return true;
+    }
+
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state,
             @Nullable LivingEntity placer, ItemStack stack) {

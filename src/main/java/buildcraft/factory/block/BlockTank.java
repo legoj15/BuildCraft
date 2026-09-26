@@ -75,20 +75,12 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
         return CODEC;
     }
 
-    // Comparator output from the fill level (1.12.2 hasComparatorInputOverride/getComparatorInputOverride).
-    // TileTank already tracks the level change and calls setChanged(), which notifies adjacent comparators.
+    // Comparator output from the fill level (1.12.2 hasComparatorInputOverride/getComparatorInputOverride);
+    // the base reads TileTank.getComparatorLevel. TileTank tracks level changes and calls setChanged(),
+    // which notifies adjacent comparators.
     @Override
     protected boolean hasAnalogOutputSignal(BlockState state) {
         return true;
-    }
-
-    @Override
-    //? if >=1.21.10 {
-    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, Direction direction) {
-    //?} else {
-    /*protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {*/
-    //?}
-        return level.getBlockEntity(pos) instanceof TileTank tank ? tank.getComparatorLevel() : 0;
     }
 
     @Override

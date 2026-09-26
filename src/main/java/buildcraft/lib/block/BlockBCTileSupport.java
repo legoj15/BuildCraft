@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.IComparatorOutputTile;
 
 /**
  * Shared bodies for the two BuildCraft block bases — {@link BlockBCTile_Neptune} (a
@@ -32,6 +33,11 @@ import buildcraft.lib.tile.AbstractBCBlockEntity;
  */
 final class BlockBCTileSupport {
     private BlockBCTileSupport() {}
+
+    /** Comparator signal for a block whose tile is an {@link IComparatorOutputTile}; 0 for anything else. */
+    static int comparatorLevel(Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof IComparatorOutputTile tile ? tile.getComparatorLevel() : 0;
+    }
 
     /**
      * Records the placing player as the tile's owner (server-side only — owner attribution is server

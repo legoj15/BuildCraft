@@ -92,6 +92,19 @@ public abstract class BlockBCTile_Neptune<T extends AbstractBCBlockEntity> exten
         return BlockBCTileSupport.openTileMenu(level, pos, player);
     }
 
+    // --- Comparator output ---
+
+    /** Reads an {@link buildcraft.lib.tile.IComparatorOutputTile}. Consulted only when a subclass opts in by
+     *  overriding {@code hasAnalogOutputSignal} to return {@code true}. */
+    @Override
+    //? if >=1.21.10 {
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos, net.minecraft.core.Direction direction) {
+    //?} else {
+    /*protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {*/
+    //?}
+        return BlockBCTileSupport.comparatorLevel(level, pos);
+    }
+
     // --- Non-player removal drop catch-all (pre-1.21.10 API; >=1.21.10 uses TileBC_Neptune#preRemoveSideEffects) ---
     //? if <1.21.10 {
     /*@Override

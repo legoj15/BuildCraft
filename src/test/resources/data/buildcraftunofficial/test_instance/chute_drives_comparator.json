@@ -1,0 +1,10 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:chute_drives_comparator",
+    "environment":  "minecraft:default",
+    "structure":  "minecraft:empty",
+    "max_ticks":  100,
+    "setup_ticks":  0,
+    "required":  true,
+    "batch":  "chute_drives_comparator"
+}

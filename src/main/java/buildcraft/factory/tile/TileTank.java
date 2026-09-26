@@ -42,6 +42,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
+import buildcraft.lib.tile.IComparatorOutputTile;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.fluid.FluidSmoother;
 import buildcraft.api.tiles.IDebuggable;
@@ -52,7 +53,7 @@ import buildcraft.api.tiles.IDebuggable;
  * Each individual tank holds 16 buckets (16,000 mB).
  * Ported from 1.12.2 TileTank.
  */
-public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable, IComparatorOutputTile {
 
     public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);
@@ -94,6 +95,7 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
 
     // --- Comparator ---
 
+    @Override
     public int getComparatorLevel() {
         int amount = tank.getAmountMb(0);
         int cap = tank.getCapacityMb(0);

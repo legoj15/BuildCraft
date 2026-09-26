@@ -85,7 +85,6 @@ public abstract class TileAutoWorkbenchBase extends TileBC_Neptune implements IH
         invBlueprint = itemManager.addInvHandler("blueprint", gridSize, EnumAccess.PHANTOM);
         invMaterialFilter = itemManager.addInvHandler("material_filter", gridSize, EnumAccess.PHANTOM);
         ItemHandlerFiltered filtered = new ItemHandlerFiltered(invMaterialFilter, true);
-        filtered.setCallback(itemManager.callback);
         invMaterials = itemManager.addInvHandler("materials", filtered, EnumAccess.INSERT, EnumPipePart.VALUES);
         invResult = itemManager.addInvHandler("result", 1, EnumAccess.EXTRACT, EnumPipePart.VALUES);
 

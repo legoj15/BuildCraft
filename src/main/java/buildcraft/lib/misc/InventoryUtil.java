@@ -9,12 +9,14 @@ package buildcraft.lib.misc;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.IntPredicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -35,6 +37,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.tile.item.IBCItemHandler;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 public class InventoryUtil {
     /** Extracts all items from the handler and adds them to the given list. */
@@ -161,6 +164,35 @@ public class InventoryUtil {
 
         if (remaining <= 0) return ItemStack.EMPTY;
         return stack.copyWithCount(remaining);
+    }
+
+    /**
+     * Comparator signal from how full the counted slots of {@code inv} are: the 7.1.x
+     * {@code BlockBuildCraft.getComparatorInputOverride} formula (vanilla's container formula restricted to the
+     * slots {@code slotCounts} accepts). Each counted slot contributes its fill fraction against
+     * min(slot limit, item max stack size); the average maps to 0..14, plus 1 when any counted slot holds
+     * anything. No counted slot reads 0 — 7.1.x divided by zero there.
+     */
+    public static int getComparatorLevel(ItemHandlerSimple inv, IntPredicate slotCounts) {
+        int counted = 0;
+        boolean anyItem = false;
+        float fill = 0;
+        for (int slot = 0; slot < inv.getSlots(); slot++) {
+            if (!slotCounts.test(slot)) {
+                continue;
+            }
+            counted++;
+            ItemStack stack = inv.getStackInSlot(slot);
+            if (!stack.isEmpty()) {
+                anyItem = true;
+                int limit = Math.max(1, Math.min(inv.getSlotLimit(slot), stack.getMaxStackSize()));
+                fill += Math.min(1f, (float) stack.getCount() / limit);
+            }
+        }
+        if (counted == 0) {
+            return 0;
+        }
+        return Mth.floor(fill / counted * 14.0F) + (anyItem ? 1 : 0);
     }
 
     /** Drops the stack as an item entity at the given position. */

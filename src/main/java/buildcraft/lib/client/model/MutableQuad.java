@@ -153,7 +153,9 @@ public class MutableQuad {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
             net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
-            tintIndex, shade, lightEmission, true // ambientOcclusion: what the deprecated 6-arg form defaulted to
+            // ambientOcclusion=true: the deprecated 6-arg constructor is this(..., true) in NeoForge's patch; the
+            // 7-arg form has been in that patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
+            tintIndex, shade, lightEmission, true
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
@@ -211,7 +213,7 @@ public class MutableQuad {
         BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
             sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
             net.minecraft.client.renderer.Sheets.translucentBlockItemSheet(),
-            tintIndex, shade, lightEmission, true // ambientOcclusion: what the deprecated 6-arg form defaulted to
+            tintIndex, shade, lightEmission, true // ambientOcclusion: see toBakedBlock()
         );
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),

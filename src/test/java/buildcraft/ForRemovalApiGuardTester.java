@@ -111,6 +111,10 @@ public class ForRemovalApiGuardTester {
             "client classes must be resolvable in the unit-test JVM, or every client-side reference goes unchecked");
         Assertions.assertTrue(scanner.resolvedTypes.contains("net.neoforged.neoforge.common.NeoForge"),
             "NeoForge classes must be resolvable in the unit-test JVM");
+        // Every JEI plugin implements IModPlugin: if JEI ever drops off the test runtime, the JEI compat code (and the
+        // PENDING entries below) would go silently unchecked rather than failing.
+        Assertions.assertTrue(scanner.resolvedTypes.contains("mezz.jei.api.IModPlugin"),
+            "JEI must be resolvable in the unit-test JVM, or every JEI reference goes unchecked");
 
         Map<String, Set<String>> violations = new TreeMap<>();
         Set<String> pendingHit = new TreeSet<>();
@@ -173,10 +177,18 @@ public class ForRemovalApiGuardTester {
                 + "// import static " + fixture.replace('$', '.') + ".doomedField;\n"
                 + "import " + fixture.replace('$', '.') + ".DoomedType;\n"
                 + "import static " + fixture.replace('$', '.') + ".doomedMethod;\n"
-                + "class Imports {}\n"));
+                + "import static " + fixture.replace('$', '.') + ".ConstantHolder.DOOMED_CONSTANT;\n"
+                + "class Imports {\n"
+                + "    String sample = \"\"\"\n"
+                + "import static " + fixture.replace('$', '.') + ".doomedField;\n"
+                + "        \"\"\";\n"
+                + "}\n"));
         Assertions.assertTrue(imports.findings.containsKey(fixture + "$DoomedType"), "unused doomed import missed");
         Assertions.assertTrue(imports.findings.containsKey(fixture + "#doomedMethod"), "doomed static import missed");
-        Assertions.assertEquals(2, imports.findings.size(), "a commented-out import must not count: " + imports.findings);
+        Assertions.assertTrue(imports.findings.containsKey(fixture + "$DoomedConstants#DOOMED_CONSTANT"),
+            "a doomed constant statically imported through an implementing class's interface was missed");
+        Assertions.assertEquals(3, imports.findings.size(),
+            "a commented-out import, or import text inside a literal, must not count: " + imports.findings);
     }
 
     /** Which {@link #PENDING} entry (if any) covers {@code declaration} — the entry itself, or its owning type. */
@@ -343,8 +355,7 @@ public class ForRemovalApiGuardTester {
                 }
                 for (Class<?> sup : supertypes(type.get())) {
                     Method overridden = declaredMethod(sup, m.getName(), m.getParameterTypes());
-                    if (overridden != null && !Modifier.isPrivate(overridden.getModifiers())
-                            && !Modifier.isStatic(overridden.getModifiers()) && isForRemoval(overridden)) {
+                    if (overridden != null && overridable(overridden, type.get()) && isForRemoval(overridden)) {
                         record(overridden.getDeclaringClass().getName() + "#" + m.getName(),
                             bcClass + " (overrides it)");
                     }
@@ -356,7 +367,7 @@ public class ForRemovalApiGuardTester {
 
         /** @return how many imports resolved to a class (liveness). */
         int scanImports(MainSourceSet.SourceFile file) {
-            String code = MainSourceSet.stripComments(file.text());
+            String code = MainSourceSet.codeOnly(file.text());
             String user = file.relativePath() + " (import)";
             int resolved = 0;
             Matcher m = IMPORT.matcher(code);
@@ -391,8 +402,9 @@ public class ForRemovalApiGuardTester {
         }
 
         private void checkStaticImport(Class<?> type, String member, String user) {
-            try {
-                for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+            // Superclasses AND interfaces: a static import can name an interface constant or static method.
+            for (Class<?> c : withSupertypes(type)) {
+                try {
                     for (Field f : c.getDeclaredFields()) {
                         if (f.getName().equals(member) && isForRemoval(f)) {
                             record(c.getName() + "#" + member, user);
@@ -403,9 +415,9 @@ public class ForRemovalApiGuardTester {
                             record(c.getName() + "#" + member, user);
                         }
                     }
+                } catch (LinkageError ignored) {
+                    // a missing optional dependency in one supertype's signatures — keep walking
                 }
-            } catch (LinkageError ignored) {
-                // a missing optional dependency in a signature — the type check above still ran
             }
         }
 
@@ -515,6 +527,17 @@ public class ForRemovalApiGuardTester {
             return null;
         }
 
+        /** Whether {@code m} can be overridden from {@code by}: not private or static, and package-private only
+         *  within its own package. */
+        private static boolean overridable(Method m, Class<?> by) {
+            int mods = m.getModifiers();
+            if (Modifier.isPrivate(mods) || Modifier.isStatic(mods)) {
+                return false;
+            }
+            return Modifier.isPublic(mods) || Modifier.isProtected(mods)
+                || m.getDeclaringClass().getPackageName().equals(by.getPackageName());
+        }
+
         private static Method declaredMethod(Class<?> c, String name, Class<?>[] params) {
             try {
                 for (Method m : c.getDeclaredMethods()) {
@@ -578,6 +601,13 @@ public class ForRemovalApiGuardTester {
             @Deprecated(forRemoval = true)
             void doomedHook() {}
         }
+
+        interface DoomedConstants {
+            @Deprecated(forRemoval = true)
+            int DOOMED_CONSTANT = 1;
+        }
+
+        static final class ConstantHolder implements DoomedConstants {}
     }
 
     /** Uses every fixture declaration with the warnings suppressed — the scanner must see through that. */

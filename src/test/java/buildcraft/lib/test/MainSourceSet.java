@@ -34,12 +34,12 @@ public final class MainSourceSet {
 
     /** The directories javac compiled this node's main code from. */
     public static List<Path> sourceDirs() {
-        return dirs("buildcraft.test.mainSourceDirs");
+        return dirs("buildcraft.test.mainSourceDirs", false);
     }
 
     /** The directories this node's compiled main classes were written to. */
     public static List<Path> classesDirs() {
-        return dirs("buildcraft.test.mainClassesDirs");
+        return dirs("buildcraft.test.mainClassesDirs", true);
     }
 
     /** Every main {@code .java} file javac actually compiled on this node. {@code compat/rei/**} is skipped because
@@ -76,11 +76,12 @@ public final class MainSourceSet {
     }
 
     /**
-     * Blanks out every comment in {@code src}, keeping string/char/text-block literals and line breaks intact, so a
-     * search over the result sees only code that is live on this node (Stonecutter's inactive branches are
-     * {@code /* *}{@code /} blocks, and prose mentions of an API sit in comments).
+     * Blanks out every comment <em>and</em> the inside of every string, char and text-block literal in {@code src},
+     * keeping the literal delimiters and all line breaks, so a search over the result sees only code that is live on
+     * this node: Stonecutter's inactive branches are {@code /* *}{@code /} blocks, prose mentions of an API sit in
+     * comments, and a string that merely names an API (or a text block holding a code sample) is not a use of it.
      */
-    public static String stripComments(String src) {
+    public static String codeOnly(String src) {
         StringBuilder out = new StringBuilder(src.length());
         int n = src.length();
         int i = 0;
@@ -94,25 +95,30 @@ public final class MainSourceSet {
             } else if (c == '/' && next == '*') {
                 i += 2;
                 while (i < n && !(src.charAt(i) == '*' && i + 1 < n && src.charAt(i + 1) == '/')) {
-                    if (src.charAt(i) == '\n') {
-                        out.append('\n');
-                    }
+                    blank(out, src.charAt(i));
                     i++;
                 }
                 i += 2;
             } else if (c == '"' && src.startsWith("\"\"\"", i)) {
-                int end = src.indexOf("\"\"\"", i + 3);
-                end = end < 0 ? n : end + 3;
-                out.append(src, i, end);
-                i = end;
-            } else if (c == '"' || c == '\'') {
-                int j = i + 1;
-                while (j < n && src.charAt(j) != c && src.charAt(j) != '\n') {
-                    j += src.charAt(j) == '\\' ? 2 : 1;
+                out.append("\"\"\"");
+                i += 3;
+                while (i < n && !src.startsWith("\"\"\"", i)) {
+                    i = blankEscapeAware(out, src, i);
                 }
-                j = Math.min(n, j + 1);
-                out.append(src, i, j);
-                i = j;
+                if (i < n) {
+                    out.append("\"\"\"");
+                    i += 3;
+                }
+            } else if (c == '"' || c == '\'') {
+                out.append(c);
+                i++;
+                while (i < n && src.charAt(i) != c && src.charAt(i) != '\n') {
+                    i = blankEscapeAware(out, src, i);
+                }
+                if (i < n && src.charAt(i) == c) {
+                    out.append(c);
+                    i++;
+                }
             } else {
                 out.append(c);
                 i++;
@@ -121,7 +127,22 @@ public final class MainSourceSet {
         return out.toString();
     }
 
-    private static List<Path> dirs(String property) {
+    /** Blanks the literal character at {@code i} — both characters of an escape pair — and returns the next index. */
+    private static int blankEscapeAware(StringBuilder out, String src, int i) {
+        int end = Math.min(src.length(), i + (src.charAt(i) == '\\' ? 2 : 1));
+        for (; i < end; i++) {
+            blank(out, src.charAt(i));
+        }
+        return i;
+    }
+
+    private static void blank(StringBuilder out, char c) {
+        out.append(c == '\n' ? '\n' : ' ');
+    }
+
+    /** @param strict every named directory must exist — a missing classes dir would silently leave part of the
+     *                node's code unscanned; source-set dirs may legitimately name absent defaults. */
+    private static List<Path> dirs(String property, boolean strict) {
         String value = System.getProperty(property);
         if (value == null || value.isBlank()) {
             throw new IllegalStateException("System property " + property + " is not set — the tasks.test block in "
@@ -132,6 +153,8 @@ public final class MainSourceSet {
             Path p = Path.of(part);
             if (Files.isDirectory(p)) {
                 dirs.add(p);
+            } else if (strict) {
+                throw new IllegalStateException(property + " names a directory that does not exist: " + p);
             }
         }
         if (dirs.isEmpty()) {

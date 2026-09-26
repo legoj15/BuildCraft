@@ -37,15 +37,15 @@ public class BlocksAtlasIdTester {
         Assertions.assertEquals(TextureAtlas.LOCATION_BLOCKS, BCLibRenderTypes.BLOCKS_ATLAS_ID);
     }
 
-    /** New render code reaches for the shared id, not the deprecated vanilla constant (comment-stripped, so prose and
-     *  Stonecutter's commented-out branches for other lines do not count). */
+    /** New render code reaches for the shared id, not the deprecated vanilla constant (comments and literals blanked,
+     *  so prose, strings and Stonecutter's commented-out branches for other lines do not count). */
     @Test
     public void onlyTheDeliberateExceptionReadsTheVanillaConstant() {
         List<MainSourceSet.SourceFile> files = MainSourceSet.javaFiles();
         Assertions.assertTrue(files.size() > 500, "expected this node's main sources, found " + files.size());
         List<String> offenders = files.stream()
             .filter(f -> !KEEPS_VANILLA_CONSTANT.contains(f.relativePath()))
-            .filter(f -> VANILLA_CONSTANT.matcher(MainSourceSet.stripComments(f.text())).find())
+            .filter(f -> VANILLA_CONSTANT.matcher(MainSourceSet.codeOnly(f.text())).find())
             .map(MainSourceSet.SourceFile::relativePath)
             .toList();
         Assertions.assertEquals(List.of(), offenders,

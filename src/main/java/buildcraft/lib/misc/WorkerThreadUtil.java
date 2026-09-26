@@ -43,7 +43,8 @@ public class WorkerThreadUtil {
 
         // JDK thread builders (Java 21+, every node) rather than commons-lang3's BasicThreadFactory, whose Builder
         // constructor is deprecated from 3.18 while its replacement is missing from the older lines' bundled copy.
-        // Explicit priority: a platform-thread builder inherits the creating thread's, which may be the render thread.
+        // Explicit NORM priority reproduces the Executors.defaultThreadFactory() that BasicThreadFactory wrapped; a
+        // platform-thread builder would otherwise inherit the creating thread's, which may be the render thread.
         ThreadFactory factory = Thread.ofPlatform().daemon(false).priority(Thread.NORM_PRIORITY)
                 .name("BuildCraft Worker Thread ", 1)
                 .uncaughtExceptionHandler((thread, e) -> {

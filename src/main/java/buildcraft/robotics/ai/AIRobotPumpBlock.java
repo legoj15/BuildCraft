@@ -80,22 +80,21 @@ public class AIRobotPumpBlock extends AIRobot {
                     // The robot's tank journals through SnapshotJournal on this line, and a journalling
                     // handler REQUIRES a live transaction — the bare (…, null) insert threw NPE on every
                     // pump cycle (a production bug the Ph9 pump game test caught). Commit only when the
-                    // bucket actually moved; drain the world source on the same commit.
+                    // bucket actually moved AND the world gave it up (a pickup can refuse; committing
+                    // first would mint fluid), so the tank and the world change together.
                     try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
                             net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                         int inserted = robot.getFluidHandler().insert(0, resource, BUCKET, tx);
-                        if (inserted >= BUCKET) {
+                        if (inserted >= BUCKET && BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
                             tx.commit();
-                            BlockUtil.drainBlock(serverLevel, blockToPump, true);
                             pumped = BUCKET;
                         }
                     }
                 }
                 //?} else {
                 /*int room = robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.SIMULATE);
-                if (room >= BUCKET) {
+                if (room >= BUCKET && BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
                     robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.EXECUTE);
-                    BlockUtil.drainBlock(serverLevel, blockToPump, true);
                     pumped = BUCKET;
                 }*/
                 //?}

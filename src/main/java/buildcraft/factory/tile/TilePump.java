@@ -467,13 +467,6 @@ public class TilePump extends TileMiner implements IDebuggable {
                     break drain_attempt;
                 }
 
-                tank.fill(0, drain, false);
-                progress = 0;
-
-                if (getOwner() != null) {
-                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);
-                }
-
                 // Re-evaluate against the live world state so state changes since the
                 // queue build (player scooped a neighbour, mob placed a block) flip the
                 // pump back to consume mode on the very next tick instead of the next
@@ -482,8 +475,23 @@ public class TilePump extends TileMiner implements IDebuggable {
                         && FluidUtilBC.areFluidsEqual(drain.getFluid(), Fluids.WATER)
                         && isInfiniteSourceAt(level, targetPos);
 
+                // Take the world's bucket BEFORE crediting the tank: a pickup can refuse
+                // (a modded BucketPickup), and crediting first would mint fluid every pass.
+                // Skip a refusing cell rather than stalling on it until the next rebuild.
+                if (!isInfiniteWaterSource && BlockUtil.drainBlock(level, currentPos, true) == null) {
+                    paths.remove(currentPos);
+                    nextPos();
+                    return;
+                }
+
+                tank.fill(0, drain, false);
+                progress = 0;
+
+                if (getOwner() != null) {
+                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);
+                }
+
                 if (!isInfiniteWaterSource) {
-                    BlockUtil.drainBlock(level, currentPos, true);
                     if (isOil(drain.getFluid())) {
                         if (getOwner() != null) {
                             AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_OIL);

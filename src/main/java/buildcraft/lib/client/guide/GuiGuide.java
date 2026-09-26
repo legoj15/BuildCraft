@@ -22,6 +22,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.CharacterEvent;
 //?}
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
@@ -40,6 +41,8 @@ import buildcraft.lib.client.sprite.SpriteNineSliced;
 import buildcraft.lib.client.sprite.SpriteRaw;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.ISimpleDrawable;
+import buildcraft.lib.gui.button.BCButton;
+import buildcraft.lib.gui.button.ButtonImage;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.pos.MousePosition;
@@ -55,7 +58,6 @@ import buildcraft.lib.misc.LocaleUtil;
 public class GuiGuide extends Screen {
 
     // --- Texture identifiers ---
-    public static final Identifier ICONS_1 = Identifier.parse("minecraft:textures/gui/icons.png");
     public static final Identifier ICONS_2 = Identifier.parse("buildcraftunofficial:textures/gui/guide/icons.png");
     public static final Identifier COVER = Identifier.parse("buildcraftunofficial:textures/gui/guide/cover.png");
     public static final Identifier LEFT_PAGE = Identifier.parse("buildcraftunofficial:textures/gui/guide/left_page.png");
@@ -85,19 +87,7 @@ public class GuiGuide extends Screen {
     public static final GuiRectangle PAGE_RIGHT_TEXT = new GuiRectangle(4, 25, PAGE_WIDTH, PAGE_HEIGHT);
 
     // --- UI icons from the icons spritesheet ---
-    public static final GuiIcon PEN_UP = new GuiIcon(ICONS_2, 0, 0, 14, 135);
-    public static final GuiIcon PEN_ANGLED = new GuiIcon(ICONS_2, 17, 0, 100, 100);
-    public static final GuiIcon PEN_HIDDEN_MIN = new GuiIcon(ICONS_2, 0, 4, 10, 5);
-    public static final GuiIcon PEN_HIDDEN_MAX = new GuiIcon(ICONS_2, 0, 4, 10, 15);
-
-    public static final GuiIcon TURN_BACK = new GuiIcon(ICONS_2, 23, 139, 18, 10);
-    public static final GuiIcon TURN_BACK_HOVERED = new GuiIcon(ICONS_2, 23, 152, 18, 10);
-    public static final GuiIcon TURN_FORWARDS = new GuiIcon(ICONS_2, 0, 139, 18, 10);
-    public static final GuiIcon TURN_FORWARDS_HOVERED = new GuiIcon(ICONS_2, 0, 152, 18, 10);
-
-    public static final GuiIcon BACK = new GuiIcon(ICONS_2, 48, 139, 17, 9);
-    public static final GuiIcon BACK_HOVERED = new GuiIcon(ICONS_2, 48, 152, 17, 9);
-
+    // (The page-turn/back arrows and sort-order buttons are GUI-atlas sprites now — see ButtonImage.)
     public static final GuiIcon BOX_EMPTY = new GuiIcon(ICONS_2, 0, 164, 16, 16);
     public static final GuiIcon BOX_MINUS = new GuiIcon(ICONS_2, 16, 164, 16, 16);
     public static final GuiIcon BOX_PLUS = new GuiIcon(ICONS_2, 32, 164, 16, 16);
@@ -119,10 +109,6 @@ public class GuiGuide extends Screen {
     public static final GuiIcon BORDER_BOTTOM_LEFT = new GuiIcon(ICONS_2, 0, 209, 13, 13);
     public static final GuiIcon BORDER_BOTTOM_RIGHT = new GuiIcon(ICONS_2, 13, 209, 13, 13);
 
-    public static final GuiIcon ORDER_TYPE = new GuiIcon(ICONS_2, 0, 0, 14, 14);
-    public static final GuiIcon ORDER_MOD_TYPE = new GuiIcon(ICONS_2, 14, 0, 14, 14);
-    public static final GuiIcon ORDER_ALPHABETICAL = new GuiIcon(ICONS_2, 28, 0, 14, 14);
-
     public static final GuiIcon EXPANDED_ARROW = new GuiIcon(ICONS_2, 96, 164, 16, 16);
     public static final GuiIcon CLOSED_ARROW = new GuiIcon(ICONS_2, 96, 180, 16, 16);
 
@@ -138,11 +124,10 @@ public class GuiGuide extends Screen {
     public static final GuiIcon SEARCH_TAB_CLOSED = new GuiIcon(ICONS_2, 58, 196, 14, 6);
     public static final GuiIcon SEARCH_TAB_OPEN = new GuiIcon(ICONS_2, 40, 209, 106, 14);
 
-    public static final GuiIcon[] ORDERS = { ORDER_TYPE, ORDER_MOD_TYPE, ORDER_ALPHABETICAL };
-
-    public static final GuiRectangle BACK_POSITION = new GuiRectangle(
-        PAGE_LEFT.width - BACK.width / 2, PAGE_LEFT.height - BACK.height - 2, BACK.width, BACK.height
-    );
+    /** The contents page's sort-order buttons, index-aligned with {@link #SORTING_TYPES}. */
+    public static final ButtonImage[] SORTING_ART = {
+        ButtonImage.GUIDE_SORT_TYPE, ButtonImage.GUIDE_SORT_MOD, ButtonImage.GUIDE_SORT_ALPHABETICAL
+    };
 
     public static final TypeOrder[] SORTING_TYPES = {
         new TypeOrder("buildcraft.guide.order.type_subtype", ETypeTag.TYPE, ETypeTag.SUB_TYPE),
@@ -198,6 +183,14 @@ public class GuiGuide extends Screen {
     // leaves the contents tree referencing orphaned ContentsNode / PageLink instances
     // and search returns blank.
     private int seenReloadGeneration = GuideManager.INSTANCE.getReloadGeneration();
+
+    // Page-turn arrows and the history "back" arrow: BCButtons drawing the guide's own art (ButtonImage) in place of
+    // a button face — hover art, click sound, keyboard focus, tooltip and narration come from the widget. Created in
+    // init(); placed and shown by layoutPageButtons(). Registered with addWidget (input + narration only): this
+    // screen draws everything itself, in book order.
+    private BCButton pageForwardButton;
+    private BCButton pageBackwardButton;
+    private BCButton historyBackButton;
 
     public GuiGuide() {
         this((GuideBook) null);
@@ -328,6 +321,62 @@ public class GuiGuide extends Screen {
     // --- Screen overrides ---
 
     @Override
+    protected void init() {
+        super.init();
+        // Vanilla's own translated "Next Page" / "Previous Page" / "Back" strings (tooltip + narration).
+        pageForwardButton = addWidget(BCButton.builder(0, 0, ButtonImage.GUIDE_PAGE_FORWARD)
+            .tooltip(Component.translatable("spectatorMenu.next_page"))
+            .onPress(() -> currentPage.nextPage()).build());
+        pageBackwardButton = addWidget(BCButton.builder(0, 0, ButtonImage.GUIDE_PAGE_BACKWARD)
+            .tooltip(Component.translatable("spectatorMenu.previous_page"))
+            .onPress(() -> currentPage.lastPage()).build());
+        historyBackButton = addWidget(BCButton.builder(0, 0, ButtonImage.GUIDE_BACK)
+            .tooltip(CommonComponents.GUI_BACK)
+            .onPress(this::closePage).build());
+        layoutPageButtons();
+    }
+
+    /**
+     * Places the page buttons on the open book and shows only the ones that apply: forward while a later spread
+     * exists, backward past the first spread, back while there is page history. Hidden widgets take no clicks,
+     * focus or narration. Runs every frame and before each click, so a page change is reflected at once.
+     */
+    private void layoutPageButtons() {
+        if (pageForwardButton == null) {
+            return; // not initialised yet
+        }
+        // The open book's origin — the same maths as render(), NOT minX/minY, which the cover and opening
+        // animation reuse for their own (narrower) layout.
+        int bookX = (this.width - PAGE_LEFT.width * 2) / 2;
+        int bookY = (this.height - BOOK_COVER.height) / 2;
+        boolean open = isOpen && currentPage != null;
+        int cp = open ? currentPage.getPage() : 0;
+        int pc = open ? currentPage.getPageCount() : 0;
+
+        ButtonImage fwd = ButtonImage.GUIDE_PAGE_FORWARD;
+        pageForwardButton.setPosition(bookX + PAGE_LEFT.width + PAGE_RIGHT.width - fwd.width() - 10,
+            bookY + PAGE_RIGHT.height - fwd.height() - 8);
+        pageForwardButton.visible = open && cp + 2 < pc;
+
+        ButtonImage bwd = ButtonImage.GUIDE_PAGE_BACKWARD;
+        pageBackwardButton.setPosition(bookX + 10, bookY + PAGE_LEFT.height - bwd.height() - 8);
+        pageBackwardButton.visible = open && cp > 0;
+
+        // Centred on the spine, just above the bottom edge.
+        ButtonImage back = ButtonImage.GUIDE_BACK;
+        historyBackButton.setPosition(bookX + PAGE_LEFT.width - back.width() / 2,
+            bookY + PAGE_LEFT.height - back.height() - 2);
+        historyBackButton.visible = open && !pages.isEmpty();
+    }
+
+    private void drawPageButton(BCButton button, float partialTicks) {
+        BCGraphics graphics = GuiIcon.getGuiGraphics();
+        if (graphics != null && button.visible) {
+            graphics.widget(button, (int) mouse.getX(), (int) mouse.getY(), partialTicks);
+        }
+    }
+
+    @Override
     public void tick() {
         // Capture once per tick so a reload landing mid-tick doesn't leave seenReloadGeneration
         // ahead of what we actually rebuilt against. Run before super.tick() and the
@@ -388,6 +437,7 @@ public class GuiGuide extends Screen {
         minX = (this.width - PAGE_LEFT.width * 2) / 2;
         minY = (this.height - BOOK_COVER.height) / 2;
         mouse.setMousePosition(mouseX, mouseY);
+        layoutPageButtons();
 
         // NeoForge 1.21.11: renderBackground is called by the parent
         // Screen.renderWithTooltipAndSubtitles, so we must NOT call it here
@@ -589,18 +639,10 @@ public class GuiGuide extends Screen {
             }
         }
 
-        // Draw the back button if there are pages on the stack
-        if (!pages.isEmpty()) {
-            GuiIcon icon = BACK;
-            IGuiArea position = BACK_POSITION.offset(minX, minY);
-            if (position.contains(mouse)) {
-                icon = BACK_HOVERED;
-            }
-            icon.drawAt(position);
-        }
-
-        // Draw page turn arrows
-        drawPageTurnArrows(cp, pc, isHalfPageShown);
+        // Back button (page history) and page-turn arrows; each is shown only when it applies (layoutPageButtons).
+        drawPageButton(historyBackButton, partialTicks);
+        drawPageButton(pageForwardButton, partialTicks);
+        drawPageButton(pageBackwardButton, partialTicks);
 
         // Render tooltips last so they sit above all other content. Item tooltips
         // (set by GuidePartItem.drawItemStack when the mouse is over a stack)
@@ -636,26 +678,6 @@ public class GuiGuide extends Screen {
         //? if <1.21.10 {
         /*buildcraft.lib.gui.BCGraphics.flushDeferredTooltip();*/
         //?}
-    }
-
-    private void drawPageTurnArrows(int currentPageIndex, int pageCount, boolean isHalfPage) {
-        // Forward arrow (right side)
-        if (currentPageIndex + 2 < pageCount) {
-            int arrowX = minX + PAGE_LEFT.width + PAGE_RIGHT.width - TURN_FORWARDS.width - 10;
-            int arrowY = minY + PAGE_RIGHT.height - TURN_FORWARDS.height - 8;
-            GuiRectangle forwardRect = new GuiRectangle(arrowX, arrowY, TURN_FORWARDS.width, TURN_FORWARDS.height);
-            GuiIcon icon = forwardRect.contains(mouse) ? TURN_FORWARDS_HOVERED : TURN_FORWARDS;
-            icon.drawAt(arrowX, arrowY);
-        }
-
-        // Back arrow (left side)
-        if (currentPageIndex > 0) {
-            int arrowX = minX + 10;
-            int arrowY = minY + PAGE_LEFT.height - TURN_BACK.height - 8;
-            GuiRectangle backRect = new GuiRectangle(arrowX, arrowY, TURN_BACK.width, TURN_BACK.height);
-            GuiIcon icon = backRect.contains(mouse) ? TURN_BACK_HOVERED : TURN_BACK;
-            icon.drawAt(arrowX, arrowY);
-        }
     }
 
     public void setupFontRenderer() {
@@ -727,24 +749,16 @@ public class GuiGuide extends Screen {
                     }
                 }
 
-                // Check page turn arrows
-                int cp = currentPage.getPage();
-                int pc = currentPage.getPageCount();
-                if (cp + 2 < pc) {
-                    int arrowX = minX + PAGE_LEFT.width + PAGE_RIGHT.width - TURN_FORWARDS.width - 10;
-                    int arrowY = minY + PAGE_RIGHT.height - TURN_FORWARDS.height - 8;
-                    GuiRectangle forwardRect = new GuiRectangle(arrowX, arrowY, TURN_FORWARDS.width, TURN_FORWARDS.height);
-                    if (forwardRect.contains(mouseX, mouseY)) {
-                        currentPage.nextPage();
-                        return true;
-                    }
-                }
-                if (cp > 0) {
-                    int arrowX = minX + 10;
-                    int arrowY = minY + PAGE_LEFT.height - TURN_BACK.height - 8;
-                    GuiRectangle backRect = new GuiRectangle(arrowX, arrowY, TURN_BACK.width, TURN_BACK.height);
-                    if (backRect.contains(mouseX, mouseY)) {
-                        currentPage.lastPage();
+                // Page-turn and back buttons: dispatched here, not left to super.mouseClicked, so they keep their
+                // place in the click order (after the chapter tabs, before the page content under them). Their
+                // layout is refreshed first so a page change since the last frame is honoured.
+                layoutPageButtons();
+                for (BCButton button : new BCButton[] { historyBackButton, pageForwardButton, pageBackwardButton }) {
+                    //? if >=1.21.10 {
+                    if (button.mouseClicked(event, doubleClick)) {
+                    //?} else {
+                    /*if (button.mouseClicked(mouseX, mouseY, mouseButton)) {*/
+                    //?}
                         return true;
                     }
                 }
@@ -760,12 +774,8 @@ public class GuiGuide extends Screen {
                     (int) mouseX, (int) mouseY, mouseButton,
                     currentPage.getPage() + 1, false
                 );
-
-                // Back button
-                if (!pages.isEmpty() && BACK_POSITION.offset(minX, minY).contains(mouseX, mouseY)) {
-                    closePage();
-                    return true;
-                }
+                // Fall through to super: it re-offers the click to the (already tried, unchanged) page buttons,
+                // which decline it again — their layout is only refreshed on the next frame or click.
 
             } else {
                 // Click on cover to start opening

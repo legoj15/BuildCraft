@@ -42,6 +42,10 @@ import buildcraft.lib.gui.BCGraphics;
  * {@code extractContents}, 1.21.11 {@code renderContents}, 1.21.10/1.21.1 {@code renderWidget}), the press hook
  * ({@code onPress(InputWithModifiers)} vs {@code onPress()}), and the mouse-button filter — so button code
  * elsewhere carries no Stonecutter directives.
+ * <p>
+ * Where a grey button face would be wrong (the guide book's pages), {@link Builder#art} swaps the face for a
+ * {@link ButtonImage} — whole-button art with its own highlighted (and, for a radio option, selected) sprites —
+ * keeping everything else: hover, click sound, keyboard press, tooltip, narration, latched state.
  */
 public class BCButton extends AbstractButton {
 
@@ -53,6 +57,8 @@ public class BCButton extends AbstractButton {
 
     private final Action action;
     private final int mouseButtons;
+    @Nullable
+    private final ButtonImage art;
     @Nullable
     private final ButtonIcon icon;
     private final boolean showLabel;
@@ -70,6 +76,7 @@ public class BCButton extends AbstractButton {
             builder.label != null ? builder.label : Component.empty());
         this.action = builder.action;
         this.mouseButtons = builder.mouseButtons;
+        this.art = builder.art;
         this.icon = builder.icon;
         this.showLabel = builder.label != null;
         this.latched = builder.latched;
@@ -80,6 +87,11 @@ public class BCButton extends AbstractButton {
 
     public static Builder builder(int x, int y, int width, int height) {
         return new Builder(x, y, width, height);
+    }
+
+    /** A button sized to {@code art}, which it draws in place of vanilla's face (see {@link Builder#art}). */
+    public static Builder builder(int x, int y, ButtonImage art) {
+        return new Builder(x, y, art.width(), art.height()).art(art);
     }
 
     /** Whether this button currently shows as a switched-on toggle / the chosen option. */
@@ -133,8 +145,14 @@ public class BCButton extends AbstractButton {
         }
     }
 
-    /** Vanilla's 9-sliced button sprite for the current {@link #face()}. */
+    /** Vanilla's 9-sliced button sprite for the current {@link #face()} — or the {@link ButtonImage} art in its place. */
     protected void drawFace(BCGraphics graphics) {
+        if (art != null) {
+            // Whole-button art: its own hover/selected sprites; an inactive one gets the icon's grey tint.
+            graphics.guiSprite(art.sprite(isLatched(), this.active && this.isHoveredOrFocused()),
+                getX(), getY(), getWidth(), getHeight(), ButtonFace.iconTint(this.active, this.alpha));
+            return;
+        }
         ButtonFace face = face();
         graphics.guiSprite(SPRITES.get(face.enabledSprite(), face.focusedSprite()),
             getX(), getY(), getWidth(), getHeight(), ButtonFace.white(this.alpha));
@@ -222,6 +240,8 @@ public class BCButton extends AbstractButton {
         private Action action = mouseButton -> {};
         private int mouseButtons = MouseButtons.LEFT;
         @Nullable
+        private ButtonImage art;
+        @Nullable
         private ButtonIcon icon;
         @Nullable
         private Component label;
@@ -250,6 +270,17 @@ public class BCButton extends AbstractButton {
         public Builder onPress(int mouseButtons, Action action) {
             this.action = action;
             this.mouseButtons = mouseButtons;
+            return this;
+        }
+
+        /**
+         * Draw {@code art} in place of vanilla's grey button face (stretched to the button size; build with
+         * {@link BCButton#builder(int, int, ButtonImage)} to size the button to it). {@link #latched} picks its
+         * selected sprites when it has them. Label-less art buttons should set a {@link #tooltip}, which is also
+         * what they narrate.
+         */
+        public Builder art(ButtonImage art) {
+            this.art = art;
             return this;
         }
 

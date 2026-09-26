@@ -7,7 +7,6 @@
 package buildcraft.lib.client.guide.parts.contents;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -38,6 +37,7 @@ import buildcraft.lib.client.guide.parts.GuideChapter;
 import buildcraft.lib.client.guide.parts.GuidePageBase;
 import buildcraft.lib.client.guide.parts.GuidePart.PagePosition;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.GuiUtil;
 import buildcraft.lib.misc.LocaleUtil;
@@ -57,6 +57,8 @@ public class GuidePageContents extends GuidePageBase {
 
     private ContentsNodeGui contents;
     private final EditBox searchText;
+    /** Sort-order radio buttons, index-aligned with {@link GuiGuide#SORTING_TYPES}; drawn and placed by renderPage. */
+    private final BCButton[] sortButtons;
     private String lastSearchText = "";
     /** -1 if all of the results can be displayed or the actual number of results if it's too many. */
     private int realResultCount = -1;
@@ -72,7 +74,25 @@ public class GuidePageContents extends GuidePageBase {
         // double-render of the text and cursor — "guide_" looks like "guide_guide_"
         // at the small font size used here. Disable to match 1.12.2.
         searchText.setTextShadow(false);
+        sortButtons = new BCButton[GuiGuide.SORTING_TYPES.length];
+        for (int i = 0; i < sortButtons.length; i++) {
+            TypeOrder order = GuiGuide.SORTING_TYPES[i];
+            sortButtons[i] = BCButton.builder(0, 0, GuiGuide.SORTING_ART[i])
+                .latched(() -> gui.sortingOrder == order)
+                .tooltip(Component.translatable(order.localeKey))
+                .onPress(() -> selectSortingOrder(order))
+                .build();
+            sortButtons[i].visible = false; // until renderPage places them on a content spread
+        }
         setupChapters();
+    }
+
+    private void selectSortingOrder(TypeOrder order) {
+        gui.sortingOrder = order;
+        loadMainGui();
+        lastSearchText = "@@@@INVALID@@@";
+        gui.refreshChapters();
+        contents.setFontRenderer(getFontRenderer());
     }
 
     @Override
@@ -210,22 +230,9 @@ public class GuidePageContents extends GuidePageBase {
                 GuiGuide.SEARCH_TAB_OPEN.drawAt(x - 2, y - 22);
                 GuiGuide.SEARCH_ICON.drawAt(x + 8, y - 18);
             }
-            // Render the EditBox via NeoForge 1.21.11's extractRenderState pipeline.
-            // Was previously a reflective scan for any 4-arg method matching (?, int, int, float)
-            // which could silently bind to the wrong method (e.g. extractWidgetRenderState)
-            // since Class.getMethods() ordering isn't stable.
             if (GuiIcon.getGuiGraphics() != null) {
-                // 26.1 renamed the widget render entry point render → extractRenderState.
-                //? if >=26.1 {
-                searchText.extractRenderState(
-                //?} else {
-                /*searchText.render(*/
-                //?}
-                    GuiIcon.getGuiGraphics().raw,
-                    (int) gui.mouse.getX(),
-                    (int) gui.mouse.getY(),
-                    gui.getLastPartialTicks()
-                );
+                GuiIcon.getGuiGraphics().widget(searchText, (int) gui.mouse.getX(), (int) gui.mouse.getY(),
+                    gui.getLastPartialTicks());
             }
 
             if (realResultCount >= 0) {
@@ -233,21 +240,16 @@ public class GuidePageContents extends GuidePageBase {
                 getFontRenderer().drawString(text, x + 105, y - 23, -1);
             }
 
-            if (index != 0) {
-                int oX = x + ORDER_OFFSET_X;
-                int oY = y + ORDER_OFFSET_Y;
-                for (int j = 0; j < GuiGuide.ORDERS.length; j++) {
-                    GuiIcon icon = GuiGuide.ORDERS[j];
-                    TypeOrder typeOrder = GuiGuide.SORTING_TYPES[j];
-                    if (gui.sortingOrder == typeOrder) {
-                        icon = icon.offset(0, 14);
-                    }
-                    if (icon.containsGuiPos(oX, oY, gui.mouse)) {
-                        icon = icon.offset(0, 28);
-                        gui.tooltips.add(Collections.singletonList(LocaleUtil.localize(typeOrder.localeKey)));
-                    }
-                    icon.drawAt(oX, oY);
-                    oY += 14;
+            // Sort-order radio buttons in the left margin of every content spread (not the title spread). Their
+            // place and visibility are refreshed here each frame; mouseClicked hands them the click.
+            boolean showSort = index != 0;
+            for (int j = 0; j < sortButtons.length; j++) {
+                BCButton button = sortButtons[j];
+                button.setPosition(x + ORDER_OFFSET_X, y + ORDER_OFFSET_Y + 14 * j);
+                button.visible = showSort;
+                if (showSort && GuiIcon.getGuiGraphics() != null) {
+                    GuiIcon.getGuiGraphics().widget(button, (int) gui.mouse.getX(), (int) gui.mouse.getY(),
+                        gui.getLastPartialTicks());
                 }
             }
         }
@@ -302,25 +304,6 @@ public class GuidePageContents extends GuidePageBase {
     public void handleMouseClick(int x, int y, int width, int height, int mouseX, int mouseY, int mouseButton,
         int index, boolean isEditing) {
         super.handleMouseClick(x, y, width, height, mouseX, mouseY, mouseButton, index, isEditing);
-        if (index % 2 == 0) {
-            if (index != 0) {
-                int oX = x + ORDER_OFFSET_X;
-                int oY = y + ORDER_OFFSET_Y;
-                for (TypeOrder order : GuiGuide.SORTING_TYPES) {
-                    GuiRectangle rect = new GuiRectangle(oX, oY, 14, 14);
-                    if (rect.contains(gui.mouse)) {
-                        gui.sortingOrder = order;
-                        loadMainGui();
-                        lastSearchText = "@@@@INVALID@@@";
-                        gui.refreshChapters();
-                        contents.setFontRenderer(getFontRenderer());
-                        return;
-                    }
-                    oY += 14;
-                }
-            }
-        }
-        
         if (mouseButton == 0) {
             if (index == 0) {
                 IFontRenderer f = getFontRenderer();
@@ -364,17 +347,18 @@ public class GuidePageContents extends GuidePageBase {
         }*/
     //?}
 
-        // A click on a sort-order icon must re-sort, not focus search. The search tab's
-        // generous hitbox (the 40x34 rect below, carried over verbatim from 1.12.2) overlaps
-        // the top-right corner of the first ("Sort By Type") icon. 1.12.2 hit-tested the order
-        // icons first within a single handler and returned early; the modern port runs this
-        // search-focus pass (GuiGuide.mouseClicked -> currentPage.mouseClicked) *before* the
-        // order handler in handleMouseClick, so the search tab would otherwise swallow that
-        // click. Returning false lets GuiGuide fall through to handleMouseClick, which performs
-        // the re-sort. The icons only render on the left content page (index != 0), so the
-        // title spread's search tab is left untouched.
-        if (getIndex() != 0 && isOverOrderIcon(mouseX, mouseY)) {
-            return false;
+        // A click on a sort-order button must re-sort, not focus search: the search tab's generous
+        // hitbox (the 40x34 rect below, carried over verbatim from 1.12.2) overlaps the top-right
+        // corner of the first ("Sort By Type") button, and 1.12.2 likewise tested the sort icons
+        // first. The buttons are only visible (so only take clicks) on a content spread.
+        for (BCButton button : sortButtons) {
+            //? if >=1.21.10 {
+            if (button.mouseClicked(event, doubleClick)) {
+            //?} else {
+            /*if (button.mouseClicked(mouseX, mouseY, mouseButton)) {*/
+            //?}
+                return true;
+            }
         }
 
         // The click region needs to cover the magnifying-glass icon (drawn at
@@ -402,25 +386,6 @@ public class GuidePageContents extends GuidePageBase {
         //?} else {
         /*return super.mouseClicked(mouseX, mouseY, mouseButton);*/
         //?}
-    }
-
-    /** True iff (mouseX, mouseY) is over one of the three sort-order icons. Reconstructs the
-     *  left content page's origin from the search box, which {@link #renderPage} positions each
-     *  frame at {@code (pageX + 23, pageY - 16)}; the icons render at
-     *  {@code (pageX + ORDER_OFFSET_X, pageY + ORDER_OFFSET_Y + 14*i)}, 14x14 — the exact rects
-     *  {@link #handleMouseClick} tests, so the skip region tracks them as the book is resized. */
-    private boolean isOverOrderIcon(double mouseX, double mouseY) {
-        int pageX = searchText.getX() - 23;
-        int pageY = searchText.getY() + 16;
-        int oX = pageX + ORDER_OFFSET_X;
-        int oY = pageY + ORDER_OFFSET_Y;
-        for (int i = 0; i < GuiGuide.SORTING_TYPES.length; i++) {
-            if (new GuiRectangle(oX, oY, 14, 14).contains(mouseX, mouseY)) {
-                return true;
-            }
-            oY += 14;
-        }
-        return false;
     }
 
     //? if >=1.21.10 {

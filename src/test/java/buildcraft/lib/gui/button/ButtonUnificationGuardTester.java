@@ -23,9 +23,10 @@ import buildcraft.TestHelper;
 /**
  * Keeps BuildCraft on ONE button implementation. A button is either vanilla's own {@code Button}/{@code ImageButton}
  * (plain text, or vanilla's own sprites) or a {@link BCButton} configured through its builder: vanilla's button face
- * with a BuildCraft icon on top. What this rejects is the pattern the unification removed — a screen painting a
- * "button" out of its background texture, hit-testing the mouse itself and playing the click sound by hand, or a
- * screen subclassing a button widget to re-implement face/press handling.
+ * with a BuildCraft icon on top, or with a {@link ButtonImage} drawn in place of the face where the art is the whole
+ * button (the guide book). A source scan cannot prove the absence of every hand-painted hotspot; it rejects
+ * the three fingerprints the unification removed: a screen playing the click sound by hand, a hover-variant
+ * {@code GuiIcon} swapped on mouse-over, and a button widget subclassed outside the shared package.
  */
 public class ButtonUnificationGuardTester {
 
@@ -34,6 +35,13 @@ public class ButtonUnificationGuardTester {
 
     private static final Pattern EXTENDS_BUTTON =
         Pattern.compile("\\bextends\\s+(AbstractButton|BCButton|Button|ImageButton)\\b");
+
+    /**
+     * A {@code GuiIcon} with a hover variant ({@code FOO_HOVERED}) is a button painted by its screen: the screen
+     * swaps the art on {@code contains(mouse)} and hit-tests the click itself. Whole-art buttons are a
+     * {@link BCButton} built with {@code .art(ButtonImage)}; the hover art is the image's highlighted sprite.
+     */
+    private static final Pattern HOVER_VARIANT_ICON = Pattern.compile("\\bGuiIcon\\s+\\w+_HOVER(ED)?\\b");
 
     /** A screen that plays vanilla's button-click sound itself is hand-rolling a button. */
     private static final Pattern HAND_ROLLED_CLICK = Pattern.compile("\\bUI_BUTTON_CLICK\\b");
@@ -99,6 +107,22 @@ public class ButtonUnificationGuardTester {
         Assertions.assertEquals("", offenders.toString(),
             "a screen plays the button-click sound itself, i.e. it paints and hit-tests its own button — "
                 + "use a BCButton widget (vanilla plays the sound):");
+    }
+
+    @Test
+    public void noScreenPaintsHoverVariantButtons() throws IOException {
+        StringBuilder offenders = new StringBuilder();
+        for (Map.Entry<String, List<String>> e : mainSources().entrySet()) {
+            for (String line : e.getValue()) {
+                String t = line.trim();
+                if (!t.startsWith("//") && !t.startsWith("*") && HOVER_VARIANT_ICON.matcher(line).find()) {
+                    offenders.append("\n  ").append(e.getKey()).append(": ").append(line.trim());
+                }
+            }
+        }
+        Assertions.assertEquals("", offenders.toString(),
+            "a hover-variant GuiIcon means the screen paints and hit-tests its own button — use "
+                + "BCButton.builder(x, y, ButtonImage) (whole-button art) or BCButton.builder(...) instead:");
     }
 
     @Test

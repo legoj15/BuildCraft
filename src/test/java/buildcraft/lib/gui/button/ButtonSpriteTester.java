@@ -52,7 +52,7 @@ public class ButtonSpriteTester {
     }
 
     /** Width and height straight out of the PNG IHDR chunk (no AWT/ImageIO in the FML test layer). */
-    private static int[] pngSize(Path png) throws IOException {
+    static int[] pngSize(Path png) throws IOException {
         try (InputStream in = Files.newInputStream(png)) {
             byte[] head = in.readNBytes(24);
             Assertions.assertEquals(24, head.length, png + " is truncated");

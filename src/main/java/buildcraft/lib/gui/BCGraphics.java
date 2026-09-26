@@ -295,6 +295,20 @@ public final class BCGraphics {
         //?}
     }
 
+    // ── widget drawn by hand: 26.1 extractRenderState(...) ⇄ render(...) ─────────────
+    /**
+     * Draws a vanilla widget at this point in the caller's own draw order — for screens and guide pages that paint
+     * everything themselves instead of letting {@code Screen} draw its renderables. Hover, hover art and the widget's
+     * tooltip work as usual.
+     */
+    public void widget(net.minecraft.client.gui.components.AbstractWidget widget, int mouseX, int mouseY, float partialTick) {
+        //? if >=26.1 {
+        widget.extractRenderState(raw, mouseX, mouseY, partialTick);
+        //?} else {
+        /*widget.render(raw, mouseX, mouseY, partialTick);*/
+        //?}
+    }
+
     // 1.21.1 has no engine-level "for next frame" tooltip, and GuiGraphics.renderTooltip(...) draws
     // IMMEDIATELY — so a frame that set two tooltips (e.g. a fluid-tank widget's own tooltip plus a
     // screen's custom tank tooltip) drew BOTH, overlapping. Mirror 26.1.2's deferred/last-wins

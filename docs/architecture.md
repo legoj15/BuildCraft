@@ -73,10 +73,23 @@ the version-forked recipe-book stub block once). Menu-opening tiles implement
 `textures/gui/sprites/button/`, an item render, or a live choice), label, `latched` state (a
 switched-on toggle / chosen radio option shows vanilla's pressed-in disabled face but stays
 clickable), live `activeWhen` and tooltip, and a `MouseButtons` mask (the action receives the GLFW
-button). All per-line button API divergence lives in `BCButton`. Screens never paint buttons from
-their background sheet, hit-test them, or play the click sound themselves —
-`ButtonUnificationGuardTester` enforces it (the gate's wiring-diagram connectors are the one
-allowlisted exception). `ButtonSpriteTester` pins every icon constant to its PNG and vice versa.
+button). All per-line button API divergence lives in `BCButton`. Where the art is the whole
+button and a grey face would be wrong (the guide book: page-turn and back arrows, the contents
+page's sort-order radio group), `BCButton.builder(x, y, ButtonImage)` draws a `ButtonImage` in
+place of the face — GUI-atlas sprites `<name>` + `<name>_highlighted` (+ `<name>_selected` /
+`<name>_selected_highlighted` for a radio option, picked by `latched`) under
+`textures/gui/sprites/` — and keeps everything else (tooltip-as-narration, sound, keyboard). A
+screen that paints everything itself draws such widgets in its own order with
+`BCGraphics.widget(...)` and registers them with `addWidget` (input/narration only); a guide page,
+which is not a screen, forwards clicks to them from its `mouseClicked`. Screens should not paint
+buttons from their background sheet, hit-test them, or play the click sound themselves.
+`ButtonUnificationGuardTester` is a source scan and only catches the fingerprints of that
+pattern: a screen playing `UI_BUTTON_CLICK` (the gate's wiring-diagram connectors are the one
+allowlisted exception), a hover-variant `GuiIcon` (`FOO_HOVERED`), and a button widget subclassed
+outside `lib/gui/button`; a hotspot with none of those passes it. Deliberately not buttons: the
+guide's chapter tabs and contents entries (navigation links) and its search tab (the search
+box's own decoration). `ButtonSpriteTester` / `ButtonImageTester` pin every icon / image
+constant to its PNG(s) and vice versa.
 
 **Pipes/Transport**: Each pipe is a composition of a `PipeBehaviour` (determines pipe type
 logic) and a `PipeFlow` (handles what flows through it — items, fluids, power). `PipeRegistry`

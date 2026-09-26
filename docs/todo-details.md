@@ -14,6 +14,7 @@ Follow-ups from the 2026-07-21 lang sweep (which moved ~20 hardcoded player-faci
 - **Four legacy `tile.*` keys are still live and duplicate a modern key.** `tile.autoWorkbenchBlock.name`, `tile.engineStone.name`, `tile.engineIron.name` and `tile.buildcraftunofficial.library.name` are referenced in code as GUI titles while `block.buildcraftunofficial.{autoworkbench_item,engine_stone,engine_iron,library}` carry the identical English. Two keys, one string, so a translator can make them disagree. Point the GUI titles at the `block.*` keys and delete the legacy four.
 - **Bucket-scale flow and tank readouts disagree on trailing zeros.** With abbreviation on, `formatFluidFlow(100, PER_SECOND, …)` renders `2.0 B/s` while `formatFluidTank(2000, 4000, …)` renders `2 / 4 B` — the tank path trims a trailing `.0`, the flow path keeps it. Surfaced 2026-07-21 by the new `LocaleUtilUnitKeyTester`, which is the first test to cover the abbreviated bucket-scale flow path at all. Possibly deliberate (a rate arguably wants the precision digit), so it is characterized, not "fixed": decide which way is right and make both agree.
 - **`/bcsoundtest` output is hardcoded English** (`SoundTestCommand`). Deliberately skipped: it is hard-gated behind `BCLib.DEV` (`-Dbuildcraft.dev=true`) so no shipped client can reach it, and its ASCII menu relies on `padRight` over a fixed 32-char width that any non-Latin translation would break. Only worth doing if the command ever ships ungated.
+- **`zh_cn.json` lacks the robotics names**: the robot item, docking station, robot entity and every `buildcraft.boardRobot*` name/description (found 2026-09-26).
 
 ## Heat-tiered fuel and Nether oil
 
@@ -24,6 +25,8 @@ Make a fuel's *heat tier* change its value in the Combustion Engine, on a delibe
 - Open questions: Nether oil generation (biome/feature wiring — reuse the existing `OilFeature`/`AddOilBiomeModifier` path); whether searing fuel is merely inefficient or actively harmful (residue? overheat?); whether the Heat Exchanger becomes mandatory infrastructure for the good tier, and if so whether that's too steep for a Nether start.
 
 **Nether oil spawns** (the worldgen half): generate oil in the Nether (lakes/spouts) for Nether-start challenge runs. Nether oil always spawns *searing* (heat 2), never cool — the inverse of Overworld oil. The `heating_and_distilling` advancement already accounts for this: its Nether branch treats searing as the natural (non-qualifying) heat, so the advancement still demands Heat-Exchanger work there. See `TileDistiller_BC8.qualifiesForHeatingAdvancement`.
+
+Design input: upstream 7.1.x `bfa69a2ef` (#3497) made flammable BuildCraft fluids explode in the Nether and skipped oil worldgen there; 8.0.x and the port dropped it. Decide explicitly whether any Nether flammability rule comes back.
 
 ## Pump on top of miners
 
@@ -45,33 +48,9 @@ The cap models (paper-thin 12×12 planes covering the unconnected sides of a mid
 
 Unify plug in-world geometry under vanilla `models/block/plug_*.json`. Today the plug rendering pipeline has four flavours: (a) blocker / power_adapter load BC-dialect JSON from `models/plugs/` via `ModelHolderStatic`, (b) timer / light_sensor / pulsar-base bake from hardcoded UVs in [PlugBakerSimpleItems.java:70-94](../src/main/java/buildcraft/silicon/client/model/plug/PlugBakerSimpleItems.java), (c) lens / facade / gate are genuinely parametric and stay in Java, and (d) the robot station builds its pedestal in [RobotStationModel](../src/main/java/buildcraft/robotics/client/model/RobotStationModel.java) — Java, but NOT parametric; it lives in code because the baked pedestal and the per-frame reserved/linked overlay must share one geometry source (one asymmetric texel would make any mismatch visible), so migrating it to JSON means feeding the dynamic renderer from the same parsed model, not just moving the numbers. Migrate (a) and (b) to standard vanilla block-model JSONs loaded through the normal resource manager, with one generic rotating baker that pulls BakedQuads off a face and rotates them per `KeyPlug*.side`; fold (d) in only with the shared-source constraint preserved. Wins: resourcepacks can reshape *and* retexture any static plug with stock Minecraft JSON, the `models/plugs/` directory and `ModelHolderStatic` go away (verify nothing else uses the latter first), and surviving Java bakers become clearly-exceptional parametric cases. Tradeoff: non-trivial refactor across transport + silicon; per-element `shade` / extended UV tricks in the BC dialect need a NeoForge model-extension equivalent or to be dropped.
 
-## Fluid atlas de-duplication
-
-The on-disk fluid textures are de-duped (one `heat_still`/`heat_flow` base, recolored at stitch time by [FluidLerpSpriteSource](../src/main/java/buildcraft/lib/client/sprite/FluidLerpSpriteSource.java)), but the stitched atlas still holds 60 fluid sprites in 20 pixel-identical triplets — the 3 heat tiers of each fluid+frame are separate sprites only because MC ties animation `frametime` (3/2/1, the hot-vs-cool speed cue) to the `SpriteContents` itself, so identical pixels at different speeds must be different sprites. True dedup needs a custom fluid renderer that frame-steps a single shared sprite per fluid+frame at a heat-dependent rate, replacing the vanilla `FluidModel`/sprite-animation path; collapsing to one shared sprite without that would lose the per-heat speed difference. Low value — the redundancy is ~0.08% of the blocks atlas and ~3 MB RAM — so this is cleanup, not a fix.
-
-## Blocks atlas-id constant
-
-~60 render sites still read the deprecated `TextureAtlas.LOCATION_BLOCKS` (≈25 files — `BCLibRenderTypes.entity*` call sites and `getTextureManager().getTexture(...)` GUI/tank lookups; `grep LOCATION_BLOCKS src/`). `PipeFlowRendererKinesis.BLOCKS_ATLAS_ID` (2026-09-08) is the pattern: a value-identical `Identifier.withDefaultNamespace("textures/atlas/blocks.png")` literal, written in canonical `Identifier` form so the build-script name conversion covers the older nodes. LOCATION_BLOCKS has **no** non-deprecated successor constant on any line (1.21.1 aliases `InventoryMenu.BLOCK_ATLAS`; `AtlasIds.BLOCKS` is a *different id space* — the atlas-manager key, not the texture id — never swap it in). Two files deliberately suppress instead of converting: `SpriteHolderRegistry` (its registry stores the constant itself) and `AddonDefaultRenderer`. Sweep = extract one shared `BLOCKS_ATLAS_ID` (natural home: `BCLibRenderTypes`), swap the call sites, keep the two suppressions. In-client smoke after: kinesis pipes, tank/distiller/heat-exchanger fluid boxes, laser beams, PIP previews.
-
-## Cross-node deprecation backlog
-
-The 2026-09-08 pass cleaned the 1.21.1 node 51 → 12 warnings (the 12 are the JEI subtype-interpreter cluster, deliberately deferred). The same `-PbcLint=deprecation` compile sweep on the other nodes found (counts include JEI noise; nothing on lines touched by that pass):
-
-- **26.2 (43) / 26.1.2 (~35):** JEI `RecipeType` + `RecipeType.create` (forRemoval — the `*JeiTypes` classes and transfer handlers); `AbstractContainerScreen.getGuiLeft/getGuiTop/getXSize/getYSize` (forRemoval — **caution:** the old-name getters are the deliberate one-jar 26.1.x compat shim; fixing likely means per-line directives, not a rename); Guava `CacheBuilder.expireAfterAccess` in Facade/Gate/LensItemModel (26.2 only); `Ingredient.items()`; `RecipeSerializer.streamCodec()`.
-- **1.21.10 / 1.21.11 (31 each):** same JEI family plus `Entity.hurtOrSimulate` ([EntityRobotBase.java:207](../src/main/java/buildcraft/api/robots/EntityRobotBase.java) — the deliberate 1.21.10+ `hurt`→`hurtOrSimulate` directive may itself need a successor directive if it's ever removed; check `hurtServer` availability when triaging).
-- **1.21.1 (12):** the JEI subtype-interpreter cluster (`IIngredientSubtypeInterpreter`, `registerSubtypeInterpreter`, `UidContext`) — all deprecated-for-removal; breaks at the next 1.21.1 `jei_version` bump. Migrate to JEI's replacement at that bump (or suppress with rationale if the pin is frozen long-term).
-
-## Redstone engine RF leak
-
-Found 2026-09-08 in the upstream-branch audit: upstream `6e774142f` (2026-05-23, 8.0.1 changelog "Fixed redstone engines outputting RF when autoconversion was enabled") fixed a bug that is **live in this port**. `TileEngineBase_BC8.getReceiverToPower` (lines ~413-434) falls back to `MjToRfAutoConvertor.createReceiver`, whose `canConnect` returns true unconditionally (`MjToRfAutoConvertor.java:105-107`), so a redstone engine ticks power into any adjacent FE machine whenever `powerMode` has autoconvert enabled (default `MJ_ONLY`, so default-safe). Upstream's fix: a `protected couldPowerRf()` hook on `TileEngineBase_BC8`, overridden to `false` in `TileEngineRedstone_BC8`. Difficulty S. Tests first: under autoconvert mode, assert the redstone engine's `getReceiverToPower` is null while e.g. a stone engine's is not.
-
-## Upstream 7.1.x tail sweep
-
-The 7.1.20→7.1.27 commits (51 non-merge, 2017-04 → 2025-01, `git rev-list --no-merges upstream/8.0.x-1.12.2..upstream/7.1.x`) never merged into ANY 8.0.x branch, so our 8.0.x-based code never inherited them. The gameplay audit against the live 7.1.27 client already covers behavior; this is the static code-level complement. A 2026-09-08 spot-check cleared most high-value items (ItemStackExact stacking, direction-param crash, quarry chunkload gate, builder dupe #3316 — port is structurally immune) — remaining unswept: `9417e8a59` (#3307 autoworkbench unattended crafting failure mode), `04936780c` (gate-click crash), `50147c04a` (MapWorld save concurrency), `f541cb0cd`/`0848496eb` (packet hardening, likely N/A on modern payloads). Second-order: `upstream/6.4.x` carries a 22-commit 2015 stable-line tail also never in 7.1.x — treat as extra input to the client-driven gameplay audit, not a separate sweep.
-
 ## REI recompile
 
-Re-compile-verify `compat/rei` when a 26.1-compatible REI ships. The whole REI tree is excluded from compilation (`build.gradle.kts` unconditional exclude; dependency commented out — "no compatible versions for MC 26.1 yet"), so the 2026-07 `ReiCraftingTableSupport` dedup is best-effort-unverified, and the old plugins had already rotted while frozen (called non-existent `getLeftPos`/`getTopPos` — fixed to `getGuiLeft`/`getGuiTop` in the rewrite). Expect `registerClickArea`/`DraggableStackVisitor`/`DraggingContext` API drift too.
+Re-compile-verify `compat/rei` when a 26.1-compatible REI ships. The whole REI tree is excluded from compilation (`build.gradle.kts` unconditional exclude; dependency commented out — "no compatible versions for MC 26.1 yet"), so the 2026-07 `ReiCraftingTableSupport` dedup is best-effort-unverified, and the old plugins had already rotted while frozen (called non-existent `getLeftPos`/`getTopPos`; the rewrite now reads the window rect via `GuiBC8#windowLeft()/windowTop()`, never either vanilla getter family). Expect `registerClickArea`/`DraggableStackVisitor`/`DraggingContext` API drift too.
 
 ## Pipe atlas split (blocked)
 
@@ -91,38 +70,77 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 
 **Cheap escape hatch if a low-spec-GPU compat report comes in:** ~1 hour revert of commit `5a6cdb5ac` — remove the 25 `dye_replace` entries from `assets/minecraft/atlases/blocks.json`, flip `PipeBaseModelGenStandard.ensureDyedSprites` to return null, restore the three fallback branches. Painted fluid pipes drop from 1-layer dyed-sprite rendering to 2-layer base+mask-overlay; atlas shrinks back to ~1024×1024.
 
-- **All nodes:** ~20 class-level `@SuppressWarnings("deprecation")` under `src/main` (ItemFragileFluidContainer, BCEnergyFluids, ItemList_BC8, ItemMapLocation, ItemPaintbrush_BC8, …) may hide more; remove each, recompile with lint, keep only where justified. `-Xlint` does not flag deprecated *imports* — a small guard (test or script grepping unconditional imports of NeoForge `@Deprecated(forRemoval)` types) would catch the next removal early. `FluidUtil` itself is fully migrated (2026-09-26, `buildcraft.lib.misc.FluidUtilBC`); only WidgetFluidTank's 1.21.1-only branch still calls it, which is correct there.
-
 ## Machine protection gaps
 
-Found during the 2026-09-26 fake-player cache work (`buildcraft.lib.misc.FakePlayerUtil`).
-- Stripes-pipe breaking (`PipeBehaviourStripes.onTick` → `BlockUtil.breakBlockAndGetDropsWithXp`) and robot breaking (`AIRobotBreak`) never call `BlockUtil.canMachineBreak`, so no BreakEvent is posted and both can break inside protected claims. Only Quarry, Mining Well and Builder check. All nodes.
-- The probe in `canMachineBreak` posts a real BreakEvent; `LocalBlockUpdateNotifier.onBlockBroken` treats it as an actual break, so every per-block check in a quarry/builder scan fires `setLevelUpdated` on nearby subscribers (TileLaser rescans). Fix idea: recognise BuildCraft's cached fake players (the `CachedFakePlayer` subclass in FakePlayerUtil can double as the marker) and ignore probe events there, or re-check block state.
-
-## Stripes advancements on fake players
-
-`AdvancementUtil.unlockAdvancement(Player, …)` given a fake player awards through that player's own tracker. On 1.21.1 and 26.2 that is NeoForge's no-op `FakePlayerAdvancements`, so BC advancements fired via a stripes pipe (e.g. `ItemList_BC8.use`) never reach the owner there. Route fake players through the UUID overload. Pre-existing, not caused by the cache. Also note: each fake-player UUID leaves a permanent PlayerList stats/advancements entry (once per UUID now, rather than per call); a fully clean fix needs NeoForge support.
-
-## Builder fluid defer on waterloggables
-
-`BlueprintBuilder.isFragileSchematicAt` and the fragile-block defer in `SchematicBlockDefault` use `canBeReplaced(WATER)`, which is still true for a dry `SimpleWaterloggedBlock` (pipes, markers), so builders defer placing them next to fluid for no reason. The predicate should exclude a `LiquidBlockContainer` that accepts the fluid; extend the existing `fluidmode_waterloggable_not_deferred` test. Related: `TileMiningWell` treats waterlogged low-viscosity cells as passable and skips them — decide whether the well should dig through them.
-
-## Electronic Library list cost
-
-`GlobalSavedDataSnapshots.getList()` re-reads and decompresses every snapshot file on the render thread once per second while the library GUI is open (1 s `SingleCache`, called every frame from `drawForegroundLayer`) — large libraries will hitch. Cache headers/keys and invalidate on add/remove. The list order is `File.listFiles` order of hash-named files, so it looks random; sort by name, then date. Minor (GLM review 2026-09-26): a server selection-sync landing in the same frame as a click can scroll the window inside `clickList` before the row is computed, selecting a neighbouring row. (Scrolling itself landed 2026-09-26 via `ScrollWindow` / `GuiElementScrollbar` / `SelectionFollower`.)
-
-## Flaky and dead tests
-
-- `robot_fetch_item_partial_fit_targets` (AIRobotFetchItemTester) failed once in a full 26.1.2 suite and passed on rerun. Likely: `AIRobotFetchItem` scans a 16-block radius that crosses neighbouring arenas (6 apart), and the `targettedItems` UUID set is static, so another test's robot can claim this test's drop. Fix: restrict the scan to the arena (zone) or position-pin the target.
-- `FluidPhysicsTest.testLightFuelSpreading` and `testCrudeOilSelfCollision` were never registered in `BuildCraftGameTests`, so they never run (`testDenseOilSinking` is now covered by `dense_oil_sinks_through_plain_water`). Register them in a contained basin or delete them — their layouts leak fluid out of the arena.
+Stripes pipes, robot breaking/harvesting and the probe-pings-lasers issue were fixed 2026-09-26 (`BreakEventCompat.isProbe`, `buildcraft.robotics.RobotProtection`). Still open:
+- **Pumps** (`TilePump`, `AIRobotPumpBlock`) drain fluids inside claims without asking; 1.12.2 didn't ask either, so it's a design call — probably gate draining behind the same `canMachineBreak` probe as the owner / station owner.
+- **Robot placing and tool use** (`AIRobotPlant`, `AIRobotUseToolOnBlock`) still run as the generic `[BuildCraft]` fake player. Switch to `FakePlayerUtil.lease(level, RobotProtection.ownerOf(robot), null)` so claim mods judge the station owner and advancements route to them.
 
 ## Fake player cache hardening
 
-Low-priority notes from the 2026-09-26 GLM review of `FakePlayerUtil` (none reachable from BC's own callers): the per-fetch reset doesn't restore FoodData, hurt/invulnerable timers, death state or portal timers; the public `fetch()` path (unlike `lease()`) sets no reservation; a `Lease` dropped without `close()` reserves its player forever with no warning (all in-tree sites use try-with-resources). Also: a modded `BucketPickup` that reports a source but refuses `pickupBlock` makes `TilePump` re-queue that cell on every 30-tick rebuild (no dupe and no free drain, since the refusal now resets progress; just a wasted BFS).
+The reset gaps, the fetch/lease split and leaked-lease detection were done 2026-09-26. One item left: a modded `BucketPickup` that reports a source but refuses `pickupBlock` makes `TilePump` re-queue that cell on every 30-tick rebuild. No dupe and no free drain (the refusal resets progress); each pass just wastes one 10 MJ attempt and the tube extension. Cheap fix: in `TilePump`, keep a transient map of refused cell → `BlockState` and skip the cell in `buildQueue`/`buildQueue0` while its state is unchanged. Needs a test-only registered block (no vanilla `BucketPickup` refuses a source). Same for `AIRobotPumpBlock`.
 
-## Robot stripes stack loss
+## Modded fluid textures
 
-`AIRobotStripesHandler` clears the robot's hand whenever `handleItem` succeeds, but handlers shrink or keep the robot's own stack (e.g. `StripesHandlerPlaceBlock` places 1 of 64) and nothing returns the remainder, so the rest is deleted. The pipe path drains the fake player's inventory back; the robot path should too. Check 7.1.x behaviour first. Pre-existing.
+`FluidUtilBC.getFluidTexture` (~line 71) guesses `<namespace>:block/<fluid-type-path>_still` for every fluid that isn't BuildCraft's, water or lava instead of asking the fluid. Below 26.1 the real answer is `IClientFluidTypeExtensions.of(fluid).getStillTexture(stack)`; on 26.x it's the `FluidModel` from `getModelManager().getFluidStateModelSet().get(state)`, which `getFluidColor` beside it already uses for tint. Any modded fluid with a differently-named texture (Create's, for example) likely draws as missing texture in tanks, `GuiElementFluidTank`, `GuiFluid`, Distiller, Heat Exchanger, Iron Engine screen, blueprint views and the fluid-shard tint. Unconfirmed — check in-client with a real mod fluid first.
+
+## Snapshot name collision
+
+`Snapshot.computeKey` hashes the content WITHOUT the header, and files are named `<hash>.bcnbt`. Saving the same structure twice under different names (or owners) silently keeps only the first file (`addSnapshot` skips existing files); a lookup for the second key then fails `readSnapshot`'s full-key equality check. Fix: header in the filename, or a header-agnostic content store plus separate header records (`GlobalSavedDataSnapshots.addSnapshot/readSnapshot`, `SnapshotIndex`, `Snapshot.Key`).
+
+## Builder clear-mode reflood loop
+
+In CLEAR fluid mode, a dry waterloggable placed next to water OUTSIDE the build area gets waterlogged by that neighbour; `isBuilt` is strict in CLEAR, so it re-queues a dry-it task forever (MJ only, no items lost; before 2026-09-26 it was deferred forever instead). Consider counting a cell that outside water re-floods as built, or placing it waterlogged. `SchematicBlockDefault.build/isBuilt`, `BlueprintBuilder`.
+
+## Quarry frame stall
+
+Pre-existing: if a cell in `TileQuarry.frameBreakBlockPoses` fails `canMine` (bedrock, a claim-protected block, a modded block logged with a thick fluid), `check()` re-adds it and the power loop spins on it every tick, so the frame never finishes. Skip or report such cells.
+
+## Mining Well tube erases water
+
+Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `setBlockAndUpdate(TUBE)` overwrites every water source in the bore, and retracting (`removeBlock`) leaves air — a well drilled through a pond permanently deletes its water column. Make the tube waterloggable, or restore the fluid on retract.
+
+## Zone Planner slot saving
+
+`TileZonePlanner` builds its seven `ItemHandlerSimple` slots (`invPaintbrushes`, `invInputPaintbrush`, `invInputMapLocation`, …) with a null callback outside the `itemManager`, so GUI changes may never call `setChanged()` — the bug class fixed for the Filtered Buffer on 2026-09-26 (`ItemHandlerManager` prebuilt-handler callback). Check whether the container/slot path marks the tile dirty; if not, wire the callback and add a save round-trip game test.
+
+## Integration Table JEI
+
+Robot + board → programmed robot, flat 5000 MJ (`RobotIntegrationRecipe`). No JEI presence at all. Pattern: a JEI-free collector like `robotics/compat/jei/ProgrammingRecipeCollector`; `RoboticsJeiSubtypes` already keys robots and boards. Optional extra for the Programming Table: a JEI '+' transfer — `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.
+
+## Guide overlay click-through
+
+`GuiGuide.mouseClicked` with `showingContentsMenu`: `currentPage.mouseClicked` runs before the overlay swallows the click, so the contents page's search tab and sort buttons beneath the open small-screen chapter overlay still take clicks. Check the overlay before delegating to the page.
+
+## JEI late start on 26.1.2
+
+A 26.1.2 dev client quick-playing into a world logged `A Screen is opening but JEI hasn't started yet ... Missing events: [TagsUpdatedEvent]` and JEI started late on the first screen open. 26.2 and 1.21.1 logs start JEI normally. Unverified whether quick-play-only or a real join-path problem (a `TagsUpdatedEvent` not firing/swallowed) — do one normal-join check.
+
+## Flaky marker tests
+
+`marker_orientation`, `marker_volume_los` and `marker_volume_triangulation_3d` failed together once in a full 26.1.2 game-test run (2026-09-26) and passed on every later run. Likely arena/concurrency interference — see the game-test arena-geometry and batch-isolation memories.
+
+## Small cleanups
+
+Found in passing on 2026-09-26; none is a bug today.
+- `TileEngineStone_BC8` (26.x branch) still calls the deprecated item-level `Item#getCraftingRemainder()` under a narrow suppression: NeoForge #3157 moved the stack-sensitive call mid-26.1.x. Switch to `consumed.getCraftingRemainder()` once the 26.1 floor passes that build (check 26.2's first build too).
+- `StatementParameterItemStackExact.readFromNbt` defaults `availableSlots` to 0 when the key is missing; upstream kept -1 (unlimited up to 64). Only hand-edited/foreign NBT. Default to -1 + unit test.
+- `BCEnergyFluids`' "layer cake" guard (`if (targetFluidState.getType().isSame(this)) continue;` in both `getSpread` overrides) looks redundant with `FlowingFluid.canBeReplacedWith`.
+- Five tests keep private `repoRoot()` copies (ClientItemDefinitionCoverageTester, GameTestManifestTester, FakePlayerProfileTester, CopyrightHeaderTester, BlockStateVariantCoverageTester) — use `TestHelper.repoRoot()`.
+- `GuiGate`'s connector hit-test is duplicated between the `>=1.21.10` and 1.21.1 `mouseClicked` bodies and repeats `drawBackgroundTexture`'s layout maths — one helper.
+- Not re-audited: method-level `@SuppressWarnings("deprecation")` on Lens/Gate/FacadeItemModel, QuadItemBakedModel and the four FragileFluidShardModel getters.
+- Optional wording (user call): upstream 7.1.27 `b84395c85` renamed the emerald-pipe tips Whitelist/Blacklist to "Limit (Only Filtered)"/"Exclude (Except Filtered)"; the Diamond-Wood GUI still uses `tip.PipeItemsEmerald.*`.
+- Optional API: upstream `d891e3b76` let addons forbid blocks from the default crop handler via IMC; the modern equivalent is a block tag read by `CropHandlerPlantable`. Only if an addon asks.
+
+## In-client smoke 2026-09-26
+
+Headless tests can't see these; check on 26.1.2 (plus a look on 1.21.1 and 26.2):
+- Blocks-atlas-id sweep: kinesis pipes (MJ + RF flow), tank/distiller/heat-exchanger fluid boxes and distiller power cubes, laser beams/boxes, blueprint PiP previews and the blueprint GUI renderer (1.21.1 especially), pipe-preview pluggables, filler-planner addon box, fluid GUI tanks (GuiElementFluidTank, GuiFluid, iron-engine screen), gate plugs, stripes-pipe renderer, LED variable models, painted fluid-pipe item models.
+- GUI window rect (`GuiBC8#window*`): window placement in every BC GUI, ledgers, JEI ghost-drag; ideally the 26.1.2 jar once on a 26.1/26.1.1 runtime.
+- Water gel break speed and sounds; TNT beside an obsidian-faced pipe (the facade shields that side).
+- Buttons: guide cover arrows/back/tooltips/sort radio, Filler Planner invert, the migrated machine screens on 1.21.1 and 26.2.
+- Robots: a working robot puffs red smoke at the right rate (fewer on Decreased/Minimal); `/particle buildcraftunofficial:robot_energy{size:100000}` errors; a blank robot on a station shows "Not programmed" with no arm swing (SP and dedicated server).
+- McDevBridge lacks a `/screenclick` endpoint (mouse button + GUI coords) — that blocked the guide/Emzuli/tooltip checks headless.
 
 ## Dev-only item files in release jars
 

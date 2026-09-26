@@ -74,7 +74,7 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 | B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | HALF-FIXED (Ph9 landed wearable acceptance + matching; List matching still open) |
 | B14 | LOW | station | Fluid output is the pipe's sided capability on the face opposite the station; the item output was made dead-end-proof (`insertItemsForce`) after the same shape refused unconnected faces. `PipeFlowFluids.getCapability` behaviour at a dead-end dock decides — needs a red-first game test. | FIXING (batch 2: test first) |
 | B16 | MED | entity | Home-station loss no longer shuts the robot down (7.1.x re-resolved the linked station every tick and called `shutdown("no docking station")`; port only checks the unresolved-after-load case) and `removeStation` leaves a main-station robot holding a dead `dockingStation`; `setblock air` under a station leaves it registered. Reproduced in-game on 26.2 (V3). | FIXING (batch 2, added) |
-| B15 | LOW | render | Energy exhaust is a vanilla white CLOUD; 7.1.x drew a red, size-scaled smoke puff (`EntityRobotEnergyParticle`) and scaled its rate with the particle setting. Cosmetic but the most visible robot effect. | OPEN — follow-up |
+| B15 | LOW | render | Energy exhaust is a vanilla white CLOUD; 7.1.x drew a red, size-scaled smoke puff (`EntityRobotEnergyParticle`) and scaled its rate with the particle setting. Cosmetic but the most visible robot effect. | FIXED 2026-09-26 (`robot_energy` particle, `RobotExhaust` rate/size math) |
 
 ### Refuted claims (kept so nobody re-reports them)
 
@@ -87,16 +87,14 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
   in-game (26.2 picker fetched from a gateless home station).
 - Break "tier gate" preventing the break: `BlockUtil.breakBlockAndGetDropsWithXp` gates only DROPS/XP; the block is
   still destroyed. REFUTED (matches 7.1.x).
-- `BoardRobotPicker.onServerStart()` never called: wired in `BCRobotics` via `ServerAboutToStartEvent`. REFUTED.
+- `BoardRobotPicker.onServerStart()` never called: wired in `BCRobotics` via `ServerAboutToStartEvent`. REFUTED. (Renamed
+  `clearTargets()` on 2026-09-26 and also wired to `ServerStoppedEvent`; the picker lock is now a claim table.)
 - Robots/boards missing from the creative tab: `BCCoreCreativeTabs` adds `ROBOT` and `ZONE_PLANNER` (boards ride the
   same tab). REFUTED.
 
 ### Design calls / deferred (real differences, not bugs)
 
-- Blank-board robot placement: 7.1.x refused it (verified in-game on 1.7.10: right-clicking a station with a blank
-  robot spawns nothing); the port places it and it idles (test `emptyBoardRobotStillPlaces` pins that on purpose,
-  "Ph4 revisits" — never revisited). DECIDE.
-- Blank robot / blank board stack to 16 in 7.1.x; port `stacksTo(1)` for both (documented as a dropped nicety). DECIDE.
+- Blank-board robot placement and blank stacking: decided 2026-09-03, both DONE (see "Decided: blank robots and boards").
 - `AIRobotGotoBlock` caps a search at 50,000 expansions (~50 s) then fails; 7.1.x's async runner searched until done.
   Bounded is the better engineering; note it under divergence 5.
 - Arrival snap: 7.1.x wrote the robot's position onto the path-cell centre / straight-move target on arrival; the port
@@ -183,16 +181,23 @@ merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
 
 Tracked as one-liners in todos.md; the detail lives here.
 
-- **Planter cannot plant sugar cane.** `CropHandlerReeds` is an empty enum stub and is never registered;
-  `CropHandlerPlantable.isSeed` explicitly excludes `Blocks.SUGAR_CANE` "for CropHandlerReeds". 7.1.x's reeds
-  handler made the reed item a seed and planted it on sand/dirt next to water. Genuine missing port (found by
-  batch 1 while fixing cactus maturity).
-- **Exhaust particle.** 7.1.x drew a red, size-scaled, lifetime-scaled smoke puff (`EntityRobotEnergyParticle`,
-  bigger for costlier AIs) and scaled its rate with the particle setting (100/400/1600); the port emits a fixed
-  vanilla white CLOUD. The most visible robot effect — worth a small custom particle.
-- **Action-provider gating.** `RobotsActionProvider` offers all 14 station/robot actions on any station-bearing
-  pipe; 7.1.x offered Provide/Accept Items only on item pipes with a wooden input, Accept/Provide Fluids only on
-  fluid pipes, Request Needed Items only with a request provider. Menu clutter, not behaviour.
+- **"Request Needed Items" does nothing** (`ActionStationRequestItemsMachine` / `ACTION_STATION_MACHINE_REQUEST`):
+  `actionActivate` is empty and nothing reads it, in 7.1.x too — machine requests already go through
+  `DockingStationPipe.getRequestProvider()`'s neighbour scan. Decide: wire it, or drop it from the menu (keep it
+  registered so saved gates load). Note on the 2026-09-26 action gating: 7.1.x offered Accept Items on any item pipe
+  (only Provide Items needed the wooden input), and its Request Needed Items check never failed because
+  `getRequestProvider()` returned `this`; the port requires a provider other than the station itself.
+- **Reservation release on unload/kill.** AIs release shared reservations only in `end()`, which is skipped when a
+  robot unloads or is killed mid-task (the picker's leak of this shape was fixed 2026-09-26 with a claim table).
+  Audit `RobotRegistry` resource/block reservations (`AIRobotSearchBlock`, the BreakBlock boards) against
+  `unloadRobot`/`killRobot`; also `releaseResources` frees a non-home, non-docked station with `unsafeRelease`
+  without removing it from `stationsTakenByRobot` (stale reverse index until `killRobot`). Check for other static
+  tables that could pin a stopped server's levels.
+- **Small robot nits (2026-09-26):** the Stripes robot loops forever on an item no handler can use (7.1.x did too —
+  could stash it or sleep); a robot stack with an unregistered board id refuses placement but its tooltip doesn't say
+  why ("Unknown board" hint); `AIRobotGotoStation.writeSelfToNBT` dereferences `stationIndex` without the null guard
+  `loadSelfFromNBT` has; `AIRobotStraightMoveTo` arrival never snaps position onto the target (7.1.x set posX/Y/Z;
+  `IRobotAccess` has no setPos), so non-station users stop up to 0.1 blocks off.
 - **Decided 2026-09-03 (user):** see "Decided: blank robots and boards" below. Still open from the same list:
   sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's
   friendlier behaviour unless asked; `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget,
@@ -216,6 +221,9 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
    spawns nothing, the item is kept). Port today: `ItemRobot.useOn` has no empty-board guard and
    `ItemRobotPlacementTester.emptyBoardRobotStillPlaces` pins the opposite — flip that test into the refusal pin.
    7.1.x's `ItemRobot.onItemUse` returned before any spawn when `getRobotNBT(stack) == getEmptyRobotBoard()`.
+**Items 1 and 2 DONE 2026-09-26** (`ItemRobot.isUnprogrammed` also catches unregistered/non-robot board ids;
+`blankRobotRefusesPlacement` pins it, and a programmed placement consumes exactly one).
+
 2. **Better UX than 1.7.x's silent refusal: show a "Not programmed" message.** Suggested shape: an action-bar
    (overlay) message, not a chat line, sent from the server side of `useOn` when the guard trips; new lang key
    (e.g. `buildcraft.robot.not_programmed`) in `en_us.json` AND `zh_cn.json` (the translation-leak sweep watches
@@ -225,8 +233,6 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
    `MAX_STACK_SIZE` 1 written by `ItemRobot.createRobotStack` / `ItemRedstoneBoard.createStack` on every
    programmed stack. Pinned by `ProgrammingRecipeTester` / `RobotIntegrationRecipeTester` (blank merge-16,
    programmed max-1, table options follow the rule) and the `robot_survival_recipes_resolve` crafting smoke.
-   Still open from this item's test list: "a blank stack of 16 loses exactly one on a successful placement"
-   — rides with item 1 (the placement-refusal flip), since both live in `ItemRobot.useOn`.
 
 - **`StatementParameterRobot` accepts robot stacks and (since Ph9's wearable acceptance) worn items**;
   7.1.x also took a List (match robots by list). Lists exist in the port; still unwired.
@@ -237,11 +243,9 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
 - **Untested behaviours the slices listed** (the strongest candidates): ~~`AIRobotBreak` progress/durability/drops;
   `AIRobotAttack` cadence + damage; harvest/plant/use-tool action layer; `AIRobotSearchEntity`; board
   `writeSelfToNBT` round-trips; robot item tooltip~~ — all pinned with Ph9 (see the resurrection doc).
-  Still open: two-robot reservation exclusivity; station policy overrides
-  (`canRobotExtractItem` & co.) with a gateless negative case; the goto-station chain and
-  straight-move arrival; charging-latch rules; `removeStation`/`killRobot`/`unloadRobot` registry
-  paths; creative sub-items; the fluid-side gate filter helpers. Batch 1/2 added tests for everything
-  they touched; the rest is a coverage sweep.
+  The rest (reservation exclusivity, station policy overrides, goto-station chain, charging latch, registry removal
+  paths, fluid-side gate filters) was pinned 2026-09-26; creative sub-items were already covered by
+  `RoboticsCreativeTabTester`. That sweep found and fixed the `removeStation` NPE for a robot docked away from home.
 - **Reference-client wishes for McDevBridge:** port `/screenclick` to the 1.12.2 module; an `/entitydata`-style read
   for 1.7.10 entities (only position/health is visible today, so robot battery/cargo on the reference side had to be
   inferred from behaviour); `pauseOnLostFocus:false` default in the legacy run dirs.

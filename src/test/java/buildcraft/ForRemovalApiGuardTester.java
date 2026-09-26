@@ -74,16 +74,7 @@ public class ForRemovalApiGuardTester {
      * entry that matches nothing on this node is fine — entries are node-agnostic, and another change may retire
      * the use first — but remove it once no node needs it.
      */
-    private static final Map<String, String> PENDING = Map.of(
-        // JEI compat — migrating to JEI's IRecipeType is tracked separately (todos: deprecation backlog, JEI part).
-        "mezz.jei.api.recipe.RecipeType",
-            "JEI RecipeType -> IRecipeType migration is its own work item (todo-details: cross-node deprecation backlog)",
-        // 1.21.1 only: JEI 19.27's subtype-interpreter API; migrate at the next 1.21.1 jei_version bump.
-        "mezz.jei.api.ingredients.subtypes.IIngredientSubtypeInterpreter",
-            "1.21.1 JEI subtype interpreters — deferred to the next 1.21.1 jei_version bump",
-        "mezz.jei.api.registration.ISubtypeRegistration#registerSubtypeInterpreter",
-            "1.21.1 JEI subtype interpreters — deferred to the next 1.21.1 jei_version bump"
-    );
+    private static final Map<String, String> PENDING = Map.of();
 
     private static final ClassLoader LOADER = ForRemovalApiGuardTester.class.getClassLoader();
 

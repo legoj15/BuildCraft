@@ -11,6 +11,7 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -151,8 +152,13 @@ public class BCRobotics {
 
         // The picker's shared fetch-target table is cleared on every server start — the 7.1.x wiring
         // (BuildCraftRobotics called BoardRobotPicker.onServerStart from its server-start handler) that the
-        // port originally dropped. (Claims held by robots that have left the world already expire on their own.)
-        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.onServerStart());
+        // port originally dropped — AND on server stop: a claim references its fetch AI -> robot -> level, and
+        // a robot mid-fetch at shutdown never runs end(), so without the stop-time clear a stopped integrated
+        // server's world graph would stay pinned by this static table while the player sits on the title
+        // screen. (ServerStoppedEvent fires from MinecraftServer.run's finally, so crashes are covered too.
+        // Claims held by robots that have left a running world already expire on their own.)
+        NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.clearTargets());
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> BoardRobotPicker.clearTargets());
 
         // Ph7: the Programming Table + Integration Table recipes. Registered per-server-start (and per MP-client
         // login) because the recipe objects build Ingredients in their constructors, which requires items to be

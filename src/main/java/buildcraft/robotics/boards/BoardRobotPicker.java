@@ -34,7 +34,8 @@ public class BoardRobotPicker extends RedstoneBoardRobot {
      *  fetch's {@code end()} — which never runs when the robot's chunk unloads mid-fetch or the robot is
      *  killed, so such a drop stayed untouchable for every robot until the server restarted (the reloaded
      *  robot included: its fetch AI is not saved). Remembering the claimant lets a claim die with its robot.
-     *  Server-thread only. Cleared on server start. */
+     *  Server-thread only. Cleared on server start and server stop — the stop-time clear is what keeps a
+     *  claim (fetch AI -> robot -> level) from pinning a stopped server's world graph. */
     private static final Map<UUID, AIRobotFetchItem> TARGETS = new HashMap<>();
 
     public BoardRobotPicker(IRobotAccess iRobot) {
@@ -71,7 +72,8 @@ public class BoardRobotPicker extends RedstoneBoardRobot {
         return claimant.robot instanceof Entity robot && robot.isRemoved();
     }
 
-    public static void onServerStart() {
+    /** Drops every claim. Wired (BCRobotics) to ServerAboutToStartEvent and ServerStoppedEvent. */
+    public static void clearTargets() {
         TARGETS.clear();
     }
 

@@ -16,8 +16,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.template.TemplateApi;
+
+import buildcraft.lib.misc.FakePlayerUtil;
 
 public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
     public TemplateBuilder(ITileForTemplateBuilder tile) {
@@ -84,18 +85,19 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
         if (placeTask.items == null || placeTask.items.isEmpty()) {
             return false;
         }
-        net.minecraft.world.entity.player.Player fakePlayer = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
-            (ServerLevel) tile.getWorldBC(),
-            tile.getOwner(),
-            tile.getBuilderPos()
-        );
-        fakePlayer.setItemInHand(InteractionHand.MAIN_HAND, placeTask.items.get(0));
-        return TemplateApi.templateRegistry.handle(
-            tile.getWorldBC(),
-            placeTask.pos,
-            fakePlayer,
-            placeTask.items.get(0)
-        );
+        // A leased (cached, reset) owner player standing at the builder; closing the lease takes the placed
+        // stack back out of its hand so the shared player never holds a live reference to it. An unowned
+        // builder (set-block placed) places as the "[BuildCraft]" player.
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(
+                (ServerLevel) tile.getWorldBC(), tile.getOwner(), tile.getBuilderPos())) {
+            lease.player().setItemInHand(InteractionHand.MAIN_HAND, placeTask.items.get(0));
+            return TemplateApi.templateRegistry.handle(
+                tile.getWorldBC(),
+                placeTask.pos,
+                lease.player(),
+                placeTask.items.get(0)
+            );
+        }
     }
 
     @Override

@@ -16,11 +16,12 @@ import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+
+import buildcraft.lib.misc.FakePlayerUtil;
 
 /** Plants the held seed at {@code blockFound} through the
  *  {@link buildcraft.api.crops.CropManager} (sustainability check + crop placement via a fake player).
@@ -62,12 +63,14 @@ public class AIRobotPlant extends AIRobot {
         if (delay++ > 40) {
             if (robot.level() instanceof ServerLevel serverLevel) {
                 // The fake player stands where the robot stands; the handler puts the seed in its main
-                // hand itself before the useOn.
-                FakePlayer player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
-                player.setPos(robot.position());
+                // hand itself before the useOn, and closing the lease takes it back out.
                 ItemStack held = robot.getHeldItem();
-                if (!CropManager.plantCrop(serverLevel, player, held, blockFound)) {
-                    setSuccess(false);
+                try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+                    FakePlayer player = lease.player();
+                    player.setPos(robot.position());
+                    if (!CropManager.plantCrop(serverLevel, player, held, blockFound)) {
+                        setSuccess(false);
+                    }
                 }
                 if (!held.isEmpty()) {
                     serverLevel.addFreshEntity(new ItemEntity(serverLevel,

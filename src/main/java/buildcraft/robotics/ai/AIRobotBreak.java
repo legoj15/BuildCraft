@@ -20,18 +20,18 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.FakePlayerUtil;
 
 /** Breaks {@code blockToBreak} with the held tool, replicating vanilla's destroy-progress math (hardness,
  *  tool speed, efficiency's squared bonus, the correct-tool 30-vs-100 divisor) a few ticks per cycle, then
  *  finishes the job through the in-tree {@code BlockUtil.breakBlockAndGetDrops} (tier gate + drops).
  *  Ported from 7.1.x {@code AIRobotBreak}.
  *
- *  <p>The per-cycle progress is one tick of {@link BlockState#getDestroyProgress} measured for a fresh
+ *  <p>The per-cycle progress is one tick of {@link BlockState#getDestroyProgress} measured for a freshly reset
  *  BuildCraft fake player holding the robot's tool — the fake player is what carries the tool (and its
  *  efficiency enchantment) into vanilla's math, exactly as 7.1.x's {@code getFakePlayerWithTool} did.
  *  The 7.1.x crack-particle SFX is dropped; the crack overlay itself is kept through
@@ -75,9 +75,14 @@ public class AIRobotBreak extends AIRobot {
             return;
         }
 
-        // A fresh context-local fake player per cycle (the provider does not cache); the held tool goes in
+        // The cached fake player, leased (reset on lease, scrubbed on close) for this cycle; the held tool goes in
         // its main hand so getDestroyProgress sees the tool speed and the efficiency bonus.
-        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+            breakCycle(serverLevel, state, hardness, lease.player());
+        }
+    }
+
+    private void breakCycle(ServerLevel serverLevel, BlockState state, float hardness, FakePlayer player) {
         player.setItemInHand(InteractionHand.MAIN_HAND, robot.getHeldItem());
         //? if >=1.21.10 {
         // 1.21.10 split the player's equipment table off the Inventory: setItemInHand now writes the

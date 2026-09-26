@@ -14,13 +14,13 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -41,6 +41,7 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -224,29 +225,21 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         if (world.isClientSide() || !(world instanceof ServerLevel serverLevel)) {
             return;
         }
-        com.mojang.authlib.GameProfile owner = holder.getOwner();
-        FakePlayer player;
-        if (owner != null) {
-            player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(
-                serverLevel, owner, pos
-            );
-        } else {
-            player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
-            player.setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        }
-        player.getInventory().clearContent();
-        //? if >=1.21.10 {
-        player.getInventory().setItem(player.getInventory().getSelectedSlot(), event.getStack());
-        //?} else {
-        /*player.getInventory().setItem(player.getInventory().selected, event.getStack());*/
-        //?}
-        if (PipeApi.stripeRegistry != null &&
-            PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
-            event.setStack(ItemStack.EMPTY);
-            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                ItemStack stack = player.getInventory().removeItemNoUpdate(i);
-                if (!stack.isEmpty()) {
-                    sendItem(stack, direction);
+        // The owner's leased fake player (the "[BuildCraft]" one for an unowned pipe), reset and centred on the
+        // pipe. The travelling stack goes in its hand; on success everything left in its inventory is sent back
+        // down the pipe, and closing the lease drops the stack reference a failed handler leaves behind (the
+        // stack itself carries on as the dropped item).
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel, holder.getOwner(), pos)) {
+            FakePlayer player = lease.player();
+            player.setItemInHand(InteractionHand.MAIN_HAND, event.getStack());
+            if (PipeApi.stripeRegistry != null &&
+                PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
+                event.setStack(ItemStack.EMPTY);
+                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                    ItemStack stack = player.getInventory().removeItemNoUpdate(i);
+                    if (!stack.isEmpty()) {
+                        sendItem(stack, direction);
+                    }
                 }
             }
         }

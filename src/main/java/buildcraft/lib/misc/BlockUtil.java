@@ -6,12 +6,10 @@
 
 package buildcraft.lib.misc;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -38,7 +36,6 @@ import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.core.BCCoreConfig;
@@ -137,13 +134,6 @@ public class BlockUtil {
         return net.minecraft.world.InteractionResult.CONSUME;
     }
 
-    /** Fallback profile used when a mining tile has no recorded owner (e.g. set-block, worldgen).
-     *  Same UUID seed and display name as BCCore's BC_PROFILE so protection mods see one identity. */
-    private static final GameProfile MACHINE_FAKE_PROFILE = new GameProfile(
-            UUID.nameUUIDFromBytes("BuildCraft".getBytes(StandardCharsets.UTF_8)),
-            "[BuildCraft]"
-    );
-
     /**
      * Returns true if a BuildCraft mining machine is permitted to break the block at {@code pos}.
      * <p>
@@ -151,16 +141,22 @@ public class BlockUtil {
      * an "override protection" toggle). Otherwise, posts the running version's block-break event with an
      * owner-bound FakePlayer positioned at {@code pos} and returns {@code !event.isCanceled()},
      * so third-party protection mods (FTB Chunks, GriefPrevention, OpenPartiesAndClaims, server
-     * protection plugins) can gate the break by cancelling the event.
+     * protection plugins) can gate the break by cancelling the event. A machine with no recorded
+     * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}.
+     * <p>
+     * Runs once per scanned block in quarry / mining-well / builder loops, so the player is the
+     * cached one, leased for the duration of the event.
      */
     public static boolean canMachineBreak(ServerLevel level, BlockPos pos, GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {
             return true;
         }
-        GameProfile profile = (owner != null && GameProfileUtil.getName(owner) != null) ? owner : MACHINE_FAKE_PROFILE;
-        Player fp = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, profile, pos);
-        BlockState state = level.getBlockState(pos);
-        return BreakEventCompat.canBreak(level, pos, state, fp);
+        GameProfile profile = (owner != null && GameProfileUtil.getName(owner) != null)
+                ? owner : FakePlayerUtil.BUILDCRAFT_PROFILE;
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, pos)) {
+            BlockState state = level.getBlockState(pos);
+            return BreakEventCompat.canBreak(level, pos, state, lease.player());
+        }
     }
 
     /** Returns the fluid associated with a block if it is a fluid block, or null otherwise. */

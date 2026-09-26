@@ -20,10 +20,11 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+
+import buildcraft.lib.misc.FakePlayerUtil;
 
 /** Right-clicks the held tool on the block at {@code useToBlock} (the farmer's hoe-on-dirt), damaging the
  *  tool per use. Ported from 7.1.x {@code AIRobotUseToolOnBlock} (7.1.x used the block's
@@ -64,12 +65,15 @@ public class AIRobotUseToolOnBlock extends AIRobot {
         if (useCycles > 40) {
             if (useToBlock != null && robot.level() instanceof ServerLevel serverLevel) {
                 ItemStack held = robot.getHeldItem();
-                FakePlayer player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(serverLevel);
-                player.setPos(robot.position());
-                // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
-                BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
-                UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
-                boolean used = held.useOn(useOnContext).consumesAction();
+                boolean used;
+                try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+                    FakePlayer player = lease.player();
+                    player.setPos(robot.position());
+                    // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
+                    BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
+                    UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
+                    used = held.useOn(useOnContext).consumesAction();
+                }
                 if (used) {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no
                     // 7.1.x-style explicit damageItem here — a tool wears exactly as it would in a

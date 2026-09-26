@@ -191,6 +191,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:item_transactor_limited_inventory", () -> buildcraft.lib.inventory.ItemTransactorTester::testLimitedInventory);
         reg.accept("buildcraftunofficial:item_handler_simple_component_round_trip", () -> buildcraft.lib.inventory.ItemTransactorTester::testComponentRoundTrip);
         reg.accept("buildcraftunofficial:item_handler_simple_legacy_id_count_fallback", () -> buildcraft.lib.inventory.ItemTransactorTester::testLegacyIdCountFallback);
+        reg.accept("buildcraftunofficial:fake_player_provider_reuses_instance", () -> buildcraft.lib.misc.FakePlayerUtilTester::testReusesInstance);
+        reg.accept("buildcraftunofficial:fake_player_provider_resets_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsState);
+        reg.accept("buildcraftunofficial:fake_player_provider_positions_player", () -> buildcraft.lib.misc.FakePlayerUtilTester::testPositionsPlayer);
+        reg.accept("buildcraftunofficial:fake_player_lease_isolates_nested_fetches", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeaseIsolatesNestedFetches);
+        reg.accept("buildcraftunofficial:fake_player_cache_drops_unloaded_level", () -> buildcraft.lib.misc.FakePlayerUtilTester::testUnloadDropsLevelPlayers);
+        reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns
         reg.accept("buildcraftunofficial:shape_pattern_tiny_template", () -> buildcraft.core.builders.patterns.ShapePatternsTester::testTinyTemplate);

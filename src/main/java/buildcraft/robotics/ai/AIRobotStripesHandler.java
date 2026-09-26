@@ -15,11 +15,12 @@ import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.pipe.PipeApi;
+
+import buildcraft.lib.misc.FakePlayerUtil;
 
 /** The stripes board's item-use cycle: aim the held item at the reserved block, "use" it there through
  *  every registered stripes item handler (a fake BuildCraft player standing on the target, facing north,
@@ -63,14 +64,18 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
 
             Direction direction = Direction.NORTH;
 
-            FakePlayer player = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(
-                    (ServerLevel) robot.level());
-            player.setPos(useToBlock.getX() + 0.5, useToBlock.getY(), useToBlock.getZ() + 0.5);
-            player.setXRot(0);
-            player.setYRot(180);
+            // Leased: the rotation set here never leaks into the next user of the shared player (a stripes
+            // pipe placing blocks would otherwise inherit yRot 180), and closing the lease drops whatever the
+            // handler put in its hands.
+            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease((ServerLevel) robot.level())) {
+                FakePlayer player = lease.player();
+                player.setPos(useToBlock.getX() + 0.5, useToBlock.getY(), useToBlock.getZ() + 0.5);
+                player.setXRot(0);
+                player.setYRot(180);
 
-            if (PipeApi.stripeRegistry.handleItem(robot.level(), useToBlock, direction, stack, player, this)) {
-                robot.setItemInUse(ItemStack.EMPTY);
+                if (PipeApi.stripeRegistry.handleItem(robot.level(), useToBlock, direction, stack, player, this)) {
+                    robot.setItemInUse(ItemStack.EMPTY);
+                }
             }
             terminate();
         }

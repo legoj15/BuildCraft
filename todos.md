@@ -5,7 +5,7 @@ Last audited: 2026-09-26
 ## 🔧 Outstanding work
 
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
-- In-game check of this round's visual changes (render sweep, buttons, guide arrows, robot smoke, blank-robot message) — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
+- In-game check of the rest of this round's visual changes (guide arrows, other versions, blank-robot message) — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Tanks and gauges may show other mods' fluids as the missing texture — [notes](docs/todo-details.md#modded-fluid-textures)
 - Electronic Library keeps only one copy when the same build is saved under two names — [notes](docs/todo-details.md#snapshot-name-collision)
 - Zone Planner may not save changes made in its slots — [notes](docs/todo-details.md#zone-planner-slot-saving)
@@ -15,7 +15,6 @@ Last audited: 2026-09-26
 - Pumps and robot planting/tool use still skip claim protection — [notes](docs/todo-details.md#machine-protection-gaps)
 - Stop pumps retrying a modded fluid block that refuses to be drained (low priority) — [notes](docs/todo-details.md#fake-player-cache-hardening)
 - JEI category for the Integration Table — [notes](docs/todo-details.md#integration-table-jei)
-- Check whether JEI starts late when joining a world on 26.1.2 — [notes](docs/todo-details.md#jei-late-start-on-2612)
 - Guide book: the small-screen chapter overlay lets clicks through to the page beneath — [notes](docs/todo-details.md#guide-overlay-click-through)
 - Three marker game tests flaked together once on 26.1.2 — [notes](docs/todo-details.md#flaky-marker-tests)
 - Robots: make sure every reservation is released when a robot unloads or dies — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)

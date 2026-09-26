@@ -112,10 +112,6 @@ Robot + board → programmed robot, flat 5000 MJ (`RobotIntegrationRecipe`). No 
 
 `GuiGuide.mouseClicked` with `showingContentsMenu`: `currentPage.mouseClicked` runs before the overlay swallows the click, so the contents page's search tab and sort buttons beneath the open small-screen chapter overlay still take clicks. Check the overlay before delegating to the page.
 
-## JEI late start on 26.1.2
-
-A 26.1.2 dev client quick-playing into a world logged `A Screen is opening but JEI hasn't started yet ... Missing events: [TagsUpdatedEvent]` and JEI started late on the first screen open. 26.2 and 1.21.1 logs start JEI normally. Unverified whether quick-play-only or a real join-path problem (a `TagsUpdatedEvent` not firing/swallowed) — do one normal-join check.
-
 ## Flaky marker tests
 
 `marker_orientation`, `marker_volume_los` and `marker_volume_triangulation_3d` failed together once in a full 26.1.2 game-test run (2026-09-26) and passed on every later run. Likely arena/concurrency interference — see the game-test arena-geometry and batch-isolation memories.
@@ -134,13 +130,13 @@ Found in passing on 2026-09-26; none is a bug today.
 
 ## In-client smoke 2026-09-26
 
-Headless tests can't see these; check on 26.1.2 (plus a look on 1.21.1 and 26.2):
-- Blocks-atlas-id sweep: kinesis pipes (MJ + RF flow), tank/distiller/heat-exchanger fluid boxes and distiller power cubes, laser beams/boxes, blueprint PiP previews and the blueprint GUI renderer (1.21.1 especially), pipe-preview pluggables, filler-planner addon box, fluid GUI tanks (GuiElementFluidTank, GuiFluid, iron-engine screen), gate plugs, stripes-pipe renderer, LED variable models, painted fluid-pipe item models.
-- GUI window rect (`GuiBC8#window*`): window placement in every BC GUI, ledgers, JEI ghost-drag; ideally the 26.1.2 jar once on a 26.1/26.1.1 runtime.
+Verified in a live 26.1.2 client on 2026-09-26 (McDevBridge): kinesis MJ flow, tank/distiller/heat-exchanger fluids, laser beam, Builder/Auto Workbench/Diamond-wood/Emzuli/Tank/List/Filler GUIs (placement, vanilla-face buttons, pressed-in modes, ledgers), the red exhaust particle and its size-bound command error; no BuildCraft render errors in the log. (JEI's quick-play "hasn't started yet / missing TagsUpdatedEvent" line also appears in 2026-08 logs and BC has no listener for that event, so it's JEI quick-play timing, not ours.) Still owed:
+- 1.21.1 and 26.2: a quick look at the same render sites and GUIs (1.21.1's blueprint GUI renderer especially), plus the pipe-preview pluggables, filler-planner addon box, gate plugs, stripes-pipe renderer, LED variable models, painted fluid-pipe item models.
+- Guide book (needs mouse clicks): cover arrows/back/tooltips/sort radio; Filler Planner invert; Emzuli right/middle click; button hover tooltips.
 - Water gel break speed and sounds; TNT beside an obsidian-faced pipe (the facade shields that side).
-- Buttons: guide cover arrows/back/tooltips/sort radio, Filler Planner invert, the migrated machine screens on 1.21.1 and 26.2.
-- Robots: a working robot puffs red smoke at the right rate (fewer on Decreased/Minimal); `/particle buildcraftunofficial:robot_energy{size:100000}` errors; a blank robot on a station shows "Not programmed" with no arm swing (SP and dedicated server).
-- McDevBridge lacks a `/screenclick` endpoint (mouse button + GUI coords) — that blocked the guide/Emzuli/tooltip checks headless.
+- A working robot's smoke rate (fewer on Decreased/Minimal); a blank robot on a station shows "Not programmed" with no arm swing (SP and dedicated server).
+- Cosmetic, maybe older than this round: on the Filler GUI, JEI's page-left arrow sits over the owner ledger at the window's top-right (JEI avoids ledgers for its item grid, not its nav bar).
+- McDevBridge lacks a `/screenclick` endpoint (mouse button + GUI coords); that is what blocks the mouse-driven checks headless.
 
 ## Dev-only item files in release jars
 

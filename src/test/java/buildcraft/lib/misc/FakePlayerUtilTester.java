@@ -287,8 +287,22 @@ public class FakePlayerUtilTester {
         try (FakePlayerUtil.Lease fresh = FakePlayerUtil.lease(level, owner, null)) {
             check(fresh.player() == leaked.player(), "after the sweep the cached player is handed out again");
             check(fresh.player().getMainHandItem().isEmpty(), "and it comes back reset");
+
+            // The leaker closes late, while the NEW lease still holds the same player: that close must neither
+            // scrub the new holder's hands nor drop its reservation.
+            fresh.player().setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE));
+            leaked.close();
+            check(fresh.player().getMainHandItem().is(Items.APPLE),
+                    "a late close of the leaked lease must not scrub the newer lease's player");
+            try (FakePlayerUtil.Lease nested = FakePlayerUtil.lease(level, owner, null)) {
+                check(nested.player() != fresh.player(),
+                        "a late close of the leaked lease must not release the newer lease's reservation");
+            }
         }
-        leaked.close(); // A late close must not release the new lease's reservation.
+        try (FakePlayerUtil.Lease after = FakePlayerUtil.lease(level, owner, null)) {
+            check(after.player() == leaked.player(), "closing the newer lease releases the cached player");
+            check(after.player().getMainHandItem().isEmpty(), "and scrubs it");
+        }
 
         helper.succeed();
     }

@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -39,6 +41,12 @@ public class RobotStripesTester {
         robot.setPos(at.x, at.y, at.z);
         robot.getBattery().addPower(5000L * MjAPI.MJ, false);
         robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 5));
+        // Whatever the robot does not keep is dropped at its own position, so that is the only place checked —
+        // a tight box well inside this 6x7 cell, cleared first so nothing already lying there is misread.
+        AABB dropZone = new AABB(at, at).inflate(1.5);
+        for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+            e.discard();
+        }
 
         AIRobotStripesHandler handler = new AIRobotStripesHandler(robot, target);
         handler.start();
@@ -54,12 +62,9 @@ public class RobotStripesTester {
         helper.assertTrue(held.is(Items.COBBLESTONE) && held.getCount() == 4,
                 "the robot keeps the 4 unplaced cobblestone in hand, holds " + held);
 
-        boolean dropped = false;
-        for (Entity e : level.getEntities((Entity) null, new AABB(target).inflate(3), e -> e instanceof ItemEntity)) {
-            dropped = true;
-            e.discard();
-        }
-        helper.assertTrue(!dropped, "nothing is dropped on the ground");
+        List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
+        dropped.forEach(Entity::discard);
+        helper.assertTrue(dropped.isEmpty(), "nothing is dropped at the robot's feet, found " + dropped);
         helper.succeed();
     }
 }

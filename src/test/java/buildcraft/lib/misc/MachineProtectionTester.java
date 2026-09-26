@@ -253,7 +253,10 @@ public class MachineProtectionTester {
         }
         check(level.getBlockState(stone).isAir(), "once allowed, the robot breaks the block");
 
-        for (Entity e : level.getEntities((Entity) null, new AABB(stone).inflate(2), e -> e instanceof ItemEntity)) {
+        // The break drops at the block's centre this same tick; a tight box keeps the cleanup inside this cell
+        // (inflate(2) around rel (1,1,1) reached into the neighbouring cell and could eat its items).
+        for (Entity e : level.getEntities((Entity) null, new AABB(stone).inflate(0.75),
+                e -> e instanceof ItemEntity item && item.getItem().is(Items.COBBLESTONE))) {
             e.discard();
         }
         helper.succeed();

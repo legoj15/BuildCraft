@@ -196,6 +196,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_provider_positions_player", () -> buildcraft.lib.misc.FakePlayerUtilTester::testPositionsPlayer);
         reg.accept("buildcraftunofficial:fake_player_lease_isolates_nested_fetches", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeaseIsolatesNestedFetches);
         reg.accept("buildcraftunofficial:fake_player_cache_drops_unloaded_level", () -> buildcraft.lib.misc.FakePlayerUtilTester::testUnloadDropsLevelPlayers);
+        reg.accept("buildcraftunofficial:fake_player_owner_session_change_evicts", () -> buildcraft.lib.misc.FakePlayerUtilTester::testOwnerSessionChangeEvicts);
+        reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns

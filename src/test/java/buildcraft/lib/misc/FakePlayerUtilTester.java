@@ -6,7 +6,10 @@
 
 package buildcraft.lib.misc;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import com.mojang.authlib.GameProfile;
 
@@ -14,13 +17,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.VanillaGameEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.api.core.BuildCraftAPI;
@@ -233,17 +240,99 @@ public class FakePlayerUtilTester {
         helper.succeed();
     }
 
-    /** A level unload forgets that level's players, so the cache never keeps a level alive. */
+    /**
+     * A level unload forgets that level's players, so the cache never keeps a level alive. The handler is called
+     * directly: posting a real {@code LevelEvent.Unload} for the shared game-test level would run every mod's unload
+     * listener against a level that is not unloading. That the handler is subscribed is pinned by
+     * {@code FakePlayerUtilSubscriptionTester}.
+     */
     public static void testUnloadDropsLevelPlayers(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
 
         FakePlayer before = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
-        // Posted on the game bus (as the server does on unload), so the listener's registration is covered too.
-        NeoForge.EVENT_BUS.post(new LevelEvent.Unload(level));
+        FakePlayerUtil.onLevelUnload(new LevelEvent.Unload(level));
         FakePlayer after = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(after != before, "the unloaded level's player is gone");
         check(after == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner), "the replacement is cached again");
+
+        helper.succeed();
+    }
+
+    /**
+     * A cached owner player binds the owner's advancement tracker once, at construction (on 1.21.10 - 26.1.x the
+     * tracker is the owner's live one). When the owner logs out the server discards that tracker and builds a new one
+     * at the next login, so a player cached across the session boundary would keep feeding a dead tracker. Owner
+     * login and logout therefore evict that owner's cached players — and only theirs.
+     */
+    public static void testOwnerSessionChangeEvicts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+        GameProfile bystander = uniqueProfile();
+
+        FakePlayer generic = BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level);
+        FakePlayer other = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, bystander);
+
+        FakePlayer beforeLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        // Stands in for the owner's real ServerPlayer: the handlers only read the UUID.
+        FakePlayer ownerSession = new FakePlayer(level, owner);
+        FakePlayerUtil.onPlayerLoggedOut(new PlayerEvent.PlayerLoggedOutEvent(ownerSession));
+        FakePlayer afterLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        check(afterLogout != beforeLogout, "the owner's logout evicts the owner's cached player");
+        check(afterLogout == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner),
+                "the rebuilt player is cached again");
+
+        FakePlayerUtil.onPlayerLoggedIn(new PlayerEvent.PlayerLoggedInEvent(ownerSession));
+        check(BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner) != afterLogout,
+                "the owner's login evicts the owner's cached player too");
+
+        check(BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, bystander) == other,
+                "another owner's cached player is untouched");
+        check(BuildCraftAPI.fakePlayerProvider.getBuildCraftPlayer(level) == generic,
+                "the generic [BuildCraft] player is untouched");
+
+        helper.succeed();
+    }
+
+    /**
+     * Resetting a player that a previous caller left mid-use (a stripes pipe "using" food, a shield or a bow) must
+     * drop the in-use state quietly: a throwaway player was simply discarded, so it never emitted the
+     * {@code ITEM_INTERACT_FINISH} vibration (which sculk sensors hear) nor ran the item's stop-using hook. Covers
+     * both the lease-close scrub and the fetch-time reset.
+     */
+    public static void testScrubIsSilent(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+        List<Entity> finishCauses = new ArrayList<>();
+        Consumer<VanillaGameEvent> listener = event -> {
+            if (event.getVanillaEvent().is(GameEvent.ITEM_INTERACT_FINISH.key())) {
+                finishCauses.add(event.getCause());
+            }
+        };
+        NeoForge.EVENT_BUS.addListener(listener);
+        try {
+            FakePlayer leased;
+            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, owner, helper.absolutePos(new BlockPos(1, 1, 1)))) {
+                leased = lease.player();
+                leased.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.APPLE, 2));
+                leased.startUsingItem(InteractionHand.MAIN_HAND);
+                check(leased.isUsingItem(), "precondition: the leased player is eating");
+            }
+            check(!leased.isUsingItem() && leased.getUseItem().isEmpty(), "closing the lease ends the use");
+            check(!finishCauses.contains(leased), "closing the lease emits no ITEM_INTERACT_FINISH vibration");
+
+            FakePlayer fetched = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+            fetched.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(Items.SHIELD));
+            fetched.startUsingItem(InteractionHand.OFF_HAND);
+            check(fetched.isUsingItem(), "precondition: the fetched player is raising a shield");
+            FakePlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+            check(again == fetched, "the same cached player comes back");
+            check(!again.isUsingItem() && again.getUseItem().isEmpty(), "the fetch-time reset ends the use");
+            check(again.getUsedItemHand() == InteractionHand.MAIN_HAND, "the used-hand flag is back to a fresh player's");
+            check(!finishCauses.contains(again), "the fetch-time reset emits no ITEM_INTERACT_FINISH vibration");
+        } finally {
+            NeoForge.EVENT_BUS.unregister(listener);
+        }
 
         helper.succeed();
     }

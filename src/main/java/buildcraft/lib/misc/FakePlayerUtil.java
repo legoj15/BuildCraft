@@ -24,6 +24,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.api.core.BCLog;
@@ -52,7 +53,20 @@ import buildcraft.api.core.IFakePlayerProvider;
  * cursor and 2x2 crafting stacks, an item in use, item cooldowns, rotations (incl. head/body and previous-tick),
  * ground/shift/sprint/swim flags and pose, motion, fall distance, fire, air, effects and health — and puts the
  * player either on the requested block (centre, like the old per-call constructor did) or back where it was
- * created. Resetting only drops references; the previous caller's stacks are never shrunk or emptied.
+ * created. Resetting only drops references; the previous caller's stacks are never shrunk or emptied, and no item
+ * hook or game event fires (an item left in use is dropped quietly, as a discarded throwaway player's was).
+ *
+ * <h2>Invalidation</h2>
+ * Entries are dropped when their level unloads, and an owner's entries when that owner logs in or out: a
+ * {@code ServerPlayer} binds its advancement tracker once at construction, and the server replaces an owner's
+ * tracker across sessions (see {@link #onPlayerLoggedIn}).
+ *
+ * <h2>What the reset cannot undo</h2>
+ * References the WORLD holds to a player: a mob leashed to it by a stripes pipe carrying a lead, a villager's
+ * trading partner, a projectile's owner. They now follow the shared player to wherever the next fetch puts it (a
+ * leash snaps and drops its lead past 12 blocks). Accepted: both upstream lines cached one player per profile too
+ * (7.1.x through Forge's {@code FakePlayerFactory}, 1.12.2 through its own map, neither ever resetting it), and the
+ * old per-call players only swapped this for a leash to an invisible ghost that no later operation could move.
  *
  * <h2>Leases and reentrancy</h2>
  * BuildCraft's own callers use {@link #lease}: try-with-resources, and {@link Lease#close()} scrubs the items the
@@ -117,6 +131,29 @@ public final class FakePlayerUtil {
         }
     }
 
+    /**
+     * The cached players' class: a plain {@link FakePlayer} (still {@code instanceof FakePlayer} and
+     * {@code isFakePlayer()} for every mod) that can end an item use quietly. {@code stopUsingItem()} would fire the
+     * item's stop-using hook and an {@code ITEM_INTERACT_FINISH} vibration that sculk sensors hear; the throwaway
+     * players this cache replaced were just discarded mid-use and never did either.
+     */
+    private static final class CachedFakePlayer extends FakePlayer {
+        CachedFakePlayer(ServerLevel level, GameProfile profile) {
+            super(level, profile);
+        }
+
+        /** Puts the in-use state back to a fresh player's without running any hook or emitting any event. */
+        void dropUseItemQuietly() {
+            setLivingEntityFlag(1, false); // using an item
+            setLivingEntityFlag(2, false); // ...with the off hand
+            useItem = ItemStack.EMPTY;
+            useItemRemaining = 0;
+            //? if >=1.21.11 {
+            recentKineticEnemies = null;
+            //?}
+        }
+    }
+
     private static final Map<Key, Entry> CACHE = new HashMap<>();
     private static boolean warnedOffThread = false;
 
@@ -169,7 +206,17 @@ public final class FakePlayerUtil {
         }
         GameProfile resolved = resolveProfile(profile);
         Key key = new Key(level, GameProfileUtil.getId(resolved), GameProfileUtil.getName(resolved));
-        return CACHE.computeIfAbsent(key, k -> new Entry(new FakePlayer(level, resolved)));
+        Entry entry = CACHE.get(key);
+        if (entry == null) {
+            // Built outside the map: construction fires entity-construction events, and a listener that fetched
+            // the same key from inside computeIfAbsent would throw ConcurrentModificationException.
+            entry = new Entry(new CachedFakePlayer(level, resolved));
+            Entry raced = CACHE.putIfAbsent(key, entry);
+            if (raced != null) {
+                entry = raced;
+            }
+        }
+        return entry;
     }
 
     private static FakePlayer detached(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
@@ -219,11 +266,14 @@ public final class FakePlayerUtil {
 
     /**
      * Drops every item reference the player holds: inventory, hands, equipment, selected slot, cursor, 2x2 grid,
-     * the item in use, and cooldowns. The stacks themselves are never modified.
+     * the item in use, and cooldowns. The stacks themselves are never modified, and no item hook, game event or
+     * third-party listener runs — so this can neither throw from foreign code nor be heard by a sculk sensor.
      */
     private static void scrubItems(FakePlayer player) {
-        if (player.isUsingItem() || !player.getUseItem().isEmpty()) {
-            player.stopUsingItem();
+        // A detached player is discarded after use, exactly like the old per-call players, so its use state
+        // (a reference only) is left to the garbage collector.
+        if (player instanceof CachedFakePlayer cached) {
+            cached.dropUseItemQuietly();
         }
         // Covers the hands and all armor/equipment on every node: 1.21.1 keeps them as Inventory compartments,
         // 1.21.10+ clears the split-off EntityEquipment table from the same call.
@@ -246,6 +296,30 @@ public final class FakePlayerUtil {
         if (event.getLevel() instanceof ServerLevel level) {
             CACHE.keySet().removeIf(key -> key.level() == level);
         }
+    }
+
+    /**
+     * Forgets the owner's cached players when the owner logs in. A {@code ServerPlayer} binds its advancement
+     * tracker once, at construction, and on 1.21.10 - 26.1.x a fake player carrying the owner's UUID binds the
+     * owner's own live tracker. The server discards that tracker at logout and builds a new one at the next login,
+     * so a player cached across a session boundary would keep feeding a dead tracker: owner criteria triggered
+     * through it (a stripes pipe or builder placing blocks, a list item's advancement) would be lost, or awarded to
+     * the logged-out entity. The per-call players this cache replaced always looked the current tracker up.
+     */
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        evictOwner(event.getEntity().getUUID());
+    }
+
+    /** See {@link #onPlayerLoggedIn}: the tracker a cached player holds is discarded when its owner logs out. */
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        evictOwner(event.getEntity().getUUID());
+    }
+
+    private static void evictOwner(UUID id) {
+        // A lease in progress keeps its entry object and releases it harmlessly; the next fetch rebuilds.
+        CACHE.keySet().removeIf(key -> key.id().equals(id));
     }
 
     /**
@@ -273,9 +347,14 @@ public final class FakePlayerUtil {
                 return;
             }
             closed = true;
-            scrubItems(player);
-            if (entry != null) {
-                entry.leased = false;
+            try {
+                scrubItems(player);
+            } finally {
+                // Released even if the scrub throws, or every later fetch for this player would silently take
+                // the detached path and bring back the per-call construction cost.
+                if (entry != null) {
+                    entry.leased = false;
+                }
             }
         }
     }

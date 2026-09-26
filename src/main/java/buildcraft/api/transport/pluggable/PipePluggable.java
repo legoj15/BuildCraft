@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
 
 
 import net.neoforged.neoforge.capabilities.ICapabilityProvider;
@@ -149,7 +148,10 @@ public abstract class PipePluggable {
         return false;
     }
 
-    /** PipePluggable version of {@link Block#getExplosionResistance(Level, BlockPos, Entity, Explosion)} */
+    /** PipePluggable version of NeoForge's context-aware
+     * {@code IBlockExtension#getExplosionResistance(BlockState, BlockGetter, BlockPos, Explosion)}: the pipe holder
+     * asks the pluggable on the side facing the explosion's centre, and uses this value when it exceeds the pipe's own
+     * resistance. 0 (the default) leaves the pipe's resistance alone. */
     public float getExplosionResistance(@Nullable Entity exploder, Explosion explosion) {
         return 0;
     }

@@ -20,6 +20,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
@@ -150,6 +151,46 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             return (lvl, pos, st, be) -> ((TilePipeHolder) be).tick();
         }
         return null;
+    }
+
+    // Explosions
+
+    /** A pluggable armours the side it covers: a blast meets the pluggable on the side facing the explosion's
+     *  centre first, so the pipe resists it as well as that pluggable does (a facade answers with its block's
+     *  resistance). Ported from 1.12.2, with one deliberate change — a pluggable can only raise the pipe's own
+     *  resistance, never lower it, so a glass facade no longer makes the pipe behind it weaker than bare. */
+    @Override
+    public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos,
+                                        Explosion explosion) {
+        float own = super.getExplosionResistance(state, level, pos, explosion);
+        Direction side = sideFacing(pos, explosion.center());
+        if (side != null && level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            PipePluggable pluggable = tile.getPluggable(side);
+            if (pluggable != null) {
+                return Math.max(own, pluggable.getExplosionResistance(explosion.getDirectSourceEntity(), explosion));
+            }
+        }
+        return own;
+    }
+
+    /** The face of the block at {@code pos} that points most directly at {@code source}, or null when the
+     *  source sits at the block's centre (no side faces it). */
+    @Nullable
+    static Direction sideFacing(BlockPos pos, Vec3 source) {
+        Vec3 toSource = source.subtract(Vec3.atCenterOf(pos));
+        if (toSource.lengthSqr() < 1.0e-8) {
+            return null;
+        }
+        Direction best = null;
+        double bestDot = Double.NEGATIVE_INFINITY;
+        for (Direction dir : Direction.values()) {
+            double dot = toSource.x * dir.getStepX() + toSource.y * dir.getStepY() + toSource.z * dir.getStepZ();
+            if (dot > bestDot) {
+                bestDot = dot;
+                best = dir;
+            }
+        }
+        return best;
     }
 
     // Shape

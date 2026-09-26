@@ -574,6 +574,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_pickaxe_break_drops_everything", () -> buildcraft.transport.PipeDropsTester::testPipePickaxeBreakDropsEverything);
         reg.accept("buildcraftunofficial:pipe_hand_break_drops_everything", () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
         reg.accept("buildcraftunofficial:pipe_fluid_break_drops_shards", () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
+        reg.accept("buildcraftunofficial:pipe_facade_explosion_resistance", () -> buildcraft.transport.PipeExplosionResistanceTester::testFacadeArmoursTheSideItCovers);
         // Non-player removal (explosion / piston / /setblock) spills the in-transit cargo only — the
         // pipe / pluggables / wires are lost. Regression guard for the dropPipeCargo catch-all.
         reg.accept("buildcraftunofficial:pipe_nonplayer_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerBreakDropsCargoOnly);

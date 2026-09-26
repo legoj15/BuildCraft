@@ -199,7 +199,7 @@ port, not as working code.
 | **Programming Table** | Boards from laser power | Dev-only husk; **Ph7** |
 | **Charging Table** | Unshipped experiment | Dev-only in 1.12.2, unobtainable in 7.1.27 too — not planned |
 | **Construction Mark** | Build sites for the Builder robot | Removed outright; Ph9's builder targets snapshots instead |
-| **Redstone Crystal** | Robot crafting ingredient (Assembly Table, 1 redstone block, 1 000 000 MJ) | Unobtainable lang-remnant in 1.12.2; the port's robot recipe currently uses redstone dust instead — [open decision](todo-details.md#robot-recipe-redstone-crystal) |
+| **Redstone Crystal** | Robot crafting ingredient (Assembly Table, 1 redstone block, 1 000 000 MJ) | Unobtainable lang-remnant in 1.12.2; **restored in the port** at 256 000 MJ (same input) |
 | **Emerald Transport Pipe** | Filtered extraction (whitelist/blacklist/round-robin) | Replaced by **Wooden Diamond** item pipe |
 | **Emerald Fluid Pipe** | Filtered fluid extraction | Replaced by **Wooden Diamond** fluid pipe (1.12.2's didn't actually filter; fixed in this port) |
 | **Emerald Kinesis Pipe** | Mid-tier power pipe | Simply gone — no replacement |

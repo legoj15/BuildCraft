@@ -8,7 +8,7 @@
   ],
   "key": {
     "P": "#c:ingots/iron",
-    "R": "#c:dusts/redstone",
+    "R": "buildcraftunofficial:redstone_crystal",
     "C": "buildcraftunofficial:chipset_diamond"
   },
   "result": {

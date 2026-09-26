@@ -26,6 +26,7 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
   `buildcraft_resources/assets/buildcraftrobotics/textures/items/board/` textures of the same names —
   upstream art ported unchanged (they arrived labelled as new Ph5 work; the git blob hashes say
   otherwise).
+- `src/main/resources/assets/buildcraftunofficial/textures/item/redstone_crystal.png` is a verbatim copy of 7.1.x `buildcraft_resources/assets/buildcraftsilicon/textures/items/redstoneCrystal.png` — upstream art ported unchanged.
 - `src/main/resources/assets/buildcraftunofficial/textures/gui/requester.png` is a verbatim copy of 7.1.x/8.0.x `textures/gui/requester_gui.png` — upstream art ported unchanged.
 - `src/main/resources/assets/buildcraftunofficial/textures/item/robot_<kind>.png` — and the base
   `textures/item/robot.png` — are byte-copies of the in-tree `textures/entity/robot_<kind>.png` skins —

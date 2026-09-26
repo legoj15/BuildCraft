@@ -149,6 +149,7 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCSiliconItems.CHIPSET_GOLD.get());
                                 output.accept(BCSiliconItems.CHIPSET_QUARTZ.get());
                                 output.accept(BCSiliconItems.CHIPSET_DIAMOND.get());
+                                output.accept(BCSiliconItems.REDSTONE_CRYSTAL.get());
                                 output.accept(BCSiliconItems.GATE_COPIER.get());
                                 // Fluids
                                 for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {

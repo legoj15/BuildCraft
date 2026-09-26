@@ -56,6 +56,11 @@ public class BCSiliconItems {
     public static final DeferredItem<Item> CHIPSET_DIAMOND =
             ITEMS.registerSimpleItem("chipset_diamond");
 
+    // Redstone Crystal — 7.1.x's robot-recipe core (BuildCraftSilicon.redstoneCrystal), restored at
+    // an 8.0-scaled Assembly Table cost; 1.12.2 dropped it and left only a lang remnant.
+    public static final DeferredItem<Item> REDSTONE_CRYSTAL =
+            ITEMS.registerSimpleItem("redstone_crystal");
+
     // Gate Copier
     public static final DeferredItem<ItemGateCopier> GATE_COPIER =
             RegistrationUtilBC.registerItem(ITEMS,"gate_copier", ItemGateCopier::new);

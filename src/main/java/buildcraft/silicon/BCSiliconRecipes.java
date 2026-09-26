@@ -166,6 +166,12 @@ public class BCSiliconRecipes {
             new IngredientStack(Ingredient.of(Items.DIAMOND)));
         AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("chipset_diamond",
             80_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.CHIPSET_DIAMOND.get())));
+
+        // 7.1.x charged 1 000 000 MJ (10M RF) for this; 256 000 MJ keeps the robot a real power
+        // investment (~3.2 diamond chipsets) without the multi-hour single-laser wait.
+        input = ImmutableSet.of(new IngredientStack(Ingredient.of(Items.REDSTONE_BLOCK)));
+        AssemblyRecipeRegistry.register(new AssemblyRecipeBasic("redstone_crystal",
+            256_000 * MjAPI.MJ, input, new ItemStack(BCSiliconItems.REDSTONE_CRYSTAL.get())));
     }
 
     // --- Lens Recipes ---

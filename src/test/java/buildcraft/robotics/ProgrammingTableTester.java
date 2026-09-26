@@ -7,9 +7,11 @@ package buildcraft.robotics;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -29,8 +31,10 @@ import net.minecraft.world.level.storage.TagValueOutput;
 
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.recipes.AssemblyRecipe;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.BCCoreItems;
+import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
@@ -39,6 +43,7 @@ import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.BCSiliconRecipes;
 import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.tile.TileIntegrationTable;
 import buildcraft.silicon.tile.TileLaser;
@@ -215,6 +220,7 @@ public class ProgrammingTableTester {
         ItemStack obsidian = new ItemStack(Items.OBSIDIAN);
         ItemStack chipsetRedstone = new ItemStack(BCSiliconItems.CHIPSET_REDSTONE.get());
         ItemStack chipsetDiamond = new ItemStack(BCSiliconItems.CHIPSET_DIAMOND.get());
+        ItemStack redstoneCrystal = new ItemStack(BCSiliconItems.REDSTONE_CRYSTAL.get());
         ItemStack gearDiamond = new ItemStack(BCCoreItems.GEAR_DIAMOND.get());
         ItemStack gearGold = new ItemStack(BCCoreItems.GEAR_GOLD.get());
 
@@ -226,12 +232,43 @@ public class ProgrammingTableTester {
                 paper, paper, paper)),
                 new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get()), "blank redstone board");
 
-        // Robot: PPP / PRP / C C (5 iron + 1 redstone + 2 diamond chipsets)
+        // Robot: PPP / PRP / C C (5 iron + 1 Redstone Crystal + 2 diamond chipsets)
         assertCraft(helper, CraftingInput.of(3, 3, List.of(
                 iron, iron, iron,
-                iron, redstone, iron,
+                iron, redstoneCrystal, iron,
                 chipsetDiamond, ItemStack.EMPTY, chipsetDiamond)),
                 new ItemStack(BCRoboticsItems.ROBOT.get()), "robot");
+
+        // Plain redstone in the robot's centre must NOT craft — the crystal is the price gate.
+        CraftingInput dustRobot = CraftingInput.of(3, 3, List.of(
+                iron, iron, iron,
+                iron, redstone, iron,
+                chipsetDiamond, ItemStack.EMPTY, chipsetDiamond));
+        if (helper.getLevel().getServer().getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, dustRobot, helper.getLevel()).isPresent()) {
+            helper.fail("robot crafted with redstone dust instead of a Redstone Crystal");
+        }
+
+        // Redstone Crystal: Assembly Table, 1 redstone block at exactly 256 000 MJ (7.1.x's
+        // 1 000 000 MJ scaled down; see docs/robotics-resurrection.md).
+        BCSiliconRecipes.ensureInitialized();
+        AssemblyRecipe crystal = AssemblyRecipeRegistry.REGISTRY.get("redstone_crystal");
+        if (crystal == null) {
+            helper.fail("missing assembly recipe: redstone_crystal");
+        }
+        Set<ItemStack> crystalOut = crystal.getOutputs(
+                NonNullList.of(ItemStack.EMPTY, new ItemStack(Items.REDSTONE_BLOCK)));
+        if (crystalOut.size() != 1
+                || !ItemStack.matches(redstoneCrystal, crystalOut.iterator().next())) {
+            helper.fail("redstone block should assemble into exactly one Redstone Crystal, got " + crystalOut);
+        }
+        if (!crystal.getOutputs(NonNullList.of(ItemStack.EMPTY, new ItemStack(Items.REDSTONE, 9))).isEmpty()) {
+            helper.fail("Redstone Crystal must need the block, not loose dust");
+        }
+        long cost = crystal.getRequiredMicroJoulesFor(redstoneCrystal);
+        if (cost != 256_000 * MjAPI.MJ) {
+            helper.fail("Redstone Crystal should cost 256 000 MJ, got " + (cost / MjAPI.MJ) + " MJ");
+        }
 
         // Programming Table: OCO / ORO / OGO
         assertCraft(helper, CraftingInput.of(3, 3, List.of(

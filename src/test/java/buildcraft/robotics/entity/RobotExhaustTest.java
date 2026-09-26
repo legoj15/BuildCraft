@@ -165,6 +165,56 @@ public class RobotExhaustTest {
         Assertions.assertEquals(options, RobotEnergyParticleOptions.STREAM_CODEC.decode(buf));
     }
 
+    // ── Untrusted sizes: /particle and the network bypass RobotExhaust.particleSize ─────────────
+
+    /** The size scales both the quad and the lifetime, so an unguarded {@code /particle ...{size:100000}} (or an
+     *  addon packet) would put screen-filling puffs on every nearby client for days. Mirrors vanilla's
+     *  {@code ScalableParticleOptionsBase}: the constructor clamps, NaN falls back to the normal size. */
+    @Test
+    public void constructorClampsOutOfRangeNegativeAndNaNSizes() {
+        Assertions.assertEquals(RobotExhaust.MAX_PARTICLE_SIZE, new RobotEnergyParticleOptions(100_000F).size());
+        Assertions.assertEquals(RobotExhaust.MAX_PARTICLE_SIZE,
+                new RobotEnergyParticleOptions(Float.POSITIVE_INFINITY).size());
+        Assertions.assertEquals(RobotEnergyParticleOptions.MIN_SIZE, new RobotEnergyParticleOptions(-5F).size(),
+                "a negative size would draw an inverted quad");
+        Assertions.assertEquals(RobotEnergyParticleOptions.MIN_SIZE,
+                new RobotEnergyParticleOptions(Float.NEGATIVE_INFINITY).size());
+        Assertions.assertEquals(1F, new RobotEnergyParticleOptions(Float.NaN).size(), "NaN reads as the normal size");
+        Assertions.assertEquals(1.2F, new RobotEnergyParticleOptions(1.2F).size(), "in-range sizes are untouched");
+    }
+
+    /** Commands and datapacks get vanilla's behaviour: an out-of-range size is a parse error, not a silent clamp. */
+    @Test
+    public void jsonCodecRejectsOutOfRangeNegativeAndNaNSizes() {
+        for (float bad : new float[] { 100_000F, 4.01F, -1F, 0F, Float.NaN }) {
+            JsonObject json = new JsonObject();
+            json.addProperty("size", bad);
+            Assertions.assertTrue(RobotEnergyParticleOptions.MAP_CODEC.codec().parse(JsonOps.INSTANCE, json)
+                    .error().isPresent(), "size " + bad + " must not parse");
+        }
+        JsonObject edge = new JsonObject();
+        edge.addProperty("size", RobotExhaust.MAX_PARTICLE_SIZE);
+        Assertions.assertEquals(RobotExhaust.MAX_PARTICLE_SIZE, RobotEnergyParticleOptions.MAP_CODEC.codec()
+                .parse(JsonOps.INSTANCE, edge).getOrThrow().size(), "the cap itself is a legal size");
+    }
+
+    /** The network path cannot reject, so it clamps: a hostile or buggy sender's raw float never reaches the
+     *  client particle unbounded. */
+    @Test
+    public void streamCodecClampsRawWireSizes() {
+        float[][] cases = {
+                { 100_000F, RobotExhaust.MAX_PARTICLE_SIZE },
+                { -3F, RobotEnergyParticleOptions.MIN_SIZE },
+                { Float.NaN, 1F },
+        };
+        for (float[] c : cases) {
+            ByteBuf buf = Unpooled.buffer();
+            buf.writeFloat(c[0]);
+            Assertions.assertEquals(c[1], RobotEnergyParticleOptions.STREAM_CODEC.decode(buf).size(),
+                    "wire size " + c[0]);
+        }
+    }
+
     /** 7.1.x drew the puff from the classic particle sheet's smoke frames, {@code 7 - age * 8 / maxAge} —
      *  big to small. Those frames are vanilla's {@code generic_7 .. generic_0}, the same list (in the same
      *  order) as vanilla's own {@code smoke.json}, so the particle ships no art of its own. */

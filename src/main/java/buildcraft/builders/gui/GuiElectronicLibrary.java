@@ -5,7 +5,6 @@
 package buildcraft.builders.gui;
 
 import java.util.List;
-import java.util.Objects;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -21,6 +20,7 @@ import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementScrollbar;
 import buildcraft.lib.gui.elem.ScrollWindow;
+import buildcraft.lib.gui.elem.SelectionFollower;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -90,8 +90,8 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     /** Scroll position of the snapshot list. Lives on the screen (not on an element) so it survives the
      *  element rebuild that {@code init()} does on every window resize. */
     private final ScrollWindow scroll = new ScrollWindow(LIST_MAX_ROWS);
-    /** The selection the list was last scrolled to follow — see {@link #refreshList()}. */
-    private Snapshot.Key followedSelection;
+    /** Scrolls the list to a selection that changed from outside (GUI open, server sync) — see {@link #refreshList()}. */
+    private final SelectionFollower<Snapshot.Key> selectionFollower = new SelectionFollower<>();
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_X, SIZE_Y);
@@ -188,15 +188,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     private List<Snapshot.Key> refreshList() {
         List<Snapshot.Key> list = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).getList();
         scroll.setTotal(list.size());
-        Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
-        if (!Objects.equals(selected, followedSelection)) {
-            int index = selected == null ? -1 : list.indexOf(selected);
-            // A selection not (yet) in the local list stays un-followed so it is picked up once it appears.
-            if (selected == null || index >= 0) {
-                scroll.ensureVisible(index);
-                followedSelection = selected;
-            }
-        }
+        selectionFollower.follow(scroll, list, menu.tile != null ? menu.tile.selected : null);
         return list;
     }
 
@@ -315,11 +307,11 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
 
     /** Selects the snapshot under the cursor. @return true if a list row was clicked. */
     private boolean clickList(double mouseX, double mouseY) {
-        if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W || mouseY < topPos + LIST_Y) {
+        if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W) {
             return false;
         }
         List<Snapshot.Key> list = refreshList();
-        int index = scroll.indexAtRow((int) ((mouseY - (topPos + LIST_Y)) / LIST_ROW_H));
+        int index = scroll.indexAt(mouseY - (topPos + LIST_Y), LIST_ROW_H);
         if (index < 0) return false;
         Snapshot.Key key = list.get(index);
         menu.sendSelectedToServer(key);
@@ -327,7 +319,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         if (menu.tile != null) {
             menu.tile.selected = key;
         }
-        followedSelection = key; // already on screen, nothing to follow
+        selectionFollower.markShown(key); // already on screen, nothing to follow
         updateDeleteButtonActive();
         return true;
     }

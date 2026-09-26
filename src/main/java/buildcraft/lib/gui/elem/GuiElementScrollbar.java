@@ -84,11 +84,8 @@ public class GuiElementScrollbar implements IInteractionElement {
     @Override
     public void onMouseClicked(int button) {
         if (button != 0 || !window.isScrollable()) return;
-        double mouseY = gui.mouse.getY();
-        if (!contains(gui.mouse.getX(), mouseY)) return;
-        double thumbTop = thumbScreenTop();
-        boolean onThumb = mouseY >= thumbTop && mouseY < thumbTop + thumbIcon.height;
-        grabOffset = onThumb ? mouseY - thumbTop : thumbIcon.height / 2.0;
+        if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
+        grabOffset = window.thumbGrabOffset(gui.mouse.getY() - track.getY(), trackLength(), thumbIcon.height);
         dragging = true;
         followMouse();
     }
@@ -110,7 +107,7 @@ public class GuiElementScrollbar implements IInteractionElement {
     }
 
     private void followMouse() {
-        int thumbTop = (int) Math.round(gui.mouse.getY() - grabOffset - track.getY());
-        window.setOffset(window.offsetForThumbDrag(thumbTop, trackLength(), thumbIcon.height));
+        window.setOffset(window.offsetForCursor(gui.mouse.getY() - track.getY(), grabOffset, trackLength(),
+            thumbIcon.height));
     }
 }

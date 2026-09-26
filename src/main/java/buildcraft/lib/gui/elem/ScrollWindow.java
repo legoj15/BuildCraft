@@ -65,14 +65,6 @@ public final class ScrollWindow {
         return getMaxOffset() > 0;
     }
 
-    public boolean canScrollUp() {
-        return offset > 0;
-    }
-
-    public boolean canScrollDown() {
-        return offset < getMaxOffset();
-    }
-
     /** Index of the first drawn entry. */
     public int getFirstVisible() {
         return offset;
@@ -93,6 +85,13 @@ public final class ScrollWindow {
         if (row < 0 || row >= visibleRows) return -1;
         int index = offset + row;
         return index < total ? index : -1;
+    }
+
+    /** The list index drawn under a cursor {@code yFromTop} pixels below the top of the window's first row, or -1.
+     * Floors rather than truncates, so a cursor just above the window misses instead of hitting the first row. */
+    public int indexAt(double yFromTop, int rowHeight) {
+        if (rowHeight <= 0 || Double.isNaN(yFromTop)) return -1;
+        return indexAtRow((int) Math.floor(yFromTop / rowHeight));
     }
 
     /** Scroll the least amount that brings {@code index} into view: an entry above the window lands on the top
@@ -146,5 +145,23 @@ public final class ScrollWindow {
         int clamped = Math.max(0, Math.min(thumbTop, trackLength - thumbLength));
         if (clamped == thumbTop(trackLength, thumbLength)) return offset;
         return offsetForThumbTop(thumbTop, trackLength, thumbLength);
+    }
+
+    /** Where a press {@code cursorInTrack} pixels down a scrollbar track grabs the thumb, as pixels below the
+     * thumb's top edge: the pressed point when the press lands on the thumb (so it drags from where it was held),
+     * otherwise the thumb's middle (so a track click centres the thumb under the cursor). */
+    public double thumbGrabOffset(double cursorInTrack, int trackLength, int thumbLength) {
+        int top = thumbTop(trackLength, thumbLength);
+        if (cursorInTrack >= top && cursorInTrack < top + thumbLength) {
+            return cursorInTrack - top;
+        }
+        return thumbLength / 2.0;
+    }
+
+    /** The offset for a thumb held {@code grabOffset} pixels below its top edge (see {@link #thumbGrabOffset}) by
+     * a cursor {@code cursorInTrack} pixels down the track. Does not change this window. */
+    public int offsetForCursor(double cursorInTrack, double grabOffset, int trackLength, int thumbLength) {
+        int top = (int) Math.round(cursorInTrack - grabOffset);
+        return offsetForThumbDrag(top, trackLength, thumbLength);
     }
 }

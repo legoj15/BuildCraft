@@ -31,8 +31,6 @@ public class ScrollWindowTester {
         Assertions.assertEquals(0, w.getFirstVisible());
         Assertions.assertEquals(0, w.getEndVisible(), "no rows to draw");
         Assertions.assertFalse(w.isScrollable());
-        Assertions.assertFalse(w.canScrollUp());
-        Assertions.assertFalse(w.canScrollDown());
         Assertions.assertFalse(w.scrollBy(5), "scrolling an empty list must be a no-op");
         Assertions.assertEquals(-1, w.indexAtRow(0), "no entry under the first row");
     }
@@ -55,7 +53,7 @@ public class ScrollWindowTester {
         Assertions.assertEquals(0, w.getMaxOffset());
         Assertions.assertEquals(ROWS, w.getEndVisible());
         Assertions.assertFalse(w.isScrollable(), "13 entries fit in 13 rows exactly");
-        Assertions.assertFalse(w.canScrollDown());
+        Assertions.assertFalse(w.scrollBy(1));
         Assertions.assertEquals(ROWS - 1, w.indexAtRow(ROWS - 1));
     }
 
@@ -64,8 +62,7 @@ public class ScrollWindowTester {
         ScrollWindow w = window(40);
         Assertions.assertEquals(27, w.getMaxOffset());
         Assertions.assertTrue(w.isScrollable());
-        Assertions.assertFalse(w.canScrollUp(), "starts at the top");
-        Assertions.assertTrue(w.canScrollDown());
+        Assertions.assertEquals(0, w.getOffset(), "starts at the top");
         Assertions.assertEquals(ROWS, w.getEndVisible(), "only one window is drawn, not the whole list");
 
         Assertions.assertTrue(w.scrollBy(3));
@@ -73,14 +70,12 @@ public class ScrollWindowTester {
         Assertions.assertEquals(3 + ROWS, w.getEndVisible());
         Assertions.assertEquals(3, w.indexAtRow(0), "row 0 maps to the first visible entry");
         Assertions.assertEquals(3 + ROWS - 1, w.indexAtRow(ROWS - 1));
-        Assertions.assertTrue(w.canScrollUp());
-        Assertions.assertTrue(w.canScrollDown());
 
         // The last entry becomes reachable.
         w.setOffset(w.getMaxOffset());
         Assertions.assertEquals(39, w.indexAtRow(ROWS - 1), "last row shows the last entry at the bottom");
         Assertions.assertEquals(40, w.getEndVisible());
-        Assertions.assertFalse(w.canScrollDown());
+        Assertions.assertFalse(w.scrollBy(1), "nothing further below the last entry");
     }
 
     @Test
@@ -281,5 +276,54 @@ public class ScrollWindowTester {
             last = offset;
         }
         Assertions.assertEquals(w.getMaxOffset(), last);
+    }
+
+    // ---- cursor -> row -----------------------------------------------------------------------------------
+
+    @Test
+    public void cursorMapsToTheEntryDrawnUnderIt() {
+        ScrollWindow w = window(40);
+        w.setOffset(10);
+        int rowH = 8;
+        Assertions.assertEquals(10, w.indexAt(0, rowH), "top pixel of the first row");
+        Assertions.assertEquals(10, w.indexAt(7.9, rowH), "bottom pixel of the first row");
+        Assertions.assertEquals(11, w.indexAt(8, rowH));
+        Assertions.assertEquals(22, w.indexAt(ROWS * rowH - 0.5, rowH), "last pixel of the last row");
+        Assertions.assertEquals(-1, w.indexAt(ROWS * rowH, rowH), "just below the window");
+        Assertions.assertEquals(-1, w.indexAt(-0.5, rowH),
+            "just above the window must miss, not truncate towards zero onto the first row");
+        Assertions.assertEquals(-1, window(3).indexAt(3 * rowH + 1, rowH), "empty rows under a short list");
+    }
+
+    // ---- scrollbar grab / track click -----------------------------------------------------------------
+
+    @Test
+    public void grabbingTheThumbKeepsItUnderTheCursor() {
+        // 150 entries: more offsets than track pixels, so every thumb pixel is reachable and the drag is exactly 1:1.
+        ScrollWindow w = window(150);
+        w.setOffset(40);
+        int top = w.thumbTop(TRACK, THUMB);
+        double cursor = top + 4.0;
+        double grab = w.thumbGrabOffset(cursor, TRACK, THUMB);
+        Assertions.assertEquals(4.0, grab, 1e-9, "a press on the thumb grabs it where it was pressed");
+        Assertions.assertEquals(40, w.offsetForCursor(cursor, grab, TRACK, THUMB), "the press alone never scrolls");
+
+        w.setOffset(w.offsetForCursor(cursor + 20, grab, TRACK, THUMB));
+        Assertions.assertEquals(top + 20, w.thumbTop(TRACK, THUMB), "the thumb follows the cursor 1:1 while dragged");
+    }
+
+    @Test
+    public void clickingTheTrackCentresTheThumbThere() {
+        ScrollWindow w = window(40);
+        double cursor = 60.0; // well below the thumb, which starts at the top
+        double grab = w.thumbGrabOffset(cursor, TRACK, THUMB);
+        Assertions.assertEquals(THUMB / 2.0, grab, 1e-9, "a track click grabs the thumb by its middle");
+        w.setOffset(w.offsetForCursor(cursor, grab, TRACK, THUMB));
+        Assertions.assertEquals(60 - THUMB / 2, w.thumbTop(TRACK, THUMB), "the thumb is centred under the cursor");
+
+        w.setOffset(w.offsetForCursor(TRACK - 1, THUMB / 2.0, TRACK, THUMB));
+        Assertions.assertEquals(w.getMaxOffset(), w.getOffset(), "a click at the very bottom clamps to the end");
+        w.setOffset(w.offsetForCursor(0, THUMB / 2.0, TRACK, THUMB));
+        Assertions.assertEquals(0, w.getOffset(), "a click at the very top clamps to the start");
     }
 }

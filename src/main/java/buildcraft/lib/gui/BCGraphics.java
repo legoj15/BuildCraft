@@ -272,6 +272,29 @@ public final class BCGraphics {
     }*/
     //?}
 
+    // ── GUI-atlas sprite: one signature on every node ─────────────────────────────
+    /**
+     * Draws a GUI-atlas sprite ({@code <ns>:textures/gui/sprites/<path>.png}, addressed as {@code <ns>:<path>} —
+     * vanilla's widget sprites and BuildCraft's button icons alike), honouring its {@code .mcmeta} GUI scaling
+     * (stretch / tile / nine-slice), multiplied by {@code argb}.
+     */
+    public void guiSprite(Identifier sprite, int x, int y, int width, int height, int argb) {
+        //? if >=1.21.10 {
+        raw.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, sprite, x, y, width, height, argb);
+        //?} else {
+        /*// 1.21.1: blitSprite has no tint argument — tint through setColor, and enable blending first exactly as
+        // vanilla AbstractButton.renderWidget does before blitting its own button sprite.
+        raw.setColor(
+            net.minecraft.util.FastColor.ARGB32.red(argb) / 255.0F,
+            net.minecraft.util.FastColor.ARGB32.green(argb) / 255.0F,
+            net.minecraft.util.FastColor.ARGB32.blue(argb) / 255.0F,
+            net.minecraft.util.FastColor.ARGB32.alpha(argb) / 255.0F);
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        raw.blitSprite(sprite, x, y, width, height);
+        raw.setColor(1.0F, 1.0F, 1.0F, 1.0F);*/
+        //?}
+    }
+
     // 1.21.1 has no engine-level "for next frame" tooltip, and GuiGraphics.renderTooltip(...) draws
     // IMMEDIATELY — so a frame that set two tooltips (e.g. a fluid-tank widget's own tooltip plus a
     // screen's custom tank tooltip) drew BOTH, overlapping. Mirror 26.1.2's deferred/last-wins

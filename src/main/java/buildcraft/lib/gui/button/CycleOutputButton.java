@@ -5,62 +5,32 @@
  */
 package buildcraft.lib.gui.button;
 
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import java.util.function.IntSupplier;
 
-import buildcraft.lib.gui.BCGraphics;
+import net.minecraft.network.chat.Component;
 
 /**
- * An icon button — a vanilla Minecraft button backdrop with a centred 12×12 {@code cycle.png} — that
- * cycles a machine's selected crafting output. The backdrop greys itself through the vanilla
- * disabled-button sprite when {@link #active} is false (i.e. the grid has no alternative outputs to
- * cycle to), so no manual tint is needed. Used by the Auto Workbench and Advanced Crafting Table for
- * the conflicting-recipe cycle feature (the issue #20 follow-up).
- *
- * <p>The owning screen sets {@link #active} and the tooltip from the synced match count each tick;
- * the click sends the cycle message (the server is a no-op past a single match).
+ * The Auto Workbench's and Advanced Crafting Table's "cycle the crafting output" button (issue #20 follow-up): a
+ * 14×14 {@link BCButton} with the {@link ButtonSprite#CYCLE} icon, greyed out (with an explanatory tooltip) unless the
+ * grid matches two or more recipes. Both screens build the identical button, so it is configured once here.
  */
-public class CycleOutputButton extends BCButton {
-    // Lives under textures/gui/ (a direct-blit GUI texture), NOT textures/icons/ — the latter is
-    // swept wholesale onto the blocks atlas by assets/minecraft/atlases/blocks.json's "icons/"
-    // source, and a non-power-of-two icon there caps the whole atlas's mip level (see issue notes).
-    private static final Identifier ICON =
-        Identifier.parse("buildcraftunofficial:textures/gui/cycle.png");
-    private static final int ICON_SIZE = 10;
+public final class CycleOutputButton {
+    public static final int SIZE = 14;
 
-    private final Runnable onCycle;
+    private CycleOutputButton() {}
 
-    public CycleOutputButton(int x, int y, Runnable onCycle) {
-        super(x, y, 14, 14, Component.empty());
-        this.onCycle = onCycle;
-    }
-
-    // The AbstractButton click hook gained an InputWithModifiers arg in 1.21.10.
-    //? if >=1.21.10 {
-    @Override
-    public void onPress(net.minecraft.client.input.InputWithModifiers modifiers) {
-        onCycle.run();
-    }
-    //?} else {
-    /*@Override
-    public void onPress() {
-        onCycle.run();
-    }*/
-    //?}
-
-    @Override
-    protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Normal Minecraft button backdrop — hover-aware, and greyed via the vanilla disabled
-        // sprite when !active (no manual tint needed).
-        drawDefaultButtonSprite(graphics);
-        // Centre the 12×12 icon on the button face.
-        int iconX = getX() + (getWidth() - ICON_SIZE) / 2;
-        int iconY = getY() + (getHeight() - ICON_SIZE) / 2;
-        //? if >=1.21.10 {
-        graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICON,
-            iconX, iconY, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
-        //?} else {
-        /*graphics.blit(ICON, iconX, iconY, 0f, 0f, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);*/
-        //?}
+    /**
+     * @param matchCount the synced number of recipes the grid currently matches
+     * @param onCycle    sends the cycle message (the server is a no-op past a single match)
+     */
+    public static BCButton create(int x, int y, IntSupplier matchCount, Runnable onCycle) {
+        return BCButton.builder(x, y, SIZE, SIZE)
+            .icon(ButtonSprite.CYCLE)
+            .activeWhen(() -> matchCount.getAsInt() > 1)
+            .tooltip(() -> Component.translatable(matchCount.getAsInt() > 1
+                ? "gui.buildcraftunofficial.cycle_output"
+                : "gui.buildcraftunofficial.cycle_output.none"))
+            .onPress(onCycle)
+            .build();
     }
 }

@@ -1,17 +1,24 @@
 package buildcraft.transport.client.gui;
 
-import buildcraft.lib.gui.BCGraphics;
-import buildcraft.lib.gui.button.BCButton;
-//? if >=1.21.10 {
-import net.minecraft.client.input.MouseButtonEvent;
-//?}
+import java.util.EnumMap;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 
+import buildcraft.core.BCCoreItems;
+import buildcraft.core.item.ItemPaintbrush_BC8;
+import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.BCButton;
+import buildcraft.lib.gui.button.ButtonIcon;
+import buildcraft.lib.gui.button.ButtonSprite;
+import buildcraft.lib.gui.button.MouseButtons;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
@@ -25,8 +32,12 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
             Identifier.parse("buildcraftunofficial:textures/gui/pipe_emzuli.png");
     private static final int SIZE_X = 176, SIZE_Y = 166;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE, 0, 0, SIZE_X, SIZE_Y);
+    private static final int PAINT_BUTTON = 20;
+    private static final ButtonIcon NO_PAINT_ICON = ButtonIcon.sprite(ButtonSprite.NO_PAINT);
 
-    private PaintButton[] paintButtons = new PaintButton[4];
+    /** Pre-coloured paintbrush stacks for the paint buttons' icons, made on first use (item components are bound
+     *  by then) — the brush is drawn through its item model, so resource packs apply. */
+    private final EnumMap<DyeColor, ItemStack> brushIcons = new EnumMap<>(DyeColor.class);
 
     public GuiEmzuliPipe(ContainerEmzuliPipe menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -39,15 +50,14 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
 
     // Filter slot positions (16×16) — match ContainerEmzuliPipe.
     private static final int[][] FILTER_SLOTS = { {25, 21}, {25, 49}, {134, 21}, {134, 49} };
-    // Paint button positions (20×20) — match the addPaintButton calls below.
+    // Paint button positions (20×20), indexed by SlotIndex ordinal (SQUARE, CIRCLE, TRIANGLE, CROSS).
     private static final int[][] PAINT_BUTTONS = { {49, 19}, {49, 47}, {106, 19}, {106, 47} };
 
     @Override
     protected void initGuiElements() {
-        paintButtons[0] = addPaintButton(SlotIndex.SQUARE, 49, 19);
-        paintButtons[1] = addPaintButton(SlotIndex.CIRCLE, 49, 47);
-        paintButtons[2] = addPaintButton(SlotIndex.TRIANGLE, 106, 19);
-        paintButtons[3] = addPaintButton(SlotIndex.CROSS, 106, 47);
+        for (SlotIndex index : SlotIndex.VALUES) {
+            addPaintButton(index, PAINT_BUTTONS[index.ordinal()][0], PAINT_BUTTONS[index.ordinal()][1]);
+        }
 
         for (int[] pos : FILTER_SLOTS) {
             mainGui.shownElements.add(new DummyHelpElement(
@@ -64,159 +74,44 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
         }
     }
 
-    private PaintButton addPaintButton(SlotIndex index, int x, int y) {
-        int bx = leftPos + x;
-        int by = topPos + y;
-        PaintButton btn = new PaintButton(index, bx, by);
-        addRenderableWidget(btn);
-        return btn;
+    /** Left click steps the slot's colour forward (no colour → white → … → black → no colour), right click steps
+     *  it back, middle click clears it — 1.12.2's paint buttons. */
+    private void addPaintButton(SlotIndex index, int x, int y) {
+        addRenderableWidget(BCButton.builder(leftPos + x, topPos + y, PAINT_BUTTON, PAINT_BUTTON)
+            .icon(ButtonIcon.item(() -> brushIcon(menu.behaviour.slotColours.get(index)))
+                .with(ButtonIcon.dynamic(() -> menu.behaviour.slotColours.get(index) == null ? NO_PAINT_ICON : null)))
+            .tooltip(() -> {
+                DyeColor colour = menu.behaviour.slotColours.get(index);
+                return colour == null
+                    ? Component.translatable("gui.pipes.emzuli.nopaint")
+                    : Component.translatable("gui.pipes.emzuli.paint", ColourUtil.getTextFullTooltip(colour));
+            })
+            .onPress(MouseButtons.ALL, mouseButton -> paint(index, mouseButton))
+            .build());
     }
 
-    // Track which paint button is currently being held down
-    private PaintButton activePressedButton = null;
-
-    // Handle ALL mouse clicks on paint buttons at the screen level.
-    // This fires on mouse DOWN, so pressing state is set immediately.
-    //? if >=1.21.10 {
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        int mouseX = (int) event.x();
-        int mouseY = (int) event.y();
-        int button = event.button();
-        for (PaintButton btn : paintButtons) {
-            if (btn != null && btn.isMouseOver(mouseX, mouseY)) {
-                btn.handleClick(button);
-                activePressedButton = btn;
-                return true;
-            }
-        }
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    // Clear pressed state when any mouse button is released
-    @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
-        if (activePressedButton != null) {
-            activePressedButton = null;
-            return true;
-        }
-        return super.mouseReleased(event);
-    }
-    //?} else {
-    /*@Override
-    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-        int mouseX = (int) mouseXd;
-        int mouseY = (int) mouseYd;
-        for (PaintButton btn : paintButtons) {
-            if (btn != null && btn.isMouseOver(mouseX, mouseY)) {
-                btn.handleClick(button);
-                activePressedButton = btn;
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseXd, mouseYd, button);
-    }
-
-    // Clear pressed state when any mouse button is released
-    @Override
-    public boolean mouseReleased(double mouseXd, double mouseYd, int button) {
-        if (activePressedButton != null) {
-            activePressedButton = null;
-            return true;
-        }
-        return super.mouseReleased(mouseXd, mouseYd, button);
-    }*/
-    //?}
-
-    private class PaintButton extends BCButton {
-        private final SlotIndex index;
-        private int pressedButton = -1; // kept for potential future use
-
-        public PaintButton(SlotIndex index, int x, int y) {
-            super(x, y, 20, 20, Component.empty());
-            this.index = index;
-            updateTooltip();
-        }
-
-        //? if >=1.21.10 {
-        @Override
-        public void onPress(net.minecraft.client.input.InputWithModifiers input) {
-            // No-op: we handle all clicks in the screen-level mouseClicked
-        }
-        //?} else {
-        /*@Override
-        public void onPress() {
-            // No-op: we handle all clicks in the screen-level mouseClicked
-        }*/
-        //?}
-
-        /** Handle a click with the given mouse button (0=left, 1=right, 2=middle). */
-        public void handleClick(int button) {
-            DyeColor current = menu.behaviour.slotColours.get(index);
-            DyeColor next;
-            switch (button) {
-                case 0 -> next = cycleColour(current);
-                case 1 -> next = cycleColourBackward(current);
-                case 2 -> next = null;
-                default -> { return; }
-            }
-            menu.paintWidgets.get(index).setColour(next);
-            if (next == null) menu.behaviour.slotColours.remove(index);
-            else menu.behaviour.slotColours.put(index, next);
-            updateTooltip();
-            // Mark which button initiated the press for held-down visual
-            pressedButton = button;
-        }
-
-        private void updateTooltip() {
-            DyeColor colour = menu.behaviour.slotColours.get(index);
-            Component tooltip;
-            if (colour == null) {
-                tooltip = Component.translatable("gui.pipes.emzuli.nopaint");
-            } else {
-                tooltip = Component.translatable("gui.pipes.emzuli.paint",
-                        ColourUtil.getTextFullTooltip(colour));
-            }
-            this.setTooltip(net.minecraft.client.gui.components.Tooltip.create(tooltip));
-        }
-
-        @Override
-        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            // Show indent while this button is the actively pressed one
-            int v = (activePressedButton == this) ? 20 : 0;
-            GuiIcon bgIcon = new GuiIcon(TEXTURE, 176, v, 20, 20, 256);
-            bgIcon.drawAt(getX(), getY());
-
-            DyeColor colour = menu.behaviour.slotColours.get(index);
-            if (colour == null) {
-                GuiIcon noPaint = new GuiIcon(TEXTURE, 176, 40, 16, 16, 256);
-                noPaint.drawAt(getX() + 2, getY() + 2);
-            } else {
-                Identifier brushTex = Identifier.parse("buildcraftunofficial:textures/item/paintbrush/" + colour.getName() + ".png");
-                GuiIcon brushIcon = new GuiIcon(brushTex, 0, 0, 16, 16, 16);
-                brushIcon.drawAt(getX() + 2, getY() + 2);
-            }
-        }
-
-        @Override
-        protected void updateWidgetNarration(net.minecraft.client.gui.narration.NarrationElementOutput output) {
-            this.defaultButtonNarrationText(output);
+    private void paint(SlotIndex index, int mouseButton) {
+        DyeColor current = menu.behaviour.slotColours.get(index);
+        DyeColor next = switch (mouseButton) {
+            case 0 -> ColourUtil.getNextOrNull(current);
+            case 1 -> ColourUtil.getPrevOrNull(current);
+            default -> null;
+        };
+        menu.paintWidgets.get(index).setColour(next);
+        // Optimistic local copy so the icon and tooltip change this frame; the server's resync agrees.
+        if (next == null) {
+            menu.behaviour.slotColours.remove(index);
+        } else {
+            menu.behaviour.slotColours.put(index, next);
         }
     }
 
-    /** Cycle to the next colour (or null for "no paint"). null → WHITE → ORANGE → ... → BLACK → null */
-    private static DyeColor cycleColour(DyeColor current) {
-        if (current == null) return DyeColor.WHITE;
-        int next = current.ordinal() + 1;
-        if (next >= 16) return null;
-        return DyeColor.byId(next);
-    }
-
-    private static DyeColor cycleColourBackward(DyeColor current) {
-        if (current == null) return DyeColor.byId(15);
-        int next = current.ordinal() - 1;
-        if (next < 0) return null;
-        return DyeColor.byId(next);
+    private ItemStack brushIcon(@Nullable DyeColor colour) {
+        if (colour == null) {
+            return ItemStack.EMPTY;
+        }
+        return brushIcons.computeIfAbsent(colour,
+            c -> ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), c));
     }
 
     @Override

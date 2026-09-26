@@ -5,11 +5,8 @@
  */
 package buildcraft.builders.gui;
 
-import java.util.List;
-
 import buildcraft.lib.gui.BCGraphics;
 //? if >=1.21.10 {
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.network.chat.Component;
@@ -19,19 +16,15 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.api.filler.IFillerPattern;
 
 import buildcraft.lib.gui.GuiBC8;
-import buildcraft.lib.gui.GuiElementSimple;
 import buildcraft.lib.gui.GuiIcon;
-import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
-import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.lib.gui.statement.GuiElementStatement;
 import buildcraft.lib.gui.statement.GuiElementStatementDrag;
 import buildcraft.lib.gui.statement.GuiElementStatementParam;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
-import buildcraft.lib.misc.LocaleUtil;
 
 import buildcraft.builders.container.ContainerFillerPlanner;
 
@@ -96,23 +89,14 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
                 new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFFDDAAFF,
                         "buildcraft.help.filler.params.desc")));
 
-        // Invert button.
-        IGuiArea invertArea = new GuiRectangle(152, 40, 16, 16).offset(mainGui.rootElement);
-        mainGui.shownElements.add(new GuiElementSimple(mainGui, invertArea) {
-            @Override
-            public void addToolTips(List<ToolTip> tooltips) {
-                if (contains(mainGui.mouse)) {
-                    String key = menu.isInverted() ? "tip.filler.invert.on" : "tip.filler.invert.off";
-                    tooltips.add(new ToolTip(LocaleUtil.localize(key)));
-                }
-            }
-
-            @Override
-            public void addHelpElements(List<HelpPosition> elements) {
-                elements.add(new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88,
-                        "buildcraft.help.filler.invert.desc").target(this));
-            }
-        });
+        // Invert toggle — the same button as the Filler's, at the same spot.
+        addRenderableWidget(GuiFiller.invertButton(leftPos + GuiFiller.INVERT_X, topPos + GuiFiller.TOGGLE_Y,
+                menu::isInverted, () -> menu.sendMessage(ContainerFillerPlanner.NET_INVERT, buf -> {})));
+        mainGui.shownElements.add(new DummyHelpElement(
+                new GuiRectangle(GuiFiller.INVERT_X, GuiFiller.TOGGLE_Y, GuiFiller.TOGGLE_SIZE, GuiFiller.TOGGLE_SIZE)
+                        .offset(mainGui.rootElement),
+                new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88,
+                        "buildcraft.help.filler.invert.desc")));
     }
 
     @Override
@@ -122,15 +106,6 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         //?} else {
         /*graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);*/
         //?}
-
-        int mx = (int) this.mainGui.mouse.getX() - leftPos;
-        int my = (int) this.mainGui.mouse.getY() - topPos;
-
-        boolean invertHover = mx >= 152 && mx < 168 && my >= 40 && my < 56;
-        // Invert button: u_start=224, active adds +16 to U, hover adds +16 to V — mirrors GuiFiller.
-        int invertU = menu.isInverted() ? 240 : 224;
-        int invertV = invertHover ? 16 : 0;
-        new GuiIcon(TEXTURE, invertU, invertV, 16, 16).drawAt(leftPos + 152, topPos + 40);
     }
 
     @Override
@@ -141,38 +116,4 @@ public class GuiFillerPlanner extends GuiBC8<ContainerFillerPlanner> {
         String titleStr = Component.translatable("item.buildcraftunofficial.filler_planner").getString();
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 10, 0xFF404040, false);
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
-            int mx = (int) event.x() - leftPos;
-            int my = (int) event.y() - topPos;
-            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFillerPlanner.NET_INVERT, (buf) -> {});
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                }
-                return true;
-            }
-        }
-        return super.mouseClicked(event, doubleClick);
-    }
-    //?} else {
-    /*@Override
-    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-        if (button == 0) {
-            int mx = (int) mouseXd - leftPos;
-            int my = (int) mouseYd - topPos;
-            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFillerPlanner.NET_INVERT, (buf) -> {});
-                if (this.minecraft.player != null) {
-                    this.minecraft.player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                }
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseXd, mouseYd, button);
-    }*/
-    //?}
 }

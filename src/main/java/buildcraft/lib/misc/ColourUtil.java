@@ -80,6 +80,24 @@ public class ColourUtil {
         FACE_TO_COLOUR[Direction.UP.ordinal()] = 0xFF_CC_CC_CC;
     }
 
+    /** Steps forwards through the 17-step cycle "no colour → WHITE → … → BLACK → no colour" (1.12.2 API). */
+    @Nullable
+    public static DyeColor getNextOrNull(@Nullable DyeColor colour) {
+        if (colour == null) {
+            return COLOURS[0];
+        }
+        return colour.ordinal() == COLOURS.length - 1 ? null : COLOURS[colour.ordinal() + 1];
+    }
+
+    /** Steps backwards through the same cycle: "no colour → BLACK → … → WHITE → no colour" (1.12.2 API). */
+    @Nullable
+    public static DyeColor getPrevOrNull(@Nullable DyeColor colour) {
+        if (colour == null) {
+            return COLOURS[COLOURS.length - 1];
+        }
+        return colour.ordinal() == 0 ? null : COLOURS[colour.ordinal() - 1];
+    }
+
     /** Returns the ledger-background colour associated with the given block face direction. */
     public static int getColourForSide(Direction face) {
         return FACE_TO_COLOUR[face.ordinal()];

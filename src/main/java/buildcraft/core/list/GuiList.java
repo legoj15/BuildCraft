@@ -6,25 +6,15 @@
 
 package buildcraft.core.list;
 
-import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.button.BCButton;
-//? if >=1.21.10 {
-import net.minecraft.client.input.InputWithModifiers;
-//?}
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 //? if >=1.21.10 {
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 //?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-//? if >=1.21.10 {
-import net.minecraft.util.ARGB;
-//?}
 import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.core.item.ItemList_BC8;
@@ -44,15 +34,10 @@ public class GuiList extends GuiBC8<ContainerList> {
      * Same UV / size as 1.12.2's GuiList.ICON_HIGHLIGHT — texture art at (176, 0). */
     private static final GuiIcon ICON_HIGHLIGHT = new GuiIcon(TEXTURE_BASE, 176, 0, 16, 16);
 
-    // Per-line vanilla Button widgets for the three toggle modes (Precise / By-Type / By-Material).
-    // Width chosen so the vanilla 9-sliced widget/button sprite has enough room for centred text;
-    // height matches Electronic Library's 20px delete button. Letter labels (P / T / M) match the
-    // first character of each mode and stay readable at this size.
+    // Per-line toggle buttons for the three match modes (Precise / By-Type / By-Material): vanilla-faced
+    // BCButtons with the mode's first letter (P / T / M) as the label, readable at 14px.
     private static final int BTN_W = 14, BTN_H = 14;
     private static final int BUTTON_COUNT = 3;
-
-    // Toggle button widgets for each line
-    private ToggleButton[][] toggleButtons;
     /** Promoted to a field so {@link #keyPressed} / {@link #mouseClicked} can ask the field
      * whether it currently has focus. Without this guard, vanilla's screen `keyPressed` would
      * see the inventory key (default `e`) press while the player is typing a list name and
@@ -144,14 +129,12 @@ public class GuiList extends GuiBC8<ContainerList> {
         labelField.setResponder(newText -> menu.setLabel(newText));
         addRenderableWidget(labelField);
 
-        // Toggle buttons for each line (Precise / By-Type / By-Material). Visually they're
-        // vanilla buttons (same widget/button sprite as Electronic Library's delete) but with
-        // a custom toggled-on state that uses vanilla's widget/button_disabled sprite for the
-        // background — same look as a vanilla disabled button — without actually disabling
-        // input or dimming the text label. See {@link ToggleButton} for the rendering details.
+        // Toggle buttons for each line (Precise / By-Type / By-Material). A switched-on mode shows
+        // "latched" — vanilla's pressed-in face with a full-bright letter, still clickable. The state
+        // is read live from the line, so the mutual exclusion switchButton applies (Precise vs
+        // By-Type/By-Material) shows on every button of the row without any refresh here.
         // The 1px left shift on bOffX lands the button row's right edge flush with the right-
         // most pixel of the slot grid (slot 8 ends at x=168, 3*14=42 wide button row → -1).
-        toggleButtons = new ToggleButton[menu.lines.length][BUTTON_COUNT];
         for (int line = 0; line < menu.lines.length; line++) {
             int bOffX = this.leftPos + 8 + 9 * 18 - BUTTON_COUNT * BTN_W - 1;
             int bOffY = this.topPos + 32 + line * 34 + 18;
@@ -162,131 +145,14 @@ public class GuiList extends GuiBC8<ContainerList> {
                 String letter = btn == 0 ? "P" : (btn == 1 ? "T" : "M");
                 String tooltipKey = btn == 0 ? "gui.list.nbt" : (btn == 1 ? "gui.list.metadata" : "gui.list.oredict");
 
-                ToggleButton button = new ToggleButton(
-                        bOffX + btn * BTN_W, bOffY, BTN_W, BTN_H,
-                        Component.literal(letter),
-                        () -> {
-                            menu.switchButton(lineIdx, btnIdx);
-                            // Mutual exclusion (Precise vs By-Type/By-Material) may have
-                            // toggled OTHER buttons in this row off — refresh all 3 visuals.
-                            for (int i = 0; i < BUTTON_COUNT; i++) {
-                                toggleButtons[lineIdx][i].setToggled(menu.lines[lineIdx].getOption(i));
-                            }
-                        });
-                button.setToggled(menu.lines[lineIdx].getOption(btnIdx));
-                button.setTooltip(Tooltip.create(Component.translatable(tooltipKey)));
-                toggleButtons[line][btn] = button;
-                addRenderableWidget(button);
+                addRenderableWidget(BCButton.builder(bOffX + btn * BTN_W, bOffY, BTN_W, BTN_H)
+                        .label(Component.literal(letter))
+                        .latched(() -> menu.lines[lineIdx].getOption(btnIdx))
+                        .tooltip(Component.translatable(tooltipKey))
+                        .onPress(() -> menu.switchButton(lineIdx, btnIdx))
+                        .build());
             }
         }
-    }
-
-    /** Vanilla-styled toggle button that uses the {@code widget/button_disabled} sprite for its
-     * toggled-on state — same look as a vanilla disabled button — but stays fully clickable and
-     * keeps its text label at full brightness.
-     *
-     * <p>Why custom rendering instead of just flipping {@code active}: vanilla's
-     * {@code AbstractButton.extractDefaultSprite} chooses its sprite from {@code (active, hovered)}
-     * AND vanilla's text rendering dims the label when {@code !active}. We want the disabled
-     * <em>sprite</em> without the dimmed <em>text</em>, so we bypass {@code extractDefaultSprite}
-     * entirely and call {@code blitSprite} ourselves with our own sprite-selection logic
-     * (driven by {@link #toggled}, not {@code active}). We then call the inherited
-     * {@code extractDefaultLabel} for the text, which renders at full color since {@code active}
-     * is always {@code true}.
-     *
-     * <p>{@code mouseClicked} is also overridden because vanilla's
-     * {@code AbstractWidget.mouseClicked} short-circuits on {@code !active} — but we keep
-     * {@code active = true} now, so the override is just to add the explicit
-     * {@link #playDownSound} call (vanilla plays the click sound from {@code mouseClicked}, not
-     * {@code onClick}, so any subclass that takes over the input path needs to play it
-     * itself). The override also gives us audio feedback that wasn't present in earlier
-     * iterations of this widget. */
-    private static class ToggleButton extends BCButton {
-        private static final Identifier SPRITE_NORMAL = Identifier.withDefaultNamespace("widget/button");
-        private static final Identifier SPRITE_DISABLED = Identifier.withDefaultNamespace("widget/button_disabled");
-        private static final Identifier SPRITE_HIGHLIGHTED = Identifier.withDefaultNamespace("widget/button_highlighted");
-
-        private final Runnable onPressAction;
-        private boolean toggled;
-
-        ToggleButton(int x, int y, int width, int height, Component message, Runnable onPressAction) {
-            super(x, y, width, height, message);
-            this.onPressAction = onPressAction;
-        }
-
-        //? if >=1.21.10 {
-        @Override
-        public void onPress(InputWithModifiers modifiers) {
-            onPressAction.run();
-        }
-        //?} else {
-        /*@Override
-        public void onPress() {
-            onPressAction.run();
-        }*/
-        //?}
-
-        void setToggled(boolean toggled) {
-            this.toggled = toggled;
-        }
-
-        @Override
-        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            // Sprite selection driven by toggled state, NOT active state — keeps the label at full
-            // colour (active stays true) while showing the disabled-look background when toggled on.
-            Identifier sprite;
-            if (toggled) {
-                sprite = SPRITE_DISABLED;
-            } else if (this.isHoveredOrFocused()) {
-                sprite = SPRITE_HIGHLIGHTED;
-            } else {
-                sprite = SPRITE_NORMAL;
-            }
-            //? if >=1.21.10 {
-            graphics.raw.blitSprite(RenderPipelines.GUI_TEXTURED, sprite,
-                    getX(), getY(), getWidth(), getHeight(),
-                    ARGB.white(this.alpha));
-            //?} else {
-            /*// 1.21.1: classic blitSprite(ResourceLocation, x, y, w, h) has no tint arg; apply alpha via setColor.
-            graphics.raw.setColor(1.0F, 1.0F, 1.0F, this.alpha);
-            graphics.raw.blitSprite(sprite, getX(), getY(), getWidth(), getHeight());
-            graphics.raw.setColor(1.0F, 1.0F, 1.0F, 1.0F);*/
-            //?}
-            // Centred letter label via the BCButton helper (the version-specific text path lives there).
-            drawDefaultButtonLabel(graphics);
-        }
-
-        //? if >=1.21.10 {
-        @Override
-        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-            // Mirrors vanilla AbstractWidget.mouseClicked but skips the !active early-return
-            // (we don't actually use active here) and explicitly plays the click sound — that
-            // sound is normally fired by AbstractWidget.mouseClicked and would be lost when
-            // overriding it.
-            if (this.visible
-                    && this.isValidClickButton(event.buttonInfo())
-                    && this.isMouseOver(event.x(), event.y())) {
-                playDownSound(Minecraft.getInstance().getSoundManager());
-                this.onClick(event, doubleClick);
-                return true;
-            }
-            return false;
-        }
-        //?} else {
-        /*@Override
-        public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-            // Mirrors vanilla AbstractWidget.mouseClicked but skips the !active early-return and
-            // explicitly plays the click sound. 1.21.1: isValidClickButton(int), onClick(double, double).
-            if (this.visible
-                    && this.isValidClickButton(button)
-                    && this.isMouseOver(mouseXd, mouseYd)) {
-                playDownSound(Minecraft.getInstance().getSoundManager());
-                this.onClick(mouseXd, mouseYd);
-                return true;
-            }
-            return false;
-        }*/
-        //?}
     }
 
     @Override

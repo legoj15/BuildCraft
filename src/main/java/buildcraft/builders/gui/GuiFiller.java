@@ -4,14 +4,9 @@ import buildcraft.lib.gui.BCGraphics;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
-import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
-//? if >=1.21.10 {
-import net.minecraft.client.input.MouseButtonEvent;
-//?}
 
 import buildcraft.api.filler.IFillerPattern;
 
@@ -20,6 +15,9 @@ import buildcraft.builders.container.ContainerFiller;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.BCButton;
+import buildcraft.lib.gui.button.ButtonIcon;
+import buildcraft.lib.gui.button.ButtonSprite;
 import buildcraft.lib.gui.elem.ToolTip;
 import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
@@ -33,9 +31,12 @@ import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.misc.LocaleUtil;
 
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 public class GuiFiller extends GuiBC8<ContainerFiller> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/filler.png");
+    /** Excavate and invert toggles: 16×16, GUI-local, on the pattern row (shared with {@link GuiFillerPlanner}). */
+    static final int TOGGLE_SIZE = 16, TOGGLE_Y = 40, EXCAVATE_X = 130, INVERT_X = 152;
 
     public GuiFiller(ContainerFiller container, Inventory playerInv, Component title) {
         super(container, playerInv, Component.translatable("block.buildcraftunofficial.filler"), 176, 241);
@@ -110,39 +111,22 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
             new ElementHelpInfo("buildcraft.help.filler.params.title", 0xFFDDAAFF,
                 "buildcraft.help.filler.params.desc")));
 
-        // Excavate button tooltip element
-        IGuiArea excavateArea = new GuiRectangle(130, 40, 16, 16).offset(mainGui.rootElement);
-        mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, excavateArea) {
-            @Override
-            public void addToolTips(List<ToolTip> tooltips) {
-                if (contains(mainGui.mouse)) {
-                    String key = menu.getSyncedCanExcavate() ? "tip.filler.excavate.on" : "tip.filler.excavate.off";
-                    tooltips.add(new ToolTip(LocaleUtil.localize(key)));
-                }
-            }
+        // Excavate and invert toggles: the icon is the state, the tooltip names it.
+        addRenderableWidget(BCButton.builder(leftPos + EXCAVATE_X, topPos + TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE)
+            .icon(ButtonIcon.either(menu::getSyncedCanExcavate, ButtonSprite.EXCAVATE_ON, ButtonSprite.EXCAVATE_OFF))
+            .tooltip(() -> Component.translatable(menu.getSyncedCanExcavate()
+                ? "tip.filler.excavate.on" : "tip.filler.excavate.off"))
+            .onPress(() -> menu.sendMessage(ContainerFiller.NET_EXCAVATE, buf -> {}))
+            .build());
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(EXCAVATE_X, TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filler.excavate.title", 0xFFCCAA88, "buildcraft.help.filler.excavate.desc")));
 
-            @Override
-            public void addHelpElements(List<HelpPosition> elements) {
-                elements.add(new ElementHelpInfo("buildcraft.help.filler.excavate.title", 0xFFCCAA88, "buildcraft.help.filler.excavate.desc").target(this));
-            }
-        });
-
-        // Invert button tooltip element
-        IGuiArea invertArea = new GuiRectangle(152, 40, 16, 16).offset(mainGui.rootElement);
-        mainGui.shownElements.add(new buildcraft.lib.gui.GuiElementSimple(mainGui, invertArea) {
-            @Override
-            public void addToolTips(List<ToolTip> tooltips) {
-                if (contains(mainGui.mouse)) {
-                    String key = menu.isInverted() ? "tip.filler.invert.on" : "tip.filler.invert.off";
-                    tooltips.add(new ToolTip(LocaleUtil.localize(key)));
-                }
-            }
-
-            @Override
-            public void addHelpElements(List<HelpPosition> elements) {
-                elements.add(new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88, "buildcraft.help.filler.invert.desc").target(this));
-            }
-        });
+        addRenderableWidget(invertButton(leftPos + INVERT_X, topPos + TOGGLE_Y, menu::isInverted,
+            () -> menu.sendMessage(ContainerFiller.NET_INVERT, buf -> {})));
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(INVERT_X, TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88, "buildcraft.help.filler.invert.desc")));
 
         // Mode icon tooltip element
         IGuiArea controlModeArea = new GuiRectangle(28, 16, 16, 16).offset(mainGui.rootElement);
@@ -185,6 +169,15 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         });
     }
 
+    /** The Filler's and Filler Planner's shared invert toggle: solid square = pattern as drawn, hollow = inverted. */
+    static BCButton invertButton(int x, int y, BooleanSupplier inverted, Runnable onToggle) {
+        return BCButton.builder(x, y, TOGGLE_SIZE, TOGGLE_SIZE)
+            .icon(ButtonIcon.either(inverted, ButtonSprite.INVERT_ON, ButtonSprite.INVERT_OFF))
+            .tooltip(() -> Component.translatable(inverted.getAsBoolean() ? "tip.filler.invert.on" : "tip.filler.invert.off"))
+            .onPress(onToggle)
+            .build();
+    }
+
     @Override
     protected void containerTick() {
         super.containerTick();
@@ -198,22 +191,6 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         //?} else {
         /*graphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);*/
         //?}
-
-        int mx = (int) this.mainGui.mouse.getX() - leftPos;
-        int my = (int) this.mainGui.mouse.getY() - topPos;
-
-        boolean excavateHover = mx >= 130 && mx < 146 && my >= 40 && my < 56;
-        boolean invertHover = mx >= 152 && mx < 168 && my >= 40 && my < 56;
-
-        // Excavate button: u_start=192, active adds +16 to U, hover adds +16 to V
-        int excavateU = menu.getSyncedCanExcavate() ? 208 : 192;
-        int excavateV = excavateHover ? 16 : 0;
-        new GuiIcon(TEXTURE, excavateU, excavateV, 16, 16).drawAt(leftPos + 130, topPos + 40);
-
-        // Invert button: u_start=224, active adds +16 to U, hover adds +16 to V
-        int invertU = menu.isInverted() ? 240 : 224;
-        int invertV = invertHover ? 16 : 0;
-        new GuiIcon(TEXTURE, invertU, invertV, 16, 16).drawAt(leftPos + 152, topPos + 40);
 
         if (menu.getSyncedLocked()) {
             new GuiIcon(Identifier.parse("buildcraftunofficial:textures/icons/lock.png"), 0, 0, 16, 16, 16).drawAt(leftPos + 12, topPos + 16);
@@ -231,50 +208,4 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
         graphics.text(font, Component.translatable("gui.filling.resources").getString(), 7, 74, 0xFF404040, false);
         graphics.text(font, Component.translatable("container.inventory").getString(), 7, 141, 0xFF404040, false);
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        // Handle button clicks BEFORE super so they aren't consumed by ACS slot handling
-        if (event.button() == 0) {
-            int mx = (int) event.x() - leftPos;
-            int my = (int) event.y() - topPos;
-
-            if (mx >= 130 && mx < 146 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFiller.NET_EXCAVATE, (buf) -> {});
-                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
-
-            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFiller.NET_INVERT, (buf) -> {});
-                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
-        }
-        return super.mouseClicked(event, doubleClick);
-    }
-    //?} else {
-    /*@Override
-    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-        // Handle button clicks BEFORE super so they aren't consumed by ACS slot handling
-        if (button == 0) {
-            int mx = (int) mouseXd - leftPos;
-            int my = (int) mouseYd - topPos;
-
-            if (mx >= 130 && mx < 146 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFiller.NET_EXCAVATE, (buf) -> {});
-                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
-
-            if (mx >= 152 && mx < 168 && my >= 40 && my < 56) {
-                menu.sendMessage(ContainerFiller.NET_INVERT, (buf) -> {});
-                this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseXd, mouseYd, button);
-    }*/
-    //?}
 }

@@ -67,6 +67,17 @@ the version-forked recipe-book stub block once). Menu-opening tiles implement
 (spectator-safe); never route the pos through the two-arg `openMenu(provider, pos)` overload
 (double-write).
 
+**Buttons**: one implementation. Plain text buttons are vanilla `Button`; everything else is a
+`BCButton` configured through `BCButton.builder(x, y, w, h)` — vanilla's `widget/button*` face
+(resource-pack styled) plus an optional `ButtonIcon` (a `ButtonSprite` GUI-atlas icon under
+`textures/gui/sprites/button/`, an item render, or a live choice), label, `latched` state (a
+switched-on toggle / chosen radio option shows vanilla's pressed-in disabled face but stays
+clickable), live `activeWhen` and tooltip, and a `MouseButtons` mask (the action receives the GLFW
+button). All per-line button API divergence lives in `BCButton`. Screens never paint buttons from
+their background sheet, hit-test them, or play the click sound themselves —
+`ButtonUnificationGuardTester` enforces it (the gate's wiring-diagram connectors are the one
+allowlisted exception). `ButtonSpriteTester` pins every icon constant to its PNG and vice versa.
+
 **Pipes/Transport**: Each pipe is a composition of a `PipeBehaviour` (determines pipe type
 logic) and a `PipeFlow` (handles what flows through it — items, fluids, power). `PipeRegistry`
 and `PipeDefinition` manage pipe types.

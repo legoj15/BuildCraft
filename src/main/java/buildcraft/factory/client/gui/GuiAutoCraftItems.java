@@ -8,7 +8,6 @@ package buildcraft.factory.client.gui;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.ImageButton;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
 //? if >=1.21.10 {
@@ -23,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.button.CycleOutputButton;
 import buildcraft.lib.gui.recipe.BCRecipeBookComponent;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -44,8 +44,7 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
     private BCRecipeBookComponent<ContainerAutoCraftItems> recipeBookComponent;
     private ImageButton recipeBookButton;
     private boolean widthTooNarrow;
-    private CycleOutputButton cycleButton;
-    private Boolean cycleHasAlternatives;
+    private BCButton cycleButton;
 
     public GuiAutoCraftItems(ContainerAutoCraftItems menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title, SIZE_X, SIZE_Y);
@@ -116,12 +115,11 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         addRenderableWidget(this.recipeBookComponent);*/
         //?}
 
-        // Cycle-output button: a frameless cycle.png icon ABOVE the recipe-output preview that lets
-        // the player pick among conflicting recipe outputs (e.g. a BuildCraft tank vs another mod's
-        // tank from the same 8-glass grid; GitHub issue #20). Always shown; greyed + unclickable
-        // unless 2+ recipes match. Clicking cycles forward (the server is a no-op past one match).
-        // Position + active state + tooltip are refreshed each tick (the recipe book shifts leftPos).
-        this.cycleButton = new CycleOutputButton(this.leftPos + 94, this.topPos + 11,
+        // Cycle-output button ABOVE the recipe-output preview: picks among conflicting recipe outputs
+        // (e.g. a BuildCraft tank vs another mod's tank from the same 8-glass grid; GitHub issue #20).
+        // Always shown; greyed + unclickable (with its own tooltip) unless 2+ recipes match — the button
+        // reads the synced match count itself. Its position follows leftPos each tick (the recipe book).
+        this.cycleButton = CycleOutputButton.create(this.leftPos + 94, this.topPos + 11, menu::getSyncedMatchCount,
             () -> menu.sendMessage(ContainerAutoCraftItems.NET_CYCLE_OUTPUT, buf -> buf.writeBoolean(true)));
         addRenderableWidget(this.cycleButton);
     }
@@ -140,20 +138,10 @@ public class GuiAutoCraftItems extends GuiBC8<ContainerAutoCraftItems> {
         updateCycleButton();
     }
 
-    /** Keeps the cycle-output button aligned (the recipe book shifts leftPos) and greys it out — with
-     *  an explanatory tooltip — when there are no alternative outputs to cycle to. */
+    /** Keeps the cycle-output button aligned: the recipe book shifts leftPos. */
     private void updateCycleButton() {
-        if (this.cycleButton == null) {
-            return;
-        }
-        this.cycleButton.setPosition(this.leftPos + 94, this.topPos + 11);
-        boolean hasAlternatives = menu.getSyncedMatchCount() > 1;
-        this.cycleButton.active = hasAlternatives;
-        if (this.cycleHasAlternatives == null || this.cycleHasAlternatives != hasAlternatives) {
-            this.cycleHasAlternatives = hasAlternatives;
-            this.cycleButton.setTooltip(Tooltip.create(Component.translatable(hasAlternatives
-                ? "gui.buildcraftunofficial.cycle_output"
-                : "gui.buildcraftunofficial.cycle_output.none")));
+        if (this.cycleButton != null) {
+            this.cycleButton.setPosition(this.leftPos + 94, this.topPos + 11);
         }
     }
 

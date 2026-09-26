@@ -7,28 +7,24 @@
 package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
-import buildcraft.lib.gui.BCGraphics;
-import buildcraft.lib.gui.button.BCButton;
-import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.narration.NarrationElementOutput;
-//? if >=1.21.10 {
-import net.minecraft.client.input.InputWithModifiers;
-//?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
+import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
+import buildcraft.lib.gui.button.BCButton;
+import buildcraft.lib.gui.button.ButtonIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerBuilder;
 import buildcraft.builders.snapshot.EnumContainerContentsMode;
-import buildcraft.builders.snapshot.EnumFluidHandlingMode;
 import buildcraft.builders.tile.TileBuilder;
 
 public class GuiBuilder extends GuiBC8<ContainerBuilder> {
@@ -84,8 +80,10 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     private static final int TANK_ROW_X = 179;
     private static final int TANK_ROW_W = TileBuilder.TANK_COUNT * 18 - 2;
 
-    private FluidModeButton fluidModeButton;
-    private ContentsModeButton contentsModeButton;
+    // Contents-mode icon: a vanilla chest, crossed by the vanilla barrier (the universal "no") under IGNORE — both
+    // item renders, so the toggle follows resource packs.
+    private static final ItemStack CHEST_ICON = new ItemStack(Items.CHEST);
+    private static final ItemStack BARRIER_OVERLAY = new ItemStack(Items.BARRIER);
 
     public GuiBuilder(ContainerBuilder container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_BLUEPRINT_X, SIZE_Y);
@@ -153,21 +151,21 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     @Override
     protected void init() {
         super.init();
-        fluidModeButton = new FluidModeButton(leftPos + FLUID_BUTTON_X, topPos + FLUID_BUTTON_Y);
-        addRenderableWidget(fluidModeButton);
-        contentsModeButton = new ContentsModeButton(leftPos + CONTENTS_BUTTON_X, topPos + CONTENTS_BUTTON_Y);
-        addRenderableWidget(contentsModeButton);
-    }
-
-    @Override
-    protected void containerTick() {
-        super.containerTick();
-        if (fluidModeButton != null) {
-            fluidModeButton.refreshTooltip();
-        }
-        if (contentsModeButton != null) {
-            contentsModeButton.refreshTooltip();
-        }
+        // Both mode buttons cycle a server-side setting; icon and tooltip read the synced mode every frame, so
+        // there is no local optimistic state to reconcile.
+        addRenderableWidget(BCButton.builder(leftPos + FLUID_BUTTON_X, topPos + FLUID_BUTTON_Y,
+                FLUID_BUTTON_SIZE, FLUID_BUTTON_SIZE)
+            .icon(ButtonIcon.item(() -> menu.getSyncedFluidMode().icon()))
+            .tooltip(() -> Component.translatable(menu.getSyncedFluidMode().tooltipKey()))
+            .onPress(() -> menu.sendMessage(ContainerBuilder.NET_FLUID_MODE_CLICK, buf -> {}))
+            .build());
+        addRenderableWidget(BCButton.builder(leftPos + CONTENTS_BUTTON_X, topPos + CONTENTS_BUTTON_Y,
+                CONTENTS_BUTTON_SIZE, CONTENTS_BUTTON_SIZE)
+            .icon(ButtonIcon.item(() -> CHEST_ICON).with(ButtonIcon.item(() ->
+                menu.getSyncedContentsMode() == EnumContainerContentsMode.IGNORE ? BARRIER_OVERLAY : ItemStack.EMPTY)))
+            .tooltip(() -> Component.translatable(menu.getSyncedContentsMode().tooltipKey()))
+            .onPress(() -> menu.sendMessage(ContainerBuilder.NET_CONTENTS_MODE_CLICK, buf -> {}))
+            .build());
     }
 
     @Override
@@ -212,106 +210,4 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
     }
 
-
-    /**
-     * 20×20 button that cycles the Builder's {@link EnumFluidHandlingMode} each click. The icon
-     * (barrier/bricks/bucket) and tooltip reflect the current server-synced mode, so there's no
-     * local optimistic state to reconcile — the button redraws whenever
-     * {@code ContainerBuilder}'s ContainerData pushes a new ordinal.
-     */
-    private class FluidModeButton extends BCButton {
-        private EnumFluidHandlingMode lastKnown;
-
-        FluidModeButton(int x, int y) {
-            super(x, y, FLUID_BUTTON_SIZE, FLUID_BUTTON_SIZE, Component.empty());
-            refreshTooltip();
-        }
-
-        //? if >=1.21.10 {
-        @Override
-        public void onPress(InputWithModifiers modifiers) {
-            menu.sendMessage(ContainerBuilder.NET_FLUID_MODE_CLICK, buf -> {});
-        }
-        //?} else {
-        /*@Override
-        public void onPress() {
-            menu.sendMessage(ContainerBuilder.NET_FLUID_MODE_CLICK, buf -> {});
-        }*/
-        //?}
-
-        @Override
-        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            // Vanilla 9-sliced, hover-aware button sprite — consistent with stock Button + resource packs.
-            drawDefaultButtonSprite(graphics);
-            EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
-            graphics.item(mode.icon(), getX() + 2, getY() + 2);
-        }
-
-        @Override
-        protected void updateWidgetNarration(NarrationElementOutput output) {
-            defaultButtonNarrationText(output);
-        }
-
-        void refreshTooltip() {
-            EnumFluidHandlingMode mode = menu.getSyncedFluidMode();
-            if (mode == lastKnown) return;
-            lastKnown = mode;
-            setTooltip(Tooltip.create(Component.translatable(mode.tooltipKey())));
-        }
-    }
-
-    /**
-     * 20×20 button that toggles whether the Builder fills placed containers (chests/hoppers/
-     * barrels/shulkers/the furnace family/dispensers/droppers/brewing stands) with their
-     * captured contents. Renders a vanilla chest as the base icon so the toggle adapts to
-     * resource packs; under {@link EnumContainerContentsMode#IGNORE} also overlays the vanilla
-     * barrier item (the universal "no" sprite) so the state reads at a glance.
-     */
-    private class ContentsModeButton extends BCButton {
-        private static final net.minecraft.world.item.ItemStack CHEST_ICON =
-                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST);
-        private static final net.minecraft.world.item.ItemStack BARRIER_OVERLAY =
-                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARRIER);
-
-        private EnumContainerContentsMode lastKnown;
-
-        ContentsModeButton(int x, int y) {
-            super(x, y, CONTENTS_BUTTON_SIZE, CONTENTS_BUTTON_SIZE, Component.empty());
-            refreshTooltip();
-        }
-
-        //? if >=1.21.10 {
-        @Override
-        public void onPress(InputWithModifiers modifiers) {
-            menu.sendMessage(ContainerBuilder.NET_CONTENTS_MODE_CLICK, buf -> {});
-        }
-        //?} else {
-        /*@Override
-        public void onPress() {
-            menu.sendMessage(ContainerBuilder.NET_CONTENTS_MODE_CLICK, buf -> {});
-        }*/
-        //?}
-
-        @Override
-        protected void drawButtonContent(BCGraphics graphics, int mouseX, int mouseY, float partialTick) {
-            drawDefaultButtonSprite(graphics);
-            graphics.item(CHEST_ICON, getX() + 2, getY() + 2);
-            if (menu.getSyncedContentsMode() == EnumContainerContentsMode.IGNORE) {
-                // Both items at the same origin; the barrier's transparent pixels let the chest show through.
-                graphics.item(BARRIER_OVERLAY, getX() + 2, getY() + 2);
-            }
-        }
-
-        @Override
-        protected void updateWidgetNarration(NarrationElementOutput output) {
-            defaultButtonNarrationText(output);
-        }
-
-        void refreshTooltip() {
-            EnumContainerContentsMode mode = menu.getSyncedContentsMode();
-            if (mode == lastKnown) return;
-            lastKnown = mode;
-            setTooltip(Tooltip.create(Component.translatable(mode.tooltipKey())));
-        }
-    }
 }

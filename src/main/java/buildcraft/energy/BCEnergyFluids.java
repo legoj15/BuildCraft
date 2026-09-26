@@ -189,6 +189,20 @@ public class BCEnergyFluids {
         return null;
     }
 
+    /**
+     * Dense oils sink through water by deleting the plain water block directly beneath them. Only an actual
+     * water fluid block may be displaced: a waterlogged block (a pipe, a marker, stairs, a chest...) reports a
+     * water fluid state too, and deleting it destroyed the block itself — contents and all. Such a block
+     * refuses oil anyway, so the oil simply rests on top of it.
+     */
+    static void displaceWaterBelow(net.minecraft.world.level.Level level, BlockPos pos) {
+        BlockPos below = pos.below();
+        BlockState stateBelow = level.getBlockState(below);
+        if (stateBelow.getBlock() instanceof LiquidBlock && stateBelow.getFluidState().is(FluidTags.WATER)) {
+            level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        }
+    }
+
     // ─── Factory method ───────────────────────────────────────────────
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -349,12 +363,7 @@ public class BCEnergyFluids {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
             if (isDenseFluid()) {
-                BlockPos below = pos.below();
-                FluidState stateBelow = level.getFluidState(below);
-                if (stateBelow.is(FluidTags.WATER)) {
-                    // Annihilate the water block immediately to sink down!
-                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-                }
+                displaceWaterBelow(level, pos);
             }
             //? if >=1.21.10 {
             super.tick(level, pos, state, fluidState);
@@ -439,12 +448,7 @@ public class BCEnergyFluids {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
             if (isDenseFluid()) {
-                BlockPos below = pos.below();
-                FluidState stateBelow = level.getFluidState(below);
-                if (stateBelow.is(FluidTags.WATER)) {
-                    // Annihilate the water block immediately to sink down!
-                    level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
-                }
+                displaceWaterBelow(level, pos);
             }
             //? if >=1.21.10 {
             super.tick(level, pos, state, fluidState);

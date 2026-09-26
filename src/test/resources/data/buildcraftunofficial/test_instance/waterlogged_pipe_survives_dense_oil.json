@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:waterlogged_pipe_survives_dense_oil",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 200,
+    "setup_ticks": 0,
+    "required": true
+}

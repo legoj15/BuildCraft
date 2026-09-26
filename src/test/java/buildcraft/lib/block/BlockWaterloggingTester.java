@@ -30,6 +30,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.energy.BCEnergyFluids;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -205,6 +206,66 @@ public class BlockWaterloggingTester {
                     && !state.getValue(BlockStateProperties.WATERLOGGED),
                 "the marker must be waterloggable, and lava must not waterlog it");
             helper.assertTrue(level.getFluidState(abs).isEmpty(), "lava must not enter the marker's cell");
+        });
+    }
+
+    /** Heavy oils "sink through" water by deleting the water block beneath them. A waterlogged block also
+     *  reports a water fluid state, so that used to delete the whole block — a waterlogged pipe (with its
+     *  cargo, plugs and wires) or marker simply vanished under a heavy-oil pool. Only a plain water block
+     *  may be displaced; a waterlogged block refuses oil, so the oil must rest on top of it. */
+    public static void testWaterloggedPipeSurvivesDenseOil(GameTestHelper helper) {
+        buildBasin(helper);
+        // Close the cell above the subject too, so the oil can only ever go down into the subject.
+        BlockPos oilPos = SUBJECT.above();
+        helper.setBlock(oilPos.west(), Blocks.STONE);
+        helper.setBlock(oilPos.east(), Blocks.STONE);
+        helper.setBlock(oilPos.north(), Blocks.STONE);
+        helper.setBlock(oilPos.south(), Blocks.STONE);
+
+        helper.setBlock(SUBJECT, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState()
+            .setValue(BlockStateProperties.WATERLOGGED, true));
+        TilePipeHolder tile = (TilePipeHolder) helper.getLevel().getBlockEntity(helper.absolutePos(SUBJECT));
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+
+        BCEnergyFluids.FluidEntry heavy = BCEnergyFluids.ALL.stream()
+            .filter(e -> e.baseName().equals("oil_heavy") && e.heat() == 0).findFirst().orElseThrow();
+        placeSource(helper, oilPos, heavy.block().get(), heavy.source().get());
+
+        helper.succeedWhen(() -> {
+            // Survival first, so a deleted pipe reports as such (once displaced, the oil keeps flowing and
+            // re-ticking, so the gate below would otherwise be the last failure message).
+            helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), SUBJECT);
+            helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(SUBJECT)) == tile,
+                "the waterlogged pipe's block entity must survive the oil above it");
+            helper.assertTrue(helper.getBlockState(SUBJECT).getValue(BlockStateProperties.WATERLOGGED),
+                "the pipe must stay waterlogged");
+            // Gate: the oil has run its tick (the one that used to delete the pipe) and settled on top.
+            helper.assertTrue(hasSpread(helper, oilPos, heavy.source().get()), "heavy oil has not ticked yet");
+            helper.assertBlockPresent(heavy.block().get(), oilPos);
+        });
+    }
+
+    /** The other half of the dense-oil rule: a PLAIN water block is still displaced, so heavy oil keeps
+     *  sinking through water. One-cell pit (the basin with its channel filled), water in it, oil above. */
+    public static void testDenseOilStillSinksThroughPlainWater(GameTestHelper helper) {
+        buildBasin(helper);
+        helper.setBlock(WEST_SOURCE, Blocks.STONE);
+        helper.setBlock(EAST_SOURCE, Blocks.STONE);
+        BlockPos oilPos = SUBJECT.above();
+        helper.setBlock(oilPos.west(), Blocks.STONE);
+        helper.setBlock(oilPos.east(), Blocks.STONE);
+        helper.setBlock(oilPos.north(), Blocks.STONE);
+        helper.setBlock(oilPos.south(), Blocks.STONE);
+        helper.setBlock(SUBJECT, Blocks.WATER);
+
+        BCEnergyFluids.FluidEntry heavy = BCEnergyFluids.ALL.stream()
+            .filter(e -> e.baseName().equals("oil_heavy") && e.heat() == 0).findFirst().orElseThrow();
+        placeSource(helper, oilPos, heavy.block().get(), heavy.source().get());
+
+        helper.succeedWhen(() -> {
+            helper.assertBlockPresent(heavy.block().get(), SUBJECT);
+            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(SUBJECT)).getType().isSame(heavy.source().get()),
+                "heavy oil must have sunk into the plain water's cell");
         });
     }
 

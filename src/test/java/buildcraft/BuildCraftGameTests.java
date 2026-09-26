@@ -600,6 +600,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:facaded_pipe_waterlogs_between_sources", () -> buildcraft.lib.block.BlockWaterloggingTester::testFacadedPipeWaterlogsBetweenSources);
         reg.accept("buildcraftunofficial:waterloggable_marker_holds_back_lava", () -> buildcraft.lib.block.BlockWaterloggingTester::testMarkerHoldsBackLava);
         reg.accept("buildcraftunofficial:waterloggable_placement_keeps_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testPlacementIntoWaterSourceWaterlogs);
+        // Heavy oil sinks through plain water by deleting it; a waterlogged block must not be deleted with it.
+        reg.accept("buildcraftunofficial:waterlogged_pipe_survives_dense_oil", () -> buildcraft.lib.block.BlockWaterloggingTester::testWaterloggedPipeSurvivesDenseOil);
+        reg.accept("buildcraftunofficial:dense_oil_sinks_through_plain_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testDenseOilStillSinksThroughPlainWater);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
         // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).

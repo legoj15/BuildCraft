@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -89,6 +91,14 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
             holder = null;
         }
         return holder;
+    }
+
+    /** Whoever placed the pipe this station sits on. */
+    @Override
+    @Nullable
+    public GameProfile getOwner() {
+        IPipeHolder h = getHolder();
+        return h == null ? null : h.getOwner();
     }
 
     @Override

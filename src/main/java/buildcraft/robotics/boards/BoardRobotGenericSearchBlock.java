@@ -11,8 +11,11 @@ package buildcraft.robotics.boards;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
@@ -26,6 +29,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.statements.ActionRobotFilter;
@@ -73,11 +77,18 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         updateFilter();
 
         Level level = robot.level();
-        startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false,
-                // Both audit fixes meet here: the neighbour-aware property (batch 1 — stacking crops are only
-                // ripe relative to the block below) AND the gate "Filter" conjunct (batch 2).
-                pos -> level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
-                        && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
+        startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, pos -> isSearchCandidate(level, pos)));
+    }
+
+    /** The search predicate. Both audit fixes meet here: the neighbour-aware property (batch 1 — stacking crops are
+     *  only ripe relative to the block below) AND the gate "Filter" conjunct (batch 2); then the reservation, and
+     *  last (it posts an event, so only for real candidates) whether protection mods let this robot break the
+     *  block — every subclass breaks what it finds, and without this a board would fly back to the same refused
+     *  block forever instead of moving on. */
+    public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
+        return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
+                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos));
     }
 
     /** The state-only form of the search predicate: the board's own block test AND the gate's Filter

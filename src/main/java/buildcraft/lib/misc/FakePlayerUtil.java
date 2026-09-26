@@ -7,7 +7,9 @@
 package buildcraft.lib.misc;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -18,6 +20,7 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
@@ -26,6 +29,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.IFakePlayerProvider;
@@ -51,7 +55,8 @@ import buildcraft.api.core.IFakePlayerProvider;
  * A cached player is shared state, so every fetch first undoes whatever the previous caller left behind:
  * inventory, both hands and all equipment (incl. the 1.21.10+ split-off equipment table), the selected slot, the
  * cursor and 2x2 crafting stacks, an item in use, item cooldowns, rotations (incl. head/body and previous-tick),
- * ground/shift/sprint/swim flags and pose, motion, fall distance, fire, air, effects and health — and puts the
+ * ground/shift/sprint/swim flags and pose, motion, fall distance, fire, air, effects, health, hunger, the hurt and
+ * invulnerability timers, death, freezing and portal travel — and puts the
  * player either on the requested block (centre, like the old per-call constructor did) or back where it was
  * created. Resetting only drops references; the previous caller's stacks are never shrunk or emptied, and no item
  * hook or game event fires (an item left in use is dropped quietly, as a discarded throwaway player's was).
@@ -71,11 +76,20 @@ import buildcraft.api.core.IFakePlayerProvider;
  * <h2>Leases and reentrancy</h2>
  * BuildCraft's own callers use {@link #lease}: try-with-resources, and {@link Lease#close()} scrubs the items the
  * caller stashed (so no live stack reference outlives the operation). While a lease is open its player is
- * reserved: a nested fetch for the same (level, profile) — from BuildCraft or from a third party through the API —
- * gets a detached, uncached {@code FakePlayer} instead of resetting the outer caller's player under it. Audit at
- * time of writing: no BuildCraft path fetches a fake player while another fetch is in use (the break-permission
- * probe, template placement, stripes pipe drops and the robot AIs all run from their own tick and never
- * synchronously reach another fetch), so the reservation is a guard against third-party listeners and future code.
+ * reserved: a nested lease for the same (level, profile) gets a detached, uncached {@code FakePlayer} instead of
+ * resetting the outer caller's player under it. Audit at time of writing: no BuildCraft path fetches a fake player
+ * while another fetch is in use (the break-permission probe, template placement, stripes pipe drops and the robot
+ * AIs all run from their own tick and never synchronously reach another fetch), so the reservation is a guard
+ * against third-party listeners and future code. Leases never legitimately outlive a server tick: one still open
+ * at the end of a tick was dropped without {@code close()}, and is released (and logged) there so it cannot
+ * reserve its player forever.
+ *
+ * <h2>API players are separate</h2>
+ * The API ({@link #PROVIDER}) cannot reserve anything — it has no release call — so API callers get their own
+ * cached player per (level, profile), never the one BuildCraft leases. A BuildCraft lease therefore never resets a
+ * player an addon is still holding, and an addon's fetch never resets a player BuildCraft is using. Two addons
+ * share one API player, as they would through {@code FakePlayerFactory}; the {@link IFakePlayerProvider} contract
+ * (use it in the current method only) covers them.
  *
  * <h2>Threading</h2>
  * The cache is a plain {@link HashMap}; every BuildCraft caller runs on the server thread (block-entity, entity
@@ -110,7 +124,8 @@ public final class FakePlayerUtil {
         }
     };
 
-    private record Key(ServerLevel level, UUID id, @Nullable String name) {}
+    /** {@code api}: the API's own player for this profile, kept apart from the one BuildCraft leases. */
+    private record Key(ServerLevel level, UUID id, @Nullable String name, boolean api) {}
 
     /** A cached player plus the state it was created in, which every fetch restores. */
     private static final class Entry {
@@ -118,7 +133,9 @@ public final class FakePlayerUtil {
         final Vec3 homePos;
         final float homeYRot, homeXRot, homeYHeadRot, homeYBodyRot;
         final int homeFireTicks;
-        boolean leased;
+        /** The lease currently reserving this player, or null. */
+        @Nullable
+        Lease activeLease;
 
         Entry(FakePlayer player) {
             this.player = player;
@@ -152,10 +169,29 @@ public final class FakePlayerUtil {
             recentKineticEnemies = null;
             //?}
         }
+
+        /**
+         * Puts back what a fresh player has for the state a caller can change short of the world: hunger, the hurt
+         * and invulnerability timers, death, freezing and portal travel. Plain field writes — no event fires.
+         */
+        void resetLivingState() {
+            foodData = new FoodData();
+            dead = false;
+            deathTime = 0;
+            hurtTime = 0;
+            hurtDuration = 0;
+            invulnerableTime = 0;
+            setTicksFrozen(0);
+            setPortalCooldown(0);
+            portalProcess = null;
+        }
     }
 
     private static final Map<Key, Entry> CACHE = new HashMap<>();
+    /** Entries reserved by a lease right now; anything still here at the end of a server tick was leaked. */
+    private static final List<Entry> OPEN_LEASES = new ArrayList<>();
     private static boolean warnedOffThread = false;
+    private static boolean warnedLeakedLease = false;
 
     private FakePlayerUtil() {}
 
@@ -175,18 +211,21 @@ public final class FakePlayerUtil {
      * after {@link Lease#close()}.
      */
     public static Lease lease(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
-        Entry entry = entryFor(level, profile);
-        if (entry == null || entry.leased) {
+        Entry entry = entryFor(level, profile, false);
+        if (entry == null || entry.activeLease != null) {
             return new Lease(detached(level, profile, pos), null);
         }
         reset(entry, pos);
-        entry.leased = true;
-        return new Lease(entry.player, entry);
+        Lease lease = new Lease(entry.player, entry);
+        entry.activeLease = lease;
+        OPEN_LEASES.add(entry);
+        return lease;
     }
 
+    /** The API path: the API's own cached player (never a leased one), reset. */
     private static FakePlayer fetch(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
-        Entry entry = entryFor(level, profile);
-        if (entry == null || entry.leased) {
+        Entry entry = entryFor(level, profile, true);
+        if (entry == null) {
             return detached(level, profile, pos);
         }
         reset(entry, pos);
@@ -195,7 +234,7 @@ public final class FakePlayerUtil {
 
     /** The cached entry, created on first use; null when called off the server thread. */
     @Nullable
-    private static Entry entryFor(ServerLevel level, @Nullable GameProfile profile) {
+    private static Entry entryFor(ServerLevel level, @Nullable GameProfile profile, boolean api) {
         if (!level.getServer().isSameThread()) {
             if (!warnedOffThread) {
                 warnedOffThread = true;
@@ -205,7 +244,7 @@ public final class FakePlayerUtil {
             return null;
         }
         GameProfile resolved = resolveProfile(profile);
-        Key key = new Key(level, GameProfileUtil.getId(resolved), GameProfileUtil.getName(resolved));
+        Key key = new Key(level, GameProfileUtil.getId(resolved), GameProfileUtil.getName(resolved), api);
         Entry entry = CACHE.get(key);
         if (entry == null) {
             // Built outside the map: construction fires entity-construction events, and a listener that fetched
@@ -230,6 +269,9 @@ public final class FakePlayerUtil {
     private static void reset(Entry entry, @Nullable BlockPos pos) {
         FakePlayer player = entry.player;
         scrubItems(player);
+        if (player instanceof CachedFakePlayer cached) {
+            cached.resetLivingState();
+        }
         player.setShiftKeyDown(false);
         player.setSprinting(false);
         player.setSwimming(false);
@@ -317,6 +359,29 @@ public final class FakePlayerUtil {
         evictOwner(event.getEntity().getUUID());
     }
 
+    /** Leases never span a server tick, so any still open once the tick is done were dropped without close(). */
+    @SubscribeEvent
+    public static void onServerTickEnd(ServerTickEvent.Post event) {
+        if (!OPEN_LEASES.isEmpty()) {
+            releaseLeakedLeases();
+        }
+    }
+
+    /** Releases every open lease (a late {@code close()} of one then does nothing) and logs the first leak. */
+    static void releaseLeakedLeases() {
+        for (Entry entry : OPEN_LEASES) {
+            if (!warnedLeakedLease) {
+                warnedLeakedLease = true;
+                BCLog.logger.warn("[lib.fakeplayer] A BuildCraft fake-player lease for "
+                        + GameProfileUtil.getName(entry.player.getGameProfile())
+                        + " was never closed; released it. The caller is missing try-with-resources"
+                        + " (further leaks are released silently).");
+            }
+            entry.activeLease = null;
+        }
+        OPEN_LEASES.clear();
+    }
+
     private static void evictOwner(UUID id) {
         // A lease in progress keeps its entry object and releases it harmlessly; the next fetch rebuilds.
         CACHE.keySet().removeIf(key -> key.id().equals(id));
@@ -347,13 +412,19 @@ public final class FakePlayerUtil {
                 return;
             }
             closed = true;
+            if (entry != null && entry.activeLease != this) {
+                // Released as leaked at the end of an earlier tick: the player may already belong to a newer
+                // lease, which a scrub or release here would pull the rug from under.
+                return;
+            }
             try {
                 scrubItems(player);
             } finally {
                 // Released even if the scrub throws, or every later fetch for this player would silently take
                 // the detached path and bring back the per-call construction cost.
                 if (entry != null) {
-                    entry.leased = false;
+                    entry.activeLease = null;
+                    OPEN_LEASES.remove(entry);
                 }
             }
         }

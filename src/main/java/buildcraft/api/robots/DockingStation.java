@@ -10,6 +10,10 @@ package buildcraft.api.robots;
 
 import java.util.Arrays;
 
+import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.world.Container;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
@@ -61,6 +65,13 @@ public abstract class DockingStation {
 
     public Direction side() {
         return side;
+    }
+
+    /** The player this station acts for (e.g. whoever placed the pipe it sits on), or null when there is none.
+     *  Robots homed here ask protection mods for permission as this player. */
+    @Nullable
+    public GameProfile getOwner() {
+        return null;
     }
 
     public EntityRobotBase robotTaking() {

@@ -12,6 +12,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
+import net.neoforged.neoforge.common.util.FakePlayer;
+
 import buildcraft.api.core.BCLog;
 
 public class AdvancementUtil {
@@ -21,7 +23,17 @@ public class AdvancementUtil {
         unlockAdvancement(player, advancementName, "code_trigger");
     }
 
+    /**
+     * Awards {@code player}. A fake player (a stripes pipe or robot using an item, any machine acting for its owner)
+     * is never awarded through its own tracker — on 1.21.1 and 26.2 NeoForge gives fake players a no-op one, so the
+     * owner never got anything — but routed to the real player with its UUID: the owner when online, nobody
+     * otherwise. See {@link #unlockAdvancement(UUID, Level, Identifier, String)}.
+     */
     public static void unlockAdvancement(Player player, Identifier advancementName, String criterionName) {
+        if (player instanceof FakePlayer) {
+            unlockAdvancement(player.getUUID(), player.level(), advancementName, criterionName);
+            return;
+        }
         if (player instanceof ServerPlayer serverPlayer) {
             MinecraftServer server = player.level().getServer();
             if (server == null) {
@@ -40,14 +52,12 @@ public class AdvancementUtil {
     }
 
     /**
-     * Prefer this over the {@link Player}-typed overload wherever the placer/actor might be a
-     * {@code net.neoforged.neoforge.common.util.FakePlayer} (e.g. a block placed via a Stripes pipe) —
-     * {@code FakePlayer} is itself a {@code ServerPlayer}, so the {@code Player}-typed overload doesn't
-     * skip it, and its {@code getAdvancements()} resolution is exactly the surface NeoForge has been
-     * actively changing (an owner-profiled fake player's UUID collides with the real owner's in
-     * {@code PlayerList.getPlayerAdvancements}). Looking the real, connected {@link ServerPlayer} up by
-     * UUID sidesteps that entirely and is correct regardless of which side of the NeoForge change you're
-     * on: it awards the real owner if they're online and cleanly no-ops (returns {@code false}) if not.
+     * Awards the real, connected player with this UUID — the path for a machine acting for its owner, and the one
+     * the {@link Player}-typed overload routes every {@link FakePlayer} through. A fake player's own
+     * {@code getAdvancements()} is exactly the surface NeoForge has been changing (a no-op tracker on 1.21.1 and
+     * 26.2; on 1.21.10 - 26.1.x a tracker shared by UUID with the real owner). Looking the connected
+     * {@link ServerPlayer} up by UUID is correct on every line: it awards the owner if they're online and cleanly
+     * no-ops (returns {@code false}) if not.
      */
     public static boolean unlockAdvancement(UUID playerId, Level level, Identifier advancementName) {
         return unlockAdvancement(playerId, level, advancementName, "code_trigger");
@@ -62,7 +72,8 @@ public class AdvancementUtil {
             return false;
         }
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
-        if (player != null) {
+        // Never a fake player (they are not in the player list), which also keeps the two overloads from recursing.
+        if (player != null && !(player instanceof FakePlayer)) {
             unlockAdvancement(player, advancementName, criterionName);
             return true;
         }

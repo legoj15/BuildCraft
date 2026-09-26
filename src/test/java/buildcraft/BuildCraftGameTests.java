@@ -198,6 +198,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_cache_drops_unloaded_level", () -> buildcraft.lib.misc.FakePlayerUtilTester::testUnloadDropsLevelPlayers);
         reg.accept("buildcraftunofficial:fake_player_owner_session_change_evicts", () -> buildcraft.lib.misc.FakePlayerUtilTester::testOwnerSessionChangeEvicts);
         reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
+        reg.accept("buildcraftunofficial:fake_player_api_separate_from_leases", () -> buildcraft.lib.misc.FakePlayerUtilTester::testApiPlayerIsSeparateFromLeases);
+        reg.accept("buildcraftunofficial:fake_player_leaked_lease_released", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsReleased);
+        reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
+        reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
+        reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
+        reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
+        reg.accept("buildcraftunofficial:machine_protection_robots_ask", () -> buildcraft.lib.misc.MachineProtectionTester::robotsAskBeforeBreaking);
+        reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns

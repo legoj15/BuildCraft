@@ -25,6 +25,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.robotics.RobotProtection;
 
 /** Breaks {@code blockToBreak} with the held tool, replicating vanilla's destroy-progress math (hardness,
  *  tool speed, efficiency's squared bonus, the correct-tool 30-vs-100 divisor) a few ticks per cycle, then
@@ -35,11 +36,16 @@ import buildcraft.lib.misc.FakePlayerUtil;
  *  BuildCraft fake player holding the robot's tool — the fake player is what carries the tool (and its
  *  efficiency enchantment) into vanilla's math, exactly as 7.1.x's {@code getFakePlayerWithTool} did.
  *  The 7.1.x crack-particle SFX is dropped; the crack overlay itself is kept through
- *  {@code destroyBlockProgress}. */
+ *  {@code destroyBlockProgress}.
+ *
+ *  <p>Before the first swing it asks protection mods, as the robot's home-station owner
+ *  ({@link RobotProtection}); a refusal fails the AI without touching the block. */
 public class AIRobotBreak extends AIRobot {
 
     private BlockPos blockToBreak;
     private float blockDamage = 0;
+    /** Whether protection mods let this robot break {@code blockToBreak}; null until asked. */
+    private Boolean permitted = null;
 
     public AIRobotBreak(IRobotAccess iRobot) {
         super(iRobot);
@@ -70,6 +76,18 @@ public class AIRobotBreak extends AIRobot {
         BlockState state = serverLevel.getBlockState(blockToBreak);
         float hardness = state.getDestroySpeed(serverLevel, blockToBreak);
         if (state.isAir() || hardness < 0) {
+            setSuccess(false);
+            terminate();
+            return;
+        }
+
+        // Ask protection mods once, before the first swing (7.1.x asked through its harvest call's break event;
+        // the port's break goes through breakBlockAndGetDrops, which posts none). Not persisted: a reloaded
+        // break asks again. The answer sticks, so a refused AI stays refused however often it is cycled.
+        if (permitted == null) {
+            permitted = RobotProtection.canBreak(robot, serverLevel, blockToBreak);
+        }
+        if (!permitted) {
             setSuccess(false);
             terminate();
             return;

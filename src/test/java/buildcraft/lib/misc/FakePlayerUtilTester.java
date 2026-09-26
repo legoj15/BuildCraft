@@ -234,10 +234,127 @@ public class FakePlayerUtilTester {
         try (FakePlayerUtil.Lease again = FakePlayerUtil.lease(level, owner, null)) {
             check(again.player() == cached, "after release, the cached player is leased again");
         }
-        check(BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner) == cached,
-                "after release, API fetches get the cached player again");
 
         helper.succeed();
+    }
+
+    /**
+     * API callers (addons) and BuildCraft's own leases never share a player: an addon's fetched player is not
+     * reserved (the API has no release call), so if a BuildCraft lease could hand out the same instance it would
+     * reset the addon's player while the addon was still using it — and an addon's fetch would reset a player
+     * BuildCraft had just released mid-way through a longer operation. Each side keeps its own cached player.
+     */
+    public static void testApiPlayerIsSeparateFromLeases(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+        ItemStack addonTool = new ItemStack(Items.SHEARS);
+
+        FakePlayer api = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        api.setItemInHand(InteractionHand.MAIN_HAND, addonTool);
+        FakePlayer leased;
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, owner, helper.absolutePos(BlockPos.ZERO))) {
+            leased = lease.player();
+            check(leased != api, "a lease never hands out the API player");
+            check(GameProfileUtil.getId(owner).equals(leased.getUUID()), "both act as the owner");
+        }
+        check(api.getMainHandItem() == addonTool, "a BuildCraft lease does not reset the addon's player");
+        check(BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner) == api, "the API player stays cached");
+        try (FakePlayerUtil.Lease again = FakePlayerUtil.lease(level, owner, null)) {
+            check(again.player() == leased, "the leased player stays cached too");
+        }
+
+        helper.succeed();
+    }
+
+    /**
+     * A {@link FakePlayerUtil.Lease} that is never closed (an addon forgetting try-with-resources) would reserve its
+     * player forever, silently sending every later fetch down the uncached path. Leases never legitimately span a
+     * server tick, so the end-of-tick sweep releases (and logs) any still open. The sweep is called directly here;
+     * that it is subscribed is pinned by {@code FakePlayerUtilSubscriptionTester}.
+     */
+    public static void testLeakedLeaseIsReleased(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+
+        FakePlayerUtil.Lease leaked = FakePlayerUtil.lease(level, owner, null);
+        leaked.player().setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.STICK));
+        try (FakePlayerUtil.Lease blocked = FakePlayerUtil.lease(level, owner, null)) {
+            check(blocked.player() != leaked.player(), "precondition: the leaked lease still reserves its player");
+        }
+
+        FakePlayerUtil.releaseLeakedLeases();
+
+        try (FakePlayerUtil.Lease fresh = FakePlayerUtil.lease(level, owner, null)) {
+            check(fresh.player() == leaked.player(), "after the sweep the cached player is handed out again");
+            check(fresh.player().getMainHandItem().isEmpty(), "and it comes back reset");
+        }
+        leaked.close(); // A late close must not release the new lease's reservation.
+
+        helper.succeed();
+    }
+
+    /**
+     * The rest of a fresh player's state that a caller can change: hunger, the hurt and invulnerability timers,
+     * death, freezing and the portal cooldown. A stripes pipe using food, or an addon hurting "its" player, must not
+     * leave the next caller a starving, invulnerable or dead player.
+     */
+    public static void testResetsLivingState(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+        FakePlayer fresh = new FakePlayer(level, owner);
+
+        FakePlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        player.getFoodData().setFoodLevel(3);
+        player.getFoodData().setSaturation(0);
+        player.getFoodData().addExhaustion(3);
+        player.hurtTime = 8;
+        player.hurtDuration = 9;
+        player.invulnerableTime = 20;
+        player.deathTime = 7;
+        setDead(player, true);
+        player.setTicksFrozen(100);
+        player.setPortalCooldown(300);
+
+        FakePlayer again = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
+        check(again == player, "the same cached player comes back");
+        check(again.getFoodData().getFoodLevel() == fresh.getFoodData().getFoodLevel(), "hunger is restored");
+        check(again.getFoodData().getSaturationLevel() == fresh.getFoodData().getSaturationLevel(),
+                "saturation is restored");
+        check(again.hurtTime == fresh.hurtTime && again.hurtDuration == fresh.hurtDuration, "hurt timers are cleared");
+        check(again.invulnerableTime == fresh.invulnerableTime, "the invulnerability timer is cleared");
+        check(again.deathTime == fresh.deathTime && !isDead(again), "the player is no longer dead");
+        check(again.getTicksFrozen() == fresh.getTicksFrozen(), "freezing is cleared");
+        check(!again.isOnPortalCooldown(), "the portal cooldown is cleared");
+        check(again.portalProcess == null, "no portal transition is pending");
+
+        helper.succeed();
+    }
+
+    /** {@code LivingEntity.dead} is protected and only {@code die()} sets it (which broadcasts a death message). */
+    private static java.lang.reflect.Field deadField() {
+        try {
+            java.lang.reflect.Field field = net.minecraft.world.entity.LivingEntity.class.getDeclaredField("dead");
+            field.setAccessible(true);
+            return field;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static void setDead(FakePlayer player, boolean value) {
+        try {
+            deadField().setBoolean(player, value);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static boolean isDead(FakePlayer player) {
+        try {
+            return deadField().getBoolean(player);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**

@@ -24,8 +24,9 @@ import net.neoforged.neoforge.common.util.FakePlayer;
  * <li>Use the player only within the current method context. Never store it: the next fetch — from any caller —
  * resets it, and it holds a reference to its level (the cache drops it when the level unloads).</li>
  * <li>Do not keep using it across a call that could fetch a fake player again (a nested fetch for the same level and
- * profile resets it under you). BuildCraft's own callers reserve the player for the duration of their operation, so
- * a nested fetch made while BuildCraft is using it gets a separate, uncached player instead.</li>
+ * profile resets it under you). The players handed out here are never the ones BuildCraft's own machines use, so
+ * BuildCraft never resets a player you hold and you never reset one BuildCraft is using; other API callers share
+ * yours.</li>
  * <li>Do not leave live stacks on it: clear what you put in its hands or inventory before returning, so no stack
  * reference outlives your operation.</li>
  * <li>Call only from the server thread.</li>

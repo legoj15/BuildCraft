@@ -189,6 +189,12 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                     if (progress > 0) {
                         world.destroyBlockProgress(offsetHash, offset, (int) (progress * 9 / target));
                     }
+                } else if (!BlockUtil.canMachineBreak((ServerLevel) world, offset, pipe.getHolder().getOwner())) {
+                    // Refused by a protection mod (asked as the pipe's owner, like the quarry and builder do):
+                    // the block stays, the crack clears and the spent power is gone — 1.12.2 likewise reset its
+                    // progress when the owner's fake player had its break event cancelled.
+                    world.destroyBlockProgress(offsetHash, offset, -1);
+                    progress = 0;
                 } else {
                     BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) world,

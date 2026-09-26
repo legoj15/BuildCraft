@@ -17,6 +17,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 /**
  * The fake-player cache is only safe if its invalidation handlers actually run: level unload (so no cached player
@@ -45,6 +46,11 @@ public class FakePlayerUtilSubscriptionTester {
     @Test
     public void ownerLogoutIsSubscribed() {
         assertSubscribed(PlayerEvent.PlayerLoggedOutEvent.class);
+    }
+
+    @Test
+    public void leakedLeaseSweepIsSubscribed() {
+        assertSubscribed(ServerTickEvent.Post.class);
     }
 
     private static void assertSubscribed(Class<? extends Event> eventType) {

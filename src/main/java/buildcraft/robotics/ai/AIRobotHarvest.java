@@ -11,6 +11,7 @@ package buildcraft.robotics.ai;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -20,6 +21,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.RobotProtection;
 
 /** Harvests a mature crop at {@code blockFound} through the
  *  {@link buildcraft.api.crops.CropManager} (maturity check, crop drops) and drops the result at the robot's
@@ -68,8 +70,11 @@ public class AIRobotHarvest extends AIRobot {
                 return;
             }
 
+            // Protection mods get their say first: 7.1.x's crop handlers broke through BlockUtils.breakBlock, which
+            // posted a break event; the port's handlers break the crop directly, so the robot asks here instead.
             NonNullList<ItemStack> drops = NonNullList.create();
-            if (!CropManager.harvestCrop(level, blockFound, drops)) {
+            if (!(level instanceof ServerLevel serverLevel) || !RobotProtection.canBreak(robot, serverLevel, blockFound)
+                    || !CropManager.harvestCrop(level, blockFound, drops)) {
                 setSuccess(false);
                 terminate();
                 return;

@@ -71,6 +71,11 @@ public class LocalBlockUpdateNotifier {
     // NOT @SubscribeEvent: the break-event class differs across 26.1.x, so this is registered
     // reflectively via BreakEventCompat (see registerBreakListener) against the common BlockEvent base.
     public static void onBlockBroken(BlockEvent event) {
+        // A machine's "may I break this?" probe (BlockUtil.canMachineBreak) is a real break event that breaks
+        // nothing; forwarding it made every per-block check in a quarry/builder scan wake nearby lasers.
+        if (buildcraft.lib.misc.BreakEventCompat.isProbe(event)) {
+            return;
+        }
         LevelAccessor accessor = event.getLevel();
         if (accessor instanceof Level level && !level.isClientSide()) {
             dispatch(level, event.getPos(), event.getState(), level.getBlockState(event.getPos()));

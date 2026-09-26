@@ -145,8 +145,10 @@ public class BlockUtil {
      * protection plugins) can gate the break by cancelling the event. A machine with no recorded
      * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}.
      * <p>
-     * Runs once per scanned block in quarry / mining-well / builder loops, so the player is the
-     * cached one, leased for the duration of the event.
+     * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
+     * pipes and robots), so the player is the cached one, leased for the duration of the event. The
+     * event is a probe — {@link BreakEventCompat#isProbe} tells BuildCraft's own break listeners to
+     * ignore it.
      */
     public static boolean canMachineBreak(ServerLevel level, BlockPos pos, GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {

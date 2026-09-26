@@ -18,6 +18,7 @@ Last audited: 2026-09-12
 - Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)
 - Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
 - Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
+- Robots: decide the robot recipe's price (bring back the Redstone Crystal or not) — [notes](docs/todo-details.md#robot-recipe-redstone-crystal)
 - Robots: the Planter can't plant sugar cane yet — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)

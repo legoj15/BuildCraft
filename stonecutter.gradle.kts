@@ -6,7 +6,7 @@
 // subproject; each node applies it (version-less) in build.gradle.kts.
 plugins {
     id("dev.kikugie.stonecutter")
-    id("net.neoforged.moddev") version "2.0.141" apply false
+    id("net.neoforged.moddev") version "2.0.147" apply false
 }
 
 // The active node — what the IDE/runClient sees and what `compileJava` builds.

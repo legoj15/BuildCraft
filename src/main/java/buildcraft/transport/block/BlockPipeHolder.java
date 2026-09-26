@@ -31,9 +31,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
@@ -50,6 +48,7 @@ import buildcraft.api.blocks.ICustomPaintHandler;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
 
+import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -92,12 +91,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
 
     public BlockPipeHolder(Properties props) {
         super(props);
-        registerDefaultState(defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, false));
+        registerDefaultState(defaultBlockState().setValue(BCWaterlogging.WATERLOGGED, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BlockStateProperties.WATERLOGGED);
+        builder.add(BCWaterlogging.WATERLOGGED);
     }
 
     // Waterlogging — a pipe's collision is a partial centre cube, and (because the block is
@@ -106,20 +105,18 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // loot table), so a fluid-driven removal would delete the pipe with NO drop. Implementing
     // SimpleWaterloggedBlock makes the pipe a LiquidBlockContainer, so FlowingFluid.spreadTo takes
     // the placeLiquid (coexist) branch instead of the destroy branch — water flows around the pipe.
+    // Shared pattern (and the reasoning behind it): BCWaterlogging.
 
     @Override
     protected FluidState getFluidState(BlockState state) {
-        return state.getValue(BlockStateProperties.WATERLOGGED)
-            ? Fluids.WATER.getSource(false)
-            : super.getFluidState(state);
+        return BCWaterlogging.fluidState(state);
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         // Start waterlogged when placed directly into a water source so the water is preserved.
-        FluidState fluid = context.getLevel().getFluidState(context.getClickedPos());
-        return defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, fluid.getType() == Fluids.WATER);
+        return BCWaterlogging.placementState(defaultBlockState(), context);
     }
 
     // Keep the contained water flowing/levelling when neighbours change (standard SimpleWaterloggedBlock pattern).
@@ -128,17 +125,13 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     protected BlockState updateShape(BlockState state, LevelReader level,
                                     net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction,
                                     BlockPos neighbourPos, BlockState neighbourState, net.minecraft.util.RandomSource random) {
-        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
-            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
-        }
+        BCWaterlogging.tickContainedWater(state, ticks, level, pos);
         return super.updateShape(state, level, ticks, pos, direction, neighbourPos, neighbourState, random);
     }
     //?} else {
     /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbourState,
                                     net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighbourPos) {
-        if (state.getValue(BlockStateProperties.WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
-        }
+        BCWaterlogging.tickContainedWater(state, level, pos);
         return super.updateShape(state, direction, neighbourState, level, pos, neighbourPos);
     }*/
     //?}

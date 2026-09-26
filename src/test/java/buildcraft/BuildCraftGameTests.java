@@ -592,6 +592,14 @@ public class BuildCraftGameTests {
         // coexist (placeLiquid) branch waterlogs rather than destroys, and a real water source floods.
         reg.accept("buildcraftunofficial:pipe_waterloggable", () -> buildcraft.transport.PipeWaterloggingTester::testPipeWaterloggable);
         reg.accept("buildcraftunofficial:pipe_survives_flowing_water", () -> buildcraft.transport.PipeWaterloggingTester::testPipeSurvivesFlowingWater);
+        // Water must never wash away ANY BuildCraft block: a registry sweep flags every non-solid,
+        // non-waterloggable state, and walled-basin tests prove markers / a facaded pipe waterlog
+        // between two real sources, lava is held back, and placing into water keeps the water.
+        reg.accept("buildcraftunofficial:bc_blocks_not_washed_away_by_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testNoBlockWashedAwayByWater);
+        reg.accept("buildcraftunofficial:marker_waterlogs_between_sources", () -> buildcraft.lib.block.BlockWaterloggingTester::testMarkerWaterlogsBetweenSources);
+        reg.accept("buildcraftunofficial:facaded_pipe_waterlogs_between_sources", () -> buildcraft.lib.block.BlockWaterloggingTester::testFacadedPipeWaterlogsBetweenSources);
+        reg.accept("buildcraftunofficial:waterloggable_marker_holds_back_lava", () -> buildcraft.lib.block.BlockWaterloggingTester::testMarkerHoldsBackLava);
+        reg.accept("buildcraftunofficial:waterloggable_placement_keeps_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testPlacementIntoWaterSourceWaterlogs);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as
         // Capabilities.Item.BLOCK (Auto Workbench, laser tables, Electronic Library).

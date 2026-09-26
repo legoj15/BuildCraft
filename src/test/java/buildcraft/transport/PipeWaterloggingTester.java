@@ -15,6 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluids;
 
+import buildcraft.lib.block.BlockWaterloggingTester;
+
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -35,12 +37,12 @@ import buildcraft.transport.tile.TilePipeHolder;
  *       directly (the exact call {@code FlowingFluid.spreadTo} makes for a {@code LiquidBlockContainer})
  *       and asserts the pipe is waterlogged, still present, reports a water fluid state, and keeps its
  *       BlockEntity. No ticking, so it can never flake on fluid timing.</li>
- *   <li><b>{@code pipe_survives_flowing_water}</b> — end-to-end: a real water source above the pipe
- *       sends flowing water down onto it; the pipe must NOT be deleted (the literal reported bug).
- *       Note it does <em>not</em> end up waterlogged — vanilla {@code SimpleWaterloggedBlock.placeLiquid}
- *       only accepts a <em>source</em> ({@code fluidState.is(Fluids.WATER)} is false for falling/flowing
- *       water), so flowing water simply can't enter the cell. Waterlogging-from-source is covered by the
- *       deterministic test above; this one guards specifically against the destroy-on-flow regression.</li>
+ *   <li><b>{@code pipe_survives_flowing_water}</b> — end-to-end: a real water source beside the pipe
+ *       (inside a walled basin, so nothing leaks into neighbouring arenas) sends flowing water at it; the
+ *       pipe must NOT be deleted (the literal reported bug). It does <em>not</em> end up waterlogged —
+ *       {@code SimpleWaterloggedBlock.canPlaceLiquid} only accepts {@code Fluids.WATER} (the source), so
+ *       flowing water can't enter the cell at all and is held back. Waterlogging from real sources is
+ *       covered by {@code BlockWaterloggingTester}.</li>
  * </ol>
  */
 public class PipeWaterloggingTester {
@@ -92,31 +94,28 @@ public class PipeWaterloggingTester {
         helper.succeed();
     }
 
-    // ---------- End-to-end: real flowing water floods the pipe rather than deleting it ----------
+    // ---------- End-to-end: real flowing water is held back instead of deleting the pipe ----------
 
     public static void testPipeSurvivesFlowingWater(GameTestHelper helper) {
-        BlockPos floor = new BlockPos(1, 1, 1);
-        BlockPos pipePos = new BlockPos(1, 2, 1);
-        BlockPos waterPos = new BlockPos(1, 3, 1);
-
-        helper.setBlock(floor, Blocks.STONE);
+        // Contained basin (shared with BlockWaterloggingTester) so the water can never leak into a
+        // neighbouring arena: stone floor + wall ring, one source west of the pipe, dry cell east of it.
+        BlockWaterloggingTester.buildBasin(helper);
+        BlockPos pipePos = BlockWaterloggingTester.SUBJECT;
         placeWoodPipe(helper, pipePos);
-        // A water source directly above sends flowing water down onto the pipe's cell every tick.
-        helper.setBlock(waterPos, Blocks.WATER);
-        // Kick the source so it schedules its spread deterministically (independent of setBlock flags).
-        helper.getLevel().scheduleTick(helper.absolutePos(waterPos), Fluids.WATER, 1);
+        BlockWaterloggingTester.placeSource(helper, BlockWaterloggingTester.WEST_SOURCE, Blocks.WATER, Fluids.WATER);
 
-        // Check AFTER a delay (not succeedWhen, which would pass on tick 1 before any water flows):
-        // by tick 40 the flowing water has been attacking the pipe cell for many ticks. Pre-fix, the
-        // pipe would have been replaced by water and deleted with no drop — exactly the reported bug.
-        // Post-fix it is a LiquidBlockContainer, so spreadTo no-ops (flowing water isn't a source, so
-        // placeLiquid declines) and the pipe survives. The source above must still be present, proving
-        // the water actually reached the pipe (otherwise the guard would be vacuous).
-        helper.runAfterDelay(40, () -> {
+        helper.succeedWhen(() -> {
+            // Gate on observed state: the source has run its spread tick, and spreading is synchronous, so
+            // the flowing water has already tried to enter the pipe's cell. Pre-fix the pipe was replaced
+            // (and deleted with no drop) right here.
+            helper.assertTrue(BlockWaterloggingTester.hasSpread(helper, BlockWaterloggingTester.WEST_SOURCE, Fluids.WATER),
+                "the water source has not spread yet");
             helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
-            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(waterPos)).is(Fluids.WATER),
-                    "the water source above the pipe should still be feeding flowing water onto it");
-            helper.succeed();
+            // Flowing water is not a source, so it neither waterlogs the pipe nor passes through it.
+            helper.assertFalse(helper.getBlockState(pipePos).getValue(BlockStateProperties.WATERLOGGED),
+                "flowing water must not waterlog the pipe (only a source can)");
+            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(BlockWaterloggingTester.EAST_SOURCE)).isEmpty(),
+                "the pipe must hold the flowing water back, not let it through to the far side");
         });
     }
 }

@@ -16,9 +16,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.InteractionResult;
@@ -45,7 +47,7 @@ import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.lib.tile.TileMarker;
 
 @SuppressWarnings("this-escape")
-public abstract class BlockMarkerBase extends Block implements EntityBlock {
+public abstract class BlockMarkerBase extends Block implements EntityBlock, SimpleWaterloggedBlock {
     private static final Map<Direction, VoxelShape> BOUNDING_BOXES = new EnumMap<>(Direction.class);
 
     static {
@@ -70,6 +72,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
         BlockState defaultState = defaultBlockState();
         defaultState = defaultState.setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
         defaultState = defaultState.setValue(BuildCraftProperties.ACTIVE, false);
+        defaultState = defaultState.setValue(BCWaterlogging.WATERLOGGED, false);
         registerDefaultState(defaultState);
     }
 
@@ -78,7 +81,17 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     @Override
     protected void createBlockStateDefinition(
             net.minecraft.world.level.block.state.StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> builder) {
-        builder.add(BuildCraftProperties.BLOCK_FACING_6, BuildCraftProperties.ACTIVE);
+        builder.add(BuildCraftProperties.BLOCK_FACING_6, BuildCraftProperties.ACTIVE, BCWaterlogging.WATERLOGGED);
+    }
+
+    // Waterlogging — a marker has no collision at all, so vanilla counts it as non-solid and flowing water
+    // (or an emptied bucket) used to wash it away; lava replaced it without even dropping it. As a
+    // SimpleWaterloggedBlock it waterlogs from a source and holds flowing water/lava back, so markers can
+    // be set out underwater. Shared pattern: BCWaterlogging.
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return BCWaterlogging.fluidState(state);
     }
 
     // getMetaFromState removed in 1.18+
@@ -107,10 +120,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
         Direction facing = ctx.getClickedFace();
-        Level world = ctx.getLevel();
-        BlockPos pos = ctx.getClickedPos();
-        BlockState state = defaultBlockState();
-        return defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, facing);
+        return BCWaterlogging.placementState(defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, facing), ctx);
     }
 
     // canPlaceBlockOnSide removed in MC 1.18+
@@ -128,6 +138,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     @Override
     //? if >=1.21.10 {
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        BCWaterlogging.tickContainedWater(state, scheduledTickAccess, level, pos);
         if (!state.canSurvive(level, pos)) {
             scheduledTickAccess.scheduleTick(pos, this, 1);
         }
@@ -135,6 +146,7 @@ public abstract class BlockMarkerBase extends Block implements EntityBlock {
     }
     //?} else {
     /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        BCWaterlogging.tickContainedWater(state, level, pos);
         if (!state.canSurvive(level, pos)) {
             level.scheduleTick(pos, this, 1);
         }

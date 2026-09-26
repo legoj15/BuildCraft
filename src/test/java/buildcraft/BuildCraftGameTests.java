@@ -853,6 +853,19 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
 
+        // Robotics coverage sweep — the RobotRegistry against LIVE (never-added) robot entities: two-robot
+        // reservation exclusivity, the goto-station reservation refusal, a dead holder's claim lapsing, and
+        // what each removal path (kill / unload / releaseResources / removeStation) frees and keeps. Plus the
+        // charging latch on a ticking robot (accepted-not-offered, per-tick drain, sleep-flag gate).
+        reg.accept("buildcraftunofficial:robot_reservation_exclusive_between_two_robots", () -> buildcraft.robotics.RobotRegistryLiveTester::twoRobotsNeverShareAReservation);
+        reg.accept("buildcraftunofficial:robot_goto_station_refuses_a_taken_station", () -> buildcraft.robotics.RobotRegistryLiveTester::gotoStationRefusesAStationAnotherRobotHolds);
+        reg.accept("buildcraftunofficial:robot_dead_holder_reservation_lapses", () -> buildcraft.robotics.RobotRegistryLiveTester::aDeadHoldersReservationLapses);
+        reg.accept("buildcraftunofficial:robot_registry_kill_releases_everything", () -> buildcraft.robotics.RobotRegistryLiveTester::killRobotReleasesEverything);
+        reg.accept("buildcraftunofficial:robot_registry_unload_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::unloadRobotKeepsHomeAndDock);
+        reg.accept("buildcraftunofficial:robot_registry_release_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::releaseResourcesKeepsHomeAndDock);
+        reg.accept("buildcraftunofficial:robot_registry_remove_station_releases_claim", () -> buildcraft.robotics.RobotRegistryLiveTester::removeStationReleasesTheRobotsClaim);
+        reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
+
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself
         // autonomously finding the supply station and pulling the tank's bucket into its own tank.

@@ -1052,10 +1052,19 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *  notice tops the latch up, so a robot on a charging station looks awake for as long as the charge keeps
      *  arriving and for ~1.5 s afterwards. */
     void onChargeReceived(long accepted) {
+        ticksCharging = latchAfterDelivery(ticksCharging, accepted);
+    }
+
+    /** The latch rule on its own, pure so the whole table is unit-testable: a delivery that ACCEPTED more than
+     *  {@link RobotChargeReceiver#CHARGE_DETECT_THRESHOLD} adds {@value #TICKS_CHARGING_PER_DELIVERY} ticks, but
+     *  only while the latch is at or below {@value #TICKS_CHARGING_TOPUP_BELOW}, and never past
+     *  {@value #MAX_TICKS_CHARGING} (7.1.x {@code receiveEnergy}). */
+    static int latchAfterDelivery(int ticksCharging, long accepted) {
         if (accepted > RobotChargeReceiver.CHARGE_DETECT_THRESHOLD
                 && ticksCharging <= TICKS_CHARGING_TOPUP_BELOW) {
-            ticksCharging = Math.min(MAX_TICKS_CHARGING, ticksCharging + TICKS_CHARGING_PER_DELIVERY);
+            return Math.min(MAX_TICKS_CHARGING, ticksCharging + TICKS_CHARGING_PER_DELIVERY);
         }
+        return ticksCharging;
     }
 
     /** Read-only view of the charging latch, for the sleep indicator and for tests that need to prove a

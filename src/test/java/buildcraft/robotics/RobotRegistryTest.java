@@ -26,8 +26,9 @@ import buildcraft.api.statements.StatementSlot;
 /**
  * Pure-JUnit characterization of {@link RobotRegistry}'s reservation bookkeeping and NBT round-trip — the
  * reservation maps and their reverse indices, exercised without a live robot entity. The entity-gated paths
- * ({@code robotIdTaking}/{@code isTaken} loaded-and-alive checks, {@code killRobot} death-frees-all) are
- * deferred to Ph3 game tests; here we drive the id-keyed core through {@code take}/{@code release}, the
+ * ({@code robotIdTaking}/{@code isTaken} loaded-and-alive checks, two-robot exclusivity, and the
+ * {@code killRobot}/{@code unloadRobot}/{@code removeStation} removal paths) live in the
+ * {@link RobotRegistryLiveTester} game tests; here we drive the id-keyed core through {@code take}/{@code release}, the
  * package-private raw inspectors, and the decoupled {@code writeToNbt}/{@code readFromNbt} (seam c).
  */
 public class RobotRegistryTest {

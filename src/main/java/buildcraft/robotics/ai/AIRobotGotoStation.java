@@ -100,10 +100,12 @@ public class AIRobotGotoStation extends AIRobot {
             terminate();
         } else if (ai instanceof AIRobotGotoBlock) {
             if (ai.success()) {
+                // Double arithmetic end to end: 7.1.x's 0.5F literals made this float maths, which drops the
+                // half-block face offset for any station past ~8.4M blocks out.
                 startDelegateAI(new AIRobotStraightMoveTo(robot,
-                        stationIndex.getX() + 0.5F + stationSide.getStepX() * 0.5F,
-                        stationIndex.getY() + 0.5F + stationSide.getStepY() * 0.5F,
-                        stationIndex.getZ() + 0.5F + stationSide.getStepZ() * 0.5F));
+                        stationIndex.getX() + 0.5 + stationSide.getStepX() * 0.5,
+                        stationIndex.getY() + 0.5 + stationSide.getStepY() * 0.5,
+                        stationIndex.getZ() + 0.5 + stationSide.getStepZ() * 0.5));
             } else {
                 terminate();
             }

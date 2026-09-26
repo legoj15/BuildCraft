@@ -338,21 +338,32 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
 
         StationIndex index = new StationIndex(station);
         if (stations.containsKey(index)) {
-            if (station.robotTaking() != null) {
+            // Captured up front: undock() RELEASES a non-main station, after which robotTaking() is null and
+            // robotIdTaking() is the sentinel — re-reading either below NPE'd (a robot docked at a station it
+            // was only visiting made every removal of that station throw) and skipped the index cleanup.
+            EntityRobotBase robot = station.robotTaking();
+            long robotId = station.robotIdTaking();
+            boolean main = station.isMainStation();
+            if (robot != null) {
                 // A robot must never be left pointing at a station that no longer exists. The main-station
                 // branch below only clears the LINK, so without this a robot docked at its own main station
                 // kept `dockingStation` referencing the deleted station — observed in-game on 26.2 as a
-                // robot still "docked" at an air block.
-                if (station.robotTaking().getDockingStation() == station) {
-                    station.robotTaking().undock();
+                // robot still "docked" at an air block. (7.1.x's non-main branch undocked unconditionally,
+                // i.e. from whatever station the robot sat at; only a dock at THIS pos+side is ours to end —
+                // matched by index, not identity, so a stale instance of the same station still counts.)
+                DockingStation dockedAt = robot.getDockingStation();
+                if (dockedAt != null && index.equals(new StationIndex(dockedAt))) {
+                    robot.undock();
                 }
-                if (!station.isMainStation()) {
-                    station.robotTaking().undock();
-                } else {
-                    station.robotTaking().setMainStation(null);
+                if (main) {
+                    robot.setMainStation(null);
                 }
-            } else if (station.robotIdTaking() != EntityRobotBase.NULL_ROBOT_ID) {
-                Set<StationIndex> taken = getStationsTakenByRobot(station.robotIdTaking());
+            }
+            // Loaded or not, the station leaves the holder's reverse index: 7.1.x trimmed it only for an
+            // UNLOADED holder, so a loaded robot kept a stale claim on a deleted (pos, side) — one that a
+            // station later registered at the same spot would then inherit.
+            if (robotId != EntityRobotBase.NULL_ROBOT_ID) {
+                Set<StationIndex> taken = getStationsTakenByRobot(robotId);
                 if (taken != null) {
                     taken.remove(index);
                 }

@@ -24,6 +24,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -413,5 +414,37 @@ public class ItemRobotPlacementTester {
             }
             helper.succeed();
         });
+    }
+
+    /** The CLIENT's half of the refusal, which is what actually decides the arm swing: the client runs
+     *  {@code useOn} first, with a pipe holder whose station never resolves a {@code DockingStation}, and swings
+     *  the hand on anything but {@code FAIL}/{@code PASS}. It must answer from what it CAN see — a station
+     *  pluggable on the clicked face and the board in the synced stack — so a blank robot predicts {@code FAIL}
+     *  (no swing, the server's "Not programmed" still arrives), a programmed one {@code SUCCESS}, and a face with
+     *  no station {@code PASS}. Asserted against the server tile: the prediction reads only the pluggable, which
+     *  both sides hold, and a game test has no client level to run the client branch in. */
+    public static void clientPredictsNoSwingForBlankRobot(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 3);
+        installStation(helper, pipeRel, Direction.UP);
+        BlockEntity tile = helper.getLevel().getBlockEntity(helper.absolutePos(pipeRel));
+
+        ItemStack bare = new ItemStack(BCRoboticsItems.ROBOT.get());
+        ItemStack namedEmpty = ItemRobot.createRobotStack(BoardRobotEmptyNBT.ID, 3000L * MjAPI.MJ);
+        ItemStack programmed = programmedRobot(3000L * MjAPI.MJ);
+
+        for (ItemStack blank : new ItemStack[] { bare, namedEmpty }) {
+            InteractionResult result = ItemRobot.predictClientUse(tile, Direction.UP, blank);
+            helper.assertTrue(result == InteractionResult.FAIL,
+                    "the client must predict FAIL (no arm swing) for a blank robot on a station, got " + result);
+        }
+        InteractionResult onStation = ItemRobot.predictClientUse(tile, Direction.UP, programmed);
+        helper.assertTrue(onStation == InteractionResult.SUCCESS,
+                "the client must predict SUCCESS (swing) for a programmed robot on a station, got " + onStation);
+        for (ItemStack any : new ItemStack[] { bare, programmed }) {
+            InteractionResult offStation = ItemRobot.predictClientUse(tile, Direction.DOWN, any);
+            helper.assertTrue(offStation == InteractionResult.PASS,
+                    "a face with no station must PASS on the client, got " + offStation);
+        }
+        helper.succeed();
     }
 }

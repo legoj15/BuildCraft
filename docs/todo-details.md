@@ -131,13 +131,14 @@ Found in passing on 2026-09-26; none is a bug today.
 Verified in a live 26.1.2 client on 2026-09-26 (McDevBridge): kinesis MJ flow, tank/distiller/heat-exchanger fluids, laser beam, Builder/Auto Workbench/Diamond-wood/Emzuli/Tank/List/Filler GUIs (placement, vanilla-face buttons, pressed-in modes, ledgers), the red exhaust particle and its size-bound command error; no BuildCraft render errors in the log. (JEI's quick-play "hasn't started yet / missing TagsUpdatedEvent" line also appears in 2026-08 logs and BC has no listener for that event, so it's JEI quick-play timing, not ours.) Still owed:
 - 1.21.1 and 26.2: a quick look at the same render sites and GUIs (1.21.1's blueprint GUI renderer especially), plus the pipe-preview pluggables, filler-planner addon box, gate plugs, stripes-pipe renderer, LED variable models, painted fluid-pipe item models.
 - Guide book (needs mouse clicks): cover arrows/back/tooltips/sort radio; Filler Planner invert; Emzuli right/middle click; button hover tooltips.
-- 1.21.1 JEI: an item bookmark (facade/gate/lens) made before this round still resolves after the subtype migration; board/robot bookmarks from older builds are expected to break once (new per-program keys).
 - Volume-marker addon icons (`AddonDefaultRenderer` now binds the sprite's own atlas page).
 - Guide contents page: clicking a left chapter tab near the sort buttons opens the chapter (the tabs now win).
-- Water gel break speed and sounds; TNT beside an obsidian-faced pipe (the facade shields that side).
-- A working robot's smoke rate (fewer on Decreased/Minimal); a blank robot on a station shows "Not programmed" with no arm swing (SP and dedicated server).
+- TNT beside an obsidian-faced pipe (the facade shields that side — the resistance itself is game-tested; this is the look of the blast).
+- A working robot's smoke rate (fewer on Decreased/Minimal).
 - Cosmetic, maybe older than this round: on the Filler GUI, JEI's page-left arrow sits over the owner ledger at the window's top-right (JEI avoids ledgers for its item grid, not its nav bar).
 - McDevBridge lacks a `/screenclick` endpoint (mouse button + GUI coords); that is what blocks the mouse-driven checks headless.
+
+Moved from this list into tests (2026-09-26): water gel's per-stage break speed and sounds (`WaterGelBlockTester`, via the same state calls the client digs with); the client's no-swing prediction for a blank robot (`ItemRobotPlacementTester.clientPredictsNoSwingForBlankRobot`; the server-side refusal and message were already pinned); the facade/gate/lens/fragile-shard JEI keys, identity and exact legacy text (`JeiSubtypeKeysTest`). The 1.21.1 JEI bookmark worry is narrower than first written: JEI 19.27's `BookmarkJsonConfig` saves the full stack through the ingredient codec, so bookmarks resolve by stack; only the pre-JSON `LegacyBookmarkConfig` import matches the legacy subtype text, which the key test now pins.
 
 ## Dev-only item files in release jars
 

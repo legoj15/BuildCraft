@@ -691,6 +691,7 @@ public class BuildCraftGameTests {
         // Factory recipe parity — restored Gelled Water -> Water Bucket (1.12.2's water_gel_to_bucket;
         // the only consumer of Gelled Water, silently lost during the modern port then re-added).
         reg.accept("buildcraftunofficial:water_gel_to_bucket_recipe", () -> buildcraft.factory.WaterGelRecipeTester::water_gel_to_bucket_recipe);
+        reg.accept("buildcraftunofficial:water_gel_break_speed_and_sounds", () -> buildcraft.factory.WaterGelBlockTester::waterGelBreakSpeedAndSoundsPerStage);
 
         // Tank / IronTanks compatibility (issue #20) — IronTanks keeps the 8-glass crafting grid;
         // BuildCraft's tank stays reachable via the #buildcraftunofficial:tanks tag in the four
@@ -811,6 +812,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_item_rejected_when_station_taken", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemRejectedWhenStationAlreadyTaken);
         reg.accept("buildcraftunofficial:robot_item_place_event_cancellable", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacementIsCancellableViaRobotEventPlace);
         reg.accept("buildcraftunofficial:robot_item_blank_robot_refuses_placement", () -> buildcraft.robotics.item.ItemRobotPlacementTester::blankRobotRefusesPlacement);
+        reg.accept("buildcraftunofficial:robot_item_client_predicts_no_swing_for_blank", () -> buildcraft.robotics.item.ItemRobotPlacementTester::clientPredictsNoSwingForBlankRobot);
 
         // Robotics Ph3 — the robot item's CUSTOM_DATA blob: the 7.1.x 'board'/'energy' key names, a bare
         // stack reading as empty-board-at-zero, the two keys being independent, an id-less board compound

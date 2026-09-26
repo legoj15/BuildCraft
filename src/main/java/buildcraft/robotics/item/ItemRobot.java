@@ -10,6 +10,8 @@ package buildcraft.robotics.item;
 
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -201,16 +203,7 @@ public class ItemRobot extends Item {
         ItemStack stack = context.getItemInHand();
 
         if (level.isClientSide()) {
-            // The client's copy of a RobotStationPluggable never resolves a DockingStation (onTick is
-            // server-only), so it cannot tell a free station from a taken one. All it can honestly answer is
-            // "there is a station on that face at all", which is enough to decide whether to swing the arm —
-            // and the board rides in the synced CUSTOM_DATA, so it knows a blank robot will be refused.
-            boolean isStationFace = tile instanceof IPipeHolder holder
-                    && holder.getPluggable(face) instanceof RobotStationPluggable;
-            if (!isStationFace) {
-                return InteractionResult.PASS;
-            }
-            return isUnprogrammed(stack) ? InteractionResult.FAIL : InteractionResult.SUCCESS;
+            return predictClientUse(tile, face, stack);
         }
 
         DockingStation station = stationOnFace(tile, face);
@@ -260,6 +253,21 @@ public class ItemRobot extends Item {
             stack.shrink(1);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    /** The client's answer to a robot click, which is what decides whether the arm swings ({@code FAIL} and
+     *  {@code PASS} don't). The client's copy of a RobotStationPluggable never resolves a DockingStation (onTick is
+     *  server-only), so it cannot tell a free station from a taken one. All it can honestly answer is "there is a
+     *  station on that face at all" — and the board rides in the synced CUSTOM_DATA, so it knows a blank robot
+     *  will be refused. Reads only the pluggable, which both sides hold, so a game test can pin it against the
+     *  server's tile. */
+    public static InteractionResult predictClientUse(@Nullable BlockEntity tile, Direction face, ItemStack stack) {
+        boolean isStationFace = tile instanceof IPipeHolder holder
+                && holder.getPluggable(face) instanceof RobotStationPluggable;
+        if (!isStationFace) {
+            return InteractionResult.PASS;
+        }
+        return isUnprogrammed(stack) ? InteractionResult.FAIL : InteractionResult.SUCCESS;
     }
 
     /** The docking station mounted on {@code face} of {@code tile}, or null. Goes through

@@ -5,6 +5,7 @@
 package buildcraft.builders.gui;
 
 import java.util.List;
+import java.util.Objects;
 
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -18,6 +19,8 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.elem.GuiElementScrollbar;
+import buildcraft.lib.gui.elem.ScrollWindow;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -40,14 +43,21 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     private static final int LIST_ROW_H = 8;
     private static final int LIST_MAX_ROWS = 13;
 
-    // Visible list panel in the texture, used only for the help-ledger hover-highlight. The
-    // texture panel extends 1 px further left than the text inset and continues well below the
-    // 12th-row baseline (the area beyond LIST_MAX_ROWS rows is empty space reserved for future
-    // scrolling). Matching the panel rather than the text-render bounds means the help
-    // highlight covers the whole dark rectangle the player sees.
+    // Visible list panel in the texture, used for the help-ledger hover-highlight and as the mouse-wheel
+    // target. The texture panel extends 1 px further left than the text inset and continues below the
+    // 13th row. Matching the panel rather than the text-render bounds means the help highlight covers
+    // the whole dark rectangle the player sees.
     private static final int LIST_HELP_X = LIST_X - 1;
     private static final int LIST_HELP_W = LIST_W + 1;
     private static final int LIST_HELP_H = 108;
+
+    // Scrollbar, restored from 1.7.10's ScrollbarWidget(163, 21, 244, 0, 110): the track strip and the
+    // thumb sprite have always been baked into this texture sheet at u=244 / u=250. The track sits flush
+    // against the panel's right border and spans the panel's full height (y 21..130).
+    private static final int SCROLL_X = 163, SCROLL_Y = 21;
+    private static final int SCROLL_W = 6, SCROLL_H = 110;
+    private static final GuiIcon ICON_SCROLL_TRACK = new GuiIcon(TEXTURE, 244, 0, SCROLL_W, SCROLL_H);
+    private static final GuiIcon ICON_SCROLL_THUMB = new GuiIcon(TEXTURE, 250, 0, SCROLL_W, 12);
 
     // Slot positions — mirror ContainerElectronicLibrary's addSlot calls so the help highlight
     // matches the visible slot exactly. Top row is DOWNLOAD (out←in), bottom row is UPLOAD (in→out).
@@ -76,6 +86,12 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     private static final int DEL_W = 60,  DEL_H = 20;
 
     private Button deleteButton;
+
+    /** Scroll position of the snapshot list. Lives on the screen (not on an element) so it survives the
+     *  element rebuild that {@code init()} does on every window resize. */
+    private final ScrollWindow scroll = new ScrollWindow(LIST_MAX_ROWS);
+    /** The selection the list was last scrolled to follow — see {@link #refreshList()}. */
+    private Snapshot.Key followedSelection;
 
     public GuiElectronicLibrary(ContainerElectronicLibrary container, Inventory playerInv, Component title) {
         super(container, playerInv, title, SIZE_X, SIZE_Y);
@@ -110,7 +126,12 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
                 new GuiRectangle(LIST_HELP_X, LIST_Y, LIST_HELP_W, LIST_HELP_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.library.list.title", 0xFF_FF_FA_A0,
                         "buildcraft.help.library.list.desc1",
-                        "buildcraft.help.library.list.desc2")));
+                        "buildcraft.help.library.list.desc2",
+                        "buildcraft.help.library.list.desc3")));
+
+        mainGui.shownElements.add(new GuiElementScrollbar(mainGui,
+                new GuiRectangle(SCROLL_X, SCROLL_Y, SCROLL_W, SCROLL_H).offset(mainGui.rootElement),
+                scroll, ICON_SCROLL_TRACK, ICON_SCROLL_THUMB));
 
         mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(DOWN_IN_X, DOWN_IN_Y, 16, 16).offset(mainGui.rootElement),
@@ -153,7 +174,30 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     @Override
     protected void containerTick() {
         super.containerTick();
+        refreshList();
         updateDeleteButtonActive();
+    }
+
+    /** Current client snapshot list, with the scroll window resized to match. Every reader of the list goes
+     *  through here, so a list that shrank since the last tick (a delete, a file removed on disk) can never be
+     *  indexed with a stale window.
+     *  <p>
+     *  When the selection changes by any route other than a click in the visible rows (the GUI opening on a
+     *  saved selection, the server syncing a new one) the list scrolls just far enough to show it. It does
+     *  not re-follow an unchanged selection, so the player can freely scroll away from it. */
+    private List<Snapshot.Key> refreshList() {
+        List<Snapshot.Key> list = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).getList();
+        scroll.setTotal(list.size());
+        Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
+        if (!Objects.equals(selected, followedSelection)) {
+            int index = selected == null ? -1 : list.indexOf(selected);
+            // A selection not (yet) in the local list stays un-followed so it is picked up once it appears.
+            if (selected == null || index >= 0) {
+                scroll.ensureVisible(index);
+                followedSelection = selected;
+            }
+        }
+        return list;
     }
 
     /** Enable/disable the delete button based on whether a snapshot is currently selected
@@ -242,14 +286,13 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         if (graphics == null) return;
 
-        GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
-        List<Snapshot.Key> list = snapshots.getList();
+        List<Snapshot.Key> list = refreshList();
         Snapshot.Key selected = menu.tile != null ? menu.tile.selected : null;
 
         // drawForegroundLayer now runs in GUI-local pose (origin = GUI top-left), so use GUI-local
         // coords here (no leftPos/topPos) — consistent with the centered title below.
         int rowY = LIST_Y;
-        for (int i = 0; i < list.size() && i < LIST_MAX_ROWS; i++) {
+        for (int i = scroll.getFirstVisible(); i < scroll.getEndVisible(); i++) {
             Snapshot.Key key = list.get(i);
             boolean isSelected = key.equals(selected);
             if (isSelected) {
@@ -258,7 +301,8 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
             }
             int colour = isSelected ? 0xFF_FF_FA_A0 : 0xFF_E0_E0_E0;
             String text = key.header == null ? key.toString() : key.header.name;
-            graphics.text(font, text, LIST_X, rowY, colour, false);
+            // Clip to the row so a long name can't run over the scrollbar (1.7.10 trimmed the same way).
+            graphics.text(font, font.plainSubstrByWidth(text, LIST_W), LIST_X, rowY, colour, false);
             rowY += LIST_ROW_H;
         }
 
@@ -269,57 +313,46 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
     }
 
+    /** Selects the snapshot under the cursor. @return true if a list row was clicked. */
+    private boolean clickList(double mouseX, double mouseY) {
+        if (mouseX < leftPos + LIST_X || mouseX >= leftPos + LIST_X + LIST_W || mouseY < topPos + LIST_Y) {
+            return false;
+        }
+        List<Snapshot.Key> list = refreshList();
+        int index = scroll.indexAtRow((int) ((mouseY - (topPos + LIST_Y)) / LIST_ROW_H));
+        if (index < 0) return false;
+        Snapshot.Key key = list.get(index);
+        menu.sendSelectedToServer(key);
+        // Optimistic client-side update for immediate visual feedback
+        if (menu.tile != null) {
+            menu.tile.selected = key;
+        }
+        followedSelection = key; // already on screen, nothing to follow
+        updateDeleteButtonActive();
+        return true;
+    }
+
+    // Same signature on every node, so no directive: the wheel over the list panel or the scrollbar scrolls the list.
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double x = mouseX - leftPos, y = mouseY - topPos;
+        if (x >= LIST_HELP_X && x < SCROLL_X + SCROLL_W && y >= SCROLL_Y && y < SCROLL_Y + SCROLL_H) {
+            refreshList();
+            scroll.scrollBy(ScrollWindow.wheelRows(scrollY));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
     //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
-
-        // Snapshot list row selection.
-        GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
-        List<Snapshot.Key> list = snapshots.getList();
-        int rowY = topPos + LIST_Y;
-        for (int i = 0; i < list.size() && i < LIST_MAX_ROWS; i++) {
-            if (mouseX >= leftPos + LIST_X && mouseX < leftPos + LIST_X + LIST_W
-                    && mouseY >= rowY && mouseY < rowY + LIST_ROW_H) {
-                Snapshot.Key key = list.get(i);
-                menu.sendSelectedToServer(key);
-                // Optimistic client-side update for immediate visual feedback
-                if (menu.tile != null) {
-                    menu.tile.selected = key;
-                }
-                updateDeleteButtonActive();
-                return true;
-            }
-            rowY += LIST_ROW_H;
-        }
-        return super.mouseClicked(event, doubleClick);
+        return clickList(event.x(), event.y()) || super.mouseClicked(event, doubleClick);
     }
     //?} else {
     /*@Override
-    public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-        double mouseX = mouseXd;
-        double mouseY = mouseYd;
-
-        // Snapshot list row selection.
-        GlobalSavedDataSnapshots snapshots = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT);
-        List<Snapshot.Key> list = snapshots.getList();
-        int rowY = topPos + LIST_Y;
-        for (int i = 0; i < list.size() && i < LIST_MAX_ROWS; i++) {
-            if (mouseX >= leftPos + LIST_X && mouseX < leftPos + LIST_X + LIST_W
-                    && mouseY >= rowY && mouseY < rowY + LIST_ROW_H) {
-                Snapshot.Key key = list.get(i);
-                menu.sendSelectedToServer(key);
-                // Optimistic client-side update for immediate visual feedback
-                if (menu.tile != null) {
-                    menu.tile.selected = key;
-                }
-                updateDeleteButtonActive();
-                return true;
-            }
-            rowY += LIST_ROW_H;
-        }
-        return super.mouseClicked(mouseXd, mouseYd, button);
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return clickList(mouseX, mouseY) || super.mouseClicked(mouseX, mouseY, button);
     }*/
     //?}
 }

@@ -1008,6 +1008,7 @@
     "buildcraft.help.library.list.title": "Snapshot List",
     "buildcraft.help.library.list.desc1": "Every snapshot stored on this client. Click a row to select; the selected entry is what Upload sends to the server bank and what Delete removes from the local library.",
     "buildcraft.help.library.list.desc2": "Rows show the snapshot's name when the header is intact, otherwise its raw key.",
+    "buildcraft.help.library.list.desc3": "When there are more snapshots than rows, scroll with the mouse wheel or drag the bar on the right.",
     "buildcraft.help.library.download_in.title": "Download Input",
     "buildcraft.help.library.download_in.desc1": "Insert a used blueprint or template whose data is not yet cached on this client.",
     "buildcraft.help.library.download_in.desc2": "The library looks the snapshot up in the server bank, streams the data back, and returns the same item through the slot at left.",

@@ -424,6 +424,7 @@
     "buildcraft.help.library.download_out.title": "下载输出",
     "buildcraft.help.library.list.desc1": "此客户端存储的每个快照。单击一行选择；所选条目是“上传”发送到服务器存储库的内容，也是“删除”从本地库中移除的内容。",
     "buildcraft.help.library.list.desc2": "行显示快照的名称（如果标头完整），否则显示其原始键。",
+    "buildcraft.help.library.list.desc3": "快照多于行数时，可用鼠标滚轮滚动，或拖动右侧的滚动条。",
     "buildcraft.help.library.list.title": "快照列表",
     "buildcraft.help.library.upload_arrow.desc": "在此客户端将所选快照的数据流式传输到服务器存储库时从左向右填充。",
     "buildcraft.help.library.upload_arrow.title": "上传进度",

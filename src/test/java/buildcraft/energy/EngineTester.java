@@ -657,6 +657,55 @@ public class EngineTester {
         });
     }
 
+    /**
+     * Upstream 8.0.1 fix ("redstone engines outputting RF when autoconversion was enabled"): with
+     * MJ-to-RF autoconversion on, a Stirling engine may still feed an adjacent Forge-Energy acceptor,
+     * but the redstone engine must never resolve one as its receiver - its free power is MJ-only.
+     * Uses the FE engine's FE input face as the Forge-Energy acceptor.
+     */
+    public static void testRedstoneEngineDoesNotAutoconvertToFe(GameTestHelper helper) {
+        BCLibConfig.PowerMode previous = BCLibConfig.powerMode.get();
+        try {
+            BCLibConfig.powerMode.set(BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF);
+            BlockPos fePos = new BlockPos(3, 2, 2);
+            BlockPos redstonePos = new BlockPos(2, 2, 2);
+            BlockPos stonePos = new BlockPos(3, 2, 1);
+            helper.setBlock(fePos, BCEnergyBlocks.ENGINE_FE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.EAST));
+            helper.setBlock(redstonePos, BCCoreBlocks.ENGINE_REDSTONE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.EAST));
+            helper.setBlock(stonePos, BCEnergyBlocks.ENGINE_STONE.get().defaultBlockState()
+                .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.SOUTH));
+
+            BlockPos feAbs = helper.absolutePos(fePos);
+            //? if >=1.21.10 {
+            var westFe = helper.getLevel().getCapability(
+                net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, feAbs, Direction.WEST);
+            var northFe = helper.getLevel().getCapability(
+                net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, feAbs, Direction.NORTH);
+            TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos, TileEngineBase_BC8.class);
+            TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*var westFe = helper.getLevel().getCapability(
+                net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, feAbs, Direction.WEST);
+            var northFe = helper.getLevel().getCapability(
+                net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK, feAbs, Direction.NORTH);
+            TileEngineBase_BC8 redstone = helper.getBlockEntity(redstonePos);
+            TileEngineBase_BC8 stone = helper.getBlockEntity(stonePos);*/
+            //?}
+            helper.assertTrue(westFe != null && northFe != null,
+                "Precondition: the FE engine must accept Forge Energy on its west and north faces");
+
+            helper.assertTrue(stone.getReceiverToPower(Direction.SOUTH) != null,
+                "Control: a Stirling engine must autoconvert into an adjacent FE acceptor when autoconvert is on");
+            helper.assertTrue(redstone.getReceiverToPower(Direction.EAST) == null,
+                "A redstone engine must never autoconvert its power into Forge Energy");
+            helper.succeed();
+        } finally {
+            BCLibConfig.powerMode.set(previous);
+        }
+    }
+
     private static void fastForwardEnergy(TileEngineBase_BC8 engine, float targetPercentage) {
         long targetPower = (long)(engine.getMaxPower() * targetPercentage);
         float targetHeat = TileEngineBase_BC8.MIN_HEAT + (TileEngineBase_BC8.MAX_HEAT - TileEngineBase_BC8.MIN_HEAT) * targetPercentage;

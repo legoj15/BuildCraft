@@ -417,7 +417,10 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
             if (receiver != null && receiver.canConnect(getMjConnector()) && getMjConnector().canConnect(receiver)) {
                 return receiver;
             }
-            // 2. Fallback: NeoForge FE/RF energy, auto-converted.
+            // 2. Fallback: NeoForge FE/RF energy, auto-converted — only for engines allowed to (see couldPowerRf).
+            if (!couldPowerRf()) {
+                return null;
+            }
             //? if >=1.21.10 {
             EnergyHandler feHandler = level.getCapability(Capabilities.Energy.BLOCK, targetPos, side.getOpposite());
             //?} else {
@@ -431,6 +434,12 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
             }
             return null;
         });
+    }
+
+    /** @return True if this engine is allowed to autoconvert output MJ to RF. By default this checks
+     *         {@link MjAPI#isRfAutoConversionEnabled()} */
+    protected boolean couldPowerRf() {
+        return MjAPI.isRfAutoConversionEnabled();
     }
 
     /**

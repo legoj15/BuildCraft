@@ -36,6 +36,11 @@ public class TileEngineRedstone_BC8 extends TileEngineBase_BC8 {
     }
 
     @Override
+    protected boolean couldPowerRf() {
+        return false;
+    }
+
+    @Override
     public boolean isBurning() {
         return isRedstonePowered;
     }

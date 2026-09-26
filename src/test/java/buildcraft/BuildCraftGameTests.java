@@ -253,6 +253,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_overheat_explodes_when_configured", () -> buildcraft.energy.EngineTester::testStirlingEngineExplodesWhenConfigured);
         reg.accept("buildcraftunofficial:engine_clear_overheat_api", () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
         reg.accept("buildcraftunofficial:engine_has_alternate_receiver_isolated", () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
+        reg.accept("buildcraftunofficial:engine_redstone_no_fe_autoconvert", () -> buildcraft.energy.EngineTester::testRedstoneEngineDoesNotAutoconvertToFe);
+        // Upstream 7.1.x tail sweep regression pins (autoworkbench #3307, tank comparator output).
+        reg.accept("buildcraftunofficial:autoworkbench_resumes_after_input", () -> buildcraft.factory.UpstreamTailRegressionTester::testAutoWorkbenchResumesAfterInputArrives);
+        reg.accept("buildcraftunofficial:tank_drives_comparator", () -> buildcraft.factory.UpstreamTailRegressionTester::testTankDrivesComparator);
         reg.accept("buildcraftunofficial:foreign_wrench_detection", () -> buildcraft.lib.misc.WrenchTagTester::testForeignWrenchDetection);
         reg.accept("buildcraftunofficial:foreign_wrench_rotates_engine", () -> buildcraft.lib.misc.WrenchTagTester::testForeignWrenchRotatesEngine);
         reg.accept("buildcraftunofficial:combustion_engine_coolant_accepts_ice", () -> buildcraft.energy.EngineTester::testCombustionEngineCoolantTankAcceptsIce);

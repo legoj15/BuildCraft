@@ -22,7 +22,6 @@ import org.joml.Vector3fc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -90,6 +89,7 @@ import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.item.ItemRobot;
+import buildcraft.robotics.particle.RobotEnergyParticleOptions;
 import buildcraft.robotics.statements.ActionRobotWorkInArea;
 
 /**
@@ -145,11 +145,6 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** How far the body yaw may swing per client tick, in degrees. */
     private static final float CLIENT_YAW_STEP = 60F;
-
-    /** Energy-particle rate divisor: one puff per this much accumulated spend-per-cycle. 7.1.x scaled this by
-     *  the client's particle setting by hand; vanilla's own {@code ClientLevel.addParticle} limiter already
-     *  applies that setting, so doing it twice would just make the effect vanish on "decreased". */
-    private static final float ENERGY_FX_PER_PARTICLE = 100F;
 
     /** Fallen this far below the world floor and the robot is gone. 7.1.x hard-coded -128, which is above the
      *  floor of a modern world. */
@@ -270,8 +265,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     private int hurtTime = 0;
     private int energySpendPerCycle = 0;
 
-    /** Client-side particle accumulator. */
-    private float energyFX = 0;
+    /** Client-side exhaust-puff accumulator. */
+    private final RobotExhaust.Accumulator energyFX = new RobotExhaust.Accumulator();
 
     // ── Construction ────────────────────────────────────────────────────────
 
@@ -791,9 +786,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         if (mainAI != null && (mainStation == null || mainStation.isInitialized())) {
             mainAI.cycle();
             AIRobot active = mainAI.getActiveAI();
-            // Kept on 7.1.x's RF-equivalent scale (10 RF = 1 MJ) so ENERGY_FX_PER_PARTICLE still means the
-            // same particle rate it did upstream: the default AI cost of MJ/10 comes out as 1, exactly as the
-            // 1 RF it was.
+            // Kept on 7.1.x's RF-equivalent scale (10 RF = 1 MJ) so RobotExhaust's rate and size rules still
+            // mean what they did upstream: the default AI cost of MJ/10 comes out as 1, exactly as the 1 RF it
+            // was.
             energySpendPerCycle = active == null ? 0 : (int) (active.getPowerCost() * 10 / MjAPI.MJ);
         }
 
@@ -817,11 +812,13 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         step = Mth.clamp(step, -CLIENT_YAW_STEP, CLIENT_YAW_STEP);
         setYRot(getYRot() + step);
 
-        energyFX += getEnergySpend();
-        if (energyFX >= ENERGY_FX_PER_PARTICLE) {
-            energyFX = 0;
+        int spend = getEnergySpend();
+        if (energyFX.tick(spend, RobotExhaust.particleThreshold(RobotExhaust.particleSetting()))) {
             Vector3fc dir = getSteamDirection();
-            level().addParticle(ParticleTypes.CLOUD,
+            // overrideLimiter = true: 7.1.x added the puff straight to the effect renderer, and the rate above
+            // is already thinned by the particle setting — vanilla's limiter on top would thin it twice and
+            // drop every puff on Minimal.
+            level().addAlwaysVisibleParticle(new RobotEnergyParticleOptions(RobotExhaust.particleSize(spend)), true,
                     getX() + dir.x() * 0.25, getY() + dir.y() * 0.25, getZ() + dir.z() * 0.25,
                     dir.x() * 0.05, dir.y() * 0.05, dir.z() * 0.05);
         }

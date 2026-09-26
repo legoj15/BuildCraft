@@ -124,6 +124,7 @@ public class BCRobotics {
         BCRoboticsItems.init(modEventBus);
         BCRoboticsBlockEntities.init(modEventBus);
         BCRoboticsEntities.init(modEventBus);
+        BCRoboticsParticles.init(modEventBus);
         BCRoboticsMenuTypes.init(modEventBus);
         BCRoboticsCreativeTabs.init(modEventBus);
 

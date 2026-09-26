@@ -15,6 +15,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
@@ -26,14 +27,17 @@ import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsMenuTypes;
+import buildcraft.robotics.BCRoboticsParticles;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.client.gui.GuiZonePlanner;
 import buildcraft.robotics.client.model.RobotChargeTintSource;
 import buildcraft.robotics.client.model.RobotStationModel;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
+import buildcraft.robotics.client.particle.RobotEnergyParticle;
 import buildcraft.robotics.client.render.PlugRobotStationRenderer;
 import buildcraft.robotics.client.render.RenderRobot;
 import buildcraft.robotics.client.render.RenderZonePlanner;
+import buildcraft.robotics.entity.RobotExhaust;
 
 public class BCRoboticsClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(BCRoboticsClient.class);
@@ -62,6 +66,14 @@ public class BCRoboticsClient {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(BCRoboticsBlockEntities.ZONE_PLANNER.get(), RenderZonePlanner::new);
         event.registerEntityRenderer(BCRoboticsEntities.ROBOT.get(), RenderRobot::new);
+    }
+
+    /** The robot's red energy exhaust. {@code registerSpriteSet}'s functional parameter type moved from
+     *  {@code ParticleEngine} to {@code ParticleResources} at 1.21.10; a constructor reference fits both, so
+     *  this line needs no directive. */
+    @SubscribeEvent
+    public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpriteSet(BCRoboticsParticles.ROBOT_ENERGY.get(), RobotEnergyParticle.Provider::new);
     }
 
     // 1.21.1-only: registers the buildcraftunofficial:board item property that drives the per-board
@@ -148,6 +160,14 @@ public class BCRoboticsClient {
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCRoboticsClient.class);
+        // The exhaust thins itself by the particle setting (7.1.x's rule); the common-side robot reads it
+        // through this seam so EntityRobot never names a client class. The ParticleStatus enum moved
+        // package at 1.21.10 and lost getId() by 26.1, so it is read through the option by ordinal
+        // (ALL, DECREASED, MINIMAL on every line) rather than imported.
+        RobotExhaust.setParticleSettingSource(() -> {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            return mc == null || mc.options == null ? 0 : mc.options.particles().get().ordinal();
+        });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }
 }

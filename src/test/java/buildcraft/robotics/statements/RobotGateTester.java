@@ -145,8 +145,8 @@ public class RobotGateTester {
     // ---------- sleep trigger + wakeup action ----------
 
     /** A picker docked at a station with the sleep trigger + wakeup action gate: the trigger fires while it
-     *  sleeps, and the wakeup preempts the sleep so the picker re-scans and fetches a diamond dropped after
-     *  it was asleep. The wake is observable ONLY through the fetch: a preempted sleep is re-entered within
+     *  sleeps, and the wakeup preempts the sleep so the picker re-scans and fetches an item (the diamond dropped
+     *  after it was asleep, or a nearer neighbour-cell item — either proves the wake). The wake is observable ONLY through the fetch: a preempted sleep is re-entered within
      *  the same tick (the board's GotoSleep fallback), so {@code isSleeping()} polls would never see it. */
     public static void sleepTriggerAndWakeupPreemptsPicker(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 2);
@@ -211,10 +211,11 @@ public class RobotGateTester {
                     return robot[0].containsItems();
                 },
                 () -> {
-                    helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
-                            new ItemStack(Items.DIAMOND, 1)),
-                            "the woken picker must fetch the dropped diamond — the wakeup action "
-                                    + "preempted the sleep and the board re-scanned");
+                    // Holding ANYTHING is the proof: the robot was asleep (override) before the gate and the
+                    // drop, and a sleeper never fetches. Do NOT pin the diamond itself — game tests run side
+                    // by side and the picker's search roams past this cell, so a neighbour's dropped item can
+                    // be nearer and legitimately fetched first (seen 2026-09-26 on 26.1.2). The diamond only
+                    // guarantees there is something to fetch; a missed wakeup still times out above.
                     robot[0].discard();
                     helper.succeed();
                 },

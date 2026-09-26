@@ -49,22 +49,6 @@ Unify plug in-world geometry under vanilla `models/block/plug_*.json`. Today the
 
 The on-disk fluid textures are de-duped (one `heat_still`/`heat_flow` base, recolored at stitch time by [FluidLerpSpriteSource](../src/main/java/buildcraft/lib/client/sprite/FluidLerpSpriteSource.java)), but the stitched atlas still holds 60 fluid sprites in 20 pixel-identical triplets — the 3 heat tiers of each fluid+frame are separate sprites only because MC ties animation `frametime` (3/2/1, the hot-vs-cool speed cue) to the `SpriteContents` itself, so identical pixels at different speeds must be different sprites. True dedup needs a custom fluid renderer that frame-steps a single shared sprite per fluid+frame at a heat-dependent rate, replacing the vanilla `FluidModel`/sprite-animation path; collapsing to one shared sprite without that would lose the per-heat speed difference. Low value — the redundancy is ~0.08% of the blocks atlas and ~3 MB RAM — so this is cleanup, not a fix.
 
-## Waterlogging facades
-
-Pipe holders are now waterloggable (`SimpleWaterloggedBlock` on `BlockPipeHolder`); facades and any other BC blocks with non-full collision shapes are still washed away by flowing water because they don't implement `LiquidBlockContainer`. Extend the same pattern (waterlogged block state + `SimpleWaterloggedBlock` + fluid-tick scheduling) to facades. Note this only protects against *water* — lava and oil still destroy these blocks (but a lava/oil-destroyed pipe now at least drops, via the `pipe_holder` loot table + `BlockPipeHolder#getDrops`).
-
-## Electronic Library scrolling
-
-Neither 1.12.2 nor the modern port wires up scrolling on the [GuiElectronicLibrary](../src/main/java/buildcraft/builders/gui/GuiElectronicLibrary.java) list panel. 1.12.2 lets the list overflow past the panel (drawing over the slots and player inventory); the port silently truncates at `LIST_MAX_ROWS = 13` and the texture has the arrows already in it. Add up/down arrow buttons (or scroll-wheel handling on the list rect) that page or pixel-scroll the visible window into the full snapshot list, persist the scroll offset across `containerTick` while the GUI stays open, and disable each arrow when there's nothing to scroll to in that direction. Worth sourcing the arrow sprites from the existing GUI texture sheet rather than spawning a second resource.
-
-## Fake player churn
-
-Use `FakePlayerFactory.get` instead of `new FakePlayer(...)`. [BCCore.java:224/230/237](../src/main/java/buildcraft/core/BCCore.java) allocates a full `ServerPlayer` on *every* fake-player request, including the per-block `BlockUtil.canMachineBreak` check in quarry/mining-well/builder scan loops (default `minePlayerProtected=false` means that path is live). Pure GC churn; all five nodes. While there: the unowned fake-player `GameProfile` is defined twice with identical values ([BCCore.java:215-219](../src/main/java/buildcraft/core/BCCore.java) and [BlockUtil.java:142-145](../src/main/java/buildcraft/lib/misc/BlockUtil.java)) — collapse to one constant.
-
-## Deprecated FluidUtil helper
-
-Migrate off deprecated `FluidUtil.getFluidContained`. [PipeBehaviourWoodDiamond.java:230](../src/main/java/buildcraft/transport/pipe/behaviour/PipeBehaviourWoodDiamond.java) calls `net.neoforged.neoforge.fluids.FluidUtil.getFluidContained(ItemStack)`, which NeoForge has marked deprecated-for-removal (2 build warnings surfaced on the 26.2 node). Swap to the fluid-handler item capability (`Capabilities.FluidHandler.ITEM` → `getFluidInTank(0)`) before NeoForge drops the helper.
-
 ## Blocks atlas-id constant
 
 ~60 render sites still read the deprecated `TextureAtlas.LOCATION_BLOCKS` (≈25 files — `BCLibRenderTypes.entity*` call sites and `getTextureManager().getTexture(...)` GUI/tank lookups; `grep LOCATION_BLOCKS src/`). `PipeFlowRendererKinesis.BLOCKS_ATLAS_ID` (2026-09-08) is the pattern: a value-identical `Identifier.withDefaultNamespace("textures/atlas/blocks.png")` literal, written in canonical `Identifier` form so the build-script name conversion covers the older nodes. LOCATION_BLOCKS has **no** non-deprecated successor constant on any line (1.21.1 aliases `InventoryMenu.BLOCK_ATLAS`; `AtlasIds.BLOCKS` is a *different id space* — the atlas-manager key, not the texture id — never swap it in). Two files deliberately suppress instead of converting: `SpriteHolderRegistry` (its registry stores the constant itself) and `AddonDefaultRenderer`. Sweep = extract one shared `BLOCKS_ATLAS_ID` (natural home: `BCLibRenderTypes`), swap the call sites, keep the two suppressions. In-client smoke after: kinesis pipes, tank/distiller/heat-exchanger fluid boxes, laser beams, PIP previews.
@@ -73,7 +57,7 @@ Migrate off deprecated `FluidUtil.getFluidContained`. [PipeBehaviourWoodDiamond.
 
 The 2026-09-08 pass cleaned the 1.21.1 node 51 → 12 warnings (the 12 are the JEI subtype-interpreter cluster, deliberately deferred). The same `-PbcLint=deprecation` compile sweep on the other nodes found (counts include JEI noise; nothing on lines touched by that pass):
 
-- **26.2 (43) / 26.1.2 (~35):** JEI `RecipeType` + `RecipeType.create` (forRemoval — the `*JeiTypes` classes and transfer handlers); `AbstractContainerScreen.getGuiLeft/getGuiTop/getXSize/getYSize` (forRemoval — **caution:** the old-name getters are the deliberate one-jar 26.1.x compat shim; fixing likely means per-line directives, not a rename); the already-tracked `FluidUtil.getFluidContained`; Guava `CacheBuilder.expireAfterAccess` in Facade/Gate/LensItemModel (26.2 only); `Ingredient.items()`; `RecipeSerializer.streamCodec()`.
+- **26.2 (43) / 26.1.2 (~35):** JEI `RecipeType` + `RecipeType.create` (forRemoval — the `*JeiTypes` classes and transfer handlers); `AbstractContainerScreen.getGuiLeft/getGuiTop/getXSize/getYSize` (forRemoval — **caution:** the old-name getters are the deliberate one-jar 26.1.x compat shim; fixing likely means per-line directives, not a rename); Guava `CacheBuilder.expireAfterAccess` in Facade/Gate/LensItemModel (26.2 only); `Ingredient.items()`; `RecipeSerializer.streamCodec()`.
 - **1.21.10 / 1.21.11 (31 each):** same JEI family plus `Entity.hurtOrSimulate` ([EntityRobotBase.java:207](../src/main/java/buildcraft/api/robots/EntityRobotBase.java) — the deliberate 1.21.10+ `hurt`→`hurtOrSimulate` directive may itself need a successor directive if it's ever removed; check `hurtServer` availability when triaging).
 - **1.21.1 (12):** the JEI subtype-interpreter cluster (`IIngredientSubtypeInterpreter`, `registerSubtypeInterpreter`, `UidContext`) — all deprecated-for-removal; breaks at the next 1.21.1 `jei_version` bump. Migrate to JEI's replacement at that bump (or suppress with rationale if the pin is frozen long-term).
 
@@ -106,6 +90,35 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 **Reopen trigger:** Mojang exposes an extensibility hook for chunk render layers, per-quad atlas binding, or otherwise opens the third-atlas case.
 
 **Cheap escape hatch if a low-spec-GPU compat report comes in:** ~1 hour revert of commit `5a6cdb5ac` — remove the 25 `dye_replace` entries from `assets/minecraft/atlases/blocks.json`, flip `PipeBaseModelGenStandard.ensureDyedSprites` to return null, restore the three fallback branches. Painted fluid pipes drop from 1-layer dyed-sprite rendering to 2-layer base+mask-overlay; atlas shrinks back to ~1024×1024.
+
+- **All nodes:** ~20 class-level `@SuppressWarnings("deprecation")` under `src/main` (ItemFragileFluidContainer, BCEnergyFluids, ItemList_BC8, ItemMapLocation, ItemPaintbrush_BC8, …) may hide more; remove each, recompile with lint, keep only where justified. `-Xlint` does not flag deprecated *imports* — a small guard (test or script grepping unconditional imports of NeoForge `@Deprecated(forRemoval)` types) would catch the next removal early. `FluidUtil` itself is fully migrated (2026-09-26, `buildcraft.lib.misc.FluidUtilBC`); only WidgetFluidTank's 1.21.1-only branch still calls it, which is correct there.
+
+## Machine protection gaps
+
+Found during the 2026-09-26 fake-player cache work (`buildcraft.lib.misc.FakePlayerUtil`).
+- Stripes-pipe breaking (`PipeBehaviourStripes.onTick` → `BlockUtil.breakBlockAndGetDropsWithXp`) and robot breaking (`AIRobotBreak`) never call `BlockUtil.canMachineBreak`, so no BreakEvent is posted and both can break inside protected claims. Only Quarry, Mining Well and Builder check. All nodes.
+- The probe in `canMachineBreak` posts a real BreakEvent; `LocalBlockUpdateNotifier.onBlockBroken` treats it as an actual break, so every per-block check in a quarry/builder scan fires `setLevelUpdated` on nearby subscribers (TileLaser rescans). Fix idea: recognise BuildCraft's cached fake players (the `CachedFakePlayer` subclass in FakePlayerUtil can double as the marker) and ignore probe events there, or re-check block state.
+
+## Stripes advancements on fake players
+
+`AdvancementUtil.unlockAdvancement(Player, …)` given a fake player awards through that player's own tracker. On 1.21.1 and 26.2 that is NeoForge's no-op `FakePlayerAdvancements`, so BC advancements fired via a stripes pipe (e.g. `ItemList_BC8.use`) never reach the owner there. Route fake players through the UUID overload. Pre-existing, not caused by the cache. Also note: each fake-player UUID leaves a permanent PlayerList stats/advancements entry (once per UUID now, rather than per call); a fully clean fix needs NeoForge support.
+
+## Builder fluid defer on waterloggables
+
+`BlueprintBuilder.isFragileSchematicAt` and the fragile-block defer in `SchematicBlockDefault` use `canBeReplaced(WATER)`, which is still true for a dry `SimpleWaterloggedBlock` (pipes, markers), so builders defer placing them next to fluid for no reason. The predicate should exclude a `LiquidBlockContainer` that accepts the fluid; extend the existing `fluidmode_waterloggable_not_deferred` test. Related: `TileMiningWell` treats waterlogged low-viscosity cells as passable and skips them — decide whether the well should dig through them.
+
+## Electronic Library list cost
+
+`GlobalSavedDataSnapshots.getList()` re-reads and decompresses every snapshot file on the render thread once per second while the library GUI is open (1 s `SingleCache`, called every frame from `drawForegroundLayer`) — large libraries will hitch. Cache headers/keys and invalidate on add/remove. The list order is `File.listFiles` order of hash-named files, so it looks random; sort by name, then date. (Scrolling itself landed 2026-09-26 via `ScrollWindow` / `GuiElementScrollbar` / `SelectionFollower`.)
+
+## Flaky and dead tests
+
+- `robot_fetch_item_partial_fit_targets` (AIRobotFetchItemTester) failed once in a full 26.1.2 suite and passed on rerun. Likely: `AIRobotFetchItem` scans a 16-block radius that crosses neighbouring arenas (6 apart), and the `targettedItems` UUID set is static, so another test's robot can claim this test's drop. Fix: restrict the scan to the arena (zone) or position-pin the target.
+- `FluidPhysicsTest.testLightFuelSpreading` and `testCrudeOilSelfCollision` were never registered in `BuildCraftGameTests`, so they never run (`testDenseOilSinking` is now covered by `dense_oil_sinks_through_plain_water`). Register them in a contained basin or delete them — their layouts leak fluid out of the arena.
+
+## Robot stripes stack loss
+
+`AIRobotStripesHandler` clears the robot's hand whenever `handleItem` succeeds, but handlers shrink or keep the robot's own stack (e.g. `StripesHandlerPlaceBlock` places 1 of 64) and nothing returns the remainder, so the rest is deleted. The pipe path drains the fake player's inventory back; the robot path should too. Check 7.1.x behaviour first. Pre-existing.
 
 ## Dev-only item files in release jars
 

@@ -1,21 +1,23 @@
-Last audited: 2026-09-12
+Last audited: 2026-09-26
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
 ## 🔧 Outstanding work
 
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
-- Let facades survive flowing water, like pipes now do — [notes](docs/todo-details.md#waterlogging-facades)
-- Make the Electronic Library's snapshot list scrollable — [notes](docs/todo-details.md#electronic-library-scrolling)
 - JEI category for the Programming Table's board grid (the assembly-table category is the pattern)
 - Unify button implementation (native buttons over custom background images)
 - Collapse duplicate fluid textures on the atlas (low value) — [notes](docs/todo-details.md#fluid-atlas-de-duplication)
-- Stop creating a fresh fake player for every machine permission check — [notes](docs/todo-details.md#fake-player-churn)
-- Move off a fluid helper NeoForge is about to remove — [notes](docs/todo-details.md#deprecated-fluidutil-helper)
 - Sweep the remaining deprecated LOCATION_BLOCKS render sites onto one shared atlas-id constant — [notes](docs/todo-details.md#blocks-atlas-id-constant)
 - Triage the other nodes' deprecation backlog the way 1.21.1's just was (26.2: 43, 26.1.2: ~35, 1.21.10/11: 31 each) — [notes](docs/todo-details.md#cross-node-deprecation-backlog)
 - Fix redstone engines leaking RF into FE machines when MJ→RF autoconvert is on (upstream fixed this 2026-05) — [notes](docs/todo-details.md#redstone-engine-rf-leak)
 - Sweep the 51 upstream 7.1.20–7.1.27 fixes that never reached any 8.0.x branch — [notes](docs/todo-details.md#upstream-71x-tail-sweep)
+- Close the machine-protection gaps: stripes pipes and robots skip claim checks, and the check itself pings lasers — [notes](docs/todo-details.md#machine-protection-gaps)
+- Stripes-pipe advancements never reach the owner on 1.21.1 and 26.2 — [notes](docs/todo-details.md#stripes-advancements-on-fake-players)
+- Builders needlessly hold off placing pipes and markers next to water — [notes](docs/todo-details.md#builder-fluid-defer-on-waterloggables)
+- Electronic Library rereads every snapshot from disk each second and lists them in random order — [notes](docs/todo-details.md#electronic-library-list-cost)
+- Fix the flaky robot fetch test and the three never-registered fluid tests — [notes](docs/todo-details.md#flaky-and-dead-tests)
+- Robots: the Stripes board deletes the rest of a stack after using one item — [notes](docs/todo-details.md#robot-stripes-stack-loss)
 - Robots: the Planter can't plant sugar cane yet — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: exhaust should be the classic red smoke, not a white puff — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Robots: gate menus list every station action on every pipe kind — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)

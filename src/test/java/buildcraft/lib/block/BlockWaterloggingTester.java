@@ -293,6 +293,11 @@ public class BlockWaterloggingTester {
                     block + " must have a WATERLOGGED property");
                 helper.assertTrue(placed.getValue(BlockStateProperties.WATERLOGGED) == wet,
                     block + " placed into " + (wet ? "a water source must start waterlogged" : "air must start dry"));
+                // Actually place it: the water must still be in the cell afterwards (getFluidState agrees).
+                level.setBlock(abs, placed, Block.UPDATE_ALL);
+                helper.assertTrue(level.getFluidState(abs).is(Fluids.WATER) == wet,
+                    block + " placed into " + (wet ? "a water source must keep the water" : "air must hold no fluid"));
+                helper.setBlock(SUBJECT, wet ? Blocks.WATER : Blocks.AIR);
             }
         }
         helper.setBlock(SUBJECT, Blocks.AIR);

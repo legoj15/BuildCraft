@@ -30,7 +30,10 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 
 /**
- * Every state of every BuildCraft block must resolve to a model through its blockstate JSON.
+ * Every state of every BuildCraft block must be matched by a variant in its blockstate JSON.
+ *
+ * <p>Scope: this checks variant-key coverage only — not that the matched variant's model file exists
+ * (vanilla logs a missing model file at resource load), and not multipart definitions.
  *
  * <p>A {@code "variants"} key only constrains the properties it names ({@code ""} matches every state), so
  * adding a property such as {@code WATERLOGGED} is free when the keys leave it out — but a JSON whose keys

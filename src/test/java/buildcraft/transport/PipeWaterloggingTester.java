@@ -104,18 +104,27 @@ public class PipeWaterloggingTester {
         placeWoodPipe(helper, pipePos);
         BlockWaterloggingTester.placeSource(helper, BlockWaterloggingTester.WEST_SOURCE, Blocks.WATER, Fluids.WATER);
 
+        boolean[] pipeRemoved = { false };
         helper.succeedWhen(() -> {
-            // Gate on observed state: the source has run its spread tick, and spreading is synchronous, so
-            // the flowing water has already tried to enter the pipe's cell. Pre-fix the pipe was replaced
-            // (and deleted with no drop) right here.
-            helper.assertTrue(BlockWaterloggingTester.hasSpread(helper, BlockWaterloggingTester.WEST_SOURCE, Fluids.WATER),
-                "the water source has not spread yet");
-            helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
-            // Flowing water is not a source, so it neither waterlogs the pipe nor passes through it.
-            helper.assertFalse(helper.getBlockState(pipePos).getValue(BlockStateProperties.WATERLOGGED),
-                "flowing water must not waterlog the pipe (only a source can)");
-            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(BlockWaterloggingTester.EAST_SOURCE)).isEmpty(),
-                "the pipe must hold the flowing water back, not let it through to the far side");
+            if (!pipeRemoved[0]) {
+                // Gate on observed state: the source has run its spread tick, and spreading is synchronous, so
+                // the flowing water has already tried to enter the pipe's cell. Pre-fix the pipe was replaced
+                // (and deleted with no drop) right here.
+                helper.assertTrue(BlockWaterloggingTester.hasSpread(helper, BlockWaterloggingTester.WEST_SOURCE, Fluids.WATER),
+                    "the water source has not spread yet");
+                helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
+                // Flowing water is not a source, so it neither waterlogs the pipe nor passes through it.
+                helper.assertFalse(helper.getBlockState(pipePos).getValue(BlockStateProperties.WATERLOGGED),
+                    "flowing water must not waterlog the pipe (only a source can)");
+                helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(BlockWaterloggingTester.EAST_SOURCE)).isEmpty(),
+                    "the pipe must hold the flowing water back, not let it through to the far side");
+                // Control: take the pipe away. The same source must now flow into the cell — positive proof the
+                // water really was pressing on the pipe, so the survival above is not vacuous.
+                helper.setBlock(pipePos, Blocks.AIR);
+                pipeRemoved[0] = true;
+            }
+            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(pipePos)).getType().isSame(Fluids.WATER),
+                "with the pipe gone, the source must flow into its cell (control for the hold-back check)");
         });
     }
 }

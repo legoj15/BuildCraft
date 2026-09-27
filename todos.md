@@ -5,7 +5,7 @@ Last audited: 2026-09-26
 ## 🔧 Outstanding work
 
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
-- In-game check of the rest of this round's visual changes (guide arrows, other versions, robot smoke) — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
+- In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Electronic Library keeps only one copy when the same build is saved under two names — [notes](docs/todo-details.md#snapshot-name-collision)
 - Zone Planner may not save changes made in its slots — [notes](docs/todo-details.md#zone-planner-slot-saving)
 - Builders in Clear mode loop forever on a block that outside water keeps re-flooding — [notes](docs/todo-details.md#builder-clear-mode-reflood-loop)

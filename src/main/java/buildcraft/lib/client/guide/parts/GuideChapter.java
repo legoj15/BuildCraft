@@ -239,11 +239,17 @@ public abstract class GuideChapter extends GuidePart {
         IFontRenderer font = gui.getCurrentFont();
         if (font == null) return Collections.singletonList(chapter.text);
         if (lastDrawn == null) return Collections.singletonList(chapter.text);
-        int maxLineW = computeMaxLineWidth();
-        if (maxLineW >= Integer.MAX_VALUE / 2 || font.getStringWidth(chapter.text) <= maxLineW) {
-            return Collections.singletonList(chapter.text);
+        return wrapTitle(font, chapter.text, computeMaxLineWidth(), gui.isSmallScreen());
+    }
+
+    /** The one line-split rule behind drawing, the click/hover hit-test and every chapter's slot offset. The
+     *  small-screen overlay ({@code central}) draws each title on one line, so it must never wrap here either —
+     *  wrapping against the side-tab margin made every overlay entry's hit area two rows tall. */
+    static List<String> wrapTitle(IFontRenderer font, String text, int maxLineW, boolean central) {
+        if (central || maxLineW >= Integer.MAX_VALUE / 2 || font.getStringWidth(text) <= maxLineW) {
+            return Collections.singletonList(text);
         }
-        return font.wrapString(chapter.text, maxLineW, false, 1f);
+        return font.wrapString(text, maxLineW, false, 1f);
     }
 
     /** The widest rendered line out of a wrapped title. */

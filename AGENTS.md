@@ -119,7 +119,7 @@ Unit tests run under moddev's FML-JUnit environment (`neoForge { unitTest }` in 
 
 ## Project skills
 
-Procedure skills ship tracked in `.claude/skills/`: **add-game-test** and **neoforge-bump**. Invoke them when doing those tasks; the details live there, not here. ZCode sessions load them from the machine-local `.zcode/skills/` mirror (see the sync script above).
+Procedure skills ship tracked in `.claude/skills/`: **add-game-test**, **neoforge-bump** and **in-client-smoke** (scripted per-node dev-client runs with screenshots, `scripts/smoke/`). Invoke them when doing those tasks; the details live there, not here. ZCode sessions load them from the machine-local `.zcode/skills/` mirror (see the sync script above).
 
 ### User notes
 - When cross-referencing code from 1.12.2, there are multiple locations code can be; as a .disabled file in the current branch, or in the 8.0.x-1.12.2 branch in either the `src_old_license` folder (for code that was written before the license migration, very old) or in the `common` folder (actually used 1.12.2 code)

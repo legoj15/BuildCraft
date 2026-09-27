@@ -40,6 +40,8 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3.0
 
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+# `pwsh -File ... -Nodes a,b` hands the list over as ONE string; accept both forms.
+$Nodes = @($Nodes | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 if (-not $Scenario) { $Scenario = Join-Path $PSScriptRoot 'scenarios/line8.json' }
 $ScenarioData = Get-Content -Raw -LiteralPath $Scenario | ConvertFrom-Json
 if (-not $OutDir) { $OutDir = Join-Path $Repo ("build/smoke/" + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
@@ -180,18 +182,26 @@ function Stop-Client($Client) {
     $script:Bridge = $null
 }
 
+function Invoke-MenuClick([string]$Text) {
+    # Menu clicks that load the world list or generate a world block the game thread for longer than the bridge's
+    # bounded wait, so the call reports a TimeoutException although the click happened. The callers poll the screen
+    # afterwards, which is the real check.
+    try { Invoke-Bridge POST '/screenclick' @{ widgetText = $Text } 120 | Out-Null }
+    catch { if ($_.Exception.Message -notmatch 'TimeoutException') { throw } }
+}
+
 function New-SmokeWorld {
     # Fresh run-smoke dir: Singleplayer opens the create screen directly when there are no saves; an older run dir
     # that somehow has saves lands on the world list, which has its own "Create New World" button.
     Wait-Until { (Get-ScreenClass) -match 'TitleScreen' } 300 'the title screen' 1000 | Out-Null
     Wait-NoOverlay
-    Invoke-Bridge POST '/screenclick' @{ widgetText = 'Singleplayer' } | Out-Null
+    Invoke-MenuClick 'Singleplayer'
     $screen = Wait-Until { $c = Get-ScreenClass; if ($c -match 'CreateWorldScreen|SelectWorldScreen') { $c } } 60 'the world screens'
     if ($screen -match 'SelectWorldScreen') {
-        Invoke-Bridge POST '/screenclick' @{ widgetText = 'Create New World' } | Out-Null
+        Invoke-MenuClick 'Create New World'
         Wait-Until { (Get-ScreenClass) -match 'CreateWorldScreen' } 60 'the create-world screen' | Out-Null
     }
-    Invoke-Bridge POST '/screenclick' @{ widgetText = 'Create New World' } | Out-Null
+    Invoke-MenuClick 'Create New World'
     Wait-InWorld 600
 }
 
@@ -274,8 +284,12 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
         }
         # The click reaches the server as a packet, while the next step's /command runs on the server loop directly:
         # without a pause the command can land first (e.g. emptying the hand before the bucket click is handled).
-        'use' { Invoke-Bridge POST '/worldclick' @{ action = 'right_click' } | Out-Null; Start-Sleep -Milliseconds 400 }
-        'attack' { Invoke-Bridge POST '/worldclick' @{ action = 'left_click' } | Out-Null; Start-Sleep -Milliseconds 400 }
+        { $_ -in 'use', 'attack' } {
+            $r = Invoke-Bridge POST '/worldclick' @{ action = $(if ($Step.do -eq 'use') { 'right_click' } else { 'left_click' }) }
+            if ($r.PSObject.Properties['success'] -and -not $r.success) { throw "worldclick refused: $($r.message)" }
+            Start-Sleep -Milliseconds 400
+            $detail = "hit $($r.hitType)"
+        }
         { $_ -in 'click', 'hover' } {
             Wait-NoOverlay
             $body = @{}
@@ -377,6 +391,7 @@ foreach ($node in $Nodes) {
     Write-Host "[$node] preparing"
     $report = [ordered]@{ node = $node; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
     $client = $null
+    $prep = $null
     try {
         $prep = Initialize-RunDir $node
         $report.bridgeJar = $prep.Jar

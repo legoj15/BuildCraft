@@ -222,6 +222,12 @@ neoForge {
             if (project.hasProperty("bcDebug")) {
                 systemProperty("buildcraft.debug", project.property("bcDebug").toString().ifBlank { "log" })
             }
+            // Optional game directory (node-relative), e.g. `-PbcRunDir=run-smoke`: the scripted in-client smoke
+            // run (scripts/smoke/) boots from its own folder so the hand-used `run/` — its extra mods, saves and
+            // options — never leaks into, or gets edited by, an automated pass.
+            if (project.hasProperty("bcRunDir")) {
+                gameDirectory = project.file(project.property("bcRunDir").toString())
+            }
         }
         register("server") {
             server()

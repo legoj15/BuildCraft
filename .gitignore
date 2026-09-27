@@ -24,6 +24,7 @@ libs
 run
 run_server
 run-gameTestServer
+run-smoke
 
 #mac
 .DS_Store

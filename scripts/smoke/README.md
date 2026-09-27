@@ -24,7 +24,7 @@ error, or BuildCraft logged an ERROR.
    off, GUI scale 2 (so screenshots line up across runs).
 2. **World.** The first run on a node creates one through the menus (Singleplayer → Create New World) and renames the
    save to `bc-smoke` after the client closes; every later run quick-plays it (`-PbcQuickPlay=bc-smoke`). The rig is
-   rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/bc-smoke` to start over.
+   rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/` to start over. (A lone save of any name is adopted as `bc-smoke`, so an interrupted first run heals itself.)
 3. **Scenario**, then every ERROR log line mentioning BuildCraft since the world loaded.
 4. `save-all`, close the client (and its Gradle wrapper), next node.
 
@@ -42,7 +42,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail` | server commands (`/command`, OWNER, no entity — target `@p`) |
+| `cmd` | `run`: string or list; `allowFail` | server commands (`/command`, OWNER, no entity — target `@p`). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`) count as success, since the world persists between runs |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at` | look at a block's centre from the current eye position; the report records what the crosshair hit |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |
@@ -50,11 +50,12 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `use` / `attack` | — | one right / left click at the crosshair |
 | `click` | `widgetText` \| `slotIndex` \| `x`,`y` (GUI units) \| `fx`,`fy` (screen fractions); `button` 0/1/2; `modifiers`; `allowMiss` | `/screenclick`; fails when nothing was under the cursor |
 | `hover` | same targets | `/screenhover`, then waits 600 ms so the tooltip draws — follow with `shot` |
+| `hoverEach` | `name`, `max` (default 12) | hover every visible, active widget on the open screen and screenshot each tooltip (`NN-<name>-hoverKK.png`) |
 | `key` | `key` | a named key into the open screen (`escape`, `tab`, `enter`, …) |
 | `close` | — | close the open screen (releases container menus server-side) |
 | `wait` | `ms` | sleep |
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
-| `expectScreen` | `contains` (regex on the screen class; `""` = no screen) | polls up to 5 s |
+| `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
 
 A failing step records its error, takes a `NN-FAILED.png`, closes any open screen and the run continues.

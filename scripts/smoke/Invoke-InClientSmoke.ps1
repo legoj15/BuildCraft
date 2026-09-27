@@ -52,6 +52,7 @@ $SaveName = 'bc-smoke'
 # ── Bridge plumbing ──────────────────────────────────────────────────────────
 
 $script:Bridge = $null
+$script:Spawned = $null
 
 function Invoke-Bridge([string]$Method, [string]$Path, $Body = $null, [int]$TimeoutSec = 60) {
     $req = @{
@@ -80,7 +81,11 @@ function Wait-Until([scriptblock]$Condition, [int]$TimeoutSec, [string]$What, [i
         try {
             $r = & $Condition
             if ($r) { return $r }
-        } catch { $lastError = $_.Exception.Message }
+        } catch {
+            # A condition throws 'FATAL: ...' when waiting longer cannot help (e.g. the process it waits on is gone).
+            if ($_.Exception.Message.StartsWith('FATAL: ')) { throw $_.Exception.Message.Substring(7) }
+            $lastError = $_.Exception.Message
+        }
         Start-Sleep -Milliseconds $PollMs
     }
     throw "timed out after ${TimeoutSec}s waiting for $What" + $(if ($lastError) { " (last error: $lastError)" } else { '' })
@@ -178,14 +183,28 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     $proc = Start-Process -FilePath (Join-Path $Repo 'gradlew.bat') -ArgumentList $gradleArgs -WorkingDirectory $Repo `
         -RedirectStandardOutput (Join-Path $LogDir 'gradle.out.log') -RedirectStandardError (Join-Path $LogDir 'gradle.err.log') `
         -WindowStyle Hidden -PassThru
+    # Recorded before any wait can throw, so the main loop can clean up a client that booted without a bridge.
+    $script:Spawned = [pscustomobject]@{ Gradle = $proc; Since = Get-Date }
 
     Wait-Until {
-        if ($proc.HasExited) { throw "runClient exited early (code $($proc.ExitCode)); see $LogDir" }
+        if ($proc.HasExited) { throw "FATAL: runClient exited early (code $($proc.ExitCode)); see $LogDir" }
         (Test-Path $BridgeFile) -and (Get-Item $BridgeFile).LastWriteTimeUtc -gt $before
     } ($BootMinutes * 60) 'the client to publish a new bridge.json' 2000 | Out-Null
-    $script:Bridge = Get-Content -Raw $BridgeFile | ConvertFrom-Json
+    # A read can catch the file mid-write; retry briefly.
+    $script:Bridge = Wait-Until { Get-Content -Raw $BridgeFile | ConvertFrom-Json } 10 'a readable bridge.json' 200
     $ping = Wait-Until { Invoke-Bridge GET '/ping' $null 5 } 120 'the bridge to answer /ping'
     [pscustomobject]@{ Gradle = $proc; Pid = [int]$script:Bridge.pid; BridgeVersion = $ping.version }
+}
+
+function Stop-Spawned {
+    # A boot that failed before Start-Client returned: no bridge pid to stop, so take down any Minecraft window that
+    # appeared since the spawn, then the Gradle wrapper's tree — otherwise the next node refuses to start beside it.
+    if (-not $script:Spawned) { return }
+    Get-Process java, javaw -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle -like 'Minecraft*' -and $_.StartTime -ge $script:Spawned.Since } |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    if (-not $script:Spawned.Gradle.HasExited) { & taskkill /PID $script:Spawned.Gradle.Id /T /F | Out-Null }
+    $script:Spawned = $null
 }
 
 function Stop-Client($Client) {
@@ -203,7 +222,7 @@ function Invoke-MenuClick([string]$Text) {
     # bounded wait, so the call reports a TimeoutException although the click happened. The callers poll the screen
     # afterwards, which is the real check.
     try { Invoke-Bridge POST '/screenclick' @{ widgetText = $Text } 120 | Out-Null }
-    catch { if ($_.Exception.Message -notmatch 'TimeoutException') { throw } }
+    catch { if ($_.Exception.Message -notmatch 'TimeoutException|timed out') { throw } }
 }
 
 function New-SmokeWorld {
@@ -412,6 +431,10 @@ foreach ($node in $Nodes) {
         $prep = Initialize-RunDir $node
         $report.bridgeJar = $prep.Jar
         $savePath = Join-Path $prep.RunDir "saves/$SaveName"
+        # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
+        # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
+        $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
+        if (-not (Test-Path $savePath) -and $saves.Count -eq 1) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
         $haveSave = Test-Path $savePath
         Write-Host "[$node] booting client ($(if ($haveSave) { 'quick-play' } else { 'first run: creating the world' }))"
         $client = Start-Client $node $prep.RunDir $haveSave $nodeOut
@@ -428,11 +451,15 @@ foreach ($node in $Nodes) {
         $report.fatal = $_.Exception.Message
         Write-Warning "[$node] $($report.fatal)"
     } finally {
-        if ($client) { Stop-Client $client }
+        if ($client) { Stop-Client $client } else { Stop-Spawned }
+        $script:Spawned = $null
     }
-    # First run: the menus named the save "New World"; rename it so later runs can quick-play it.
-    if ($prep -and -not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and (Test-Path (Join-Path $prep.RunDir 'saves/New World'))) {
-        Rename-Item -LiteralPath (Join-Path $prep.RunDir 'saves/New World') -NewName $SaveName
+    # First run: adopt the save the menus just created (same rule as before booting).
+    if ($prep) {
+        $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
+        if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1) {
+            Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName
+        }
     }
     $report.finished = (Get-Date).ToString('s')
     $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $nodeOut 'report.json') -Encoding utf8

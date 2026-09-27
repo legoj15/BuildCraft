@@ -155,7 +155,23 @@ function Initialize-RunDir([string]$Node) {
 
 # ── Client lifecycle ─────────────────────────────────────────────────────────
 
+function Assert-NoOtherClient {
+    # Every McDevBridge client overwrites the one ~/.mcdevbridge/bridge.json: a second dev client (another session's,
+    # or one left open by hand) would steal this run's bridge mid-scenario.
+    # Waits briefly first: the previous node's window can outlive its kill by a few seconds.
+    $deadline = (Get-Date).AddSeconds(30)
+    do {
+        $others = @(Get-Process java, javaw -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like 'Minecraft*' })
+        if (-not $others.Count) { return }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    if ($others.Count) {
+        throw "another Minecraft client is running (pid $(@($others.Id) -join ', ')); close it first — clients share ~/.mcdevbridge/bridge.json"
+    }
+}
+
 function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]$LogDir) {
+    Assert-NoOtherClient
     $before = if (Test-Path $BridgeFile) { (Get-Item $BridgeFile).LastWriteTimeUtc } else { [datetime]::MinValue }
     $gradleArgs = @(":${Node}:runClient", '-PbcRunDir=run-smoke', '--console=plain')
     if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$SaveName" }

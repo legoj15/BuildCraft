@@ -36,6 +36,8 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
@@ -345,6 +347,70 @@ public class BlockUtil {
     public record BreakResult(List<ItemStack> drops, int xp, FluidStack capturedFluid) {}
 
     /**
+     * Records the block states around {@code pos} that a removal there can invalidate indirectly —
+     * the direct neighbours plus the vertical columns beside them (vine curtains and hanging chains
+     * are the deep case: a jungle strand can hang dozens of blocks below the block it was growing
+     * on). Call this BEFORE removing the block, pass the result to
+     * {@link #resyncChangedBlocks} after, and every support-driven block the removal cascaded
+     * through gets pushed to clients explicitly.
+     *
+     * <p>Why this exists: the support cascade (a vine popping when its last anchor is broken) runs
+     * on the server through shape updates that strip {@code UPDATE_CLIENTS} (vanilla relies on each
+     * client replaying the same cascade locally), and {@code sendBlockUpdated} is skipped outright
+     * for chunks that are not block-ticking. A machine that breaks blocks with no player predicting
+     * the break — robots above all — therefore leaves the client rendering blocks the server no
+     * longer has: the "lumberjack leaves floating vines" report. Vanilla's own client resyncs the
+     * moment the chunk reloads, so this is purely a sync repair, not a world change.
+     */
+    public static Long2ObjectOpenHashMap<BlockState> snapshotSupportsForResync(Level world, BlockPos pos) {
+        Long2ObjectOpenHashMap<BlockState> snapshot = new Long2ObjectOpenHashMap<>();
+        for (BlockPos p : resyncRegion(pos)) {
+            snapshot.put(p.asLong(), world.getBlockState(p));
+        }
+        return snapshot;
+    }
+
+    /**
+     * Pushes every snapshotted position whose state no longer matches to clients via
+     * {@code sendBlockUpdated} — deliberately bypassing the block-ticking gate vanilla applies to
+     * cascade updates, so machines working in player-away chunks still stay visually in sync.
+     * Returns the positions that were resynced (in snapshot order; empty when nothing changed).
+     */
+    public static List<BlockPos> resyncChangedBlocks(ServerLevel world, Long2ObjectOpenHashMap<BlockState> snapshot) {
+        List<BlockPos> resynced = new ArrayList<>();
+        for (it.unimi.dsi.fastutil.longs.Long2ObjectMap.Entry<BlockState> entry : snapshot.long2ObjectEntrySet()) {
+            BlockPos pos = BlockPos.of(entry.getLongKey());
+            BlockState before = entry.getValue();
+            BlockState current = world.getBlockState(pos);
+            if (current != before) {
+                world.sendBlockUpdated(pos, before, current, Block.UPDATE_ALL);
+                resynced.add(pos);
+            }
+        }
+        return resynced;
+    }
+
+    /** The resync region for {@code pos}: the block, its six neighbours, and the vertical columns
+     *  above/below the four side neighbours (the shapes support cascades actually travel). */
+    private static Iterable<BlockPos> resyncRegion(BlockPos pos) {
+        List<BlockPos> cells = new ArrayList<>(7 + 4 * 51);
+        cells.add(pos);
+        for (Direction direction : Direction.values()) {
+            cells.add(pos.relative(direction));
+        }
+        for (Direction side : new Direction[] {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            BlockPos column = pos.relative(side);
+            for (int i = 1; i <= 40; i++) {
+                cells.add(column.above(i));
+            }
+            for (int i = 1; i <= 10; i++) {
+                cells.add(column.below(i));
+            }
+        }
+        return cells;
+    }
+
+    /**
      * Breaks a block in the world and returns its drops, or empty if the block could not be broken.
      * Backwards-compatible wrapper around {@link #breakBlockAndGetDropsWithXp} that discards the XP.
      *
@@ -373,6 +439,11 @@ public class BlockUtil {
         if (state.getDestroySpeed(world, pos) < 0) {
             return Optional.empty();
         }
+
+        // Capture the support-cascade neighbourhood before the break so every block the removal
+        // invalidated gets explicitly re-synced to clients afterwards (see
+        // snapshotSupportsForResync — the "lumberjack leaves floating vines" client-ghost fix).
+        Long2ObjectOpenHashMap<BlockState> supportsBefore = snapshotSupportsForResync(world, pos);
 
         // Snapshot the BlockEntity BEFORE destroying — getDrops and getExpDrop both read it
         // (sculk-family blocks compute XP off BE state, container blocks include contents in
@@ -437,6 +508,7 @@ public class BlockUtil {
         } else {
             world.destroyBlock(pos, false);
         }
+        resyncChangedBlocks(world, supportsBefore);
 
         return Optional.of(new BreakResult(drops, xp, capturedFluid));
     }

@@ -804,6 +804,16 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
         reg.accept("buildcraftunofficial:robot_fetch_item_lock_dies_with_robot", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemLockDiesWithItsRobot);
 
+        // The robot break path (AIRobotBreak -> BlockUtil.breakBlockAndGetDrops) must keep flag-3
+        // semantics: support-driven blocks (vines etc.) pop when their support is broken. Pins the
+        // removal routes used by both the robots and the Quarry/Mining Well.
+        reg.accept("buildcraftunofficial:robot_break_pops_directly_attached_vine", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testBreakPopsDirectlyAttachedVine);
+        reg.accept("buildcraftunofficial:robot_break_full_chop_cascades_vine_column", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testFullChopCascadesVineColumn);
+        reg.accept("buildcraftunofficial:robot_break_remove_block_pops_attached_vine", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testRemoveBlockPopsAttachedVine);
+        reg.accept("buildcraftunofficial:robot_break_lumberjack_e2e_drops_vines", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testLumberjackRobotChopsTreeAndDropsItsVines);
+        reg.accept("buildcraftunofficial:robot_break_canopy_tree_vines_fall_with_decay", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testLumberjackCanopyTreeVinesFallWithLeafDecay);
+        reg.accept("buildcraftunofficial:robot_break_resync_diff_catches_cascade", () -> buildcraft.robotics.ai.RobotBreakBlockUpdateTester::testResyncDiffCatchesCascadedVines);
+
         // Robotics Ph3 — ItemRobot.useOn: the only survival path a robot enters the world by. Free-station
         // placement end to end (face-centre position, takeAsMain + dock, charge carried over, item consumed),
         // the taken-station refusal, the cancellable RobotEvent.Place, and 7.1.x's blank-robot refusal (with the

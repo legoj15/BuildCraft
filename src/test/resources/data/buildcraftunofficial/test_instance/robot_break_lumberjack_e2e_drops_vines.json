@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_break_lumberjack_e2e_drops_vines",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 900,
+    "setup_ticks": 0,
+    "required": true
+}

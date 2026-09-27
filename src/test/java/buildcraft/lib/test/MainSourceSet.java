@@ -75,6 +75,34 @@ public final class MainSourceSet {
         return files;
     }
 
+    /** One main source file's live code on this node ({@link #codeOnly}), by its source-root-relative path. */
+    public static String codeOf(String relativePath) {
+        return javaFiles().stream()
+            .filter(f -> f.relativePath().equals(relativePath))
+            .map(f -> codeOnly(f.text()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("this node did not compile " + relativePath));
+    }
+
+    /** The brace-balanced body of the first method in {@code code} whose declaration contains {@code signature}. */
+    public static String methodBody(String code, String signature) {
+        int at = code.indexOf(signature);
+        if (at < 0) {
+            throw new AssertionError("method not found: " + signature);
+        }
+        int open = code.indexOf('{', at);
+        int depth = 0;
+        for (int i = open; i < code.length(); i++) {
+            char c = code.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}' && --depth == 0) {
+                return code.substring(open, i + 1);
+            }
+        }
+        throw new AssertionError("unbalanced braces after " + signature);
+    }
+
     /**
      * Blanks out every comment <em>and</em> the inside of every string, char and text-block literal in {@code src},
      * keeping the literal delimiters and all line breaks, so a search over the result sees only code that is live on

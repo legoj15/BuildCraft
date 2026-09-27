@@ -77,33 +77,11 @@ public class ScrolledListTester {
     @Test
     public void theLibraryClickPicksFromTheDrawnRowsWithoutRefreshing() {
         String path = "buildcraft/builders/gui/GuiElectronicLibrary.java";
-        String code = MainSourceSet.javaFiles().stream()
-            .filter(f -> f.relativePath().equals(path))
-            .map(f -> MainSourceSet.codeOnly(f.text()))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("this node did not compile " + path));
-        String body = methodBody(code, "boolean clickList(");
+        String body = MainSourceSet.methodBody(MainSourceSet.codeOf(path), "boolean clickList(");
         Assertions.assertTrue(body.contains("rows.pick("), "clickList must hit-test through ScrolledList.pick");
         Assertions.assertFalse(body.contains("refreshList("),
             "clickList must not refresh the list before picking: a sync since the frame would shift the rows");
         Assertions.assertFalse(body.contains(".refresh("), "clickList must not refresh the ScrolledList itself");
-    }
-
-    /** The brace-balanced body of the first method whose declaration contains {@code signature}. */
-    private static String methodBody(String code, String signature) {
-        int at = code.indexOf(signature);
-        Assertions.assertTrue(at >= 0, "method not found: " + signature);
-        int open = code.indexOf('{', at);
-        int depth = 0;
-        for (int i = open; i < code.length(); i++) {
-            char c = code.charAt(i);
-            if (c == '{') {
-                depth++;
-            } else if (c == '}' && --depth == 0) {
-                return code.substring(open, i + 1);
-            }
-        }
-        throw new AssertionError("unbalanced braces after " + signature);
     }
 
     @Test

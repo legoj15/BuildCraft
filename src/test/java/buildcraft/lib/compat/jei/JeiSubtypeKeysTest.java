@@ -39,8 +39,9 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * give different keys — otherwise JEI either lists duplicates or merges variants into one entry.</li>
  * <li><b>Legacy text</b>: each key's {@code toString()} is the exact string the pre-2026-09-26 interpreters returned.
  * On 1.21.1, {@code JeiSubtypes} hands JEI 19.x that string as the legacy subtype info (what an old bookmark file is
- * matched against); a changed string silently orphans those bookmarks. JEI 19's current bookmark file stores the
- * full stack, so it survives regardless — this pins the older path.</li>
+ * matched against); a changed string silently orphans those bookmarks. JEI 19.27's current bookmark file stores the
+ * full stack (its BookmarkCodec goes through the typed-ingredient codec; checked with javap on the pinned jar), so it
+ * survives regardless — this pins the older import path.</li>
  * </ul>
  * The redstone board and robot keys are pinned separately ({@code ProgrammingRecipeCollectorTester}).
  */

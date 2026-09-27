@@ -67,8 +67,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  * refusal instead of the path it names.
  *
  * <p><b>Arena discipline, same as {@code RobotStationPluggableTester} and {@code EntityRobotTester}.</b> The
- * framework spaces arenas 6 blocks apart in X and 8 in Z, so every relative position here stays inside that
- * cell (x 3, z 1..7). These tests used to build at x=7, i.e. one block into the NEXT test's arena -- which
+ * framework spaces arenas 6 blocks apart in X and 7 in Z, so every relative position here stays inside that
+ * cell (x 0..5, z 0..6). These tests used to build at x=7, i.e. one block into the NEXT test's arena -- which
  * both risked overwriting a neighbour's blocks outright and pushed the pipe and the robot into a chunk this
  * test never force-loads the way it force-loads its own. And because force-loading only makes a chunk tick
  * <em>eventually</em> ({@link EntityArenaUtil#forceLoadEntityArena}), every phase below is gated on the state

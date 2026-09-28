@@ -49,7 +49,7 @@ import buildcraft.robotics.BCRoboticsStatements;
  *  {@link IDockingStationProvider} seam.
  *
  *  <p>The eight robot actions (goto/work/load-unload/wake-up/filter/filter-tool/forbid/force) go on every
- *  station. The six cargo actions are gated on what the station can actually move, exactly as 7.1.x's
+ *  station. The five cargo actions are gated on what the station can actually move, exactly as 7.1.x's
  *  {@code RobotsActionProvider} gated them:
  *  <ul>
  *  <li>Request Items / Accept Items — an item pipe (7.1.x {@code getPipeType() == ITEM}; here the station's
@@ -57,11 +57,11 @@ import buildcraft.robotics.BCRoboticsStatements;
  *  <li>Accept Fluids — a fluid pipe (the station's fluid output);</li>
  *  <li>Provide Items / Provide Fluids — a wooden pipe facing an inventory / tank (the station's item / fluid
  *      INPUT, the very seams 7.1.x tested);</li>
- *  <li>Request Needed Items — a real request provider beside the pipe. 7.1.x tested
- *      {@code getRequestProvider() != null}, but its pipe station answered {@code this} as the fallback, so the
- *      check never failed; the port asks for a provider OTHER than the station itself, which is what the
- *      check was evidently meant to say.</li>
- *  </ul> */
+ *  </ul>
+ *
+ *  <p>Request Needed Items is never offered: it was dead on arrival in 7.1.x and 8.0.x alike (an empty
+ *  activate and no consumers — machines get supplied through {@code DockingStationPipe.getRequestProvider()}'s
+ *  neighbour scan without it). It stays registered so gates saved with it still load. */
 public class RoboticsProvidersTest extends VanillaSetupBaseTester {
 
     /** A bare block entity that hosts a station through the API seam — what a future station-hosting
@@ -206,14 +206,13 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
             BCRoboticsStatements.ACTION_STATION_FORCE_ROBOT,
     };
 
-    /** The six cargo actions, each gated on one seam. */
+    /** The five cargo actions, each gated on one seam. */
     private static final IActionInternal[] CARGO_ACTIONS = {
             BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS,
             BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS,
             BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS,
             BCRoboticsStatements.ACTION_STATION_PROVIDE_FLUIDS,
             BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS,
-            BCRoboticsStatements.ACTION_STATION_MACHINE_REQUEST,
     };
 
     private static final ITriggerInternal[] ALL_TRIGGERS = {
@@ -235,7 +234,7 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
         }
     }
 
-    /** Exactly {@code expected} out of the six cargo actions — no more. */
+    /** Exactly {@code expected} out of the five cargo actions — no more. */
     private static void assertCargoExactly(List<IActionInternal> actions, IActionInternal... expected) {
         List<IActionInternal> want = List.of(expected);
         for (IActionInternal action : CARGO_ACTIONS) {
@@ -300,11 +299,15 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
                 BCRoboticsStatements.ACTION_STATION_PROVIDE_FLUIDS);
     }
 
+    /** Even a station with a real requester beside its pipe must not offer Request Needed Items — the action
+     *  never did anything in 7.1.x or 8.0.x, so the port keeps it out of the menu entirely. It stays
+     *  registered, so a gate saved with it still loads. */
     @Test
-    public void requestNeededItemsNeedsARequesterOtherThanTheStationItself() {
-        assertCargoExactly(actionsFor(Seam.SELF_REQUESTER));
-        assertCargoExactly(actionsFor(Seam.FOREIGN_REQUESTER),
-                BCRoboticsStatements.ACTION_STATION_MACHINE_REQUEST);
+    public void requestNeededItemsIsNeverOffered() {
+        List<IActionInternal> actions = actionsFor(Seam.FOREIGN_REQUESTER);
+        assertCargoExactly(actions);
+        Assertions.assertFalse(offers(actions, BCRoboticsStatements.ACTION_STATION_MACHINE_REQUEST),
+                "Request Needed Items is a registered no-op and must not be offered");
     }
 
     @Test

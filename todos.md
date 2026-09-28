@@ -16,7 +16,6 @@ Last audited: 2026-09-26
 - JEI category for the Integration Table — [notes](docs/todo-details.md#integration-table-jei)
 - Three marker game tests flaked together once on 26.1.2 — [notes](docs/todo-details.md#flaky-marker-tests)
 - Robots: make sure every reservation is released when a robot unloads or dies — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
-- Robots: decide whether "Request Needed Items" does something or leaves the gate menu — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 
 ## 🆕 New Features (version 2026.2)

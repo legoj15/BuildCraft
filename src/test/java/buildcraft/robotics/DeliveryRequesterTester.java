@@ -164,7 +164,7 @@ public class DeliveryRequesterTester {
 
     // ---------- virtual provider (gate Request Items actions) ----------
 
-    /** A gate holding {@code Request Needed Items} with an item parameter turns its station into a virtual
+    /** A gate holding {@code Request Items} with an item parameter turns its station into a virtual
      *  requester for exactly that stack — the Ph6 statement's one real effect, read back through the same
      *  encoding 7.1.x used (side/action/param bits over 127 slots). */
     public static void gateRequestItemsActionMakesTheStationAProvider(GameTestHelper helper) {

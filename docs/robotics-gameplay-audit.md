@@ -181,12 +181,6 @@ merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
 
 Tracked as one-liners in todos.md; the detail lives here.
 
-- **"Request Needed Items" does nothing** (`ActionStationRequestItemsMachine` / `ACTION_STATION_MACHINE_REQUEST`):
-  `actionActivate` is empty and nothing reads it, in 7.1.x too — machine requests already go through
-  `DockingStationPipe.getRequestProvider()`'s neighbour scan. Decide: wire it, or drop it from the menu (keep it
-  registered so saved gates load). Note on the 2026-09-26 action gating: 7.1.x offered Accept Items on any item pipe
-  (only Provide Items needed the wooden input), and its Request Needed Items check never failed because
-  `getRequestProvider()` returned `this`; the port requires a provider other than the station itself.
 - **Reservation release on unload/kill.** AIs release shared reservations only in `end()`, which is skipped when a
   robot unloads or is killed mid-task (the picker's leak of this shape was fixed 2026-09-26 with a claim table).
   Audit `RobotRegistry` resource/block reservations (`AIRobotSearchBlock`, the BreakBlock boards) against

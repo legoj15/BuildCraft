@@ -15,7 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.robots.DockingStation;
-import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.statements.IActionExternal;
 import buildcraft.api.statements.IActionInternal;
 import buildcraft.api.statements.IActionInternalSided;
@@ -30,14 +29,15 @@ public enum RobotsActionProvider implements IActionProvider {
     /** The robot/station actions, offered only to containers whose tile hosts a station (gated on
      *  {@code RobotUtils.getStations(...)} being non-empty, as in 7.1.x).
      *
-     *  <p>The eight robot actions go on every station. The six cargo actions follow 7.1.x's gating, read off
+     *  <p>The eight robot actions go on every station. The five cargo actions follow 7.1.x's gating, read off
      *  the station's own seams rather than a pipe-type enum so any station host answers the same way:
      *  Request/Accept Items where the station has an item output (7.1.x: an item pipe), Accept Fluids where it
-     *  has a fluid output (a fluid pipe), Provide Items/Fluids where it has an item/fluid input (a wooden pipe
-     *  facing an inventory/tank), and Request Needed Items where a request provider OTHER than the station
-     *  itself sits beside it. 7.1.x checked {@code getRequestProvider() != null}, but its pipe station
-     *  answered {@code this} as the fallback, so that check never failed and the action cluttered every
-     *  station; the port asks the question the check was evidently meant to ask. Only the menu is gated —
+     *  has a fluid output (a fluid pipe), and Provide Items/Fluids where it has an item/fluid input (a wooden
+     *  pipe facing an inventory/tank).
+     *
+     *  <p>Request Needed Items is deliberately never offered: it was dead on arrival in 7.1.x and 8.0.x
+     *  alike — an empty activate, no consumers, machines get supplied through {@code getRequestProvider()}'s
+     *  neighbour scan without it. It stays registered so gates saved with it load. Only the menu is gated —
      *  an action already set on a gate is kept (the gate validates parameter counts, not this list). */
     @Override
     public void addInternalActions(Collection<IActionInternal> actions, IStatementContainer container) {
@@ -58,14 +58,11 @@ public enum RobotsActionProvider implements IActionProvider {
         boolean fluidOutput = false;
         boolean itemInput = false;
         boolean fluidInput = false;
-        boolean requester = false;
         for (DockingStation station : stations) {
             itemOutput |= station.getItemOutput() != null;
             fluidOutput |= station.getFluidOutput() != null;
             itemInput |= station.getItemInput() != null;
             fluidInput |= station.getFluidInput() != null;
-            IRequestProvider provider = station.getRequestProvider();
-            requester |= provider != null && provider != station;
         }
         if (itemOutput) {
             actions.add(BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS);
@@ -79,9 +76,6 @@ public enum RobotsActionProvider implements IActionProvider {
         }
         if (fluidInput) {
             actions.add(BCRoboticsStatements.ACTION_STATION_PROVIDE_FLUIDS);
-        }
-        if (requester) {
-            actions.add(BCRoboticsStatements.ACTION_STATION_MACHINE_REQUEST);
         }
     }
 

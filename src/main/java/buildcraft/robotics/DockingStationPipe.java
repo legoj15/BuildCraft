@@ -299,7 +299,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     // 7.1.x's two-half discovery, ported whole. The physical half: a Requester block beside the pipe is
     // found by scanning the host pipe's six neighbours (7.1.x scanned the pipe tile's neighbours for an
     // IRequestProvider — identity, not capability — and so does this). The virtual half: EVERY station is
-    // itself a provider whose requests are the gate-side "Request Needed Items" actions, which is what
+    // itself a provider whose requests are the gate-side "Request Items" actions, which is what
     // makes that Ph6 statement actually do something. The fallback keeps getRequestProvider() non-null,
     // exactly as 7.1.x returned `this` — the delivery search polls every station as a provider.
 

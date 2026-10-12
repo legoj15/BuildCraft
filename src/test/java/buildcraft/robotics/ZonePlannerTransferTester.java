@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemMapLocation;
@@ -22,9 +23,11 @@ import buildcraft.robotics.zone.ZonePlan;
  * paintbrush store the zone into that colour's tile layer) and an OUTPUT write (the layer is stamped back onto
  * a fresh map). Pins the world&lt;-&gt;tile-relative offset (layers are stored relative to the tile, the item
  * carries absolute coords) and {@link ItemMapLocation#setZone}/{@code getZone}. Also pins the output refusal:
- * a brush whose colour layer is empty must not run the transfer (no empty-zone maps, no map consumed). A game
- * test because it builds real {@link ItemStack}s with data components; the {@code gameTestServer} run sets
- * {@code buildcraft.dev=true}, so the otherwise dev-gated {@code MAP_LOCATION} item exists here.
+ * a brush whose colour layer is empty must not run the transfer (no empty-zone maps, no map consumed), and
+ * an inventory edit must mark the chunk dirty (the setChanged callback wiring that keeps rack contents from
+ * silently vanishing on relog). A game test because it builds real {@link ItemStack}s with data components;
+ * the {@code gameTestServer} run sets {@code buildcraft.dev=true}, so the otherwise dev-gated
+ * {@code MAP_LOCATION} item exists here.
  */
 public class ZonePlannerTransferTester {
 
@@ -94,6 +97,20 @@ public class ZonePlannerTransferTester {
                 "an unpainted colour writes no map at all, not an empty-zone map");
         helper.assertTrue(tile.invOutputMapLocation.getStackInSlot(0).getCount() == 1,
                 "the would-be-written map location is left untouched");
+
+        // --- PERSISTENCE: an inventory edit must mark the chunk dirty via the tile's setChanged ---
+        // Vanilla re-caches a block entity's saved NBT only when setChanged() runs, so a rack edit with
+        // no wired callback would persist the stale pre-edit state — a stashed brush vanished on relog.
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+        //? if >=1.21.10 {
+        chunk.tryMarkSaved();
+        //?} else {
+        /*chunk.setUnsaved(false);*/
+        //?}
+        helper.assertFalse(chunk.isUnsaved(), "baseline: the chunk flag is clean before the edit");
+        tile.invPaintbrushes.setStackInSlot(0,
+                ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), DyeColor.BLACK));
+        helper.assertTrue(chunk.isUnsaved(), "a rack edit marks the chunk dirty so the brush survives the save");
 
         helper.succeed();
     }

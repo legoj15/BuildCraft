@@ -68,6 +68,15 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         invOutputPaintbrush.setChecker((slot, stack) -> stack.getItem() instanceof ItemPaintbrush_BC8);
         invInputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
         invOutputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
+
+        // Vanilla re-caches a block entity's saved NBT only when setChanged() runs, so an inventory edit
+        // with no callback would persist the stale pre-edit state — brushes stashed in the rack vanished
+        // on relog. Same wiring as the distiller / heat exchanger tiles.
+        for (ItemHandlerSimple inv : new ItemHandlerSimple[] {
+                invPaintbrushes, invInputPaintbrush, invInputMapLocation, invInputResult,
+                invOutputPaintbrush, invOutputMapLocation, invOutputResult }) {
+            inv.setCallback((handler, slot, before, after) -> setChanged());
+        }
     }
 
     /** Ticks to complete one input/output transfer — 10 s, matching 1.12.2. */

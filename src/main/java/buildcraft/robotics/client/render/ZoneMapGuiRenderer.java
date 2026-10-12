@@ -69,7 +69,7 @@ public final class ZoneMapGuiRenderer {
         Matrix4f mat = pose.last().pose();
         ZoneMapGeometry.emitTerrain(buffers.getBuffer(BCLibRenderTypes.debugSolid()), mat, camera,
                 viewportW, viewportH, level);
-        ZoneMapGeometry.emitOverlays(buffers.getBuffer(BCLibRenderTypes.debugFilled()), mat, camera,
+        ZoneMapGeometry.emitOverlays(buffers.getBuffer(BCLibRenderTypes.zoneOverlay()), mat, camera,
                 tilePos, layers, bufferLayer, bufferColorIndex, hoverPos, level);
         buffers.endBatch();
 

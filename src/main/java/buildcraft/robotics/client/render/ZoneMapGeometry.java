@@ -31,7 +31,7 @@ import buildcraft.robotics.zone.ZonePlan;
  * surface. Both use BuildCraft's POSITION_COLOR debug render types — no textures, no lighting — with
  * per-face shading baked into the vertex colour, the same trick the 1.12.2 renderer used. The caller
  * picks the render types ({@code BCLibRenderTypes.debugSolid()} for terrain,
- * {@code BCLibRenderTypes.debugFilled()} for overlays) and supplies the matching consumer.
+ * {@code BCLibRenderTypes.zoneOverlay()} for overlays) and supplies the matching consumer.
  */
 public final class ZoneMapGeometry {
 

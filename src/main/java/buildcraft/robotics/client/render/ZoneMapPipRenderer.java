@@ -76,7 +76,7 @@ public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRende
             return;
         }
         RenderType terrainType = BCLibRenderTypes.debugSolid();
-        RenderType overlayType = BCLibRenderTypes.debugFilled();
+        RenderType overlayType = BCLibRenderTypes.zoneOverlay();
         int wPx = state.x1() - state.x0();
         int hPx = state.y1() - state.y0();
         //? if >=26.2 {

@@ -167,6 +167,47 @@ public final class BCLibRenderTypes {
     }
 
     /**
+     * Translucent, vertex-coloured QUADs with depth writes and <em>no view-offset Z layering</em> — the
+     * zone tints and hover highlight of the Zone Planner's map viewport. NOT vanilla's
+     * {@code debugFilledBox()} (what {@link #debugFilled()} returns): that type carries
+     * {@code VIEW_OFFSET_Z_LAYERING}, a modelview shrink-to-eye hack calibrated for OpenGL's forward depth
+     * range. Under the Vulkan backend's reversed depth — inside the picture-in-picture pass's own
+     * projection — the offset moves these quads out of the clip volume and the overlays simply don't draw:
+     * the map shows terrain (a layering-free type) but no zones, no hover box, no paint preview, which
+     * reads to a player as "painting does nothing". Our overlay geometry manages its own depth lift in
+     * world space ({@code OVERLAY_LIFT} / {@code HOVER_DEPTH_BIAS} in {@code ZoneMapGeometry}), so it
+     * never needed the layering hack.
+     */
+    //? if >=1.21.11 {
+    private static final RenderType ZONE_OVERLAY = RenderType.create(
+            "buildcraft:zone_overlay",
+            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+    );
+    //?} elif >=1.21.10 {
+    /*private static final RenderType ZONE_OVERLAY = RenderType.create(
+            "buildcraft:zone_overlay", 1536, false, false, LED_PIPELINE,
+            RenderType.CompositeState.builder().createCompositeState(false)
+    );*/
+    //?} else {
+    /*// 1.21.1: LED_PIPELINE's classic equivalent — position_color, translucent blend, default
+    // LEQUAL depth WITH write, and no layering state.
+    private static final RenderType ZONE_OVERLAY = RenderType.create(
+            "buildcraft:zone_overlay",
+            com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            1536, false, false,
+            RenderType.CompositeState.builder()
+                    .setShaderState(net.minecraft.client.renderer.RenderStateShard.POSITION_COLOR_SHADER)
+                    .setTransparencyState(net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .createCompositeState(false)
+    );*/
+    //?}
+
+    public static RenderType zoneOverlay() {
+        return ZONE_OVERLAY;
+    }
+
+    /**
      * Vanilla's translucent, vertex-coloured filled-box render type. Used by the advanced-debug
      * overlay ({@link buildcraft.lib.debug.DebugRenderHelper}) — a box's per-vertex alpha controls
      * whether it reads as a translucent volume or a solid marker.

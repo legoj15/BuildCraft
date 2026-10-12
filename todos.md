@@ -7,7 +7,7 @@ Last audited: 2026-09-26
 - Fix the last places English text leaks through translations — [list](docs/todo-details.md#translation-follow-ups)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Electronic Library keeps only one copy when the same build is saved under two names — [notes](docs/todo-details.md#snapshot-name-collision)
-- Zone Planner may not save changes made in its slots — [notes](docs/todo-details.md#zone-planner-slot-saving)
+- Emzuli and Wood/Diamond pipe filters may silently lose their filter items on relog (same missing-change-callback class as the fixed Zone Planner rack) — [notes](docs/todo-details.md#pipe-filter-callbacks)
 - Builders in Clear mode loop forever on a block that outside water keeps re-flooding — [notes](docs/todo-details.md#builder-clear-mode-reflood-loop)
 - Quarry frame stalls on a block it isn't allowed to mine — [notes](docs/todo-details.md#quarry-frame-stall)
 - Mining Well tube permanently deletes the water it drills through — [notes](docs/todo-details.md#mining-well-tube-erases-water)

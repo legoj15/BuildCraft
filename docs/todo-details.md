@@ -98,9 +98,9 @@ Pre-existing: if a cell in `TileQuarry.frameBreakBlockPoses` fails `canMine` (be
 
 Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `setBlockAndUpdate(TUBE)` overwrites every water source in the bore, and retracting (`removeBlock`) leaves air — a well drilled through a pond permanently deletes its water column. Make the tube waterloggable, or restore the fluid on retract.
 
-## Zone Planner slot saving
+## Pipe filter callbacks
 
-`TileZonePlanner` builds its seven `ItemHandlerSimple` slots (`invPaintbrushes`, `invInputPaintbrush`, `invInputMapLocation`, …) with a null callback outside the `itemManager`, so GUI changes may never call `setChanged()` — the bug class fixed for the Filtered Buffer on 2026-09-26 (`ItemHandlerManager` prebuilt-handler callback). Check whether the container/slot path marks the tile dirty; if not, wire the callback and add a save round-trip game test.
+Suspected 2026-10-12 while fixing the Zone Planner rack (`3274a55bc`): `PipeBehaviourEmzuli.invFilters` and `PipeBehaviourWoodDiamond.filters` are built with no change callback, the same missing-`setChanged()` class that silently emptied the planner's rack on relog. Pipe behaviours save through their own NBT path, so whether the pipe re-serialises on filter edits needs checking before wiring anything — verify with a stash-filter/relog in-client test first.
 
 ## Integration Table JEI
 

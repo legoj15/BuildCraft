@@ -21,9 +21,10 @@ import buildcraft.robotics.zone.ZonePlan;
  * round trip a player drives through the GUI slots: an INPUT read (a ZONE {@link ItemMapLocation} + a coloured
  * paintbrush store the zone into that colour's tile layer) and an OUTPUT write (the layer is stamped back onto
  * a fresh map). Pins the world&lt;-&gt;tile-relative offset (layers are stored relative to the tile, the item
- * carries absolute coords) and {@link ItemMapLocation#setZone}/{@code getZone}. A game test because it builds
- * real {@link ItemStack}s with data components; the {@code gameTestServer} run sets {@code buildcraft.dev=true},
- * so the otherwise dev-gated {@code MAP_LOCATION} item exists here.
+ * carries absolute coords) and {@link ItemMapLocation#setZone}/{@code getZone}. Also pins the output refusal:
+ * a brush whose colour layer is empty must not run the transfer (no empty-zone maps, no map consumed). A game
+ * test because it builds real {@link ItemStack}s with data components; the {@code gameTestServer} run sets
+ * {@code buildcraft.dev=true}, so the otherwise dev-gated {@code MAP_LOCATION} item exists here.
  */
 public class ZonePlannerTransferTester {
 
@@ -74,6 +75,25 @@ public class ZonePlannerTransferTester {
         helper.assertTrue(roundTripped != null && roundTripped.get(ax, az),
                 "the zone round-trips back to its original absolute world coords");
         helper.assertFalse(roundTripped != null && roundTripped.get(ax + 1, az), "and nothing else leaks in");
+
+        // --- REFUSAL: a BLACK paintbrush (its layer was never painted) + a fresh map must not run ---
+        // The gate must fire before any progress: a short spin pins the counter at idle (pre-fix it climbs
+        // 0,1,2...), then a full drive window proves no output item appears and the map is never consumed.
+        tile.invOutputResult.setStackInSlot(0, ItemStack.EMPTY);
+        tile.invOutputPaintbrush.setStackInSlot(0,
+                ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), DyeColor.BLACK));
+        tile.invOutputMapLocation.setStackInSlot(0, new ItemStack(BCCoreItems.MAP_LOCATION.get()));
+        for (int i = 0; i < 5; i++) {
+            tile.serverTick();
+        }
+        helper.assertTrue(tile.getProgressOutput() == -1,
+                "the output transfer never starts progressing for an unpainted colour");
+        drive(tile);
+
+        helper.assertTrue(tile.invOutputResult.getStackInSlot(0).isEmpty(),
+                "an unpainted colour writes no map at all, not an empty-zone map");
+        helper.assertTrue(tile.invOutputMapLocation.getStackInSlot(0).getCount() == 1,
+                "the would-be-written map location is left untouched");
 
         helper.succeed();
     }

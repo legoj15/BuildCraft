@@ -31,6 +31,12 @@ import buildcraft.lib.misc.NBTUtilBC;
  * vanilla type whose static init needs the registries up — lets the pure zone-math be exercised by cheap JUnit
  * on every node. The on-disk / on-wire form is unchanged: each chunk still serialises its {@code chunkX} /
  * {@code chunkZ} as plain ints (the {@code "chunkMapping"} contract shared with {@code ItemMapLocation}).
+ *
+ * <p>Invariant: every chunk in the map has at least one marked column. {@link #set} prunes on the last clear;
+ * the deserialisers ({@link #readFromNBT}, {@link #readFromByteBuf}) and the copy constructor drop
+ * column-less chunks from crafted or legacy data, so the invariant holds at every trust boundary. It is what
+ * keeps {@link #isEmpty()} a truthful "nothing is marked" for the planner's output gate, and what keeps
+ * {@code ZoneChunk.getRandomBlockPos} from NPE-ing on a chunk with no columns.
  */
 public class ZonePlan implements IZone {
     private final HashMap<Long, ZoneChunk> chunkMapping = new HashMap<>();
@@ -39,7 +45,10 @@ public class ZonePlan implements IZone {
 
     public ZonePlan(ZonePlan old) {
         for (Map.Entry<Long, ZoneChunk> entry : old.chunkMapping.entrySet()) {
-            chunkMapping.put(entry.getKey(), new ZoneChunk(entry.getValue()));
+            ZoneChunk chunk = entry.getValue();
+            if (!chunk.isEmpty()) {
+                chunkMapping.put(entry.getKey(), new ZoneChunk(chunk));
+            }
         }
     }
 
@@ -107,6 +116,11 @@ public class ZonePlan implements IZone {
         return chunkMapping.containsKey(packChunkKey(chunkX, chunkZ));
     }
 
+    /** True when no column is marked — a painted nothing. Gates the planner's output transfer. */
+    public boolean isEmpty() {
+        return chunkMapping.isEmpty();
+    }
+
     /** The packed chunk keys currently occupied — decode with {@link #unpackChunkX}/{@link #unpackChunkZ}. */
     public Set<Long> getChunkKeys() {
         return chunkMapping.keySet();
@@ -135,6 +149,9 @@ public class ZonePlan implements IZone {
             CompoundTag zoneChunkTag = NBTUtilBC.getCompound(list, i);
             ZoneChunk chunk = new ZoneChunk();
             chunk.readFromNBT(zoneChunkTag);
+            if (chunk.isEmpty()) {
+                continue;
+            }
             chunkMapping.put(
                 packChunkKey(
                     NBTUtilBC.getInt(zoneChunkTag, "chunkX", 0),
@@ -206,6 +223,9 @@ public class ZonePlan implements IZone {
             long key = packChunkKey(buf.readInt(), buf.readInt());
             ZoneChunk value = new ZoneChunk();
             value.readFromByteBuf(buf);
+            if (value.isEmpty()) {
+                continue;
+            }
             chunkMapping.put(key, value);
         }
         return this;

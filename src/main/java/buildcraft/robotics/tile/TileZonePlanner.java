@@ -154,7 +154,11 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
     }
 
     private boolean isOutputValid() {
-        return paintbrushColour(invOutputPaintbrush.getStackInSlot(0)) != null
+        DyeColor colour = paintbrushColour(invOutputPaintbrush.getStackInSlot(0));
+        // An empty layer (brush colour never painted here) refuses the transfer outright — otherwise a
+        // colour-mismatched brush would happily burn 10 s and produce a ZONE map containing zero chunks.
+        return colour != null
+                && !layers[colour.ordinal()].isEmpty()
                 && invOutputMapLocation.getStackInSlot(0).getItem() instanceof ItemMapLocation
                 && invOutputResult.getStackInSlot(0).isEmpty();
     }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
@@ -147,6 +148,54 @@ public class ZonePlanTest {
         original.set(8, 8, true);
 
         Assertions.assertEquals(Set.of("3,3"), cells(copy), "the copy is snapshotted, not aliased");
+    }
+
+    @Test
+    public void testEveryReadPathDropsColumnlessChunks() {
+        // Crafted or legacy data can carry a chunk with zero marked columns. Every read path must drop it:
+        // "a stored chunk implies a marked column" is what keeps isEmpty() truthful for the planner's
+        // output gate, and what keeps ZoneChunk.getRandomBlockPos from NPE-ing on a null BitSet.
+        ZoneChunk realChunk = new ZoneChunk();
+        realChunk.set(3, 3, true);
+
+        // NBT: one real chunk plus one with no bits and no fullSet flag.
+        CompoundTag tag = new CompoundTag();
+        ListTag list = new ListTag();
+        CompoundTag realTag = new CompoundTag();
+        realChunk.writeToNBT(realTag);
+        realTag.putInt("chunkX", 0);
+        realTag.putInt("chunkZ", 0);
+        list.add(realTag);
+        CompoundTag emptyTag = new CompoundTag();
+        new ZoneChunk().writeToNBT(emptyTag);
+        emptyTag.putInt("chunkX", 5);
+        emptyTag.putInt("chunkZ", 7);
+        list.add(emptyTag);
+        tag.put("chunkMapping", list);
+
+        ZonePlan fromNbt = new ZonePlan();
+        fromNbt.readFromNBT(tag);
+        Assertions.assertTrue(fromNbt.hasChunk(0, 0), "the real chunk survives");
+        Assertions.assertFalse(fromNbt.hasChunk(5, 7), "a columnless chunk from NBT is dropped");
+
+        // ByteBuf: same pair, hand-rolled because ZonePlan only ever writes whole plans.
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        buf.writeInt(2);
+        buf.writeInt(0);
+        buf.writeInt(0);
+        realChunk.writeToByteBuf(buf);
+        buf.writeInt(5);
+        buf.writeInt(7);
+        new ZoneChunk().writeToByteBuf(buf);
+
+        ZonePlan fromBuf = new ZonePlan().readFromByteBuf(buf);
+        Assertions.assertTrue(fromBuf.hasChunk(0, 0), "the real chunk survives the wire");
+        Assertions.assertFalse(fromBuf.hasChunk(5, 7), "a columnless chunk from the wire is dropped");
+
+        // Copy constructor: only reachable with a tainted in-memory map, but filtered for symmetry.
+        ZonePlan tainted = new ZonePlan();
+        tainted.getChunkMapping().put(ZonePlan.packChunkKey(2, 2), new ZoneChunk());
+        Assertions.assertFalse(new ZonePlan(tainted).hasChunk(2, 2), "the copy constructor drops it too");
     }
 
     @Test

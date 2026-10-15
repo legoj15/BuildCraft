@@ -20,6 +20,7 @@ Last audited: 2026-09-26
 
 ## 🆕 New Features (version 2026.2)
 
+- Guide book: a Robots chapter, file the hidden robot items and statements, and decide the table-of-contents restructure — [design](docs/guide-robots-and-toc.md)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
@@ -50,4 +51,3 @@ Last audited: 2026-09-26
 - Dedicated pipe-texture atlas — vanilla render internals forbid it today — [why + reopen trigger](docs/todo-details.md#pipe-atlas-split-blocked)
 - Fluid viscosity — floating gases and swim effects need vanilla support — [quick notes](docs/todo-details.md#quick-notes)
 - Drop the old JEI recipe-transfer method on 26.2 once JEI deletes it — [notes](docs/todo-details.md#jei-old-transfer-overload)
-- Bump the 26.2 node past NeoForge 26.2.0.84 — .87's access transformer breaks the dev recompile for everyone — [diagnosis](docs/todo-details.md#neoforge-262087-recompile-break)

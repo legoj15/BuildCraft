@@ -20,10 +20,12 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.client.gui.GuiProgrammingTable;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.gui.GuiIntegrationTable;
 
 /**
  * JEI integration for robotics: the Programming Table category (every board program, the cost, and the grid cell
- * to click), the table as its catalyst, a click-through on the table GUI's power bar, and subtype keys that tell
+ * to click), the Integration Table category (blank robot + board = that robot, so a functional robot has a recipe),
+ * both tables as catalysts, click-throughs on their GUIs' power bars, and subtype keys that tell
  * boards and robots apart by program (robots also by charged vs drained) — without those, JEI merges every board into
  * one entry (and every robot into another) because the program rides in {@code CUSTOM_DATA}. See
  * {@link RoboticsJeiSubtypes}.
@@ -46,6 +48,7 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         registration.addRecipeCategories(new ProgrammingTableCategory(registration.getJeiHelpers().getGuiHelper()));
+        registration.addRecipeCategories(new IntegrationTableCategory(registration.getJeiHelpers().getGuiHelper()));
     }
 
     @Override
@@ -54,11 +57,13 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
         // relative order of the latter and JEI's own start is not ours to rely on, and the call is once-per-JVM.
         BCRoboticsRecipes.ensureInitialized();
         registration.addRecipes(ProgrammingRecipeJeiTypes.PROGRAMMING, ProgrammingRecipeCollector.collect());
+        registration.addRecipes(IntegrationRecipeJeiTypes.INTEGRATION, IntegrationRecipeCollector.collect());
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addCraftingStation(ProgrammingRecipeJeiTypes.PROGRAMMING, BCSiliconItems.PROGRAMMING_TABLE.get());
+        registration.addCraftingStation(IntegrationRecipeJeiTypes.INTEGRATION, BCSiliconItems.INTEGRATION_TABLE.get());
     }
 
     @Override
@@ -67,5 +72,8 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
         // option grid (x 43-150), which the GUI hit-tests itself.
         registration.addRecipeClickArea(GuiProgrammingTable.class, 164, 36, 4, 70,
                 ProgrammingRecipeJeiTypes.PROGRAMMING);
+        // Likewise the Integration Table's bar (GuiIntegrationTable.RECT_PROGRESS), clear of its slots.
+        registration.addRecipeClickArea(GuiIntegrationTable.class, 164, 22, 4, 70,
+                IntegrationRecipeJeiTypes.INTEGRATION);
     }
 }

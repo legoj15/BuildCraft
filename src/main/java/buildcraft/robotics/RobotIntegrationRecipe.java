@@ -23,7 +23,8 @@ import buildcraft.robotics.item.ItemRobot;
  *  (which extended the now-gone {@code IntegrationRecipeBC}) onto the surviving {@link IntegrationRecipe} contract.
  *  The robot's stored charge is carried into the result; a zero-charge robot is topped up to
  *  {@link IRobotAccess#SAFETY_POWER} so a fresh craft never spawns a robot that dies where it stands. 7.1.x's
- *  {@code generateExample*} triples fed the old JEI view — dropped until robotics grows a JEI category. */
+ *  {@code generateExample*} triples fed the old JEI view — the JEI entries are now probed from the board registry by
+ *  {@code IntegrationRecipeCollector} instead. */
 public class RobotIntegrationRecipe extends IntegrationRecipe {
 
     /** 7.1.x charged a flat 50,000 RF, converted at the canonical 1 RF = 100,000 micro-MJ bridge. */

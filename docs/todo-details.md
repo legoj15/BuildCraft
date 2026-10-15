@@ -102,9 +102,9 @@ Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `se
 
 Suspected 2026-10-12 while fixing the Zone Planner rack (`3274a55bc`): `PipeBehaviourEmzuli.invFilters` and `PipeBehaviourWoodDiamond.filters` are built with no change callback, the same missing-`setChanged()` class that silently emptied the planner's rack on relog. Pipe behaviours save through their own NBT path, so whether the pipe re-serialises on filter edits needs checking before wiring anything — verify with a stash-filter/relog in-client test first.
 
-## Integration Table JEI
+## Programming Table JEI transfer
 
-Robot + board → programmed robot, flat 5000 MJ (`RobotIntegrationRecipe`). No JEI presence at all. Pattern: a JEI-free collector like `robotics/compat/jei/ProgrammingRecipeCollector`; `RoboticsJeiSubtypes` already keys robots and boards. Optional extra for the Programming Table: a JEI '+' transfer — `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.
+The Integration Table category needs one too (robot to the centre, board to any ring slot; no option state, so it is the simpler of the two). A JEI '+' transfer for the Programming Table category: `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.
 
 ## Flaky marker tests
 
@@ -116,7 +116,7 @@ Found in passing on 2026-09-26; none is a bug today.
 - `TileEngineStone_BC8` (26.x branch) still calls the deprecated item-level `Item#getCraftingRemainder()` under a narrow suppression: NeoForge #3157 moved the stack-sensitive call mid-26.1.x. Switch to `consumed.getCraftingRemainder()` once the 26.1 floor passes that build (check 26.2's first build too).
 - `StatementParameterItemStackExact.readFromNbt` defaults `availableSlots` to 0 when the key is missing; upstream kept -1 (unlimited up to 64). Only hand-edited/foreign NBT. Default to -1 + unit test.
 - `BCEnergyFluids`' "layer cake" guard (`if (targetFluidState.getType().isSame(this)) continue;` in both `getSpread` overrides) looks redundant with `FlowingFluid.canBeReplacedWith`.
-- The Programming Table's GUI geometry (slots, 6x4 grid pitch, selection cell, energy bar) is restated in `ContainerProgrammingTable`/`GuiProgrammingTable`, `ProgrammingTableCategory`'s crop maths and `BCRoboticsJeiPlugin`'s click area; expose shared constants so a GUI change can't silently desync JEI.
+- The Programming and Integration Tables' GUI geometry (slots, grid/ring pitch, selection cell, energy bar) is restated in their `Container*`/`Gui*` classes, `ProgrammingTableCategory`/`IntegrationTableCategory`'s crop maths and `BCRoboticsJeiPlugin`'s click areas; expose shared constants so a GUI change can't silently desync JEI.
 - `GuiGate`'s connector hit-test is duplicated between the `>=1.21.10` and 1.21.1 `mouseClicked` bodies and repeats `drawBackgroundTexture`'s layout maths — one helper.
 - Not re-audited: method-level `@SuppressWarnings("deprecation")` on Lens/Gate/FacadeItemModel, QuadItemBakedModel and the four FragileFluidShardModel getters.
 - Optional wording (user call): upstream 7.1.27 `b84395c85` renamed the emerald-pipe tips Whitelist/Blacklist to "Limit (Only Filtered)"/"Exclude (Except Filtered)"; the Diamond-Wood GUI still uses `tip.PipeItemsEmerald.*`.

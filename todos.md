@@ -13,6 +13,7 @@ Last audited: 2026-09-26
 - Mining Well tube permanently deletes the water it drills through — [notes](docs/todo-details.md#mining-well-tube-erases-water)
 - Pumps and robot planting/tool use still skip claim protection — [notes](docs/todo-details.md#machine-protection-gaps)
 - Stop pumps retrying a modded fluid block that refuses to be drained (low priority) — [notes](docs/todo-details.md#fake-player-cache-hardening)
+- JEI on 26.2 is a broken early build (no item list or recipe keys); update it — [notes](docs/todo-details.md#jei-26-2-bump)
 - JEI "+" recipe transfer for the Programming and Integration Tables — [notes](docs/todo-details.md#programming-table-jei-transfer)
 - Three marker game tests flaked together once on 26.1.2 — [notes](docs/todo-details.md#flaky-marker-tests)
 - Robots: make sure every reservation is released when a robot unloads or dies — [audit follow-ups](docs/robotics-gameplay-audit.md#follow-ups)

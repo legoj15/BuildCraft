@@ -102,6 +102,10 @@ Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `se
 
 Suspected 2026-10-12 while fixing the Zone Planner rack (`3274a55bc`): `PipeBehaviourEmzuli.invFilters` and `PipeBehaviourWoodDiamond.filters` are built with no change callback, the same missing-`setChanged()` class that silently emptied the planner's rack on relog. Pipe behaviours save through their own NBT path, so whether the pipe re-serialises on filter edits needs checking before wiring anything — verify with a stash-filter/relog in-client test first.
 
+## JEI 26.2 bump
+
+`versions/26.2/gradle.properties` pins `jei_version=30.0.0.1`. In the dev client its `NeoForgeGuiPlugin` dies at runtime start with `NoClassDefFoundError: net/neoforged/neoforge/client/event/ContainerScreenEvent$Render$Foreground` (NeoForge 26.2.0.88), so there is no ingredient list and no R/U lookup keys; recipe pages opened from BC click areas still work. Latest at 2026-10-15 is `30.42.0.236`, verified working in the smoke client. Blocker: it marks `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal, so `ForRemovalApiGuardTester` fails on `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler`. Migrate those three to the replacement overload behind a `//? if >=26.2` (or whatever line introduced it), then bump. Check whether the player-facing `jei` dependency range in the mods.toml needs raising too.
+
 ## Programming Table JEI transfer
 
 The Integration Table category needs one too (robot to the centre, board to any ring slot; no option state, so it is the simpler of the two). A JEI '+' transfer for the Programming Table category: `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.

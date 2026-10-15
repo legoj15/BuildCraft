@@ -1,0 +1,160 @@
+{
+  "name": "jei-integration-table",
+  "description": "JEI Integration Table category, opened from the table's energy-bar click area. JEI ignores the bridge's key injection (it listens to NeoForge's key event), so lookups go through mouse clicks.",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "label": "load the rig's chunks",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "?forceload add {X-4} {Z-4} {X+4} {Z+4}"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "label": "setup",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "difficulty peaceful",
+        "time set 6000",
+        "weather clear",
+        "fill {X-4} {Y-1} {Z-4} {X+4} {Y-1} {Z+4} minecraft:smooth_stone",
+        "?fill {X-4} {Y} {Z-4} {X+4} {Y+4} {Z+4} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:integration_table",
+        "?clear @p",
+        "item replace entity @p hotbar.0 with buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotMiner\"},energy:100000000000L}]",
+        "item replace entity @p hotbar.1 with buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotKnight\"},energy:0L}]",
+        "item replace entity @p hotbar.2 with buildcraftunofficial:robot"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "label": "open table",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiIntegrationTable"
+    },
+    {
+      "name": "table-gui",
+      "do": "shot",
+      "look": "the real Integration Table GUI, for comparing its ring/preview/result layout with the JEI page"
+    },
+    {
+      "label": "click the energy bar (JEI click area)",
+      "do": "click",
+      "x": 291,
+      "y": 60
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "name": "jei-category",
+      "do": "shot",
+      "look": "JEI page titled Integration Table: blank robot in the centre of the 3x3 ring, a programmed board in the top-left ring cell, the programmed robot in the preview and result slots, MJ cost under the panel; crop clean (no title text, no inventory)"
+    },
+    {
+      "label": "left-click the result robot = its recipes",
+      "do": "click",
+      "x": 266,
+      "y": 144
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "name": "jei-robot-recipe",
+      "do": "shot",
+      "look": "the programmed robot's recipe lookup lands on the Integration Table entry for that program (1/1, or 1/N if crafting recipes also show), not 'no recipes'"
+    },
+    {
+      "do": "key",
+      "key": "escape"
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "label": "reopen table",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiIntegrationTable"
+    },
+    {
+      "label": "click the energy bar",
+      "do": "click",
+      "x": 291,
+      "y": 60
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "label": "right-click the centre blank robot = its uses",
+      "do": "click",
+      "x": 172,
+      "y": 144,
+      "button": 1
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "name": "jei-blank-robot-uses",
+      "do": "shot",
+      "look": "uses of the blank robot include the Integration Table category paging through every robot program"
+    },
+    {
+      "do": "key",
+      "key": "escape"
+    },
+    {
+      "do": "close"
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "jei-transfer",
+  "description": "JEI '+' recipe transfer on each BuildCraft transfer handler: Assembly Table (real items), Auto Workbench (phantom blueprint) and Distiller (buckets). JEI ignores the bridge's key injection, so recipe pages open from each GUI's click area and '+' is clicked by position (GUI scale 2, 427x240 screen).",
+  "base": [0, 150, 0],
+  "steps": [
+    { "label": "load the rig's chunks", "do": "cmd", "run": ["gamemode creative @p", "?forceload add {X-4} {Z-4} {X+4} {Z+4}"] },
+    { "do": "tp", "at": [0, 0, 2], "yaw": 180, "pitch": 30 },
+    { "do": "wait", "ms": 3000 },
+    { "label": "setup", "do": "cmd", "run": [
+      "difficulty peaceful", "time set 6000", "weather clear",
+      "fill {X-4} {Y-1} {Z-4} {X+4} {Y-1} {Z+4} minecraft:smooth_stone",
+      "?fill {X-4} {Y} {Z-4} {X+4} {Y+4} {Z+4} minecraft:air",
+      "setblock {X} {Y} {Z} buildcraftunofficial:assembly_table",
+      "setblock {X+2} {Y} {Z} buildcraftunofficial:autoworkbench_item",
+      "setblock {X-2} {Y} {Z} buildcraftunofficial:distiller",
+      "?clear @p",
+      "give @p minecraft:redstone 64", "give @p minecraft:diamond 64",
+      "give @p buildcraftunofficial:oil_bucket 4"
+    ] },
+    { "do": "tp", "at": [0, 0, 2], "yaw": 180, "pitch": 30 },
+
+    { "do": "aim", "at": [0, 0, 0] },
+    { "label": "open Assembly Table", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiAssemblyTable" },
+    { "label": "click the power bar (JEI click area)", "do": "click", "x": 213, "y": 70 },
+    { "do": "wait", "ms": 800 },
+    { "name": "asm-jei", "do": "shot", "look": "JEI Assembly Table page 1: redstone + diamond -> diamond chipset, with a '+' button bottom-right" },
+    { "label": "click '+'", "do": "click", "x": 289, "y": 196 },
+    { "do": "wait", "ms": 800 },
+    { "name": "asm-after-transfer", "do": "shot", "look": "back on the Assembly Table: one redstone and one diamond moved into the input grid, the hotbar stacks show 63" },
+    { "do": "close" },
+
+    { "do": "aim", "at": [2, 0, 0] },
+    { "label": "open Auto Workbench", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiAutoCraft" },
+    { "label": "click the progress arrow (JEI click area)", "do": "click", "x": 226, "y": 73 },
+    { "do": "wait", "ms": 800 },
+    { "name": "awb-jei", "do": "shot", "look": "JEI Crafting page 1 with a '+' beside the first recipe" },
+    { "label": "click the first recipe's '+'", "do": "click", "x": 283, "y": 140 },
+    { "do": "wait", "ms": 800 },
+    { "name": "awb-after-transfer", "do": "shot", "look": "back on the Auto Workbench: the blueprint grid shows the first recipe's pattern as phantom items" },
+    { "do": "close" },
+
+    { "do": "aim", "at": [-2, 0, 0] },
+    { "label": "open Distiller", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiDistiller" },
+    { "label": "click the process schematic (JEI click area)", "do": "click", "x": 204, "y": 79 },
+    { "do": "wait", "ms": 800 },
+    { "name": "dist-jei", "do": "shot", "look": "JEI Distiller page 1: oil in, two fractions out, '+' bottom-right" },
+    { "label": "click '+'", "do": "click", "x": 303, "y": 190 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "dist-after-transfer", "do": "shot", "look": "back on the Distiller: one oil bucket went into the machine (the hotbar holds one fewer; the tile drains it into the input tank and leaves an empty bucket in its slot)" },
+    { "do": "close" }
+  ]
+}

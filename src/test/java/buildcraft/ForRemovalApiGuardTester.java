@@ -74,7 +74,13 @@ public class ForRemovalApiGuardTester {
      * entry that matches nothing on this node is fine — entries are node-agnostic, and another change may retire
      * the use first — but remove it once no node needs it.
      */
-    private static final Map<String, String> PENDING = Map.of();
+    private static final Map<String, String> PENDING = Map.of(
+        // JEI 30.30+ (26.2) adds transferRecipe(IRecipeTransferContext, boolean), which the three BC handlers
+        // override, but leaves the old six-arg overload ABSTRACT while marking it for removal — so every
+        // implementer must still declare it. Drop each handler's old override (and this entry) once JEI
+        // removes it on every node's pin. Tracked: docs/todo-details.md#jei-old-transfer-overload
+        "mezz.jei.api.recipe.transfer.IRecipeTransferHandler#transferRecipe",
+        "forced override: still abstract in JEI 30.42 despite forRemoval");
 
     private static final ClassLoader LOADER = ForRemovalApiGuardTester.class.getClassLoader();
 

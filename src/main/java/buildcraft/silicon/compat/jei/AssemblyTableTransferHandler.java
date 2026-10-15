@@ -14,6 +14,9 @@ import javax.annotation.Nullable;
 
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
+//? if >=26.2 {
+/*import mezz.jei.api.recipe.transfer.IRecipeTransferContext;*/
+//?}
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 //? if >=1.21.10 {
@@ -70,8 +73,21 @@ public class AssemblyTableTransferHandler implements IRecipeTransferHandler<Cont
         return AssemblyRecipeJeiTypes.ASSEMBLY;
     }
 
+    //? if >=26.2 {
+    /*@Override
+    @Nullable
+    public IRecipeTransferError transferRecipe(
+            IRecipeTransferContext<AssemblyRecipeJei, ContainerAssemblyTable> context, boolean doTransfer) {
+        return transfer(context.getContainer(), context.getRecipe(), context.getPlayer(), context.isMaxTransfer(),
+                doTransfer);
+    }*/
+    //?}
+
+    // JEI 30.30+ (26.2) deprecates this for removal in favour of the context overload above but keeps it
+    // abstract, so it must stay; it is also the only entry point on older JEI builds.
     @Override
     @Nullable
+    @SuppressWarnings("removal")
     public IRecipeTransferError transferRecipe(
             ContainerAssemblyTable container,
             AssemblyRecipeJei recipe,
@@ -79,7 +95,12 @@ public class AssemblyTableTransferHandler implements IRecipeTransferHandler<Cont
             Player player,
             boolean maxTransfer,
             boolean doTransfer) {
+        return transfer(container, recipe, player, maxTransfer, doTransfer);
+    }
 
+    @Nullable
+    private IRecipeTransferError transfer(ContainerAssemblyTable container, AssemblyRecipeJei recipe, Player player,
+            boolean maxTransfer, boolean doTransfer) {
         Inventory inv = player.getInventory();
 
         // Choose one alternative per input slot — preferring one the player has enough of — and

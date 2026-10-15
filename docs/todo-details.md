@@ -102,10 +102,6 @@ Pre-existing: `BlockTube` isn't waterloggable, so `TileMiner.updateLength`'s `se
 
 Suspected 2026-10-12 while fixing the Zone Planner rack (`3274a55bc`): `PipeBehaviourEmzuli.invFilters` and `PipeBehaviourWoodDiamond.filters` are built with no change callback, the same missing-`setChanged()` class that silently emptied the planner's rack on relog. Pipe behaviours save through their own NBT path, so whether the pipe re-serialises on filter edits needs checking before wiring anything — verify with a stash-filter/relog in-client test first.
 
-## JEI 26.2 bump
-
-`versions/26.2/gradle.properties` pins `jei_version=30.0.0.1`. In the dev client its `NeoForgeGuiPlugin` dies at runtime start with `NoClassDefFoundError: net/neoforged/neoforge/client/event/ContainerScreenEvent$Render$Foreground` (NeoForge 26.2.0.88), so there is no ingredient list and no R/U lookup keys; recipe pages opened from BC click areas still work. Latest at 2026-10-15 is `30.42.0.236`, verified working in the smoke client. Blocker: it marks `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal, so `ForRemovalApiGuardTester` fails on `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler`. Migrate those three to the replacement overload behind a `//? if >=26.2` (or whatever line introduced it), then bump. Check whether the player-facing `jei` dependency range in the mods.toml needs raising too.
-
 ## Programming Table JEI transfer
 
 The Integration Table category needs one too (robot to the centre, board to any ring slot; no option state, so it is the simpler of the two). A JEI '+' transfer for the Programming Table category: `TileProgrammingTable.findRecipe` runs only in `serverTick`, so options are null until the next tick and `selectOption` clamps to -1; the server handler must find recipes right after inserting.
@@ -150,6 +146,10 @@ One-line technical breadcrumbs for bullets that don't need a full section:
 - **Cauldron as tank** — NeoForge already exposes `IFluidHandler` capabilities for cauldrons; wire that into BC's fluid pipe connection logic (drain water/lava/powder-snow, fill to the appropriate level).
 - **Builder can't-place flags** — e.g. a red box overlay on the resource list or the build area for blocks that can't be placed yet (floating torches, flowers on stone).
 - **Fluid viscosity (blocked)** — flow speed is already moddable, but negative density (floating gases) is not native and traversal/swimming modifications aren't possible.
+
+## JEI old transfer overload
+
+JEI 30.30.0.203+ (26.2 node) marks the six-arg `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal but keeps it abstract, so `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler` must still declare it; their real entry point on 26.2 is the `//? if >=26.2` `transferRecipe(IRecipeTransferContext, boolean)` override, and both delegate to a private `transfer(...)`. Reopen trigger: a JEI 30.x (or later 26.2+ line) release where the six-arg method is gone. Then delete the old override behind `//? if <that line` (other nodes' JEI never had the context overload), and remove the `IRecipeTransferHandler#transferRecipe` entry from `ForRemovalApiGuardTester.PENDING`. Note that dropping it also drops support for JEI < 30.30 on 26.2, so add a `jei` version range to the mods.toml at that point.
 
 ## NeoForge 26.2.0.87 recompile break
 

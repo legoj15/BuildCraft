@@ -14,6 +14,9 @@ import javax.annotation.Nullable;
 
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
+//? if >=26.2 {
+/*import mezz.jei.api.recipe.transfer.IRecipeTransferContext;*/
+//?}
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 
@@ -75,11 +78,26 @@ public abstract class AbstractBucketTransferHandler<C extends AbstractContainerM
      */
     protected abstract List<BucketSlot> getRequiredBuckets(R recipe);
 
+    //? if >=26.2 {
+    /*@Override
+    @Nullable
+    public IRecipeTransferError transferRecipe(IRecipeTransferContext<R, C> context, boolean doTransfer) {
+        return transfer(context.getContainer(), context.getRecipe(), context.getPlayer(), doTransfer);
+    }*/
+    //?}
+
+    // JEI 30.30+ (26.2) deprecates this for removal in favour of the context overload above but keeps it
+    // abstract, so it must stay; it is also the only entry point on older JEI builds.
     @Override
     @Nullable
+    @SuppressWarnings("removal")
     public IRecipeTransferError transferRecipe(C container, R recipe, IRecipeSlotsView recipeSlots,
             Player player, boolean maxTransfer, boolean doTransfer) {
+        return transfer(container, recipe, player, doTransfer);
+    }
 
+    @Nullable
+    private IRecipeTransferError transfer(C container, R recipe, Player player, boolean doTransfer) {
         List<BucketSlot> required = getRequiredBuckets(recipe);
         if (required.isEmpty()) {
             return missing();

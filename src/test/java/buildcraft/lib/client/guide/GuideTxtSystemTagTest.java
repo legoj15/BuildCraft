@@ -218,6 +218,31 @@ class GuideTxtSystemTagTest {
         assertTrue(missing.isEmpty(), "missing guide chapter translations:\n" + String.join("\n", missing));
     }
 
+    @Test
+    void everyTitleOverrideHasALangKeyInBothLanguages() {
+        // `title` is a suffix under buildcraft.guide.page.; a missing key shows the raw suffix as the page title.
+        Map<String, String> en = lang("en_us.json");
+        Map<String, String> zh = lang("zh_cn.json");
+        Set<String> keys = new TreeSet<>();
+        for (Entry e : mainBook()) {
+            String title = e.str("title");
+            if (!title.isEmpty()) {
+                keys.add("buildcraft.guide.page." + title);
+            }
+        }
+        assertFalse(keys.isEmpty(), "no entry carries a title override; the robots overview and boards should");
+        List<String> missing = new ArrayList<>();
+        for (String key : keys) {
+            if (!en.containsKey(key) || en.get(key).isBlank()) {
+                missing.add("en_us: " + key);
+            }
+            if (!zh.containsKey(key) || zh.get(key).isBlank()) {
+                missing.add("zh_cn: " + key);
+            }
+        }
+        assertTrue(missing.isEmpty(), "missing guide page-title translations:\n" + String.join("\n", missing));
+    }
+
     // ---------------------------------------------------------------------------------------------------------
     // (3) robotics content is registered
     // ---------------------------------------------------------------------------------------------------------

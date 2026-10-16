@@ -289,7 +289,6 @@ public enum GuideManager {
             domains.put(book, new HashSet<>());
         }
 
-        // GuideCraftingRecipes not yet ported — skip recipe indexing
 
         for (PageEntry<?> entry : manager.getAllEntries()) {
             domains.get(null).add(entry.typeTags.domain);
@@ -992,7 +991,7 @@ public enum GuideManager {
             buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT[3], x, y);
         registerCategory("buildcraft", "set_power_limit",
             new String[] { "buildcraft.guide.contents.actions" },
-            new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            new String[] { "buildcraft.guide.chapter.subtype.power_delivery" },
             new String[] { SYSTEM_PREFIX + "power" },
             icon,
             "buildcraft.guide.group.to.buildcraft.set_power_limit",

@@ -79,4 +79,10 @@ home links need two clear cells; the Request Needed Items action is inert, as in
 - reviewer (Haiku) — found the `type="statement"` link bug (already caught in-client), two prose
   overclaims, two missing guard tests; two of its "likely wrong" prose items were wrong calls
   (Planter light rule and the two-cell home approach are real).
-- impl (Sonnet) — link-target and id guard tests + three nits: see git log.
+- impl (Sonnet) — link-target and id guard tests + three nits: clean; the link test exposed two pre-existing
+  dead links and the SimpleScript import bug (fixed here, pinned by `SimpleScriptImportTest`).
+- opencode triad (Qwen 27B + GLM flash; Flash-Next deferred) — confirmed: Miner pick-tier prose wrong,
+  gate-free recharge misstated, Forbid/Force and Robot In Station parameter claims wrong, Set Power Limit
+  category orphaned a "Power › Item Transport" chapter, stale crafting-recipes comment, no title-key lang test.
+  Refuted: the lookup "returns all steps" claim (no such fallback), the "no system/subtype lang test" claim.
+  Noted, not done: zh_cn lacks the robot item and board display names (pre-existing translation gap).

@@ -9,7 +9,7 @@ Right-click any face of a pipe to attach a station there. Then right-click the s
 <chapter name="What the pipe decides"/>
 On a kinesis (power) pipe the station charges a docked robot from the pipe's power. On a <bold>Wooden item pipe</bold> the station can hand out items from the inventory on the pipe's extraction face, and on a Wooden fluid pipe it can hand out fluid the same way. On any item pipe a station can take cargo from a robot and push it into the pipe. A station on a cobblestone pipe, say, can only accept deliveries.
 <chapter name="What the gate decides"/>
-None of the above happens without a gate on the station's pipe saying so. The station actions are:
+Charging needs no gate, but none of the item and fluid transfers above happen without a gate on the station's pipe saying so. The station actions are:
 <link to="buildcraftunofficial:action/station_provide_items"/>
 <link to="buildcraftunofficial:action/station_accept_items"/>
 <link to="buildcraftunofficial:action/station_provide_fluids"/>
@@ -18,7 +18,7 @@ None of the above happens without a gate on the station's pipe saying so. The st
 <link to="buildcraftunofficial:action/station_request_needed_items"/>
 <link to="buildcraftunofficial:action/station_forbid_robot"/>
 <link to="buildcraftunofficial:action/station_force_robot"/>
-Forbid Robot and Force Robot take a robot or board as a parameter and turn away, or reserve the station for, robots of that kind. Request Items asks passing Delivery robots for an item, like a one-slot <link inline="buildcraftunofficial:block/requester"/>. The gate can also read the station's state:
+Forbid Robot and Force Robot take a kind of robot as a parameter (click the slot with a programmed robot, or with an empty hand to cycle through the boards) and turn away, or reserve the station for, robots of that kind. Request Items asks passing Delivery robots for an item, like a one-slot <link inline="buildcraftunofficial:block/requester"/>. The gate can also read the station's state:
 <link to="buildcraftunofficial:trigger/robot_in_station"/>
 <link to="buildcraftunofficial:trigger/station_linked"/>
 <link to="buildcraftunofficial:trigger/station_reserved"/>

@@ -406,6 +406,9 @@ chipset "silicon" "chipset_quartz"
 // ===========================================================================
 
 // ---- Robots / Robots (robot) ---------------------------------------------
+// The overview page floats to the top of the Robots chapter (weight -10); it is the one
+// page a new player should read first, and it links to everything below.
+concept "robots" "robot" "robots" "-10"
 item_typed "robots" "robot" "robot" "buildcraftunofficial:robot"
 item_typed "robots" "robot" "redstone_board" "buildcraftunofficial:redstone_board"
 block "robots" "robot" "programming_table"
@@ -420,6 +423,28 @@ action "robots" "robot" "robot_load_unload_area"  "buildcraft:robot.load_unload_
 action "robots" "robot" "robot_wake_up"           "buildcraft:robot.wakeup"
 action "robots" "robot" "robot_filter"            "buildcraft:robot.work_filter"
 action "robots" "robot" "robot_filter_tool"       "buildcraft:robot.work_filter_tool"
+
+// ---- Robots / Boards (board) ---------------------------------------------
+// One page per board the Programming Table offers (see the `board` alias in util.txt);
+// prose at board/<name>.md. Keep in step with BCRobotics#registerBoards.
+board "picker"
+board "carrier"
+board "tank"
+board "lumberjack"
+board "harvester"
+board "miner"
+board "planter"
+board "farmer"
+board "pump"
+board "knight"
+board "butcher"
+board "delivery"
+board "leaf_cutter"
+board "shovelman"
+board "bomber"
+board "stripes"
+board "builder"
+board "empty"
 
 // ---- Robots / Docking Stations (station) ---------------------------------
 // The Docking Station pluggable (item id robot_station — renamed back to "Docking Station"

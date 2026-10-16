@@ -140,6 +140,30 @@ alias plug 2 `item_plug "%0" "%1" "buildcraftunofficial:%1"`
 alias paper 2 `item_typed "%0" "paperwork" "%1" "buildcraftunofficial:%1"`
 alias chipset 2 `item_typed "%0" "chipset" "%1" "buildcraftunofficial:%1"`
 
+// Robot board pages: `board "<name>"` -> board/<name>.md. A board is not an item of its own
+// (every board is the one redstone_board item carrying a board id in its data), so these are
+// `external` entries titled through buildcraft.guide.page.board_<name>, filed under
+// Robots > Boards (Items > Boards by type). No icon: external entries draw none.
+alias board 1 `add "board/%0" \`{
+    "type": "external",
+    "book": "${0}",
+    "tag_system": "robots",
+    "tag_type": "item",
+    "tag_subtype": "board",
+    "title": "board_%0"
+}\``
+// Concept page with an explicit TOC placement and weight: `concept "<sys>" "<subtype>" "<name>" "<sort>"`
+// -> concept/<name>.md, titled through buildcraft.guide.page.<name>.
+alias concept 4 `add "concept/%2" \`{
+    "type": "external",
+    "book": "${0}",
+    "tag_system": "%0",
+    "tag_type": "item",
+    "tag_subtype": "%1",
+    "title": "%2",
+    "sort": %3
+}\``
+
 // Config-guide page registration. Path stays config/<name>.md so loadLangInternal
 // finds the existing .md content. Uses ${0} so the book is set by the importer.
 // No tag_system: the config book is a separate book with its own contents page.

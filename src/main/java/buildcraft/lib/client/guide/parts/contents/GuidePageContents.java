@@ -351,7 +351,7 @@ public class GuidePageContents extends GuidePageBase {
 
         // A click on a sort-order button must re-sort, not focus search: the search tab's generous
         // hitbox (the 40x34 rect below, carried over verbatim from 1.12.2) overlaps the top-right
-        // corner of the first ("Sort By Type") button, and 1.12.2 likewise tested the sort icons
+        // corner of the first ("Sort By System") button, and 1.12.2 likewise tested the sort icons
         // first. The buttons are only visible (so only take clicks) on a content spread.
         for (BCButton button : sortButtons) {
             //? if >=1.21.10 {

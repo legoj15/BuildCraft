@@ -831,10 +831,10 @@ public enum GuideManager {
             buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS, x, y);
         registerCategory("buildcraft", "filler_patterns",
             new String[] { "buildcraft.guide.contents.actions" },
-            // Filed under Automation: the filler block is an automation machine, and
-            // the patterns are GUI choices for how it shapes its area-fill — same
-            // subtype the filler itself sits under (Blocks > Automation).
-            new String[] { "buildcraft.guide.chapter.subtype.automation" },
+            // Filed under Builders: the patterns are GUI choices for how the Filler shapes
+            // its area-fill, so they sit in the same subtype as the Filler itself
+            // (Building > Builders in the system view, Blocks > Builders by type).
+            new String[] { "buildcraft.guide.chapter.subtype.builders" },
             new String[] { SYSTEM_PREFIX + "building" },
             icon,
             "buildcraft.guide.group.to.buildcraft.filler_patterns",

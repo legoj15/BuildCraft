@@ -254,7 +254,8 @@ public class SimpleScript {
                     for (int i = 0; i < replacements.size(); i++) {
                         rdata[i] = new LineData(replacements.get(i), file, i);
                     }
-                    lines.lineIterator.next();
+                    // nextToken left the cursor before the import line and replace() steps past it itself;
+                    // stepping here as well made replace() swallow the line AFTER the import (SimpleScriptImportTest).
                     if (!lines.replace(token.datas[0], rdata, s -> s)) {
                         log("Recursive import!");
                     }

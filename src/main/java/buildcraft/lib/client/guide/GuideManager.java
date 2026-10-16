@@ -815,7 +815,9 @@ public enum GuideManager {
             String chapterKey = chapterTagTypes[i];
             String subtypeKey = (chapterSubtypes != null && i < chapterSubtypes.length)
                 ? chapterSubtypes[i] : null;
-            fileExtraEntry(chapterKey, subtypeKey, chapterSystems[i], link);
+            String systemKey = (chapterSystems != null && i < chapterSystems.length)
+                ? chapterSystems[i] : null;
+            fileExtraEntry(chapterKey, subtypeKey, systemKey, link);
         }
     }
 

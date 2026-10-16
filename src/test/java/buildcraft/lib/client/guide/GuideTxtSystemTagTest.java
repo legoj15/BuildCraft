@@ -32,6 +32,9 @@ import java.util.regex.Pattern;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+
 import org.junit.jupiter.api.Test;
 
 import buildcraft.api.registry.IReloadableRegistry.PackType;
@@ -316,6 +319,55 @@ class GuideTxtSystemTagTest {
             }
         }
         assertEquals("Lasers", lang("en_us.json").get("buildcraft.guide.chapter.subtype.laser"));
+    }
+
+    // ---------------------------------------------------------------------------------------------------------
+    // (5) every id the script names exists in the game
+    // ---------------------------------------------------------------------------------------------------------
+
+    /** Every {@code stack} id (an item entry's registry id, optionally followed by {@code ,count}) must be a
+     *  registered item: a typo or a renamed block item leaves a guide entry that renders as an empty stack. */
+    @Test
+    void everyStackIdIsARegisteredItem() {
+        List<String> bad = new ArrayList<>();
+        int checked = 0;
+        for (Entry e : expandGuide()) {
+            String stack = e.str("stack");
+            if (stack.isEmpty()) {
+                continue;
+            }
+            checked++;
+            Identifier id = Identifier.tryParse(stack.split(",")[0].trim());
+            if (id == null || !BuiltInRegistries.ITEM.containsKey(id)) {
+                bad.add(e.path() + " -> '" + stack + "'");
+            }
+        }
+        assertTrue(checked > 100, "expected the full set of stack entries, checked " + checked);
+        assertTrue(bad.isEmpty(), "guide.txt names unregistered items:\n" + String.join("\n", bad));
+    }
+
+    /** Every {@code statement} id must resolve in {@link StatementManager#statements}; a stale id would generate
+     *  the "runtime stub" page instead of the authored one. */
+    @Test
+    void everyStatementIdIsARegisteredStatement() {
+        // Statements self-register from static initialisers of their holder classes; the FML-JUnit boot loads
+        // BC's content, but touch the holders explicitly so this test does not depend on load order.
+        assertNotNull(BCRoboticsStatements.TRIGGER_ROBOT_SLEEP);
+        assertFalse(StatementManager.statements.isEmpty(), "StatementManager is empty under the test JVM");
+        List<String> bad = new ArrayList<>();
+        int checked = 0;
+        for (Entry e : expandGuide()) {
+            String statement = e.str("statement");
+            if (statement.isEmpty()) {
+                continue;
+            }
+            checked++;
+            if (!StatementManager.statements.containsKey(statement)) {
+                bad.add(e.path() + " -> '" + statement + "'");
+            }
+        }
+        assertTrue(checked > 50, "expected the full set of statement entries, checked " + checked);
+        assertTrue(bad.isEmpty(), "guide.txt names unregistered statements:\n" + String.join("\n", bad));
     }
 
     // ---------------------------------------------------------------------------------------------------------

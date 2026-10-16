@@ -46,6 +46,10 @@ public class JsonTypeTags {
     public String[] getOrdered(TypeOrder typeOrder) {
         if (domain == null && subType == null) {
             // Built-in type for "others"
+            // Invariant: this early-out returns only the type key and drops `system`. That is deliberate:
+            // the fall-through statement tags built by the one-arg constructor rely on the adder
+            // (GuideManager, via fileExtraEntry(tags.type, null, systemKeyOf(tags.system), ...)) reading
+            // `tags.system` directly instead of going through getOrdered.
             return new String[] { type };
         }
 

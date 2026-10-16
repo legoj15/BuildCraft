@@ -6,7 +6,6 @@
 
 package buildcraft.lib.client.guide;
 
-
 import com.google.common.collect.ImmutableList;
 
 public class TypeOrder {

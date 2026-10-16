@@ -1,6 +1,6 @@
 {
   "name": "guide-robots",
-  "description": "The guide book after the Sort By System change: the system contents page, the Sort By Type view, the Robots chapter and its pages.",
+  "description": "The guide book after the Sort By System change: the three sort views, the chapter overlay, the Robots chapter and its pages reached through search.",
   "base": [
     0,
     150,
@@ -11,12 +11,18 @@
       "do": "cmd",
       "run": [
         "gamemode creative @p",
-        "?tp @p {X} {Y} {Z}"
+        "time set 6000",
+        "weather clear"
       ]
     },
     {
       "do": "hold",
       "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
     },
     {
       "label": "open guide",
@@ -28,73 +34,85 @@
       "timeoutSec": 20
     },
     {
-      "do": "wait",
-      "ms": 500
-    },
-    {
-      "label": "open the book",
+      "label": "open the cover",
       "do": "click",
-      "x": 213,
-      "y": 120,
+      "fx": 0.5,
+      "fy": 0.5,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 2500
     },
     {
       "label": "next page",
       "do": "click",
-      "widgetText": "Next Page"
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
     },
     {
       "name": "contents-system",
       "do": "shot",
-      "look": "default contents: Getting Started, Power, Transport, Gates and Logic, Building, Mining and Fluids, Silicon, Robots in that order, each with subchapters; the first sort button latched"
-    },
-    {
-      "name": "contents-system",
-      "do": "widgets"
+      "look": "default contents: Getting Started, Power, Transport ... Robots in fixed order; first sort button latched"
     },
     {
       "label": "hover sort by system",
       "do": "hover",
-      "widgetText": "Sort By System",
-      "allowMiss": true
+      "x": 37,
+      "y": 17
     },
     {
       "name": "sort-system-tooltip",
       "do": "shot",
-      "look": "'Sort By System' tooltip on the first (latched) sort button"
+      "look": "'Sort By System' tooltip on the first, latched sort button"
     },
     {
       "label": "sort by type",
       "do": "click",
-      "widgetText": "Sort By Type",
+      "x": 37,
+      "y": 30,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
     },
     {
       "name": "contents-type",
       "do": "shot",
-      "look": "the old Blocks/Items/Pipes tree; Builders, Markers, Crafting Tables, Boards, Robots and Docking Stations subchapters; no Automation/Basic/Specialized"
+      "look": "Blocks/Items/Pipes tree with Builders, Markers, Crafting Tables, Boards, Robots, Docking Stations subchapters; no Automation/Basic/Specialized"
     },
     {
-      "label": "sort alphabetically",
+      "label": "next page",
       "do": "click",
-      "widgetText": "Sort Alphabetically",
+      "x": 385,
+      "y": 230,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
+    },
+    {
+      "name": "contents-type-2",
+      "do": "shot",
+      "look": "type view continued"
+    },
+    {
+      "label": "sort alphabetically",
+      "do": "click",
+      "x": 37,
+      "y": 42,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
     },
     {
       "name": "contents-alpha",
@@ -104,12 +122,13 @@
     {
       "label": "back to system",
       "do": "click",
-      "widgetText": "Sort By System",
+      "x": 37,
+      "y": 17,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
     },
     {
       "label": "open chapters overlay",
@@ -125,125 +144,552 @@
     {
       "name": "chapters-overlay",
       "do": "shot",
-      "look": "chapter overlay lists the eight systems in fixed order"
-    },
-    {
-      "name": "chapters-overlay",
-      "do": "widgets"
+      "look": "eight system chapters in fixed order"
     },
     {
       "label": "pick Robots",
       "do": "click",
-      "widgetText": "Robots",
+      "x": 156,
+      "y": 151,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
     },
     {
       "name": "robots-chapter",
       "do": "shot",
-      "look": "Robots chapter: Getting Started with Robots first, then Boards (18), Docking Stations, Robots subchapters"
+      "look": "Robots chapter: Robots subchapter with Getting Started with Robots first, then Boards (18), Docking Stations"
     },
     {
-      "name": "robots-chapter",
-      "do": "widgets"
-    },
-    {
-      "label": "open overview",
+      "label": "next page",
       "do": "click",
-      "widgetText": "Getting Started with Robots",
+      "x": 385,
+      "y": 230,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 500
+      "ms": 600
+    },
+    {
+      "name": "robots-chapter-2",
+      "do": "shot",
+      "look": "Robots chapter continued: the board list and the station statements"
+    },
+    {
+      "label": "open first entry",
+      "do": "click",
+      "x": 130,
+      "y": 56,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "name": "robots-first-entry",
+      "do": "shot",
+      "look": "whatever the first entry of the Robots chapter opens"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "label": "open the cover",
+      "do": "click",
+      "fx": 0.5,
+      "fy": 0.5,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "focus the search tab",
+      "do": "click",
+      "x": 58,
+      "y": 8,
+      "allowMiss": true
+    },
+    {
+      "do": "text",
+      "text": "Getting Started with Robots"
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "search-robots-overview",
+      "do": "shot",
+      "look": "search results for 'Getting Started with Robots'"
+    },
+    {
+      "label": "open first result",
+      "do": "click",
+      "x": 130,
+      "y": 56,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
     },
     {
       "name": "robots-overview",
       "do": "shot",
-      "look": "the overview page renders: lore, chapter headings, the four item links, statement links with icons"
+      "look": "the overview page: lore, headings, item links with icons, statement links with icons, no red missing-link text"
     },
     {
       "label": "next page",
       "do": "click",
-      "widgetText": "Next Page",
+      "x": 385,
+      "y": 230,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 400
+      "ms": 600
     },
     {
       "name": "robots-overview-2",
       "do": "shot",
-      "look": "second page of the overview: Work in Area / Provide Items / Accept Items statement links render with icons, no red missing-link text"
-    },
-    {
-      "label": "back",
-      "do": "click",
-      "widgetText": "Back",
-      "allowMiss": true
-    },
-    {
-      "do": "wait",
-      "ms": 400
-    },
-    {
-      "label": "open picker board",
-      "do": "click",
-      "widgetText": "Picker Board",
-      "allowMiss": true
-    },
-    {
-      "do": "wait",
-      "ms": 500
-    },
-    {
-      "name": "board-picker",
-      "do": "shot",
-      "look": "Picker Board page: title, lore, Behaviour chapter, links"
-    },
-    {
-      "label": "back",
-      "do": "click",
-      "widgetText": "Back",
-      "allowMiss": true
-    },
-    {
-      "do": "wait",
-      "ms": 400
-    },
-    {
-      "label": "open robot",
-      "do": "click",
-      "widgetText": "Robot",
-      "allowMiss": true
-    },
-    {
-      "do": "wait",
-      "ms": 500
-    },
-    {
-      "name": "item-robot",
-      "do": "shot",
-      "look": "Robot page: crafting recipe and (if the renderer landed) the Integration Table step"
+      "look": "the overview page: lore, headings, item links with icons, statement links with icons, no red missing-link text (continued)"
     },
     {
       "label": "next page",
       "do": "click",
-      "widgetText": "Next Page",
+      "x": 385,
+      "y": 230,
       "allowMiss": true
     },
     {
       "do": "wait",
-      "ms": 400
+      "ms": 600
+    },
+    {
+      "name": "robots-overview-3",
+      "do": "shot",
+      "look": "the overview page: lore, headings, item links with icons, statement links with icons, no red missing-link text (continued)"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "label": "open the cover",
+      "do": "click",
+      "fx": 0.5,
+      "fy": 0.5,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "focus the search tab",
+      "do": "click",
+      "x": 58,
+      "y": 8,
+      "allowMiss": true
+    },
+    {
+      "do": "text",
+      "text": "Picker Board"
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "search-board-picker",
+      "do": "shot",
+      "look": "search results for 'Picker Board'"
+    },
+    {
+      "label": "open first result",
+      "do": "click",
+      "x": 130,
+      "y": 56,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "board-picker",
+      "do": "shot",
+      "look": "Picker Board page: title, lore, Behaviour, links"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "label": "open the cover",
+      "do": "click",
+      "fx": 0.5,
+      "fy": 0.5,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "focus the search tab",
+      "do": "click",
+      "x": 58,
+      "y": 8,
+      "allowMiss": true
+    },
+    {
+      "do": "text",
+      "text": "Work in Area"
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "label": "open first result",
+      "do": "click",
+      "x": 130,
+      "y": 56,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "action-work-in-area",
+      "do": "shot",
+      "look": "Work in Area action page: authored text, not a WIP stub"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "label": "open the cover",
+      "do": "click",
+      "fx": 0.5,
+      "fy": 0.5,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "focus the search tab",
+      "do": "click",
+      "x": 58,
+      "y": 8,
+      "allowMiss": true
+    },
+    {
+      "do": "text",
+      "text": "Docking Station"
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "search-station",
+      "do": "shot",
+      "look": "search results for 'Docking Station'"
+    },
+    {
+      "label": "open first result",
+      "do": "click",
+      "x": 130,
+      "y": 56,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "station",
+      "do": "shot",
+      "look": "Docking Station page: three chapters, the station/robot statement links with icons, recipe"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "station-2",
+      "do": "shot",
+      "look": "Docking Station page: three chapters, the station/robot statement links with icons, recipe (continued)"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "station-3",
+      "do": "shot",
+      "look": "Docking Station page: three chapters, the station/robot statement links with icons, recipe (continued)"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": -90
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "label": "open the cover",
+      "do": "click",
+      "fx": 0.5,
+      "fy": 0.5,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "label": "sort by type",
+      "do": "click",
+      "x": 37,
+      "y": 30,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "type-items-robots",
+      "do": "shot",
+      "look": "Items > Robots: Getting Started with Robots, Redstone Board, Robot"
+    },
+    {
+      "label": "open Robot",
+      "do": "click",
+      "x": 88,
+      "y": 88,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "item-robot",
+      "do": "shot",
+      "look": "Robot item page: lore, Information, hint; crafting recipe"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
     },
     {
       "name": "item-robot-2",
       "do": "shot",
-      "look": "Robot page continued: recipes/usages"
+      "look": "Robot page continued: crafting recipe then the Integration Table panel under usages"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "item-robot-3",
+      "do": "shot",
+      "look": "Robot page continued"
+    },
+    {
+      "label": "back",
+      "do": "click",
+      "x": 215,
+      "y": 236,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "label": "open Redstone Board",
+      "do": "click",
+      "x": 130,
+      "y": 72,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "name": "item-board",
+      "do": "shot",
+      "look": "Redstone Board page: lore, Information with costs"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "item-board-2",
+      "do": "shot",
+      "look": "Redstone Board: crafting, then the Programming Table panel cycling boards, then Integration"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "x": 385,
+      "y": 230,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "name": "item-board-3",
+      "do": "shot",
+      "look": "Redstone Board continued"
     },
     {
       "do": "close"

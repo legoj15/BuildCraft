@@ -1,0 +1,256 @@
+{
+  "name": "guide-robots",
+  "description": "The guide book after the Sort By System change: the system contents page, the Sort By Type view, the Robots chapter and its pages.",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "?tp @p {X} {Y} {Z}"
+      ]
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:guide"
+    },
+    {
+      "label": "open guide",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiGuide",
+      "timeoutSec": 20
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "open the book",
+      "do": "click",
+      "x": 213,
+      "y": 120,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "widgetText": "Next Page"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "contents-system",
+      "do": "shot",
+      "look": "default contents: Getting Started, Power, Transport, Gates and Logic, Building, Mining and Fluids, Silicon, Robots in that order, each with subchapters; the first sort button latched"
+    },
+    {
+      "name": "contents-system",
+      "do": "widgets"
+    },
+    {
+      "label": "hover sort by system",
+      "do": "hover",
+      "widgetText": "Sort By System",
+      "allowMiss": true
+    },
+    {
+      "name": "sort-system-tooltip",
+      "do": "shot",
+      "look": "'Sort By System' tooltip on the first (latched) sort button"
+    },
+    {
+      "label": "sort by type",
+      "do": "click",
+      "widgetText": "Sort By Type",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "contents-type",
+      "do": "shot",
+      "look": "the old Blocks/Items/Pipes tree; Builders, Markers, Crafting Tables, Boards, Robots and Docking Stations subchapters; no Automation/Basic/Specialized"
+    },
+    {
+      "label": "sort alphabetically",
+      "do": "click",
+      "widgetText": "Sort Alphabetically",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "contents-alpha",
+      "do": "shot",
+      "look": "flat A-Z list"
+    },
+    {
+      "label": "back to system",
+      "do": "click",
+      "widgetText": "Sort By System",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "open chapters overlay",
+      "do": "click",
+      "x": 250,
+      "y": 3,
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "name": "chapters-overlay",
+      "do": "shot",
+      "look": "chapter overlay lists the eight systems in fixed order"
+    },
+    {
+      "name": "chapters-overlay",
+      "do": "widgets"
+    },
+    {
+      "label": "pick Robots",
+      "do": "click",
+      "widgetText": "Robots",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "robots-chapter",
+      "do": "shot",
+      "look": "Robots chapter: Getting Started with Robots first, then Boards (18), Docking Stations, Robots subchapters"
+    },
+    {
+      "name": "robots-chapter",
+      "do": "widgets"
+    },
+    {
+      "label": "open overview",
+      "do": "click",
+      "widgetText": "Getting Started with Robots",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "robots-overview",
+      "do": "shot",
+      "look": "the overview page renders: lore, chapter headings, the four item links, statement links with icons"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "widgetText": "Next Page",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "name": "robots-overview-2",
+      "do": "shot",
+      "look": "second page of the overview: Work in Area / Provide Items / Accept Items statement links render with icons, no red missing-link text"
+    },
+    {
+      "label": "back",
+      "do": "click",
+      "widgetText": "Back",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "label": "open picker board",
+      "do": "click",
+      "widgetText": "Picker Board",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "board-picker",
+      "do": "shot",
+      "look": "Picker Board page: title, lore, Behaviour chapter, links"
+    },
+    {
+      "label": "back",
+      "do": "click",
+      "widgetText": "Back",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "label": "open robot",
+      "do": "click",
+      "widgetText": "Robot",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "item-robot",
+      "do": "shot",
+      "look": "Robot page: crafting recipe and (if the renderer landed) the Integration Table step"
+    },
+    {
+      "label": "next page",
+      "do": "click",
+      "widgetText": "Next Page",
+      "allowMiss": true
+    },
+    {
+      "do": "wait",
+      "ms": 400
+    },
+    {
+      "name": "item-robot-2",
+      "do": "shot",
+      "look": "Robot page continued: recipes/usages"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "hold",
+      "item": "minecraft:air"
+    }
+  ]
+}

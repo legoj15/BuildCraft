@@ -1,4 +1,4 @@
-Last audited: 2026-09-26
+Last audited: 2026-10-15
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -20,7 +20,7 @@ Last audited: 2026-09-26
 
 ## 🆕 New Features (version 2026.2)
 
-- Guide book: a Robots chapter, file the hidden robot items and statements, and decide the table-of-contents restructure — [design](docs/guide-robots-and-toc.md)
+- Guide book follow-ups from the Robots chapter: board icons, sort-button art, robot name tags — [list](docs/todo-details.md#guide-book-follow-ups)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)

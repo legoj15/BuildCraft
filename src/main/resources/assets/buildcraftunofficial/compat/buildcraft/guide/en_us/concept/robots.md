@@ -13,7 +13,7 @@ Building a working robot takes four steps, each on its own page:
 First craft a blank Redstone Board and give it a job in the Programming Table, which needs laser power. Then craft a blank Robot and combine it with the programmed board in the Integration Table, which also needs laser power. A blank robot refuses to be placed and only says "Not programmed", so the board step is never optional.
 <chapter name="Docking Stations"/>
 A programmed robot is placed by right-clicking a <link inline="buildcraftunofficial:item/robot_station"/> on a pipe. That station becomes the robot's <bold>home</bold>: it is linked to it, returns to it to sleep, and reads its orders from the gate on that pipe. Robots use other stations too, to pick up and drop off cargo, to fetch tools, and to recharge. Whether a station allows any of that is decided by the gate on its pipe, so a station with no gate is a parking spot and nothing more.
-Recharging works only on a station attached to a kinesis (power) pipe. A robot flies off to recharge when its battery drops below a fifth, and shuts down where it stands if it finds nowhere to charge.
+Recharging works only on a station attached to a kinesis (power) pipe. A robot flies off to recharge when its battery drops below a fifth; if it finds nowhere to charge it keeps working until it is flat, then shuts down where it stands.
 <chapter name="Giving orders"/>
 Robots have no control screen. Every order is a gate action on a station's pipe, and the gate must actually be firing for the action to count, so the usual trick is a trigger that is always true, such as Redstone Signal Off with no redstone nearby.
 <link to="buildcraftunofficial:action/robot_work_in_area"/>
@@ -27,4 +27,4 @@ A robot with nothing to do, or nothing to do it with, parks on its home station 
 Sneak and right-click a robot with a wrench to take it apart one layer at a time: first anything it wears, then the tool it holds, then the robot itself, which keeps its board and charge.
 </hint>
 <chapter name="Boards"/>
-Every board has a page of its own under Boards. The cheap ones (Picker, Carrier, Tank) move things between stations. The middle tier works a zone with a tool: Lumberjack, Miner, Farmer, Planter, Harvester, Leaf Cutter, Shovelman and Pump. The expensive ones fight, deliver on request, drop TNT, or feed a Builder.
+Every board has a page of its own under Boards. The cheap ones (Picker, Carrier, Tank) move things between stations. The middle tier works a zone: Lumberjack, Miner, Farmer, Planter, Leaf Cutter and Shovelman with a tool from a station, Harvester and Pump with none, and the Butcher with a sword. The expensive ones fight monsters (Knight), deliver on request, drop TNT, run items like a Stripes pipe, or feed a Builder. The Empty board is the blank one, and a robot carrying it cannot be placed.

@@ -110,6 +110,18 @@ The Integration Table category needs one too (robot to the centre, board to any 
 
 `marker_orientation`, `marker_volume_los` and `marker_volume_triangulation_3d` failed together once in a full 26.1.2 game-test run (2026-09-26) and passed on every later run. Likely arena/concurrency interference — see the game-test arena-geometry and batch-isolation memories.
 
+## Guide book follow-ups
+
+Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-robots-and-toc.md](guide-robots-and-toc.md)):
+- Board pages have no icon: they are `external` entries and `PageEntryExternal#createDrawable` returns null. Give external entries an optional `icon` stack field (a programmed board stack via `ItemRedstoneBoard.createStack`) so Robots > Boards reads like the rest of the tree.
+- The Sort By System button reuses the old Sort By Mod glyph (`textures/gui/sprites/guide/sort_system*.png`, four states). Needs a 14x14 icon that says "system".
+- Robot name tags: `RenderRobot` draws a custom name, but the robot is a bare `Entity`, so the vanilla name tag never applies and nothing else sets one. Either accept name tags in `EntityRobot#interactRobot` (and carry the name through the item on wrench pickup) or drop the render hook. The guide no longer mentions naming.
+- `RoboticsJeiSubtypes` and the two board/robot program collectors live in `buildcraft.robotics.compat.jei` but the guide's recipe lookups use them too; move them to a neutral package.
+- `GuideAssembly` still shows a raw "N MJ" cost tooltip with a stale "localizeMj not ported" comment; `LocaleUtil.localizeMj` exists and is what the new laser-table panel uses.
+- `Request Needed Items` (`station.provide_machine_request`) is registered on every station gate but nothing reads it, in 7.1.x either. Implement (feed a neighbouring machine's missing list, the Builder is the obvious consumer) or remove it and its lang keys; its guide page says it is inert.
+- In the system view the Robots chapter's first subchapter is also called "Robots" (subtype `robot`). A better subtype label ("Robot Basics"?) would read better in both views.
+- Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
+
 ## Small cleanups
 
 Found in passing on 2026-09-26; none is a bug today.

@@ -86,3 +86,4 @@ home links need two clear cells; the Request Needed Items action is inert, as in
   category orphaned a "Power › Item Transport" chapter, stale crafting-recipes comment, no title-key lang test.
   Refuted: the lookup "returns all steps" claim (no such fallback), the "no system/subtype lang test" claim.
   Noted, not done: zh_cn lacks the robot item and board display names (pre-existing translation gap).
+- PENDING: the Flash-Next (dgx) leg of triad `review-the-committed-change-20261015-211942-2f0a` was still running at session end (deferred); the opencode notify hook delivers it at the next prompt, or collect it with `opencode_wait_group`. Adjudicate against fb195ecb2.

@@ -30,6 +30,11 @@ public class ContentsNode implements IContentsNode {
     private IContentsNode[] sortedNodes = new IContentsNode[0];
     IContentsNode[] visibleNodes = new IContentsNode[0];
     private boolean needsSorting = false;
+    /** Fixed TOC position overriding the min-of-children weight, or null to inherit. The
+     *  Sort By System chapters use it so they read as a curriculum (Getting Started, Power,
+     *  Transport, ...) rather than wherever their lowest-weighted entry happens to fall. */
+    @Nullable
+    private Integer explicitSortIndex = null;
 
     public ContentsNode(String title, int indent) {
         this(title, indent, false);
@@ -46,8 +51,16 @@ public class ContentsNode implements IContentsNode {
         return title;
     }
 
+    /** Pin this node's sort position, ignoring its members' weights. See {@link #explicitSortIndex}. */
+    public void setSortIndex(int sortIndex) {
+        this.explicitSortIndex = sortIndex;
+    }
+
     @Override
     public int getSortIndex() {
+        if (explicitSortIndex != null) {
+            return explicitSortIndex;
+        }
         // A chapter inherits the lowest weight among its members, so it floats to where its
         // earliest-weighted entry would sit. Reads the raw child map (fully populated before
         // sort() runs), so it is independent of sort/visibility state. Empty -> neutral 0.

@@ -126,12 +126,15 @@ public class GuiGuide extends Screen {
 
     /** The contents page's sort-order buttons, index-aligned with {@link #SORTING_TYPES}. */
     public static final ButtonImage[] SORTING_ART = {
-        ButtonImage.GUIDE_SORT_TYPE, ButtonImage.GUIDE_SORT_MOD, ButtonImage.GUIDE_SORT_ALPHABETICAL
+        ButtonImage.GUIDE_SORT_SYSTEM, ButtonImage.GUIDE_SORT_TYPE, ButtonImage.GUIDE_SORT_ALPHABETICAL
     };
 
+    /** Index 0 is the default view. Sort By System replaced 1.12.2's Sort By Mod: BC is now one
+     *  monolithic mod, so a mod-first order showed a single "BuildCraft" chapter holding
+     *  everything, while grouping by game system gives a new reader a path through the mod. */
     public static final TypeOrder[] SORTING_TYPES = {
+        new TypeOrder("buildcraft.guide.order.system_subtype", ETypeTag.SYSTEM, ETypeTag.SUB_TYPE),
         new TypeOrder("buildcraft.guide.order.type_subtype", ETypeTag.TYPE, ETypeTag.SUB_TYPE),
-        new TypeOrder("buildcraft.guide.order.mod_type", ETypeTag.MOD, ETypeTag.TYPE),
         new TypeOrder("buildcraft.guide.order.alphabetical")
     };
 

@@ -6,13 +6,15 @@
 
 package buildcraft.lib.client.guide;
 
-import net.minecraft.resources.Identifier;
-
 public enum ETypeTag {
     MOD("mod."),
     SUB_MOD("submod."),
     TYPE("type."),
-    SUB_TYPE("subtype.");
+    SUB_TYPE("subtype."),
+    /** The game system an entry belongs to (Power, Transport, Gates and Logic, ...). BC is one
+     *  monolithic mod, so the old mod-first view collapsed everything into one "BuildCraft"
+     *  chapter; grouping by system is the useful top level for a reader learning the mod. */
+    SYSTEM("system.");
 
     public final String preText;
 

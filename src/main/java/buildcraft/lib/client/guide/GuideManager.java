@@ -120,6 +120,19 @@ public enum GuideManager {
 
     public final Set<Object> objectsAdded = new HashSet<>();
 
+    /** Raw {@code tag_system} keys in the order their chapters appear under Sort By System. The
+     *  view is a reading path through the mod — start, power it, move things, automate the
+     *  logic, then the bigger machines — so it is curated, not alphabetical (which would open
+     *  on "Building" and bury "Getting Started"). Systems not listed (addons) follow, A–Z. */
+    static final List<String> SYSTEM_CHAPTER_ORDER = List.of(
+        "getting_started", "power", "transport", "logic", "building", "mining_fluids", "silicon", "robots");
+
+    /** Far below any authored entry weight, so every system chapter sorts ahead of the root
+     *  chapters/leaves that have no system (e.g. the search-only "Other Items"). */
+    private static final int SYSTEM_SORT_BASE = -1_000_000;
+
+    private static final String SYSTEM_PREFIX = ETypeTag.SYSTEM.preText;
+
     private boolean isInReload = false;
 
     // Bumped at the end of every successful reload0(). GuiGuide polls this in tick()
@@ -153,6 +166,22 @@ public enum GuideManager {
 
     static {
         PAGE_LOADERS.put("md", MarkdownPageLoader.INSTANCE);
+    }
+
+    /** Fixed TOC position for a Sort By System chapter. Takes the full lang key
+     *  ({@code buildcraft.guide.chapter.system.<x>}) — or the bare {@code <x>} — and matches the
+     *  raw key rather than the localized title, so a language missing a system name still sorts
+     *  correctly. Unknown systems all share the slot after the list, falling back to A–Z. */
+    static int systemChapterSortIndex(String systemKey) {
+        String raw = systemKey.startsWith(SYSTEM_PREFIX) ? systemKey.substring(SYSTEM_PREFIX.length()) : systemKey;
+        int idx = SYSTEM_CHAPTER_ORDER.indexOf(raw);
+        return SYSTEM_SORT_BASE + (idx < 0 ? SYSTEM_CHAPTER_ORDER.size() : idx);
+    }
+
+    /** Full chapter lang key for a raw {@code tag_system} value, or null when there is none. */
+    @Nullable
+    private static String systemKeyOf(@Nullable String rawSystem) {
+        return (rawSystem == null || rawSystem.isBlank()) ? null : SYSTEM_PREFIX + rawSystem;
     }
 
     public void onRegistryReload(EventBuildCraftReload.FinishLoad event) {
@@ -462,13 +491,14 @@ public enum GuideManager {
         }
 
         // Auto-iterated categories (Triggers, Actions, ...) are filed per sort order by
-        // fileExtraEntry: their own top-level chapter under Sort By Type, nested under the
-        // single "BuildCraft" mod chapter under Sort By Mod, and flat under Alphabetical —
-        // mirroring how regular entries (Blocks/Items/Pipes) place themselves via getOrdered.
-        // The previous version filed them as a top-level chapter in *every* order, which
-        // leaked "Triggers"/"Actions" chapters into Mod and Alphabetical sorts. Statements
-        // carry no subtype.
-        final IEntryLinkConsumer adder = (tags, page) -> fileExtraEntry(tags.type, null, page);
+        // fileExtraEntry: their own top-level chapter under Sort By Type, nested under their
+        // game system under Sort By System, and flat under Alphabetical — mirroring how
+        // regular entries (Blocks/Items/Pipes) place themselves via getOrdered. The previous
+        // version filed them as a top-level chapter in *every* order, which leaked
+        // "Triggers"/"Actions" chapters into views that group differently. Statements carry
+        // no subtype.
+        final IEntryLinkConsumer adder =
+            (tags, page) -> fileExtraEntry(tags.type, null, systemKeyOf(tags.system), page);
 
         for (PageValueType<?> type : GuidePageRegistry.INSTANCE.types.values()) {
             type.iterateAllDefault(adder, net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
@@ -479,7 +509,7 @@ public enum GuideManager {
         // Each is paired with a group registered in GuideGroupManager so the listed
         // entries also de-dup from the auto-iterated leaves above (see e.g.
         // PageEntryStatement#iterateAllDefault skipping IFillerPattern).
-        addCategoryEntries(adder);
+        addCategoryEntries();
 
         quickSearcher.generate(net.minecraft.util.profiling.InactiveProfiler.INSTANCE);
 
@@ -579,57 +609,55 @@ public enum GuideManager {
      *  to the data: groups in {@link GuideGroupManager#populateDefaultGroups()}, leaf
      *  filtering inside the relevant {@code iterateAllDefault} (e.g.
      *  {@code PageEntryStatement} skipping {@code IFillerPattern}). */
-    private void addCategoryEntries(IEntryLinkConsumer adder) {
+    private void addCategoryEntries() {
         // Reset before each rebuild so a /reload doesn't accumulate stale links from the
         // previous generation (the matching ContentsNode is rebuilt fresh, so leftover
         // entries here would only manifest as stale <link> targets).
         categoryLinks.clear();
-        addFillerPatternsCategory(adder);
-        addEmzuliExtractionPresetsCategory(adder);
-        addPipeSignalsCategory(adder);
-        addSetPipeDirectionCategory(adder);
-        addPaintPipeColourCategory(adder);
-        addSetPowerLimitCategory(adder);
+        addFillerPatternsCategory();
+        addEmzuliExtractionPresetsCategory();
+        addPipeSignalsCategory();
+        addSetPipeDirectionCategory();
+        addPaintPipeColourCategory();
+        addSetPowerLimitCategory();
     }
 
     /** File an auto-iterated leaf — a statement Trigger/Action, or a consolidated "category"
      *  entry — into every opted-in book's contents tree, placed correctly <i>per sort order</i>
      *  (the previous version filed it as a top-level chapter in <em>every</em> order, which
-     *  leaked "Triggers"/"Actions" chapters into Sort By Mod and Alphabetical where the regular
-     *  entries collapse under "BuildCraft" / go flat):
+     *  leaked "Triggers"/"Actions" chapters into views that group differently):
      *  <ul>
      *  <li><b>Alphabetical</b> (no tags) — flat under the root, no chapter grouping, a pure
      *      A–Z list.</li>
-     *  <li><b>Mod-first</b> (Sort By Mod) — under the single "BuildCraft" mod chapter, with
-     *      {@code chapterKey} as a sub-header beneath it, so the order shows exactly one
-     *      top-level chapter (mirrors how regular entries nest their type under the mod).</li>
+     *  <li><b>System-first</b> (Sort By System) — under its game-system chapter, then its
+     *      subtype; with no subtype, {@code chapterKey} stands in for it (see
+     *      {@link #placeExtraEntryInOrder}).</li>
      *  <li><b>Type-first</b> (Sort By Type) — as its own top-level chapter named by
      *      {@code chapterKey} (e.g. "Triggers"/"Actions"), parallel to Blocks/Items/Pipes.</li>
      *  </ul>
-     *  When {@code subtypeKey} is non-null/non-empty <em>and the order groups by subtype</em>
-     *  (Sort By Type), the leaf lands one level deeper under the category chapter (e.g.
-     *  {@code Actions > Item Transport}); orders without a subtype level (Sort By Mod) drop it,
-     *  so a pipe-item category action sits directly under {@code Actions} alongside the plain
-     *  actions instead of inside an Item Transport sub-group. Both keys are full localization
-     *  keys. Idempotent on {@link #pageLinksAdded} / {@link #quickSearcher}, so filing the same
-     *  page under several chapters (e.g. Pipe Signals under both Triggers and Actions) is safe. */
-    private void fileExtraEntry(String chapterKey, @Nullable String subtypeKey, PageLink page) {
+     *  All keys are full localization keys; {@code subtypeKey} and {@code systemKey} may be null.
+     *  Idempotent on {@link #pageLinksAdded} / {@link #quickSearcher}, so filing the same page
+     *  under several chapters (e.g. Pipe Signals under both Triggers and Actions) is safe. */
+    private void fileExtraEntry(String chapterKey, @Nullable String subtypeKey, @Nullable String systemKey,
+        PageLink page) {
         if (pageLinksAdded.add(page)) {
             quickSearcher.add(page, page.getSearchName());
         }
         String chapterTitle = localizeChapter(chapterKey);
         String subtypeTitle = (subtypeKey == null || subtypeKey.isEmpty())
             ? null : localizeChapter(subtypeKey);
-        // Every auto-iterated entry is BuildCraft's (this is a single mod); regular entries
-        // build the same "BuildCraft" node via getOrdered(mod_type)[0], so the get-or-create
-        // inside placeExtraEntryInOrder reuses it rather than making a second mod tab.
+        boolean hasSystem = systemKey != null && !systemKey.isEmpty();
+        String systemTitle = hasSystem ? localizeChapter(systemKey) : null;
+        int systemSort = hasSystem ? systemChapterSortIndex(systemKey) : 0;
+        // Every auto-iterated entry is BuildCraft's (this is a single mod). No built-in order
+        // groups by mod any more; MOD stays handled so any TypeOrder naming it still places.
         String modTitle = LocaleUtil.localize(ETypeTag.MOD.preText + "buildcraft");
         for (Entry<GuideBook, Map<TypeOrder, ContentsNode>> bookEntry : contents.entrySet()) {
             @Nullable GuideBook book = bookEntry.getKey();
             if (book != null && !book.appendAllEntries) continue;
             for (Entry<TypeOrder, ContentsNode> orderEntry : bookEntry.getValue().entrySet()) {
                 placeExtraEntryInOrder(orderEntry.getKey(), orderEntry.getValue(),
-                    modTitle, chapterTitle, subtypeTitle, page);
+                    modTitle, systemTitle, systemSort, chapterTitle, subtypeTitle, page);
             }
         }
     }
@@ -638,32 +666,40 @@ public enum GuideManager {
      *  contents {@code root}. Walks the order's own tag sequence and emits one chapter level per
      *  tag the entry has a value for — exactly mirroring {@link JsonTypeTags#getOrdered} for
      *  regular entries — so the depth always matches the order: flat under Alphabetical
-     *  (no tags), {@code BuildCraft > Actions} under Sort By Mod ({@code [MOD, TYPE]}, no
-     *  subtype level), {@code Actions > Item Transport} under Sort By Type
-     *  ({@code [TYPE, SUB_TYPE]}). Static and registry-free so it can be unit-tested directly. */
+     *  (no tags), {@code Gates and Logic > Wire} under Sort By System ({@code [SYSTEM, SUB_TYPE]}),
+     *  {@code Actions > Item Transport} under Sort By Type ({@code [TYPE, SUB_TYPE]}).
+     *
+     *  <p>One deliberate divergence from getOrdered: in an order with no TYPE level, a leaf
+     *  without a subtype uses {@code chapterTitle} at the SUB_TYPE level. Otherwise every plain
+     *  statement would spill loose into its system chapter, and the search-only "Other Items" /
+     *  "Other Fluids" chapters (no system, no subtype) would dissolve into root leaves.
+     *
+     *  <p>A SYSTEM-level chapter is pinned to {@code systemSortIndex} (see
+     *  {@link #systemChapterSortIndex}). Static and registry-free so it can be unit-tested. */
     static void placeExtraEntryInOrder(TypeOrder order, ContentsNode root, String modTitle,
-        String chapterTitle, @Nullable String subtypeTitle, IContentsNode leaf) {
+        @Nullable String systemTitle, int systemSortIndex, String chapterTitle, @Nullable String subtypeTitle,
+        IContentsNode leaf) {
+        boolean hasSubtype = subtypeTitle != null && !subtypeTitle.isEmpty();
+        boolean orderHasType = order.tags.contains(ETypeTag.TYPE);
         ContentsNode node = root;
         int indent = 0;
         for (ETypeTag tag : order.tags) {
             String title = switch (tag) {
                 case MOD -> modTitle;
+                case SYSTEM -> systemTitle;
                 case TYPE -> chapterTitle;
-                case SUB_TYPE -> subtypeTitle;
+                case SUB_TYPE -> hasSubtype ? subtypeTitle : (orderHasType ? null : chapterTitle);
                 case SUB_MOD -> null; // auto-iterated entries carry no submod
             };
             if (title == null || title.isEmpty()) {
                 continue; // skip tags this entry has no value for (mirrors getOrdered)
             }
             node = getOrCreateChapter(node, title, indent++);
+            if (tag == ETypeTag.SYSTEM) {
+                node.setSortIndex(systemSortIndex);
+            }
         }
         node.addChild(leaf);
-    }
-
-    /** Thin wrapper over {@link #fileExtraEntry} kept for the {@link #registerCategory} call
-     *  site (category entries that specify an explicit subtype). */
-    private void addToChapterSubtype(String chapterKey, @Nullable String subtypeKey, PageLink page) {
-        fileExtraEntry(chapterKey, subtypeKey, page);
     }
 
     /** Locate or create a child {@link ContentsNode} of {@code parent} with the given
@@ -713,7 +749,7 @@ public enum GuideManager {
      *  <p>Most categories pass a single chapter tag — they collapse leaves that all live
      *  in one chapter (Filler Patterns are pure actions; Emzuli presets are pure actions).
      *  Pipe Signals span both Triggers and Actions, so the same TOC link is filed under
-     *  both — the {@link IEntryLinkConsumer} dedups its search-index population for us
+     *  both — {@link #fileExtraEntry} dedups its search-index population for us
      *  (see {@code pageLinksAdded.add(page)}), so this only adds the link to two
      *  ContentsNodes.
      *
@@ -726,6 +762,10 @@ public enum GuideManager {
      *  localization keys (e.g. {@code "buildcraft.guide.chapter.subtype.pipe_item"}),
      *  same convention {@code chapterTagTypes} uses.
      *
+     *  <p>{@code chapterSystems} is a parallel array to {@code chapterTagTypes} giving each
+     *  placement's game system as a full key ({@code buildcraft.guide.chapter.system.<x>}) —
+     *  the top-level chapter the entry files under in the default Sort By System view.
+     *
      *  <p>{@code extraParts} (nullable) supplies any additional {@link GuidePart}s to
      *  insert between the description and the group listing — typically a manual
      *  {@code <link>}-style backlink to a related page that {@link GuideGroupManager}'s
@@ -737,8 +777,8 @@ public enum GuideManager {
      *  the opened page's header, so a raw English string here leaks into all three. Most
      *  categories reuse their group's own {@code buildcraft.guide.group.to.<domain>.<group>}
      *  heading, which is by definition the same words for the same concept. */
-    private void registerCategory(IEntryLinkConsumer adder, String domain, String groupName,
-        String[] chapterTagTypes, @Nullable String[] chapterSubtypes,
+    private void registerCategory(String domain, String groupName,
+        String[] chapterTagTypes, @Nullable String[] chapterSubtypes, String[] chapterSystems,
         ISimpleDrawable icon, String titleKey,
         @Nullable java.util.function.Function<GuiGuide, List<GuidePart>> extraParts) {
         GuideGroupSet groupSet = GuideGroupManager.get(domain, groupName);
@@ -775,11 +815,7 @@ public enum GuideManager {
             String chapterKey = chapterTagTypes[i];
             String subtypeKey = (chapterSubtypes != null && i < chapterSubtypes.length)
                 ? chapterSubtypes[i] : null;
-            if (subtypeKey == null || subtypeKey.isEmpty()) {
-                adder.addChild(new JsonTypeTags(chapterKey), link);
-            } else {
-                addToChapterSubtype(chapterKey, subtypeKey, link);
-            }
+            fileExtraEntry(chapterKey, subtypeKey, chapterSystems[i], link);
         }
     }
 
@@ -787,18 +823,19 @@ public enum GuideManager {
      *  category entry under Actions, using the stairs sprite as the icon. The body
      *  comes from {@code concept/filler_patterns.md}; this method just supplies the
      *  TOC-side metadata (icon, title, chapter placement). */
-    private void addFillerPatternsCategory(IEntryLinkConsumer adder) {
+    private void addFillerPatternsCategory() {
         // Use the same statement-slot rendering the patterns themselves use elsewhere in
         // the guide (16x16 framed slot with the pattern's sprite), so the icon visually
         // matches the leaf entries this category replaces.
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS, x, y);
-        registerCategory(adder, "buildcraft", "filler_patterns",
+        registerCategory("buildcraft", "filler_patterns",
             new String[] { "buildcraft.guide.contents.actions" },
             // Filed under Automation: the filler block is an automation machine, and
             // the patterns are GUI choices for how it shapes its area-fill — same
             // subtype the filler itself sits under (Blocks > Automation).
             new String[] { "buildcraft.guide.chapter.subtype.automation" },
+            new String[] { SYSTEM_PREFIX + "building" },
             icon,
             "buildcraft.guide.group.to.buildcraft.filler_patterns",
             null);
@@ -811,14 +848,15 @@ public enum GuideManager {
      *  the auto-emitted Linked-From machinery doesn't cover the source-of-group case
      *  (the pipe is the SOURCE of the {@code extraction_presets} group, not an entry
      *  in some other group containing the category). */
-    private void addEmzuliExtractionPresetsCategory(IEntryLinkConsumer adder) {
+    private void addEmzuliExtractionPresetsCategory() {
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             // ACTION_EXTRACTION_PRESET[0] is the SQUARE/RED preset (see SlotIndex enum
             // order in PipeBehaviourEmzuli) — the visually-canonical "default" preset.
             buildcraft.transport.BCTransportStatements.ACTION_EXTRACTION_PRESET[0], x, y);
-        registerCategory(adder, "buildcraft", "extraction_presets",
+        registerCategory("buildcraft", "extraction_presets",
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            new String[] { SYSTEM_PREFIX + "transport" },
             icon,
             // Not the group's own heading ("Extraction Presets") — the TOC line needs the
             // "Emzuli" qualifier to be findable, since the group heading only ever renders
@@ -840,27 +878,27 @@ public enum GuideManager {
      *  The body comes from {@code concept/pipe_signals.md} — including its own
      *  {@code <link to="buildcraftunofficial:item/wire"/>} back to the pipe wire page,
      *  so no extraParts are needed (unlike Emzuli, whose md had no inline wire link). */
-    private void addPipeSignalsCategory(IEntryLinkConsumer adder) {
+    private void addPipeSignalsCategory() {
         // Use the BLACK active sprite for the icon — the user's reference document was
         // "Black Pipe Signal", and BLACK's the canonical example wire colour throughout
         // the codebase (it's the colour the now-removed guide.txt entries pointed at).
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             buildcraft.transport.BCTransportStatements.ACTION_PIPE_SIGNAL[
                 net.minecraft.world.item.DyeColor.BLACK.ordinal()], x, y);
-        registerCategory(adder, "buildcraft", "pipe_signals",
+        registerCategory("buildcraft", "pipe_signals",
             new String[] {
                 "buildcraft.guide.contents.triggers",
                 "buildcraft.guide.contents.actions",
             },
-            // Filed under Pluggables in both chapters: the wire pluggable (and the
-            // pulsar that drives it) is the semantic source of pipe signals — readers
-            // looking for "anything to do with wires" find the category there alongside
-            // the wire and pulsar pages, instead of in Item Transport with the items
-            // those signals end up gating.
+            // Filed under Wire in both chapters: pipe wire is the semantic source of pipe
+            // signals, so readers looking for "anything to do with wires" find the category
+            // beside the wire pages (Gates and Logic > Wire under Sort By System), instead of
+            // in Item Transport with the items those signals end up gating.
             new String[] {
-                "buildcraft.guide.chapter.subtype.pipe_plug",
-                "buildcraft.guide.chapter.subtype.pipe_plug",
+                "buildcraft.guide.chapter.subtype.wire",
+                "buildcraft.guide.chapter.subtype.wire",
             },
+            new String[] { SYSTEM_PREFIX + "logic", SYSTEM_PREFIX + "logic" },
             icon,
             "buildcraft.guide.group.to.buildcraft.pipe_signals",
             null);
@@ -889,7 +927,7 @@ public enum GuideManager {
      *  blocks → items → GUI in order and caches the hit. Resource packs that retexture
      *  the compass replace the per-frame {@code compass_XX.png} textures, so the
      *  rendered sprite still reflects the active resource pack. */
-    private void addSetPipeDirectionCategory(IEntryLinkConsumer adder) {
+    private void addSetPipeDirectionCategory() {
         buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder compassFrame =
             buildcraft.lib.client.sprite.SpriteHolderRegistry.getHolder("minecraft:item/compass_16");
         ISimpleDrawable icon = (x, y) -> {
@@ -906,9 +944,10 @@ public enum GuideManager {
                 sprite, (int) x, (int) y, 16, 16, 0xFFFFFFFF);*/
             //?}
         };
-        registerCategory(adder, "buildcraft", "set_pipe_direction",
+        registerCategory("buildcraft", "set_pipe_direction",
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            new String[] { SYSTEM_PREFIX + "transport" },
             icon,
             "buildcraft.guide.group.to.buildcraft.set_pipe_direction",
             null);
@@ -920,13 +959,14 @@ public enum GuideManager {
      *  writeup). The body is the existing "Paint Items Black" page
      *  ({@code action/pipe_colour.md}), whose text applies equally to all colour
      *  variants since the only difference between them is which colour they paint. */
-    private void addPaintPipeColourCategory(IEntryLinkConsumer adder) {
+    private void addPaintPipeColourCategory() {
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             buildcraft.transport.BCTransportStatements.ACTION_PIPE_COLOUR[
                 net.minecraft.world.item.DyeColor.BLACK.ordinal()], x, y);
-        registerCategory(adder, "buildcraft", "paint_pipe_colour",
+        registerCategory("buildcraft", "paint_pipe_colour",
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            new String[] { SYSTEM_PREFIX + "transport" },
             icon,
             "buildcraft.guide.group.to.buildcraft.paint_pipe_colour",
             null);
@@ -942,15 +982,16 @@ public enum GuideManager {
      *  instead keys its own single-pipe {@code set_power_limit_*} group in
      *  GuideGroupManager, so a pipe page's "Linked To: Set Power Limit" chapter lists only
      *  that pipe's own seven levels. */
-    private void addSetPowerLimitCategory(IEntryLinkConsumer adder) {
+    private void addSetPowerLimitCategory() {
         // ACTION_IRON_POWER_LIMIT[3] is the limitShift=3 entry — sprite m16. See
         // BCTransportStatements (i = numLevels-1-shift); i=3 ⇒ shift=3 ⇒ index 3 of
         // {m256, m128, m64, m16, m8, m2, m0} = m16, a partially-filled limiter bar.
         ISimpleDrawable icon = (x, y) -> GuiElementStatementSource.drawGuiSlot(
             buildcraft.transport.BCTransportStatements.ACTION_IRON_POWER_LIMIT[3], x, y);
-        registerCategory(adder, "buildcraft", "set_power_limit",
+        registerCategory("buildcraft", "set_power_limit",
             new String[] { "buildcraft.guide.contents.actions" },
             new String[] { "buildcraft.guide.chapter.subtype.pipe_item" },
+            new String[] { SYSTEM_PREFIX + "power" },
             icon,
             "buildcraft.guide.group.to.buildcraft.set_power_limit",
             null);
@@ -961,7 +1002,7 @@ public enum GuideManager {
         contents.put(book, map);
         for (TypeOrder order : GuiGuide.SORTING_TYPES) {
             // The Alphabetical order (no tags) keeps a strict A–Z list, ignoring sort weights
-            // that reorder the Type / Mod views.
+            // that reorder the System / Type views.
             map.put(order, new ContentsNode("root", -1, order.tags.isEmpty()));
         }
     }
@@ -993,6 +1034,10 @@ public enum GuideManager {
                         nodePath[i] = node;
                     } else {
                         throw new IllegalStateException("Unknown node type " + subNode.getClass());
+                    }
+                    // Keyed off the raw lang key, not the title: see systemChapterSortIndex.
+                    if (ordered[i].startsWith(SYSTEM_PREFIX)) {
+                        node.setSortIndex(systemChapterSortIndex(ordered[i]));
                     }
                 }
                 if (nodePath.length == 0) {

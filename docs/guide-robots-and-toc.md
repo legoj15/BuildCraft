@@ -43,11 +43,10 @@ Fluid, Fluid Transport, Item, Item Transport, Pluggables, Power Delivery, plus t
   Forbid/Force Robot) have no `trigger`/`action` line, so `PageEntryStatement#iterateAllDefault` emits them flat
   under Triggers/Actions with no subchapter — the exact failure mode the timer/pulsar comments in `guide.txt`
   describe.
-- **No recipe renderer for the robot crafting chain.** `lib/client/guide/parts/recipe/` has Crafting, Assembly
-  and Smelting only. `<recipes_usages>` on a board or robot page cannot show Programming Table (board ← blank
-  board) or Integration Table (robot ← blank robot + board) steps. JEI already has an Integration Table category
-  (`8eb5038a6`), so the recipe model to mirror exists; the guide needs `GuideIntegration*` / `GuideProgramming*`
-  triples modelled on `GuideAssembly*`.
+- **Robot crafting chain: renderers exist, pages don't use them yet.** `<recipes_usages stack="buildcraftunofficial:robot"/>`
+  (and `...:redstone_board`) now lists the Integration / Programming Table steps under the item's uses (one panel
+  cycling every program); a page pins one step with `<recipe id="buildcraftunofficial:boardRobotMiner" type="integration"/>`
+  or `type="programming"` (the id is the board id). Lookups: `buildcraft.robotics.client.guide`.
 - Stale in passing: `item/guide.md` still points players at mod-buildcraft.com forums and the upstream
   BuildCraft/BuildCraft issue tracker.
 
@@ -75,13 +74,13 @@ Layout:
 - **Robots › Stations and Tables** — Docking Station, Programming Table, Integration Table, Zone Planner,
   Requester. Existing `block_auto`/`plug` aliases can be re-pointed with a `robot` type; the Assembly Table stays
   under Automation (it is a silicon machine, not a robot one).
-- **Robots › Items** — Robot, Redstone Board (blank). Both pages lean on the recipe renderer above.
+- **Robots › Items** — Robot, Redstone Board (blank). Both pages lean on the table recipe lookups above.
 - **Triggers › Robots** and **Actions › Robots / Docking Stations** — the 20 statements, via new `trigger`/`action`
   lines with subtypes `robot` and `station`. Two subtypes on the Actions side because the station actions (what a
   station offers) and the robot actions (what a robot is told) are different mental objects. Auto-stub bodies are
   acceptable at first; the statement names are self-describing.
 
-Cost: ~1 day Java for the two recipe renderers; the rest is `guide.txt`, two dozen lang keys, and prose.
+Cost: no Java left; it is `guide.txt`, two dozen lang keys, and prose.
 Prose volume is the real cost (≈ 26 pages, 18 of them short).
 
 ## Decision 2 — restructure the table of contents?

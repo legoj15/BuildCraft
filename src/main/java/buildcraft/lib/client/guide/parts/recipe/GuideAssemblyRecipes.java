@@ -76,6 +76,12 @@ public enum GuideAssemblyRecipes implements IStackRecipes {
         return null;
     }
 
+    @Override
+    @Nullable
+    public GuidePartFactory getFactoryById(String id) {
+        return getFactoryByName(id);
+    }
+
     private static GuidePartFactory createFactory(buildcraft.api.recipes.AssemblyRecipe recipe, ItemStack output) {
         return new GuideAssemblyFactory(resolveInputStacks(recipe, output), output,
             recipe.getRequiredMicroJoulesFor(output));

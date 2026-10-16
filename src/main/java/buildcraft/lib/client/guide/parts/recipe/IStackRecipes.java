@@ -9,6 +9,7 @@ package buildcraft.lib.client.guide.parts.recipe;
 import java.util.List;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.world.item.ItemStack;
 
@@ -20,4 +21,15 @@ public interface IStackRecipes {
     List<GuidePartFactory> getUsages(@Nonnull ItemStack stack);
 
     List<GuidePartFactory> getRecipes(@Nonnull ItemStack stack);
+
+    /** Backs {@code <recipe id="..." type="<this handler's type>"/>}: one specific recipe, named in whatever id
+     *  space the handler owns (an assembly recipe's registry name, a robot board's id, ...), for pages that need to
+     *  pin a recipe the item-based lookups can't single out. Crafting resolves ids itself (recipe ResourceLocations),
+     *  so the default — no id support — is right for it.
+     *
+     *  @return The recipe's display factory, or null if this handler has no recipe with that id. */
+    @Nullable
+    default GuidePartFactory getFactoryById(String id) {
+        return null;
+    }
 }

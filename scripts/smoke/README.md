@@ -52,6 +52,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `hover` | same targets | `/screenhover`, then waits 600 ms so the tooltip draws — follow with `shot` |
 | `hoverEach` | `name`, `max` (default 12) | hover every visible, active widget on the open screen and screenshot each tooltip (`NN-<name>-hoverKK.png`) |
 | `key` | `key` | a named key into the open screen (`escape`, `tab`, `enter`, …) |
+| `text` | `text` | type a string into the open screen's focused widget (click the search box first) |
 | `close` | — | close the open screen (releases container menus server-side) |
 | `wait` | `ms` | sleep |
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |

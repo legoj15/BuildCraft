@@ -345,6 +345,8 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             if ($Step.do -eq 'hover') { Start-Sleep -Milliseconds 600 }   # tooltips draw on the next frames
         }
         'key' { Invoke-Bridge POST '/screenkeys' @{ type = 'key'; key = $Step.key } | Out-Null; $detail = $Step.key }
+        # Typed text goes to whichever widget of the open screen has focus (click a search box first).
+        'text' { Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Step.text } | Out-Null; $detail = $Step.text }
         # The close packet and a following /command race on the server: a slot change made while the server still has
         # the old menu open is sent under that menu's id, which the client (already back on its inventory) drops.
         'close' { Invoke-Bridge POST '/screenclose' | Out-Null; Start-Sleep -Milliseconds 400 }

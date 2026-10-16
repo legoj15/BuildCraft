@@ -824,12 +824,15 @@ public enum XmlPageLoader implements IPageLoaderText {
      *  recipe has that id, or the recipe isn't a crafting recipe. */
     @Nullable
     private static GuidePartFactory loadRecipeById(String id, @Nullable String type) {
-        // type="assembling" → resolve the id as an Assembly Table recipe by its registry name;
-        // any other type (or none) treats the id as a crafting recipe's ResourceLocation.
-        if ("assembling".equals(type)) {
-            GuidePartFactory factory = GuideAssemblyRecipes.getFactoryByName(id.trim());
+        // A registered non-crafting type resolves the id in its own id space (IStackRecipes.getFactoryById):
+        // type="assembling" → an Assembly Table recipe's registry name; type="programming" /
+        // type="integration" → a robot board id (e.g. "buildcraftunofficial:boardRobotMiner"). No type,
+        // "crafting", or an unknown type treats the id as a crafting recipe's ResourceLocation.
+        IStackRecipes handler = type == null || "crafting".equals(type) ? null : RecipeLookupHelper.handlerTypes.get(type);
+        if (handler != null) {
+            GuidePartFactory factory = handler.getFactoryById(id.trim());
             if (factory == null) {
-                BCLog.logger.warn("[lib.guide.loader.xml] No assembly recipe found with name " + id);
+                BCLog.logger.warn("[lib.guide.loader.xml] No " + type + " recipe found with id " + id);
             }
             return factory;
         }

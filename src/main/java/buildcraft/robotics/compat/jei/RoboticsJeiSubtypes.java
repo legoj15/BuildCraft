@@ -57,8 +57,10 @@ public final class RoboticsJeiSubtypes {
      *  option is a no-op: same item, and — for boards and robots — the same JEI key. Any other item counts as the
      *  same only when its components match exactly. That is deliberately STRICTER than JEI, which merges every stack
      *  of an item it has no key for: an addon recipe that rewrites such an item's components is still a real
-     *  conversion (the tooltips differ), so it keeps its entry rather than being hidden as a no-op. */
-    static boolean sameVariant(ItemStack a, ItemStack b) {
+     *  conversion (the tooltips differ), so it keeps its entry rather than being hidden as a no-op. The guide book's
+     *  table lookups ({@code buildcraft.robotics.client.guide}) match a page's stack against these entries the same
+     *  way, so a Miner board's page finds the Miner step whatever else its stack carries. */
+    public static boolean sameVariant(ItemStack a, ItemStack b) {
         if (!ItemStack.isSameItem(a, b)) {
             return false;
         }

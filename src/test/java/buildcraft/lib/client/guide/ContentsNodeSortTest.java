@@ -22,8 +22,9 @@ import buildcraft.lib.client.guide.parts.contents.IContentsNode;
 import buildcraft.lib.client.guide.parts.contents.PageLink;
 
 /** Pins {@link ContentsNode}'s TOC sort: weight first (lower = earlier), alphabetical within
- *  equal weights, a chapter inherits its lowest member's weight, and the Alphabetical root
- *  ignores weights entirely. */
+ *  equal weights, a chapter inherits its lowest member's weight unless it carries an explicit
+ *  index (the Sort By System chapters, which follow a fixed curriculum order), and the
+ *  Alphabetical root ignores weights entirely. */
 class ContentsNodeSortTest {
 
     /** Minimal always-visible leaf carrying a name + sort weight, so the test needs no
@@ -103,5 +104,46 @@ class ContentsNodeSortTest {
         root.addChild(new TestLeaf("b", 0));
         // With ignoreSortWeight set, the high-weighted "a" still sorts before "b" by name.
         assertEquals(List.of("a", "b"), sortedNames(root));
+    }
+
+    @Test
+    void explicitSortIndexWinsOverChildrenMinimum() {
+        ContentsNode chapter = new ContentsNode("chapter", 0);
+        chapter.addChild(new TestLeaf("x", 500));
+        assertEquals(500, chapter.getSortIndex(), "without an explicit index the chapter takes its min");
+        chapter.setSortIndex(-7);
+        chapter.addChild(new TestLeaf("y", -100));
+        assertEquals(-7, chapter.getSortIndex(), "an explicit index ignores every child weight");
+    }
+
+    private static ContentsNode systemChapter(String rawSystem, String title) {
+        ContentsNode node = new ContentsNode(title, 0);
+        node.setSortIndex(GuideManager.systemChapterSortIndex(ETypeTag.SYSTEM.preText + rawSystem));
+        node.addChild(new TestLeaf(title + " entry", 0));
+        return node;
+    }
+
+    @Test
+    void systemChaptersFollowTheFixedListThenUnknownsAlphabetically() {
+        ContentsNode root = new ContentsNode("root", -1);
+        // Added in scrambled order, with titles whose A-Z order disagrees with the fixed list.
+        root.addChild(systemChapter("zzz_addon", "Zzz Addon"));
+        root.addChild(systemChapter("robots", "Robots"));
+        root.addChild(systemChapter("transport", "Transport"));
+        root.addChild(systemChapter("aaa_addon", "Aaa Addon"));
+        root.addChild(systemChapter("getting_started", "Getting Started"));
+        root.addChild(systemChapter("power", "Power"));
+        root.addChild(systemChapter("logic", "Gates and Logic"));
+        root.addChild(systemChapter("building", "Building"));
+        root.addChild(systemChapter("mining_fluids", "Mining and Fluids"));
+        root.addChild(systemChapter("silicon", "Silicon"));
+        // A non-system root chapter (the search-only Other Items) keeps its member weight.
+        ContentsNode other = new ContentsNode("Other Items", 0);
+        other.addChild(new TestLeaf("Stone", 0));
+        root.addChild(other);
+
+        assertEquals(List.of(
+            "Getting Started", "Power", "Transport", "Gates and Logic", "Building", "Mining and Fluids",
+            "Silicon", "Robots", "Aaa Addon", "Zzz Addon", "Other Items"), sortedNames(root));
     }
 }

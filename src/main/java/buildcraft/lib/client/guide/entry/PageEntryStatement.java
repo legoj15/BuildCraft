@@ -32,8 +32,13 @@ public class PageEntryStatement extends PageValueType<IStatement> {
 
     public static final PageEntryStatement INSTANCE = new PageEntryStatement();
 
-    private static final JsonTypeTags TRIGGER_TAGS = new JsonTypeTags("buildcraft.guide.contents.triggers");
-    private static final JsonTypeTags ACTION_TAGS = new JsonTypeTags("buildcraft.guide.contents.actions");
+    /** Fall-through tags for statements with no guide.txt line (chiefly addon statements). They
+     *  carry the "logic" system so the default Sort By System view files them under
+     *  Gates and Logic &gt; Triggers/Actions instead of loose at the contents root. */
+    private static final JsonTypeTags TRIGGER_TAGS =
+        new JsonTypeTags(null, "buildcraft.guide.contents.triggers", null, "logic");
+    private static final JsonTypeTags ACTION_TAGS =
+        new JsonTypeTags(null, "buildcraft.guide.contents.actions", null, "logic");
 
     @Override
     public Class<IStatement> getEntryClass() {

@@ -30,9 +30,9 @@ public record ButtonImage(Identifier normal, Identifier highlighted, Identifier 
     /** Guide book: back to the previously opened page (bottom of the spine). */
     public static final ButtonImage GUIDE_BACK = of("guide/back", 17, 9);
 
-    /** Guide contents: sort the entries by type / by mod then type / alphabetically (a radio group). */
+    /** Guide contents: sort the entries by game system / by type / alphabetically (a radio group). */
+    public static final ButtonImage GUIDE_SORT_SYSTEM = radio("guide/sort_system", 14, 14);
     public static final ButtonImage GUIDE_SORT_TYPE = radio("guide/sort_type", 14, 14);
-    public static final ButtonImage GUIDE_SORT_MOD = radio("guide/sort_mod", 14, 14);
     public static final ButtonImage GUIDE_SORT_ALPHABETICAL = radio("guide/sort_alphabetical", 14, 14);
 
     /** The sprite for a button in this state: {@code selected} = latched (the chosen radio option). */

@@ -9,9 +9,7 @@ package buildcraft.lib.client.guide.data;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.resources.Identifier;
-
-
+import javax.annotation.Nullable;
 
 import buildcraft.api.core.BCLog;
 
@@ -24,11 +22,21 @@ public class JsonTypeTags {
     public final String domain;
     public final String type;
     public final String subType;
+    /** Raw game-system key (e.g. {@code "power"}, from a page entry's {@code tag_system}), or null.
+     *  Unlike the other tags it has no "unknown" fallback: an entry nobody filed under a system
+     *  should sit at the contents root, not under an invented "Unknown" chapter. */
+    @Nullable
+    public final String system;
 
     public JsonTypeTags(String domain, String type, String subType) {
+        this(domain, type, subType, null);
+    }
+
+    public JsonTypeTags(String domain, String type, String subType, @Nullable String system) {
         this.domain = domain;
         this.type = type;
         this.subType = subType;
+        this.system = system;
     }
 
     public JsonTypeTags(String type) {
@@ -64,6 +72,8 @@ public class JsonTypeTags {
             return type;
         } else if (tag == ETypeTag.SUB_TYPE) {
             return subType;
+        } else if (tag == ETypeTag.SYSTEM) {
+            return system;
         }
         throw new IllegalStateException("Don't know the type " + tag);
     }
@@ -84,7 +94,10 @@ public class JsonTypeTags {
         String d = firstNonEmpty(this.domain, parent.domain, "unknown");
         String t = firstNonEmpty(this.type, parent.type, "unknown");
         String st = firstNonEmpty(this.subType, parent.subType, "unknown");
-        return new JsonTypeTags(d, t, st);
+        // No "unknown" default for the system — see the field's Javadoc.
+        String sys = firstNonEmpty(this.system, parent.system);
+        if (sys != null && sys.isBlank()) sys = null;
+        return new JsonTypeTags(d, t, st, sys);
     }
 
     private static String firstNonEmpty(String... strings) {
@@ -106,6 +119,7 @@ public class JsonTypeTags {
         }
         BCLog.logger.info(f + "domain = " + domain + ",");
         BCLog.logger.info(f + "type = " + type + ",");
-        BCLog.logger.info(f + "sub_type = " + subType);
+        BCLog.logger.info(f + "sub_type = " + subType + ",");
+        BCLog.logger.info(f + "system = " + system);
     }
 }

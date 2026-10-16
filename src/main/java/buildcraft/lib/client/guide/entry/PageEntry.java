@@ -41,7 +41,10 @@ public final class PageEntry<T> extends PageValue<T> {
             : Identifier.parse("buildcraft:guide");
         String tagType = json.has("tag_type") ? json.get("tag_type").getAsString() : "";
         String subType = json.has("tag_subtype") ? json.get("tag_subtype").getAsString() : "";
-        this.typeTags = new JsonTypeTags(name.getNamespace(), tagType, subType);
+        // Optional: drives the default Sort By System contents view. Absent -> null, so the
+        // entry files at the root of that view rather than under a placeholder chapter.
+        String system = json.has("tag_system") ? json.get("tag_system").getAsString() : null;
+        this.typeTags = new JsonTypeTags(name.getNamespace(), tagType, subType, system);
         this.creativeOnly = json.has("creative_only") && json.get("creative_only").getAsBoolean();
         this.sortIndex = json.has("sort") ? json.get("sort").getAsInt() : 0;
     }

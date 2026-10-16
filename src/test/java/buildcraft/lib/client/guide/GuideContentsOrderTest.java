@@ -19,14 +19,16 @@ import buildcraft.lib.client.guide.parts.contents.IContentsNode;
 /** Pins the per-sort-order placement of auto-iterated guide entries (Triggers/Actions and
  *  consolidated category links) done by {@link GuideManager#placeExtraEntryInOrder}. Regression
  *  guard for the bug where these were filed as a top-level chapter in <em>every</em> order, so
- *  "Triggers"/"Actions" chapters leaked into Sort By Mod (which should show only "BuildCraft")
- *  and Sort Alphabetically (which should be flat). */
+ *  "Triggers"/"Actions" chapters leaked into views that should not have them (Sort
+ *  Alphabetically must stay flat; Sort By System must nest them under their game system). */
 class GuideContentsOrderTest {
 
     // Tag structure of the three real sort orders (titles are passed in, so no lang needed).
+    private static final TypeOrder SYSTEM = new TypeOrder("k.system", ETypeTag.SYSTEM, ETypeTag.SUB_TYPE);
     private static final TypeOrder TYPE = new TypeOrder("k.type", ETypeTag.TYPE, ETypeTag.SUB_TYPE);
-    private static final TypeOrder MOD = new TypeOrder("k.mod", ETypeTag.MOD, ETypeTag.TYPE);
     private static final TypeOrder ALPHA = new TypeOrder("k.alpha");
+
+    private static final int LOGIC_SORT = -42;
 
     /** A stand-in leaf. A ContentsNode is itself an IContentsNode, so it serves as a placeable
      *  leaf whose location we can assert via getChild() lookups by title. */
@@ -38,44 +40,100 @@ class GuideContentsOrderTest {
     void alphabetical_isFlat_withNoChapters() {
         ContentsNode root = new ContentsNode("root", -1);
         IContentsNode entry = leaf("MyEntry");
-        GuideManager.placeExtraEntryInOrder(ALPHA, root, "BuildCraft", "Actions", null, entry);
+        GuideManager.placeExtraEntryInOrder(ALPHA, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Actions", null, entry);
 
         assertSame(entry, root.getChild("MyEntry"), "leaf sits directly under the root");
         assertNull(root.getChild("Actions"), "no category chapter in alphabetical sort");
+        assertNull(root.getChild("Gates and Logic"), "no system chapter in alphabetical sort");
         assertNull(root.getChild("BuildCraft"), "no mod chapter in alphabetical sort");
     }
 
     @Test
-    void modSort_collapsesEverythingUnderOneBuildCraftChapter() {
+    void systemSort_systemAndSubtype_nestsSystemThenSubtype() {
+        // Pipe Signals: system "logic", subtype "wire", filed from the Triggers placement.
         ContentsNode root = new ContentsNode("root", -1);
-        GuideManager.placeExtraEntryInOrder(MOD, root, "BuildCraft", "Triggers", null, leaf("T1"));
-        GuideManager.placeExtraEntryInOrder(MOD, root, "BuildCraft", "Actions", null, leaf("A1"));
+        IContentsNode signals = leaf("Pipe Signals");
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Triggers", "Wire", signals);
 
-        // Exactly one top-level node, and it is the mod chapter.
-        ContentsNode bc = (ContentsNode) root.getChild("BuildCraft");
-        assertNotNull(bc, "mod sort files under a single BuildCraft chapter");
-        assertEquals(0, bc.indent, "BuildCraft is a top-level chapter (indent 0)");
-        assertNull(root.getChild("Triggers"), "Triggers must not be top-level under Sort By Mod");
-        assertNull(root.getChild("Actions"), "Actions must not be top-level under Sort By Mod");
+        ContentsNode logic = (ContentsNode) root.getChild("Gates and Logic");
+        assertNotNull(logic, "system is the top-level chapter");
+        assertEquals(0, logic.indent, "system chapter sits at indent 0");
+        ContentsNode wire = (ContentsNode) logic.getChild("Wire");
+        assertNotNull(wire, "subtype nests under the system");
+        assertEquals(1, wire.indent, "subtype sits at indent 1");
+        assertSame(signals, wire.getChild("Pipe Signals"), "leaf lands under the subtype");
+        assertNull(logic.getChild("Triggers"), "a real subtype replaces the Triggers level");
+        assertNull(root.getChild("Triggers"), "Triggers never leaks to the top level");
+    }
 
-        // Triggers/Actions become sub-headers nested inside BuildCraft.
-        ContentsNode triggers = (ContentsNode) bc.getChild("Triggers");
-        assertNotNull(triggers, "Triggers nests under BuildCraft");
-        assertNotNull(bc.getChild("Actions"), "Actions nests under BuildCraft");
-        assertEquals(1, triggers.indent, "sub-header sits at indent 1");
+    @Test
+    void systemSort_systemWithoutSubtype_groupsUnderCategoryChapter() {
+        // A flat statement (system "logic", no subtype) still groups as Gates and Logic > Triggers.
+        ContentsNode root = new ContentsNode("root", -1);
+        IContentsNode trigger = leaf("Redstone Signal");
+        IContentsNode action = leaf("Loop");
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Triggers", null, trigger);
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Actions", null, action);
+
+        ContentsNode logic = (ContentsNode) root.getChild("Gates and Logic");
+        assertNotNull(logic, "system chapter exists");
+        ContentsNode triggers = (ContentsNode) logic.getChild("Triggers");
+        ContentsNode actions = (ContentsNode) logic.getChild("Actions");
+        assertNotNull(triggers, "Triggers nests under the system");
+        assertNotNull(actions, "Actions nests under the system");
+        assertEquals(1, triggers.indent, "category sub-header sits at indent 1");
+        assertSame(trigger, triggers.getChild("Redstone Signal"));
+        assertSame(action, actions.getChild("Loop"));
+        assertNull(root.getChild("Triggers"), "Triggers must not be top-level under Sort By System");
+        assertNull(root.getChild("BuildCraft"), "no mod chapter under Sort By System");
+    }
+
+    @Test
+    void systemSort_noSystemNoSubtype_filesUnderCategoryAtRoot() {
+        // The search-only "Other Items" chapter carries neither a system nor a subtype.
+        ContentsNode root = new ContentsNode("root", -1);
+        IContentsNode stone = leaf("Stone");
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", null, LOGIC_SORT,
+            "Other Items", null, stone);
+
+        ContentsNode other = (ContentsNode) root.getChild("Other Items");
+        assertNotNull(other, "Other Items survives as a root chapter");
+        assertEquals(0, other.indent, "Other Items sits at indent 0");
+        assertSame(stone, other.getChild("Stone"));
+    }
+
+    @Test
+    void systemSort_systemChapterCarriesItsFixedSortIndex() {
+        ContentsNode root = new ContentsNode("root", -1);
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Triggers", null, leaf("Redstone Signal"));
+        GuideManager.placeExtraEntryInOrder(SYSTEM, root, "BuildCraft", null, LOGIC_SORT,
+            "Other Items", null, leaf("Stone"));
+
+        assertEquals(LOGIC_SORT, root.getChild("Gates and Logic").getSortIndex(),
+            "the system chapter takes the fixed index, not its children's minimum");
+        assertEquals(0, root.getChild("Other Items").getSortIndex(),
+            "a non-system chapter keeps the min-of-children weight");
     }
 
     @Test
     void typeSort_keepsSeparateTopLevelChapters() {
         ContentsNode root = new ContentsNode("root", -1);
-        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Triggers", null, leaf("T1"));
-        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Actions", null, leaf("A1"));
+        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Triggers", null, leaf("T1"));
+        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Actions", null, leaf("A1"));
 
         ContentsNode triggers = (ContentsNode) root.getChild("Triggers");
         ContentsNode actions = (ContentsNode) root.getChild("Actions");
         assertNotNull(triggers, "Triggers is its own top-level chapter under Sort By Type");
         assertNotNull(actions, "Actions is its own top-level chapter under Sort By Type");
         assertNull(root.getChild("BuildCraft"), "no mod chapter under Sort By Type");
+        assertNull(root.getChild("Gates and Logic"), "no system chapter under Sort By Type");
         assertEquals(0, triggers.indent, "top-level chapter sits at indent 0");
     }
 
@@ -83,7 +141,8 @@ class GuideContentsOrderTest {
     void typeSort_subtypeNestsUnderItsCategoryChapter() {
         ContentsNode root = new ContentsNode("root", -1);
         IContentsNode paint = leaf("Paint");
-        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Actions", "Item Transport", paint);
+        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Transport", 0,
+            "Actions", "Item Transport", paint);
 
         ContentsNode actions = (ContentsNode) root.getChild("Actions");
         assertNotNull(actions, "category chapter exists");
@@ -94,37 +153,16 @@ class GuideContentsOrderTest {
     }
 
     @Test
-    void modSort_dropsSubtypeLevel_filingDirectlyUnderCategory() {
-        // Sort By Mod's tags are [MOD, TYPE] — no SUB_TYPE — so a category entry's subtype is
-        // dropped and it files directly under BuildCraft > Actions, just like a plain action.
-        // (Mirrors how regular entries place via getOrdered(mod_type), which has no subtype.)
-        ContentsNode root = new ContentsNode("root", -1);
-        IContentsNode paint = leaf("Paint");
-        GuideManager.placeExtraEntryInOrder(MOD, root, "BuildCraft", "Actions", "Item Transport", paint);
-
-        ContentsNode bc = (ContentsNode) root.getChild("BuildCraft");
-        assertNotNull(bc, "single BuildCraft chapter");
-        ContentsNode actions = (ContentsNode) bc.getChild("Actions");
-        assertNotNull(actions, "category sub-header under BuildCraft");
-        assertNull(actions.getChild("Item Transport"), "no subtype level under Sort By Mod");
-        assertSame(paint, actions.getChild("Paint"), "category page files directly under Actions");
-    }
-
-    @Test
-    void modSort_plainActionAndCategoryActionAreSiblingsUnderActions() {
-        // The reported bug: under Sort By Mod a plain action (Loop) and a pipe-item category
-        // action (Paint, subtype "Item Transport") must both land directly under
-        // BuildCraft > Actions as siblings — Loop must NOT appear inside an Item Transport group.
+    void typeSort_plainActionSitsDirectlyUnderActions() {
+        // Under Sort By Type a statement without a subtype stays a direct child of its category
+        // chapter; the system-order fallback (subtype := category) must not leak into this view.
         ContentsNode root = new ContentsNode("root", -1);
         IContentsNode loop = leaf("Loop");
-        IContentsNode paint = leaf("Paint");
-        GuideManager.placeExtraEntryInOrder(MOD, root, "BuildCraft", "Actions", null, loop);
-        GuideManager.placeExtraEntryInOrder(MOD, root, "BuildCraft", "Actions", "Item Transport", paint);
+        GuideManager.placeExtraEntryInOrder(TYPE, root, "BuildCraft", "Gates and Logic", LOGIC_SORT,
+            "Actions", null, loop);
 
-        ContentsNode bc = (ContentsNode) root.getChild("BuildCraft");
-        ContentsNode actions = (ContentsNode) bc.getChild("Actions");
+        ContentsNode actions = (ContentsNode) root.getChild("Actions");
         assertSame(loop, actions.getChild("Loop"), "plain action sits directly under Actions");
-        assertSame(paint, actions.getChild("Paint"), "category action also sits directly under Actions");
-        assertNull(actions.getChild("Item Transport"), "no Item Transport sub-group in Sort By Mod");
+        assertNull(actions.getChild("Actions"), "no doubled Actions > Actions level");
     }
 }

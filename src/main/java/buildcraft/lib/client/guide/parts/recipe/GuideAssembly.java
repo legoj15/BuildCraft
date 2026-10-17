@@ -8,11 +8,13 @@ package buildcraft.lib.client.guide.parts.recipe;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.parts.GuidePartItem;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.recipe.ChangingItemStack;
 import buildcraft.lib.recipe.ChangingObject;
 
@@ -76,12 +78,18 @@ public class GuideAssembly extends GuidePartItem {
             drawItemStack(output.get(), x + (int) OUT_POSITION.x, y + (int) OUT_POSITION.y);
 
             if (MJ_POSITION.offset(x, y).contains(gui.mouse)) {
-                // LocaleUtil.localizeMj not ported — show raw MJ value
-                gui.tooltips.add(Collections.singletonList(mjCost.get() + " MJ"));
+                gui.tooltips.add(costTooltip(mjCost.get()));
             }
         }
         current = current.nextLine(PIXEL_HEIGHT, height);
         return current;
+    }
+
+    /** The tooltip over the energy bar: the table's cost in the player's display units, the same text the
+     *  Laser Table panel and the machine GUIs show.
+     *  @param microJoules The recipe's cost in micro-MJ, as {@code getRequiredMicroJoulesFor} returns it. */
+    static List<String> costTooltip(long microJoules) {
+        return Collections.singletonList(LocaleUtil.localizeMj(microJoules));
     }
 
     @Override

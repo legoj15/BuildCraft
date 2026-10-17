@@ -952,6 +952,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         // Search and pathfinding against the real level: unloaded chunks are never read (or loaded).
         reg.accept("buildcraftunofficial:robot_search_skips_unloaded_chunks", () -> buildcraft.robotics.path.UnloadedChunkSearchTester::searchNearAnUnloadedChunkDoesNotLoadIt);
+        reg.accept("buildcraftunofficial:robot_ground_search_skips_unloaded_columns", () -> buildcraft.robotics.ai.GroundSearchTester::groundSearchSkipsUnloadedColumns);
+        reg.accept("buildcraftunofficial:robot_ground_search_empty_zone_fails", () -> buildcraft.robotics.ai.GroundSearchTester::groundSearchInAnEmptyZoneFails);
         // A random search (planter, stripes) with no candidate gives up after 7.1.x's round budget, so the board sleeps.
         reg.accept("buildcraftunofficial:robot_random_search_without_candidate_fails", () -> buildcraft.robotics.ai.RandomSearchBudgetTester::randomSearchWithNoCandidateFails);
         reg.accept("buildcraftunofficial:robot_planter_with_nothing_to_plant_sleeps", () -> buildcraft.robotics.ai.RandomSearchBudgetTester::planterWithNothingToPlantSleeps);

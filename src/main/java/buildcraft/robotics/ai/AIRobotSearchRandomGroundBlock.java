@@ -8,21 +8,24 @@
 package buildcraft.robotics.ai;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 
 import java.util.Random;
 
 import buildcraft.api.core.IZone;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.path.IBlockFilter;
 
 /** Picks a random column ({@code zone.getRandomBlockPos}, or a random point in a circle of {@code range}
  *  around the robot) and scans it top-down for the first block matching {@code filter} — the "ground"
  *  search the bomber uses to find somewhere to drop its payload. Ported from 7.1.x
- * {@code AIRobotSearchRandomGroundBlock}; 7.1.x's {@code world.getHeight()} cap is the modern
- * {@code getMaxBuildHeight()} and the scan floor drops to {@code getMinBuildHeight()} (modern worlds
- * extend below zero). */
+ * {@code AIRobotSearchRandomGroundBlock}; 7.1.x's {@code world.getHeight()} cap is the level's highest
+ * buildable y and the scan floor drops to its lowest (modern worlds extend below zero). Columns in unloaded
+ * chunks are re-picked rather than read, and a zone with nothing to pick from fails the search. */
 public class AIRobotSearchRandomGroundBlock extends AIRobot {
 
     private static final int MAX_ATTEMPTS = 4096;
@@ -52,43 +55,54 @@ public class AIRobotSearchRandomGroundBlock extends AIRobot {
 
     @Override
     public void update() {
+        // Every give-up returns at once: falling through into the scan could terminate a second time in the same
+        // update, and that second terminate() would reach the parent after it had already started its next delegate.
         if (filter == null) {
             terminate();
+            return;
         }
 
-        attempts++;
-
-        if (attempts > MAX_ATTEMPTS) {
-            terminate();
-        }
-
+        Level level = robot.level();
         int x;
         int z;
-
-        if (zone == null) {
-            double r = robot.level().getRandom().nextFloat() * range;
-            float a = robot.level().getRandom().nextFloat() * 2.0F * (float) Math.PI;
-
-            x = (int) (Mth.cos(a) * r + Mth.floor(robot.position().x));
-            z = (int) (Mth.sin(a) * r + Mth.floor(robot.position().z));
-        } else {
-            if (zoneRandom == null) {
-                zoneRandom = new Random(robot.level().getRandom().nextLong());
+        // Not 7.1.x: a column in an unloaded chunk is picked again rather than read (reading it loads or generates
+        // the chunk on the server thread), each pick counting as an attempt.
+        while (true) {
+            attempts++;
+            if (attempts > MAX_ATTEMPTS) {
+                terminate();
+                return;
             }
-            BlockPos b = zone.getRandomBlockPos(zoneRandom);
-            x = b.getX();
-            z = b.getZ();
+
+            if (zone == null) {
+                double r = level.getRandom().nextFloat() * range;
+                float a = level.getRandom().nextFloat() * 2.0F * (float) Math.PI;
+
+                x = (int) (Mth.cos(a) * r + Mth.floor(robot.position().x));
+                z = (int) (Mth.sin(a) * r + Mth.floor(robot.position().z));
+            } else {
+                if (zoneRandom == null) {
+                    zoneRandom = new Random(level.getRandom().nextLong());
+                }
+                BlockPos b = zone.getRandomBlockPos(zoneRandom);
+                if (b == null) {
+                    // A zone with nothing to pick from: nothing to find, ever.
+                    terminate();
+                    return;
+                }
+                x = b.getX();
+                z = b.getZ();
+            }
+
+            if (level.hasChunk(SectionPos.blockToSectionCoord(x), SectionPos.blockToSectionCoord(z))) {
+                break;
+            }
         }
 
         // 7.1.x scanned from world.getHeight() (the fixed 256 cap) down to 0; the modern scan spans the
         // level's actual build range (modern worlds extend below zero and past 256).
-        //? if >=1.21.10 {
-        int top = robot.level().getMaxY();
-        int bottom = robot.level().getMinY();
-        //?} else {
-        /*int top = robot.level().getMaxBuildHeight();
-        int bottom = robot.level().getMinBuildHeight();*/
-        //?}
+        int top = RobotUtils.maxBuildY(level);
+        int bottom = RobotUtils.minBuildY(level);
         for (int y = top; y >= bottom; --y) {
             BlockPos pos = new BlockPos(x, y, z);
             if (filter.matches(pos)) {

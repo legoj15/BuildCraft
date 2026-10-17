@@ -98,6 +98,50 @@ public class TileQuarryUnminableFrameTester {
         }
     }
 
+    /**
+     * A claim that is lifted after the quarry parked its cell: lifting fires no event, so the quarry must ask again
+     * on its own within a bounded time, and the frame gap it left must then fill. The quarry has finished and gone
+     * idle by the time the claim lifts, which is the case a re-scan tied to active work could never reach.
+     */
+    public static void testFrameCompletesAfterClaimIsLifted(GameTestHelper helper) {
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            Scenario s = new Scenario(helper);
+            try {
+                helper.setBlock(STUCK_EDGE, Blocks.STONE);
+                try (ClaimProtectionMod claim = new ClaimProtectionMod(s.abs(STUCK_EDGE), true)) {
+                    s.runToDiggingAndVerify(helper, Blocks.STONE);
+                    assertTrue(!claim.askedBy.isEmpty(),
+                            "liveness: the quarry must have asked the claim about the cell");
+                }
+                // The claim is lifted: nothing tells the quarry. It must find out by asking again.
+                BlockPos stuckAbs = s.abs(STUCK_EDGE);
+                int ticks = 0;
+                int limit = TileQuarry.FRAME_RETRY_TICKS * 3;
+                while (ticks < limit && !helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get())) {
+                    s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
+                    s.quarry.tick();
+                    ticks++;
+                }
+                assertTrue(helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get()),
+                        "the frame gap was never filled after the claim was lifted (" + ticks + " ticks, cell holds "
+                                + helper.getLevel().getBlockState(stuckAbs) + ")");
+                for (int i = 0; i < limit && s.quarry.hasPendingWork(); i++) {
+                    s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
+                    s.quarry.tick();
+                }
+                assertTrue(!s.quarry.hasPendingWork() && !s.quarry.isActive(),
+                        "the quarry must settle idle again once the gap is filled");
+            } finally {
+                s.cleanUp(helper);
+            }
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
     private static final class Scenario {
         final TileQuarry quarry;
         final BlockPos quarryAbs;

@@ -404,6 +404,8 @@ public class BuildCraftGameTests {
         // spun on forever: the rest of the frame is built and the drill starts.
         reg.accept("buildcraftunofficial:quarry_frame_completes_around_bedrock", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundBedrock);
         reg.accept("buildcraftunofficial:quarry_frame_completes_around_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundClaimProtectedBlock);
+        // ... and once the claim is lifted (no event fires) the quarry asks again on its own and fills the gap.
+        reg.accept("buildcraftunofficial:quarry_frame_completes_after_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAfterClaimIsLifted);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);

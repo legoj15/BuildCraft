@@ -102,4 +102,51 @@ public class ProtectionRefusalsTest {
         Assertions.assertTrue(refusals.isRefused(POS, STONE, 1), "the remembered position did not move with the cursor");
         Assertions.assertFalse(refusals.isRefused(cursor, STONE, 1));
     }
+
+    @Test
+    public void clearDropsEveryRefusal() {
+        ProtectionRefusals refusals = new ProtectionRefusals(100, 8);
+        refusals.remember(POS, STONE, 0);
+        refusals.remember(POS.above(), STONE, 0);
+        Assertions.assertFalse(refusals.isEmpty());
+        refusals.clear();
+        Assertions.assertTrue(refusals.isEmpty());
+        Assertions.assertFalse(refusals.isRefused(POS, STONE, 1));
+    }
+
+    @Test
+    public void takeExpiredHandsBackOnlyRefusalsWhoseWindowElapsed() {
+        ProtectionRefusals refusals = new ProtectionRefusals(100, 8);
+        refusals.remember(POS, STONE, 0);
+        refusals.remember(POS.above(), STONE, 50);
+        Assertions.assertTrue(refusals.takeExpired(99, 8).isEmpty(), "nothing is due yet");
+        Assertions.assertEquals(java.util.List.of(POS), refusals.takeExpired(100, 8), "only the older one is due");
+        Assertions.assertEquals(java.util.List.of(POS.above()), refusals.takeExpired(150, 8));
+    }
+
+    @Test
+    public void takeExpiredRestartsTheWindowSoACellIsNotHandedBackTwice() {
+        ProtectionRefusals refusals = new ProtectionRefusals(100, 8);
+        refusals.remember(POS, STONE, 0);
+        Assertions.assertEquals(java.util.List.of(POS), refusals.takeExpired(100, 8));
+        Assertions.assertTrue(refusals.takeExpired(101, 8).isEmpty(), "the window restarted");
+        Assertions.assertTrue(refusals.isRefused(POS, STONE, 199), "and the refusal still holds in that window");
+        Assertions.assertEquals(java.util.List.of(POS), refusals.takeExpired(200, 8), "due again a window later");
+    }
+
+    @Test
+    public void takeExpiredRespectsTheLimitAndLeavesTheRestDue() {
+        ProtectionRefusals refusals = new ProtectionRefusals(100, 8);
+        refusals.remember(POS, STONE, 0);
+        refusals.remember(POS.above(), STONE, 0);
+        refusals.remember(POS.above(2), STONE, 0);
+        Assertions.assertEquals(2, refusals.takeExpired(100, 2).size());
+        Assertions.assertEquals(java.util.List.of(POS.above(2)), refusals.takeExpired(100, 2),
+                "the one left over is handed back next call");
+    }
+
+    @Test
+    public void takeExpiredOnAnEmptyMemoryIsCheap() {
+        Assertions.assertTrue(new ProtectionRefusals(100, 8).takeExpired(1_000, 8).isEmpty());
+    }
 }

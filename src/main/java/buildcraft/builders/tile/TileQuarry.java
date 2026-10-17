@@ -9,11 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -63,6 +61,7 @@ import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.ProtectionRefusals;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AxisOrder;
 import buildcraft.lib.misc.data.Box;
@@ -103,6 +102,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return hasPendingWork() ? super.getPowerRequested() : 0;
         }
     };
+    /** How long a refused frame-line cell is left alone before the quarry asks about it again. Package-private for
+     *  the game test. */
+    static final int FRAME_RETRY_TICKS = 200;
+    /** The most refused cells probed in one tick, so a large claimed volume is re-asked a few cells at a time. */
+    private static final int FRAME_RETRY_PROBES_PER_TICK = 8;
     public final Box frameBox = new Box();
     final Box miningBox = new Box();
     private BoxIterator boxIterator;
@@ -116,13 +120,16 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BlockUtil.uniqueBlockPosComparator(Comparator.comparingDouble(p -> getBlockPos().distSqr(p)))
     );
     private final Set<BlockPos> framePlaceFramePoses = new HashSet<>();
-    // Frame-volume cells the quarry reached the head of the break queue on and may never mine (bedrock, a
-    // claim-protected block, a block logged with a thick fluid), each with the state it was parked on. check()
-    // keeps a parked cell out of frameBreakBlockPoses for as long as that state stands, so the power loop is not
-    // pinned to it forever; an unminable frame-line cell simply stays a gap in the frame. A different block
-    // arriving in the cell (or the cell turning to air/fluid) drops the entry, and updatePoses() clears the map,
-    // so e.g. a claim that is lifted is picked up again on the next chunk reload.
-    private final Map<BlockPos, BlockState> frameUnminablePoses = new HashMap<>();
+    // Frame-volume cells the quarry reached the head of the break queue on and may not break (bedrock, a
+    // claim-protected block, a block logged with a thick fluid), each remembered with the state it was refused on.
+    // check() keeps a refused cell out of frameBreakBlockPoses while that state stands and the retry window runs, so
+    // the power loop is not pinned to it; an unminable frame-line cell is a gap in the frame meanwhile. The window
+    // exists because lifting a claim fires no event: retryRefusedFrameCells() probes each cell once its window ends,
+    // even after the quarry has finished and gone idle. Unbounded on purpose (a capacity would make a large claimed
+    // volume thrash, forgetting live refusals the next scan re-asks): the cells held are cells of the frame box.
+    // updatePoses() clears it, and the clock is ticksRun, the quarry's own server tick count.
+    private final ProtectionRefusals frameRefusals = new ProtectionRefusals(FRAME_RETRY_TICKS, Integer.MAX_VALUE);
+    private long ticksRun = 0;
     public Task currentTask = null;
     public Vec3 drillPos;
     public Vec3 clientDrillPos;
@@ -455,16 +462,31 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             && (BlockUtil.isFluidloggedBlock(state) || BlockUtil.getFluidWithFlowing(level, blockPos) == null);
     }
 
-    /** Queues a cell for clearing, unless it is parked in {@link #frameUnminablePoses} on the block it still holds. */
+    /** Queues a cell for clearing, unless it was refused on the block it still holds and the retry window runs. */
     private void queueFrameBreak(BlockPos blockPos) {
-        BlockState parkedOn = frameUnminablePoses.get(blockPos);
-        if (parkedOn != null) {
-            if (parkedOn.equals(level.getBlockState(blockPos))) {
-                return;
-            }
-            frameUnminablePoses.remove(blockPos);
+        if (frameRefusals.isRefused(blockPos, level.getBlockState(blockPos), ticksRun)) {
+            return;
         }
         frameBreakBlockPoses.add(blockPos);
+    }
+
+    /**
+     * Probes the refused frame cells whose retry window has ended, a few per tick: a cell that can be mined now is
+     * queued again (and wakes a quarry that had finished), anything else keeps its refusal for another window. Runs
+     * for an idle quarry too, which is the point: a claim lifted after the job is done fires no event, and the frame
+     * gap it left would otherwise stay until the next chunk reload. Costs one map peek per tick while nothing is due,
+     * and never reads a cell in an unloaded chunk (an idle quarry has released its chunk tickets).
+     */
+    private void retryRefusedFrameCells() {
+        if (frameRefusals.isEmpty()) {
+            return;
+        }
+        for (BlockPos blockPos : frameRefusals.takeExpired(ticksRun, FRAME_RETRY_PROBES_PER_TICK)) {
+            if (level.isLoaded(blockPos) && canMine(blockPos)) {
+                frameRefusals.forget(blockPos);
+                check(blockPos);
+            }
+        }
     }
 
     private void check(BlockPos blockPos) {
@@ -472,11 +494,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         framePlaceFramePoses.remove(blockPos);
         boolean onFrameLine = shouldBeFrame(blockPos);
         if (onFrameLine && level.getBlockState(blockPos).is(BCBuildersBlocks.FRAME.get())) {
-            frameUnminablePoses.remove(blockPos);
+            frameRefusals.forget(blockPos);
         } else if (canIgnoreInFrameBox(blockPos)) {
             queueFrameBreak(blockPos);
         } else {
-            frameUnminablePoses.remove(blockPos);
+            frameRefusals.forget(blockPos);
             if (onFrameLine) {
                 framePlaceFramePoses.add(blockPos);
             }
@@ -555,7 +577,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         firstChecked = false;
         frameBreakBlockPoses.clear();
         framePlaceFramePoses.clear();
-        frameUnminablePoses.clear();
+        frameRefusals.clear();
         BlockState state = level.getBlockState(worldPosition);
         if (state.is(BCBuildersBlocks.QUARRY.get()) && frameBox.isInitialized()) {
             List<BlockPos> blocksInArea = frameBox.getBlocksInArea();
@@ -655,6 +677,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
 
+        ticksRun++;
+
         // Re-apply miningMaxDepth so config changes take effect on already-placed quarries
         // (saved mining box was sized under whatever config was in effect when it was placed).
         // Mining-box top stays anchored to the frame interior; only the floor depends on the
@@ -681,6 +705,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (!firstChecked) {
             return;
         }
+
+        retryRefusedFrameCells();
 
         // Capture the unrestricted-power gate at tick start — the power_loop below drains
         // up to MAX_POWER_PER_TICK from the battery, which can cross the half-capacity
@@ -735,9 +761,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     currentTask = new TaskBreakBlock(blockPos);
                     sendUpdate = true;
                 } else if (canIgnoreInFrameBox(blockPos)) {
-                    // A real block the quarry may never break: park it so check() stops re-queueing it,
+                    // A real block the quarry may not break: park it so check() stops re-queueing it,
                     // else this branch (which skips everything after it) would spin on it every tick.
-                    frameUnminablePoses.put(blockPos.immutable(), level.getBlockState(blockPos));
+                    frameRefusals.remember(blockPos, level.getBlockState(blockPos), ticksRun);
                 }
                 check(blockPos);
                 continue power_loop;

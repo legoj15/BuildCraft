@@ -901,6 +901,15 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:integration_table_tops_up_drained_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableTopsUpDrainedRobot);
         reg.accept("buildcraftunofficial:robot_survival_recipes_resolve", () -> buildcraft.robotics.ProgrammingTableTester::robotSurvivalRecipesResolve);
         reg.accept("buildcraftunofficial:robot_name_tag_data_round_trip", () -> buildcraft.robotics.ProgrammingTableTester::robotNameTagDataRoundTrip);
+        // JEI "+" transfer into the two tables (server side: container message -> real inventory, same-tick
+        // option selection) and the table menus' slot-layout pin that the shared GUI geometry must not move.
+        reg.accept("buildcraftunofficial:jei_transfer_programming_selects_in_same_tick", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferSelectsOptionInTheSameTick);
+        reg.accept("buildcraftunofficial:jei_transfer_programming_blank_forms_and_slot_reuse", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferAcceptsEveryBlankFormAndReusesTheSlot);
+        reg.accept("buildcraftunofficial:jei_transfer_programming_rejects_bad_requests", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferRejectsWhatItCannotHonour);
+        reg.accept("buildcraftunofficial:jei_transfer_integration_fills_centre_and_ring", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferFillsCentreAndRing);
+        reg.accept("buildcraftunofficial:jei_transfer_integration_charged_robot_and_centre_reuse", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferTakesChargedBlankRobotAndKeepsTheCentre);
+        reg.accept("buildcraftunofficial:jei_transfer_integration_atomic_and_selective", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferIsAtomicAndSelective);
+        reg.accept("buildcraftunofficial:robotics_table_menus_keep_slot_layout", () -> buildcraft.robotics.RoboticsTableTransferTester::tableMenusKeepTheirSlotLayout);
         // Ph8: the request network (Requester block, virtual gate provider, delivery loop).
         reg.accept("buildcraftunofficial:requester_station_neighbour_scan", () -> buildcraft.robotics.DeliveryRequesterTester::stationFindsRequesterThroughNeighbourScan);
         reg.accept("buildcraftunofficial:requester_gate_request_items_provider", () -> buildcraft.robotics.DeliveryRequesterTester::gateRequestItemsActionMakesTheStationAProvider);

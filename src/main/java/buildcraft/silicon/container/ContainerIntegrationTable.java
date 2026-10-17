@@ -10,10 +10,15 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
+import buildcraft.lib.net.PacketBufferBC;
+
+import buildcraft.robotics.container.RoboticsTableTransfer;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileIntegrationTable;
@@ -50,5 +55,16 @@ public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTa
         addSlot(new SlotOutput(tile.invResult, 0, 138, 49));
 
         addFullPlayerInventory(8, 109);
+    }
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_JEI_TRANSFER_INTEGRATION && !isClient && tile != null) {
+            // JEI "+" on an Integration Table recipe. Payload: the board id; the robot and the board are both
+            // checked against the player's real inventory before either moves.
+            RoboticsTableTransfer.integrate(player.getInventory(), tile, buffer.readUtf(), true);
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
     }
 }

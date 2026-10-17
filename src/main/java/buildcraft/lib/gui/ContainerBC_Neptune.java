@@ -54,6 +54,17 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu implemen
     /** Container message ID: JEI "+" transfer of filled fluid buckets into a machine's container
      *  slots (Distiller, Heat Exchanger). Payload: varInt count, then (varInt slotIndex, utf bucketItemId) pairs. */
     public static final int NET_JEI_TRANSFER_BUCKETS = 103;
+    // 104 is each container's own NET_CYCLE_OUTPUT (Advanced Crafting Table, Auto Workbench), so the shared
+    // machine-transfer ids carry on from 105.
+    /** Container message ID: JEI "+" transfer for the Programming Table. Payload: utf programming-recipe id, utf
+     *  id of the board to program. The server moves one blank board in from the player (or reuses the one already
+     *  in the slot), resolves the table's recipe in the same tick and selects that board's grid cell. Handled by
+     *  {@code ContainerProgrammingTable}; see {@code RoboticsTableTransfer}. */
+    public static final int NET_JEI_TRANSFER_PROGRAMMING = 105;
+    /** Container message ID: JEI "+" transfer for the Integration Table. Payload: utf id of the robot board to
+     *  integrate. The server moves one blank robot into the centre slot and that board into a ring slot. Handled by
+     *  {@code ContainerIntegrationTable}; see {@code RoboticsTableTransfer}. */
+    public static final int NET_JEI_TRANSFER_INTEGRATION = 106;
 
     public final Player player;
     private final BCContainerSupport support;

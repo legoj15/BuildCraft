@@ -8,6 +8,8 @@
  */
 package buildcraft.robotics.boards;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -25,6 +27,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
@@ -50,6 +53,10 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     /** The gate fluid filter of the robot's home station, refreshed on every search pass. Null means
      *  "no station, no filter" — pump anything. */
     private IFluidFilter fluidFilter;
+
+    /** Blocks the pump AI was refused (by a protection mod or the block's own pickup), skipped by the search
+     *  while they stay unchanged. Transient: a reloaded board asks once more. */
+    private final DrainRefusals refusals = new DrainRefusals();
 
     public BoardRobotPump(IRobotAccess iRobot) {
         super(iRobot);
@@ -96,6 +103,18 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         return fluidFilter.matches(new FluidStack(fluidState.getType(), BUCKET));
     }
 
+    /** The search predicate: a drainable fluid source nobody else has reserved that the station's gate filter
+     *  lets through and that has not refused this board's robot (see {@link #refusals}). Asking protection mods
+     *  is NOT part of it: this runs for every scanned cell, so the pump AI asks once, about the one block it was
+     *  sent to, and the answer comes back through {@link #delegateAIEnded}. */
+    public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
+        return level != null
+                && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
+                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && matchesGateFilter(level.getBlockState(pos))
+                && !refusals.isRefused(level, pos);
+    }
+
     @Override
     public void update() {
         if (carriedFluid() > 0) {
@@ -103,10 +122,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         } else {
             updateFilter();
             Level level = robot.level();
-            IBlockFilter blockFilter = pos -> level != null
-                    && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
-                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
-                    && matchesGateFilter(level.getBlockState(pos));
+            IBlockFilter blockFilter = pos -> isSearchCandidate(level, pos);
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, blockFilter));
         }
     }
@@ -120,7 +136,14 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
-        } else if (ai instanceof AIRobotPumpBlock) {
+        } else if (ai instanceof AIRobotPumpBlock pumpAi) {
+            // A block that would not be given up (a claim mod said no, or its pickup refused) must not be
+            // searched again while it is unchanged: the AI is one attempt and dies here, so the memory is the
+            // board's. Without it the robot flew straight back to the same block on every pass.
+            Level level = robot.level();
+            if (pumpAi.refused() && level != null && pumpAi.blockToPump() != null) {
+                refusals.remember(level, pumpAi.blockToPump());
+            }
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {
             if (!ai.success()) {

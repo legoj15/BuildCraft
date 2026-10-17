@@ -536,6 +536,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_probe_plain_water_unaffected", () -> buildcraft.factory.PumpSpringProbeTester::testPlainWaterColumnUnaffected);
         reg.accept("buildcraftunofficial:pump_probe_solid_obstruction", () -> buildcraft.factory.PumpSpringProbeTester::testSolidObstructionStopsProbe);
 
+        // Pump claim protection: pumps ask protection mods before draining, and remember cells that refused
+        reg.accept("buildcraftunofficial:pump_protection_refused_cell_not_drained_or_retried", () -> buildcraft.factory.PumpProtectionTester::refusedCellIsNotDrainedOrRetried);
+        reg.accept("buildcraftunofficial:pump_protection_unprotected_sources_drained", () -> buildcraft.factory.PumpProtectionTester::unprotectedSourcesAreStillDrained);
+        reg.accept("buildcraftunofficial:pump_protection_asks_only_about_chosen_cell", () -> buildcraft.factory.PumpProtectionTester::asksOnlyAboutTheCellItIsWorkingOn);
+        reg.accept("buildcraftunofficial:pump_refused_pickup_not_retried", () -> buildcraft.factory.PumpProtectionTester::refusedPickupIsNotRetried);
+
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
         reg.accept("buildcraftunofficial:distiller_input_blocks_external_extract", () -> buildcraft.factory.DistillerTester::testInputTankBlocksExternalExtract);
@@ -921,6 +927,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_plant_sugar_cane_beside_water", () -> buildcraft.lib.crops.CropHandlerReedsTester::planterPlantsSugarCaneOnlyOnSandBesideWater);
         reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
         reg.accept("buildcraftunofficial:robot_pump_keeps_waterlogged_marker", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpKeepsWaterloggedMarker);
+        reg.accept("buildcraftunofficial:robot_pump_asks_before_draining", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::pumpAsksBeforeDraining);
+        reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_block", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockThatRefused);
+        reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_pickup", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockWhosePickupRefused);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);

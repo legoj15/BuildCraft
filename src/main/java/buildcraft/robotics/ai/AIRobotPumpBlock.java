@@ -24,6 +24,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.robotics.RobotProtection;
 
 /** Pumps a bucket of fluid out of the source block at {@code blockToPump} (through the in-tree
  *  {@code BlockUtil.drainBlock}) into the robot's tank. Ported from 7.1.x {@code AIRobotPumpBlock}
@@ -34,7 +35,11 @@ import buildcraft.lib.misc.BlockUtil;
  *  and never set its {@code pumped} counter, so its {@code success()} was permanently false. The pump
  *  board ignored the success (it just released the block and re-searched), so the bug was inert; this
  *  port tanks the bucket for real and reports it, per the design doc. One bucket per pass: a partially
- *  full tank (room &lt; 1000) fails the pass, and the board's tank check routes the robot to unload first. */
+ *  full tank (room &lt; 1000) fails the pass, and the board's tank check routes the robot to unload first.
+ *
+ *  <p>Before the world changes, the pass asks protection mods ({@link RobotProtection}, as the home station's
+ *  owner) about the one block it was sent to. A refusal — from a mod, or from a block that reports a source yet
+ *  refuses its pickup — is reported through {@link #refused()} so the board can stop sending the robot there. */
 public class AIRobotPumpBlock extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -44,6 +49,8 @@ public class AIRobotPumpBlock extends AIRobot {
     /** mB moved on the completing cycle — package-private so the Ph9 action-AI game test can pin the
      *  exactly-one-bucket contract. */
     int pumped = 0;
+    /** Whether a protection mod (or the block's own pickup) refused to give the block up; see {@link #refused()}. */
+    private boolean refused = false;
 
     public AIRobotPumpBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -76,7 +83,7 @@ public class AIRobotPumpBlock extends AIRobot {
                 FluidResource resource = FluidResource.of(preview);
                 int room = robot.getFluidHandler().getCapacityAsInt(0, resource)
                         - robot.getFluidHandler().getAmountAsInt(0);
-                if (room >= BUCKET) {
+                if (room >= BUCKET && isPermitted(serverLevel)) {
                     // The robot's tank journals through SnapshotJournal on this line, and a journalling
                     // handler REQUIRES a live transaction — the bare (…, null) insert threw NPE on every
                     // pump cycle (a production bug the Ph9 pump game test caught). Commit only when the
@@ -85,17 +92,25 @@ public class AIRobotPumpBlock extends AIRobot {
                     try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
                             net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                         int inserted = robot.getFluidHandler().insert(0, resource, BUCKET, tx);
-                        if (inserted >= BUCKET && BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
-                            tx.commit();
-                            pumped = BUCKET;
+                        if (inserted >= BUCKET) {
+                            if (BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
+                                tx.commit();
+                                pumped = BUCKET;
+                            } else {
+                                refused = true;
+                            }
                         }
                     }
                 }
                 //?} else {
                 /*int room = robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.SIMULATE);
-                if (room >= BUCKET && BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
-                    robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.EXECUTE);
-                    pumped = BUCKET;
+                if (room >= BUCKET && isPermitted(serverLevel)) {
+                    if (BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
+                        robot.getFluidHandler().fill(preview, IFluidHandler.FluidAction.EXECUTE);
+                        pumped = BUCKET;
+                    } else {
+                        refused = true;
+                    }
                 }*/
                 //?}
             }
@@ -106,6 +121,32 @@ public class AIRobotPumpBlock extends AIRobot {
     @Override
     public boolean success() {
         return pumped > 0;
+    }
+
+    /** The block this AI was sent to pump (null for an AI that was never given one). */
+    public BlockPos blockToPump() {
+        return blockToPump;
+    }
+
+    /**
+     * True when this pass failed because the block would not be given up, not because the robot was full or the
+     * block was already gone: a claim/protection mod refused the pump (asked as the home station's owner, once the
+     * robot has room for the bucket), or the block reports a source yet refused its bucket pickup. The pump board
+     * remembers such a block so it does not send the robot straight back to it.
+     */
+    public boolean refused() {
+        return refused;
+    }
+
+    /** Asks protection mods whether this robot may take fluid from the block, as {@link RobotProtection} does for
+     *  every robot that changes the world; only the block this pass actually targets is asked about. A refusal is
+     *  recorded for {@link #refused()}. */
+    private boolean isPermitted(ServerLevel serverLevel) {
+        if (RobotProtection.canBreak(robot, serverLevel, blockToPump)) {
+            return true;
+        }
+        refused = true;
+        return false;
     }
 
     @Override

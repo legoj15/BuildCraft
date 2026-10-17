@@ -26,6 +26,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -50,6 +51,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.VecUtil;
@@ -117,6 +119,17 @@ public class TilePump extends TileMiner implements IDebuggable {
     private final Deque<BlockPos> queue = new ArrayDeque<>();
     private boolean isInfiniteWaterSource;
     private int rebuildDelay = 0;
+
+    /**
+     * Cells that refused to be drained (a claim mod cancelled the break probe, or a modded {@code BucketPickup}
+     * refused {@code pickupBlock}), skipped by the queue builders while they stay unchanged — see
+     * {@link DrainRefusals}. Transient on purpose: never saved, so a reloaded pump asks once more.
+     */
+    private final DrainRefusals refusals = new DrainRefusals();
+
+    /** The cell protection mods have cleared for the bucket being pumped; null between buckets. */
+    @Nullable
+    private BlockPos permittedPos;
 
     /** The position just below the bottom of the pump tube. */
     private BlockPos targetPos;
@@ -191,7 +204,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         nextPosesToCheck.add(seed);
         paths.put(seed, new FluidPath(seed, null));
         checked.add(seed.asLong());
-        if (BlockUtil.getDrainableFluid(level, seed) != null) {
+        if (isQueueable(seed)) {
             queue.add(seed);
         }
 
@@ -313,8 +326,9 @@ public class TilePump extends TileMiner implements IDebuggable {
                             FluidPath path = new FluidPath(offsetPos, oldPath);
                             paths.put(offsetPos, path);
                             // Queue only what drainBlock can take; the path still runs through
-                            // non-drainable wet cells (kelp) so fluid beyond them is reachable.
-                            if (BlockUtil.getDrainableFluid(level, offsetPos) != null) {
+                            // non-drainable wet cells (kelp) and cells that refused (isQueueable) so
+                            // fluid beyond them is reachable.
+                            if (isQueueable(offsetPos)) {
                                 queue.add(offsetPos);
                             }
                             nextPosesToCheck.add(offsetPos);
@@ -356,6 +370,29 @@ public class TilePump extends TileMiner implements IDebuggable {
                     oilSpringPos = springPositions.get(0);
             }
         }
+    }
+
+    /** Whether the pump should line up a bucket from {@code pos}: {@code drainBlock} can take it, and it has not
+     *  refused (and stayed the same) since. A refusing cell still carries the BFS through it, just not the queue. */
+    private boolean isQueueable(BlockPos pos) {
+        return BlockUtil.getDrainableFluid(level, pos) != null && !refusals.isRefused(level, pos);
+    }
+
+    /**
+     * Asks protection mods whether the pump may take fluid from {@code pos}, as the pump's owner (the generic
+     * "[BuildCraft]" identity for an unowned pump), through the same probe the quarry and mining well use. Only the
+     * cell the pump is about to drain is asked about, never the whole pool it could reach, and once per bucket: a
+     * cleared cell stays cleared until its bucket is credited.
+     */
+    private boolean isDrainPermitted(BlockPos pos) {
+        if (pos.equals(permittedPos)) {
+            return true;
+        }
+        if (level instanceof ServerLevel serverLevel && !BlockUtil.canMachineBreak(serverLevel, pos, getOwner())) {
+            return false;
+        }
+        permittedPos = pos;
+        return true;
     }
 
     private boolean canDrain(BlockPos blockPos) {
@@ -451,6 +488,14 @@ public class TilePump extends TileMiner implements IDebuggable {
 
         long target = 10 * MjAPI.MJ;
         if (currentPos != null && paths.containsKey(currentPos)) {
+            // Ask before spending power on the cell, so a claimed cell costs nothing and the pump moves
+            // straight on to the next one (one cell per tick, so a fully claimed pool is not probed all at once).
+            if (canDrain(currentPos) && !isDrainPermitted(currentPos)) {
+                refusals.remember(level, currentPos);
+                paths.remove(currentPos);
+                nextPos();
+                return;
+            }
             progress += (int) battery.extractPower(0, target - progress);
             if (progress < target) {
                 return;
@@ -482,7 +527,9 @@ public class TilePump extends TileMiner implements IDebuggable {
                 // (a modded BucketPickup), and crediting first would mint fluid every pass.
                 // Skip a refusing cell rather than stalling on it until the next rebuild; the
                 // power spent on the refused attempt is gone, so the next cell pays in full.
+                // The refusal is remembered, or the rebuild would queue the same cell again.
                 if (!isInfiniteWaterSource && BlockUtil.drainBlock(level, currentPos, true) == null) {
+                    refusals.remember(level, currentPos);
                     progress = 0;
                     paths.remove(currentPos);
                     nextPos();
@@ -491,6 +538,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 tank.fill(0, drain, false);
                 progress = 0;
+                permittedPos = null; // the next bucket asks again
 
                 if (getOwner() != null) {
                     AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);

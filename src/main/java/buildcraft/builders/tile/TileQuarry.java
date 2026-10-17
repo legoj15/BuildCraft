@@ -9,9 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -114,6 +116,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BlockUtil.uniqueBlockPosComparator(Comparator.comparingDouble(p -> getBlockPos().distSqr(p)))
     );
     private final Set<BlockPos> framePlaceFramePoses = new HashSet<>();
+    // Frame-volume cells the quarry reached the head of the break queue on and may never mine (bedrock, a
+    // claim-protected block, a block logged with a thick fluid), each with the state it was parked on. check()
+    // keeps a parked cell out of frameBreakBlockPoses for as long as that state stands, so the power loop is not
+    // pinned to it forever; an unminable frame-line cell simply stays a gap in the frame. A different block
+    // arriving in the cell (or the cell turning to air/fluid) drops the entry, and updatePoses() clears the map,
+    // so e.g. a claim that is lifted is picked up again on the next chunk reload.
+    private final Map<BlockPos, BlockState> frameUnminablePoses = new HashMap<>();
     public Task currentTask = null;
     public Vec3 drillPos;
     public Vec3 clientDrillPos;
@@ -446,20 +455,30 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             && (BlockUtil.isFluidloggedBlock(state) || BlockUtil.getFluidWithFlowing(level, blockPos) == null);
     }
 
+    /** Queues a cell for clearing, unless it is parked in {@link #frameUnminablePoses} on the block it still holds. */
+    private void queueFrameBreak(BlockPos blockPos) {
+        BlockState parkedOn = frameUnminablePoses.get(blockPos);
+        if (parkedOn != null) {
+            if (parkedOn.equals(level.getBlockState(blockPos))) {
+                return;
+            }
+            frameUnminablePoses.remove(blockPos);
+        }
+        frameBreakBlockPoses.add(blockPos);
+    }
+
     private void check(BlockPos blockPos) {
         frameBreakBlockPoses.remove(blockPos);
         framePlaceFramePoses.remove(blockPos);
-        if (shouldBeFrame(blockPos)) {
-            if (!level.getBlockState(blockPos).is(BCBuildersBlocks.FRAME.get())) {
-                if (canIgnoreInFrameBox(blockPos)) {
-                    frameBreakBlockPoses.add(blockPos);
-                } else {
-                    framePlaceFramePoses.add(blockPos);
-                }
-            }
+        boolean onFrameLine = shouldBeFrame(blockPos);
+        if (onFrameLine && level.getBlockState(blockPos).is(BCBuildersBlocks.FRAME.get())) {
+            frameUnminablePoses.remove(blockPos);
+        } else if (canIgnoreInFrameBox(blockPos)) {
+            queueFrameBreak(blockPos);
         } else {
-            if (canIgnoreInFrameBox(blockPos)) {
-                frameBreakBlockPoses.add(blockPos);
+            frameUnminablePoses.remove(blockPos);
+            if (onFrameLine) {
+                framePlaceFramePoses.add(blockPos);
             }
         }
         if (!firstChecked) {
@@ -527,7 +546,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         return Component.translatable("chat.debugger.quarry");
     }
 
-    private void updatePoses() {
+    // package-private so the frame-stall tests can rebuild the scan queues after setting the boxes directly.
+    void updatePoses() {
         framePoses.clear();
         frameBoxPosesCount = 0;
         toCheck.clear();
@@ -535,6 +555,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         firstChecked = false;
         frameBreakBlockPoses.clear();
         framePlaceFramePoses.clear();
+        frameUnminablePoses.clear();
         BlockState state = level.getBlockState(worldPosition);
         if (state.is(BCBuildersBlocks.QUARRY.get()) && frameBox.isInitialized()) {
             List<BlockPos> blocksInArea = frameBox.getBlocksInArea();
@@ -713,6 +734,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     drillPos = null;
                     currentTask = new TaskBreakBlock(blockPos);
                     sendUpdate = true;
+                } else if (canIgnoreInFrameBox(blockPos)) {
+                    // A real block the quarry may never break: park it so check() stops re-queueing it,
+                    // else this branch (which skips everything after it) would spin on it every tick.
+                    frameUnminablePoses.put(blockPos.immutable(), level.getBlockState(blockPos));
                 }
                 check(blockPos);
                 continue power_loop;

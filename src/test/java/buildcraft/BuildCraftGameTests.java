@@ -370,6 +370,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_lava_blocks_drill", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testLavaBlocksDrillButWaterDoesNot);
         // A waterlogged block on the frame line is broken (with drops) before the frame goes in, never framed over.
         reg.accept("buildcraftunofficial:quarry_frame_breaks_waterlogged_block", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testFrameLineWaterloggedBlockIsBrokenNotOverwritten);
+        // A cell in the frame volume the quarry may never mine (bedrock, a claim-protected block) is skipped, not
+        // spun on forever: the rest of the frame is built and the drill starts.
+        reg.accept("buildcraftunofficial:quarry_frame_completes_around_bedrock", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundBedrock);
+        reg.accept("buildcraftunofficial:quarry_frame_completes_around_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundClaimProtectedBlock);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);

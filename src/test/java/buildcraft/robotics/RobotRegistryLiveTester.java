@@ -203,6 +203,81 @@ public class RobotRegistryLiveTester {
         }
     }
 
+    // ---------- the id counter ----------
+
+    /** A robot that loads with an id the counter has not passed (the registry file that counted it was lost or
+     *  reset, so the counter restarted behind the robots already in the world) raises the counter past that id when
+     *  it registers: the next robot placed must not be handed the id of one that is still out there. */
+    public static void aRobotLoadedAheadOfTheCounterRaisesTheCounter(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot loaded = f.unregisteredRobot();
+            long ahead = f.registry.nextRobotIdPeek() + 1000;
+            loaded.setUniqueRobotId(ahead); // what EntityRobot.readData restores from the entity's NBT
+
+            f.registry.registerRobot(loaded);
+
+            helper.assertTrue(loaded.getRobotId() == ahead, "a robot that already has an id keeps it");
+            helper.assertTrue(f.registry.nextRobotIdPeek() > ahead,
+                    "the counter moves past the id of the robot that just registered");
+            EntityRobot placed = f.robot();
+            helper.assertTrue(placed.getRobotId() > ahead,
+                    "a robot placed afterwards gets an id past it (got " + placed.getRobotId() + ", live robot has "
+                            + ahead + ")");
+            helper.succeed();
+        }
+    }
+
+    /** The case the counter cannot see coming: the registry was reset, a robot with no registry footprint (its home
+     *  station removed, so nothing in the data names its id) sat in an unloaded chunk, and a robot placed meanwhile
+     *  was handed that same id. When the old robot's chunk loads, the two must not end up sharing the id: the
+     *  robot already registered keeps it (its station link and reservations are filed under it) and the arriving
+     *  one is given a fresh id. */
+    public static void aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot placed = f.robot();
+            long id = placed.getRobotId();
+            LiveStation home = f.station(1, 5, Direction.UP);
+            helper.assertTrue(home.takeAsMain(placed), "precondition: the placed robot is linked to its home");
+            EntityRobot arriving = f.unregisteredRobot();
+            arriving.setUniqueRobotId(id); // the id the old robot was saved with, re-issued by the reset counter
+
+            f.registry.registerRobot(arriving);
+
+            helper.assertTrue(placed.getRobotId() == id, "the robot that registered first keeps its id");
+            helper.assertTrue(arriving.getRobotId() != id && arriving.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
+                    "the arriving robot is given a fresh id (got " + arriving.getRobotId() + ")");
+            helper.assertTrue(f.registry.getLoadedRobot(id) == placed, "the id still resolves to the first holder");
+            helper.assertTrue(f.registry.getLoadedRobot(arriving.getRobotId()) == arriving,
+                    "the fresh id resolves to the arriving robot");
+            helper.assertTrue(home.linkedId() == id && home.robotTaking() == placed,
+                    "the first holder's station link is untouched");
+            EntityRobot next = f.robot();
+            helper.assertTrue(next.getRobotId() != id && next.getRobotId() != arriving.getRobotId(),
+                    "the counter is past both ids");
+            helper.succeed();
+        }
+    }
+
+    /** The other half of the collision rule: a holder that is no longer alive (removed without passing through the
+     *  registry, the state a missed removal hook leaves) is a stale entry, not a live robot, so the robot arriving
+     *  with its id keeps the id and replaces it. */
+    public static void aRobotArrivingWithADeadRobotsIdKeepsIt(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot stale = f.robot();
+            long id = stale.getRobotId();
+            stale.discard(); // never added, so its removal hook is inert: the registry still holds it
+            helper.assertTrue(f.registry.getLoadedRobot(id) == stale, "precondition: the stale entry is still held");
+            EntityRobot arriving = f.unregisteredRobot();
+            arriving.setUniqueRobotId(id);
+
+            f.registry.registerRobot(arriving);
+
+            helper.assertTrue(arriving.getRobotId() == id, "a robot replacing a dead holder keeps its own id");
+            helper.assertTrue(f.registry.getLoadedRobot(id) == arriving, "...and the id now resolves to it");
+            helper.succeed();
+        }
+    }
+
     // ---------- removal paths ----------
 
     /** {@code killRobot} (a robot destroyed): every resource and every station — home, dock and plain

@@ -1009,6 +1009,16 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_registry_unload_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::unloadRobotKeepsHomeAndDock);
         reg.accept("buildcraftunofficial:robot_registry_release_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::releaseResourcesKeepsHomeAndDock);
         reg.accept("buildcraftunofficial:robot_registry_remove_station_releases_claim", () -> buildcraft.robotics.RobotRegistryLiveTester::removeStationReleasesTheRobotsClaim);
+        // The robot id counter never falls behind a robot that is still in the world (a robot registering with an id
+        // the counter has not passed raises it), and a 1.21.x-era saved-data file is picked up by the real 26.1+
+        // storage instead of being orphaned.
+        reg.accept("buildcraftunofficial:robot_registry_loaded_robot_raises_id_counter", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotLoadedAheadOfTheCounterRaisesTheCounter);
+        // ...and two robots never share an id: one arriving with a live robot's id is given a fresh one.
+        reg.accept("buildcraftunofficial:robot_registry_id_collision_reissues_arriving", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne);
+        reg.accept("buildcraftunofficial:robot_registry_id_of_dead_holder_is_kept", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithADeadRobotsIdKeepsIt);
+        reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
+        // ...but once a 26.1+ file exists it wins, and the pre-26.1 file is left on disk (recoverable).
+        reg.accept("buildcraftunofficial:legacy_saved_data_both_files_current_wins", () -> buildcraft.lib.misc.LegacySavedDataTester::bothFilesPresentTheCurrentWinsAndTheLegacyIsKept);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

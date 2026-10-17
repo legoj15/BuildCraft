@@ -26,7 +26,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
@@ -41,6 +40,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceId;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
 import org.jspecify.annotations.Nullable;
@@ -59,10 +59,10 @@ import org.jspecify.annotations.Nullable;
 public class RobotRegistry extends SavedData implements IRobotRegistry {
 
     //? if >=26.1 {
-    public static final SavedDataType<RobotRegistry> TYPE = new SavedDataType<>(
-        Identifier.withDefaultNamespace("buildcraft_robot_registry"),
-        () -> new RobotRegistry(null),
-        makeCodec(null),
+    public static final SavedDataType<RobotRegistry> TYPE = LegacySavedData.type(
+        "buildcraft_robot_registry",
+        RobotRegistry::new,
+        RobotRegistry::makeCodec,
         DataFixTypes.SAVED_DATA_MAP_DATA
     );
     //?} elif >=1.21.10 {
@@ -156,12 +156,40 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
 
         if (robot.getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
             robot.setUniqueRobotId(getNextRobotId());
+        } else {
+            // A robot loading with the id it was saved with. The counter is persisted with this registry, so it is
+            // normally already past that id - but a registry that was lost or reset (a world upgraded across a save
+            // layout change, a restored backup) restarts the counter behind the robots still in the world, and the
+            // next robot placed would be handed a live one's id.
+            raiseNextRobotIdPast(robot.getRobotId());
         }
-        if (robotsLoaded.containsKey(robot.getRobotId())) {
-            BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " was not unregistered properly");
+        EntityRobotBase holder = robotsLoaded.get(robot.getRobotId());
+        if (holder != null && holder != robot) {
+            if (holder.isAlive()) {
+                // Two live robots carrying one id. The counter cannot prevent every case: after a registry reset, a
+                // robot nothing in the data names (its home station gone) can sit in an unloaded chunk while its id
+                // is re-issued to a newly placed robot. The robot registered first keeps the id - its station link
+                // and reservations are filed under it - and the arriving one starts over under a fresh id (whatever
+                // it held under the old one belongs to the first holder now).
+                long fresh = getNextRobotId();
+                BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " arrived while another live robot "
+                        + "holds that id; giving the arriving robot the id " + fresh);
+                robot.setUniqueRobotId(fresh);
+            } else {
+                BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " was not unregistered properly");
+            }
         }
 
         addRobotLoaded(robot);
+    }
+
+    /** Makes sure the next id handed out is greater than {@code robotId}. The null id is the one value that is never
+     *  a robot (it is also the largest, so counting it would overflow the counter). */
+    private void raiseNextRobotIdPast(long robotId) {
+        if (robotId != EntityRobotBase.NULL_ROBOT_ID && robotId >= nextRobotID) {
+            nextRobotID = robotId + 1;
+            setDirty();
+        }
     }
 
     private Set<ResourceId> getResourcesTakenByRobot(long robotId) {
@@ -178,7 +206,8 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     }
 
     private void removeRobotLoaded(EntityRobotBase robot) {
-        robotsLoaded.remove(robot.getRobotId());
+        // Only this robot's own entry: a stale holder going away must not drop the robot that replaced it.
+        robotsLoaded.remove(robot.getRobotId(), robot);
         robotsLoadedSet.remove(robot);
     }
 
@@ -652,6 +681,18 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             } catch (Exception e) {
                 BCLog.logger.error("[robots] Could not load docking station", e);
             }
+        }
+
+        // The counter must stay ahead of every robot id the data names, whatever the saved counter says: the robots
+        // those ids belong to are still out in the world, and are never asked about the counter again.
+        for (long robotId : resourcesTaken.values()) {
+            raiseNextRobotIdPast(robotId);
+        }
+        for (long robotId : stationsTakenByRobot.keySet()) {
+            raiseNextRobotIdPast(robotId);
+        }
+        for (DockingStation station : stations.values()) {
+            raiseNextRobotIdPast(station.linkedId());
         }
     }
 

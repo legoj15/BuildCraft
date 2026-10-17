@@ -29,7 +29,6 @@ import net.minecraft.world.level.saveddata.SavedData;
 //? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.datafix.DataFixTypes;
 
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -39,16 +38,17 @@ import buildcraft.api.transport.EnumWirePart;
 import buildcraft.api.transport.IWireEmitter;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
+import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
 import org.jspecify.annotations.Nullable;
 
 public class SavedDataWireSystems extends SavedData {
     //? if >=26.1 {
-    public static final SavedDataType<SavedDataWireSystems> TYPE = new SavedDataType<>(
-        Identifier.withDefaultNamespace("buildcraft_wire_systems"),
-        () -> new SavedDataWireSystems(null),
-        makeCodec(null),
+    public static final SavedDataType<SavedDataWireSystems> TYPE = LegacySavedData.type(
+        "buildcraft_wire_systems",
+        SavedDataWireSystems::new,
+        SavedDataWireSystems::makeCodec,
         DataFixTypes.SAVED_DATA_MAP_DATA
     );
     //?} elif >=1.21.10 {

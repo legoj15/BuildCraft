@@ -6,7 +6,6 @@ package buildcraft.core.marker;
 
 import com.mojang.serialization.Codec;
 
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 //? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -29,10 +28,10 @@ public class VolumeSavedData extends MarkerSavedData {
     private static final Codec<VolumeSavedData> CODEC = makeCodec(VolumeSavedData::new);
 
     //? if >=26.1 {
-    public static final SavedDataType<VolumeSavedData> TYPE = new SavedDataType<>(
-            Identifier.withDefaultNamespace(ID),
-            VolumeSavedData::new,
-            CODEC,
+    public static final SavedDataType<VolumeSavedData> TYPE = buildcraft.lib.misc.LegacySavedData.type(
+            ID,
+            level -> new VolumeSavedData(),
+            level -> CODEC,
             net.minecraft.util.datafix.DataFixTypes.LEVEL
     );
     //?} elif >=1.21.10 {

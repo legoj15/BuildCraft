@@ -6,7 +6,6 @@ package buildcraft.core.marker;
 
 import com.mojang.serialization.Codec;
 
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 //? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -29,10 +28,10 @@ public class PathSavedData extends MarkerSavedData {
     private static final Codec<PathSavedData> CODEC = makeCodec(PathSavedData::new);
 
     //? if >=26.1 {
-    public static final SavedDataType<PathSavedData> TYPE = new SavedDataType<>(
-            Identifier.withDefaultNamespace(ID),
-            PathSavedData::new,
-            CODEC,
+    public static final SavedDataType<PathSavedData> TYPE = buildcraft.lib.misc.LegacySavedData.type(
+            ID,
+            level -> new PathSavedData(),
+            level -> CODEC,
             net.minecraft.util.datafix.DataFixTypes.LEVEL
     );
     //?} elif >=1.21.10 {

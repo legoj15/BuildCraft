@@ -114,8 +114,6 @@ public class TileFiller extends TileBC_Neptune
 
     private Template.BuildingInfo buildingInfo;
     public TemplateBuilder builder = new TemplateBuilder(this);
-    @Nullable
-    private GameProfile owner;
 
     @Override
     protected boolean spillsContentsOnRemoval() {
@@ -163,9 +161,9 @@ public class TileFiller extends TileBC_Neptune
         if (level == null || level.isClientSide()) {
             return;
         }
-        // Store owner
+        // Store owner (the inherited field; TileBC_Neptune saves it)
         if (placer instanceof Player player) {
-            owner = player.getGameProfile();
+            setOwner(player.getGameProfile());
         }
 
         BlockState blockState = level.getBlockState(worldPosition);
@@ -285,8 +283,8 @@ public class TileFiller extends TileBC_Neptune
                 // Gated on !finished so the LOOP-completion advancement fires only on the
                 // false→true transition — in LOOP mode this branch re-enters every tick once
                 // the builder has nothing left to do.
-                if (!finished && mode == Mode.LOOP && owner != null) {
-                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(owner), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
+                if (!finished && mode == Mode.LOOP && getOwner() != null) {
+                    AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
                 }
                 finished = true;
                 // Clear stale render cache so the client receives empty task lists
@@ -348,13 +346,7 @@ public class TileFiller extends TileBC_Neptune
             output.store("builderState", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeNBT());
             output.store("builderClientData", net.minecraft.nbt.CompoundTag.CODEC, builder.serializeClientNBT());
         }
-
-        // Owner
-        if (owner != null) {
-            BCValueOutput ownerChild = output.child("owner");
-            ownerChild.putString("name", GameProfileUtil.getName(owner) != null ? GameProfileUtil.getName(owner) : "");
-            ownerChild.putString("uuid", GameProfileUtil.getId(owner) != null ? GameProfileUtil.getId(owner).toString() : "");
-        }
+        // The owner is saved by TileBC_Neptune.writeData (ownerUUID/ownerName).
     }
 
     @Override
@@ -431,19 +423,28 @@ public class TileFiller extends TileBC_Neptune
             });
         }
 
-        // Owner
-        Optional<BCValueInput> ownerInputOpt = input.child("owner");
-        if (ownerInputOpt.isPresent()) {
-            BCValueInput ownerInput = ownerInputOpt.get();
-            String uuidStr = ownerInput.getStringOr("uuid", "");
-            String name = ownerInput.getStringOr("name", "");
-            if (!uuidStr.isEmpty()) {
-                try {
-                    owner = new GameProfile(UUID.fromString(uuidStr), name);
-                } catch (Exception e) {
-                    owner = null;
-                }
-            }
+        // The owner itself is read by TileBC_Neptune.readData (ownerUUID/ownerName). Saves from before the Filler
+        // shared that field kept the owner in a private "owner" child; read it when the standard keys are absent.
+        if (owner == null) {
+            owner = readLegacyOwner(input);
+        }
+    }
+
+    /** The owner stored in the retired {@code owner} child (name/uuid), or null when there is none or its id is unusable. */
+    @Nullable
+    private static GameProfile readLegacyOwner(BCValueInput input) {
+        Optional<BCValueInput> child = input.child("owner");
+        if (child.isEmpty()) {
+            return null;
+        }
+        String uuidStr = child.get().getStringOr("uuid", "");
+        if (uuidStr.isEmpty()) {
+            return null;
+        }
+        try {
+            return new GameProfile(UUID.fromString(uuidStr), child.get().getStringOr("name", ""));
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
@@ -600,13 +601,6 @@ public class TileFiller extends TileBC_Neptune
             //?}
         }
         return remaining <= 0 ? ItemStack.EMPTY : stack.copyWithCount(remaining);
-    }
-
-    // ==================== IPlayerOwned ====================
-
-    @Override
-    public GameProfile getOwner() {
-        return owner;
     }
 
     // ==================== Accessors ====================

@@ -93,8 +93,9 @@ public abstract class AbstractBCBlockEntity extends BlockEntity {
     // The owner field + placement entry point shared by TileBC_Neptune and the raw machine tiles. The
     // ownerUUID/ownerName NBT itself is handled by OwnerData, which owner-bearing subclasses call from
     // their writeData/readData — this base deliberately does NOT serialize owner, so ownerless tiles
-    // (markers, TileSpringOil) stay byte-identical. TilePipeHolder, whose placement flow is bespoke, still uses
-    // this field; TileFiller still keeps a private owner of its own that shadows it (a tracked todo).
+    // (markers, TileSpringOil) stay byte-identical. TilePipeHolder, whose placement flow is bespoke, also uses
+    // this field. No subclass may declare an owner of its own (OwnerFieldShadowGuardTest): it would hide this
+    // one, and the inherited setOwner/getOwner would disagree.
 
     @Nullable
     protected GameProfile owner;

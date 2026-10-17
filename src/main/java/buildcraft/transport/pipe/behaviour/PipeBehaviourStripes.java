@@ -18,6 +18,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
 
@@ -61,8 +62,16 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     @Nullable
     public Direction direction = null;
     private long progress;
-    /** Whether protection mods were already asked about the block in front for the current break cycle. */
+    /** Whether protection mods were already asked about {@link #cycleTarget} (in {@link #cycleState}) this cycle. */
     private boolean askedThisCycle;
+    /** The block the current break cycle is about: {@link #progress} and {@link #askedThisCycle} hold for this
+     *  position in this state only. The pipe being re-pointed, or the block vanishing or being replaced, starts a new
+     *  cycle (see {@link #startCycleIfTargetChanged}); before, a stale answer and progress carried over, so the pipe
+     *  charged and cracked a block nobody had asked about. Null between cycles. */
+    @Nullable
+    private BlockPos cycleTarget;
+    @Nullable
+    private BlockState cycleState;
     /** Blocks protection mods refused, so a refused block is left alone instead of re-charged every cycle. */
     private final ProtectionRefusals refusals = new ProtectionRefusals(REFUSAL_RETRY_TICKS, 4);
     /** Ticks this pipe has run: the refusal clock (it also advances in a hand-driven test loop, unlike game time). */
@@ -106,6 +115,11 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     public void writePayload(FriendlyByteBuf buffer) {
         super.writePayload(buffer);
         buffer.writeByte(direction == null ? -1 : direction.ordinal());
+    }
+
+    /** The power put into breaking the block in front so far this cycle (for tests). */
+    public long getBreakProgress() {
+        return progress;
     }
 
     // Direction management
@@ -192,6 +206,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         ticksRun++;
         if (direction != null) {
             BlockPos offset = pos.relative(direction);
+            startCycleIfTargetChanged(world, offset, world.getBlockState(offset));
             long target = BlockUtil.computeBlockBreakPower(world, offset);
             // A block protection mods refused is left alone (no power, no asking) until it changes or the retry
             // window passes: 1.12.2 re-charged the whole break and re-asked every cycle for as long as the claim stood.
@@ -231,9 +246,28 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                 }
             }
         } else {
-            progress = 0;
-            askedThisCycle = false;
+            endCycle(world);
         }
+    }
+
+    /** Starts a fresh break cycle when the block in front is not the one the current cycle is about. */
+    private void startCycleIfTargetChanged(Level world, BlockPos offset, BlockState state) {
+        if (!offset.equals(cycleTarget) || !state.equals(cycleState)) {
+            endCycle(world);
+            cycleTarget = offset.immutable();
+            cycleState = state;
+        }
+    }
+
+    /** Drops the current cycle: its progress (and the crack it drew), and the answer protection mods gave for it. */
+    private void endCycle(Level world) {
+        if (progress > 0 && cycleTarget != null) {
+            world.destroyBlockProgress(cycleTarget.hashCode(), cycleTarget, -1);
+        }
+        progress = 0;
+        askedThisCycle = false;
+        cycleTarget = null;
+        cycleState = null;
     }
 
     /**

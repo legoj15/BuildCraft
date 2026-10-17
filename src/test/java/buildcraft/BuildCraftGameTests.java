@@ -226,6 +226,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_backs_off", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeBacksOffFromARefusedBlock);
+        reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks_again_for_new_target", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksAgainForANewTarget);
         reg.accept("buildcraftunofficial:machine_protection_robots_ask", () -> buildcraft.lib.misc.MachineProtectionTester::robotsAskBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_asks_chosen_only", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchAsksOnlyAboutTheChosenTarget);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);

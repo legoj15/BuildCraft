@@ -221,6 +221,73 @@ public class MachineProtectionTester {
         helper.succeed();
     }
 
+    /**
+     * The "already asked" answer belongs to the block it was given for, not to the pipe: a pipe part-way into one
+     * block that is re-pointed at another (a gate direction action, or the auto-repoint), or whose block vanishes and
+     * is replaced, starts over on the new block and asks about it before spending any power on it. Before the fix
+     * the stale answer and the progress carried over, so the pipe charged and cracked a claimed block nobody asked
+     * about (the claim only got its say at the final break).
+     */
+    public static void stripesPipeAsksAgainForANewTarget(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos pipeRel = new BlockPos(2, 1, 2);
+        BlockPos aRel = pipeRel.above();
+        BlockPos bRel = pipeRel.east();
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, pipeRel);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        helper.setBlock(aRel, Blocks.STONE);
+        helper.setBlock(bRel, Blocks.STONE);
+        BlockPos a = helper.absolutePos(aRel);
+        BlockPos b = helper.absolutePos(bRel);
+        long targetA = BlockUtil.computeBlockBreakPower(level, a);
+
+        // Re-pointed: 60% into A, the pipe is turned to face B, which a claim refuses.
+        chargeUntilSixtyPercent(stripes, targetA);
+        try (ClaimProtectionMod claimB = new ClaimProtectionMod(b, true)) {
+            stripes.direction = Direction.EAST;
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claimB.asks() == 1, "the re-pointed pipe asks about B before working on it, asked "
+                    + claimB.asks() + " times");
+            check(stripes.getBreakProgress() == 0, "no power is spent on the refused B: progress "
+                    + stripes.getBreakProgress() / MjAPI.MJ + " MJ");
+            for (int i = 0; i < 20; i++) {
+                stripes.receivePower(64 * MjAPI.MJ, false);
+                stripes.onTick();
+                check(stripes.getBreakProgress() == 0, "B stays refused: no progress (and so no crack) on it");
+            }
+            check(level.getBlockState(b).is(Blocks.STONE), "B is not broken");
+        }
+
+        // Replaced: 60% into A, A vanishes and a claimed block takes its place.
+        stripes.direction = Direction.UP;
+        chargeUntilSixtyPercent(stripes, targetA);
+        helper.setBlock(aRel, Blocks.AIR);
+        stripes.onTick();
+        try (ClaimProtectionMod claimA = new ClaimProtectionMod(a, true)) {
+            helper.setBlock(aRel, Blocks.COBBLESTONE);
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claimA.asks() == 1, "the replacement block is asked about before any power, asked "
+                    + claimA.asks() + " times");
+            check(stripes.getBreakProgress() == 0, "and no power is spent on it: progress "
+                    + stripes.getBreakProgress() / MjAPI.MJ + " MJ");
+            check(level.getBlockState(a).is(Blocks.COBBLESTONE), "the replacement block is not broken");
+        }
+        helper.succeed();
+    }
+
+    /** Ticks {@code stripes} (facing an unclaimed block that needs {@code target}) until it is 60% of the way in. */
+    private static void chargeUntilSixtyPercent(PipeBehaviourStripes stripes, long target) {
+        for (int i = 0; i < 40 && stripes.getBreakProgress() * 10 < target * 6; i++) {
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+        }
+        check(stripes.getBreakProgress() * 10 >= target * 6 && stripes.getBreakProgress() < target,
+                "precondition: the pipe is 60% into the block, at " + stripes.getBreakProgress() + " of " + target);
+    }
+
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));

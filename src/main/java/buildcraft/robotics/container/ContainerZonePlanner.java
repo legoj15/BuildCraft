@@ -107,8 +107,8 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     // them) and persists them. NET_PAINT_LAYER carries an edit up; the server's per-tick diff
     // (broadcastChanges) pushes any changed layer back down via NET_SYNC_LAYER — covering both
     // viewport paints and the paintbrush/map-location slot transfer.
-    private static final int NET_PAINT_LAYER = 10;
-    private static final int NET_SYNC_LAYER = 11;
+    public static final int NET_PAINT_LAYER = 10;
+    public static final int NET_SYNC_LAYER = 11;
 
     /** Per-viewer snapshot of the last layer bytes pushed to this menu's client, for change detection. */
     private byte[][] lastSentLayers;
@@ -163,6 +163,15 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
                 plan.readFromByteBuf(buffer);
                 tile.layers[idx] = plan;
                 tile.setChanged();
+                // The painter's client already shows this layer (it applied the stroke before sending it), so the
+                // per-tick diff must not push it back at them: by the time the echo lands they may have drawn a
+                // newer stroke, and the echo would wipe it until the next sync. Recording the stored bytes as
+                // "already sent" suppresses the echo for this viewer only; every other open menu keeps its own
+                // snapshot and still receives the change.
+                if (lastSentLayers == null) {
+                    lastSentLayers = new byte[tile.layers.length][];
+                }
+                lastSentLayers[idx] = serialize(plan);
             }
             return;
         }

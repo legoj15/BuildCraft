@@ -858,6 +858,13 @@ public class BuildCraftGameTests {
         // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
 
+        // Robotics — Zone Planner layer sync: a viewer's own paint is not echoed back to them (it would
+        // overwrite newer local strokes) while other viewers still get it; client-sent layers are
+        // clamped to the survey range with the server's own far chunks preserved, oversized layers are
+        // rejected (and the painter resynced), and unchanged layers are not re-serialised every tick.
+        reg.accept("buildcraftunofficial:zone_planner_paint_not_echoed", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintIsNotEchoedToItsOriginator);
+        reg.accept("buildcraftunofficial:zone_planner_paint_reaches_other_viewers", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintStillReachesOtherViewers);
+
         // Robotics Ph2 — docking station pluggable: placement auto-registers/removal auto-deregisters
         // in the RobotRegistry, RobotUtils discovery through a real pipe holder, the take/release
         // reservation lifecycle (undock -> release; physical dock/undock movement is Ph3), the MJ-charge

@@ -5,9 +5,6 @@
  */
 package buildcraft.robotics.client.zone;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import net.minecraft.world.level.Level;
@@ -15,35 +12,26 @@ import net.minecraft.world.level.chunk.EmptyLevelChunk;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
- * Client-side cache of {@link ZonePlannerMapChunk}s, keyed by packed chunk coordinate. Built lazily
- * from the client's own loaded chunks as the Zone Planner's viewport pans over them; columns outside
- * the loaded area simply return {@code null} and render as gaps.
+ * Client-side cache of {@link ZonePlannerMapChunk}s. Built lazily from the client's own loaded chunks as the Zone
+ * Planner's viewport (and the planner block's in-world screen) look at them; columns outside the loaded area
+ * simply return {@code null} and render as gaps.
  *
- * <p>The cache is {@link #clear() cleared} when the planner GUI opens (and is safe to clear on
- * dimension change), so it never serves stale terrain from a previous world. A built chunk is kept for
- * the life of the open GUI &mdash; terrain rarely changes mid-edit, and a one-time scan per chunk keeps
- * the per-frame render allocation-free.
+ * <p>The lifetime rules live in {@link LevelChunkCache} (and its unit tests): the cache holds one level's chunks
+ * at a time, so another dimension or world never sees them; it is {@link #clear() cleared} when the planner GUI
+ * opens, on logout and on client level unload; a chunk is {@link #invalidateChunk dropped} when it reloads or
+ * unloads; and, because the client is never told when a single block changes, an entry older than a few seconds
+ * is rebuilt (a few per {@link #tick}, so a wide survey view stays cheap). Everything here runs on the client
+ * main thread; the events that drive it are wired in {@code BCRoboticsClient.GameBus}.
  */
 public enum ZonePlannerMapDataClient {
     INSTANCE;
 
-    private final Map<Long, ZonePlannerMapChunk> cache = new HashMap<>();
+    private final LevelChunkCache<Level, ZonePlannerMapChunk> cache =
+            new LevelChunkCache<>(ZonePlannerMapDataClient::build);
 
-    private static long key(int chunkX, int chunkZ) {
-        return (chunkX & 0xFFFF_FFFFL) | ((long) chunkZ << 32);
-    }
-
-    /**
-     * The map data for the given chunk, building and caching it on first access. Returns {@code null}
-     * if the chunk is not currently loaded on the client (the viewport renders those as empty).
-     */
+    /** Scans one chunk of {@code level}, or returns {@code null} if the client has not got it. */
     @Nullable
-    public ZonePlannerMapChunk getChunk(Level level, int chunkX, int chunkZ) {
-        long k = key(chunkX, chunkZ);
-        ZonePlannerMapChunk existing = cache.get(k);
-        if (existing != null) {
-            return existing;
-        }
+    private static ZonePlannerMapChunk build(Level level, int chunkX, int chunkZ) {
         if (!level.hasChunk(chunkX, chunkZ)) {
             return null;
         }
@@ -51,11 +39,29 @@ public enum ZonePlannerMapDataClient {
         if (chunk instanceof EmptyLevelChunk) {
             return null;
         }
-        ZonePlannerMapChunk built = new ZonePlannerMapChunk(level, chunk, chunkX, chunkZ);
-        cache.put(k, built);
-        return built;
+        return new ZonePlannerMapChunk(level, chunk, chunkX, chunkZ);
     }
 
+    /**
+     * The map data for the given chunk of {@code level}, building and caching it on first access. Returns
+     * {@code null} if the chunk is not currently loaded on the client (the viewport renders those as empty).
+     */
+    @Nullable
+    public ZonePlannerMapChunk getChunk(Level level, int chunkX, int chunkZ) {
+        return cache.get(level, chunkX, chunkZ);
+    }
+
+    /** Drops one chunk (it was reloaded or unloaded); the next look rebuilds it from the client's chunk. */
+    public void invalidateChunk(Level level, int chunkX, int chunkZ) {
+        cache.invalidate(level, chunkX, chunkZ);
+    }
+
+    /** Advances the refresh clock; called once per client tick. */
+    public void tick() {
+        cache.tick();
+    }
+
+    /** Forgets everything: the planner GUI opening, logout, a client level unloading. */
     public void clear() {
         cache.clear();
     }

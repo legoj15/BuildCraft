@@ -870,6 +870,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
         reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
 
+        // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
+        // block changed), invalidated on a chunk reload, and never shared between levels.
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_refreshes", () -> buildcraft.robotics.ZonePlannerMapCacheTester::terrainChangesAppearAfterTheRefreshAge);
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_invalidates", () -> buildcraft.robotics.ZonePlannerMapCacheTester::invalidatingAChunkRebuildsItAtOnce);
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_per_level", () -> buildcraft.robotics.ZonePlannerMapCacheTester::chunksAreNotSharedAcrossLevels);
+
         // Robotics Ph2 — docking station pluggable: placement auto-registers/removal auto-deregisters
         // in the RobotRegistry, RobotUtils discovery through a real pipe holder, the take/release
         // reservation lifecycle (undock -> release; physical dock/undock movement is Ph3), the MJ-charge

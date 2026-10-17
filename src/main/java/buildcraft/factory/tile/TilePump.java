@@ -382,7 +382,8 @@ public class TilePump extends TileMiner implements IDebuggable {
      * Asks protection mods whether the pump may take fluid from {@code pos}, as the pump's owner (the generic
      * "[BuildCraft]" identity for an unowned pump), through the same probe the quarry and mining well use. Only the
      * cell the pump is about to drain is asked about, never the whole pool it could reach, and once per bucket: a
-     * cleared cell stays cleared until its bucket is credited.
+     * cleared cell stays cleared until its bucket is credited or the pump moves off it ({@link #nextPos}), whichever
+     * comes first.
      */
     private boolean isDrainPermitted(BlockPos pos) {
         if (pos.equals(permittedPos)) {
@@ -439,6 +440,10 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     private void nextPos() {
+        // Every way off a cell runs through here (a credited bucket, a refusal, a scooped or cut-off cell, a
+        // rebuild), so this is where a permit ends: an abandoned bucket was never credited, and a later re-queue of
+        // the same cell (perhaps claimed by then) must ask again rather than ride the old permit.
+        permittedPos = null;
         while (!queue.isEmpty()) {
             currentPos = queue.removeLast();
             if (canDrain(currentPos)) {

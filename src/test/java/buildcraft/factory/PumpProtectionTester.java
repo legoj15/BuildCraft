@@ -183,6 +183,52 @@ public class PumpProtectionTester {
     }
 
     /**
+     * A permit covers one bucket, not one cell forever. The pump is cleared to drain A but runs out of power
+     * mid-bucket; a player scoops A first, so the pump abandons the bucket and moves on. The owner then claims A and
+     * the water comes back. When a later rebuild queues A again the pump must ask afresh: the old permit was for a
+     * bucket that was never credited, and reusing it would drain from inside the new claim without asking.
+     */
+    public static void abandonedPermitIsNotReused(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        TilePump pump = buildPumpedChannel(helper);
+        helper.setBlock(CELL_A, Blocks.WATER);
+        helper.setBlock(CELL_B, Blocks.STONE); // a one-cell pool: A is the only cell the pump can ever choose
+        BlockPos a = helper.absolutePos(CELL_A);
+
+        // Power-starved: a trickle that lets the pump pick A and be cleared for it, but never finish the bucket.
+        try (ClaimProtectionMod open = new ClaimProtectionMod(a, false)) {
+            for (int i = 0; i < 4 && open.asks() == 0; i++) {
+                pump.getBattery().addPowerChecking(MjAPI.MJ, false);
+                pump.serverTick();
+            }
+            check(open.asks() == 1, "precondition: the pump was cleared for A, asked " + open.asks() + " times");
+            check(pump.getTank().getAmountMb(0) == 0, "precondition: the bucket from A is still unfinished");
+        }
+
+        // A player scoops A mid-bucket: the pump's bucket is abandoned and it moves off the cell.
+        helper.setBlock(CELL_A, Blocks.AIR);
+        for (int i = 0; i < PUMP_TICKS && !pump.isComplete(); i++) {
+            runPump(pump, 1);
+        }
+        check(pump.isComplete(), "precondition: with A scooped, the pump has nothing left to work on");
+
+        // The owner claims A, then the water comes back; the next rebuild queues A again.
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(a, true)) {
+            helper.setBlock(CELL_A, Blocks.WATER);
+            runPump(pump, PUMP_TICKS);
+
+            check(claim.asks() >= 1, "a re-queued cell is asked about again, not waved through on an abandoned permit");
+            check(isSource(level, a), "the claimed cell is not drained");
+            check(pump.getTank().getAmountMb(0) == 0,
+                    "nothing is pumped from inside the claim, got " + pump.getTank().getAmountMb(0));
+        }
+
+        helper.setBlock(CELL_A, Blocks.AIR);
+        helper.succeed();
+    }
+
+    /**
      * A modded block that reports a water source but refuses its bucket pickup. The pump tries it, is refused, takes
      * the plain water beside it, and does not try the refusing cell again while it is unchanged. Before the pump
      * remembered refusals it re-queued the cell on every rebuild, and every retry spent a full cycle of power.

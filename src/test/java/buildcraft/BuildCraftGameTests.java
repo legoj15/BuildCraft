@@ -541,6 +541,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_protection_unprotected_sources_drained", () -> buildcraft.factory.PumpProtectionTester::unprotectedSourcesAreStillDrained);
         reg.accept("buildcraftunofficial:pump_protection_asks_only_about_chosen_cell", () -> buildcraft.factory.PumpProtectionTester::asksOnlyAboutTheCellItIsWorkingOn);
         reg.accept("buildcraftunofficial:pump_refused_pickup_not_retried", () -> buildcraft.factory.PumpProtectionTester::refusedPickupIsNotRetried);
+        reg.accept("buildcraftunofficial:pump_protection_abandoned_permit_not_reused", () -> buildcraft.factory.PumpProtectionTester::abandonedPermitIsNotReused);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);

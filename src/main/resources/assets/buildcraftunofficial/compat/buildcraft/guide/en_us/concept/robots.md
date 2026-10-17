@@ -1,5 +1,5 @@
 <lore>
-Pipes move things and gates make decisions, but somebody still has to walk out to the forest with an axe. Not any more. A Robot is a small flying worker that lives on your pipe network: give it a job, give it a place to charge, tell it where it may work, and it gets on with it while you do something else.
+Pipes move things and gates make decisions, but somebody still has to walk out to the forest with an axe... until now. These flying robots are controlled and powered entirely by the pipe network and can get various jobs done.
 </lore>
 <no_lore>
 Robots are autonomous flying workers. A robot's job is set by the Redstone Board it was programmed with; it docks on Docking Stations attached to pipes, recharges from kinesis pipes, and takes its orders from the gate on its home station's pipe.

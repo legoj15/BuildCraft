@@ -608,8 +608,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_protection_permit_rechecked_before_drain", () -> buildcraft.factory.PumpProtectionTester::permitIsRecheckedBeforeTheDrain);
         reg.accept("buildcraftunofficial:pump_protection_drain_refusal_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::drainTimeRefusalSpendsTheBucketsPower);
         reg.accept("buildcraftunofficial:pump_abandoned_bucket_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::abandonedBucketSpendsItsPower);
-        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsNeverLoadAChunk);
-        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsStillWorkOnLoadedCells);
+        reg.accept("buildcraftunofficial:refusal_memory_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.RefusalMemoryLevelTester::levelOverloadsNeverLoadAChunk);
+        reg.accept("buildcraftunofficial:refusal_memory_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.RefusalMemoryLevelTester::levelOverloadsStillWorkOnLoadedCells);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);

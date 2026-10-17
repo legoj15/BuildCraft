@@ -41,6 +41,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.test.ClaimProtectionMod;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotBreak;
@@ -154,18 +155,18 @@ public class MachineProtectionTester {
         }
 
         // The claim is lifted without the block changing - nothing fires an event for that - so the pipe notices
-        // only once its retry window has passed.
-        for (int i = 0; i < PipeBehaviourStripes.REFUSAL_RETRY_TICKS + 60 && !level.getBlockState(target).isAir(); i++) {
+        // only once its retry window (game time) has passed: wait real ticks for it, gated on the block going.
+        EntityArenaUtil.tickUntil(helper, (int) RefusalMemory.STRIPES.windowTicks() + 100, () -> {
             stripes.receivePower(64 * MjAPI.MJ, false);
             stripes.onTick();
-        }
-        check(level.getBlockState(target).isAir(), "once allowed, the stripes pipe breaks the block");
-
-        // The cobblestone drop travels down the pipe; empty it so removing the arena's pipe drops nothing.
-        for (TravellingItem item : ((PipeFlowItems) tile.getPipe().getFlow()).getAllItemsForRender()) {
-            item.getStack().setCount(0);
-        }
-        helper.succeed();
+            return level.getBlockState(target).isAir();
+        }, () -> {
+            // The cobblestone drop travels down the pipe; empty it so removing the arena's pipe drops nothing.
+            for (TravellingItem item : ((PipeFlowItems) tile.getPipe().getFlow()).getAllItemsForRender()) {
+                item.getStack().setCount(0);
+            }
+            helper.succeed();
+        }, "once allowed, the stripes pipe breaks the block");
     }
 
     /** A stripes pipe at {@code pipeRel}, facing up (an unconnected one keeps a non-null direction across ticks). */

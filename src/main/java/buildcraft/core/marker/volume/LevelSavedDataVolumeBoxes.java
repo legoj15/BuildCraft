@@ -29,7 +29,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
-import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
@@ -57,10 +56,10 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
     // decode it manually because VolumeBox needs a Level reference.
     //? if >=26.1 {
     public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
-        return new SavedDataType<>(
-                Identifier.withDefaultNamespace(DATA_NAME),
-                () -> new LevelSavedDataVolumeBoxes(world),
-                buildCodec(world),
+        return buildcraft.lib.misc.LegacySavedData.type(
+                DATA_NAME,
+                level -> new LevelSavedDataVolumeBoxes(world),
+                level -> buildCodec(world),
                 net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
     }

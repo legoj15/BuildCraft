@@ -23,6 +23,7 @@ import buildcraft.api.robots.ResourceId;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.lib.misc.NBTUtilBC;
 
 /**
  * Pure-JUnit characterization of {@link RobotRegistry}'s reservation bookkeeping and NBT round-trip — the
@@ -268,9 +269,12 @@ public class RobotRegistryTest {
         RobotRegistry before = new RobotRegistry(null);
         ResourceId idA = resource(1, 2, 3);
         ResourceId idB = resource(4, 5, 6);
-        before.take(idA, ROBOT_A);
-        before.take(idB, ROBOT_B);
-        before.getNextRobotId(); // advance nextRobotID off its Long.MIN_VALUE default
+        // Holders are ids the counter really issued: a registry that names an id the counter has not passed is a
+        // damaged one, and the load raises the counter past it (see the counter tests below).
+        long robotA = before.getNextRobotId();
+        long robotB = before.getNextRobotId();
+        before.take(idA, robotA);
+        before.take(idB, robotB);
         long expectedNext = before.nextRobotIdPeek();
 
         CompoundTag tag = new CompoundTag();
@@ -280,11 +284,85 @@ public class RobotRegistryTest {
         after.readFromNbt(tag);
 
         Assertions.assertEquals(expectedNext, after.nextRobotIdPeek(), "nextRobotID persists");
-        Assertions.assertEquals(ROBOT_A, after.rawHolderOf(idA), "resource A's holder persists");
-        Assertions.assertEquals(ROBOT_B, after.rawHolderOf(idB), "resource B's holder persists");
+        Assertions.assertEquals(robotA, after.rawHolderOf(idA), "resource A's holder persists");
+        Assertions.assertEquals(robotB, after.rawHolderOf(idB), "resource B's holder persists");
         // The reverse index is not persisted directly; readFromNbt must rebuild it via take().
-        Assertions.assertTrue(after.resourcesReservedBy(ROBOT_A).contains(idA), "reverse index rebuilt for A");
-        Assertions.assertTrue(after.resourcesReservedBy(ROBOT_B).contains(idB), "reverse index rebuilt for B");
+        Assertions.assertTrue(after.resourcesReservedBy(robotA).contains(idA), "reverse index rebuilt for A");
+        Assertions.assertTrue(after.resourcesReservedBy(robotB).contains(idB), "reverse index rebuilt for B");
+    }
+
+    // ---- the id counter must never fall behind an id the world still uses ----
+
+    /** A world whose registry file was lost or reset (a 1.21.x -> 26.x upgrade used to orphan it) restarts the counter
+     *  at its default while the robots keep the ids they were saved with. The data the registry DID load still names
+     *  some of those ids (a reservation, a station link); the next robot must not be handed one of them. */
+    @Test
+    public void testLoadRaisesTheCounterPastEveryIdTheDataStillNames() {
+        long heldResource = Long.MIN_VALUE + 5;
+        long linkedStation = Long.MIN_VALUE + 9;
+        BlockPos pos = new BlockPos(8, 64, 9);
+        TestDockingStation station = new TestDockingStation(pos, Direction.SOUTH);
+        CompoundTag stationTag = new CompoundTag();
+        station.writeToNbt(stationTag);
+        stationTag.putLong("robotId", linkedStation);
+        TestDockingStation linked = new TestDockingStation();
+        linked.readFromNbt(stationTag);
+
+        RobotRegistry saved = new RobotRegistry(null);
+        saved.take(resource(1, 2, 3), heldResource);
+        saved.registerStation(linked);
+        CompoundTag tag = new CompoundTag();
+        saved.writeToNbt(tag);
+        Assertions.assertEquals(Long.MIN_VALUE, NBTUtilBC.getLong(tag, "nextRobotID", 0L),
+                "precondition: the saved counter is back at its default, behind the ids the data names");
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(tag);
+
+        Assertions.assertEquals(linkedStation + 1, loaded.nextRobotIdPeek(),
+                "the counter moves to one past the highest id the registry names");
+        Assertions.assertEquals(linkedStation + 1, loaded.getNextRobotId(), "...so that is the next id handed out");
+    }
+
+    @Test
+    public void testLoadKeepsAHigherPersistedCounter() {
+        RobotRegistry saved = new RobotRegistry(null);
+        long robot = saved.getNextRobotId();
+        saved.take(resource(1, 2, 3), robot);
+        for (int i = 0; i < 100; i++) {
+            saved.getNextRobotId(); // robots that have since been killed: their ids are spent, not reusable
+        }
+        long counter = saved.nextRobotIdPeek();
+        CompoundTag tag = new CompoundTag();
+        saved.writeToNbt(tag);
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(tag);
+
+        Assertions.assertEquals(counter, loaded.nextRobotIdPeek(),
+                "the persisted counter wins when it is already past every id in the data");
+    }
+
+    /** The null id is {@code Long.MAX_VALUE}: counting it as "the highest id seen" would overflow the counter. */
+    @Test
+    public void testLoadIgnoresTheNullRobotId() {
+        RobotRegistry saved = new RobotRegistry(null);
+        saved.take(resource(1, 2, 3), EntityRobotBase.NULL_ROBOT_ID);
+        CompoundTag tag = new CompoundTag();
+        saved.writeToNbt(tag);
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(tag);
+
+        Assertions.assertEquals(Long.MIN_VALUE, loaded.nextRobotIdPeek(), "the null id is not a robot");
+    }
+
+    @Test
+    public void testLoadWithoutAnyRobotIdsKeepsTheDefaultCounter() {
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(new CompoundTag());
+
+        Assertions.assertEquals(Long.MIN_VALUE, loaded.nextRobotIdPeek());
     }
 
     @Test

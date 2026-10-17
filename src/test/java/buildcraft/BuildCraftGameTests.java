@@ -974,6 +974,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_registry_unload_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::unloadRobotKeepsHomeAndDock);
         reg.accept("buildcraftunofficial:robot_registry_release_keeps_home_and_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::releaseResourcesKeepsHomeAndDock);
         reg.accept("buildcraftunofficial:robot_registry_remove_station_releases_claim", () -> buildcraft.robotics.RobotRegistryLiveTester::removeStationReleasesTheRobotsClaim);
+        // The robot id counter never falls behind a robot that is still in the world (a robot registering with an id
+        // the counter has not passed raises it), and a 1.21.x-era saved-data file is picked up by the real 26.1+
+        // storage instead of being orphaned.
+        reg.accept("buildcraftunofficial:robot_registry_loaded_robot_raises_id_counter", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotLoadedAheadOfTheCounterRaisesTheCounter);
+        reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

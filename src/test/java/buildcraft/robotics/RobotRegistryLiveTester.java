@@ -198,6 +198,30 @@ public class RobotRegistryLiveTester {
         }
     }
 
+    // ---------- the id counter ----------
+
+    /** A robot that loads with an id the counter has not passed (the registry file that counted it was lost or
+     *  reset, so the counter restarted behind the robots already in the world) raises the counter past that id when
+     *  it registers: the next robot placed must not be handed the id of one that is still out there. */
+    public static void aRobotLoadedAheadOfTheCounterRaisesTheCounter(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot loaded = f.unregisteredRobot();
+            long ahead = f.registry.nextRobotIdPeek() + 1000;
+            loaded.setUniqueRobotId(ahead); // what EntityRobot.readData restores from the entity's NBT
+
+            f.registry.registerRobot(loaded);
+
+            helper.assertTrue(loaded.getRobotId() == ahead, "a robot that already has an id keeps it");
+            helper.assertTrue(f.registry.nextRobotIdPeek() > ahead,
+                    "the counter moves past the id of the robot that just registered");
+            EntityRobot placed = f.robot();
+            helper.assertTrue(placed.getRobotId() > ahead,
+                    "a robot placed afterwards gets an id past it (got " + placed.getRobotId() + ", live robot has "
+                            + ahead + ")");
+            helper.succeed();
+        }
+    }
+
     // ---------- removal paths ----------
 
     /** {@code killRobot} (a robot destroyed): every resource and every station — home, dock and plain

@@ -200,12 +200,18 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
         reg.accept("buildcraftunofficial:fake_player_api_separate_from_leases", () -> buildcraft.lib.misc.FakePlayerUtilTester::testApiPlayerIsSeparateFromLeases);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_released", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsReleased);
+        reg.accept("buildcraftunofficial:fake_player_leaked_lease_swept_at_tick_start", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsSweptWhenATickStarts);
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
+        reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_backs_off", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeBacksOffFromARefusedBlock);
         reg.accept("buildcraftunofficial:machine_protection_robots_ask", () -> buildcraft.lib.misc.MachineProtectionTester::robotsAskBeforeBreaking);
+        reg.accept("buildcraftunofficial:machine_protection_robot_search_asks_chosen_only", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchAsksOnlyAboutTheChosenTarget);
+        reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
+        reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
+        reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns
@@ -939,6 +945,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
         reg.accept("buildcraftunofficial:robot_pump_keeps_waterlogged_marker", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpKeepsWaterloggedMarker);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
+        reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

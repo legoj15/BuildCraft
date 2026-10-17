@@ -29,6 +29,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.lib.misc.ProtectionRefusals;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
@@ -46,6 +47,9 @@ import buildcraft.robotics.statements.ActionRobotFilter;
  *  {@code update()} and only fall through to {@code super.update()} when nothing is found yet. */
 public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
+    /** Game ticks a refused block is left alone before the owner's claim is asked about it again (1 minute). */
+    public static final int REFUSAL_RETRY_TICKS = 1200;
+
     private BlockPos blockFound;
 
     /** The blocks the linked station's gate "Filter" action names, refreshed every {@link #update()}.
@@ -53,6 +57,10 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  wholesale rather than mutated in place, so the search predicate can never observe a half-built
      *  set — 7.1.x's own comment warned that this predicate may be evaluated off the tick thread. */
     private volatile Set<Block> gateBlockFilter = Set.of();
+
+    /** Blocks protection mods refused this robot, so a refused block is not chosen again (and not asked about
+     *  again) every search. Transient: a reloaded board simply asks again. */
+    private final ProtectionRefusals refusals = new ProtectionRefusals(REFUSAL_RETRY_TICKS, 256);
 
     public BoardRobotGenericSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -77,18 +85,34 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         updateFilter();
 
         Level level = robot.level();
-        startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, pos -> isSearchCandidate(level, pos)));
+        startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, pos -> isSearchCandidate(level, pos),
+                pos -> approveSearchTarget(level, pos)));
     }
 
-    /** The search predicate. Both audit fixes meet here: the neighbour-aware property (batch 1 — stacking crops are
-     *  only ripe relative to the block below) AND the gate "Filter" conjunct (batch 2); then the reservation, and
-     *  last (it posts an event, so only for real candidates) whether protection mods let this robot break the
-     *  block — every subclass breaks what it finds, and without this a board would fly back to the same refused
-     *  block forever instead of moving on. */
+    /** The search predicate, evaluated for every block the scan visits, so it asks nobody anything: the
+     *  neighbour-aware property (batch 1 — stacking crops are only ripe relative to the block below) AND the gate
+     *  "Filter" conjunct (batch 2); then the reservation, and last a block protection mods already refused this
+     *  robot (remembered by {@link #approveSearchTarget}; unchanged blocks only, for a bounded time). */
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
                 && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
-                && (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos));
+                && !refusals.isRefused(pos, level.getBlockState(pos), level.getGameTime());
+    }
+
+    /** Asked once about the block the search has settled on (not about every candidate scanned, which would post a
+     *  break event per block to every listener on every search): whether protection mods let this robot break it —
+     *  every subclass breaks what it finds. A refusal is remembered so the next search skips the block instead of
+     *  flying back to it (and asking) forever; it lasts while the block is unchanged, up to
+     *  {@link #REFUSAL_RETRY_TICKS}, since lifting a claim fires no event. */
+    public boolean approveSearchTarget(@Nullable Level level, BlockPos pos) {
+        if (level == null) {
+            return false;
+        }
+        if (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos)) {
+            return true;
+        }
+        refusals.remember(pos, level.getBlockState(pos), level.getGameTime());
+        return false;
     }
 
     /** The state-only form of the search predicate: the board's own block test AND the gate's Filter

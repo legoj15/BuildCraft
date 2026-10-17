@@ -48,9 +48,24 @@ public class FakePlayerUtilSubscriptionTester {
         assertSubscribed(PlayerEvent.PlayerLoggedOutEvent.class);
     }
 
+    /**
+     * The leaked-lease sweep runs when a tick STARTS: by then every lease that is still open was dropped without
+     * close() during an earlier tick. Run at the end of a tick it would force-release a lease another listener
+     * opened earlier in that same Post phase and is still using.
+     */
     @Test
-    public void leakedLeaseSweepIsSubscribed() {
-        assertSubscribed(ServerTickEvent.Post.class);
+    public void leakedLeaseSweepRunsAtTickStart() {
+        assertSubscribed(ServerTickEvent.Pre.class);
+    }
+
+    @Test
+    public void leakedLeaseSweepIsNotInThePostPhase() {
+        for (Method method : FakePlayerUtil.class.getDeclaredMethods()) {
+            Class<?>[] params = method.getParameterTypes();
+            Assertions.assertFalse(params.length == 1 && params[0] == ServerTickEvent.Post.class,
+                    method.getName() + " handles ServerTickEvent.Post; a sweep there would release a lease another"
+                            + " Post listener opened earlier in the same phase and is still using");
+        }
     }
 
     private static void assertSubscribed(Class<? extends Event> eventType) {

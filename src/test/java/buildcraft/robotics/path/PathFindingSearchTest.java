@@ -153,6 +153,93 @@ public class PathFindingSearchTest {
         Assertions.assertEquals(target, included.getResultTarget(), "a target inside the work zone is found");
     }
 
+    private static PathFindingSearch searchApproving(MockSoftGrid grid, Set<BlockPos> reservations,
+            IBlockFilter approveTarget) {
+        return new PathFindingSearch(grid, grid.start(), squareDeltas(6), grid.targetFilter(), NO_END_SLACK, MAX_DIST,
+                null, reservations, approveTarget);
+    }
+
+    @Test
+    public void testApproverIsAskedOnlyAboutTheTargetItLocksOnto() {
+        // Seven candidate blocks: the scan visits and matches many of them, but only the chosen one is approved.
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S......",
+                ".T.T.T.",
+                ".......",
+                ".T.T.T.",
+                ".......",
+                "......T");
+        List<BlockPos> asked = new ArrayList<>();
+
+        PathFindingSearch s = searchApproving(grid, new HashSet<>(), pos -> {
+            asked.add(pos);
+            return true;
+        });
+        run(s);
+
+        Assertions.assertNotNull(s.getResultTarget(), "a target is found");
+        Assertions.assertEquals(List.of(s.getResultTarget()), asked,
+                "the approver is asked once, about the chosen target only - not about every candidate scanned");
+    }
+
+    @Test
+    public void testRefusedTargetIsSkippedAndNotReserved() {
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S....",
+                ".T...",
+                ".....",
+                "....T");
+        BlockPos near = new BlockPos(1, Y, 1);
+        BlockPos far = new BlockPos(4, Y, 3);
+        List<BlockPos> asked = new ArrayList<>();
+        Set<BlockPos> reservations = new HashSet<>();
+
+        PathFindingSearch s = searchApproving(grid, reservations, pos -> {
+            asked.add(pos);
+            return !pos.equals(near);
+        });
+        run(s);
+
+        Assertions.assertEquals(far, s.getResultTarget(), "the search carries on past the refused target");
+        Assertions.assertEquals(1, asked.stream().filter(near::equals).count(), "a refused target is asked about once");
+        Assertions.assertFalse(reservations.contains(near), "a refused target is never reserved");
+        Assertions.assertTrue(reservations.contains(far), "the approved target is reserved");
+    }
+
+    @Test
+    public void testSearchFindsNothingWhenEveryTargetIsRefused() {
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S....",
+                ".T.T.",
+                ".....");
+        Set<BlockPos> reservations = new HashSet<>();
+
+        PathFindingSearch s = searchApproving(grid, reservations, pos -> false);
+        run(s);
+
+        Assertions.assertNull(s.getResultTarget(), "with every target refused the search ends empty-handed");
+        Assertions.assertTrue(reservations.isEmpty(), "and holds no reservation");
+    }
+
+    @Test
+    public void testAlreadyReservedTargetIsNotAskedAbout() {
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S....",
+                ".....",
+                "..T..");
+        BlockPos target = new BlockPos(2, Y, 2);
+        Set<BlockPos> reservations = new HashSet<>();
+        reservations.add(target);
+        List<BlockPos> asked = new ArrayList<>();
+
+        run(searchApproving(grid, reservations, pos -> {
+            asked.add(pos);
+            return true;
+        }));
+
+        Assertions.assertTrue(asked.isEmpty(), "a target another robot already holds is not worth asking about");
+    }
+
     /** Minimal axis-aligned-box {@link IZone} for zone-filtering tests; only {@link #contains(Vec3)} is exercised. */
     private static final class BoxZone implements IZone {
         private final double x0;

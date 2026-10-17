@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.FakePlayerUtil;
 
 /**
  * Who a robot acts for when protection mods are asked. A robot has no owner of its own; it works for its home
@@ -32,6 +33,15 @@ public final class RobotProtection {
     public static GameProfile ownerOf(IRobotAccess robot) {
         DockingStation home = robot.getLinkedStation();
         return home == null ? null : home.getOwner();
+    }
+
+    /**
+     * Leases the fake player this robot acts as in the world: the home station owner's (so claim mods judge the owner
+     * and advancements a used item grants reach them), or the generic "[BuildCraft]" player when the robot has no
+     * owner. Use with try-with-resources, like every {@link FakePlayerUtil.Lease}.
+     */
+    public static FakePlayerUtil.Lease lease(IRobotAccess robot, ServerLevel level) {
+        return FakePlayerUtil.lease(level, ownerOf(robot), null);
     }
 
     /** Whether protection mods let this robot break the block at {@code pos}; see {@link BlockUtil#canMachineBreak}. */

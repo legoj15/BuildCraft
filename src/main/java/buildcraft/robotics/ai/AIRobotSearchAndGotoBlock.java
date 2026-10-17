@@ -8,6 +8,8 @@
  */
 package buildcraft.robotics.ai;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 
@@ -34,6 +36,8 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     private AIRobotSearchBlock search;
 
     private IBlockFilter filter;
+    @Nullable
+    private IBlockFilter approve;
     private boolean random;
     private double maxDistanceToEnd;
 
@@ -51,9 +55,22 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     public AIRobotSearchAndGotoBlock(IRobotAccess iRobot, boolean iRandom, IBlockFilter iFilter,
             double iMaxDistanceToEnd) {
+        this(iRobot, iRandom, iFilter, null, iMaxDistanceToEnd);
+    }
+
+    /** As the three-argument form, with {@code iApprove} asked once about the block the search settles on - for
+     *  checks too costly to run on every scanned block, such as asking protection mods. */
+    public AIRobotSearchAndGotoBlock(IRobotAccess iRobot, boolean iRandom, IBlockFilter iFilter,
+            @Nullable IBlockFilter iApprove) {
+        this(iRobot, iRandom, iFilter, iApprove, 0);
+    }
+
+    public AIRobotSearchAndGotoBlock(IRobotAccess iRobot, boolean iRandom, IBlockFilter iFilter,
+            @Nullable IBlockFilter iApprove, double iMaxDistanceToEnd) {
         super(iRobot);
 
         filter = iFilter;
+        approve = iApprove;
         random = iRandom;
         maxDistanceToEnd = iMaxDistanceToEnd;
     }
@@ -64,7 +81,7 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     @Override
     public void update() {
-        startDelegateAI(new AIRobotSearchBlock(robot, random, filter, maxDistanceToEnd));
+        startDelegateAI(new AIRobotSearchBlock(robot, random, filter, approve, maxDistanceToEnd));
     }
 
     /** Reserves the found block (the search's {@code takeResource()}); the caller releases it via the

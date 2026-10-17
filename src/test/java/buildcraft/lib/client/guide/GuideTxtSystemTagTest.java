@@ -218,6 +218,36 @@ class GuideTxtSystemTagTest {
         assertTrue(missing.isEmpty(), "missing guide chapter translations:\n" + String.join("\n", missing));
     }
 
+    /** In the Sort By System view a subtype is a chapter inside its system's chapter, so a subtype that reads exactly
+     *  like its system ("Robots" inside "Robots") looks like a duplicated node. Checked per (system, subtype) pair in
+     *  both languages, using the labels the contents page actually shows. */
+    @Test
+    void noSubtypeLabelRepeatsItsSystemLabel() {
+        Map<String, Map<String, String>> langs = Map.of("en_us", lang("en_us.json"), "zh_cn", lang("zh_cn.json"));
+        Set<String> pairs = new TreeSet<>();
+        for (Entry e : mainBook()) {
+            String sub = e.str("tag_subtype");
+            if (!sub.isEmpty()) {
+                pairs.add(e.str("tag_system") + "/" + sub);
+            }
+        }
+        List<String> clashes = new ArrayList<>();
+        for (String pair : pairs) {
+            String system = pair.substring(0, pair.indexOf('/'));
+            String sub = pair.substring(pair.indexOf('/') + 1);
+            for (Map.Entry<String, Map<String, String>> language : langs.entrySet()) {
+                String systemLabel = language.getValue().get("buildcraft.guide.chapter.system." + system);
+                String subLabel = language.getValue().get("buildcraft.guide.chapter.subtype." + sub);
+                if (systemLabel != null && systemLabel.equals(subLabel)) {
+                    clashes.add(language.getKey() + ": system '" + system + "' / subtype '" + sub + "' are both '"
+                        + systemLabel + "'");
+                }
+            }
+        }
+        assertTrue(clashes.isEmpty(), "a subtype chapter repeats its system chapter's label:\n"
+            + String.join("\n", clashes));
+    }
+
     @Test
     void everyTitleOverrideHasALangKeyInBothLanguages() {
         // `title` is a suffix under buildcraft.guide.page.; a missing key shows the raw suffix as the page title.

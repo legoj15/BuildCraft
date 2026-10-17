@@ -182,6 +182,7 @@ public class BuildCraftGameTests {
 
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
+        reg.accept("buildcraftunofficial:oil_spread_skips_same_fluid", () -> buildcraft.energy.OilWaterInteractionTest::testOilSpreadSkipsSameFluidNeighbour);
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);

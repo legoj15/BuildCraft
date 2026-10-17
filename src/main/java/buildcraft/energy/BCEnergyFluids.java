@@ -413,8 +413,8 @@ public class BCEnergyFluids {
                            BlockState targetState = level.getBlockState(targetPos);
                            if (targetState.isAir() || targetState.canBeReplaced()) {
                                FluidState targetFluidState = targetState.getFluidState();
-                               if (targetFluidState.getType().isSame(this)) continue;
-                               
+                               // A same-fluid neighbour needs no skip here: its canBeReplacedWith refuses any
+                               // horizontal replacement (BaseFlowingFluid: only DOWN, and never the same family).
                                FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
                                if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
                                    map.put(dir, newFluid);
@@ -496,8 +496,8 @@ public class BCEnergyFluids {
                            BlockState targetState = level.getBlockState(targetPos);
                            if (targetState.isAir() || targetState.canBeReplaced()) {
                                FluidState targetFluidState = targetState.getFluidState();
-                               if (targetFluidState.getType().isSame(this)) continue;
-                               
+                               // A same-fluid neighbour needs no skip here: its canBeReplacedWith refuses any
+                               // horizontal replacement (BaseFlowingFluid: only DOWN, and never the same family).
                                FluidState newFluid = this.getNewLiquid(level, targetPos, targetState);
                                if (!newFluid.isEmpty() && targetFluidState.canBeReplacedWith(level, targetPos, newFluid.getType(), dir)) {
                                    map.put(dir, newFluid);

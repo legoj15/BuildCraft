@@ -19,7 +19,6 @@ import static buildcraft.builders.BuilderRefloodTester.isBuilt;
 import static buildcraft.builders.BuilderRefloodTester.isWetSlab;
 import static buildcraft.builders.BuilderRefloodTester.setUpBuilder;
 
-import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
@@ -39,6 +38,7 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.lib.block.BlockWaterloggingTester;
+import buildcraft.lib.test.ThreadAllocationMeter;
 
 /**
  * The cost of {@link SnapshotBuilder#scanAreaFluid()}, the whole-box fluid sweep behind the CLEAR/REPLACE place-task
@@ -361,26 +361,19 @@ public class BuilderFluidSweepTester {
         int cells = size.getX() * size.getY() * size.getZ();
         expect(cells == TALL * 4, "the build box must cover the whole blueprint, got " + size);
 
-        com.sun.management.ThreadMXBean threads = (com.sun.management.ThreadMXBean) ManagementFactory
-                .getThreadMXBean();
-        expect(threads.isThreadAllocatedMemorySupported(), "the JVM must report per-thread allocation");
-        long thread = Thread.currentThread().threadId();
         for (int i = 0; i < 20; i++) { // warm the sweep up so the measured one is the steady state
             builder.scanAreaFluid();
         }
-        long floor = Long.MAX_VALUE;
-        for (int i = 0; i < 5; i++) { // what taking a measurement itself costs
-            long before = threads.getThreadAllocatedBytes(thread);
-            floor = Math.min(floor, threads.getThreadAllocatedBytes(thread) - before);
-        }
-        long allocated = Long.MAX_VALUE;
-        for (int i = 0; i < 5; i++) { // the least of a few: a stray allocation elsewhere cannot fail the test
-            long before = threads.getThreadAllocatedBytes(thread);
-            SnapshotBuilder.AreaFluid result = builder.scanAreaFluid();
-            long after = threads.getThreadAllocatedBytes(thread);
-            expect(result == SnapshotBuilder.AreaFluid.NONE, "the box holds no fluid, got " + result);
-            allocated = Math.min(allocated, after - before - floor);
-        }
+        // The meter throws when the JVM cannot count per-thread allocation (it switches tracking on when it can):
+        // a counter that reads -1 would measure every sweep as zero bytes, and this test would pass unmeasured.
+        // The check on the answer stays out of the measured action, whose message building would be counted.
+        SnapshotBuilder.AreaFluid[] last = { null };
+        boolean[] everyAnswerNone = { true };
+        long allocated = ThreadAllocationMeter.leastAllocatedBytes(5, () -> {
+            last[0] = builder.scanAreaFluid();
+            everyAnswerNone[0] &= last[0] == SnapshotBuilder.AreaFluid.NONE;
+        });
+        expect(everyAnswerNone[0], "the box holds no fluid, got " + last[0]);
         long budget = cells * 8L; // under one reference per cell; the old sweep spent 30+ bytes on each
         expect(allocated < budget, "one sweep over " + cells + " fluid-free cells allocated " + allocated
                 + " bytes (budget " + budget + "): it allocates per cell");

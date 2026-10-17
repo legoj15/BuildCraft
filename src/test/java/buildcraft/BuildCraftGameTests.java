@@ -982,6 +982,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_registry_id_collision_reissues_arriving", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne);
         reg.accept("buildcraftunofficial:robot_registry_id_of_dead_holder_is_kept", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithADeadRobotsIdKeepsIt);
         reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
+        // ...but once a 26.1+ file exists it wins, and the pre-26.1 file is left on disk (recoverable).
+        reg.accept("buildcraftunofficial:legacy_saved_data_both_files_current_wins", () -> buildcraft.lib.misc.LegacySavedDataTester::bothFilesPresentTheCurrentWinsAndTheLegacyIsKept);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

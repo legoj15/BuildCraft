@@ -50,7 +50,16 @@ import buildcraft.api.core.BCLog;
  * <p>{@link #type} builds a {@code SavedDataType} whose factory - run by the storage only when the 26.1+ location has
  * no file - looks in the old location first and starts the data from that file when it exists. The old file is only
  * read, never moved or deleted: it stays as the backup until the new one has been saved, and a crash before the first
- * save just repeats the read. Every BuildCraft saved-data type is built this way
+ * save just repeats the read.
+ *
+ * <p>Known gap: the old file is read only while the 26.1+ one is absent, and nothing marks an old file as carried
+ * over, so "both exist" cannot tell a world this code migrated from one a 26.x build WITHOUT this migration already
+ * saved. The storage marks the data it creates dirty ({@code SavedDataStorage.set}), so such a build wrote a fresh
+ * 26.1+ file the first time anything asked for the type, and from then on that file wins: the world keeps that
+ * build's data and the 1.21.x data stays unread (the robot registry's id guards in {@code RobotRegistry} keep its
+ * ids safe regardless). The old file is still on disk; moving the 26.1+ file aside before a launch re-imports it.
+ *
+ * <p>Every BuildCraft saved-data type is built this way
  * ({@code LegacySavedDataGuardTester} enforces it). The id of a type must never change: it is the file name under both
  * layouts.
  */
@@ -145,9 +154,9 @@ public final class LegacySavedData {
 
     /**
      * The {@code data} payload of {@code legacyFile}, brought up to the current data version, or null when there is
-     * nothing to carry over: the 26.1+ file {@code currentFile} already exists (it always wins; the old one is stale
-     * from then on), the old file does not exist, or it cannot be read (logged; the data then starts fresh, as it does
-     * for vanilla's own saved data). Never writes, moves or deletes either file.
+     * nothing to carry over: the 26.1+ file {@code currentFile} already exists (it always wins, including the fresh one
+     * a 26.x build without this migration wrote - see the class note on the known gap), the old file does not exist,
+     * or it cannot be read (logged; the data then starts fresh, as it does for vanilla's own saved data). Never writes, moves or deletes either file.
      */
     public static @Nullable Tag readLegacyFile(Path currentFile, Path legacyFile, DataFixTypes fixType) {
         if (Files.exists(currentFile) || !Files.isRegularFile(legacyFile)) {

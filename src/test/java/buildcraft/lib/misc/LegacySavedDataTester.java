@@ -11,14 +11,17 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import com.mojang.serialization.Codec;
 
+import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
@@ -87,6 +90,68 @@ public class LegacySavedDataTester {
         helper.succeed();
         //?} else {
         /*// Before 26.1 the layout never moved: nothing to migrate, nothing to test.
+        helper.succeed();*/
+        //?}
+    }
+
+    //? if >=26.1 {
+    private static void writeSavedDataFile(Path file, int value, int dataVersion) throws IOException {
+        Files.createDirectories(file.getParent());
+        CompoundTag payload = new CompoundTag();
+        payload.putInt("value", value);
+        CompoundTag wrapper = new CompoundTag();
+        wrapper.put("data", payload);
+        wrapper.putInt("DataVersion", dataVersion);
+        NbtIo.writeCompressed(wrapper, file);
+    }
+    //?}
+
+    /**
+     * With BOTH files on disk the real storage hands back the 26.1+ file and never asks for the pre-26.1 one, and the
+     * pre-26.1 file is left byte-for-byte intact. This pins today's behaviour for the open gap in
+     * {@link LegacySavedData} (a 1.21.x world already saved once by a 26.x build without the migration keeps that
+     * build's fresh file): the old data is still on disk to recover. A merge of the two would flip the first assert.
+     */
+    public static void bothFilesPresentTheCurrentWinsAndTheLegacyIsKept(GameTestHelper helper) {
+        //? if >=26.1 {
+        ServerLevel level = helper.getLevel();
+        helper.assertTrue(level.dimension() == Level.OVERWORLD,
+                "the layouts asserted here are the overworld's");
+        Path worldRoot = level.getServer().getWorldPath(LevelResource.ROOT);
+        String name = "buildcraft_test_legacy_both_" + Long.toHexString(System.nanoTime());
+        Path legacy = worldRoot.resolve("data").resolve(name + ".dat");
+        // Where the 26.1+ storage of the overworld keeps it: <dimension folder>/data/minecraft/<name>.dat.
+        Path current = DimensionType.getStorageFolder(level.dimension(), worldRoot).resolve("data")
+                .resolve("minecraft").resolve(name + ".dat");
+        try {
+            writeSavedDataFile(legacy, 1111, 4671);
+            writeSavedDataFile(current, 2222, SharedConstants.getCurrentVersion().dataVersion().version());
+            byte[] legacyBefore = Files.readAllBytes(legacy);
+
+            SavedDataType<Probe> type = LegacySavedData.type(name, lvl -> new Probe(-1), lvl -> Probe.CODEC,
+                    DataFixTypes.SAVED_DATA_MAP_DATA);
+            Probe probe = level.getDataStorage().computeIfAbsent(type);
+            probe.setDirty(false);
+
+            helper.assertTrue(probe.value == 2222,
+                    "with both files present the 26.1+ file must be what the storage hands back (got " + probe.value
+                            + "; 1111 is the pre-26.1 file, -1 a fresh start)");
+            helper.assertTrue(Arrays.equals(legacyBefore, Files.readAllBytes(legacy)),
+                    "the pre-26.1 file must be left untouched, so its data stays recoverable");
+        } catch (IOException e) {
+            helper.fail("could not lay down the saved-data files: " + e);
+            return;
+        } finally {
+            try {
+                Files.deleteIfExists(legacy);
+                Files.deleteIfExists(current);
+            } catch (IOException ignored) {
+                // a leftover file in a throwaway test world is harmless
+            }
+        }
+        helper.succeed();
+        //?} else {
+        /*// Before 26.1 the layout never moved: there is only one file.
         helper.succeed();*/
         //?}
     }

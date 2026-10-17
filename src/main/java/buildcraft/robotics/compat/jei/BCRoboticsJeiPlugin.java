@@ -11,6 +11,7 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
 
@@ -64,6 +65,19 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
         registration.addCraftingStation(ProgrammingRecipeJeiTypes.PROGRAMMING, BCSiliconItems.PROGRAMMING_TABLE.get());
         registration.addCraftingStation(IntegrationRecipeJeiTypes.INTEGRATION, BCSiliconItems.INTEGRATION_TABLE.get());
+    }
+
+    @Override
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        // "+" on a Programming Table entry puts a blank board in the table and selects that entry's option;
+        // on an Integration Table entry it puts a blank robot in the centre and the entry's board in the ring.
+        // Both move real items out of the player's inventory (server-side, see RoboticsTableTransfer).
+        registration.addRecipeTransferHandler(
+                new ProgrammingTableTransferHandler(registration.getTransferHelper()),
+                ProgrammingRecipeJeiTypes.PROGRAMMING);
+        registration.addRecipeTransferHandler(
+                new IntegrationTableTransferHandler(registration.getTransferHelper()),
+                IntegrationRecipeJeiTypes.INTEGRATION);
     }
 
     @Override

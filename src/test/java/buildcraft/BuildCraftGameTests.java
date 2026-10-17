@@ -909,6 +909,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:jei_transfer_integration_fills_centre_and_ring", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferFillsCentreAndRing);
         reg.accept("buildcraftunofficial:jei_transfer_integration_charged_robot_and_centre_reuse", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferTakesChargedBlankRobotAndKeepsTheCentre);
         reg.accept("buildcraftunofficial:jei_transfer_integration_atomic_and_selective", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferIsAtomicAndSelective);
+        reg.accept("buildcraftunofficial:jei_transfer_programming_matches_every_jei_entry", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferMatchesEveryJeiEntry);
+        reg.accept("buildcraftunofficial:jei_transfer_integration_matches_every_jei_entry", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferMatchesEveryJeiEntry);
         reg.accept("buildcraftunofficial:robotics_table_menus_keep_slot_layout", () -> buildcraft.robotics.RoboticsTableTransferTester::tableMenusKeepTheirSlotLayout);
         // Ph8: the request network (Requester block, virtual gate provider, delivery loop).
         reg.accept("buildcraftunofficial:requester_station_neighbour_scan", () -> buildcraft.robotics.DeliveryRequesterTester::stationFindsRequesterThroughNeighbourScan);

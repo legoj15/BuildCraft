@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import io.netty.buffer.Unpooled;
@@ -28,6 +29,10 @@ import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotMinerNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.container.ContainerProgrammingTable;
+import buildcraft.robotics.compat.jei.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.jei.IntegrationRecipeJei;
+import buildcraft.robotics.compat.jei.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.jei.ProgrammingRecipeJei;
 import buildcraft.robotics.container.RoboticsTableTransfer;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
@@ -179,6 +184,42 @@ public class RoboticsTableTransferTester {
         }
         expect(helper, RoboticsTableTransfer.Result.BUSY,
                 RoboticsTableTransfer.program(inv, table, RECIPE_ID, BoardRobotPickerNBT.ID, false), "stick in slot");
+        helper.succeed();
+    }
+
+    /** The data contract with the JEI category: pressing "+" on ANY Programming entry selects exactly the grid
+     *  cell that entry highlights, at the cost it prints. Driven from the collector's real entries, with the ids
+     *  the JEI handler would send, so a drift between what JEI shows and what the server selects fails here. */
+    public static void programmingTransferMatchesEveryJeiEntry(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        TileProgrammingTable table = placeProgrammingTable(helper);
+        Player player = survivalPlayer(helper);
+        Inventory inv = player.getInventory();
+        ContainerProgrammingTable menu = new ContainerProgrammingTable(0, player, table);
+
+        List<ProgrammingRecipeJei> entries = ProgrammingRecipeCollector.collect();
+        if (entries.size() < 5) {
+            helper.fail("liveness: expected the collector to offer several Programming entries, got " + entries.size());
+        }
+        for (ProgrammingRecipeJei entry : entries) {
+            table.invBoard.setStackInSlot(0, ItemStack.EMPTY);
+            table.findRecipe(); // forget the previous entry's recipe and selection
+            inv.setItem(0, entry.inputs().get(0).copy());
+
+            sendProgramming(menu, entry.recipeId(), entry.boardId());
+
+            if (table.optionId != entry.gridIndex()) {
+                helper.fail(entry.id() + ": '+' selected cell " + table.optionId + " but the entry highlights "
+                        + entry.gridIndex());
+            }
+            if (!ItemStack.matches(table.options.get(table.optionId), entry.grid().get(entry.gridIndex()))) {
+                helper.fail(entry.id() + ": the selected cell is not the board the entry shows");
+            }
+            if (table.getTarget() != entry.microJoules()) {
+                helper.fail(entry.id() + ": the table wants " + table.getTarget() + " but the entry prints "
+                        + entry.microJoules());
+            }
+        }
         helper.succeed();
     }
 
@@ -334,6 +375,45 @@ public class RoboticsTableTransferTester {
         sendIntegration(menu, "buildcraftunofficial:no_such_board");
         if (!table.invTarget.getStackInSlot(0).isEmpty() || inv.getItem(0).isEmpty() || inv.getItem(1).isEmpty()) {
             helper.fail("the blank board and unknown ids must not move anything");
+        }
+        helper.succeed();
+    }
+
+    /** The same contract for the Integration Table: for every JEI entry, the entry's own blank robot and board
+     *  fill the table, and one tick later the table offers exactly the entry's first output at its price. */
+    public static void integrationTransferMatchesEveryJeiEntry(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        TileIntegrationTable table = placeIntegrationTable(helper);
+        Player player = survivalPlayer(helper);
+        Inventory inv = player.getInventory();
+        ContainerIntegrationTable menu = new ContainerIntegrationTable(0, player, table);
+
+        List<IntegrationRecipeJei> entries = IntegrationRecipeCollector.collect();
+        if (entries.size() < 5) {
+            helper.fail("liveness: expected the collector to offer several Integration entries, got " + entries.size());
+        }
+        for (IntegrationRecipeJei entry : entries) {
+            table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
+            for (int i = 0; i < table.invToIntegrate.getSlots(); i++) {
+                table.invToIntegrate.setStackInSlot(i, ItemStack.EMPTY);
+            }
+            inv.setItem(0, entry.center().copy());
+            inv.setItem(1, entry.expansions().get(0).copy());
+
+            sendIntegration(menu, entry.boardId());
+            table.serverTick();
+
+            if (!inv.getItem(0).isEmpty() || !inv.getItem(1).isEmpty()) {
+                helper.fail(entry.id() + ": the entry's robot and board were not both taken");
+            }
+            if (!ItemStack.matches(table.getOutput(), entry.outputs().get(0))) {
+                helper.fail(entry.id() + ": the table offers " + table.getOutput() + " but the entry shows "
+                        + entry.outputs().get(0));
+            }
+            if (table.getTarget() != entry.microJoules()) {
+                helper.fail(entry.id() + ": the table wants " + table.getTarget() + " but the entry prints "
+                        + entry.microJoules());
+            }
         }
         helper.succeed();
     }

@@ -8,6 +8,8 @@ package buildcraft.builders.container;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -55,8 +57,10 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
      *  this is slack for hand-copied files, not a limit anything legitimate approaches. */
     public static final int MAX_SELECTED_NAME_LENGTH = 256;
 
-    // Server-side accumulator for incoming chunked upload data
-    private final LibraryUploadBuffer upload = new LibraryUploadBuffer();
+    /** Server-side accumulator for incoming chunked upload data; made on first use, with the limits the config sets
+     *  then. */
+    @Nullable
+    private LibraryUploadBuffer upload;
 
     // Client-side constructor (from network)
     public ContainerElectronicLibrary(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -136,9 +140,19 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             || header.key.hash.length == HashUtil.HASH_BYTES && header.name.length() <= MAX_SELECTED_NAME_LENGTH;
     }
 
-    /** Bytes of the upload in progress held on the server; never more than {@link LibraryUploadBuffer#MAX_UPLOAD_BYTES}. */
+    private LibraryUploadBuffer upload() {
+        if (upload == null) upload = new LibraryUploadBuffer(LibraryUploadBuffer.Limits.current());
+        return upload;
+    }
+
+    /** Bytes of the upload in progress held on the server; never more than {@link #getUploadLimits}' maximum. */
     public int getBufferedUploadBytes() {
-        return upload.bufferedBytes();
+        return upload == null ? 0 : upload.bufferedBytes();
+    }
+
+    /** What one upload to this menu may hold. */
+    public LibraryUploadBuffer.Limits getUploadLimits() {
+        return upload().limits();
     }
 
     @Override
@@ -191,9 +205,20 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         if (id == NET_UPLOAD_DATA && !isClient) {
             boolean last = (buffer.readByte() != 0);
             byte[] chunk = buffer.readByteArray();
+            LibraryUploadBuffer upload = upload();
+            if (!tile.isUploadRequested()) {
+                // Nothing was asked for (or the request was withdrawn mid-stream): keep none of it, and do not let a
+                // stale prefix run into the next upload.
+                upload.skip(last);
+                return;
+            }
+            tile.onUploadChunk();
+            int droppedBefore = upload.droppedUploads();
             byte[] assembled = upload.accept(last, chunk);
             if (assembled != null) {
                 receiveUpload(assembled);
+            } else if (upload.droppedUploads() != droppedBefore) {
+                tile.onUploadRefused("it is larger than any scan the config allows");
             }
         }
     }
@@ -241,9 +266,10 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
     private void receiveUpload(byte[] assembled) {
         Snapshot snapshot;
         try {
-            snapshot = LibraryUploadBuffer.decode(assembled);
+            snapshot = upload().decode(assembled);
         } catch (java.io.IOException e) {
             BCLog.logger.warn("[library] Failed to deserialize uploaded snapshot", e);
+            tile.onUploadRefused("it is not a readable snapshot");
             return;
         }
         tile.onUploadReceived(snapshot);

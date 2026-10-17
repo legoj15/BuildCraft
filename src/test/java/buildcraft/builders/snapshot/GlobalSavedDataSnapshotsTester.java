@@ -351,6 +351,51 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertNotNull(store.getSnapshot(good.key), "the save noticed the file changed and rewrote it");
     }
 
+    /** A build other than {@link #build()}, so its file is a valid snapshot holding a different key. */
+    private static Template otherBuild() {
+        Template template = build();
+        template.data.set(1);
+        template.computeKey();
+        return template;
+    }
+
+    @Test
+    public void aValidFileHoldingAnotherBuildUnderThisBuildsNameIsNotTrusted() throws IOException {
+        // Readable is not enough: the file must hold the key it is named for, or the save writes nothing and every
+        // lookup of this build fails from then on.
+        Template good = build();
+        Template other = otherBuild();
+        Assertions.assertNotEquals(good.key, other.key);
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        store.addSnapshot(other);
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        byte[] whole = Files.readAllBytes(target);
+        long before = Files.getLastModifiedTime(target).toMillis();
+        Files.copy(dir.resolve(GlobalSavedDataSnapshots.fileName(other.key)), target,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Files.setLastModifiedTime(target, FileTime.fromMillis(before + 60_000));
+        Assertions.assertNull(store.getSnapshot(good.key), "the file answers for the other build, not this one");
+
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the save noticed the wrong build and rewrote it");
+        Assertions.assertArrayEquals(whole, Files.readAllBytes(target));
+    }
+
+    @Test
+    public void aFreshStoreDoesNotTrustAFileHoldingAnotherBuild() throws IOException {
+        // The same, for a file this store never saw: left by a hand copy under the wrong name.
+        Template good = build();
+        Template other = otherBuild();
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        try (FileOutputStream out = new FileOutputStream(target.toFile())) {
+            NbtSquisher.squishVanilla(Snapshot.writeToNBT(other), out);
+        }
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key));
+    }
+
     @Test
     public void aRewrittenFileIsTrustedAgainOnTheNextSave() throws IOException {
         // The trust follows what the file looks like now: after the rewrite it is verified, and left alone.

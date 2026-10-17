@@ -11,7 +11,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import io.netty.buffer.Unpooled;
@@ -240,9 +242,9 @@ public class ElectronicLibraryTester {
 
     /**
      * The two inputs a client drives on the Electronic Library menu are checked by the server: a selection that
-     * cannot be a library key (wrong hash length, cut off) leaves the earlier selection alone, an upload that runs
-     * past the limit is dropped without the server ever holding more than the limit nor producing an item, and an
-     * ordinary upload sent in chunks still completes.
+     * cannot be a library key (wrong hash length, cut off) leaves the earlier selection alone, and an upload the tile
+     * did not ask for is neither buffered nor turned into an item (see {@link #testUploadsAnswerOnlyTheirRequest}
+     * for the asked-for ones).
      */
     public static void testClientMessagesAreChecked(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
@@ -281,49 +283,197 @@ public class ElectronicLibraryTester {
         sendSelected(menu, null);
         assertTrue(tile.selected == null, "clearing the selection still works");
 
-        // --- Oversized upload ---
-        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
-        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
-        int pastTheLimit = LibraryUploadBuffer.MAX_UPLOAD_BYTES / LibraryUploadBuffer.CHUNK_BYTES + 4;
-        for (int i = 0; i < pastTheLimit; i++) {
-            sendChunk(menu, false, chunk);
-            assertTrue(menu.getBufferedUploadBytes() <= LibraryUploadBuffer.MAX_UPLOAD_BYTES,
-                "the server never holds more than the limit, held " + menu.getBufferedUploadBytes());
-        }
-        assertTrue(menu.getBufferedUploadBytes() == 0, "the overflowing upload was dropped, not kept");
-        sendChunk(menu, true, new byte[] {1, 2, 3});
-        assertTrue(menu.getBufferedUploadBytes() == 0, "the tail of the dropped upload is ignored");
-        assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "a dropped upload produces no item");
-        assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "and consumes none");
-
-        // --- An ordinary upload, in chunks, still completes ---
-        Template template = new Template();
-        template.size = new BlockPos(5, 1, 1);
-        template.facing = Direction.NORTH;
-        template.offset = BlockPos.ZERO;
-        template.data = new BitSet();
-        template.data.set(1);
-        template.data.set(3);
-        template.computeKey();
+        // --- Uploads nobody asked for change nothing ---
+        // A modded client can send NET_UPLOAD_DATA at any time. Without an outstanding request it must not overwrite
+        // a finished item, consume a blank, or store anything.
+        Template template = template(1, 3);
+        tile.selected = template.key; // even with everything else in place
+        ItemStack finished = BCBuildersItems.TEMPLATE_USED.get().createUsedStack(fakeHeader());
+        tile.invUpOut.setStackInSlot(0, finished);
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
         GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
         try {
-            ByteArrayOutputStream squished = new ByteArrayOutputStream();
-            NbtSquisher.squishVanilla(Snapshot.writeToNBT(template), squished);
-            byte[] whole = squished.toByteArray();
-            int third = whole.length / 3;
-            sendChunk(menu, false, Arrays.copyOfRange(whole, 0, third));
-            sendChunk(menu, false, Arrays.copyOfRange(whole, third, 2 * third));
-            assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "nothing is produced before the last chunk");
-            sendChunk(menu, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
+            sendUpload(menu, template);
+            assertTrue(tile.invUpOut.getStackInSlot(0) == finished, "an unasked-for upload leaves the output alone");
+            assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "and the blank");
+            assertTrue(store.getSnapshot(template.key) == null, "and stores nothing");
 
-            assertFalse(tile.invUpOut.getStackInSlot(0).isEmpty(), "the completed upload produced its item");
-            assertTrue(tile.invUpIn.getStackInSlot(0).isEmpty(), "and consumed the blank");
-            assertTrue(store.getSnapshot(template.key) != null, "the snapshot was stored on the server");
+            tile.invUpOut.setStackInSlot(0, ItemStack.EMPTY);
+            sendUpload(menu, template);
+            assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "an empty output does not make it asked for");
+            assertTrue(store.getSnapshot(template.key) == null, "nor stores anything");
+
+            byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+            for (int i = 0; i < 8; i++) sendChunk(menu, false, chunk);
+            assertTrue(menu.getBufferedUploadBytes() == 0, "an unasked-for stream is not even buffered");
+            sendChunk(menu, true, chunk);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         } finally {
             store.removeSnapshot(template.key);
         }
         helper.succeed();
+    }
+
+    private static Template template(int... set) {
+        Template template = new Template();
+        template.size = new BlockPos(5, 1, 1);
+        template.facing = Direction.NORTH;
+        template.offset = BlockPos.ZERO;
+        template.data = new BitSet();
+        for (int i : set) template.data.set(i);
+        template.computeKey();
+        return template;
+    }
+
+    /** Send {@code snapshot} the way the client does: squashed, in three chunks. */
+    private static void sendUpload(ContainerElectronicLibrary menu, Snapshot snapshot) throws IOException {
+        ByteArrayOutputStream squished = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), squished);
+        byte[] whole = squished.toByteArray();
+        int third = whole.length / 3;
+        sendChunk(menu, false, Arrays.copyOfRange(whole, 0, third));
+        sendChunk(menu, false, Arrays.copyOfRange(whole, third, 2 * third));
+        sendChunk(menu, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
+    }
+
+    /** One step of {@link #runSteps}: wait until {@code ready}, then run {@code action}. */
+    private record Step(String waitingFor, BooleanSupplier ready, Runnable action) {}
+
+    /**
+     * Run {@code steps} in order, each on the first tick its condition holds, then succeed; fail naming the step
+     * still waiting after {@code maxTicks}. Every tick's poll is scheduled up front (as {@code EntityArenaUtil.tickUntil}
+     * does): the framework must not be scheduled from inside its own runnables.
+     */
+    private static void runSteps(GameTestHelper helper, int maxTicks, List<Step> steps, Runnable cleanup) {
+        int[] next = {0};
+        boolean[] done = {false};
+        for (int t = 1; t <= maxTicks; t++) {
+            final int tick = t;
+            helper.runAfterDelay(tick, () -> {
+                if (done[0]) return;
+                try {
+                    while (next[0] < steps.size() && steps.get(next[0]).ready().getAsBoolean()) {
+                        steps.get(next[0]++).action().run();
+                    }
+                    if (next[0] == steps.size()) {
+                        done[0] = true;
+                        cleanup.run();
+                        helper.succeed();
+                    } else if (tick == maxTicks) {
+                        done[0] = true;
+                        cleanup.run();
+                        helper.fail("Still waiting for: " + steps.get(next[0]).waitingFor()
+                            + " (waited " + maxTicks + " ticks)");
+                    }
+                } catch (RuntimeException e) {
+                    done[0] = true;
+                    cleanup.run();
+                    throw e;
+                }
+            });
+        }
+    }
+
+    /**
+     * An upload is accepted only as the answer to the tile's own request, for the build it asked for, and once: the
+     * wrong build or an oversized stream is refused and not asked for again until the blank changes, a matching
+     * upload makes one item from one blank, and a second answer to the same request makes nothing.
+     */
+    public static void testUploadsAnswerOnlyTheirRequest(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary menu = new ContainerElectronicLibrary(0, player.getInventory(), tile);
+        // The tile asks only the players watching its menu.
+        player.containerMenu = menu;
+        tile.onPlayerOpen(player);
+
+        Template wanted = template(0, 2, 4);
+        Template other = template(1);
+        GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
+        long[] refusedAt = {0};
+        ItemStack[] made = {ItemStack.EMPTY};
+        Runnable upload = () -> {
+            try {
+                sendUpload(menu, wanted);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        };
+
+        tile.selected = wanted.key;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the first request", tile::isUploadRequested, () -> {
+                try {
+                    sendUpload(menu, other);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertTrue(tile.isUploadRefused(), "an upload of another build is refused");
+                assertFalse(tile.isUploadRequested(), "and ends the request");
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "and makes no item");
+                assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "nor takes the blank");
+                assertTrue(store.getSnapshot(other.key) == null, "nor is stored");
+                refusedAt[0] = helper.getLevel().getGameTime();
+            }),
+            new Step("a request cycle and more to pass after the refusal",
+                () -> helper.getLevel().getGameTime() >= refusedAt[0] + 70,
+                () -> {
+                    assertFalse(tile.isUploadRequested(), "a refused upload is not asked for again");
+                    assertTrue(tile.isUploadRefused(), "it stays refused while nothing changes");
+                    assertTrue(tile.progressUp == -1, "and the upload sits idle, got " + tile.progressUp);
+                    tile.invUpIn.setStackInSlot(0, ItemStack.EMPTY);
+                }),
+            new Step("taking the blank out to clear the refusal", () -> !tile.isUploadRefused(),
+                () -> tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()))),
+            new Step("the request for the new blank", tile::isUploadRequested, () -> {
+                byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+                int limit = menu.getUploadLimits().maxUploadBytes();
+                int pastTheLimit = limit / LibraryUploadBuffer.CHUNK_BYTES + 4;
+                for (int i = 0; i < pastTheLimit; i++) {
+                    sendChunk(menu, false, chunk);
+                    assertTrue(menu.getBufferedUploadBytes() <= limit,
+                        "the server never holds more than the limit, held " + menu.getBufferedUploadBytes());
+                }
+                sendChunk(menu, true, new byte[] {1, 2, 3});
+                assertTrue(menu.getBufferedUploadBytes() == 0, "the overflowing upload was dropped, not kept");
+                assertTrue(tile.isUploadRefused(), "an oversized upload is refused");
+                assertFalse(tile.isUploadRequested(), "and not asked for again");
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "and makes no item");
+                assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "nor takes the blank");
+                tile.invUpIn.setStackInSlot(0, ItemStack.EMPTY);
+            }),
+            new Step("taking the blank out again", () -> !tile.isUploadRefused(),
+                () -> tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()))),
+            new Step("the request for the third blank", tile::isUploadRequested, () -> {
+                upload.run();
+                made[0] = tile.invUpOut.getStackInSlot(0);
+                assertFalse(made[0].isEmpty(), "the asked-for upload made its item");
+                assertTrue(tile.invUpIn.getStackInSlot(0).isEmpty(), "from the blank");
+                assertTrue(store.getSnapshot(wanted.key) != null, "and was stored on the server");
+                assertFalse(tile.isUploadRequested(), "the request is answered");
+
+                // A second watcher's answer to the same request: no blank to take, an item to keep.
+                upload.run();
+                assertTrue(tile.invUpOut.getStackInSlot(0) == made[0], "a second answer leaves the item alone");
+                tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+                upload.run();
+                assertTrue(tile.invUpOut.getStackInSlot(0) == made[0], "even with a new blank waiting");
+                assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "which it does not take");
+            }));
+        runSteps(helper, 380, steps, () -> {
+            tile.onPlayerClose(player);
+            store.removeSnapshot(wanted.key);
+            store.removeSnapshot(other.key);
+        });
     }
 }

@@ -281,7 +281,7 @@ public class GlobalSavedDataSnapshots {
 
     /**
      * Whether saving {@code key} would add nothing: the file {@link #fileName} gives it exists and holds a readable
-     * snapshot, or (for a named key) an older {@code <hash>.bcnbt} from before names split files holds it. A
+     * snapshot answering {@code key} (not another build copied in under its name), or (for a named key) an older {@code <hash>.bcnbt} from before names split files holds it. A
      * {@code <hash>.bcnbt} holding a name also answers a content-only save, since a content-only lookup finds it.
      * <p>
      * A file this store wrote (or an earlier save already decompressed) is trusted while its size and modification
@@ -292,18 +292,23 @@ public class GlobalSavedDataSnapshots {
      */
     private boolean alreadyStored(Snapshot.Key key) {
         File stored = new File(snapshotsFile, fileName(key));
-        if (stored.isFile() && isIntact(stored)) return true;
+        if (stored.isFile() && isIntact(stored, key)) return true;
         if (key.header == null) return false;
         File legacy = new File(snapshotsFile, key + SNAPSHOT_FILE_EXTENSION);
         return legacy.isFile() && matching(legacy, key, true) != null;
     }
 
-    private boolean isIntact(File snapshotFile) {
+    /** Whether {@code snapshotFile} (the file {@link #fileName} gives {@code key}) holds a readable snapshot that
+     *  answers {@code key}: readable is not enough, since a valid file of another build under this name (a hand copy,
+     *  a sync tool) would otherwise be trusted and the save would write nothing. */
+    private boolean isIntact(File snapshotFile, Snapshot.Key key) {
         // Stat before reading: a file replaced between the two leaves a stamp that no longer matches, so the next
-        // save verifies it again instead of trusting content it never saw.
+        // save verifies it again instead of trusting content it never saw. The stamp is keyed by name, and only a
+        // file that answered this name's key is ever stamped, so a matching stamp vouches for the key too.
         FileStamp stamp = FileStamp.of(snapshotFile);
         if (stamp.equals(intactFiles.get(snapshotFile.getName()))) return true;
-        if (stamp.length() == 0 || readSnapshotFile(snapshotFile) == null) {
+        Snapshot held = stamp.length() == 0 ? null : readSnapshotFile(snapshotFile);
+        if (held == null || !answers(held.key, key, false)) {
             intactFiles.remove(snapshotFile.getName());
             return false;
         }

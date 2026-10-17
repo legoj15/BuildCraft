@@ -5,6 +5,7 @@
  */
 package buildcraft.builders.container;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.BitSet;
@@ -17,6 +18,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
 
+import buildcraft.builders.snapshot.Blueprint;
+import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
 import buildcraft.lib.nbt.NbtSquisher;
@@ -26,6 +29,9 @@ import buildcraft.lib.nbt.NbtSquisher;
  * may grow when it is unpacked, are decided here and not by the sender.
  */
 public class LibraryUploadBufferTester {
+
+    /** The smallest limits the buffer ever runs with; the size tests feed a full upload of these. */
+    private static final LibraryUploadBuffer.Limits LIMITS = LibraryUploadBuffer.Limits.FLOOR;
 
     private static byte[] bytes(int... values) {
         byte[] out = new byte[values.length];
@@ -56,7 +62,7 @@ public class LibraryUploadBufferTester {
 
     @Test
     public void chunksAssembleInOrderWhenTheLastOneArrives() {
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
         Assertions.assertNull(buffer.accept(false, bytes(1, 2)), "more to come");
         Assertions.assertNull(buffer.accept(false, bytes(3)), "more to come");
         Assertions.assertArrayEquals(bytes(1, 2, 3, 4), buffer.accept(true, bytes(4)));
@@ -67,28 +73,28 @@ public class LibraryUploadBufferTester {
     @Test
     public void anEmptyFinalChunkStillCompletesAnUpload() {
         // The client sends one when the snapshot serialised to nothing.
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
         Assertions.assertArrayEquals(new byte[0], buffer.accept(true, new byte[0]));
     }
 
     @Test
     public void anUploadExactlyAtTheByteLimitIsAccepted() {
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
         byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
-        int chunks = LibraryUploadBuffer.MAX_UPLOAD_BYTES / LibraryUploadBuffer.CHUNK_BYTES;
+        int chunks = LIMITS.maxUploadBytes() / LibraryUploadBuffer.CHUNK_BYTES;
         Assertions.assertNull(feed(buffer, chunk, chunks - 1));
         byte[] whole = buffer.accept(true, chunk);
         Assertions.assertNotNull(whole, "the limit itself is allowed");
-        Assertions.assertEquals(LibraryUploadBuffer.MAX_UPLOAD_BYTES, whole.length);
+        Assertions.assertEquals(LIMITS.maxUploadBytes(), whole.length);
     }
 
     @Test
     public void anUploadPastTheByteLimitIsDroppedAndTheBufferReset() {
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
         byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
-        int atLimit = LibraryUploadBuffer.MAX_UPLOAD_BYTES / LibraryUploadBuffer.CHUNK_BYTES;
+        int atLimit = LIMITS.maxUploadBytes() / LibraryUploadBuffer.CHUNK_BYTES;
         feed(buffer, chunk, atLimit);
-        Assertions.assertEquals(LibraryUploadBuffer.MAX_UPLOAD_BYTES, buffer.bufferedBytes());
+        Assertions.assertEquals(LIMITS.maxUploadBytes(), buffer.bufferedBytes());
 
         Assertions.assertNull(buffer.accept(false, bytes(1)), "one byte past the limit");
         Assertions.assertEquals(0, buffer.bufferedBytes(), "the overflowing upload is dropped, not kept");
@@ -108,8 +114,8 @@ public class LibraryUploadBufferTester {
     @Test
     public void aSingleChunkPastTheByteLimitIsDropped() {
         // Whatever the transport allows per packet, one chunk cannot carry the upload past the limit by itself.
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
-        Assertions.assertNull(buffer.accept(true, new byte[LibraryUploadBuffer.MAX_UPLOAD_BYTES + 1]));
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(true, new byte[LIMITS.maxUploadBytes() + 1]));
         Assertions.assertEquals(0, buffer.bufferedBytes());
         Assertions.assertArrayEquals(bytes(9), buffer.accept(true, bytes(9)), "and the next upload is unaffected");
     }
@@ -117,10 +123,10 @@ public class LibraryUploadBufferTester {
     @Test
     public void anUploadPastTheChunkLimitIsDroppedEvenWhenTheBytesAreFew() {
         // One-byte chunks cost an array header each: the count is bounded as well as the total.
-        LibraryUploadBuffer buffer = new LibraryUploadBuffer();
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
         byte[] chunk = bytes(1);
-        feed(buffer, chunk, LibraryUploadBuffer.MAX_CHUNKS);
-        Assertions.assertEquals(LibraryUploadBuffer.MAX_CHUNKS, buffer.bufferedChunks());
+        feed(buffer, chunk, LIMITS.maxChunks());
+        Assertions.assertEquals(LIMITS.maxChunks(), buffer.bufferedChunks());
 
         Assertions.assertNull(buffer.accept(false, chunk));
         Assertions.assertEquals(0, buffer.bufferedChunks(), "dropped and reset");
@@ -135,7 +141,7 @@ public class LibraryUploadBufferTester {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         NbtSquisher.squishVanilla(Snapshot.writeToNBT(template), out);
 
-        Snapshot decoded = LibraryUploadBuffer.decode(out.toByteArray());
+        Snapshot decoded = new LibraryUploadBuffer(LIMITS).decode(out.toByteArray());
         Assertions.assertEquals(template.key, decoded.key, "the key is recomputed from the content");
     }
 
@@ -157,7 +163,133 @@ public class LibraryUploadBufferTester {
 
     @Test
     public void garbageIsRefusedAsUnreadable() {
-        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(bytes(1, 2, 3, 4)));
-        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(new byte[0]));
+        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(bytes(1, 2, 3, 4)));
+        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(new byte[0]));
+    }
+
+    // ── Drops and skips: what the menu tells the tile ───────────────────────
+
+    @Test
+    public void aDroppedUploadIsCountedOnceSoTheTileCanStopAsking() {
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertEquals(0, buffer.droppedUploads());
+        Assertions.assertNull(buffer.accept(false, new byte[LIMITS.maxUploadBytes() + 1]));
+        Assertions.assertEquals(1, buffer.droppedUploads(), "the overflow is one dropped upload");
+        Assertions.assertNull(buffer.accept(false, bytes(1)));
+        Assertions.assertNull(buffer.accept(true, bytes(1)));
+        Assertions.assertEquals(1, buffer.droppedUploads(), "the ignored tail is not another one");
+    }
+
+    @Test
+    public void aSkippedStreamIsIgnoredToItsEndAndClearsWhatCameBefore() {
+        // An upload nobody asked for: none of it is kept, and a stale prefix cannot corrupt the next upload.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
+        buffer.skip(false);
+        Assertions.assertEquals(0, buffer.bufferedBytes(), "the earlier part is dropped");
+        Assertions.assertNull(buffer.accept(false, bytes(3)), "the rest of the skipped stream is ignored");
+        Assertions.assertNull(buffer.accept(true, bytes(4)), "including its final chunk");
+        Assertions.assertEquals(0, buffer.droppedUploads(), "skipping is not refusing");
+        Assertions.assertArrayEquals(bytes(5, 6), buffer.accept(true, bytes(5, 6)), "the next upload starts clean");
+
+        buffer.skip(true);
+        Assertions.assertArrayEquals(bytes(7), buffer.accept(true, bytes(7)), "skipping a final chunk skips no more");
+    }
+
+    // ── Limits: every scan the config allows fits ───────────────────────────
+
+    @Test
+    public void theLimitsNeverFallBelowTheFloor() {
+        // What the limits were before they followed the config: a volume-box scan that fit then still fits.
+        for (int distance : new int[] {1, 64, 256}) {
+            LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.forMarkerDistance(distance);
+            Assertions.assertTrue(limits.maxUploadBytes() >= 16 * 1024 * 1024, "at " + distance);
+            Assertions.assertTrue(limits.maxChunks() >= 513, "at " + distance);
+            Assertions.assertTrue(limits.maxExpandedBytes() >= 256L * 1024 * 1024, "at " + distance);
+        }
+    }
+
+    @Test
+    public void theLimitsCoverTheLargestMarkerScanAtTheConfigMaximum() {
+        // The review's case: a 256-cube blueprint is 16,777,216 cells at 16 accounted bytes each, exactly the old
+        // 256 MiB quota before its palette was counted. A marker reaches markerMaxDistance blocks past itself, so
+        // the largest box is one longer than that on each side.
+        int distance = 256;
+        long cells = LibraryUploadBuffer.largestMarkerScanCells(distance);
+        Assertions.assertEquals(257L * 257 * 257, cells);
+        LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.forMarkerDistance(distance);
+        Assertions.assertTrue(limits.maxExpandedBytes() >= cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL
+            + LibraryUploadBuffer.EXPANDED_HEADROOM, "unpacked: " + limits.maxExpandedBytes());
+        Assertions.assertTrue(limits.maxUploadBytes() >= cells * LibraryUploadBuffer.UPLOAD_BYTES_PER_CELL
+            + LibraryUploadBuffer.UPLOAD_HEADROOM, "on the wire: " + limits.maxUploadBytes());
+        Assertions.assertTrue((long) limits.maxChunks() * LibraryUploadBuffer.CHUNK_BYTES >= limits.maxUploadBytes(),
+            "the chunk count admits a full upload at the sender's chunk size");
+    }
+
+    @Test
+    public void theLimitsFollowTheLiveConfig() {
+        Assertions.assertEquals(LibraryUploadBuffer.Limits.forMarkerDistance(
+            buildcraft.core.BCCoreConfig.markerMaxDistance.get()), LibraryUploadBuffer.Limits.current());
+    }
+
+    /** A blueprint of {@code side}^3 cells, each holding {@code cell.applyAsInt(index)}. */
+    private static Blueprint blueprint(int side, java.util.function.IntUnaryOperator cell) {
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(side, side, side);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.palette.add(new SchematicBlockAir());
+        blueprint.data = new int[side * side * side];
+        for (int i = 0; i < blueprint.data.length; i++) blueprint.data[i] = cell.applyAsInt(i);
+        blueprint.computeKey();
+        return blueprint;
+    }
+
+    private static byte[] squish(Snapshot snapshot) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), out);
+        return out.toByteArray();
+    }
+
+    /** The smallest quota {@code payload} unpacks under: what the game's accounter charges for it. */
+    private static long accountedBytes(byte[] payload) {
+        long fails = 0;
+        long fits = 1L << 32;
+        while (fits - fails > 1) {
+            long mid = (fails + fits) >>> 1;
+            try {
+                NbtSquisher.expand(new ByteArrayInputStream(payload), mid);
+                fits = mid;
+            } catch (IOException e) {
+                fails = mid;
+            }
+        }
+        return fits;
+    }
+
+    @Test
+    public void theUnpackedCostPerCellIsWhatTheGameCharges() throws IOException {
+        // Measured against this node's own NBT accounter, so a line that charges more per tag fails here and not
+        // on a player's upload. The slope between two sizes is the per-cell cost; the rest is fixed overhead.
+        byte[] small = squish(blueprint(8, i -> 0));
+        byte[] large = squish(blueprint(16, i -> 0));
+        long cellsSmall = 8 * 8 * 8;
+        long cellsLarge = 16 * 16 * 16;
+        long perCell = (accountedBytes(large) - accountedBytes(small)) / (cellsLarge - cellsSmall);
+        Assertions.assertTrue(perCell <= LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL,
+            "the game charges " + perCell + " bytes a cell");
+        Assertions.assertTrue(accountedBytes(large) <= cellsLarge * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL
+            + LibraryUploadBuffer.EXPANDED_HEADROOM);
+    }
+
+    @Test
+    public void aCellNeverCostsMoreOnTheWireThanItsFourBytes() throws IOException {
+        // The worst case: cells that do not compress at all.
+        java.util.Random random = new java.util.Random(42);
+        int side = 32;
+        byte[] payload = squish(blueprint(side, i -> random.nextInt()));
+        long cells = (long) side * side * side;
+        Assertions.assertTrue(payload.length <= cells * LibraryUploadBuffer.UPLOAD_BYTES_PER_CELL * 101 / 100 + 4096,
+            payload.length + " bytes for " + cells + " cells");
     }
 }

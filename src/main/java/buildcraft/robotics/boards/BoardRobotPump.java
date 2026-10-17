@@ -27,15 +27,14 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.IFluidFilter;
-import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
@@ -58,11 +57,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
 
     private static final int BUCKET = 1000;
 
-    private BlockPos blockFound;
-
-    /** Whether this board holds the registry reservation on {@link #blockFound} in this session. Not saved: the
-     *  unload that saved a mid-job board freed it, so {@link #preempt} re-claims it after a reload. */
-    private boolean blockFoundClaimed;
+    /** The source being pumped. Saved; a reloaded one is re-claimed only while the resumed pump works it. */
+    private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM_WHILE_WORKING);
 
     /** The gate fluid filter of the robot's home station, refreshed on every search pass. Null means
      *  "no station, no filter" — pump anything. */
@@ -167,9 +163,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
-                blockFound = searchAndGoto.getBlockFound();
-                blockFoundClaimed = searchAndGoto.holdsReservation();
-                startDelegateAI(new AIRobotPumpBlock(robot, blockFound));
+                blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
+                startDelegateAI(new AIRobotPumpBlock(robot, blockFound.job()));
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
@@ -189,25 +184,11 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         }
     }
 
-    /** Runs before the delegate on every cycle. A board reloaded mid-job remembers its block, but the unload freed
-     *  the reservation: re-claim it before the resumed action AI touches the block, or - when another robot took
-     *  it meanwhile - give up the block and the action rather than work it alongside that robot. With no resumed
-     *  action there is nothing to re-claim it for, so it is simply forgotten. Not 7.1.x, which worked it
-     *  unreserved. */
+    /** Runs before the delegate on every cycle: a remembered source is re-claimed before the resumed pump touches
+     *  it, or given up with the pump ({@link JobClaim#preempt}). */
     @Override
     public void preempt(AIRobot ai) {
-        if (blockFound != null && !blockFoundClaimed) {
-            IRobotRegistry registry = robot.getRegistry();
-            if (registry == null) {
-                return;
-            }
-            if (ai != null && registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
-                blockFoundClaimed = true;
-            } else {
-                blockFound = null;
-                abortDelegateAI();
-            }
-        }
+        blockFound.preempt(this, ai);
     }
 
     @Override
@@ -216,34 +197,22 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     }
 
     protected BlockPos blockFound() {
-        return blockFound;
+        return blockFound.job();
     }
 
     private void releaseBlockFound() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
-            blockFound = null;
-            blockFoundClaimed = false;
-        }
+        blockFound.release();
     }
 
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
-
-        if (blockFound != null) {
-            int[] arr = {blockFound.getX(), blockFound.getY(), blockFound.getZ()};
-            nbt.putIntArray("blockFound", arr);
-        }
+        JobClaim.writeBlock(blockFound, nbt, "blockFound");
     }
 
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         super.loadSelfFromNBT(nbt);
-
-        int[] arr = NbtApiUtil.getIntArray(nbt, "blockFound", null);
-        if (arr != null && arr.length == 3) {
-            blockFound = new BlockPos(arr[0], arr[1], arr[2]);
-        }
+        JobClaim.readBlock(blockFound, nbt, "blockFound");
     }
 }

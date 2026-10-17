@@ -17,12 +17,11 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.IStackFilter;
-import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotPlant;
@@ -40,11 +39,8 @@ import buildcraft.robotics.statements.ActionRobotFilter;
  *  the target) — kept: the planter does not need to stand on the exact cell before the seed spot. */
 public class BoardRobotPlanter extends RedstoneBoardRobot {
 
-    private BlockPos blockFound;
-
-    /** Whether this board holds the registry reservation on {@link #blockFound} in this session. Not saved: the
-     *  unload that saved a mid-job board freed it, so {@link #preempt} re-claims it after a reload. */
-    private boolean blockFoundClaimed;
+    /** The spot being planted. Saved; a reloaded one is re-claimed only while the resumed planting works it. */
+    private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM_WHILE_WORKING);
 
     public BoardRobotPlanter(IRobotAccess iRobot) {
         super(iRobot);
@@ -89,9 +85,8 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
-                blockFound = searchAndGoto.getBlockFound();
-                blockFoundClaimed = searchAndGoto.holdsReservation();
-                startDelegateAI(new AIRobotPlant(robot, blockFound));
+                blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
+                startDelegateAI(new AIRobotPlant(robot, blockFound.job()));
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
@@ -104,25 +99,11 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
         }
     }
 
-    /** Runs before the delegate on every cycle. A board reloaded mid-job remembers its block, but the unload freed
-     *  the reservation: re-claim it before the resumed action AI touches the block, or - when another robot took
-     *  it meanwhile - give up the block and the action rather than work it alongside that robot. With no resumed
-     *  action there is nothing to re-claim it for, so it is simply forgotten. Not 7.1.x, which worked it
-     *  unreserved. */
+    /** Runs before the delegate on every cycle: a remembered spot is re-claimed before the resumed planting touches
+     *  it, or given up with the planting ({@link JobClaim#preempt}). */
     @Override
     public void preempt(AIRobot ai) {
-        if (blockFound != null && !blockFoundClaimed) {
-            IRobotRegistry registry = robot.getRegistry();
-            if (registry == null) {
-                return;
-            }
-            if (ai != null && registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
-                blockFoundClaimed = true;
-            } else {
-                blockFound = null;
-                abortDelegateAI();
-            }
-        }
+        blockFound.preempt(this, ai);
     }
 
     @Override
@@ -131,34 +112,22 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
     }
 
     protected BlockPos blockFound() {
-        return blockFound;
+        return blockFound.job();
     }
 
     private void releaseBlockFound() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
-            blockFound = null;
-            blockFoundClaimed = false;
-        }
+        blockFound.release();
     }
 
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
-
-        if (blockFound != null) {
-            int[] arr = {blockFound.getX(), blockFound.getY(), blockFound.getZ()};
-            nbt.putIntArray("blockFound", arr);
-        }
+        JobClaim.writeBlock(blockFound, nbt, "blockFound");
     }
 
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         super.loadSelfFromNBT(nbt);
-
-        int[] arr = NbtApiUtil.getIntArray(nbt, "blockFound", null);
-        if (arr != null && arr.length == 3) {
-            blockFound = new BlockPos(arr[0], arr[1], arr[2]);
-        }
+        JobClaim.readBlock(blockFound, nbt, "blockFound");
     }
 }

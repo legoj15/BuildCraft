@@ -14,6 +14,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
@@ -29,10 +30,12 @@ import buildcraft.robotics.ai.AIRobotStripesHandler;
  *  ({@link AIRobotStripesHandler}) is not resumable, so a board reloaded mid-use has nothing to continue on that
  *  cell, and the unload freed its reservation: carrying the block into the new session would only leave a stale
  *  cell to save again and to release (a second time) at the end. The farmer, planter and pump keep theirs because
- *  their action AIs resume, and re-claim the block before they move. */
+ *  their action AIs resume, and re-claim the block before they move. All of them hold the cell through the same
+ *  {@link JobClaim}; this board picks {@link JobClaim.OnReload#FORGET}. */
 public class BoardRobotStripes extends RedstoneBoardRobot {
 
-    private BlockPos blockFound;
+    /** {@link JobClaim.OnReload#FORGET}: the cell is never saved (see the class doc). */
+    private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.FORGET);
 
     public BoardRobotStripes(IRobotAccess iRobot) {
         super(iRobot);
@@ -58,8 +61,8 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAI) {
             if (searchAI.success()) {
-                blockFound = searchAI.getBlockFound();
-                startDelegateAI(new AIRobotStripesHandler(robot, blockFound));
+                blockFound.adopt(searchAI.getBlockFound(), searchAI.holdsReservation());
+                startDelegateAI(new AIRobotStripesHandler(robot, blockFound.job()));
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
@@ -74,14 +77,18 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     /** The cell the stripes handler is using, or null between uses. */
     BlockPos blockFound() {
-        return blockFound;
+        return blockFound.job();
+    }
+
+    /** A cell the search reported without holding it is re-claimed before the handler uses it, or given up
+     *  ({@link JobClaim#preempt}) - the one rule every board follows. */
+    @Override
+    public void preempt(AIRobot ai) {
+        blockFound.preempt(this, ai);
     }
 
     private void releaseBlockFound() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
-            blockFound = null;
-        }
+        blockFound.release();
     }
 
     /** Releases AND forgets the block: the same board instance resumes after an abort (a recharge, say), and a

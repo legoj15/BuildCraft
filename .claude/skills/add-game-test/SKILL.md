@@ -77,6 +77,29 @@ one.) Entities added during the test must be discarded before `succeed()` — pa
 sweeps only ~1 block, and leaked entities fail unrelated tests; assert dropped items by
 identity, not proximity. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
 
+## Tests that place markers (or touch any other dimension-wide cache)
+
+Marker connections live in `VolumeCache`/`PathCache`: singletons keyed only by dimension, scanned up to
+`markerMaxDistance` (64) blocks in a straight line **across arenas**, counting unloaded markers too. The
+runner never clears the grid between batches, so a marker any test leaves behind is a connection candidate
+and a line-of-sight obstacle for every later marker test that shares a row, column or height with it (this
+was the 2026-09-26 flake: orientation, volume_los and triangulation_3d failing together). A private
+`test_environment` only stops marker tests running *concurrently*; it does nothing about leftovers.
+
+- **A marker test** goes through `MarkerArenaUtil` (`src/test/java/buildcraft/lib/test/`): `open` evicts
+  everything already in scan range (WARN-logged, so the polluter is findable), `Session.place` refuses
+  coordinates outside the 6x7 cell, `await`/`awaitThen` gate on the marker joining the cache (it does on the
+  first level tick, not on placement) and clean up on timeout, `guard`/`finish` clean up on every other exit.
+  Give it its own `test_environment` file (copy `marker_volume_los.json`) and set the manifest's `environment`
+  to the test's own id; `MarkerTestIsolationTester` enforces both. Never schedule from inside a scheduled
+  runnable (the framework iterates a fastutil map while running them): schedule every poll up front.
+- **Any other test that places a marker** (waterlogging, pumps, schematics) calls
+  `MarkerArenaUtil.clearMarkers(helper, rel...)` before it ends: in a `finally` for a synchronous test, as the
+  last step of the assertion for a `succeedWhen` one. `MarkerTestIsolationTester` fails a test source that
+  references `MARKER_VOLUME`/`MARKER_PATH` without it.
+- `GameTestHelper.relativePos` inverts the rotation wrongly even for an unrotated arena (26.1.2 returns
+  `(-1,2,-1)` for `(1,2,1)`); subtract `absolutePos(BlockPos.ZERO)` instead.
+
 ## To verify your test is actually running (not silently skipped)
 
 Note the "N GAME TESTS COMPLETE" count before and after. Each new test should bump N by 1. If it

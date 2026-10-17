@@ -434,6 +434,10 @@ public class BlockDropsTester {
             // Markers were Material.CIRCUITS in 1.12.2 — hand-break returns the marker
             // item without needing a tool.
             helper.assertItemEntityPresent(BCCoreBlocks.MARKER_PATH.get().asItem(), markerPos, 2.0);
+            // The dropped marker item would outlive the test (pass-time entity cleanup only reaches ~1 block) and
+            // could satisfy a later test's "a path marker dropped" check by proximity.
+            buildcraft.lib.test.EntityArenaUtil.droppedItems(helper, markerPos, 2.0)
+                    .forEach(net.minecraft.world.entity.item.ItemEntity::discard);
             helper.succeed();
         });
     }

@@ -417,6 +417,10 @@ public class FluidHandlingModeTester {
      * branch exempts it. Confirms that the carve-out works.
      */
     public static void testWaterloggableBlockNotDeferredNearWater(GameTestHelper helper) {
+        // Two volume markers are placed below, each with a water source beside it and stone under it. They must not
+        // outlive the test: markers are registered in a dimension-wide cache that the marker connection tests scan
+        // across arenas (see MarkerTester), and an unwalled source keeps flowing into the neighbouring arenas.
+        BlockPos[] markerCells = { new BlockPos(2, 2, 4), new BlockPos(2, 2, 6) };
         try {
             BlockPos local = new BlockPos(2, 2, 2);
             BlockPos abs = helper.absolutePos(local);
@@ -449,7 +453,7 @@ public class FluidHandlingModeTester {
 
             EnumFluidHandlingMode[] modes = {EnumFluidHandlingMode.REPLACE, EnumFluidHandlingMode.CLEAR};
             for (int i = 0; i < modes.length; i++) {
-                BlockPos markerAbs = helper.absolutePos(new BlockPos(2, 2, 4 + 2 * i));
+                BlockPos markerAbs = helper.absolutePos(markerCells[i]);
                 helper.getLevel().setBlock(markerAbs.below(), Blocks.STONE.defaultBlockState(), 3);
                 helper.getLevel().setBlock(markerAbs.east(), Blocks.WATER.defaultBlockState(), 3);
                 boolean markerPlaced = schem(marker).build(helper.getLevel(), markerAbs, modes[i]);
@@ -461,6 +465,15 @@ public class FluidHandlingModeTester {
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        } finally {
+            // Pass or fail: remove the markers and the fluid that was set up beside them (and the fence's water).
+            for (BlockPos cell : markerCells) {
+                buildcraft.lib.test.MarkerArenaUtil.clearMarkers(helper, cell);
+                helper.setBlock(cell.east(), Blocks.AIR);
+                helper.setBlock(cell.below(), Blocks.AIR);
+            }
+            helper.setBlock(new BlockPos(2, 2, 2), Blocks.AIR);
+            helper.setBlock(new BlockPos(3, 2, 2), Blocks.AIR);
         }
     }
 

@@ -211,8 +211,17 @@ public class RobotActionAIsTester {
     /** A waterlogged block is pumped like a bucket empties it: the robot takes the bucket of water and the
      *  block stays, dry. Draining used to set the cell to air, deleting the marker with no drop. */
     public static void pumpKeepsWaterloggedMarker(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
         BlockPos wellRel = new BlockPos(2, 1, 2);
+        try {
+            pumpKeepsWaterloggedMarker(helper, wellRel);
+        } finally {
+            // Pass or fail: don't leave the marker in the shared marker cache (see MarkerTester).
+            buildcraft.lib.test.MarkerArenaUtil.clearMarkers(helper, wellRel);
+        }
+    }
+
+    private static void pumpKeepsWaterloggedMarker(GameTestHelper helper, BlockPos wellRel) {
+        ServerLevel level = helper.getLevel();
         helper.setBlock(wellRel.below(), Blocks.STONE);
         helper.setBlock(wellRel, buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
                 .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));

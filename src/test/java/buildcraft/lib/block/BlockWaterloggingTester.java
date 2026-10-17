@@ -37,6 +37,7 @@ import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -162,7 +163,10 @@ public class BlockWaterloggingTester {
         buildBasin(helper);
         // Default facing is UP: the marker stands on the stone floor below the subject cell.
         helper.setBlock(SUBJECT, BCCoreBlocks.MARKER_VOLUME.get());
-        assertWaterloggedBetweenSources(helper, BCCoreBlocks.MARKER_VOLUME.get(), () -> {});
+        // The marker must not outlive the test: markers are registered in a dimension-wide cache that the
+        // marker connection tests scan across arenas (see MarkerTester). Last step of the assertion.
+        assertWaterloggedBetweenSources(helper, BCCoreBlocks.MARKER_VOLUME.get(),
+            () -> MarkerArenaUtil.clearMarkers(helper, SUBJECT));
     }
 
     /** Characterisation for the todo's facade concern: a solid facade on a pipe floods with the pipe and
@@ -212,6 +216,8 @@ public class BlockWaterloggingTester {
                     && !state.getValue(BlockStateProperties.WATERLOGGED),
                 "the marker must be waterloggable, and lava must not waterlog it");
             helper.assertTrue(level.getFluidState(abs).isEmpty(), "lava must not enter the marker's cell");
+            // Last step: don't leave the marker in the shared marker cache (see MarkerTester).
+            MarkerArenaUtil.clearMarkers(helper, SUBJECT);
         });
     }
 
@@ -295,8 +301,17 @@ public class BlockWaterloggingTester {
      *  exactly as a player's bucket does. Always-waterlogged plants (kelp) give up no water to a bucket, so
      *  they are not drainable at all; a plain water block still drains to air. */
     public static void testDrainBlockKeepsWaterloggedBlocks(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
         BlockPos markerRel = new BlockPos(1, 2, 4);
+        try {
+            drainBlockKeepsWaterloggedBlocks(helper, markerRel);
+        } finally {
+            // Pass or fail: don't leave the marker in the shared marker cache (see MarkerTester).
+            MarkerArenaUtil.clearMarkers(helper, markerRel);
+        }
+    }
+
+    private static void drainBlockKeepsWaterloggedBlocks(GameTestHelper helper, BlockPos markerRel) {
+        ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(2, 2, 4);
         BlockPos kelpRel = new BlockPos(3, 2, 4);
         BlockPos waterRel = new BlockPos(4, 2, 4);
@@ -359,6 +374,15 @@ public class BlockWaterloggingTester {
      *  deleted the kelp and then the marker. Drives the pump's own tick synchronously, so no fluid flows
      *  mid-test; stops on observed state, never a fixed tick count. */
     public static void testPumpKeepsWaterloggedMarker(GameTestHelper helper) {
+        try {
+            pumpKeepsWaterloggedMarker(helper);
+        } finally {
+            // Pass or fail: don't leave the marker in the shared marker cache (see MarkerTester).
+            MarkerArenaUtil.clearMarkers(helper, SUBJECT);
+        }
+    }
+
+    private static void pumpKeepsWaterloggedMarker(GameTestHelper helper) {
         buildBasin(helper);
         ServerLevel level = helper.getLevel();
         helper.setBlock(WEST_SOURCE, Blocks.WATER);

@@ -61,10 +61,28 @@ public class BuildCraftGameTests {
             // and spring tests can't place fluid above. Full ctor: batch, name, structure, rotation,
             // maxTicks, setupTicks, required, manualOnly, maxAttempts, requiredSuccesses, skyAccess, fn.
             coll.add(new net.minecraft.gametest.framework.TestFunction(
-                "defaultBatch", id, "buildcraftunofficial:empty",
+                readBatch(id), id, "buildcraftunofficial:empty",
                 net.minecraft.world.level.block.Rotation.NONE, readMaxTicks(id, 100), 0L, true, false, 1, 1, true, sup.get()));
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to register 1.21.1 game test " + id, e);
+        }
+    }
+
+    // 1.21.1 has no test_environment either, but its batch NAME plays the same role (tests of one batch run
+    // concurrently, batches run one after another), so a manifest's "environment" becomes the batch name.
+    // Without this every test, the marker tests included, would share "defaultBatch" and run concurrently
+    // in neighbouring arenas, which is exactly the crosstalk the per-test marker environments exist to prevent
+    // (see MarkerTester). minecraft:default / no environment stay in the shared default batch.
+    private static String readBatch(String id) {
+        String path = id.substring(id.indexOf(':') + 1);
+        try (java.io.InputStream in = BuildCraftGameTests.class.getResourceAsStream(
+                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
+            if (in == null) return GameTestBatchNames.DEFAULT;
+            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
+                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+            return GameTestBatchNames.forEnvironment(o.has("environment") ? o.get("environment").getAsString() : null);
+        } catch (Exception e) {
+            return GameTestBatchNames.DEFAULT;
         }
     }
 
@@ -241,6 +259,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_path_los", () -> buildcraft.core.marker.MarkerTester::testPathLineOfSight);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_2d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
+        // Hermeticity of the marker tests themselves: leftovers from earlier batches must neither corrupt a connection nor survive MarkerArenaUtil.open.
+        reg.accept("buildcraftunofficial:marker_leftovers_do_not_corrupt_connections", () -> buildcraft.core.marker.MarkerTester::testLeftoverMarkersDoNotCorruptConnections);
+        reg.accept("buildcraftunofficial:marker_open_evicts_leftovers", () -> buildcraft.core.marker.MarkerTester::testOpenEvictsLeftoverMarkers);
+        reg.accept("buildcraftunofficial:marker_session_cleans_up_on_failure", () -> buildcraft.core.marker.MarkerTester::testSessionCleansUpWhenBodyThrows);
 
         // Oil generation primitives (SurfacePool shape + defensive tree-clearing)
         reg.accept("buildcraftunofficial:oilgen_set_oil_skips_unloaded_chunk", () -> buildcraft.energy.generation.OilGenStructureTester::testSetOilSkipsUnloadedChunk);

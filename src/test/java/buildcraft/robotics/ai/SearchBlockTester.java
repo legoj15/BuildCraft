@@ -25,8 +25,7 @@ import buildcraft.robotics.entity.EntityRobot;
  *  the arena grid the sibling {@link AIRobotSearchAndGotoBlock} flight test lands exactly one cell (6
  *  blocks) west and places an identical oak log at the same relative (5,2,3) — a nearer legal target than
  *  the log this test places, so a plain "is an oak log" filter deterministically finds the neighbour's
- *  log. The search itself is correct; the test pins the block it owns. Red until the AI step lands the
- *  scanner wiring (the skeleton terminates on the first cycle). */
+ *  log. The search itself is correct; the test pins the block it owns. */
 public class SearchBlockTester {
 
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;

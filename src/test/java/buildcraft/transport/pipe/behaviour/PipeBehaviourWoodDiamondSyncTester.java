@@ -6,9 +6,12 @@
 package buildcraft.transport.pipe.behaviour;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.VanillaSetupBaseTester;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 
 /**
@@ -20,12 +23,12 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
  * {@code currentFilter} drive the round-robin extraction order; {@code filterValid} is derived
  * from {@code filters} content and must be recomputed when the inventory is reloaded.
  * <p>
- * Filter inventory content sync is part of
- * {@link buildcraft.lib.tile.item.ItemHandlerSimple}'s contract and is not pinned here
- * because populating a slot needs {@link net.minecraft.world.item.ItemStack} support that the
- * JUnit classpath cannot bootstrap.
+ * The filter inventory's content round trip is pinned here too: the unit-test JVM boots the loader
+ * and the item registries, so a slot can be populated with a real
+ * {@link net.minecraft.world.item.ItemStack} (hence {@link VanillaSetupBaseTester}). That a filter
+ * edit also reaches disk is a game-test concern ({@code PipeFilterPersistenceTester}).
  */
-public class PipeBehaviourWoodDiamondSyncTester  {
+public class PipeBehaviourWoodDiamondSyncTester extends VanillaSetupBaseTester {
 
     //? if >=26.1 {
     @Test
@@ -75,6 +78,24 @@ public class PipeBehaviourWoodDiamondSyncTester  {
         target.readFromNbt(new CompoundTag());
         Assertions.assertEquals(FilterMode.WHITE_LIST, target.filterMode,
                 "absent mode tag must reset filterMode to the WHITE_LIST default");
+    }
+
+    @Test
+    public void filterContentSurvivesAnNbtRoundTrip() {
+        PipeBehaviourWoodDiamond source = new PipeBehaviourWoodDiamond(null);
+        source.filters.setStackInSlot(4, new ItemStack(Items.IRON_INGOT));
+        CompoundTag nbt = source.writeToNbt();
+
+        PipeBehaviourWoodDiamond target = new PipeBehaviourWoodDiamond(null);
+        target.readFromNbt(nbt);
+        Assertions.assertTrue(target.filters.getStackInSlot(4).is(Items.IRON_INGOT),
+                "readFromNbt must restore the filter content the server saved");
+        Assertions.assertTrue(target.filters.getStackInSlot(3).isEmpty(), "and leave the other slots empty");
+        Assertions.assertTrue(target.filterValid, "a restored filter makes filterValid true");
+
+        PipeBehaviourWoodDiamond cold = new PipeBehaviourWoodDiamond(null, nbt);
+        Assertions.assertTrue(cold.filters.getStackInSlot(4).is(Items.IRON_INGOT),
+                "the (IPipe, CompoundTag) constructor must restore the filter content on cold load");
     }
 
     @Test

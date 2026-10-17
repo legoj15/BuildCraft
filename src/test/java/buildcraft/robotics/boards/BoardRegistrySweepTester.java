@@ -15,8 +15,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
  *  report their own id. The item-blob side of the same set is pinned by the JUnit
  *  {@code BoardNbtRoundTripTest}; the {@code create(IRobotAccess)} side is covered automatically by the
  *  existing {@code everyRegisteredBoardSelfResolves} sweep once these boards are registered. Being a game
- *  test, this one runs on every node's game-test suite, not just the FML-JUnit boot. Red until the
- *  registration commit wires the boards in. */
+ *  test, this one runs on every node's game-test suite, not just the FML-JUnit boot. */
 public class BoardRegistrySweepTester {
 
     private static final String[] PH5_BOARD_IDS = {

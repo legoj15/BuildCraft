@@ -69,9 +69,10 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         invInputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
         invOutputMapLocation.setChecker((slot, stack) -> stack.getItem() instanceof ItemMapLocation);
 
-        // Vanilla re-caches a block entity's saved NBT only when setChanged() runs, so an inventory edit
-        // with no callback would persist the stale pre-edit state — brushes stashed in the rack vanished
-        // on relog. Same wiring as the distiller / heat exchanger tiles.
+        // setChanged() is what flags the chunk unsaved, and vanilla only writes an unsaved chunk (it
+        // serialises block entities live at that point, so the data itself is never stale). An inventory edit
+        // with no callback never flags it, and the rack's contents were then never written — brushes stashed
+        // in it vanished on relog. Same wiring as the distiller / heat exchanger tiles.
         for (ItemHandlerSimple inv : new ItemHandlerSimple[] {
                 invPaintbrushes, invInputPaintbrush, invInputMapLocation, invInputResult,
                 invOutputPaintbrush, invOutputMapLocation, invOutputResult }) {

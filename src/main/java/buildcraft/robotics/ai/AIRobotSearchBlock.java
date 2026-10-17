@@ -11,6 +11,8 @@ package buildcraft.robotics.ai;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -44,6 +46,8 @@ public class AIRobotSearchBlock extends AIRobot {
 
     private PathFindingSearch blockScanner = null;
     private IBlockFilter pathFound;
+    @Nullable
+    private IBlockFilter approveFound;
     private Iterator<BlockPos> blockIter;
     private double maxDistanceToEnd;
     private IZone zone;
@@ -54,9 +58,18 @@ public class AIRobotSearchBlock extends AIRobot {
 
     public AIRobotSearchBlock(IRobotAccess iRobot, boolean random, IBlockFilter iPathFound,
             double iMaxDistanceToEnd) {
+        this(iRobot, random, iPathFound, null, iMaxDistanceToEnd);
+    }
+
+    /** @param iApproveFound asked once about the block the search settles on (see
+     *            {@link PathFindingSearch#PathFindingSearch}), for checks too costly to run on every scanned block;
+     *            null approves any */
+    public AIRobotSearchBlock(IRobotAccess iRobot, boolean random, IBlockFilter iPathFound,
+            @Nullable IBlockFilter iApproveFound, double iMaxDistanceToEnd) {
         super(iRobot);
 
         pathFound = iPathFound;
+        approveFound = iApproveFound;
         zone = iRobot.getZoneToWork();
         // Scanner selection, as 7.1.x: the expanding cube is the default; random gets the zone's own
         // distribution when the robot has a work zone, else a uniform sphere of radius 64.
@@ -98,7 +111,7 @@ public class AIRobotSearchBlock extends AIRobot {
         if (blockScanner == null) {
             blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
                     blockIter, pathFound, maxDistanceToEnd, 96, zone,
-                    robot.getRegistry().getBlockReservations());
+                    robot.getRegistry().getBlockReservations(), approveFound);
         }
         if (blockScanner.isDone()) {
             path = blockScanner.getResult();

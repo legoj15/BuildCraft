@@ -12,6 +12,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
@@ -48,10 +50,25 @@ public class PathFindingSearch implements IIterableAlgorithm {
     private final Iterator<BlockPos> blockIter;
     private final double maxDistanceToEnd;
     private final Set<BlockPos> reservations;
+    @Nullable
+    private final IBlockFilter approveTarget;
 
     public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
             IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,
             Set<BlockPos> reservations) {
+        this(access, start, blockIter, pathFound, maxDistanceToEnd, maxDistance, zone, reservations, null);
+    }
+
+    /**
+     * @param approveTarget asked ONCE about each target a path was found to - not about every block the scan
+     *            visits, which {@code pathFound} is - before that target is reserved; a target it refuses is dropped
+     *            and the search carries on with the others. For checks that are too costly to run per scanned block,
+     *            such as asking protection mods. Null approves everything.
+     */
+    public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
+            IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,
+            Set<BlockPos> reservations, @Nullable IBlockFilter approveTarget) {
+        this.approveTarget = approveTarget;
         this.access = access;
         this.start = start;
         this.pathFound = pathFound;
@@ -124,7 +141,11 @@ public class PathFindingSearch implements IIterableAlgorithm {
             if (pathFinding.isDone()) {
                 LinkedList<BlockPos> path = pathFinding.getResult();
                 if (path != null && path.size() > 0) {
-                    if (reserve(pathFinding.end())) {
+                    BlockPos end = pathFinding.end();
+                    // The approver sits between "a path exists" and "reserve": it is asked about a target only once
+                    // it is actually chosen (and not when another search already holds it), and a refused target
+                    // never holds a reservation.
+                    if (!isReserved(end) && approves(end) && reserve(end)) {
                         return;
                     }
                 }
@@ -159,6 +180,16 @@ public class PathFindingSearch implements IIterableAlgorithm {
             }
         }
         return null;
+    }
+
+    private boolean approves(BlockPos block) {
+        return approveTarget == null || approveTarget.matches(block);
+    }
+
+    private boolean isReserved(BlockPos block) {
+        synchronized (reservations) {
+            return reservations.contains(block);
+        }
     }
 
     private boolean reserve(BlockPos block) {

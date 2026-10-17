@@ -235,6 +235,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_stripes_reports_failure_for_unusable_item", () -> buildcraft.robotics.ai.RobotStripesTester::stripesReportsFailureForAnItemNoHandlerCanUse);
         reg.accept("buildcraftunofficial:robot_stripes_board_spills_item_it_gives_up_on", () -> buildcraft.robotics.boards.RobotStripesGiveUpTester::stripesBoardSpillsAnItemItGivesUpOn);
         reg.accept("buildcraftunofficial:robot_dispose_items_drops_cargo_when_no_station", () -> buildcraft.robotics.ai.RobotDisposeItemsTester::disposeItemsDropsCargoWhenNoStationWillTakeIt);
+        reg.accept("buildcraftunofficial:robot_straight_move_snaps_onto_target", () -> buildcraft.robotics.ai.RobotStraightMoveSnapTester::straightMoveSnapsARealRobotOntoItsTarget);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns

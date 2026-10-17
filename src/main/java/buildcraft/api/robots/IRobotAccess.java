@@ -86,6 +86,13 @@ public interface IRobotAccess {
 
     AABB getBoundingBox();
 
+    /** Places the robot exactly at {@code (x, y, z)} - the arrival snap 7.1.x's movement AIs wrote straight into
+     *  {@code posX/posY/posZ}. Declared with vanilla {@code Entity#setPos(double, double, double)}'s signature, which
+     *  the concrete robot already inherits (and which, as a class method, wins over this default), so only a test
+     *  {@code IRobotAccess} ever runs the body: an access with no position to move simply ignores the snap. */
+    default void setPos(double x, double y, double z) {
+    }
+
     /** Euclidean distance from the robot's current position to {@code (x, y, z)}. 7.1.x's AIs called this on
      *  every movement frame to detect arrival; declared as a default over {@link #position()} so a test
      *  {@code IRobotAccess} (which already supplies a position) never has to re-implement it. */

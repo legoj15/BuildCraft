@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_fluid_sweep_bounded_with_tolerated_water",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1050,
+    "setup_ticks": 0,
+    "required": true
+}

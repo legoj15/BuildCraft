@@ -58,5 +58,9 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
+| `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed). Follow with `click` "Save and Quit to Title" to leave the world |
+| `inWorld` | `timeoutSec` (default 300) | waits until the player is in a world with no screen open: after `click` "Play Selected World" |
+
+A scenario that visits a second world names it in a top-level `"extraSaves": ["bc-smoke-b"]`: before boot the runner copies the `bc-smoke` save to each missing name (so the first run on a node, which only creates `bc-smoke`, needs a second run). The world list is sorted by last played, so the world just left is entry one and `click` `x:213, y:100` picks entry two (see `scenarios/marker-relog.json`, which leaves a world, joins the other and comes back).
 
 A failing step records its error, takes a `NN-FAILED.png`, closes any open screen and the run continues.

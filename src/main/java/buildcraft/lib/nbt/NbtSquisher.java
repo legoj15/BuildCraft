@@ -24,6 +24,22 @@ public class NbtSquisher {
         return NbtIo.readCompressed(stream, NbtAccounter.unlimitedHeap());
     }
 
+    /**
+     * Like {@link #expand(InputStream)}, but reading more than {@code maxBytes} of NBT (vanilla's heap estimate,
+     * counted as tags are read) fails instead of allocating it. For data from outside the game, where a few
+     * kilobytes of compressed zeros can stand for gigabytes.
+     *
+     * @throws IOException if the data is unreadable or would unpack past {@code maxBytes}
+     */
+    public static CompoundTag expand(InputStream stream, long maxBytes) throws IOException {
+        try {
+            return NbtIo.readCompressed(stream, NbtAccounter.create(maxBytes));
+        } catch (RuntimeException e) {
+            // The accounter reports an oversize read as an unchecked exception.
+            throw new IOException("Unreadable or oversized NBT: " + e.getMessage(), e);
+        }
+    }
+
     public static void squishVanilla(CompoundTag nbt, OutputStream stream) throws IOException {
         NbtIo.writeCompressed(nbt, stream);
     }

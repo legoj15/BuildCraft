@@ -7,8 +7,6 @@ package buildcraft.builders.container;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
-import java.util.List;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,6 +22,7 @@ import buildcraft.api.core.BCLog;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
+import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.nbt.NbtSquisher;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -52,8 +51,12 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
 
     private final ContainerData data;
 
+    /** The longest header name a client may select. Library names come from a text box that stops at 32 characters;
+     *  this is slack for hand-copied files, not a limit anything legitimate approaches. */
+    public static final int MAX_SELECTED_NAME_LENGTH = 256;
+
     // Server-side accumulator for incoming chunked upload data
-    private final List<byte[]> uploadChunks = new ArrayList<>();
+    private final LibraryUploadBuffer upload = new LibraryUploadBuffer();
 
     // Client-side constructor (from network)
     public ContainerElectronicLibrary(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -119,12 +122,49 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         });
     }
 
+    /**
+     * Whether a key a client asks to select could be one: every key the game makes holds a SHA-256 hash (its own and
+     * its header's), and a name is typed into a short text box. The selection is a key in the <em>client's</em>
+     * library, which the server has no copy of until the upload lands, so existence cannot be checked here; this only
+     * keeps a made-up key from being saved with the tile, synced to every client that loads it, and forwarded to
+     * every player watching the menu.
+     */
+    public static boolean isSelectable(Snapshot.Key key) {
+        if (key.hash.length != HashUtil.HASH_BYTES) return false;
+        Snapshot.Header header = key.header;
+        return header == null
+            || header.key.hash.length == HashUtil.HASH_BYTES && header.name.length() <= MAX_SELECTED_NAME_LENGTH;
+    }
+
+    /** Bytes of the upload in progress held on the server; never more than {@link LibraryUploadBuffer#MAX_UPLOAD_BYTES}. */
+    public int getBufferedUploadBytes() {
+        return upload.bufferedBytes();
+    }
+
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
 
         if (id == NET_SELECTED && !isClient) {
-            tile.selected = (buffer.readByte() != 0) ? new Snapshot.Key(buffer) : null;
+            if (buffer.readByte() == 0) {
+                tile.selected = null;
+                return;
+            }
+            Snapshot.Key key;
+            try {
+                key = new Snapshot.Key(buffer);
+            } catch (RuntimeException e) {
+                // A cut-off or overlong key: the client is not the one we wrote the reader for.
+                BCLog.logger.warn("[library] Ignoring an unreadable snapshot selection from {}",
+                    player.getName().getString());
+                return;
+            }
+            if (isSelectable(key)) {
+                tile.selected = key;
+            } else {
+                BCLog.logger.warn("[library] Ignoring a malformed snapshot selection from {}",
+                    player.getName().getString());
+            }
             return;
         }
 
@@ -151,9 +191,9 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         if (id == NET_UPLOAD_DATA && !isClient) {
             boolean last = (buffer.readByte() != 0);
             byte[] chunk = buffer.readByteArray();
-            uploadChunks.add(chunk);
-            if (last) {
-                assembleUpload();
+            byte[] assembled = upload.accept(last, chunk);
+            if (assembled != null) {
+                receiveUpload(assembled);
             }
         }
     }
@@ -176,7 +216,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         }
 
         // Send in 32 KB chunks so we stay within packet limits
-        final int CHUNK = 32 * 1024;
+        final int CHUNK = LibraryUploadBuffer.CHUNK_BYTES;
         int offset = 0;
         while (offset < data.length) {
             int end = Math.min(offset + CHUNK, data.length);
@@ -197,24 +237,16 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         }
     }
 
-    /** Server: reassemble accumulated upload chunks and hand off to the tile. */
-    private void assembleUpload() {
-        int total = uploadChunks.stream().mapToInt(c -> c.length).sum();
-        byte[] assembled = new byte[total];
-        int pos = 0;
-        for (byte[] chunk : uploadChunks) {
-            System.arraycopy(chunk, 0, assembled, pos, chunk.length);
-            pos += chunk.length;
-        }
-        uploadChunks.clear();
-
+    /** Server: unpack a fully received upload (bounded, see {@link LibraryUploadBuffer#decode}) and hand it to the tile. */
+    private void receiveUpload(byte[] assembled) {
+        Snapshot snapshot;
         try {
-            Snapshot snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(assembled)));
-            snapshot.computeKey();
-            tile.onUploadReceived(snapshot);
+            snapshot = LibraryUploadBuffer.decode(assembled);
         } catch (java.io.IOException e) {
             BCLog.logger.warn("[library] Failed to deserialize uploaded snapshot", e);
+            return;
         }
+        tile.onUploadReceived(snapshot);
     }
 
     @Override

@@ -16,6 +16,9 @@ import net.minecraft.nbt.NbtIo;
 
 public class HashUtil {
 
+    /** Length in bytes of every hash {@link #computeHash} returns (SHA-256). */
+    public static final int HASH_BYTES = 32;
+
     /** Compute a SHA-256 hash of the given CompoundTag's serialized bytes. */
     public static byte[] computeHash(CompoundTag nbt) {
         try {

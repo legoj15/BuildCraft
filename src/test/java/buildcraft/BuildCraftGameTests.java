@@ -984,6 +984,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_reloaded_delivery_yields_taken_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryYieldsAnOrderAnotherRobotTook);
         reg.accept("buildcraftunofficial:robot_reloaded_delivery_reclaims_free_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryReclaimsAFreeOrder);
         reg.accept("buildcraftunofficial:robot_delivery_recharge_abort_gives_up_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryAbortedByARechargeGivesUpItsOrder);
+        reg.accept("buildcraftunofficial:robot_delivery_recharge_abort_retakes_free_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryAbortedByARechargeRetakesAFreeOrder);
+        reg.accept("buildcraftunofficial:robot_delivery_ended_docked_keeps_dock", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryEndedWhileDockedKeepsTheDock);
+        reg.accept("buildcraftunofficial:robot_reloaded_goto_station_yields_taken_station", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedGotoStationYieldsAStationAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_goto_station_reclaims_free_station", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedGotoStationReclaimsAFreeStation);
+        reg.accept("buildcraftunofficial:robot_registry_kill_after_unload_frees_stations", () -> buildcraft.robotics.RobotRegistryLiveTester::killRobotAfterAnUnloadFreesItsStations);
+        reg.accept("buildcraftunofficial:robot_undock_after_reload_frees_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::undockAfterAReloadFreesTheDock);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
         reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
         reg.accept("buildcraftunofficial:robot_goto_station_abort_frees_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedGotoStationFreesItsPlainClaim);

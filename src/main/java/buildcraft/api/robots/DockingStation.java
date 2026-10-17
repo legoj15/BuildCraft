@@ -108,8 +108,15 @@ public abstract class DockingStation {
         }
     }
 
+    /** Claims the station for a plain visit. True when {@code robot} holds it on return: it was free and is now
+     *  taken, or the robot held it already (as its home, its dock or a visit), which is left exactly as it was.
+     *
+     *  <p>The holder is compared by id, never by the cached entity: 7.1.x tested {@code robotTaking == null}, which is
+     *  also true for a station whose holder is linked but merely not loaded (an unload drops the cached entity, and
+     *  so does reading the station from NBT) - another robot then took over the unloaded robot's home or dock, and
+     *  the holder's own re-take reset its home link to a plain claim. */
     public boolean take(EntityRobotBase robot) {
-        if (robotTaking == null) {
+        if (robotTakingId == EntityRobotBase.NULL_ROBOT_ID) {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(world);
             linkIsMain = false;
             robotTaking = robot;
@@ -123,10 +130,12 @@ public abstract class DockingStation {
         }
     }
 
+    /** Gives back {@code robot}'s plain claim; a main link is never released here. By id, like {@link #take}: the
+     *  cached entity is gone after an unload, and a reloaded robot undocking must still free its dock. */
     public void release(EntityRobotBase robot) {
-        if (robotTaking == robot && !linkIsMain) {
+        if (robotTakingId == robot.getRobotId() && robotTakingId != EntityRobotBase.NULL_ROBOT_ID && !linkIsMain) {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(world);
-            unsafeRelease(robot);
+            unsafeRelease(robot.getRobotId());
             registry.registryMarkDirty();
             registry.release(this, robot.getRobotId());
         }
@@ -137,7 +146,15 @@ public abstract class DockingStation {
      * registry).
      */
     public void unsafeRelease(EntityRobotBase robot) {
-        if (robotTaking == robot) {
+        unsafeRelease(robot.getRobotId());
+    }
+
+    /** {@link #unsafeRelease(EntityRobotBase)} by robot id: drops any link (main included) that {@code robotId} holds,
+     *  without touching the registry. The registry's forced paths use this one, because the robot they release may
+     *  be unloaded already, and an unload drops the station's cached entity - an entity comparison then never
+     *  matched, and a killed robot's home stayed linked to its dead id. */
+    public void unsafeRelease(long robotId) {
+        if (robotId != EntityRobotBase.NULL_ROBOT_ID && robotTakingId == robotId) {
             linkIsMain = false;
             robotTaking = null;
             robotTakingId = EntityRobotBase.NULL_ROBOT_ID;

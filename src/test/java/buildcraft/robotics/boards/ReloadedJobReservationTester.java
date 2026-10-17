@@ -32,6 +32,7 @@ import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
 import buildcraft.robotics.StackRequest;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
+import buildcraft.robotics.ai.AIRobotGotoStation;
 import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
@@ -217,6 +218,68 @@ public class ReloadedJobReservationTester {
         }
     }
 
+    // ---------- the flight to a station ----------
+
+    /** Robot A reloaded while its {@link AIRobotGotoStation} flies to a station it only visits (a plain claim, not its
+     *  home): the unload freed the claim, but the goto resumes its approach leg. */
+    private static AIRobotGotoStation reloadMidStationFlight(Robots r, LiveStation station) {
+        GameTestHelper helper = r.helper;
+        station.world = helper.getLevel();
+        r.registry.registerStation(station);
+        r.cleanup.add(() -> r.registry.removeStation(station));
+
+        AIRobotGotoStation before = new AIRobotGotoStation(r.robotA, station);
+        before.start();
+        helper.assertTrue(station.robotIdTaking() == r.robotA.getRobotId()
+                        && before.getDelegateAI() instanceof AIRobotGotoBlock,
+                "precondition: robot A claimed the station and flies to it - got " + before.getDelegateAI());
+
+        AIRobotGotoStation flight = r.reload(before, AIRobotGotoStation.class);
+        helper.assertTrue(flight.getDelegateAI() instanceof AIRobotGotoBlock,
+                "precondition: the reloaded goto resumes its approach leg - got " + flight.getDelegateAI());
+        helper.assertFalse(station.isTaken(), "precondition: the unload left the station unclaimed");
+        return flight;
+    }
+
+    /** Robot B took the station while A was away: A's resumed flight must give it up, not dock beside B. */
+    public static void reloadedGotoStationYieldsAStationAnotherRobotTook(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            AIRobotGotoStation flight = reloadMidStationFlight(r, station);
+            helper.assertTrue(station.take(r.robotB), "robot B claims the station while A is away");
+
+            flight.cycle();
+
+            helper.assertTrue(station.robotIdTaking() == r.robotB.getRobotId(), "robot B still holds the station");
+            helper.assertTrue(flight.getDelegateAI() == null,
+                    "the reloaded goto must stop flying to a station another robot holds - got "
+                            + flight.getDelegateAI());
+            helper.assertFalse(flight.success(), "...and report the flight as failed, never as docked");
+            station.release(r.robotB);
+            helper.succeed();
+        }
+    }
+
+    /** Nobody took the station: A's resumed flight claims it again, flies on, and - being the AI that claimed it -
+     *  gives it back when it is cut short. */
+    public static void reloadedGotoStationReclaimsAFreeStation(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            AIRobotGotoStation flight = reloadMidStationFlight(r, station);
+
+            flight.cycle();
+
+            helper.assertTrue(station.robotIdTaking() == r.robotA.getRobotId(),
+                    "the reloaded goto must claim its station again before docking - unclaimed, any robot can take it");
+            helper.assertTrue(flight.getDelegateAI() instanceof AIRobotGotoBlock,
+                    "...and keep flying to it - got " + flight.getDelegateAI());
+
+            flight.abort();
+            helper.assertFalse(station.isTaken(), "an aborted flight gives back the claim it re-took");
+            helper.succeed();
+        }
+    }
+
     // ---------- the farmer / planter / pump action ----------
 
     private record ActionBoard(String name, Block block, Function<EntityRobot, RedstoneBoardRobot> board,
@@ -305,6 +368,7 @@ public class ReloadedJobReservationTester {
     private static BoardRobotDelivery reloadMidDelivery(Robots r, ResourceId[] requestId) {
         GameTestHelper helper = r.helper;
         LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+        station.world = helper.getLevel();
         r.registry.registerStation(station);
         r.cleanup.add(() -> r.registry.removeStation(station));
 
@@ -364,6 +428,94 @@ public class ReloadedJobReservationTester {
             helper.succeed();
         }
     }
+    /** A delivery that ends with the robot docked at the requester's station (the delivery flight docks it there):
+     *  the board gives the order back, but the station is the robot's dock now, so it stays claimed until the robot
+     *  undocks - as {@code AIRobotGotoStation.end()} leaves it. Released here, a second robot could claim and dock at
+     *  a station the first one still sits on. */
+    public static void deliveryEndedWhileDockedKeepsTheDock(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            station.world = helper.getLevel();
+            r.registry.registerStation(station);
+            r.cleanup.add(() -> r.registry.removeStation(station));
+            r.cleanup.add(r.robotA::undock);
+
+            StackRequest request = new StackRequest(null, 0, new ItemStack(Items.DIAMOND, 3));
+            request.setStation(station);
+            ResourceId requestId = request.getResourceId(helper.getLevel());
+            r.free(requestId);
+
+            BoardRobotDelivery board = new BoardRobotDelivery(r.robotA);
+            CompoundTag self = new CompoundTag();
+            CompoundTag requestNbt = new CompoundTag();
+            request.writeToNBT(requestNbt);
+            self.put("currentRequest", requestNbt);
+            board.loadSelfFromNBT(self);
+            helper.assertTrue(r.registry.take(requestId, r.robotA), "precondition: robot A reserved the order");
+            helper.assertTrue(station.take(r.robotA), "precondition: robot A claimed the requester's station");
+            r.robotA.dock(station);
+
+            board.delegateAIEnded(new AIRobotDeliverRequested(r.robotA, request));
+
+            helper.assertTrue(board.currentRequest() == null && !r.registry.isTaken(requestId),
+                    "the finished delivery gives its order back");
+            helper.assertTrue(station.robotIdTaking() == r.robotA.getRobotId() && r.robotA.getDockingStation() == station,
+                    "...but not the station robot A is docked at");
+            r.robotA.undock();
+            helper.assertFalse(station.isTaken(), "undocking is what frees it");
+            helper.succeed();
+        }
+    }
+
+    /** The recharge-aborted board with nobody contending: the recharge released the order, and when the main AI
+     *  resumes the same board instance it takes the order (and the requester's station) back and carries on with
+     *  it, as 7.1.x's board kept its order across a recharge. */
+    public static void deliveryAbortedByARechargeRetakesAFreeOrder(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            station.world = helper.getLevel();
+            r.registry.registerStation(station);
+            r.cleanup.add(() -> r.registry.removeStation(station));
+
+            StackRequest request = new StackRequest(null, 0, new ItemStack(Items.DIAMOND, 3));
+            request.setStation(station);
+            ResourceId requestId = request.getResourceId(helper.getLevel());
+            r.free(requestId);
+
+            BoardRobotDelivery board = new BoardRobotDelivery(r.robotA);
+            CompoundTag self = new CompoundTag();
+            CompoundTag requestNbt = new CompoundTag();
+            request.writeToNBT(requestNbt);
+            self.put("currentRequest", requestNbt);
+            board.loadSelfFromNBT(self);
+            helper.assertTrue(r.registry.take(requestId, r.robotA), "precondition: robot A reserved the order");
+
+            helper.assertTrue(station.take(r.robotA), "precondition: robot A claimed the requester's station");
+
+            AIRobotMain main = new AIRobotMain(r.robotA);
+            r.cleanup.add(main::abortDelegateAI);
+            main.startDelegateAI(board);
+            board.startDelegateAI(new AIRobotDeliverRequested(r.robotA, request));
+            board.preempt(board.getDelegateAI());
+
+            // The recharge (see deliveryAbortedByARechargeGivesUpItsOrder): abort the board, release everything.
+            main.abortDelegateAI();
+            r.registry.releaseResources(r.robotA);
+            helper.assertFalse(r.registry.isTaken(requestId) || station.isTaken(),
+                    "precondition: the recharge released the order and the station");
+
+            main.startDelegateAI(board);
+            board.preempt(board.getDelegateAI());
+
+            helper.assertTrue(r.registry.robotIdTaking(requestId) == r.robotA.getRobotId(),
+                    "the resumed board takes its free order back - got holder " + r.registry.robotIdTaking(requestId));
+            helper.assertTrue(board.currentRequest() != null, "...and keeps working it");
+            helper.assertTrue(station.robotIdTaking() == r.robotA.getRobotId(),
+                    "...with the requester's station claimed again - got " + station);
+            helper.succeed();
+        }
+    }
+
     /** A delivery cut short by a recharge: {@code AIRobotMain} aborts the board to start {@link AIRobotRecharge},
      *  whose start frees every reservation the robot holds - the order included. While robot A charges, robot B
      *  takes the order. When A's main AI resumes the same board instance, it must not go back to delivering an
@@ -371,6 +523,7 @@ public class ReloadedJobReservationTester {
     public static void deliveryAbortedByARechargeGivesUpItsOrder(GameTestHelper helper) {
         try (Robots r = new Robots(helper)) {
             LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            station.world = helper.getLevel();
             r.registry.registerStation(station);
             r.cleanup.add(() -> r.registry.removeStation(station));
 

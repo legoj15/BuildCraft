@@ -17,9 +17,10 @@ import buildcraft.robotics.ai.MockRobotAccess;
  *  go-to-station override, a shutdown that powered back up): it disposes of it first - unloads it at a station, or
  *  drops it - and only then looks for an order. That is 7.1.x's behaviour, kept on purpose: its board's
  *  {@code update()} opened with the same {@code containsItems()} branch, and the recharge that aborted the board
- *  released the order it was filling, so the cargo had no order left to be delivered to. (The port additionally
- *  forgets the order at the abort - see {@code ReloadedJobReservationTester} - where 7.1.x re-loaded for the stale,
- *  unreserved one.) Keeping the cargo and re-taking the order would be a new feature, not a repair. */
+ *  released the order it was filling, and the board re-loaded for it after the disposal. (The port keeps the order
+ *  too, but takes it back owner-checked before working it, or gives it up if another robot took it meanwhile - see
+ *  {@code ReloadedJobReservationTester}.) Keeping the cargo for a re-taken order would be a new feature, not a
+ *  repair. */
 public class BoardRobotDeliveryResumeTest extends VanillaSetupBaseTester {
 
     /** A robot that carries something and counts how often anything asks how big its inventory is: only the

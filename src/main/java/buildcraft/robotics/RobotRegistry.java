@@ -422,14 +422,16 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             for (StationIndex s : new HashSet<>(held)) {
                 DockingStation d = stations.get(s);
                 if (d != null) {
+                    // By id: a robot released after an unload (killed later, or reloaded as a new entity) is no
+                    // longer the station's cached entity, so an entity comparison would leave the station linked.
                     if (!d.canRelease()) {
                         if (forceAll) {
-                            d.unsafeRelease(robot);
+                            d.unsafeRelease(robotId);
                         } else if (resetEntities && d.robotIdTaking() == robotId) {
                             d.invalidateRobotTakingEntity();
                         }
                     } else {
-                        d.unsafeRelease(robot);
+                        d.unsafeRelease(robotId);
                     }
                 }
                 // The index must say exactly what the robot still holds. unsafeRelease frees the station but, by

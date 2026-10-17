@@ -107,34 +107,48 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         return currentRequest;
     }
 
-    /** An ended board gives its order back - most often {@code AIRobotMain} aborting it for a recharge, whose
-     *  start frees every reservation anyway. The same board instance resumes afterwards, and one that still
-     *  remembered the order (and still believed it held it) would skip the {@link #preempt} re-claim and deliver an
-     *  order another robot took meanwhile a second time. Not 7.1.x, whose board had no {@code end()}. */
+    /** An ended board - most often {@code AIRobotMain} aborting it for a recharge (whose start frees every
+     *  reservation anyway), a gate's go-to-station override, or a shutdown - gives its order's claims back but keeps
+     *  the order, as 7.1.x's board kept it. The same board instance resumes afterwards, and {@link #preempt} then takes
+     *  the order back if it is still free, or gives it up to the robot that took it meanwhile. (The cargo it carried
+     *  is disposed of on resume either way, as in 7.1.x: see {@link #update}.) */
     @Override
     public void end() {
-        releaseCurrentRequest();
+        releaseClaims();
     }
 
+    /** Gives up the order: its claims and the board's memory of it. */
     private void releaseCurrentRequest() {
         if (currentRequest != null) {
-            IRobotRegistry registry = robot.getRegistry();
-            if (registry != null) {
-                registry.release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
-            }
-            DockingStation station = currentRequest.getStation(robot.level());
-            if (station != null) {
-                station.release((EntityRobotBase) robot);
-            }
+            releaseClaims();
             currentRequest = null;
-            currentRequestClaimed = false;
         }
     }
 
-    /** Runs before the delegate on every cycle. A board reloaded mid-order remembers the order, but the unload freed
-     *  its reservation: re-claim it before the resumed load or delivery moves, or - when another robot took the
-     *  order meanwhile, or its station is gone - drop it and stop, rather than fill one order twice. Not 7.1.x,
-     *  which delivered unreserved. */
+    /** Gives back what this board holds for its order - the request's reservation and the requester's station - and
+     *  keeps the order itself. Both owner-checked; the station only when it may go: not when it is the robot's home,
+     *  and not while the robot is docked there (the delivery flight docks it at the requester), since that claim is
+     *  the robot's dock now and undocking is what frees it - as {@code AIRobotGotoStation.end()} leaves it. */
+    private void releaseClaims() {
+        if (currentRequest == null) {
+            return;
+        }
+        IRobotRegistry registry = robot.getRegistry();
+        if (registry != null) {
+            registry.release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
+            DockingStation station = currentRequest.getStation(robot.level());
+            if (station != null && station.robotIdTaking() == robot.getRobotId() && station.canRelease()) {
+                station.release((EntityRobotBase) robot);
+            }
+        }
+        currentRequestClaimed = false;
+    }
+
+    /** Runs before the delegate on every cycle. A board that comes back to an order without holding it - reloaded
+     *  mid-order (the unload freed its claims), or resumed after an abort ({@link #end}) - takes the order and the
+     *  requester's station again before the resumed load or delivery moves; when another robot holds either, or the
+     *  station is gone, it gives the order up and stops, rather than fill one order twice. Not 7.1.x, which went on
+     *  delivering unreserved. */
     @Override
     public void preempt(AIRobot ai) {
         if (currentRequest != null && !currentRequestClaimed) {
@@ -142,7 +156,9 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             if (registry == null) {
                 return;
             }
-            if (registry.reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())) {
+            DockingStation station = currentRequest.getStation(robot.level());
+            if (station != null && registry.reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())
+                    && station.take((EntityRobotBase) robot)) {
                 currentRequestClaimed = true;
             } else {
                 releaseCurrentRequest();

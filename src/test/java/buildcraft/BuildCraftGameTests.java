@@ -232,6 +232,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);
+        reg.accept("buildcraftunofficial:robot_stripes_reports_failure_for_unusable_item", () -> buildcraft.robotics.ai.RobotStripesTester::stripesReportsFailureForAnItemNoHandlerCanUse);
+        reg.accept("buildcraftunofficial:robot_stripes_board_spills_item_it_gives_up_on", () -> buildcraft.robotics.boards.RobotStripesGiveUpTester::stripesBoardSpillsAnItemItGivesUpOn);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         
         // Shape Patterns

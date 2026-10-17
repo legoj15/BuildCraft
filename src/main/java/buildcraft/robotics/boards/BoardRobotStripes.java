@@ -7,13 +7,19 @@
  */
 package buildcraft.robotics.boards;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
@@ -29,10 +35,28 @@ import buildcraft.robotics.ai.AIRobotStripesHandler;
  *  ({@link AIRobotStripesHandler}) is not resumable, so a board reloaded mid-use has nothing to continue on that
  *  cell, and the unload freed its reservation: carrying the block into the new session would only leave a stale
  *  cell to save again and to release (a second time) at the end. The farmer, planter and pump keep theirs because
- *  their action AIs resume, and re-claim the block before they move. */
+ *  their action AIs resume, and re-claim the block before they move.
+ *
+ *  <p><b>An item nothing can use</b> (7.1.x looped on it for ever, flying cell to cell with every other item in the
+ *  supply chest starved behind it): a single failed use proves nothing - a seed only takes on farmland, a bucket
+ *  needs somewhere to pour - so failed uses are counted in a row, and after {@value #GIVE_UP_AFTER_FAILED_USES} of
+ *  them the board gives the item back: it goes into the robot's cargo and {@link AIRobotDisposeItems} unloads it at
+ *  a station or, with none that will take it, drops it. The item is then refused by the fetch filter for the rest of
+ *  the session, so a supply chest that took it back does not simply hand it over again. Neither the count nor the
+ *  refused items are saved: a reloaded board spends at most one more round of failures to learn it again. */
 public class BoardRobotStripes extends RedstoneBoardRobot {
 
+    /** Failed uses in a row after which the held item is given up on: ten random empty cells, each a flight and a
+     *  60-cycle use, is long enough that an item with any use at all has worked somewhere. */
+    static final int GIVE_UP_AFTER_FAILED_USES = 10;
+
     private BlockPos blockFound;
+
+    /** Uses of the current item that no handler took, since the last one that one did (or the last item fetched). */
+    private int failedUses;
+
+    /** One-item copies of the stacks given up on this session; the fetch filter never equips a match again. */
+    private final List<ItemStack> refused = new ArrayList<>();
 
     public BoardRobotStripes(IRobotAccess iRobot) {
         super(iRobot);
@@ -43,10 +67,23 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
         return BoardRobotStripesNBT.INSTANCE;
     }
 
+    /** The fetch filter: any item, bar the ones this board has given up on (same item and components, any count). */
+    boolean worthEquipping(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        for (ItemStack given : refused) {
+            if (ItemStack.isSameItemSameComponents(given, stack)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public void update() {
         if (robot.getHeldItem().isEmpty()) {
-            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, stack -> !stack.isEmpty()));
+            startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, this::worthEquipping));
         } else {
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, pos ->
                     robot.level().isEmptyBlock(pos)
@@ -64,11 +101,40 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
-            if (!ai.success()) {
+            if (ai.success()) {
+                failedUses = 0;
+            } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotStripesHandler) {
             releaseBlockFound();
+            if (ai.success()) {
+                failedUses = 0;
+            } else if (++failedUses >= GIVE_UP_AFTER_FAILED_USES) {
+                giveUpHeldItem();
+            }
+        }
+    }
+
+    /** Takes the item out of the robot's hand for good: refused by the fetch filter from now on, and into the cargo
+     *  slots to be disposed of. A cargo that cannot take it all (the four slots are full) drops the rest at the
+     *  robot's feet straight away. */
+    private void giveUpHeldItem() {
+        failedUses = 0;
+        ItemStack held = robot.getHeldItem();
+        if (held.isEmpty()) {
+            return;
+        }
+        refused.add(held.copyWithCount(1));
+        robot.setItemInUse(ItemStack.EMPTY);
+
+        ItemStack left = robot.getTransactor().insert(held, false, false);
+        if (!left.isEmpty()) {
+            robot.level().addFreshEntity(new ItemEntity(robot.level(),
+                    robot.position().x, robot.position().y, robot.position().z, left));
+        }
+        if (robot.containsItems()) {
+            startDelegateAI(new AIRobotDisposeItems(robot));
         }
     }
 

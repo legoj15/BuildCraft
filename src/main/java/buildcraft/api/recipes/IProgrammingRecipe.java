@@ -26,6 +26,16 @@ public interface IProgrammingRecipe {
     /** @return Whether this recipe applies to the given input stack. */
     boolean canCraft(@Nonnull ItemStack input);
 
+    /**
+     * @return True if crafting {@code option} from {@code input} would only hand back what the input already is (a
+     *         board "converted" into the very board it is), so the table skips it: it neither asks for energy nor
+     *         consumes the input. Only called for an input {@link #canCraft} accepts. Defaults to {@code false} - a
+     *         recipe whose options can never coincide with its inputs need not override it.
+     */
+    default boolean isRedundant(@Nonnull ItemStack input, @Nonnull ItemStack option) {
+        return false;
+    }
+
     /** Craft the input ItemStack with the given option into an output ItemStack. The table consumes the input. */
     @Nonnull
     ItemStack craft(@Nonnull ItemStack input, @Nonnull ItemStack option);

@@ -9,6 +9,7 @@ package buildcraft.silicon.tile;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,22 +31,29 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 
 public class TileIntegrationTable extends TileLaserTableBase {
+    // Access follows 7.1.x: canInsertItem/canExtractItem (pipes) put the robot and the board IN and take only the
+    // finished robot OUT, and isItemValidForSlot (pipes and hands alike) lets in only what can be crafted from --
+    // a robot in the centre, and a board in the ring only once there is a robot to program and only while the ring
+    // would still hold exactly what the recipe consumes (7.1.x capped the robot recipe at one expansion). A pipe
+    // cannot pull an input back out, so letting in a second board or a stray stack used to jam the table.
     public final ItemHandlerSimple invTarget = itemManager.addInvHandler(
         "target",
         1,
-        ItemHandlerManager.EnumAccess.BOTH,
+        (slot, stack) -> isCentreInput(stack),
+        ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public final ItemHandlerSimple invToIntegrate = itemManager.addInvHandler(
         "toIntegrate",
         3 * 3 - 1,
-        ItemHandlerManager.EnumAccess.BOTH,
+        (slot, stack) -> canRingTake(invTarget.getStackInSlot(0), slot, stack),
+        ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public final ItemHandlerSimple invResult = itemManager.addInvHandler(
         "result",
         1,
-        ItemHandlerManager.EnumAccess.INSERT,
+        ItemHandlerManager.EnumAccess.EXTRACT,
         EnumPipePart.VALUES
     );
     public IntegrationRecipe recipe;
@@ -54,6 +62,9 @@ public class TileIntegrationTable extends TileLaserTableBase {
         super(BCSiliconBlockEntities.INTEGRATION_TABLE.get(), pos, state);
     }
 
+    /** Consumes the recipe's inputs: the centre stack and, precisely, the ring requirements. Both are checked
+     *  against the current contents before either inventory is touched, and the inventories change only when both
+     *  pass, so a failed call (a stray stack in the ring, say) never costs the player an input. */
     private boolean extract(IngredientStack item, ImmutableList<IngredientStack> items, boolean simulate) {
         ItemStack targetStack = invTarget.getStackInSlot(0);
         if (targetStack.isEmpty()) return false;
@@ -63,13 +74,38 @@ public class TileIntegrationTable extends TileLaserTableBase {
         // ingredient test below already decides identity.
         if (targetStack.getCount() < item.count) return false;
         if (!item.ingredient.test(targetStack)) return false;
-        if (!extract(invToIntegrate, items, simulate, true)) return false;
+        if (!extract(invToIntegrate, items, true, true)) return false;
         if (!simulate) {
+            extract(invToIntegrate, items, false, true);
             targetStack = targetStack.copy();
             targetStack.setCount(targetStack.getCount() - item.count);
             invTarget.setStackInSlot(0, targetStack);
         }
         return true;
+    }
+
+    /** True if some registered recipe takes {@code stack} as its centre item. */
+    private static boolean isCentreInput(ItemStack stack) {
+        for (IntegrationRecipe candidate : IntegrationRecipeRegistry.INSTANCE.getAllRecipes()) {
+            if (candidate.getCenterStack().ingredient.test(stack)) return true;
+        }
+        return false;
+    }
+
+    /** True if ring slot {@code slot} may hold {@code stack} with {@code centre} in the centre: the ring, with that
+     *  stack in that slot, must make a recipe whose requirements it holds exactly (the craft's own precise check),
+     *  so nothing that goes in can stop the table crafting. Public so the JEI transfer can ask the question for the
+     *  robot it is about to put in the centre. */
+    public boolean canRingTake(ItemStack centre, int slot, ItemStack stack) {
+        if (centre.isEmpty()) return false;
+        NonNullList<ItemStack> ring = NonNullList.withSize(invToIntegrate.getSlots(), ItemStack.EMPTY);
+        for (int i = 0; i < ring.size(); i++) {
+            ring.set(i, i == slot ? stack : invToIntegrate.getStackInSlot(i));
+        }
+        IntegrationRecipe candidate = IntegrationRecipeRegistry.INSTANCE.getRecipeFor(centre, ring);
+        if (candidate == null) return false;
+        ItemStack output = candidate.getOutput(centre, ring);
+        return !output.isEmpty() && planExtraction(ring, candidate.getRequirements(output), true) != null;
     }
 
     private boolean isSpaceEnough(ItemStack stack) {
@@ -102,7 +138,11 @@ public class TileIntegrationTable extends TileLaserTableBase {
 
         updateRecipe();
 
-        if (getTarget() > 0 && power >= getTarget()) {
+        // The cost is read BEFORE the inputs are consumed: once they are gone the recipe has no output and
+        // getTarget() reads 0, which used to make the deduction below a no-op, so one charge programmed every
+        // robot after it.
+        long cost = getTarget();
+        if (cost > 0 && power >= cost) {
             ItemStack output = getOutput();
             // Gate the whole craft on the consumption actually succeeding — the return value used to be
             // ignored, which could emit the output while leaving every input where it was (a dupe,
@@ -116,7 +156,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
                     result = output.copy();
                 }
                 invResult.setStackInSlot(0, result);
-                power -= getTarget();
+                power -= cost;
             }
         }
     }

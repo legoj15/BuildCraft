@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_station_forbid_robot",
     "environment": "buildcraftunofficial:robot_gate",
     "structure": "minecraft:empty",
-    "max_ticks": 340,
+    "max_ticks": 460,
     "setup_ticks": 0,
     "required": true
 }

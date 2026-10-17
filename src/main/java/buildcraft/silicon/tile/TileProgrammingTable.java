@@ -91,19 +91,23 @@ public class TileProgrammingTable extends TileLaserTableBase {
         }
     }
 
+    /** Whether a craft is on the cards right now: an option is selected, the result slot is free, the input still
+     *  fits the matched recipe, and the option would actually change it (see {@link IProgrammingRecipe#isRedundant}).
+     *  This, not "the cost is above zero", is what the tick gates on - the blank-board option is free by design, and a
+     *  free option is still work. */
     public boolean hasWork() {
-        return currentRecipe != null && options != null
-            && optionId >= 0 && optionId < options.size()
-            && invResult.getStackInSlot(0).isEmpty();
+        if (currentRecipe == null || options == null
+            || optionId < 0 || optionId >= options.size()
+            || !invResult.getStackInSlot(0).isEmpty()) {
+            return false;
+        }
+        ItemStack input = invBoard.getStackInSlot(0);
+        return currentRecipe.canCraft(input) && !currentRecipe.isRedundant(input, options.get(optionId));
     }
 
     @Override
     public long getTarget() {
-        if (!hasWork()) {
-            return 0;
-        }
-        ItemStack input = invBoard.getStackInSlot(0);
-        return currentRecipe.canCraft(input) ? currentRecipe.getEnergyCost(options.get(optionId)) : 0;
+        return hasWork() ? currentRecipe.getEnergyCost(options.get(optionId)) : 0;
     }
 
     @Override
@@ -112,8 +116,9 @@ public class TileProgrammingTable extends TileLaserTableBase {
 
         findRecipe();
 
+        // Gate on the work, not on a positive cost: a free option (the blank board) has target 0 and must still run.
         long target = getTarget();
-        if (target > 0 && power >= target) {
+        if (hasWork() && power >= target) {
             ItemStack input = invBoard.getStackInSlot(0);
             ItemStack out = currentRecipe.craft(input, options.get(optionId));
             input = input.copy();
@@ -128,6 +133,10 @@ public class TileProgrammingTable extends TileLaserTableBase {
             }
             power -= target;
             setChanged();
+            // 7.1.x re-matched the recipe straight after a craft: an input that is now gone drops the selection. It
+            // matters most for the free blank option, which would otherwise stay selected and wipe whatever
+            // programmed board next lands in the slot the moment it arrives.
+            findRecipe();
         }
     }
 

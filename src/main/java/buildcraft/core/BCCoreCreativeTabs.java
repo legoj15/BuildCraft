@@ -140,10 +140,7 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCSiliconBlocks.LASER.get());
                                 output.accept(BCSiliconBlocks.ASSEMBLY_TABLE.get());
                                 output.accept(BCSiliconBlocks.ADVANCED_CRAFTING_TABLE.get());
-                                // Integration Table is dev-only.
-                                if (BCSiliconBlocks.INTEGRATION_TABLE != null) {
-                                    output.accept(BCSiliconBlocks.INTEGRATION_TABLE.get());
-                                }
+                                // The Integration and Programming Tables are on the robots tab (BCRoboticsCreativeTabs)
                                 output.accept(BCSiliconItems.CHIPSET_REDSTONE.get());
                                 output.accept(BCSiliconItems.CHIPSET_IRON.get());
                                 output.accept(BCSiliconItems.CHIPSET_GOLD.get());

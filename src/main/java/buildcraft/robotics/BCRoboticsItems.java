@@ -30,12 +30,16 @@ public class BCRoboticsItems {
      *  is needed — matches {@code PLUG_BLOCKER}/{@code PLUG_POWER_ADAPTOR} in transport. */
     public static final DeferredItem<ItemPluggableSimple> ROBOT_STATION;
 
-    /** The robot itself. Never stacks: board and charge live in the stack's CUSTOM_DATA, so two robots are
-     *  almost never interchangeable. */
+    /** The robot itself. A blank robot (no board, or the empty board) stacks to 16; a programmed robot stays at 1,
+     *  because its board and charge live in the stack's CUSTOM_DATA and two such robots are almost never
+     *  interchangeable. The item registers the blank limit; each programmed stack carries
+     *  {@code MAX_STACK_SIZE = 1}, stamped by {@code ItemRobot#createRobotStack}. */
     public static final DeferredItem<ItemRobot> ROBOT;
 
-    /** The standalone board item — the thing a programming table (Ph7) eventually turns into a robot. Never
-     *  stacks: the board id lives in the stack's CUSTOM_DATA. */
+    /** The standalone board item: the Programming Table turns a board into any other, and the Integration Table
+     *  fits one into a robot. Crafted blank from paper and a redstone dust (the {@code redstone_board} recipe). A
+     *  blank board stacks to 16; a programmed board stays at 1, since its id lives in the stack's CUSTOM_DATA (each
+     *  programmed stack carries {@code MAX_STACK_SIZE = 1}, stamped by {@code ItemRedstoneBoard#createStack}). */
     public static final DeferredItem<ItemRedstoneBoard> REDSTONE_BOARD;
 
     static {

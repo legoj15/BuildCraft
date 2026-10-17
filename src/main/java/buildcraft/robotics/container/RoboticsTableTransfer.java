@@ -183,7 +183,9 @@ public final class RoboticsTableTransfer {
         if (needRobot && !table.invTarget.insertItem(0, robot, true).isEmpty()) {
             return Result.BUSY;
         }
-        if (needBoard && !table.invToIntegrate.insertItem(0, board, true).isEmpty()) {
+        // The ring only takes a board with a robot in the centre, which a robot still in the player's inventory is
+        // not yet, so ask about the robot the transfer is about to put there.
+        if (needBoard && !table.canRingTake(needRobot ? robot : centre, 0, board)) {
             return Result.BUSY;
         }
         if (needRobot) {

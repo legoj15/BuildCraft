@@ -29,13 +29,15 @@ import buildcraft.core.BCCoreCreativeTabs;
 import buildcraft.lib.misc.RegistryUtilBC;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
+import buildcraft.silicon.BCSiliconItems;
 import buildcraft.transport.BCTransportCreativeTabs;
 import buildcraft.transport.BCTransportItems;
 
 /**
  * Pins the dedicated robotics creative tab: registration, title, icon, tab-row position, and the
- * 7.1.10 content layout (robots, then the robot station, then the boards), plus the removals that
- * move implies — robotics items off the main tab and the robot station off the pluggables tab.
+ * 7.1.10 content layout (robots, then the robot station, then the boards, then the two robot tables),
+ * plus the removals that move implies — robotics items (the Programming and Integration Tables
+ * included) off the main tab and the robot station off the pluggables tab.
  *
  * <p>Tab contents are rebuilt the way the game does it, {@link CreativeModeTab#buildContents}, which
  * also fires the tab-contents event — so the plugs-tab assertions exercise the very listener the
@@ -132,13 +134,30 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
     public void mainTabNoLongerCarriesRobotics() {
         CreativeModeTab main = BCCoreCreativeTabs.MAIN_TAB.get();
         main.buildContents(displayParameters());
+        // Liveness: the main tab is built from its own display-items generator; a laser table staying on it
+        // proves the build ran, so the robotics absences below are not vacuous.
+        Assertions.assertTrue(containsItem(main.getDisplayItems(), BCSiliconItems.ASSEMBLY_TABLE.get()),
+                "precondition: the main tab build is live");
         for (ItemStack stack : main.getDisplayItems()) {
             Item item = stack.getItem();
             Assertions.assertTrue(item != BCRoboticsItems.ZONE_PLANNER.get()
                             && item != BCRoboticsItems.ROBOT.get()
-                            && item != BCRoboticsItems.REDSTONE_BOARD.get(),
+                            && item != BCRoboticsItems.REDSTONE_BOARD.get()
+                            && item != BCSiliconItems.PROGRAMMING_TABLE.get()
+                            && item != BCSiliconItems.INTEGRATION_TABLE.get(),
                     "the main tab must no longer show robotics items (found " + stack + ")");
         }
+    }
+
+    @Test
+    public void robotsTabCarriesBothRobotTables() {
+        CreativeModeTab tab = robotsTab();
+        tab.buildContents(displayParameters());
+        List<ItemStack> items = new ArrayList<>(tab.getDisplayItems());
+        Assertions.assertEquals(1, countForItem(items, BCSiliconItems.PROGRAMMING_TABLE.get()),
+                "the Programming Table is on the robots tab exactly once");
+        Assertions.assertEquals(1, countForItem(items, BCSiliconItems.INTEGRATION_TABLE.get()),
+                "the Integration Table is on the robots tab exactly once");
     }
 
     @Test

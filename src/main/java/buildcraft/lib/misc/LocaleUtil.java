@@ -28,7 +28,13 @@ import net.minecraft.locale.Language;
  * A message or title the SERVER sends must carry data and let the client format it: menu titles ride the base
  * translation key and map through {@code BCEnergyConfig#clientMenuTitle}; action-bar figures ride
  * {@code MessageEnergyOverlay} ({@code MessageUtil#sendEnergyOverlay}). {@code ServerUnitBakingGuardTester} pins
- * every non-client caller of these formatters, so a new one has to be classified. */
+ * every non-client caller of these formatters, so a new one has to be classified.
+ *
+ * <p>Two inputs are NOT client settings: {@code powerMode} (DISPLAY_RF re-units MJ figures as FE/RF) and the
+ * {@code mjRfConversionAmount} ratio are COMMON config ({@link BCLibConfig}), the values the server's machines really
+ * convert at, and NeoForge never syncs a COMMON file to a remote client. A figure the server sends therefore carries
+ * the server's values of both ({@code MessageEnergyOverlay}, formatted through
+ * {@link #localizeMjFlow(long, boolean, long)}); the no-argument forms read this JVM's own copy. */
 public class LocaleUtil {
     public static String localize(String key) {
         return Language.getInstance().getOrDefault(key);
@@ -64,8 +70,17 @@ public class LocaleUtil {
      *  and {@link BCLibConfig#decimalSeparator}; abbreviation follows
      *  {@link BCLibConfig#abbreviateLargeNumbers}. */
     public static String localizeMjFlow(long microMjPerTick) {
-        if (isDisplayRf()) {
-            return formatMjFlowAsRf(microMjPerTick, currentMjPerRf(), currentFlowDisplay(),
+        return localizeMjFlow(microMjPerTick, isDisplayRf(), currentMjPerRf());
+    }
+
+    /** {@link #localizeMjFlow(long)} with the two SERVER-authoritative inputs passed in: whether MJ figures display
+     *  as FE/RF ({@code powerMode == DISPLAY_RF}) and the MJ⇄RF ratio ({@code mjPerRf}, micro-MJ per 1 RF; an
+     *  out-of-range value falls back to the default ratio). For a figure the server sent, so it converts at the rate
+     *  the server's machines use; every display preference (unit names, separators, flow mode, language) is still
+     *  this JVM's. */
+    public static String localizeMjFlow(long microMjPerTick, boolean displayRf, long mjPerRf) {
+        if (displayRf) {
+            return formatMjFlowAsRf(microMjPerTick, MjRfConversion.createRaw(mjPerRf).mjPerRf, currentFlowDisplay(),
                     energyUnit(), shouldUseFullNames());
         }
         return localizeMjFlowForcedMj(microMjPerTick);
@@ -339,17 +354,19 @@ public class LocaleUtil {
     }
 
     /** Whether {@code powerMode} is {@code DISPLAY_RF} — the mode that switches machine readouts
-     *  from MJ to FE/RF. Null-safe (false under JUnit, where the config isn't booted), so the
-     *  MJ-formatting paths stay in their MJ branch for the structural formatter tests. */
-    private static boolean isDisplayRf() {
+     *  from MJ to FE/RF. Null-safe (false before the config spec is built), so the MJ-formatting
+     *  paths stay in their MJ branch. {@code powerMode} is COMMON config: on the server this is the
+     *  authoritative answer; on a remote client it is the client's own copy, never synced to the
+     *  server's (see {@link #localizeMjFlow(long, boolean, long)}). */
+    public static boolean isDisplayRf() {
         return BCLibConfig.powerMode != null
                 && BCLibConfig.powerMode.get() == BCLibConfig.PowerMode.DISPLAY_RF;
     }
 
     /** The MJ⇄RF conversion ratio as micro-MJ per 1 RF, parsed from {@code mjRfConversionAmount}
      *  (MJ per RF) and clamped to the supported range by {@link MjRfConversion}. Falls back to the
-     *  default ratio when the config isn't loaded. */
-    private static long currentMjPerRf() {
+     *  default ratio when the config isn't loaded. COMMON config, like {@link #isDisplayRf()}. */
+    public static long currentMjPerRf() {
         double mjPerRf = BCLibConfig.mjRfConversionAmount != null
                 ? BCLibConfig.mjRfConversionAmount.get()
                 : MjRfConversion.DEFAULT_MJ_PER_RF / (double) MjAPI.MJ;

@@ -124,7 +124,13 @@ reads is the server's, so the server must never format a unit-bearing figure int
 send the base translation key and the client maps it (`BCEnergyConfig.clientMenuTitle`);
 action-bar figures send the raw amount (`MessageEnergyOverlay` via `MessageUtil.sendEnergyOverlay`)
 and the client formats it. `ServerUnitBakingGuardTester` fails the build on a server message that
-formats units itself and pins every non-client caller of the `LocaleUtil` unit formatters.
+formats units itself and pins every non-client caller of the `LocaleUtil` unit formatters. Not
+every formatter input is a client setting: `powerMode` (DISPLAY_RF re-units MJ figures as FE/RF)
+and `mjRfConversionAmount` are COMMON, back the server's real MJ⇄RF conversion (`MjAPI.config`),
+and NeoForge never syncs a COMMON file to a remote client. So `MessageEnergyOverlay.of` snapshots
+the server's two values into the payload and the client converts with them
+(`LocaleUtil.localizeMjFlow(amount, displayRf, mjPerRf)`); the no-argument formatters read the
+local JVM's copy, which on a remote client is its own unsynced file.
 
 **Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
 

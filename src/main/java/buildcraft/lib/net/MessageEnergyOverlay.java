@@ -29,12 +29,26 @@ import buildcraft.lib.misc.MessageUtil;
  * through {@link MessageUtil#sendEnergyOverlay}, never by formatting on the server (a source guard,
  * {@code ServerUnitBakingGuardTester}, fails the build if a message sender also calls a {@code LocaleUtil} formatter).
  *
- * @param key    base translation key of the message, taking the formatted figure as its one {@code %s}; the client
- *               swaps in the key's {@code .rf} sibling when its RF-naming toggle is on and the language has one
- * @param kind   which unit family {@code amount} is in
- * @param amount the figure, in the unit {@code kind} names
+ * <p>Two inputs to the figure are the SERVER's, not the player's: {@code powerMode} (DISPLAY_RF re-units MJ figures as
+ * FE/RF) and the {@code mjRfConversionAmount} ratio. Both are COMMON config, back the server's real MJ⇄RF conversion,
+ * and are never synced to a remote client, whose own copy may say anything. {@link #of} snapshots the sender's values
+ * into the payload, so the client converts at the rate the server's machines actually use.
+ *
+ * @param key       base translation key of the message, taking the formatted figure as its one {@code %s}; the
+ *                  client swaps in the key's {@code .rf} sibling when its RF-naming toggle is on and the language has
+ *                  one
+ * @param kind      which unit family {@code amount} is in
+ * @param amount    the figure, in the unit {@code kind} names
+ * @param displayRf the server's {@code powerMode == DISPLAY_RF}: an {@link Kind#MJ_FLOW} figure shows as FE/RF
+ * @param mjPerRf   the server's MJ⇄RF ratio, micro-MJ per 1 RF (out of range falls back to the default)
  */
-public record MessageEnergyOverlay(String key, Kind kind, long amount) implements CustomPacketPayload {
+public record MessageEnergyOverlay(String key, Kind kind, long amount, boolean displayRf, long mjPerRf)
+        implements CustomPacketPayload {
+
+    /** The payload for a figure sent from THIS JVM (the server), carrying its own power mode and MJ⇄RF ratio. */
+    public static MessageEnergyOverlay of(String key, Kind kind, long amount) {
+        return new MessageEnergyOverlay(key, kind, amount, LocaleUtil.isDisplayRf(), LocaleUtil.currentMjPerRf());
+    }
 
     /** The unit family of {@link #amount()}; also picks the formatter the client uses. */
     public enum Kind {
@@ -52,20 +66,24 @@ public record MessageEnergyOverlay(String key, Kind kind, long amount) implement
                 buf.writeUtf(payload.key);
                 buf.writeEnum(payload.kind);
                 buf.writeVarLong(payload.amount);
+                buf.writeBoolean(payload.displayRf);
+                buf.writeVarLong(payload.mjPerRf);
             },
-            buf -> new MessageEnergyOverlay(buf.readUtf(), buf.readEnum(Kind.class), buf.readVarLong()));
+            buf -> new MessageEnergyOverlay(buf.readUtf(), buf.readEnum(Kind.class), buf.readVarLong(),
+                    buf.readBoolean(), buf.readVarLong()));
 
-    /** The Component to show, built against THIS JVM's language and display settings. Client-side only in effect: a
-     *  dedicated server has no toggle and the server's language, which is exactly what this exists to avoid. */
+    /** The Component to show, built against THIS JVM's language and display settings and the payload's (server's)
+     *  power mode and ratio. Client-side only in effect: a dedicated server has no toggle and the server's language,
+     *  which is exactly what this exists to avoid. */
     public Component resolve() {
         return resolve(BCEnergyConfig.rfNamingEnabled(), Language.getInstance()::has);
     }
 
     /** Pure form of {@link #resolve()} with the RF-naming toggle and the language lookup passed in. The formatted
-     *  figure itself still reads the live {@link LocaleUtil} settings. */
+     *  figure itself still reads the live {@link LocaleUtil} display settings. */
     public Component resolve(boolean rfNaming, Predicate<String> hasKey) {
         String figure = switch (kind) {
-            case MJ_FLOW -> LocaleUtil.localizeMjFlow(amount);
+            case MJ_FLOW -> LocaleUtil.localizeMjFlow(amount, displayRf, mjPerRf);
             // localizeRfFlow takes an int: clamp rather than wrap a corrupt amount negative.
             case RF_FLOW -> LocaleUtil.localizeRfFlow((int) Math.max(0L, Math.min(Integer.MAX_VALUE, amount)));
         };

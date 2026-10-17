@@ -105,10 +105,11 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
     public boolean onWrenchInteract(Player player) {
         if (level == null || level.isClientSide()) return false;
         currentOutputIndex = (currentOutputIndex + 1) % OUTPUTS.length;
-        // The player's client formats the output (localizeMjFlow), so the overlay follows THEIR flow-display
-        // format and switches MJ -> FE/RF under powerMode == DISPLAY_RF, matching the engine's ledger and every
-        // other power readout. This runs on the server, which has none of those client settings (and the wrong
-        // language), so it sends the raw micro-MJ/tick amount rather than a string it formatted itself.
+        // The player's client formats the output (localizeMjFlow), so the overlay follows THEIR unit names, number
+        // format and flow-display mode. This runs on the server, which has none of those client settings (and the
+        // wrong language), so it sends the raw micro-MJ/tick amount rather than a string it formatted itself. The
+        // payload does carry the server's powerMode and MJ/RF ratio (COMMON config, never synced to a remote client),
+        // so a DISPLAY_RF server's figure switches to FE/RF at the rate its machines actually convert.
         MessageUtil.sendEnergyOverlay(player, "chat.engine.creative.mode",
             MessageEnergyOverlay.Kind.MJ_FLOW, getCurrentOutput());
         setChanged();

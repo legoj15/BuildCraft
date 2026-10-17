@@ -21,12 +21,16 @@ import buildcraft.lib.test.MainSourceSet;
 /** Keeps unit text out of strings the SERVER builds.
  *
  * <p>{@link LocaleUtil}'s energy/fluid/heat formatters answer from the display preferences — the FE/RF naming toggle,
- * full-vs-short unit names, number separators, the flow display mode — and every one of those lives on the CLIENT
- * config spec ({@code useRfNaming} and friends are {@code null} on a dedicated server, so the formatter silently
- * answers with defaults), while the language they read is the server's, not the player's. A message the server
- * formats and then ships therefore shows the wrong unit (or the wrong language) to exactly the players a dedicated
- * server has. The fix is to send data and let the client format it — see
- * {@link buildcraft.lib.net.MessageEnergyOverlay}.
+ * full-vs-short unit names, number separators, the flow display mode — and those live on the CLIENT config spec
+ * ({@code useRfNaming} and friends are {@code null} on a dedicated server, so the formatter silently answers with
+ * defaults), while the language they read is the server's, not the player's. A message the server formats and then
+ * ships therefore shows the wrong unit (or the wrong language) to exactly the players a dedicated server has. The fix
+ * is to send data and let the client format it — see {@link buildcraft.lib.net.MessageEnergyOverlay}.
+ *
+ * <p>Two inputs are the exception and stay the server's: {@code powerMode} (DISPLAY_RF re-units MJ figures as FE/RF)
+ * and the {@code mjRfConversionAmount} ratio are COMMON config, back the server's real conversion, and are never
+ * synced to a remote client. The payload carries the server's values of both, so the client converts at the rate the
+ * server's machines actually use.
  *
  * <p>Two source scans pin the audit that found this, so the next caller cannot reintroduce it unnoticed. */
 public class ServerUnitBakingGuardTester {
@@ -86,6 +90,11 @@ public class ServerUnitBakingGuardTester {
             Assertions.assertTrue(MainSourceSet.codeOf(file).contains("sendEnergyOverlay("),
                     file + " must send its energy figure with MessageUtil.sendEnergyOverlay");
         }
+        // The power mode and MJ/RF ratio are the SERVER's (COMMON config, never synced to a remote client), so the
+        // sender must snapshot them into the payload through the factory rather than leave the client to its own copy.
+        Assertions.assertTrue(MainSourceSet.codeOf("buildcraft/lib/misc/MessageUtil.java").contains("MessageEnergyOverlay.of("),
+                "MessageUtil.sendEnergyOverlay must build the payload with MessageEnergyOverlay.of, which carries the"
+                        + " server's powerMode and mjRfConversionAmount");
     }
 
     /** Every file outside client-only packages that calls a {@link LocaleUtil} unit formatter, with why that is safe.

@@ -16,7 +16,19 @@ import buildcraft.energy.BCEnergyConfig;
 import buildcraft.lib.BCLibConfig;
 import net.minecraft.locale.Language;
 
-/** Localization utility. Uses Minecraft's Language registry for translation to avoid preemptive formatting errors. */
+/** Localization utility. Uses Minecraft's Language registry for translation to avoid preemptive formatting errors.
+ *
+ * <p><b>Where the unit formatters may run.</b> {@code localizeMj*}, {@code localizeRf*}, {@code localizeFluid*},
+ * {@code localizeHeat}, {@code energyUnit}, {@code mjUnit} and {@code fluidUnit} read the player's display settings
+ * (FE/RF naming, full unit names, separators, abbreviation, flow mode). Those are CLIENT config
+ * ({@code BCUnifiedClientConfig}), unset on a dedicated server, and the language they read is the server's. So they
+ * belong where the client assembles text: screens, ledgers, JEI, the guide, item tooltips ({@code appendHoverText} is
+ * only called by the client), statement descriptions (reached only through {@code IGuiSlot#getTooltip}, from GUIs and
+ * the guide). Developer {@code getDebugInfo} F3 text is built on the server on purpose and is English by design.
+ * A message or title the SERVER sends must carry data and let the client format it: menu titles ride the base
+ * translation key and map through {@code BCEnergyConfig#clientMenuTitle}; action-bar figures ride
+ * {@code MessageEnergyOverlay} ({@code MessageUtil#sendEnergyOverlay}). {@code ServerUnitBakingGuardTester} pins
+ * every non-client caller of these formatters, so a new one has to be classified. */
 public class LocaleUtil {
     public static String localize(String key) {
         return Language.getInstance().getOrDefault(key);

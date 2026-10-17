@@ -267,6 +267,37 @@ public class LangFileIntegrityTester {
                 "zh_cn.json carries these " + what + " blank or copied verbatim from English " + untranslated);
     }
 
+    /** A whole {@code "chat.…"} translation key written as a string literal. A key assembled at runtime
+     *  ({@code "chat.pipe." + x + ".mode"}) shows up as a literal ending in a dot and is reported as missing. */
+    private static final Pattern CHAT_KEY_LITERAL = Pattern.compile("\"(chat\\.[A-Za-z0-9_.]+)\"");
+
+    /** Messages the server sends a player ride on {@code chat.*} keys. When the Iron/Diamond pipe wrench message was
+     *  re-keyed for the creative engine, the two {@code chat.pipe.*.iron.mode} entries went with it but the pipe code
+     *  still built them by concatenation, so every wrench click on those pipes showed the raw key — and no test saw
+     *  it, because nothing compared the keys the code names with the keys the lang files have. */
+    @Test
+    public void chatKeysNamedByCodeExistInBothLanguages() {
+        Set<String> referenced = new HashSet<>();
+        for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
+            Matcher m = CHAT_KEY_LITERAL.matcher(file.text());
+            while (m.find()) {
+                referenced.add(m.group(1));
+            }
+        }
+        // Liveness: the scan must actually see the chat keys, or the checks below pass vacuously.
+        Assertions.assertTrue(referenced.contains("chat.gateCopier.gateCopied"), "scan lost the gate copier messages");
+        Assertions.assertTrue(referenced.contains("chat.engine.creative.mode"), "scan lost the creative engine message");
+
+        for (String file : new String[] { EN, ZH }) {
+            Map<String, String> lang = parse(file);
+            List<String> missing = referenced.stream().filter(k -> !lang.containsKey(k)).sorted().toList();
+            Assertions.assertTrue(missing.isEmpty(),
+                    file + " lacks chat keys that the code sends to players " + missing
+                            + " — the player sees the raw key. (A key built by concatenation cannot be checked:"
+                            + " write each key out in full.)");
+        }
+    }
+
     /** Painted pipes and charged paintbrushes are named through a two-argument format key (colour, then the base
      *  item name) so each language owns the word order; see {@code ColouredItemNameTest} for the Java side. */
     @Test

@@ -7,7 +7,6 @@ package buildcraft.core.tile;
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -23,9 +22,9 @@ import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
-import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.net.MessageEnergyOverlay;
 
 public class TileEngineCreative extends TileEngineBase_BC8 {
     public static final long[] OUTPUTS = { 1, 2, 4, 8, 16, 32, 64, 128, 256 };
@@ -106,11 +105,12 @@ public class TileEngineCreative extends TileEngineBase_BC8 {
     public boolean onWrenchInteract(Player player) {
         if (level == null || level.isClientSide()) return false;
         currentOutputIndex = (currentOutputIndex + 1) % OUTPUTS.length;
-        // Render the output through localizeMjFlow so the overlay follows the player's flow-display
-        // format and switches MJ -> FE/RF under powerMode == DISPLAY_RF, matching the engine's ledger
-        // and every other power readout. getCurrentOutput() is already micro-MJ/tick.
-        MessageUtil.sendOverlayMessage(player,
-            Component.translatable("chat.engine.creative.mode", LocaleUtil.localizeMjFlow(getCurrentOutput())));
+        // The player's client formats the output (localizeMjFlow), so the overlay follows THEIR flow-display
+        // format and switches MJ -> FE/RF under powerMode == DISPLAY_RF, matching the engine's ledger and every
+        // other power readout. This runs on the server, which has none of those client settings (and the wrong
+        // language), so it sends the raw micro-MJ/tick amount rather than a string it formatted itself.
+        MessageUtil.sendEnergyOverlay(player, "chat.engine.creative.mode",
+            MessageEnergyOverlay.Kind.MJ_FLOW, getCurrentOutput());
         setChanged();
         // Sync to client so animation speed updates immediately. No-re-mesh push: the piston
         // speed feeds RenderEngine_BC8, not the (empty) block model.

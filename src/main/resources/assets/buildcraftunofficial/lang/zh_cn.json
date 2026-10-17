@@ -654,6 +654,7 @@
     "chat.gateCopier.gateCopied": "已复制门配置",
     "chat.gateCopier.gatePasted": "已粘贴门配置",
     "chat.gateCopier.noInformation": "此门没有可复制的配置",
+    "chat.pipe.iron.mode": "切换至 %s 限制",
     "chat.schematicSingle.invalid": "无效图纸：%s",
     "chat.schematicSingle.neededEntry": "%s × %s",
     "chat.schematicSingle.notEnoughItems": "物品不足。共需：%s",

@@ -118,7 +118,13 @@ to execute on the logical thread.
 **Config**: Two specs — `BCUnifiedConfig` (COMMON) and `BCUnifiedClientConfig` (CLIENT) — each
 wrap the per-subsystem configs into one `ModConfigSpec` using `.push()/.pop()` sections. The
 COMMON/CLIENT split is load-bearing (client-only render/display options must live on the CLIENT
-spec).
+spec). A consequence for anything the SERVER sends a player: the display settings (FE/RF naming,
+full unit names, number separators, flow mode) are unset on a dedicated server and the language it
+reads is the server's, so the server must never format a unit-bearing figure into text. Menu titles
+send the base translation key and the client maps it (`BCEnergyConfig.clientMenuTitle`);
+action-bar figures send the raw amount (`MessageEnergyOverlay` via `MessageUtil.sendEnergyOverlay`)
+and the client formats it. `ServerUnitBakingGuardTester` fails the build on a server message that
+formats units itself and pins every non-client caller of the `LocaleUtil` unit formatters.
 
 **Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
 

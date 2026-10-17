@@ -178,6 +178,7 @@
     "block.buildcraftunofficial.engine_creative": "Creative Engine",
     "block.buildcraftunofficial.power_tester": "Power Tester",
     "chat.engine.creative.mode": "Switched to %s limit",
+    "chat.pipe.iron.mode": "Switched to %s limit",
     "chat.gateCopier.gateCopied": "Copied gate configuration",
     "chat.gateCopier.gatePasted": "Pasted gate configuration",
     "chat.gateCopier.noInformation": "This gate has no configuration to copy",

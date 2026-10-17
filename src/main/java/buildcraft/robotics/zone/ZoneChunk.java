@@ -30,6 +30,18 @@ public class ZoneChunk {
         fullSet = old.fullSet;
     }
 
+    /** A chunk with every column marked. */
+    public static ZoneChunk full() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.fullSet = true;
+        return chunk;
+    }
+
+    /** True when every column is marked. */
+    public boolean isFull() {
+        return fullSet;
+    }
+
     public boolean get(int xChunk, int zChunk) {
         return fullSet || property != null && property.get(xChunk + zChunk * 16);
     }
@@ -132,10 +144,30 @@ public class ZoneChunk {
         return !fullSet && (property == null || property.isEmpty());
     }
 
+    /** A chunk's bit set covers 16x16 = 256 columns, so its byte form is 32 bytes at most. */
+    private static final int MAX_BIT_BYTES = 16 * 16 / 8;
+
+    /** Whether both chunks mark the same columns ("every column" is the same whether it is flagged full or set
+     *  bit by bit). */
+    public boolean sameContent(ZoneChunk other) {
+        return effectiveBits().equals(other.effectiveBits());
+    }
+
+    private BitSet effectiveBits() {
+        if (fullSet) {
+            BitSet all = new BitSet(16 * 16);
+            all.set(0, 16 * 16);
+            return all;
+        }
+        return property == null ? new BitSet(0) : property;
+    }
+
     public ZoneChunk readFromByteBuf(FriendlyByteBuf buf) {
         int flags = buf.readUnsignedByte();
         if ((flags & 1) != 0) {
-            property = BitSet.valueOf(buf.readByteArray());
+            // Bounded: a chunk's bit set is 32 bytes at most, and an unbounded read would let a malformed
+            // message allocate whatever length it declares.
+            property = BitSet.valueOf(buf.readByteArray(MAX_BIT_BYTES));
         }
         fullSet = (flags & 2) != 0;
 

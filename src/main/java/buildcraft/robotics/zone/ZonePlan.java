@@ -39,7 +39,22 @@ import buildcraft.lib.misc.NBTUtilBC;
  * {@code ZoneChunk.getRandomBlockPos} from NPE-ing on a chunk with no columns.
  */
 public class ZonePlan implements IZone {
+    /** Width, in blocks, of the Zone Planner's survey view: the map window is 213 px wide and zooms out to
+     *  0.125 px/block ({@code GuiZonePlanner}, {@code ZoneMapCamera.MIN_PX_PER_BLOCK}), "about 1,700 blocks". */
+    public static final int SURVEY_SPAN_BLOCKS = 1704;
+    /** How far from its planner, in chunks, a stroke may reach: half the survey span, rounded up. Layers are
+     *  stored tile-relative, so {@link #paintRect} clips to tile-relative chunks {@code [-r, r - 1]}. (A zone read
+     *  in from a map location may sit further out; painting can never reach or erase it.) */
+    public static final int MAX_CHUNK_RADIUS = ((SURVEY_SPAN_BLOCKS / 2) + 15) >> 4;
+    /** First tile-relative block coordinate (on either axis) inside the survey square. */
+    public static final int SURVEY_MIN_BLOCK = -MAX_CHUNK_RADIUS << 4;
+    /** Last tile-relative block coordinate (on either axis) inside the survey square. */
+    public static final int SURVEY_MAX_BLOCK = (MAX_CHUNK_RADIUS << 4) - 1;
+
     private final HashMap<Long, ZoneChunk> chunkMapping = new HashMap<>();
+    /** Bumped on every mutation made through this class (not through {@link #getChunkMapping()}'s raw map), so a
+     *  watcher can tell "unchanged since I last looked" without re-serialising. */
+    private int modCount;
 
     public ZonePlan() {}
 
@@ -88,10 +103,36 @@ public class ZonePlan implements IZone {
         }
 
         property.set(x & 0xF, z & 0xF, val);
+        modCount++;
 
         if (property.isEmpty()) {
             chunkMapping.remove(key);
         }
+    }
+
+    /** A counter that moves whenever this plan is mutated through its own methods (never through the raw map
+     *  {@link #getChunkMapping()} exposes). Equal counter on the same instance means unchanged. */
+    public int modCount() {
+        return modCount;
+    }
+
+
+    /** True when both plans mark exactly the same columns, however they were built (unlike comparing the wire
+     *  bytes, which follow the hash map's iteration order). */
+    public boolean sameContent(ZonePlan other) {
+        if (other == this) {
+            return true;
+        }
+        if (chunkMapping.size() != other.chunkMapping.size()) {
+            return false;
+        }
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+            ZoneChunk theirs = other.chunkMapping.get(e.getKey());
+            if (theirs == null || !e.getValue().sameContent(theirs)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public List<int[]> getAll() {
@@ -144,6 +185,7 @@ public class ZonePlan implements IZone {
 
     public void readFromNBT(CompoundTag nbt) {
         chunkMapping.clear();
+        modCount++;
         ListTag list = NBTUtilBC.getList(nbt, "chunkMapping", net.minecraft.nbt.Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag zoneChunkTag = NBTUtilBC.getCompound(list, i);
@@ -226,6 +268,7 @@ public class ZonePlan implements IZone {
 
     public ZonePlan readFromByteBuf(FriendlyByteBuf buf) {
         chunkMapping.clear();
+        modCount++;
         int size = buf.readInt();
         for (int i = 0; i < size; i++) {
             long key = packChunkKey(buf.readInt(), buf.readInt());
@@ -237,6 +280,76 @@ public class ZonePlan implements IZone {
             chunkMapping.put(key, value);
         }
         return this;
+    }
+
+    /**
+     * Marks or, with {@code val == false}, clears the tile-relative block rectangle between two corners
+     * (inclusive, in either order), clipped to the survey square: the one edit the viewport makes, and the one
+     * edit a client may ask the server for. The clip means a stroke can neither reach where the map shows
+     * nothing nor erase a far zone it cannot see (one read in from a map location may sit anywhere). Chunks the
+     * rectangle covers whole are set or dropped in one step, so even a stroke across the whole square (a client
+     * message of four ints) costs a few thousand map operations, not millions of cell writes.
+     *
+     * @return true if any column changed (the modification counter then moves).
+     */
+    public boolean paintRect(int x0, int z0, int x1, int z1, boolean val) {
+        int minX = Math.max(Math.min(x0, x1), SURVEY_MIN_BLOCK);
+        int maxX = Math.min(Math.max(x0, x1), SURVEY_MAX_BLOCK);
+        int minZ = Math.max(Math.min(z0, z1), SURVEY_MIN_BLOCK);
+        int maxZ = Math.min(Math.max(z0, z1), SURVEY_MAX_BLOCK);
+        if (minX > maxX || minZ > maxZ) {
+            return false;
+        }
+        boolean changed = false;
+        for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
+            int lx0 = Math.max(minX, cx << 4) & 0xF;
+            int lx1 = Math.min(maxX, (cx << 4) | 0xF) & 0xF;
+            for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
+                int lz0 = Math.max(minZ, cz << 4) & 0xF;
+                int lz1 = Math.min(maxZ, (cz << 4) | 0xF) & 0xF;
+                long key = packChunkKey(cx, cz);
+                ZoneChunk chunk = chunkMapping.get(key);
+                if (lx0 == 0 && lx1 == 0xF && lz0 == 0 && lz1 == 0xF) {
+                    if (val && (chunk == null || !chunk.isFull())) {
+                        chunkMapping.put(key, ZoneChunk.full());
+                        changed = true;
+                    } else if (!val && chunk != null) {
+                        chunkMapping.remove(key);
+                        changed = true;
+                    }
+                    continue;
+                }
+                if (chunk == null) {
+                    if (!val) {
+                        continue;
+                    }
+                    chunk = new ZoneChunk();
+                    chunkMapping.put(key, chunk);
+                }
+                for (int lx = lx0; lx <= lx1; lx++) {
+                    for (int lz = lz0; lz <= lz1; lz++) {
+                        if (chunk.get(lx, lz) != val) {
+                            chunk.set(lx, lz, val);
+                            changed = true;
+                        }
+                    }
+                }
+                if (chunk.isEmpty()) {
+                    chunkMapping.remove(key);
+                }
+            }
+        }
+        if (changed) {
+            modCount++;
+        }
+        return changed;
+    }
+
+    /** {@link #paintRect} on a copy of {@code base}, which is not changed: the viewport's stroke preview. */
+    public static ZonePlan withRect(ZonePlan base, int x0, int z0, int x1, int z1, boolean val) {
+        ZonePlan out = new ZonePlan(base);
+        out.paintRect(x0, z0, x1, z1, val);
+        return out;
     }
 
     public void writeToByteBuf(FriendlyByteBuf buf) {

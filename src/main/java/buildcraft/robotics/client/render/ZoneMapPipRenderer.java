@@ -83,12 +83,12 @@ public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRende
         /*collector.submitCustomGeometry(poseStack, terrainType,
                 (pose, vc) -> ZoneMapGeometry.emitTerrain(vc, pose.pose(), state.camera(), wPx, hPx, level));
         collector.submitCustomGeometry(poseStack, overlayType,
-                (pose, vc) -> ZoneMapGeometry.emitOverlays(vc, pose.pose(), state.camera(), state.tilePos(),
+                (pose, vc) -> ZoneMapGeometry.emitOverlays(vc, pose.pose(), state.camera(), wPx, hPx, state.tilePos(),
                         state.layers(), state.bufferLayer(), state.bufferColorIndex(), state.hoverPos(), level));*/
         //?} else {
         Matrix4f mat = poseStack.last().pose();
         ZoneMapGeometry.emitTerrain(this.bufferSource.getBuffer(terrainType), mat, state.camera(), wPx, hPx, level);
-        ZoneMapGeometry.emitOverlays(this.bufferSource.getBuffer(overlayType), mat, state.camera(),
+        ZoneMapGeometry.emitOverlays(this.bufferSource.getBuffer(overlayType), mat, state.camera(), wPx, hPx,
                 state.tilePos(), state.layers(), state.bufferLayer(), state.bufferColorIndex(),
                 state.hoverPos(), level);
         //?}

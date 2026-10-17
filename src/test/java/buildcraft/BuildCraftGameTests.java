@@ -858,6 +858,25 @@ public class BuildCraftGameTests {
         // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
 
+        // Robotics — Zone Planner layer sync: strokes go up as rectangles applied to the server's layer, so
+        // concurrent strokes from several viewers are all kept; the painter re-applies unacknowledged strokes
+        // over late syncs and is not echoed their own; no stroke reaches past the survey square; malformed
+        // messages are ignored (and the painter resynced); unchanged layers are not re-serialised every tick.
+        reg.accept("buildcraftunofficial:zone_planner_paint_not_echoed", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintIsNotEchoedToItsOriginator);
+        reg.accept("buildcraftunofficial:zone_planner_paint_reaches_other_viewers", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintStillReachesOtherViewers);
+        reg.accept("buildcraftunofficial:zone_planner_paint_concurrent_strokes_kept", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::concurrentStrokesAreBothKept);
+        reg.accept("buildcraftunofficial:zone_planner_paint_across_sync_kept", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokeAcrossASyncKeepsTheSync);
+        reg.accept("buildcraftunofficial:zone_planner_paint_newer_local_stroke_kept", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::newerLocalStrokeSurvivesALateSync);
+        reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::farChunksAreUntouchedByStrokes);
+        reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
+        reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
+
+        // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
+        // block changed), invalidated on a chunk reload, and never shared between levels.
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_refreshes", () -> buildcraft.robotics.ZonePlannerMapCacheTester::terrainChangesAppearAfterTheRefreshAge);
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_invalidates", () -> buildcraft.robotics.ZonePlannerMapCacheTester::invalidatingAChunkRebuildsItAtOnce);
+        reg.accept("buildcraftunofficial:zone_planner_map_cache_per_level", () -> buildcraft.robotics.ZonePlannerMapCacheTester::chunksAreNotSharedAcrossLevels);
+
         // Robotics Ph2 — docking station pluggable: placement auto-registers/removal auto-deregisters
         // in the RobotRegistry, RobotUtils discovery through a real pipe holder, the take/release
         // reservation lifecycle (undock -> release; physical dock/undock movement is Ph3), the MJ-charge

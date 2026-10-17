@@ -46,6 +46,9 @@ public final class ZoneMapGeometry {
     private static final int ZONE_ALPHA = 0x88;
     /** Lift the zone overlay quads this far above the surface so they don't z-fight the top face. */
     private static final float OVERLAY_LIFT = 0.05f;
+    /** The survey-square border: a light red that reads over grass, sand, water and every dye tint. */
+    private static final float BORDER_R = 1.0f, BORDER_G = 0.35f, BORDER_B = 0.3f;
+    private static final int BORDER_ALPHA = 0xD0;
     /** Depth-only bias for the hover highlight, in blocks "up" toward the overhead camera. Its screen
      *  position stays on the surface, but its depth is computed as if it were this much taller, so it
      *  sorts cleanly in front of the column top and normal relief instead of z-fighting them (which
@@ -80,16 +83,7 @@ public final class ZoneMapGeometry {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
 
         boolean farMode = cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK;
-        // Power-of-two strides (1, 2, 4, 8; the survey floor is 0.125 px/block) keep the sample grid
-        // world-aligned across chunk borders — chunk origins are multiples of 16 and 16 % stride == 0,
-        // so adjacent chunks never double-cover or gap.
-        int stride = 1;
-        if (farMode) {
-            int need = (int) Math.ceil(1.0 / cam.pxPerBlock);
-            while (stride < need && stride < 8) {
-                stride <<= 1;
-            }
-        }
+        int stride = strideFor(cam);
         double[] b = farMode
                 ? cam.visibleGroundBounds(wPx, hPx, FAR_PAD)
                 : cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
@@ -121,6 +115,21 @@ public final class ZoneMapGeometry {
                 }
             }
         }
+    }
+
+    /** World blocks per terrain sample at the camera's zoom: 1 at 1 px/block and closer, then the power of two
+     *  (2, 4, 8; the survey floor is 0.125 px/block) that keeps a sample at least a pixel wide. Powers of two
+     *  keep the sample grid world-aligned across chunk borders &mdash; chunk origins are multiples of 16 and
+     *  16 % stride == 0, so adjacent chunks never double-cover or gap. */
+    private static int strideFor(ZoneMapCamera cam) {
+        int stride = 1;
+        if (cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK) {
+            int need = (int) Math.ceil(1.0 / cam.pxPerBlock);
+            while (stride < need && stride < 8) {
+                stride <<= 1;
+            }
+        }
+        return stride;
     }
 
     /** Emits one terrain cell: a stride&times;stride top face at the sampled surface, with skirt faces
@@ -195,12 +204,14 @@ public final class ZoneMapGeometry {
     // ── Zone overlays + hover ─────────────────────────────────────────────────────────────
 
     /** Emits the painted-zone tints (one colour per dye layer, the in-progress paint preview swapped in
-     *  for its layer) and the hover highlight, laid just above each column's surface. */
+     *  for its layer), the survey-square border and the hover highlight, laid just above each column's
+     *  surface. {@code wPx}/{@code hPx} is the viewport size, which bounds the border to what is visible. */
     public static void emitOverlays(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
-                                    BlockPos tile, ZonePlan[] layers,
+                                    int wPx, int hPx, BlockPos tile, ZonePlan[] layers,
                                     ZonePlan bufferLayer, int bufferColorIndex,
                                     BlockPos hover, Level level) {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
+        emitSurveyBorder(vc, mat, cam, wPx, hPx, tile, data, level);
 
         for (int i = 0; i < layers.length; i++) {
             ZonePlan layer = (bufferColorIndex == i && bufferLayer != null)
@@ -227,6 +238,58 @@ public final class ZoneMapGeometry {
         if (hover != null) {
             hoverHighlight(vc, mat, cam, hover.getX(), hover.getZ(), hover.getY());
         }
+    }
+
+    /** Outlines the survey square: strokes are clipped to it ({@link ZonePlan#paintRect}), on the client and
+     *  on the server alike. Drawn as a band one terrain sample wide just inside each edge, on the terrain
+     *  surface; only the visible stretch of each edge is walked, and unmapped columns are skipped (with vanilla
+     *  render distances the edge usually lies beyond the loaded terrain, which cannot be painted either). */
+    private static void emitSurveyBorder(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam, int wPx, int hPx,
+                                         BlockPos tile, ZonePlannerMapDataClient data, Level level) {
+        int band = strideFor(cam);
+        // The square in world blocks, max exclusive.
+        int minX = tile.getX() + ZonePlan.SURVEY_MIN_BLOCK;
+        int maxX = tile.getX() + ZonePlan.SURVEY_MAX_BLOCK + 1;
+        int minZ = tile.getZ() + ZonePlan.SURVEY_MIN_BLOCK;
+        int maxZ = tile.getZ() + ZonePlan.SURVEY_MAX_BLOCK + 1;
+        double[] view = cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
+        int fromX = Math.max(minX, (int) Math.floor(view[0]));
+        int toX = Math.min(maxX, (int) Math.ceil(view[2]));
+        int fromZ = Math.max(minZ, (int) Math.floor(view[1]));
+        int toZ = Math.min(maxZ, (int) Math.ceil(view[3]));
+        if (fromX >= toX || fromZ >= toZ) {
+            return; // the square is wholly out of view
+        }
+        // North and south edges run along X; west and east along Z.
+        for (int edgeZ : new int[] {minZ, maxZ - band}) {
+            if (edgeZ + band > view[1] && edgeZ < view[3]) {
+                for (int x = fromX; x < toX; x += band) {
+                    borderCell(vc, mat, cam, data, level, x, edgeZ, Math.min(x + band, maxX), edgeZ + band);
+                }
+            }
+        }
+        for (int edgeX : new int[] {minX, maxX - band}) {
+            if (edgeX + band > view[0] && edgeX < view[2]) {
+                for (int z = fromZ; z < toZ; z += band) {
+                    borderCell(vc, mat, cam, data, level, edgeX, z, edgeX + band, Math.min(z + band, maxZ));
+                }
+            }
+        }
+    }
+
+    /** One border cell over {@code [x0, x1) x [z0, z1)}, at the surface of its first column. */
+    private static void borderCell(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
+                                   ZonePlannerMapDataClient data, Level level, int x0, int z0, int x1, int z1) {
+        int surf = surfaceAt(data, level, x0, z0);
+        if (surf == ZonePlannerMapChunk.NO_DATA) {
+            return;
+        }
+        float y = surf + 1 + 2 * OVERLAY_LIFT; // above the zone tints, so the edge reads over a painted zone
+        quad(vc, mat, cam, 1f, BORDER_R, BORDER_G, BORDER_B, BORDER_ALPHA,
+                x0, y, z0,
+                x1, y, z0,
+                x1, y, z1,
+                x0, y, z1);
     }
 
     /** Bold, opaque highlight for the hovered column — a bright centre inside a dark frame, lifted above

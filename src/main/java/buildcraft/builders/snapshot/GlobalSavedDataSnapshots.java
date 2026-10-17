@@ -9,8 +9,11 @@ package buildcraft.builders.snapshot;
 import java.time.Duration;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
@@ -18,6 +21,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -31,6 +36,7 @@ import com.google.common.cache.LoadingCache;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.fml.loading.FMLPaths;
@@ -42,6 +48,8 @@ import buildcraft.lib.nbt.NbtSquisher;
 
 public class GlobalSavedDataSnapshots {
     private static final String SNAPSHOT_FILE_EXTENSION = ".bcnbt";
+    /** Ends the in-progress copy of a save ({@code <file name>.<random>.tmp}); never listed or read as a snapshot. */
+    private static final String TEMP_FILE_EXTENSION = ".tmp";
     /** Bytes of the header hash kept in a named snapshot's file name; enough to tell one build's names apart. */
     private static final int HEADER_DIGEST_BYTES = 8;
     /** How often the background scan looks for files added or removed outside the game. */
@@ -67,6 +75,9 @@ public class GlobalSavedDataSnapshots {
     private final AtomicBoolean rescanQueued = new AtomicBoolean();
     private volatile long lastRescanNanos;
     private volatile boolean rescannedOnce;
+    /** Files this store wrote, or has read back intact, so a repeat save of one is a name check only; a file not
+     *  in here (left by an older version, a crash, or a hand copy) is decompressed once before it is trusted. */
+    private final Set<String> intactFiles = ConcurrentHashMap.newKeySet();
     private final File snapshotsFile;
 
     private GlobalSavedDataSnapshots(Side side) {
@@ -82,6 +93,20 @@ public class GlobalSavedDataSnapshots {
             }
         } else if (!snapshotsFile.isDirectory()) {
             throw new IllegalStateException("The snapshots directory was not a directory: " + snapshotsFile);
+        }
+        deleteOrphanedTempFiles();
+    }
+
+    /** Delete the in-progress copies a crash mid-save left behind (a live save always removes its own). */
+    private void deleteOrphanedTempFiles() {
+        File[] files = snapshotsFile.listFiles();
+        if (files == null) return;
+        for (File file : files) {
+            String name = file.getName();
+            if (name.endsWith(TEMP_FILE_EXTENSION) && name.contains(SNAPSHOT_FILE_EXTENSION + ".")
+                    && file.isFile() && !file.delete()) {
+                LOGGER.warn("Failed to delete the leftover snapshot temp file {}", file);
+            }
         }
     }
 
@@ -192,12 +217,10 @@ public class GlobalSavedDataSnapshots {
     public void addSnapshot(Snapshot snapshot) {
         if (!alreadyStored(snapshot.key)) {
             File snapshotFile = new File(snapshotsFile, fileName(snapshot.key));
-            try (FileOutputStream fileOutputStream = new FileOutputStream(snapshotFile)) {
-                NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), fileOutputStream);
-            } catch (IOException e) {
-                BCLog.logger.error("Failed to write the snapshot file: " + snapshotFile, e);
-            }
-            if (snapshotFile.isFile()) {
+            // Serialise before touching the disk: a snapshot that cannot be written leaves nothing behind.
+            CompoundTag nbt = Snapshot.writeToNBT(snapshot);
+            if (writeAtomically(nbt, snapshotFile)) {
+                intactFiles.add(snapshotFile.getName());
                 index.put(snapshotFile.getName(), snapshot.key, snapshotFile.lastModified(), snapshotFile.length());
             }
         }
@@ -205,16 +228,62 @@ public class GlobalSavedDataSnapshots {
     }
 
     /**
-     * Whether saving {@code key} would add nothing, checked by file name so a save never decompresses a large
-     * snapshot: the file {@link #fileName} gives it exists, or (for a named key) an older {@code <hash>.bcnbt} from
-     * before names split files holds it. A {@code <hash>.bcnbt} holding a name also answers a content-only save,
-     * since a content-only lookup finds it.
+     * Write {@code nbt} to a temp file beside {@code target}, then move it over {@code target} in one step, so a
+     * crash or a full disk mid-write can never leave a half-written {@code .bcnbt} for later saves to trust. A
+     * failed write deletes its temp file and leaves {@code target} as it was.
+     *
+     * @return whether {@code target} now holds the snapshot
+     */
+    private boolean writeAtomically(CompoundTag nbt, File target) {
+        Path temp = null;
+        try {
+            temp = Files.createTempFile(snapshotsFile.toPath(), target.getName() + ".", TEMP_FILE_EXTENSION);
+            try (var out = Files.newOutputStream(temp)) {
+                NbtSquisher.squishVanilla(nbt, out);
+            }
+            try {
+                Files.move(temp, target.toPath(), StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temp, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+            return true;
+        } catch (IOException e) {
+            BCLog.logger.error("Failed to write the snapshot file: " + target, e);
+            return false;
+        } finally {
+            if (temp != null) {
+                try {
+                    Files.deleteIfExists(temp);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete the snapshot temp file {}", temp, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether saving {@code key} would add nothing: the file {@link #fileName} gives it exists and holds a readable
+     * snapshot, or (for a named key) an older {@code <hash>.bcnbt} from before names split files holds it. A
+     * {@code <hash>.bcnbt} holding a name also answers a content-only save, since a content-only lookup finds it.
+     * <p>
+     * A file this store wrote (or already read back) is trusted by name, so a save never decompresses a large
+     * snapshot twice. Any other existing file is decompressed once first: an empty or truncated one (left by a
+     * crash under the old in-place write) is not "stored" and is overwritten by the save.
      */
     private boolean alreadyStored(Snapshot.Key key) {
-        if (new File(snapshotsFile, fileName(key)).isFile()) return true;
+        File stored = new File(snapshotsFile, fileName(key));
+        if (stored.isFile() && isIntact(stored)) return true;
         if (key.header == null) return false;
         File legacy = new File(snapshotsFile, key + SNAPSHOT_FILE_EXTENSION);
         return legacy.isFile() && matching(legacy, key, true) != null;
+    }
+
+    private boolean isIntact(File snapshotFile) {
+        if (intactFiles.contains(snapshotFile.getName())) return true;
+        if (snapshotFile.length() == 0 || readSnapshotFile(snapshotFile) == null) return false;
+        intactFiles.add(snapshotFile.getName());
+        return true;
     }
 
     /** Delete every file holding exactly {@code key} (an old-style and a new-style file can both hold one entry);
@@ -227,6 +296,7 @@ public class GlobalSavedDataSnapshots {
                 BCLog.logger.error("Failed to delete the snapshot file: " + snapshotFile);
                 break;
             }
+            intactFiles.remove(snapshotFile.getName());
             index.remove(snapshotFile.getName());
         }
         invalidate(key);

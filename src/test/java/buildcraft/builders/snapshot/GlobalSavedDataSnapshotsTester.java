@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.lib.nbt.NbtSquisher;
@@ -175,5 +176,116 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertNotNull(server.getSnapshot(cabin.key), "the second item resolves");
         Assertions.assertNull(house.key.header, "the server stores content only");
         Assertions.assertEquals(1, fileCount(), "the server keeps one copy of the content");
+    }
+
+    /** A template that cannot be serialised, so a save of it must fail without touching the disk. */
+    private static final class UnserialisableTemplate extends Template {
+        UnserialisableTemplate(Template good) {
+            size = good.size;
+            facing = good.facing;
+            offset = good.offset;
+            data = good.data;
+            key = good.key;
+        }
+
+        @Override
+        public CompoundTag serializeNBT() {
+            throw new IllegalStateException("cannot serialise");
+        }
+    }
+
+    private long countOf(String suffix) throws IOException {
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.filter(f -> f.getFileName().toString().endsWith(suffix)).count();
+        }
+    }
+
+    @Test
+    public void aSaveThatFailsToSerialiseLeavesNothingBehindAndALaterSaveWorks() throws IOException {
+        Template good = build();
+        GlobalSavedDataSnapshots store = store();
+
+        Assertions.assertThrows(IllegalStateException.class, () -> store.addSnapshot(new UnserialisableTemplate(good)));
+        Assertions.assertEquals(0, fileCount(), "a failed save leaves neither a partial file nor a temp file");
+        Assertions.assertFalse(store.isListed(good.key), "a failed save is not listed");
+        Assertions.assertNull(store.getSnapshot(good.key));
+
+        store.addSnapshot(good);
+        Assertions.assertEquals(1, fileCount());
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the retry is not blocked by the failed attempt");
+    }
+
+    @Test
+    public void aSaveThatCannotReachItsTargetNameLeavesNoTempFile() throws IOException {
+        Template good = build();
+        // A non-empty directory squatting on the target name: the temp file is written fine, the move onto it fails.
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        Files.createDirectory(target);
+        Files.write(target.resolve("keep"), new byte[] {1});
+        GlobalSavedDataSnapshots store = store();
+
+        store.addSnapshot(good);
+        Assertions.assertEquals(0, countOf(".tmp"), "the failed move cleans up its temp file");
+        Assertions.assertEquals(1, fileCount(), "only the squatting directory remains");
+        Assertions.assertFalse(store.isListed(good.key));
+    }
+
+    @Test
+    public void anEmptyFileAtTheTargetNameIsReplacedNotTrusted() throws IOException {
+        Template good = build();
+        Files.write(dir.resolve(GlobalSavedDataSnapshots.fileName(good.key)), new byte[0]);
+        GlobalSavedDataSnapshots store = store();
+        Assertions.assertNull(store.getSnapshot(good.key), "an empty file holds nothing");
+
+        store.addSnapshot(good);
+        Assertions.assertEquals(1, fileCount());
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the empty file was overwritten with the snapshot");
+    }
+
+    @Test
+    public void aTruncatedFileAtTheTargetNameIsReplacedNotTrusted() throws IOException {
+        Template good = build();
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        // Write the real file once, then cut it in half: what a crash part-way through an in-place write leaves.
+        try (FileOutputStream out = new FileOutputStream(target.toFile())) {
+            NbtSquisher.squishVanilla(Snapshot.writeToNBT(good), out);
+        }
+        byte[] whole = Files.readAllBytes(target);
+        Files.write(target, java.util.Arrays.copyOf(whole, whole.length / 2));
+        GlobalSavedDataSnapshots store = store();
+        Assertions.assertNull(store.getSnapshot(good.key), "half a file holds nothing");
+
+        store.addSnapshot(good);
+        Assertions.assertEquals(1, fileCount());
+        Assertions.assertNotNull(store.getSnapshot(good.key));
+    }
+
+    @Test
+    public void aSavedFileLeavesNoTempFileAndIsTrustedOnTheNextSave() throws IOException {
+        Template good = build();
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Assertions.assertEquals(1, countOf(".bcnbt"));
+        Assertions.assertEquals(1, fileCount(), "no temp file survives a successful save");
+
+        long modified = Files.getLastModifiedTime(dir.resolve(GlobalSavedDataSnapshots.fileName(good.key))).toMillis();
+        store.addSnapshot(good);
+        Assertions.assertEquals(modified,
+            Files.getLastModifiedTime(dir.resolve(GlobalSavedDataSnapshots.fileName(good.key))).toMillis(),
+            "an intact file is left alone");
+    }
+
+    @Test
+    public void tempFilesLeftByACrashAreSweptWhenTheStoreOpens() throws IOException {
+        Template good = build();
+        GlobalSavedDataSnapshots first = store();
+        first.addSnapshot(good);
+        Path orphan = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key) + ".1234.tmp");
+        Files.write(orphan, new byte[] {1, 2, 3});
+
+        GlobalSavedDataSnapshots reopened = store();
+        Assertions.assertFalse(Files.exists(orphan), "the orphaned temp file is deleted");
+        Assertions.assertEquals(1, fileCount(), "the real snapshot survives the sweep");
+        Assertions.assertNotNull(reopened.getSnapshot(good.key));
     }
 }

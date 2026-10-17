@@ -21,13 +21,14 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.MachineIdentity;
 
 /**
  * Who a robot acts for when protection mods are asked. A robot has no owner of its own; it works for its home
  * (linked) station, whose owner is whoever placed the pipe the station sits on. So a robot flying out of its owner's
  * base is refused wherever that owner would be — the same rule as the Quarry and Builder, which ask as the player
- * who placed them. A robot with no home station asks as the generic "[BuildCraft]" identity, as 7.1.x's robots
- * always did.
+ * who placed them. A robot with no home station (or whose station's owner has no name) asks as the generic
+ * "[BuildCraft]" identity, as 7.1.x's robots always did; {@link MachineIdentity} is the one rule for that.
  */
 public final class RobotProtection {
     private RobotProtection() {}
@@ -39,13 +40,19 @@ public final class RobotProtection {
         return home == null ? null : home.getOwner();
     }
 
+    /** The identity this robot asks and acts as: its home station's named owner, else "[BuildCraft]" (see
+     *  {@link MachineIdentity}). */
+    public static GameProfile identityOf(IRobotAccess robot) {
+        return MachineIdentity.of(ownerOf(robot));
+    }
+
     /**
      * Leases the fake player this robot acts as in the world: the home station owner's (so claim mods judge the owner
      * and advancements a used item grants reach them), or the generic "[BuildCraft]" player when the robot has no
      * owner. Use with try-with-resources, like every {@link FakePlayerUtil.Lease}.
      */
     public static FakePlayerUtil.Lease lease(IRobotAccess robot, ServerLevel level) {
-        return FakePlayerUtil.lease(level, ownerOf(robot), null);
+        return FakePlayerUtil.lease(level, identityOf(robot), null);
     }
 
     /**
@@ -67,6 +74,6 @@ public final class RobotProtection {
 
     /** Whether protection mods let this robot break the block at {@code pos}; see {@link BlockUtil#canMachineBreak}. */
     public static boolean canBreak(IRobotAccess robot, ServerLevel level, BlockPos pos) {
-        return BlockUtil.canMachineBreak(level, pos, ownerOf(robot));
+        return BlockUtil.canMachineBreak(level, pos, identityOf(robot));
     }
 }

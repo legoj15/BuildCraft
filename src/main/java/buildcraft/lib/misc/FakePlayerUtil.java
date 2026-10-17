@@ -195,9 +195,9 @@ public final class FakePlayerUtil {
 
     private FakePlayerUtil() {}
 
-    /** {@code profile}, or {@link #BUILDCRAFT_PROFILE} when there is no usable owner profile. */
+    /** {@code profile}, or {@link #BUILDCRAFT_PROFILE} when it is not a real named owner: see {@link MachineIdentity}. */
     public static GameProfile resolveProfile(@Nullable GameProfile profile) {
-        return profile == null || GameProfileUtil.getId(profile) == null ? BUILDCRAFT_PROFILE : profile;
+        return MachineIdentity.of(profile);
     }
 
     /** Leases the generic "[BuildCraft]" player, left where it was created. */

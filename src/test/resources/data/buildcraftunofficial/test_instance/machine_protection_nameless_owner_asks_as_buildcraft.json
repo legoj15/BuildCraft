@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

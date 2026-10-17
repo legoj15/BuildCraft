@@ -231,6 +231,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_robot_search_asks_chosen_only", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchAsksOnlyAboutTheChosenTarget);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_refusals_belong_to_owner", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchRefusalsBelongToTheOwner);
+        reg.accept("buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft", () -> buildcraft.lib.misc.MachineProtectionTester::namelessOwnerAsksAsBuildCraft);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);

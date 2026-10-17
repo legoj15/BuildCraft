@@ -146,20 +146,19 @@ public class BlockUtil {
      * owner-bound FakePlayer positioned at {@code pos} and returns {@code !event.isCanceled()},
      * so third-party protection mods (FTB Chunks, GriefPrevention, OpenPartiesAndClaims, server
      * protection plugins) can gate the break by cancelling the event. A machine with no recorded
-     * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}.
+     * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}: see
+     * {@link MachineIdentity}, the rule the machine's own fake player follows too.
      * <p>
      * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
      * pipes and robots), so the player is the cached one, leased for the duration of the event. The
      * event is a probe — {@link BreakEventCompat#isProbe} tells BuildCraft's own break listeners to
      * ignore it.
      */
-    public static boolean canMachineBreak(ServerLevel level, BlockPos pos, GameProfile owner) {
+    public static boolean canMachineBreak(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {
             return true;
         }
-        GameProfile profile = (owner != null && GameProfileUtil.getName(owner) != null)
-                ? owner : FakePlayerUtil.BUILDCRAFT_PROFILE;
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, pos)) {
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
             BlockState state = level.getBlockState(pos);
             return BreakEventCompat.canBreak(level, pos, state, lease.player());
         }

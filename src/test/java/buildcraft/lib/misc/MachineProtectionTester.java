@@ -437,6 +437,28 @@ public class MachineProtectionTester {
         helper.succeed();
     }
 
+    /**
+     * A machine whose owner was restored without a name (an old save stored only the id) asks as the generic
+     * "[BuildCraft]" identity, not as a blank-named fake player: the probe used to be posted with an empty name, which
+     * claim mods show (and some key on) as nobody at all.
+     */
+    public static void namelessOwnerAsksAsBuildCraft(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, Blocks.STONE);
+        BlockPos pos = helper.absolutePos(rel);
+        GameProfile nameless = new GameProfile(UUID.nameUUIDFromBytes("bc_nameless_owner".getBytes()), "");
+        try (ClaimProtectionMod observer = new ClaimProtectionMod(pos, false)) {
+            check(BlockUtil.canMachineBreak(level, pos, nameless), "an unclaimed block may be broken");
+            check(observer.asks() == 1, "precondition: the probe was posted once, got " + observer.asks());
+            Player asker = observer.askedBy.get(0);
+            check(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE).equals(asker.getUUID()),
+                    "a nameless owner asks as [BuildCraft], got " + asker.getGameProfile());
+        }
+        helper.succeed();
+    }
+
     /** Registers {@code robot} with the live registry (a reservation by an unregistered robot reads as not taken). */
     private static IRobotRegistry register(EntityRobot robot) {
         IRobotRegistry registry = robot.getRegistry();

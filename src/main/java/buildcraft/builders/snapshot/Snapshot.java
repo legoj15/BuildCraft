@@ -106,6 +106,23 @@ public abstract class Snapshot {
         return getDataSize(size.getX(), size.getY(), size.getZ());
     }
 
+    /**
+     * The cell count of a size read from a file or an upload, where it is untrusted: refused when a side is negative
+     * or the count does not fit an int (it would wrap, and {@link #getDataSize} would then disagree with the cells
+     * actually indexed).
+     */
+    public static int checkedDataSize(BlockPos size) throws InvalidInputDataException {
+        if (size.getX() < 0 || size.getY() < 0 || size.getZ() < 0) {
+            throw new InvalidInputDataException("Snapshot size " + size + " has a negative side");
+        }
+        long xy = (long) size.getX() * size.getY(); // at most 2^62: cannot wrap
+        // xy is checked first so the second product stays inside a long too
+        if (xy > Integer.MAX_VALUE || xy * size.getZ() > Integer.MAX_VALUE) {
+            throw new InvalidInputDataException("Snapshot size " + size + " holds more cells than an int can count");
+        }
+        return (int) (xy * size.getZ());
+    }
+
     @SuppressWarnings({"WeakerAccess", "unused"})
     public int getDataSize() {
         return getDataSize(size);
@@ -140,6 +157,7 @@ public abstract class Snapshot {
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         key = new Key(NBTUtilBC.getCompound(nbt, "key"));
         size = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "size"));
+        checkedDataSize(size);
         facing = NBTUtilBC.readEnum(nbt.get("facing"), Direction.class);
         offset = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "offset"));
     }

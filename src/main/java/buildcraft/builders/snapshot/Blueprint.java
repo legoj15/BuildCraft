@@ -166,8 +166,6 @@ public class Blueprint extends Snapshot {
             NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
             palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
         }
-        data = new int[Snapshot.getDataSize(size)];
-
         // Support both ListTag and IntArray for data
         Tag dataTag = nbt.get("data");
         ListTag serializedDataList = dataTag instanceof ListTag lt ? lt : null;
@@ -179,13 +177,17 @@ public class Blueprint extends Snapshot {
         int serializedDataLength = serializedDataList == null
             ? serializedDataIntArray.length
             : serializedDataList.size();
-        if (serializedDataLength != getDataSize()) {
+        // The size is untrusted (an upload's header can claim any size in a few bytes): the cells are allocated only
+        // once the list actually holds that many, so the array never outgrows the NBT that was read.
+        int expectedLength = Snapshot.checkedDataSize(size);
+        if (serializedDataLength != expectedLength) {
             throw new InvalidInputDataException(
                 "Serialized data has length of " + serializedDataLength +
                     ", but we expected " +
-                    getDataSize() + " (" + size.toString() + ")"
+                    expectedLength + " (" + size.toString() + ")"
             );
         }
+        data = new int[expectedLength];
         for (int z = 0; z < size.getZ(); z++) {
             for (int y = 0; y < size.getY(); y++) {
                 for (int x = 0; x < size.getX(); x++) {

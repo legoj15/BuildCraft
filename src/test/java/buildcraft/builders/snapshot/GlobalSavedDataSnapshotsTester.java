@@ -10,6 +10,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import java.util.BitSet;
 import java.util.Date;
 import java.util.UUID;
@@ -167,8 +169,10 @@ public class GlobalSavedDataSnapshotsTester {
     public void uploadingOneBuildUnderTwoNamesGivesTwoWorkingItems() throws IOException {
         Template content = build();
         GlobalSavedDataSnapshots server = store();
-        Snapshot.Header house = TileElectronicLibrary.storeUpload(server, named(content, "house", 100));
-        Snapshot.Header cabin = TileElectronicLibrary.storeUpload(server, named(content, "cabin", 200));
+        Template houseUpload = named(content, "house", 100);
+        Template cabinUpload = named(content, "cabin", 200);
+        Snapshot.Header house = TileElectronicLibrary.storeUpload(server, houseUpload, houseUpload.key.header);
+        Snapshot.Header cabin = TileElectronicLibrary.storeUpload(server, cabinUpload, cabinUpload.key.header);
 
         Assertions.assertEquals("house", house.name);
         Assertions.assertEquals("cabin", cabin.name);
@@ -176,6 +180,28 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertNotNull(server.getSnapshot(cabin.key), "the second item resolves");
         Assertions.assertNull(house.key.header, "the server stores content only");
         Assertions.assertEquals(1, fileCount(), "the server keeps one copy of the content");
+    }
+
+    @Test
+    public void anUploadedItemIsNamedByTheRequestNotByThePayload() throws IOException {
+        // The request's header was checked when the client selected it (name length capped); the payload's was not,
+        // so an answer carrying a huge name or another player's id must not reach the item.
+        Template content = build();
+        Snapshot.Header asked = named(content, "house", 100).key.header;
+        Template payload = content.copy();
+        Snapshot.Key bare = new Snapshot.Key(payload.key, (Snapshot.Header) null);
+        payload.key = new Snapshot.Key(bare, new Snapshot.Header(bare, new UUID(9, 9), new Date(999), "x".repeat(4096)));
+
+        Snapshot.Header made = TileElectronicLibrary.storeUpload(store(), payload, asked);
+        Assertions.assertEquals("house", made.name);
+        Assertions.assertEquals(new UUID(0, 7), made.owner);
+        Assertions.assertEquals(new Date(100), made.created);
+        Assertions.assertArrayEquals(content.key.hash, made.key.hash, "the item points at the uploaded content");
+        Assertions.assertNull(made.key.header);
+
+        Snapshot.Header unnamed = TileElectronicLibrary.storeUpload(store(), payload, null);
+        Assertions.assertEquals("Snapshot", unnamed.name, "a request with no header gets the default name");
+        Assertions.assertEquals(new UUID(0, 0), unnamed.owner);
     }
 
     /** A template that cannot be serialised, so a save of it must fail without touching the disk. */
@@ -275,6 +301,11 @@ public class GlobalSavedDataSnapshotsTester {
             "an intact file is left alone");
     }
 
+    /** Backdate {@code file} by {@code age}, as if it had been sitting there that long. */
+    private static void age(Path file, Duration age) throws IOException {
+        Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis() - age.toMillis()));
+    }
+
     @Test
     public void tempFilesLeftByACrashAreSweptWhenTheStoreOpens() throws IOException {
         Template good = build();
@@ -282,10 +313,127 @@ public class GlobalSavedDataSnapshotsTester {
         first.addSnapshot(good);
         Path orphan = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key) + ".1234.tmp");
         Files.write(orphan, new byte[] {1, 2, 3});
+        age(orphan, GlobalSavedDataSnapshots.ORPHANED_TEMP_MIN_AGE.plusMinutes(1));
 
         GlobalSavedDataSnapshots reopened = store();
         Assertions.assertFalse(Files.exists(orphan), "the orphaned temp file is deleted");
         Assertions.assertEquals(1, fileCount(), "the real snapshot survives the sweep");
         Assertions.assertNotNull(reopened.getSnapshot(good.key));
+    }
+
+    @Test
+    public void aTempFileAnotherInstanceIsStillWritingSurvivesTheSweep() throws IOException {
+        // A second server pointed at the same directory opens its store while the first is mid-save: the first's
+        // temp file is seconds from done, not left by a crash, and deleting it would fail that save.
+        Template good = build();
+        Path inFlight = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key) + ".5678.tmp");
+        Files.write(inFlight, new byte[] {1, 2, 3});
+
+        store();
+        Assertions.assertTrue(Files.exists(inFlight), "a just-written temp file is not an orphan");
+
+        // Still young just inside the threshold; only past it is the file treated as a crash leftover.
+        age(inFlight, GlobalSavedDataSnapshots.ORPHANED_TEMP_MIN_AGE.minusSeconds(30));
+        store();
+        Assertions.assertTrue(Files.exists(inFlight), "a temp file below the age threshold is kept");
+
+        age(inFlight, GlobalSavedDataSnapshots.ORPHANED_TEMP_MIN_AGE.plusSeconds(30));
+        store();
+        Assertions.assertFalse(Files.exists(inFlight), "past the threshold it is swept");
+    }
+
+    @Test
+    public void aFileTruncatedOutsideTheGameAfterTheStoreSavedItIsNotTrusted() throws IOException {
+        Template good = build();
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        byte[] whole = Files.readAllBytes(target);
+        // What an external tool (a sync client, a hand edit, another instance) leaves behind.
+        Files.write(target, java.util.Arrays.copyOf(whole, whole.length / 2));
+        Assertions.assertNull(store.getSnapshot(good.key), "the cut file holds nothing");
+
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the save noticed the file changed and rewrote it");
+        Assertions.assertArrayEquals(whole, Files.readAllBytes(target));
+    }
+
+    @Test
+    public void aFileReplacedByGarbageOfTheSameLengthIsNotTrusted() throws IOException {
+        Template good = build();
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        byte[] whole = Files.readAllBytes(target);
+        long before = Files.getLastModifiedTime(target).toMillis();
+        // Same length, so only the modification time can tell it changed.
+        Files.write(target, new byte[whole.length]);
+        Files.setLastModifiedTime(target, FileTime.fromMillis(before + 60_000));
+        Assertions.assertNull(store.getSnapshot(good.key));
+
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the save noticed the file changed and rewrote it");
+    }
+
+    /** A build other than {@link #build()}, so its file is a valid snapshot holding a different key. */
+    private static Template otherBuild() {
+        Template template = build();
+        template.data.set(1);
+        template.computeKey();
+        return template;
+    }
+
+    @Test
+    public void aValidFileHoldingAnotherBuildUnderThisBuildsNameIsNotTrusted() throws IOException {
+        // Readable is not enough: the file must hold the key it is named for, or the save writes nothing and every
+        // lookup of this build fails from then on.
+        Template good = build();
+        Template other = otherBuild();
+        Assertions.assertNotEquals(good.key, other.key);
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        store.addSnapshot(other);
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        byte[] whole = Files.readAllBytes(target);
+        long before = Files.getLastModifiedTime(target).toMillis();
+        Files.copy(dir.resolve(GlobalSavedDataSnapshots.fileName(other.key)), target,
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Files.setLastModifiedTime(target, FileTime.fromMillis(before + 60_000));
+        Assertions.assertNull(store.getSnapshot(good.key), "the file answers for the other build, not this one");
+
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key), "the save noticed the wrong build and rewrote it");
+        Assertions.assertArrayEquals(whole, Files.readAllBytes(target));
+    }
+
+    @Test
+    public void aFreshStoreDoesNotTrustAFileHoldingAnotherBuild() throws IOException {
+        // The same, for a file this store never saw: left by a hand copy under the wrong name.
+        Template good = build();
+        Template other = otherBuild();
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        try (FileOutputStream out = new FileOutputStream(target.toFile())) {
+            NbtSquisher.squishVanilla(Snapshot.writeToNBT(other), out);
+        }
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Assertions.assertNotNull(store.getSnapshot(good.key));
+    }
+
+    @Test
+    public void aRewrittenFileIsTrustedAgainOnTheNextSave() throws IOException {
+        // The trust follows what the file looks like now: after the rewrite it is verified, and left alone.
+        Template good = build();
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(good);
+        Path target = dir.resolve(GlobalSavedDataSnapshots.fileName(good.key));
+        byte[] whole = Files.readAllBytes(target);
+        Files.write(target, new byte[0]);
+        store.addSnapshot(good);
+        Assertions.assertArrayEquals(whole, Files.readAllBytes(target));
+
+        long modified = Files.getLastModifiedTime(target).toMillis();
+        store.addSnapshot(good);
+        Assertions.assertEquals(modified, Files.getLastModifiedTime(target).toMillis(), "the rewritten file is trusted");
     }
 }

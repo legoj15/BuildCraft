@@ -72,8 +72,24 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
     public int progressDown = -1;
     public int progressUp = -1;
 
+    /** Ticks an asked-for upload may go without a chunk arriving before the tile asks again (the asker may have
+     *  closed the menu, or not have the snapshot). */
+    static final int UPLOAD_ANSWER_TIMEOUT_TICKS = 100;
+
     /** Players currently viewing this tile's GUI (server-side tracking for network broadcasts). */
     private final Set<Player> watchingPlayers = new HashSet<>();
+
+    /** The key the last upload request asked the watchers for, while it is still wanted: an upload is accepted only
+     *  against it, so a client cannot write an item no request asked for, nor answer one request twice. Not saved:
+     *  a reload asks again. */
+    @Nullable
+    private Snapshot.Key uploadRequested;
+    /** Ticks left before an unanswered {@link #uploadRequested} is asked again. */
+    private int uploadWaitTicks;
+    /** A key whose upload was refused (too large, unreadable, the wrong build): not asked for again until the
+     *  selection or the blank changes, so one bad upload is not re-sent and re-parsed every few seconds. */
+    @Nullable
+    private Snapshot.Key uploadRefused;
 
     public TileElectronicLibrary(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.LIBRARY.get(), pos, state);
@@ -135,20 +151,66 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
         }
 
         // --- Upload: request snapshot data from client, then write to server DB ---
-        if (selected != null && !invUpIn.getStackInSlot(0).isEmpty() && invUpOut.getStackInSlot(0).isEmpty()) {
+        if (invUpIn.getStackInSlot(0).isEmpty()) {
+            uploadRefused = null; // a new blank is a new try
+        }
+        if (!canTakeUpload() || selected.equals(uploadRefused)) {
+            uploadRequested = null;
+            progressUp = -1;
+        } else if (uploadRequested != null && !uploadRequested.equals(selected)) {
+            // The selection changed while waiting: the old answer is no longer wanted.
+            uploadRequested = null;
+            progressUp = 0;
+        } else if (uploadRequested != null) {
+            if (--uploadWaitTicks <= 0) {
+                uploadRequested = null; // nobody answered: count up and ask again
+                progressUp = 0;
+            }
+        } else {
             if (progressUp == -1) {
                 progressUp = 0;
             }
             if (progressUp >= 50) {
-                // Signal all watching clients to send us the selected snapshot
-                requestUpload();
-                progressUp = -1;
+                // Signal all watching clients to send us the selected snapshot, and wait for the answer.
+                if (requestUpload()) {
+                    uploadRequested = selected;
+                    uploadWaitTicks = UPLOAD_ANSWER_TIMEOUT_TICKS;
+                } else {
+                    progressUp = -1;
+                }
             } else {
                 progressUp++;
             }
-        } else if (progressUp != -1) {
-            progressUp = -1;
         }
+    }
+
+    /** Whether an upload could be turned into an item now: something selected, a blank in, the output free. */
+    private boolean canTakeUpload() {
+        return selected != null && !invUpIn.getStackInSlot(0).isEmpty() && invUpOut.getStackInSlot(0).isEmpty();
+    }
+
+    /** Whether an upload request is out and still wanted; the menu keeps no upload chunk while it is not. */
+    public boolean isUploadRequested() {
+        return uploadRequested != null;
+    }
+
+    /** Whether the selected snapshot's upload was refused and is not being asked for again. */
+    public boolean isUploadRefused() {
+        return selected != null && selected.equals(uploadRefused);
+    }
+
+    /** An upload chunk for the outstanding request arrived: a large upload in flight is not timed out. */
+    public void onUploadChunk() {
+        if (uploadRequested != null) uploadWaitTicks = UPLOAD_ANSWER_TIMEOUT_TICKS;
+    }
+
+    /** The upload for the outstanding request could not be used; stop asking for it (see {@link #uploadRefused}). */
+    public void onUploadRefused(String why) {
+        if (uploadRequested == null) return;
+        BCLog.logger.warn("[library] Refused the upload of {} at {}: {}", uploadRequested, worldPosition, why);
+        uploadRefused = uploadRequested;
+        uploadRequested = null;
+        progressUp = -1;
     }
 
     /**
@@ -187,22 +249,40 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
      * Send an upload request to all watching clients. Each client will look up the selected
      * snapshot in their local library and send it back to the server.
      */
-    private void requestUpload() {
-        if (selected == null) return;
+    private boolean requestUpload() {
+        if (selected == null) return false;
         final Snapshot.Key key = selected;
+        boolean asked = false;
         for (Player p : watchingPlayers) {
             if (p.containerMenu instanceof ContainerElectronicLibrary container) {
                 container.sendMessage(ContainerElectronicLibrary.NET_UPLOAD_REQUEST, buf -> key.writeToByteBuf(buf));
+                asked = true;
             }
         }
+        return asked;
     }
 
     /**
-     * Called by ContainerElectronicLibrary when a client has uploaded snapshot data.
-     * Adds the snapshot to the server DB and creates the used item in the output slot.
+     * Called by ContainerElectronicLibrary when a client has uploaded snapshot data. Accepted only as the answer to
+     * the outstanding request, for the build it asked for, while a blank waits and the output is free: then the
+     * snapshot goes into the server DB and the used item into the output slot. Anything else is ignored (an
+     * unasked-for or second answer) or refused (the wrong build).
+     *
+     * @return whether the upload became an item
      */
-    public void onUploadReceived(Snapshot snapshot) {
-        Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot);
+    public boolean onUploadReceived(Snapshot snapshot) {
+        if (uploadRequested == null || !canTakeUpload()) {
+            BCLog.logger.warn("[library] Ignoring an upload at {} that no request is waiting for", worldPosition);
+            return false;
+        }
+        if (snapshot.key == null || !java.util.Arrays.equals(snapshot.key.hash, uploadRequested.hash)) {
+            onUploadRefused("it is not the snapshot that was asked for");
+            return false;
+        }
+        Snapshot.Header asked = uploadRequested.header;
+        uploadRequested = null;
+        progressUp = -1;
+        Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot, asked);
         EnumSnapshotType type = snapshot.getType();
         ItemSnapshot usedItem = type == EnumSnapshotType.BLUEPRINT
             ? BCBuildersItems.BLUEPRINT_USED.get()
@@ -210,21 +290,27 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
         invUpOut.setStackInSlot(0, usedItem.createUsedStack(header));
         invUpIn.setStackInSlot(0, ItemStack.EMPTY);
         setChanged();
+        return true;
     }
 
     /**
      * Store an uploaded snapshot in {@code store}; returns the header for the item that stands for it. The server
      * keeps content only (like the Architect Table does) and the name travels on the item, so one build uploaded
      * under several names shares one file and every resulting item finds it.
+     * <p>
+     * The item's name, owner and date come from {@code asked}, the header of the request the tile made (checked by
+     * {@link ContainerElectronicLibrary#isSelectable} when the client selected it), never from the upload's own
+     * header: the upload is matched to the request by content hash only, so its header is whatever the sender wrote
+     * (an unbounded name would push the item past the size clients accept for it).
      */
-    public static Snapshot.Header storeUpload(GlobalSavedDataSnapshots store, Snapshot snapshot) {
-        Snapshot.Header uploaded = snapshot.key.header;
+    public static Snapshot.Header storeUpload(GlobalSavedDataSnapshots store, Snapshot snapshot,
+                                             @Nullable Snapshot.Header asked) {
         snapshot.key = new Snapshot.Key(snapshot.key, (Snapshot.Header) null);
         store.addSnapshot(snapshot);
-        if (uploaded == null) {
+        if (asked == null) {
             return new Snapshot.Header(snapshot.key, new UUID(0, 0), new java.util.Date(), "Snapshot");
         }
-        return new Snapshot.Header(snapshot.key, uploaded.owner, uploaded.created, uploaded.name);
+        return new Snapshot.Header(snapshot.key, asked.owner, asked.created, asked.name);
     }
 
     // --- NBT persistence ---

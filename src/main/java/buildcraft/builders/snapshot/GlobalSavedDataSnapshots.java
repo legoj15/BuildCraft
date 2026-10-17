@@ -21,7 +21,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -50,6 +49,9 @@ public class GlobalSavedDataSnapshots {
     private static final String SNAPSHOT_FILE_EXTENSION = ".bcnbt";
     /** Ends the in-progress copy of a save ({@code <file name>.<random>.tmp}); never listed or read as a snapshot. */
     private static final String TEMP_FILE_EXTENSION = ".tmp";
+    /** A temp file younger than this is never swept: a save writes one for seconds, and a second game instance
+     *  sharing the directory (two servers, a server and a client over one game dir) must not lose its live one. */
+    static final Duration ORPHANED_TEMP_MIN_AGE = Duration.ofMinutes(5);
     /** Bytes of the header hash kept in a named snapshot's file name; enough to tell one build's names apart. */
     private static final int HEADER_DIGEST_BYTES = 8;
     /** How often the background scan looks for files added or removed outside the game. */
@@ -75,9 +77,20 @@ public class GlobalSavedDataSnapshots {
     private final AtomicBoolean rescanQueued = new AtomicBoolean();
     private volatile long lastRescanNanos;
     private volatile boolean rescannedOnce;
-    /** Files this store wrote, or has read back intact, so a repeat save of one is a name check only; a file not
-     *  in here (left by an older version, a crash, or a hand copy) is decompressed once before it is trusted. */
-    private final Set<String> intactFiles = ConcurrentHashMap.newKeySet();
+    /** What a file looked like (size and modification time) when this store wrote it, or when a save last
+     *  decompressed it and found it readable. A repeat save of a file whose stats still match is a stat check
+     *  only; any other file (left by an older version, a crash, a hand copy, or changed outside the game since
+     *  it was trusted) is decompressed once before it is trusted again. Reads through {@link #getSnapshot} do
+     *  not add to this: only a save's own check does. */
+    private final Map<String, FileStamp> intactFiles = new ConcurrentHashMap<>();
+
+    /** A file's size and modification time: the cheap fingerprint the trust in {@link #intactFiles} is keyed on,
+     *  the same one {@link SnapshotIndex} uses to notice a changed file. */
+    private record FileStamp(long length, long modified) {
+        static FileStamp of(File file) {
+            return new FileStamp(file.length(), file.lastModified());
+        }
+    }
     private final File snapshotsFile;
 
     private GlobalSavedDataSnapshots(Side side) {
@@ -97,14 +110,17 @@ public class GlobalSavedDataSnapshots {
         deleteOrphanedTempFiles();
     }
 
-    /** Delete the in-progress copies a crash mid-save left behind (a live save always removes its own). */
+    /** Delete the in-progress copies a crash mid-save left behind (a live save always removes its own). Only those
+     *  older than {@link #ORPHANED_TEMP_MIN_AGE}: a younger one may belong to a save running in another instance
+     *  that shares this directory. */
     private void deleteOrphanedTempFiles() {
         File[] files = snapshotsFile.listFiles();
         if (files == null) return;
+        long oldestKept = System.currentTimeMillis() - ORPHANED_TEMP_MIN_AGE.toMillis();
         for (File file : files) {
             String name = file.getName();
             if (name.endsWith(TEMP_FILE_EXTENSION) && name.contains(SNAPSHOT_FILE_EXTENSION + ".")
-                    && file.isFile() && !file.delete()) {
+                    && file.isFile() && file.lastModified() <= oldestKept && !file.delete()) {
                 LOGGER.warn("Failed to delete the leftover snapshot temp file {}", file);
             }
         }
@@ -220,8 +236,9 @@ public class GlobalSavedDataSnapshots {
             // Serialise before touching the disk: a snapshot that cannot be written leaves nothing behind.
             CompoundTag nbt = Snapshot.writeToNBT(snapshot);
             if (writeAtomically(nbt, snapshotFile)) {
-                intactFiles.add(snapshotFile.getName());
-                index.put(snapshotFile.getName(), snapshot.key, snapshotFile.lastModified(), snapshotFile.length());
+                FileStamp stamp = FileStamp.of(snapshotFile);
+                intactFiles.put(snapshotFile.getName(), stamp);
+                index.put(snapshotFile.getName(), snapshot.key, stamp.modified(), stamp.length());
             }
         }
         invalidate(snapshot.key);
@@ -264,25 +281,38 @@ public class GlobalSavedDataSnapshots {
 
     /**
      * Whether saving {@code key} would add nothing: the file {@link #fileName} gives it exists and holds a readable
-     * snapshot, or (for a named key) an older {@code <hash>.bcnbt} from before names split files holds it. A
+     * snapshot answering {@code key} (not another build copied in under its name), or (for a named key) an older {@code <hash>.bcnbt} from before names split files holds it. A
      * {@code <hash>.bcnbt} holding a name also answers a content-only save, since a content-only lookup finds it.
      * <p>
-     * A file this store wrote (or already read back) is trusted by name, so a save never decompresses a large
-     * snapshot twice. Any other existing file is decompressed once first: an empty or truncated one (left by a
-     * crash under the old in-place write) is not "stored" and is overwritten by the save.
+     * A file this store wrote (or an earlier save already decompressed) is trusted while its size and modification
+     * time are unchanged, so a save never decompresses a large snapshot twice. Any other existing file is
+     * decompressed once first: an empty or truncated one (left by a crash under the old in-place write, or by
+     * something outside the game replacing a file this store had trusted) is not "stored" and is overwritten by
+     * the save.
      */
     private boolean alreadyStored(Snapshot.Key key) {
         File stored = new File(snapshotsFile, fileName(key));
-        if (stored.isFile() && isIntact(stored)) return true;
+        if (stored.isFile() && isIntact(stored, key)) return true;
         if (key.header == null) return false;
         File legacy = new File(snapshotsFile, key + SNAPSHOT_FILE_EXTENSION);
         return legacy.isFile() && matching(legacy, key, true) != null;
     }
 
-    private boolean isIntact(File snapshotFile) {
-        if (intactFiles.contains(snapshotFile.getName())) return true;
-        if (snapshotFile.length() == 0 || readSnapshotFile(snapshotFile) == null) return false;
-        intactFiles.add(snapshotFile.getName());
+    /** Whether {@code snapshotFile} (the file {@link #fileName} gives {@code key}) holds a readable snapshot that
+     *  answers {@code key}: readable is not enough, since a valid file of another build under this name (a hand copy,
+     *  a sync tool) would otherwise be trusted and the save would write nothing. */
+    private boolean isIntact(File snapshotFile, Snapshot.Key key) {
+        // Stat before reading: a file replaced between the two leaves a stamp that no longer matches, so the next
+        // save verifies it again instead of trusting content it never saw. The stamp is keyed by name, and only a
+        // file that answered this name's key is ever stamped, so a matching stamp vouches for the key too.
+        FileStamp stamp = FileStamp.of(snapshotFile);
+        if (stamp.equals(intactFiles.get(snapshotFile.getName()))) return true;
+        Snapshot held = stamp.length() == 0 ? null : readSnapshotFile(snapshotFile);
+        if (held == null || !answers(held.key, key, false)) {
+            intactFiles.remove(snapshotFile.getName());
+            return false;
+        }
+        intactFiles.put(snapshotFile.getName(), stamp);
         return true;
     }
 

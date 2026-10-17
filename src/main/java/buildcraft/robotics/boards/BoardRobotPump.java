@@ -8,6 +8,13 @@
  */
 package buildcraft.robotics.boards;
 
+import java.util.Objects;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
@@ -25,6 +32,9 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.lib.misc.DrainRefusals;
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
@@ -50,6 +60,16 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     /** The gate fluid filter of the robot's home station, refreshed on every search pass. Null means
      *  "no station, no filter" — pump anything. */
     private IFluidFilter fluidFilter;
+
+    /** Blocks the pump AI was refused (by a protection mod or the block's own pickup), skipped by the search
+     *  while they stay unchanged. Every entry was refused to {@link #refusalsOwner}: the AI asks as the home
+     *  station's owner, so a refusal says nothing about anyone else. Transient: a reloaded board asks once more. */
+    private final DrainRefusals refusals = new DrainRefusals();
+
+    /** The UUID of the home-station owner every entry in {@link #refusals} was refused to (null: no owner, the
+     *  generic "[BuildCraft]" identity). */
+    @Nullable
+    private UUID refusalsOwner;
 
     public BoardRobotPump(IRobotAccess iRobot) {
         super(iRobot);
@@ -96,6 +116,31 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         return fluidFilter.matches(new FluidStack(fluidState.getType(), BUCKET));
     }
 
+    /** The search predicate: a drainable fluid source nobody else has reserved that the station's gate filter
+     *  lets through and that has not refused this board's robot (see {@link #refusals}). Asking protection mods
+     *  is NOT part of it: this runs for every scanned cell, so the pump AI asks once, about the one block it was
+     *  sent to, and the answer comes back through {@link #delegateAIEnded}. */
+    public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
+        return level != null
+                && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
+                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && matchesGateFilter(level.getBlockState(pos))
+                && !refusalsForCurrentOwner().isRefused(level, pos);
+    }
+
+    /** {@link #refusals}, first emptied if the robot now works for someone other than the owner they were refused
+     *  to (it was relinked to another player's station): that owner's refusals are not this one's, so the
+     *  memory is keyed on the owner as well as the cell and its state. */
+    private DrainRefusals refusalsForCurrentOwner() {
+        GameProfile owner = RobotProtection.ownerOf(robot);
+        UUID ownerId = owner == null ? null : GameProfileUtil.getId(owner);
+        if (!Objects.equals(ownerId, refusalsOwner)) {
+            refusals.clear();
+            refusalsOwner = ownerId;
+        }
+        return refusals;
+    }
+
     @Override
     public void update() {
         if (carriedFluid() > 0) {
@@ -103,10 +148,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         } else {
             updateFilter();
             Level level = robot.level();
-            IBlockFilter blockFilter = pos -> level != null
-                    && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
-                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
-                    && matchesGateFilter(level.getBlockState(pos));
+            IBlockFilter blockFilter = pos -> isSearchCandidate(level, pos);
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, blockFilter));
         }
     }
@@ -120,7 +162,14 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
-        } else if (ai instanceof AIRobotPumpBlock) {
+        } else if (ai instanceof AIRobotPumpBlock pumpAi) {
+            // A block that would not be given up (a claim mod said no, or its pickup refused) must not be
+            // searched again while it is unchanged: the AI is one attempt and dies here, so the memory is the
+            // board's. Without it the robot flew straight back to the same block on every pass.
+            Level level = robot.level();
+            if (pumpAi.refused() && level != null && pumpAi.blockToPump() != null) {
+                refusalsForCurrentOwner().remember(level, pumpAi.blockToPump());
+            }
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {
             if (!ai.success()) {

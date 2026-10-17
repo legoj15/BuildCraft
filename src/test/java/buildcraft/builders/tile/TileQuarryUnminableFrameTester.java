@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreConfig;
-import buildcraft.lib.misc.MachineProtectionTester;
+import buildcraft.lib.test.ClaimProtectionMod;
 
 /**
  * A cell inside the quarry's frame volume that the quarry may never mine must not stall the quarry.
@@ -83,8 +83,8 @@ public class TileQuarryUnminableFrameTester {
             Scenario s = new Scenario(helper);
             try {
                 helper.setBlock(STUCK_EDGE, Blocks.STONE);
-                try (MachineProtectionTester.ProtectionMod claim =
-                             new MachineProtectionTester.ProtectionMod(s.abs(STUCK_EDGE), true)) {
+                try (ClaimProtectionMod claim =
+                             new ClaimProtectionMod(s.abs(STUCK_EDGE), true)) {
                     s.runToDiggingAndVerify(helper, Blocks.STONE);
                     assertTrue(!claim.askedBy.isEmpty(),
                             "liveness: the quarry must have asked the claim about the cell");

@@ -37,6 +37,7 @@ import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
+import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotBreak;
@@ -74,28 +75,6 @@ public class MachineProtectionTester {
                 "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
     }
 
-    /** Records every break event at {@code pos}, cancelling them all when {@code refuse} is set. */
-    public static final class ProtectionMod implements AutoCloseable {
-        public final List<Player> askedBy = new ArrayList<>();
-        private final Object token;
-
-        public ProtectionMod(BlockPos pos, boolean refuse) {
-            token = BreakEventCompat.onBreak(event -> {
-                if (event.getPos().equals(pos)) {
-                    askedBy.add(BreakEventCompat.playerOf(event));
-                    if (refuse) {
-                        BreakEventCompat.cancel(event);
-                    }
-                }
-            });
-        }
-
-        @Override
-        public void close() {
-            BreakEventCompat.removeListener(token);
-        }
-    }
-
     /**
      * The permission probe posts a real break event, but nothing breaks — so a nearby laser (any
      * {@link ILocalBlockUpdateSubscriber}) must not be told a block changed. Before the fix every per-block check in a
@@ -129,7 +108,7 @@ public class MachineProtectionTester {
         };
         LocalBlockUpdateNotifier notifier = LocalBlockUpdateNotifier.instance(level);
         notifier.registerSubscriberForUpdateNotifications(laser);
-        try (ProtectionMod observer = new ProtectionMod(pos, false)) {
+        try (ClaimProtectionMod observer = new ClaimProtectionMod(pos, false)) {
             check(BlockUtil.canMachineBreak(level, pos, new GameProfile(UUID.randomUUID(), "bc_protection_test")),
                     "an unprotected block may be broken");
             check(!observer.askedBy.isEmpty(), "precondition: the probe was actually posted");
@@ -158,7 +137,7 @@ public class MachineProtectionTester {
         helper.setBlock(targetRel, Blocks.STONE);
         BlockPos target = helper.absolutePos(targetRel);
 
-        try (ProtectionMod claim = new ProtectionMod(target, true)) {
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(target, true)) {
             for (int i = 0; i < 60; i++) {
                 stripes.receivePower(64 * MjAPI.MJ, false);
                 stripes.onTick();
@@ -219,7 +198,7 @@ public class MachineProtectionTester {
         // The pipe's battery holds 256 MJ: that much arrives while it fills, and anything beyond it was spent.
         long batteryCapacity = 256 * MjAPI.MJ;
 
-        try (ProtectionMod claim = new ProtectionMod(target, true)) {
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(target, true)) {
             long accepted = 0;
             for (int i = 0; i < 60; i++) {
                 accepted += 64 * MjAPI.MJ - stripes.receivePower(64 * MjAPI.MJ, false);
@@ -274,9 +253,9 @@ public class MachineProtectionTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_PICKAXE));
         BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
 
-        try (ProtectionMod stoneClaim = new ProtectionMod(stone, true);
-                ProtectionMod logClaim = new ProtectionMod(log, true);
-                ProtectionMod wheatClaim = new ProtectionMod(wheat, true)) {
+        try (ClaimProtectionMod stoneClaim = new ClaimProtectionMod(stone, true);
+                ClaimProtectionMod logClaim = new ClaimProtectionMod(log, true);
+                ClaimProtectionMod wheatClaim = new ClaimProtectionMod(wheat, true)) {
             AIRobotBreak breaker = new AIRobotBreak(robot, stone);
             for (int i = 0; i < 20; i++) {
                 breaker.cycle();
@@ -405,8 +384,8 @@ public class MachineProtectionTester {
         BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
 
         AIRobot search = null;
-        try (ProtectionMod claim = new ProtectionMod(refused, true);
-                ProtectionMod open = new ProtectionMod(allowed, false)) {
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(refused, true);
+                ClaimProtectionMod open = new ClaimProtectionMod(allowed, false)) {
             for (int round = 1; round <= 2; round++) {
                 // Pinned to this test's two logs: logs in a neighbouring arena are legal targets for the board too.
                 search = new AIRobotSearchAndGotoBlock(robot, false,

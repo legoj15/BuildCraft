@@ -29,33 +29,33 @@ public class GuiGate extends GuiBC8<ContainerGate> {
     private static final GuiIcon BACKGROUND_ROW = new GuiIcon(TEXTURE_BASE, 0, 23, 176, 18);
     
     private final int numRows;
-    
+    /** Geometry of the trigger/action rows, shared by the widget layout, the wiring drawing and click handling. */
+    private final GateRowLayout layout;
+
     public GuiGate(ContainerGate container, Inventory playerInventory, Component title) {
         // Compute total GUI size based on number of slots (slotHeight maps to number of rows drawn)
         super(container, playerInventory, title, 176, 16 + 101 + container.slotHeight * 18);
         this.numRows = container.slotHeight;
+        this.layout = new GateRowLayout(container.gate.isSplitInTwo(), container.gate.variant.numSlots,
+                container.gate.variant.numTriggerArgs, container.gate.variant.numActionArgs);
     }
 
     @Override
     protected void initGuiElements() {
-        boolean twoColumns = menu.gate.isSplitInTwo();
-        int horizontalSlotCount = twoColumns ? 2 : 1;
-        int verticalSlotCount = menu.gate.variant.numSlots / horizontalSlotCount;
-        int numTriggerArgs = menu.gate.variant.numTriggerArgs;
-        int numActionArgs = menu.gate.variant.numActionArgs;
-        
-        int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
-        int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
-        
+        int horizontalSlotCount = layout.horizontalSlotCount;
+        int verticalSlotCount = layout.verticalSlotCount;
+        int numTriggerArgs = layout.numTriggerArgs;
+        int numActionArgs = layout.numActionArgs;
+
         // Drag handler must be added before sources so they can inject events into it
         mainGui.shownElements.add(new buildcraft.lib.gui.statement.GuiElementStatementDrag(mainGui));
 
         // Help regions — one column-wide rect per role per pair, covering all rows in that pair.
         int totalHeight = verticalSlotCount * 18;
-        int rowBaseY = 16;
+        int rowBaseY = GateRowLayout.FIRST_ROW_Y;
         for (int col = 0; col < horizontalSlotCount; col++) {
-            int baseX = slotPairStart + 7 + col * (18 + slotPairWidth);
-            int actionStartX = baseX + 18 * (2 + numTriggerArgs);
+            int baseX = layout.slotBaseX(col);
+            int actionStartX = layout.actionX(col);
 
             mainGui.shownElements.add(new DummyHelpElement(
                     new GuiRectangle(baseX, rowBaseY, 18, totalHeight).offset(mainGui.rootElement),
@@ -93,10 +93,10 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Loop over vertical and horizontal slots
         for (int row = 0; row < verticalSlotCount; row++) {
             for (int col = 0; col < horizontalSlotCount; col++) {
-                int pairIndex = row + col * verticalSlotCount;
-                int baseX = slotPairStart + 7 + col * (18 + slotPairWidth);
-                int baseY = 16 + row * 18;
-                
+                int pairIndex = layout.pairIndex(row, col);
+                int baseX = layout.slotBaseX(col);
+                int baseY = layout.slotBaseY(row);
+
                 // Trigger slot
                 IGuiArea triggerArea = new GuiRectangle(baseX, baseY, 18, 18).offset(mainGui.rootElement);
                 mainGui.shownElements.add(new GuiElementStatement<>(mainGui, triggerArea, menu.gate.statements[pairIndex].trigger, menu.possibleTriggersContext, true));
@@ -108,7 +108,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
                 }
                 
                 // Action slot
-                int actionStartX = baseX + 18 * (2 + numTriggerArgs);
+                int actionStartX = layout.actionX(col);
                 IGuiArea actionArea = new GuiRectangle(actionStartX, baseY, 18, 18).offset(mainGui.rootElement);
                 mainGui.shownElements.add(new GuiElementStatement<>(mainGui, actionArea, menu.gate.statements[pairIndex].action, menu.possibleActionsContext, true));
                 
@@ -127,37 +127,8 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Check connector button clicks BEFORE super.mouseClicked(), because
         // AbstractContainerScreen.mouseClicked() returns true for any click in the
         // container area (slot interactions), which would swallow the connector click.
-        if (event.button() == 0) {
-            boolean twoColumns = menu.gate.isSplitInTwo();
-            int horizontalSlotCount = twoColumns ? 2 : 1;
-            int verticalSlotCount = menu.gate.variant.numSlots / horizontalSlotCount;
-            int numTriggerArgs = menu.gate.variant.numTriggerArgs;
-            int numActionArgs = menu.gate.variant.numActionArgs;
-            int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
-            int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
-
-            int mx = (int) event.x() - leftPos;
-            int my = (int) event.y() - topPos;
-
-            for (int row = 0; row < verticalSlotCount - 1; row++) {
-                for (int col = 0; col < horizontalSlotCount; col++) {
-                    int connBaseX = slotPairStart + 7 + col * (18 + slotPairWidth) + 18 * (1 + numTriggerArgs);
-                    int connBaseY = 16 + 9 + row * 18;
-
-                    if (mx >= connBaseX && mx < connBaseX + 18 && my >= connBaseY && my < connBaseY + 18) {
-                        int pairIndex = row + col * verticalSlotCount;
-                        boolean newState = !menu.gate.connections[pairIndex];
-                        // Optimistic client-side update for instant visual feedback
-                        menu.gate.connections[pairIndex] = newState;
-                        // Send the change to the server
-                        menu.setConnected(pairIndex, newState);
-                        if (net.minecraft.client.Minecraft.getInstance().player != null) {
-                            net.minecraft.client.Minecraft.getInstance().player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                        }
-                        return true;
-                    }
-                }
-            }
+        if (event.button() == 0 && toggleConnectorAt(event.x(), event.y())) {
+            return true;
         }
         return super.mouseClicked(event, doubleClick);
     }
@@ -167,41 +138,31 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Check connector button clicks BEFORE super.mouseClicked(), because
         // AbstractContainerScreen.mouseClicked() returns true for any click in the
         // container area (slot interactions), which would swallow the connector click.
-        if (button == 0) {
-            boolean twoColumns = menu.gate.isSplitInTwo();
-            int horizontalSlotCount = twoColumns ? 2 : 1;
-            int verticalSlotCount = menu.gate.variant.numSlots / horizontalSlotCount;
-            int numTriggerArgs = menu.gate.variant.numTriggerArgs;
-            int numActionArgs = menu.gate.variant.numActionArgs;
-            int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
-            int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
-
-            int mx = (int) mouseXd - leftPos;
-            int my = (int) mouseYd - topPos;
-
-            for (int row = 0; row < verticalSlotCount - 1; row++) {
-                for (int col = 0; col < horizontalSlotCount; col++) {
-                    int connBaseX = slotPairStart + 7 + col * (18 + slotPairWidth) + 18 * (1 + numTriggerArgs);
-                    int connBaseY = 16 + 9 + row * 18;
-
-                    if (mx >= connBaseX && mx < connBaseX + 18 && my >= connBaseY && my < connBaseY + 18) {
-                        int pairIndex = row + col * verticalSlotCount;
-                        boolean newState = !menu.gate.connections[pairIndex];
-                        // Optimistic client-side update for instant visual feedback
-                        menu.gate.connections[pairIndex] = newState;
-                        // Send the change to the server
-                        menu.setConnected(pairIndex, newState);
-                        if (net.minecraft.client.Minecraft.getInstance().player != null) {
-                            net.minecraft.client.Minecraft.getInstance().player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
-                        }
-                        return true;
-                    }
-                }
-            }
+        if (button == 0 && toggleConnectorAt(mouseXd, mouseYd)) {
+            return true;
         }
         return super.mouseClicked(mouseXd, mouseYd, button);
     }*/
     //?}
+
+    /** Flips the vertical connector under the screen-space mouse position, if there is one. Shared by both
+     *  {@code mouseClicked} variants so the hit-test lives once; the connectors are the gate's wiring diagram rather
+     *  than buttons, hence the screen plays the click sound itself (see ButtonUnificationGuardTester). */
+    private boolean toggleConnectorAt(double mouseX, double mouseY) {
+        int pairIndex = layout.connectorPairAt((int) mouseX - leftPos, (int) mouseY - topPos);
+        if (pairIndex < 0) {
+            return false;
+        }
+        boolean newState = !menu.gate.connections[pairIndex];
+        // Optimistic client-side update for instant visual feedback
+        menu.gate.connections[pairIndex] = newState;
+        // Send the change to the server
+        menu.setConnected(pairIndex, newState);
+        if (net.minecraft.client.Minecraft.getInstance().player != null) {
+            net.minecraft.client.Minecraft.getInstance().player.playSound(net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0F, 1.0F);
+        }
+        return true;
+    }
 
     @Override
     protected void init() {
@@ -225,22 +186,16 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         BACKGROUND_BOTTOM.drawAt(leftPos, topPos + 16 + numRows * 18);
         
         // Draw connector wires and buttons directly over the background
-        boolean twoColumns = menu.gate.isSplitInTwo();
-        int horizontalSlotCount = twoColumns ? 2 : 1;
-        int verticalSlotCount = menu.gate.variant.numSlots / horizontalSlotCount;
-        int numTriggerArgs = menu.gate.variant.numTriggerArgs;
-        int numActionArgs = menu.gate.variant.numActionArgs;
-        int slotPairWidth = 18 * (3 + numTriggerArgs + numActionArgs);
-        int slotPairStart = (162 - (slotPairWidth + (twoColumns ? slotPairWidth + 18 : 0))) / 2;
-        
+        int horizontalSlotCount = layout.horizontalSlotCount;
+        int verticalSlotCount = layout.verticalSlotCount;
+
         for (int row = 0; row < verticalSlotCount; row++) {
             for (int col = 0; col < horizontalSlotCount; col++) {
-                int pairIndex = row + col * verticalSlotCount;
-                int baseX = leftPos + slotPairStart + 7 + col * (18 + slotPairWidth);
-                int baseY = topPos + 16 + row * 18;
-                
-                int connectorPos = baseX + 18 * (1 + numTriggerArgs);
-                
+                int pairIndex = layout.pairIndex(row, col);
+                int baseY = topPos + layout.slotBaseY(row);
+
+                int connectorPos = leftPos + layout.connectorX(col);
+
                 boolean triggerOn = menu.gate.triggerOn[pairIndex] && menu.gate.statements[pairIndex].trigger.get() != null;
                 boolean actionOn = menu.gate.actionOn[pairIndex] && menu.gate.statements[pairIndex].action.get() != null;
                 
@@ -265,7 +220,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
                 // Vertical connectors
                 if (row < verticalSlotCount - 1) {
                     int connBaseX = connectorPos;
-                    int connBaseY = baseY + 9;
+                    int connBaseY = topPos + layout.connectorY(row);
                     boolean isConnected = menu.gate.connections[pairIndex];
                     boolean actionAbove = menu.gate.actionOn[pairIndex];
                     boolean actionBelow = menu.gate.actionOn[pairIndex + 1];
@@ -278,7 +233,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
                     // Button representation
                     int mx = (int) this.mainGui.mouse.getX();
                     int my = (int) this.mainGui.mouse.getY();
-                    boolean hovered = (mx >= connBaseX && mx < connBaseX + 18 && my >= connBaseY && my < connBaseY + 18);
+                    boolean hovered = layout.connectorContains(row, col, mx - leftPos, my - topPos);
                     
                     int btnU = hovered ? 194 : 176;
                     int btnV = 72;

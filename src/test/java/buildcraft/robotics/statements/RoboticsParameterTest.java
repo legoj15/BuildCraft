@@ -8,6 +8,7 @@ package buildcraft.robotics.statements;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -127,6 +128,31 @@ public class RoboticsParameterTest extends VanillaSetupBaseTester {
         StatementParameterItemStackExact result = param.onClick(null, null, ItemStack.EMPTY, LEFT);
         Assertions.assertEquals(5, result.getItemStack().getCount(),
                 "a left-click must step the exact-stack count up");
+    }
+
+    @Test
+    public void exactParamMissingSlotsKeyDefaultsToUnlimited() {
+        // Hand-edited or foreign NBT may omit "availableSlots"; upstream 7.1.x treated that as -1 (unlimited up to 64).
+        StatementParameterItemStackExact param = StatementParameterItemStackExact.readFromNbt(new CompoundTag());
+        Assertions.assertEquals(-1, param.availableSlots,
+                "a missing availableSlots key must default to -1 (unlimited), not 0");
+    }
+
+    @Test
+    public void exactParamMissingSlotsKeyStillStepsUp() {
+        CompoundTag nbt = new CompoundTag();
+        new StatementParameterItemStackExact(new ItemStack(Items.DIAMOND, 4), 3).writeToNbt(nbt);
+        nbt.remove("availableSlots");
+        StatementParameterItemStackExact param = StatementParameterItemStackExact.readFromNbt(nbt);
+        StatementParameterItemStackExact result = param.onClick(null, null, ItemStack.EMPTY, LEFT);
+        Assertions.assertEquals(5, result.getItemStack().getCount(),
+                "a parameter read without availableSlots must still step its count up");
+    }
+
+    @Test
+    public void exactParamDefaultCtorIsUnlimited() {
+        Assertions.assertEquals(-1, new StatementParameterItemStackExact().availableSlots,
+                "the no-arg constructor must default to unlimited slots (-1), as upstream does");
     }
 
     @Test

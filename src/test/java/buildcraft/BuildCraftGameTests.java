@@ -200,6 +200,7 @@ public class BuildCraftGameTests {
 
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
+        reg.accept("buildcraftunofficial:oil_spread_skips_same_fluid", () -> buildcraft.energy.OilWaterInteractionTest::testOilSpreadSkipsSameFluidNeighbour);
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
@@ -282,6 +283,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_redstone_dry_run", () -> buildcraft.energy.EngineTester::testRedstoneEngineDryRunHeat);
         reg.accept("buildcraftunofficial:engine_redstone_safe_limit", () -> buildcraft.energy.EngineTester::testRedstoneEngineSafeLimit);
         reg.accept("buildcraftunofficial:engine_stirling_fuel", () -> buildcraft.energy.EngineTester::testStirlingEngineFuel);
+        reg.accept("buildcraftunofficial:engine_stirling_lava_bucket", () -> buildcraft.energy.EngineTester::testStirlingEngineLavaBucketLeavesBucket);
         reg.accept("buildcraftunofficial:engine_stirling_releases_stored_power", () -> buildcraft.energy.EngineTester::testStirlingEngineReleasesStoredPowerWithoutFuel);
         reg.accept("buildcraftunofficial:engine_stirling_explosion", () -> buildcraft.energy.EngineTester::testStirlingEngineExplosion);
         reg.accept("buildcraftunofficial:engine_combustion_stable", () -> buildcraft.energy.EngineTester::testCombustionEngineStable);

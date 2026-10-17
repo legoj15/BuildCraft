@@ -81,6 +81,7 @@ public final class QuadItemBakedModel implements IDynamicBakedModel {
         return false;
     }
 
+    // Abstract-yet-deprecated on 1.21.1 (NeoForge's ModelData overload delegates back here), so overriding it is mandatory.
     @Override
     @SuppressWarnings("deprecation")
     public TextureAtlasSprite getParticleIcon() {

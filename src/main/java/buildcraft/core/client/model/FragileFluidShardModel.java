@@ -70,7 +70,9 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
     @Override public boolean isGui3d() { return vanilla.isGui3d(); }
     @Override public boolean usesBlockLight() { return vanilla.usesBlockLight(); }
     @Override public boolean isCustomRenderer() { return false; }
+    // Both are deprecated on 1.21.1; the ModelData overload delegates back to the no-arg getter (abstract), so overriding it is mandatory.
     @Override @SuppressWarnings("deprecation") public TextureAtlasSprite getParticleIcon() { return vanilla.getParticleIcon(ModelData.EMPTY); }
+    // Forwarded deliberately: ItemEntityRenderer's ground bob and applyTransform's default both read getTransforms().
     @Override @SuppressWarnings("deprecation") public ItemTransforms getTransforms() { return vanilla.getTransforms(); }
     @Override public ItemOverrides getOverrides() { return overrides; }
 
@@ -131,6 +133,7 @@ public class FragileFluidShardModel implements IDynamicBakedModel {
         @Override public boolean isGui3d() { return resolved.isGui3d(); }
         @Override public boolean usesBlockLight() { return resolved.usesBlockLight(); }
         @Override public boolean isCustomRenderer() { return false; }
+        // Same two deprecated 1.21.1 hooks as the outer model, forwarded to the resolved model.
         @Override @SuppressWarnings("deprecation") public TextureAtlasSprite getParticleIcon() { return resolved.getParticleIcon(ModelData.EMPTY); }
         @Override @SuppressWarnings("deprecation") public ItemTransforms getTransforms() { return resolved.getTransforms(); }
         @Override public ItemOverrides getOverrides() { return ItemOverrides.EMPTY; }

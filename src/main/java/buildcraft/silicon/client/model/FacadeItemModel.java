@@ -205,6 +205,7 @@ public class FacadeItemModel implements ItemModel {
         return false;
     }
 
+    // Abstract-yet-deprecated on 1.21.1 (NeoForge's ModelData overload delegates back here), so overriding it is mandatory.
     @Override
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {

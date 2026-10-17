@@ -73,21 +73,41 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         data.setDirty();
     }
 
+    /**
+     * Sends a player who has just entered this level (login, dimension change, respawn) everything its client
+     * cache needs: the client drops its marker cache whenever its level unloads, and the live updates of
+     * {@link #loadMarker}/{@link #addConnection} only reach players already in the dimension. Wired by
+     * {@link MarkerCacheEvents}. Does nothing for a player with no connection yet.
+     */
     public void onPlayerJoinWorld(ServerPlayer player) {
+        if (player.connection == null) {
+            return;
+        }
+        for (MessageMarker message : createJoinSyncMessages()) {
+            PacketDistributor.sendToPlayer(player, message);
+        }
+    }
+
+    /**
+     * The messages that bring a client cache from empty to this cache's state: one carrying every marker (loaded
+     * or not), then one per connection. Empty for a client cache. Kept apart from the sending so the content
+     * can be checked without a network connection.
+     */
+    public List<MessageMarker> createJoinSyncMessages() {
+        List<MessageMarker> messages = new ArrayList<>();
         if (isServer) {// Sanity Check
-            // Send ALL loaded markers
+            // ALL markers
             if (!tileCache.isEmpty()) {
                 List<BlockPos> positions = new ArrayList<>(tileCache.keySet());
-                MessageMarker message = new MessageMarker(true, false, cacheId, positions);
-                PacketDistributor.sendToPlayer(player, message);
+                messages.add(new MessageMarker(true, false, cacheId, positions));
             }
-            // Send ALL connections.
+            // ALL connections.
             for (C connection : connectionToPos.keySet()) {
                 List<BlockPos> positions = new ArrayList<>(connection.getMarkerPositions());
-                MessageMarker message = new MessageMarker(true, true, cacheId, positions);
-                PacketDistributor.sendToPlayer(player, message);
+                messages.add(new MessageMarker(true, true, cacheId, positions));
             }
         }
+        return messages;
     }
 
     public boolean hasLoadedOrUnloadedMarker(BlockPos pos) {

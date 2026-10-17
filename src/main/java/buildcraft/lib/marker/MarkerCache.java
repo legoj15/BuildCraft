@@ -52,6 +52,8 @@ public abstract class MarkerCache<S extends MarkerSubCache<?>> {
         }
     }
 
+    /** Sends a player who entered a level the markers and connections of every cache. Wired by
+     *  {@link MarkerCacheEvents}. */
     public static void onPlayerJoinWorld(ServerPlayer player) {
         for (MarkerCache<?> cache : CACHES) {
             Level world = player.level();
@@ -59,7 +61,9 @@ public abstract class MarkerCache<S extends MarkerSubCache<?>> {
         }
     }
 
-    /** Drops the unloading world's sub-cache. Wired for server levels by {@link MarkerCacheEvents}. */
+    /** Drops the unloading level's sub-cache from the table of its own side (a client level and the integrated
+     *  server's level of the same dimension key have separate ones). Wired for both sides by
+     *  {@link MarkerCacheEvents}. */
     public static void onWorldUnload(Level world) {
         for (MarkerCache<?> cache : CACHES) {
             cache.onWorldUnloadImpl(world);

@@ -267,6 +267,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_path_los", () -> buildcraft.core.marker.MarkerTester::testPathLineOfSight);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_2d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
+        // Join resync: what a joining client is sent, and that a player joining a level triggers it.
+        reg.accept("buildcraftunofficial:marker_join_sync_replays_markers_and_connections", () -> buildcraft.core.marker.MarkerTester::testJoinSyncReplaysMarkersAndConnections);
+        reg.accept("buildcraftunofficial:marker_join_event_resyncs_player", () -> buildcraft.lib.marker.MarkerJoinResyncTester::aPlayerJoiningALevelIsResynced);
         // Hermeticity of the marker tests themselves: leftovers from earlier batches must neither corrupt a connection nor survive MarkerArenaUtil.open.
         reg.accept("buildcraftunofficial:marker_leftovers_do_not_corrupt_connections", () -> buildcraft.core.marker.MarkerTester::testLeftoverMarkersDoNotCorruptConnections);
         reg.accept("buildcraftunofficial:marker_open_evicts_leftovers", () -> buildcraft.core.marker.MarkerTester::testOpenEvictsLeftoverMarkers);

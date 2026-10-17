@@ -16,15 +16,22 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileMarkerPath;
 import buildcraft.core.tile.TileMarkerVolume;
+import buildcraft.lib.marker.MarkerCache;
+import buildcraft.lib.net.MessageMarker;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.FakeLevels;
 import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil.Session;
 import buildcraft.lib.test.MarkerArenaUtil.Stray;
@@ -212,6 +219,57 @@ public class MarkerTester {
                 assertBox(helper, volume, pos1, corner, "3D Triangulation failed!");
             }, 2 * SETTLE_TICKS, () -> {
                 assertBox(helper, volumeAt(helper, pos1), pos1, corner, "3D Triangulation did not hold!");
+                arena.finish();
+            }, "Volume markers never registered in the cache");
+        });
+    }
+
+    // ---------- Join resync: what a client that has just entered the level is sent ----------
+
+    /** A client resets its marker cache whenever its level unloads, so the sync it is sent on joining has to carry
+     *  everything: replaying it into the client table of a level the client built fresh must reproduce the server's
+     *  markers and connection, and a later unload of that client level must leave nothing for the next world. */
+    public static void testJoinSyncReplaysMarkersAndConnections(GameTestHelper helper) {
+        Session arena = MarkerArenaUtil.open(helper);
+        arena.guard(() -> {
+            BlockPos pos1 = new BlockPos(1, 2, 1);
+            BlockPos pos2 = new BlockPos(5, 2, 1);
+            arena.place(pos1, BCCoreBlocks.MARKER_VOLUME.get());
+            arena.place(pos2, BCCoreBlocks.MARKER_VOLUME.get());
+
+            arena.awaitThen(REGISTER_TICKS, () -> volumeRegistered(arena, pos1, pos2), () -> {
+                volumeAt(helper, pos1).onManualConnectionAttempt(null);
+                assertBox(helper, volumeAt(helper, pos1), pos1, pos2, "Precondition: the server did not connect the markers!");
+            }, SETTLE_TICKS, () -> {
+                BlockPos abs1 = arena.abs(pos1);
+                BlockPos abs2 = arena.abs(pos2);
+                List<MessageMarker> messages = VolumeCache.INSTANCE.getSubCache(helper.getLevel()).createJoinSyncMessages();
+
+                // The joining client's level: same dimension key as this one, its own (client-side) table.
+                Level client = FakeLevels.fake(true, helper.getLevel().dimension());
+                MarkerCache.onWorldUnload(client);
+                try {
+                    VolumeSubCache joined = VolumeCache.INSTANCE.getSubCache(client);
+                    for (MessageMarker message : messages) {
+                        joined.handleMessageMain(message); // what MessageMarker.handle does for each packet
+                    }
+                    if (!joined.hasLoadedOrUnloadedMarker(abs1) || !joined.hasLoadedOrUnloadedMarker(abs2)) {
+                        throw new IllegalStateException("The join sync did not carry both markers: " + messages);
+                    }
+                    VolumeConnection connection = joined.getConnection(abs1);
+                    if (connection == null || !connection.getMarkerPositions().containsAll(List.of(abs1, abs2))) {
+                        throw new IllegalStateException("The join sync did not carry the connection: " + messages);
+                    }
+
+                    // Leaving the world: nothing of it may be shown in the next one.
+                    NeoForge.EVENT_BUS.post(new LevelEvent.Unload(client));
+                    VolumeSubCache nextWorld = VolumeCache.INSTANCE.getSubCache(client);
+                    if (nextWorld == joined || nextWorld.getConnection(abs1) != null || nextWorld.hasLoadedOrUnloadedMarker(abs1)) {
+                        throw new IllegalStateException("The client cache outlived its level's unload");
+                    }
+                } finally {
+                    MarkerCache.onWorldUnload(client);
+                }
                 arena.finish();
             }, "Volume markers never registered in the cache");
         });

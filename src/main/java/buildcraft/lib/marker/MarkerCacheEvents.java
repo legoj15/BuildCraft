@@ -5,22 +5,34 @@
  */
 package buildcraft.lib.marker;
 
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 /**
- * Wires {@link MarkerCache#onWorldUnload}, which 1.12.2 hooked to its world-unload event and the port had left
- * without a caller. Each {@link MarkerCache} singleton keeps a sub-cache per dimension holding the loaded marker
- * block entities (and through them their level), so without this a stopped server's world stayed reachable from
- * the mod, and the NEXT world to use the same dimension key was handed the old world's sub-cache — its marker
- * positions, connections and saved-data link — instead of building its own.
- *
- * <p>Server levels only. Dropping the CLIENT sub-cache on unload is the other half of the 1.12.2 hook, but it
- * is only safe together with that version's join-time resync ({@code MarkerCache.onPlayerJoinWorld}, also
- * unwired here), so the client side is left as it was.
+ * Wires {@link MarkerCache#onWorldUnload} and {@link MarkerCache#onPlayerJoinWorld}, the two halves of 1.12.2's
+ * marker lifecycle ({@code BCLibEventDist}) that the port had left without a caller. They only make sense
+ * together:
+ * <ul>
+ * <li><b>Unload</b> drops a level's sub-cache, on BOTH sides. A {@link MarkerCache} singleton keeps a sub-cache
+ *     per dimension key and per side. On the server it holds the loaded marker block entities (and through them
+ *     their level), so without the drop a stopped server's world stayed reachable from the mod. On the client
+ *     it holds the markers and connections the server has sent, and a dimension key such as
+ *     {@code minecraft:overworld} is the same key in every world a client ever joins, so the NEXT world to use
+ *     it was handed the old world's markers and connections instead of its own. NeoForge posts this event for
+ *     a client level when it is replaced ({@code Minecraft.setLevel}: dimension change, new connection) and when
+ *     the connection closes ({@code Minecraft.disconnect}), which covers every way a client leaves a world.
+ *     Nothing here touches a client-only class; on a dedicated server a client level never exists.</li>
+ * <li><b>Join</b> refills what the unload dropped: the live {@code MessageMarker} updates only reach players
+ *     already in the dimension, so a player entering a level (login, dimension change, respawn) is sent every
+ *     marker and connection of it. Without this a client that reset its cache would never see a connection
+ *     that was made before it arrived, and neither would a fresh client on a dedicated server.</li>
+ * </ul>
  */
 @EventBusSubscriber(modid = "buildcraftunofficial")
 public final class MarkerCacheEvents {
@@ -30,8 +42,27 @@ public final class MarkerCacheEvents {
 
     @SubscribeEvent
     public static void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+        if (event.getLevel() instanceof Level level) {
             MarkerCache.onWorldUnload(level);
         }
+    }
+
+    @SubscribeEvent
+    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
+        Level level = event.getLevel();
+        if (level.isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        MinecraftServer server = level.getServer();
+        if (server == null) {
+            return;
+        }
+        // One server tick later, like 1.12.2: the event fires from inside the join/respawn/teleport handling,
+        // before that has finished sending the player their new level.
+        server.execute(() -> {
+            if (!player.hasDisconnected()) {
+                MarkerCache.onPlayerJoinWorld(player);
+            }
+        });
     }
 }

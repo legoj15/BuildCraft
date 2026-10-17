@@ -27,6 +27,11 @@ import buildcraft.robotics.path.SoftBlockAccess;
  *  its target succeeds without pathfinding. */
 public class AIRobotGotoBlock extends AIRobotGoto {
 
+    /** The flight's reach in blocks: 7.1.x's {@code maxTotalDistance} argument to {@code PathFinding}, verbatim.
+     *  The finder rejects every cell whose path-so-far plus squared distance to the target exceeds this squared,
+     *  so a target farther than this from the robot's block fails at once without the robot moving. */
+    public static final int FLIGHT_REACH = 96;
+
     private PathFinding pathSearch;
     private LinkedList<BlockPos> path;
     private double prevDistance = Double.MAX_VALUE;
@@ -42,6 +47,14 @@ public class AIRobotGotoBlock extends AIRobotGoto {
      *  forever. Package-private so tests can shrink it. */
     int maxTotalExpansions = 50 * PathFinding.PATH_ITERATIONS;
     private int expansions;
+
+    /** Whether a flight from {@code from} (the robot's block) to {@code to} is inside {@link #FLIGHT_REACH}.
+     *  Straight-line distance: sufficient in open air (each step toward the target lowers the finder's
+     *  weight), so a board that checks this before sending a robot never picks a target the flight rejects
+     *  outright; detours around obstacles can still run out of reach, which the flight reports as a failure. */
+    public static boolean withinFlightReach(BlockPos from, BlockPos to) {
+        return from.distSqr(to) <= (double) FLIGHT_REACH * FLIGHT_REACH;
+    }
 
     public AIRobotGotoBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -97,7 +110,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                     (int) Math.floor(finalZ));
             // A robot already on the target (or where a 0 distance is reported) short-circuits above in start();
             // here we only reach this point when there is genuinely somewhere to go.
-            pathSearch = new PathFinding(SoftBlockAccess.of(robot.level()), start, end, maxDistance, 96);
+            pathSearch = new PathFinding(SoftBlockAccess.of(robot.level()), start, end, maxDistance, FLIGHT_REACH);
         } else if (path != null) {
             double distance = robot.getDistance(nextX, nextY, nextZ);
 

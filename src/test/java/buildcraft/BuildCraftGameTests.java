@@ -1097,6 +1097,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_builder_board_state_machine", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardStateMachine);
         reg.accept("buildcraftunofficial:robot_builder_board_supplies_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSuppliesBuilderMachine);
         reg.accept("buildcraftunofficial:robot_builder_board_keeps_cargo_on_failed_flight", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardKeepsCargoWhenTheFlightFails);
+        reg.accept("buildcraftunofficial:robot_builder_board_skips_builder_beyond_flight_reach", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSkipsBuilderBeyondFlightReach);
         reg.accept("buildcraftunofficial:robot_builder_board_sleeps_without_power_station", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSleepsWhenNoPowerStationIsFree);
         reg.accept("buildcraftunofficial:robot_bomber_drops_exactly_one_tnt", () -> buildcraft.robotics.boards.BomberBoardTester::bomberDropsExactlyOneTnt);
         reg.accept("buildcraftunofficial:robot_armour_scales_damage_debit", () -> buildcraft.robotics.entity.RobotWearablesTester::armourScalesTheDamageDebit);

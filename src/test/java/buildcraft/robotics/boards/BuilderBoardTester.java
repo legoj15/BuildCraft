@@ -64,7 +64,7 @@ import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 
 /** Ph9's Builder-board tests. The rewritten board supplies Builder MACHINES (7.1.x fed construction
- *  markers, which no longer exist): find the closest needy one inside {@code MAX_RANGE_SQ}, fetch its
+ *  markers, which no longer exist): find the closest needy one inside the flight's reach, fetch its
  *  first missing stack, fly there, insert into its resource inventory.
  *
  *  <p>Two tests: a synchronous state-machine walk (which delegate AI each situation starts — the
@@ -146,7 +146,7 @@ public class BuilderBoardTester {
      *  <li>cargo aboard and charge healthy → the delivery flight ({@code AIRobotGotoBlock}).</li>
      *  </ul>
      *  Phases 1–3 are race-safe: whichever needy builder the search finds, the delegate type is the
-     *  same. Plus the {@code MAX_RANGE_SQ} pin: 7.1.x's registration verbatim. */
+     *  same. The search radius is pinned by {@link #builderBoardSkipsBuilderBeyondFlightReach}. */
     public static void builderBoardStateMachine(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos idleBuilderRel = new BlockPos(1, 2, 2);
@@ -195,10 +195,6 @@ public class BuilderBoardTester {
         delegate = board.getDelegateAI();
         helper.assertTrue(delegate instanceof AIRobotGotoBlock,
                 "a loaded, charged robot flies the delivery leg, got " + delegate);
-
-        // The 7.1.x search radius, pinned: three 64-block radii squared.
-        helper.assertTrue(BoardRobotBuilder.MAX_RANGE_SQ == 3 * 64 * 64,
-                "MAX_RANGE_SQ is 7.1.x's registration verbatim");
 
         helper.succeed();
     }
@@ -407,6 +403,52 @@ public class BuilderBoardTester {
                 helper.assertTrue(board.getDelegateAI() == sleeper,
                         "the board keeps sleeping — it must not start another recharge, got "
                                 + board.getDelegateAI());
+            }
+        } finally {
+            helper.setBlock(builderRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /** The board must not pick a Builder its own delivery flight cannot reach. 7.1.x searched three 64-block
+     *  radii (about 111 blocks) while {@code AIRobotGotoBlock} rejects any target past
+     *  {@link AIRobotGotoBlock#FLIGHT_REACH} (96) from the robot's block: a robot at a station 100 blocks from
+     *  the only needy machine picked it, failed the flight at once, benched it, slept and repeated forever with
+     *  the cargo aboard. The candidate test now uses the flight's reach — inclusive at exactly 96 blocks,
+     *  out at 97 and at 100, with the benched-inclusive search (the sleep-with-cargo check) agreeing.
+     *
+     *  <p>The robot is never added to the level, so standing it 100 blocks outside the arena touches no
+     *  other test's cell; only the finder runs (no delegate AI starts, nothing moves or drops). */
+    public static void builderBoardSkipsBuilderBeyondFlightReach(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos builderRel = new BlockPos(4, 2, 2);
+
+        try {
+            TileBuilder builder = placeBuilder(helper, builderRel,
+                    makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
+            helper.assertTrue(BoardRobotBuilder.needsItems(builder), "sanity: the machine reports demand");
+            BlockPos builderAbs = helper.absolutePos(builderRel);
+
+            ZonedRobot robot = new ZonedRobot(level, justThisBlock(builderAbs));
+            robot.getBattery().addPower(SEEDED_CHARGE, false);
+            BoardRobotBuilder board = new BoardRobotBuilder(robot);
+
+            int[] reachable = { 12, AIRobotGotoBlock.FLIGHT_REACH };
+            int[] outOfReach = { AIRobotGotoBlock.FLIGHT_REACH + 1, 100, 110 };
+            for (int offset : reachable) {
+                Vec3 pos = Vec3.atCenterOf(builderAbs.offset(offset, 0, 0));
+                robot.setPos(pos.x, pos.y, pos.z);
+                helper.assertTrue(board.findClosestBuilder(false) == builder,
+                        "a needy machine " + offset + " blocks away is inside the flight's reach");
+            }
+            for (int offset : outOfReach) {
+                Vec3 pos = Vec3.atCenterOf(builderAbs.offset(offset, 0, 0));
+                robot.setPos(pos.x, pos.y, pos.z);
+                helper.assertTrue(board.findClosestBuilder(false) == null,
+                        "a needy machine " + offset + " blocks away is beyond the flight's reach — the board"
+                                + " must not pick it");
+                helper.assertTrue(board.findClosestBuilder(true) == null,
+                        "…nor count it as a benched need worth keeping cargo for (" + offset + " blocks)");
             }
         } finally {
             helper.setBlock(builderRel, Blocks.AIR);

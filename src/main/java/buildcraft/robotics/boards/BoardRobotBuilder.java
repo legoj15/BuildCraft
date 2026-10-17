@@ -46,7 +46,7 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  * that supply line:
  *
  * <ol>
- *   <li>find the closest Builder machine inside {@link #MAX_RANGE_SQ} (zone-filtered) whose blueprint
+ *   <li>find the closest Builder machine inside the delivery flight's reach (zone-filtered) whose blueprint
  *       still reports missing item requirements ({@link BlueprintBuilder#remainingRequiredItems}),</li>
  *   <li>fetch the first missing stack from a station,</li>
  *   <li>fly to the machine (energy-gated, 8-block arrival radius like 7.1.x's slot flights) and insert
@@ -54,12 +54,16 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  *   <li>repeat; sleep when no Builder needs anything, dispose of stale cargo when the need vanished.</li>
  * </ol>
  *
- * <p>Kept from 7.1.x: the search radius and zone filter, the one-stack-at-a-time fetch, the 40-tick
+ * <p>Kept from 7.1.x: the zone filter, the one-stack-at-a-time fetch, the 40-tick
  * launching delay between fruitless passes, the {@code SAFETY_POWER} energy gate before the flight
  * leg, and the sleep/dispose fallbacks. Dropped with the API it fed: the slot reservation, the
  * {@code >4 requirements} slot skip (7.1.x robots refused slots too complex for their 4-slot cargo —
  * the modern fetch delivers one stack per trip, so the constraint never binds), and the robot paying
- * the build energy (the machine's battery pays now). Template-builder machines are not served: only
+ * the build energy (the machine's battery pays now), and 7.1.x's search radius ({@code MAX_RANGE_SQ = 3*64*64},
+ * about 111 blocks): it was wider than its own flight's reach ({@link AIRobotGotoBlock#FLIGHT_REACH}, 96), which
+ * 7.1.x masked by building the slot whether or not the flight arrived. Now that a failed flight keeps the cargo,
+ * a candidate between 97 and 111 blocks would fail every flight forever, so the search uses the flight's reach
+ * from the robot's block. Template-builder machines are not served: only
  * {@code BlueprintBuilder} computes a missing-items list, and 7.1.x's markers were blueprint-only too.
  *
  * <p>Two failure paths the port added (7.1.x's slot flights had neither): a delivery flight that FAILS
@@ -68,10 +72,6 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  * fails (no free power station) sends the robot home to sleep instead of re-running the search every cycle.
  */
 public class BoardRobotBuilder extends RedstoneBoardRobot {
-
-    /** 7.1.x verbatim: three 64-block radii squared. Package-private so the board's game test can pin
-     *  the constant against 7.1.x's registration. */
-    static final int MAX_RANGE_SQ = 3 * 64 * 64;
 
     /** How long a Builder the robot could not fly to stays off its candidate list (30 s). Package-private so
      *  the board's game test can pin the window. Not saved: a reloaded robot simply retries. */
@@ -228,13 +228,15 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         return missing.isEmpty() ? ItemStack.EMPTY : missing.get(0);
     }
 
-    /** The closest needy Builder in range and zone. {@code includeBenched} also counts machines benched
-     *  after a failed flight — used only to tell "the need vanished" from "the need is out of reach". */
-    private TileBuilder findClosestBuilder(boolean includeBenched) {
+    /** The closest needy Builder in zone and inside the delivery flight's reach from the robot's block.
+     *  {@code includeBenched} also counts machines benched after a failed flight — used only to tell "the need
+     *  vanished" from "the need is out of reach". Package-private so the board's game test can pin the reach. */
+    TileBuilder findClosestBuilder(boolean includeBenched) {
         double minDistance = Double.MAX_VALUE;
         TileBuilder minBuilder = null;
 
         IZone zone = robot.getZoneToWork();
+        BlockPos robotBlock = robot.blockPosition();
 
         long now = robot.level().getGameTime();
         unreachableUntil.values().removeIf(until -> now >= until);
@@ -250,6 +252,9 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             if (zone != null && !zone.contains(new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5))) {
                 continue;
             }
+            if (!AIRobotGotoBlock.withinFlightReach(robotBlock, pos)) {
+                continue;
+            }
 
             double dx = robot.position().x - pos.getX();
             double dy = robot.position().y - pos.getY();
@@ -262,11 +267,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             }
         }
 
-        if (minBuilder != null && minDistance < MAX_RANGE_SQ) {
-            return minBuilder;
-        } else {
-            return null;
-        }
+        return minBuilder;
     }
 
     @Override

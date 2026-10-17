@@ -133,6 +133,70 @@ public class LangFileIntegrityTester {
                         + " change, or the translation silently accumulates dead weight.");
     }
 
+    /** en_us keys that are deliberately NOT translated into zh_cn. Keep this tiny: it is for text no player ever
+     *  reads in a localised client (dev-only command output and the like), never for "I'll translate it later".
+     *  Today nothing needs it, so the set is empty; add a key here with a one-line reason on the entry. */
+    private static final Set<String> ENGLISH_ONLY = Set.of();
+
+    @Test
+    public void translationCoversEveryEnglishKey() {
+        Map<String, String> zh = parse(ZH);
+        List<String> missing = parse(EN).keySet().stream()
+                .filter(k -> !zh.containsKey(k) && !ENGLISH_ONLY.contains(k))
+                .sorted()
+                .toList();
+        Assertions.assertTrue(missing.isEmpty(),
+                "zh_cn.json lacks " + missing.size() + " key(s) that en_us.json has " + missing
+                        + " — a Chinese player sees the raw English fallback for each. Translate the key (matching"
+                        + " the terminology already in zh_cn.json), or, if it is genuinely never shown to a"
+                        + " player, list it in ENGLISH_ONLY with the reason.");
+    }
+
+    @Test
+    public void englishOnlyAllowlistHasNoStaleEntries() {
+        Map<String, String> en = parse(EN);
+        Map<String, String> zh = parse(ZH);
+        List<String> stale = ENGLISH_ONLY.stream()
+                .filter(k -> !en.containsKey(k) || zh.containsKey(k))
+                .sorted()
+                .toList();
+        Assertions.assertTrue(stale.isEmpty(),
+                "ENGLISH_ONLY entries that no longer exist in en_us or have since been translated " + stale
+                        + " — drop them from the allowlist.");
+    }
+
+    /** The Zone Planner is one machine with one Chinese name, the block's. Its help-ledger title and the prose that
+     *  points at "the planner" once drifted into a second spelling (规划器, "-er" for a device, vs the block's
+     *  规划机, "-machine"), so a player saw two different names for the same GUI. */
+    @Test
+    public void zonePlannerIsNamedConsistentlyInChinese() {
+        Map<String, String> zh = parse(ZH);
+        String blockName = zh.get("block.buildcraftunofficial.zone_planner");
+        Assertions.assertNotNull(blockName, "zh_cn must name the Zone Planner block");
+        Assertions.assertEquals(blockName, zh.get("buildcraft.help.zone_planner.map.title"),
+                "the Zone Planner's help-ledger title must be the block's own name");
+
+        String wrongForm = "区域规划器";
+        List<String> drifted = zh.entrySet().stream()
+                .filter(e -> e.getValue().contains(wrongForm))
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+        Assertions.assertTrue(drifted.isEmpty(),
+                "these zh_cn values spell the Zone Planner " + wrongForm + " instead of " + blockName + " " + drifted);
+
+        // The Filler Planner is a different item (填充规划器) and keeps its own name; only the Zone Planner's own help
+        // ledger is in scope for the bare "规划器" shorthand, which must read as the block name instead.
+        List<String> bareShorthand = zh.entrySet().stream()
+                .filter(e -> e.getKey().startsWith("buildcraft.help.zone_planner.") && e.getValue().contains("规划器"))
+                .map(Map.Entry::getKey)
+                .sorted()
+                .toList();
+        Assertions.assertTrue(bareShorthand.isEmpty(),
+                "the Zone Planner help ledger refers to the machine as 规划器 instead of " + blockName + " "
+                        + bareShorthand);
+    }
+
     /** Anything robotics: the robot and its entity, the docking station, the redstone board item and every
      *  {@code buildcraft.boardRobot*} programme name/description. Matched on the KEY so a newly added board
      *  is covered the moment its lang key lands, with no list to maintain. */

@@ -594,7 +594,11 @@ public class RobotStationPluggableTester {
                 long stored = robot[0].getBattery().getStored();
                 helper.assertTrue(stored <= expectedMj, "the conversion must be lossless and exact: " + feSent
                         + " FE at 5 RF/MJ is " + expectedMj + " micro-MJ, but the robot holds " + stored);
-                return stored == expectedMj;
+                if (stored == expectedMj) {
+                    RfStationTestSupport.removeStation(helper, absPipePos, Direction.WEST);
+                    return true;
+                }
+                return false;
             }, "a robot docked on a station attached to an RF kinesis pipe never received the " + feSent
                     + " FE it was sent as " + expectedMj + " micro-MJ -- the pipe cannot see the station as a "
                     + "Forge-Energy destination");
@@ -712,6 +716,9 @@ public class RobotStationPluggableTester {
                                 "flipping back to MJ_ONLY must close the Forge Energy surface again");
                     } finally {
                         scope.close();
+                        RfStationTestSupport.removeStation(helper, rfAbs, Direction.UP);
+                        RfStationTestSupport.removeStation(helper, mjAbs, Direction.UP);
+                        RfStationTestSupport.removeStation(helper, itemAbs, Direction.UP);
                     }
                     helper.succeed();
                 },

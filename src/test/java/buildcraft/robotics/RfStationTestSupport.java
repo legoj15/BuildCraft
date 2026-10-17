@@ -7,8 +7,11 @@ package buildcraft.robotics;
 
 import java.util.function.BooleanSupplier;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.RobotManager;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.transport.BCTransportConfig;
@@ -95,6 +98,21 @@ public final class RfStationTestSupport {
                     }
                 });
             }
+        }
+    }
+
+    /** Drops the station at {@code absPos}/{@code side} from the robot registry (a no-op if absent).
+     *
+     *  <p>The station search is dimension-wide and the runner never clears the registry between tests, so a
+     *  station a test leaves behind is a candidate for every robot that runs after it -- which is exactly how
+     *  {@code robot_station_forbid_robot}'s carrier ends up flying to a stranger's arena and missing its
+     *  timeout. Deregistering (rather than breaking the pipe) leaves nothing to drop into the world. The
+     *  pluggable's {@code onTick} registers only while it is not yet valid, so it does not come back. */
+    public static void removeStation(GameTestHelper gth, BlockPos absPos, Direction side) {
+        var registry = RobotManager.registryProvider.getRegistry(gth.getLevel());
+        DockingStation station = registry.getStation(absPos, side);
+        if (station != null) {
+            registry.removeStation(station);
         }
     }
 

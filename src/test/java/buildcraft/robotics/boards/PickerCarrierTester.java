@@ -519,6 +519,7 @@ public class PickerCarrierTester {
                 if (robot[0].getDockingStation() == station
                         && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER) {
                     robot[0].discard();
+                    RfStationTestSupport.removeStation(helper, helper.absolutePos(pipeRel), Direction.WEST);
                     return true;
                 }
                 return false;

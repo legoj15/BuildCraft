@@ -335,6 +335,75 @@ public class RobotActionAIsTester {
         helper.succeed();
     }
 
+    /** Aiming turns the SERVER's body, and the knockback blow follows it. The robot's yaw was written only
+     *  on the client (stepped toward the aim data), so the server's own {@code yRot} stayed 0: every
+     *  knockback pushed +Z whatever the robot faced, and the periodic full entity sync snapped each
+     *  client's body back to 0. (7.1.x never wrote the server yaw either, so its knockback was always +Z
+     *  too — this is an improvement over it, not a restoration.)
+     *
+     *  <p>The cows stand SOUTH of the robot, so vanilla's own hit knockback (away from the attacker) pushes
+     *  them +Z and leaves X alone; any X motion is therefore the robot's enchantment push. Aimed east it
+     *  must be +1.0 (Knockback II x 0.5), aimed west -1.0 — a push perpendicular to the aim, which is what
+     *  feeding the aim convention straight into vanilla's yaw formula gives, reads ~0 here. */
+    public static void aimingTurnsTheServerBodyAndKnockbackFollowsIt(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        //? if >=26.2 {
+        /*Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 3);
+        Mob westCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 4);*/
+        //?} else {
+        Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 3);
+        Mob westCow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 4);
+        //?}
+        Mob[] cows = { eastCow, westCow };
+        for (Mob cow : cows) {
+            cow.setNoAi(true);
+            cow.setNoGravity(true);
+        }
+
+        try {
+            EntityRobot robot = unaddedRobot(helper, new BlockPos(3, 2, 2));
+            ItemStack sword = new ItemStack(Items.IRON_SWORD);
+            sword.enchant(level.registryAccess()
+                    .lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                    .getOrThrow(net.minecraft.world.item.enchantment.Enchantments.KNOCKBACK), 2);
+            robot.setItemInUse(sword);
+
+            // East: the aim target sits 5 blocks to +X.
+            robot.aimItemAt(helper.absolutePos(new BlockPos(8, 2, 2)));
+            helper.assertTrue(Math.abs(net.minecraft.util.Mth.wrapDegrees(robot.getYRot() - robot.getAimYaw())) < 0.01F,
+                    "the server body turns to the aim: yRot " + robot.getYRot() + " vs aim " + robot.getAimYaw());
+            // A reloaded robot keeps facing the way it did: the save carries the body yaw, not the aim,
+            // so the aim is seeded from it (else the client would swing the body back toward 0).
+            EntityRobot reloaded = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+            EntityArenaUtil.loadEntity(level, reloaded, EntityArenaUtil.saveEntity(level, robot));
+            helper.assertTrue(Math.abs(net.minecraft.util.Mth.wrapDegrees(reloaded.getAimYaw() - robot.getYRot())) < 0.01F,
+                    "a reloaded robot's aim follows its saved body yaw: aim " + reloaded.getAimYaw()
+                            + " vs yRot " + robot.getYRot());
+
+            eastCow.setDeltaMovement(Vec3.ZERO);
+            robot.attackTargetEntityWithCurrentItem(eastCow);
+            helper.assertTrue(eastCow.getDeltaMovement().x > 0.9,
+                    "aimed east, Knockback II pushes the target +X by ~1.0, got "
+                            + eastCow.getDeltaMovement().x);
+
+            // West: the aim target sits 5 blocks to -X.
+            robot.aimItemAt(helper.absolutePos(new BlockPos(-2, 2, 2)));
+            helper.assertTrue(Math.abs(net.minecraft.util.Mth.wrapDegrees(robot.getYRot() - robot.getAimYaw())) < 0.01F,
+                    "the server body follows a second aim too: yRot " + robot.getYRot()
+                            + " vs aim " + robot.getAimYaw());
+            westCow.setDeltaMovement(Vec3.ZERO);
+            robot.attackTargetEntityWithCurrentItem(westCow);
+            helper.assertTrue(westCow.getDeltaMovement().x < -0.9,
+                    "aimed west, Knockback II pushes the target -X by ~1.0, got "
+                            + westCow.getDeltaMovement().x);
+        } finally {
+            for (Mob cow : cows) {
+                cow.discard();
+            }
+        }
+        helper.succeed();
+    }
+
     // ---------- search entity ----------
 
     /** {@link AIRobotSearchEntity} picks the NEAREST matching entity inside its box and reports nothing

@@ -10,9 +10,12 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 
+import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 
@@ -93,6 +96,111 @@ public class RobotWearablesTester {
             robot.discard();
         }
         helper.succeed();
+    }
+
+    // ---------- armour discounts the damage debit ----------
+
+    private static final long DAMAGE_PER_POINT = 260L * MjAPI.MJ;
+
+    /** A fresh unadded robot wearing {@code worn} (put on through the real interact path, one click each)
+     *  takes a 2-point hit, and the battery loses exactly {@code expectedPerPoint * 2}. */
+    private static void assertDebit(GameTestHelper helper, String label, long expectedPerPoint,
+            ItemStack... worn) {
+        ServerLevel level = helper.getLevel();
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        var player = helper.makeMockPlayer(GameType.CREATIVE);
+        try {
+            for (ItemStack piece : worn) {
+                player.setItemInHand(InteractionHand.MAIN_HAND, piece.copy());
+                InteractionResult result = interact(robot, player);
+                helper.assertTrue(result == InteractionResult.SUCCESS,
+                        label + ": " + piece.getItem() + " must be wearable, got " + result);
+            }
+            helper.assertTrue(robot.getWearables().size() == worn.length,
+                    label + ": every piece is aboard, got " + robot.getWearables().size());
+
+            long stored = 5000L * MjAPI.MJ;
+            robot.getBattery().setStored(stored);
+            Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
+            boolean hurt = EntityArenaUtil.hurt(level, robot, level.damageSources().playerAttack(attacker), 2.0F);
+            attacker.discard();
+
+            helper.assertTrue(hurt, label + ": the hit lands");
+            long debit = stored - robot.getBattery().getStored();
+            helper.assertTrue(debit == 2 * expectedPerPoint,
+                    label + ": a 2-point hit must cost " + (2 * expectedPerPoint) + " but cost " + debit);
+        } finally {
+            player.discard();
+        }
+    }
+
+    /** 7.1.x: each worn ARMOUR piece scaled the per-point debit by {@code 2 / (2 + protection)} and every
+     *  other wearable took a flat 30% off. The port had only the flat 30% (its comment promised the armour
+     *  hookup "after wearable acceptance", which shipped without it). Iron helmet = 2 protection (halves
+     *  the debit), diamond = 3 (two fifths); a skull and a carved pumpkin are not armour (0.7 each, the
+     *  pumpkin because it carries no armour attribute — 7.1.x's non-ItemArmor branch); and pieces compound
+     *  in the order worn. */
+    public static void armourScalesTheDamageDebit(GameTestHelper helper) {
+        assertDebit(helper, "bare robot", DAMAGE_PER_POINT);
+        assertDebit(helper, "iron helmet", DAMAGE_PER_POINT * 2 / 4, new ItemStack(Items.IRON_HELMET));
+        assertDebit(helper, "diamond helmet", DAMAGE_PER_POINT * 2 / 5, new ItemStack(Items.DIAMOND_HELMET));
+        assertDebit(helper, "skull", DAMAGE_PER_POINT * 7 / 10, new ItemStack(Items.SKELETON_SKULL));
+        assertDebit(helper, "carved pumpkin", DAMAGE_PER_POINT * 7 / 10, new ItemStack(Items.CARVED_PUMPKIN));
+        assertDebit(helper, "iron helmet then skull", DAMAGE_PER_POINT * 2 / 4 * 7 / 10,
+                new ItemStack(Items.IRON_HELMET), new ItemStack(Items.SKELETON_SKULL));
+        assertDebit(helper, "iron then diamond helmet", DAMAGE_PER_POINT * 2 / 4 * 2 / 5,
+                new ItemStack(Items.IRON_HELMET), new ItemStack(Items.DIAMOND_HELMET));
+        helper.succeed();
+    }
+
+    // ---------- creative players keep what they equip ----------
+
+    /** The player-side half of the interact: {@code Player.interactOn} is what the server's packet handler
+     *  calls, and it is where vanilla restores a creative player's stack when an entity interaction used
+     *  an item up ({@code hasInfiniteMaterials}). The robot's own {@code interact} (what the tests above
+     *  call) shrinks the stack unconditionally; going through the real entry point shows what a creative
+     *  player actually experiences: the helmet goes on the robot and the stack in hand stays whole, while a
+     *  survival player pays one. */
+    public static void creativeEquipKeepsTheHeldItem(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        var creative = helper.makeMockPlayer(GameType.CREATIVE);
+        var survival = helper.makeMockPlayer(GameType.SURVIVAL);
+        try {
+            // makeMockPlayer only overrides gameMode(); a real player's abilities follow the game type.
+            GameType.CREATIVE.updatePlayerAbilities(creative.getAbilities());
+            GameType.SURVIVAL.updatePlayerAbilities(survival.getAbilities());
+
+            creative.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_HELMET, 3));
+            InteractionResult result = interactOn(creative, robot);
+            helper.assertTrue(result.consumesAction(), "the creative click equips the helmet, got " + result);
+            helper.assertTrue(robot.getWearables().size() == 1, "the helmet is aboard");
+            helper.assertTrue(creative.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 3,
+                    "a creative player keeps the whole stack, got "
+                            + creative.getItemInHand(InteractionHand.MAIN_HAND).getCount());
+
+            survival.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_HELMET, 3));
+            result = interactOn(survival, robot);
+            helper.assertTrue(result.consumesAction(), "the survival click equips the helmet, got " + result);
+            helper.assertTrue(robot.getWearables().size() == 2, "the second helmet is aboard");
+            helper.assertTrue(survival.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 2,
+                    "a survival player pays one helmet, got "
+                            + survival.getItemInHand(InteractionHand.MAIN_HAND).getCount());
+        } finally {
+            creative.discard();
+            survival.discard();
+        }
+        helper.succeed();
+    }
+
+    /** {@code Player.interactOn} grew the hit-location argument at 26.1, alongside {@code Entity.interact}. */
+    private static InteractionResult interactOn(net.minecraft.world.entity.player.Player player,
+            EntityRobot robot) {
+        //? if >=26.1 {
+        return player.interactOn(robot, InteractionHand.MAIN_HAND, new net.minecraft.world.phys.Vec3(0.5, 0.5, 0.5));
+        //?} else {
+        /*return player.interactOn(robot, InteractionHand.MAIN_HAND);*/
+        //?}
     }
 
     /** The interact entry point fork: 26.1 grew the third hit-location argument. */

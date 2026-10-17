@@ -36,6 +36,8 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
@@ -441,6 +443,11 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         } else {
             setBoardFromId(in.getStringOr("boardId", ""));
         }
+
+        // A save carries the body yaw (vanilla's Rotation, which aimItemAt now keeps in step with the aim) but
+        // not the aim itself. Seed the aim from it, or the client's yaw stepper would swing a reloaded
+        // robot's body back toward 0 until the next aim.
+        entityData.set(AIM_YAW, getYRot());
     }
 
     /** Writes one station record: 7.1.x's key, a modern {@code pos} int[3] + {@code side} byte body. Prefers
@@ -598,12 +605,17 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             return true;
         }
 
-        // 7.1.x's shape, in long math: each worn item discounts the debit by a flat 30%. Upstream additionally
-        // scaled armour by its own protection value; that hookup waits for wearable ACCEPTANCE (Ph9), since
-        // until then nothing can put a wearable on a robot and this loop never runs.
+        // 7.1.x's shape, worn piece by piece in the order put on: armour scales the per-point debit by
+        // 2 / (2 + its protection) (an iron helmet halves it), anything else worn (a skull, an overlay item, a
+        // carved pumpkin — no armour attribute) takes a flat 30% off.
         long perPoint = DAMAGE_ENERGY_PER_POINT;
-        for (int worn = wearables.size(); worn > 0; worn--) {
-            perPoint = perPoint * 7 / 10;
+        for (ItemStack worn : wearables) {
+            double protection = armourProtection(worn);
+            if (protection >= 0) {
+                perPoint = Math.round(perPoint * 2.0 / (2.0 + protection));
+            } else {
+                perPoint = perPoint * 7 / 10;
+            }
         }
 
         long debit = Math.round((double) amount * perPoint);
@@ -616,6 +628,25 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         // dropped robot item.
         onRobotHit(true);
         return true;
+    }
+
+    /** The protection a worn piece adds, the modern reading of 7.1.x's {@code ItemArmor.damageReduceAmount}:
+     *  the sum of its head-slot {@code ARMOR} attribute modifiers (iron helmet 2, diamond 3), or -1 when the
+     *  piece is not armour at all — it carries no {@code ARMOR} attribute for the head slot, like a skull, a
+     *  carved pumpkin or a robot overlay item (7.1.x's non-{@code ItemArmor} branch). Toughness and the
+     *  multiplier operations are deliberately ignored, as 7.1.x had neither. */
+    static double armourProtection(ItemStack stack) {
+        double[] total = { 0 };
+        boolean[] isArmour = { false };
+        stack.forEachModifier(EquipmentSlot.HEAD, (attribute, modifier) -> {
+            if (attribute.unwrapKey().equals(Attributes.ARMOR.unwrapKey())) {
+                isArmour[0] = true;
+                if (modifier.operation() == AttributeModifier.Operation.ADD_VALUE) {
+                    total[0] += modifier.amount();
+                }
+            }
+        });
+        return isArmour[0] ? total[0] : -1;
     }
 
     //? if >=26.1 {
@@ -1198,10 +1229,18 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         return entityData.get(AIM_PITCH);
     }
 
+    /** Server side the body turns with the aim: {@code yRot} is the yaw the client's stepper converges on
+     *  ({@code clientTick} walks {@code yRot} toward {@link #getAimYaw()}), so writing it here means the
+     *  periodic full entity sync carries the real yaw instead of snapping every client's body back to 0, and
+     *  the knockback in {@code attackTargetEntityWithCurrentItem} has a direction to follow. (7.1.x's server
+     *  yaw never left 0 either.) */
     @Override
     public void aimItemAt(float yaw, float pitch) {
         entityData.set(AIM_YAW, yaw);
         entityData.set(AIM_PITCH, pitch);
+        if (!level().isClientSide()) {
+            setYRot(yaw);
+        }
     }
 
     /** 7.1.x's formula, verbatim: {@code atan2(dz, dx)} for the yaw and {@code -atan2(dy, horizontal)} for the

@@ -11,7 +11,9 @@
  */
 package buildcraft.robotics.boards;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -59,12 +61,23 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  * the modern fetch delivers one stack per trip, so the constraint never binds), and the robot paying
  * the build energy (the machine's battery pays now). Template-builder machines are not served: only
  * {@code BlueprintBuilder} computes a missing-items list, and 7.1.x's markers were blueprint-only too.
+ *
+ * <p>Two failure paths the port added (7.1.x's slot flights had neither): a delivery flight that FAILS
+ * keeps the cargo aboard and benches that machine for {@link #UNREACHABLE_RETRY_TICKS}; a recharge that
+ * fails (no free power station) sends the robot home to sleep instead of re-running the search every cycle.
  */
 public class BoardRobotBuilder extends RedstoneBoardRobot {
 
     /** 7.1.x verbatim: three 64-block radii squared. Package-private so the board's game test can pin
      *  the constant against 7.1.x's registration. */
     static final int MAX_RANGE_SQ = 3 * 64 * 64;
+
+    /** How long a Builder the robot could not fly to stays off its candidate list (30 s). Package-private so
+     *  the board's game test can pin the window. Not saved: a reloaded robot simply retries. */
+    static final int UNREACHABLE_RETRY_TICKS = 600;
+
+    /** Builders whose delivery flight failed, keyed by position, mapped to the game time they come back. */
+    private final Map<BlockPos, Long> unreachableUntil = new HashMap<>();
 
     private TileBuilder builderToSupply;
     private ItemStack requiredStack = ItemStack.EMPTY;
@@ -129,7 +142,28 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             if (!ai.success()) {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
+        } else if (ai instanceof AIRobotRecharge) {
+            if (!ai.success()) {
+                // No free power station: AIRobotRecharge reports the failure and ends at once, which would
+                // leave this board idle and start the same doomed search again on the very next cycle,
+                // forever. Go home and sleep like every other failure path — AIRobotMain's own recharge
+                // preempt (below SAFETY_POWER) keeps retrying on its 120-tick cooldown meanwhile.
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
         } else if (ai instanceof AIRobotGotoBlock) {
+            if (!ai.success()) {
+                // The flight never arrived (no path, or too far): the cargo is still aboard, and inserting
+                // it into a machine the robot never reached would teleport it there. Keep it, and keep
+                // that machine off the candidate list for a while so the next pass looks elsewhere (or
+                // disposes of the cargo) instead of sending the same doomed flight again.
+                if (builderToSupply != null) {
+                    unreachableUntil.put(builderToSupply.getBuilderPos(),
+                            robot.level().getGameTime() + UNREACHABLE_RETRY_TICKS);
+                }
+                builderToSupply = null;
+                requiredStack = ItemStack.EMPTY;
+                return;
+            }
             if (builderToSupply == null || builderToSupply.isRemoved()
                     || !needsItems(builderToSupply)) {
                 // Defensive: a wrong NBT load or a machine that finished/changed while we flew. The
@@ -162,6 +196,12 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         }
     }
 
+    /** Whether {@code builder} is currently off the candidate list because a delivery flight to it failed. */
+    boolean isSkipped(TileBuilder builder, long gameTime) {
+        Long until = unreachableUntil.get(builder.getBuilderPos());
+        return until != null && gameTime < until;
+    }
+
     private IStackFilter matchesRequired() {
         ItemStack target = requiredStack;
         return stack -> StackUtil.canMerge(target, stack);
@@ -188,11 +228,14 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
 
         IZone zone = robot.getZoneToWork();
 
+        long now = robot.level().getGameTime();
+        unreachableUntil.values().removeIf(until -> now >= until);
+
         for (TileBuilder builder : BCBuildersEventDist.INSTANCE.getLoadedBuilders(robot.level())) {
             if (builder.getLevel() != robot.level()) {
                 continue;
             }
-            if (!needsItems(builder)) {
+            if (!needsItems(builder) || isSkipped(builder, now)) {
                 continue;
             }
             BlockPos pos = builder.getBuilderPos();

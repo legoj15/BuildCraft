@@ -22,6 +22,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.BlockClaims;
+import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.path.BlockScannerExpanding;
 import buildcraft.robotics.path.BlockScannerRandom;
 import buildcraft.robotics.path.BlockScannerZoneRandom;
@@ -51,6 +52,16 @@ public class AIRobotSearchBlock extends AIRobot {
     private Iterator<BlockPos> blockIter;
     private double maxDistanceToEnd;
     private IZone zone;
+    /** Whether the scanner is one of the random ones, which never run out: only those are bounded by
+     *  {@link #RANDOM_SEARCH_ROUNDS}. The expanding cube is finite and ends the search on its own. */
+    private boolean randomScanner;
+    private int rounds;
+
+    /** How many {@code iterate()} rounds a RANDOM search gets before it gives up with nothing found. 7.1.x ran every
+     *  search on an {@code IterableAlgorithmRunner}, whose default bound was 1000 rounds; that bound is what ended a
+     *  random search with no candidate, and so what sent an idle planter or stripes robot to sleep. The synchronous
+     *  port runs one round per update, so without it a random search with nothing to find never ended. */
+    static final int RANDOM_SEARCH_ROUNDS = 1000;
 
     public AIRobotSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -77,12 +88,14 @@ public class AIRobotSearchBlock extends AIRobot {
         if (!random) {
             blockIter = new BlockScannerExpanding();
         } else if (zone != null && level != null) {
-            blockIter = new BlockScannerZoneRandom(iRobot.blockPosition(), level.getRandom(), zone);
+            blockIter = new BlockScannerZoneRandom(iRobot.blockPosition(), level.getRandom(), zone,
+                    RobotUtils.minBuildY(level), RobotUtils.maxBuildY(level));
         } else if (level != null) {
             blockIter = new BlockScannerRandom(level.getRandom(), 64);
         } else {
             blockIter = null; // no world to draw randomness from — update() aborts a runner-less job
         }
+        randomScanner = random;
         blockFound = null;
         path = null;
         maxDistanceToEnd = iMaxDistanceToEnd;
@@ -116,7 +129,9 @@ public class AIRobotSearchBlock extends AIRobot {
                     // robot holds, as a search cell or as a job, is skipped.
                     BlockClaims.searchCells(robot.getRegistry(), robot.getRobotId()), approveFound);
         }
-        if (blockScanner.isDone()) {
+        if (blockScanner.isDone() || (randomScanner && rounds >= RANDOM_SEARCH_ROUNDS)) {
+            // Out of rounds, a path found is still taken (getResult reports the finished path finder); otherwise the
+            // search ends with nothing found, as 7.1.x's runner did.
             path = blockScanner.getResult();
             if (path.size() > 0) {
                 // Drop the target cell itself — the robot flies to the cell BEFORE it, not into it.
@@ -128,6 +143,7 @@ public class AIRobotSearchBlock extends AIRobot {
             terminate();
         } else {
             blockScanner.iterate();
+            rounds++;
         }
     }
 

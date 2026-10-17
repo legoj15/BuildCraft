@@ -24,5 +24,13 @@ public interface IZone {
 
     /** Gets a random position that {@link #contains(Vec3)} will return true. */
     BlockPos getRandomBlockPos(Random rand);
+
+    /** As {@link #getRandomBlockPos(Random)}, for a zone in a level whose build range is {@code minY..maxY} (both
+     *  inclusive): a zone that does not fix its own height (a column-only zone) draws its y from that range. A zone
+     *  with its own height bounds keeps them, which is the default. May return null when the zone has nothing to pick
+     *  from. */
+    default BlockPos getRandomBlockPos(Random rand, int minY, int maxY) {
+        return getRandomBlockPos(rand);
+    }
 }
 

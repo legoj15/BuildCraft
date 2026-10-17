@@ -209,7 +209,9 @@ public class PathFindingSearch implements IIterableAlgorithm {
                 return true;
             }
         }
-        return !blockIter.hasNext();
+        // A used-up scan is only the end once every path finder it started has finished too: 7.1.x answered
+        // !hasNext() alone, dropping the targets whose paths were still being searched.
+        return !blockIter.hasNext() && pathFinders.isEmpty();
     }
 
     public LinkedList<BlockPos> getResult() {

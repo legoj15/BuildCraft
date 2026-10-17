@@ -255,6 +255,23 @@ public class AIRobotGotoStationTest {
                 STATION.getZ() + 0.5, "the reloaded goto still flies onto the station's west face");
     }
 
+    @Test
+    public void aGotoReloadedFromNbtWhoseApproachFailsReportsFailure() {
+        // AIRobot defaults success to TRUE, and a goto read back from NBT is built through the 1-arg constructor: if
+        // that left the default, a reloaded goto whose approach leg then failed would report the robot docked.
+        StubStation station = new StubStation(STATION, Direction.SOUTH);
+        registry.station = station;
+        CompoundTag tag = new CompoundTag();
+        new AIRobotGotoStation(robot, station).writeSelfToNBT(tag);
+
+        AIRobotGotoStation reloaded = new AIRobotGotoStation(robot);
+        reloaded.loadSelfFromNBT(tag);
+        reloaded.delegateAIEnded(new FailedGotoBlock(robot));
+
+        Assertions.assertFalse(reloaded.success(), "a reloaded goto whose approach failed did not dock");
+        Assertions.assertTrue(robot.docks.isEmpty());
+    }
+
     private static void assertTarget(AIRobot ai, double x, double y, double z, String message) {
         CompoundTag tag = new CompoundTag();
         ai.writeSelfToNBT(tag);

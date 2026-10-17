@@ -5,9 +5,15 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 
@@ -97,6 +103,74 @@ public class AIRobotGotoBlockTest {
         gotoBlock.update();
         Assertions.assertSame(gotoBlock, parent.ended, "an over-budget search must give up");
         Assertions.assertFalse(gotoBlock.success(), "giving up is a failure, not a silent success");
+    }
+
+    @Test
+    public void aPathStepThatTurnsHardIsNeverFlownIntoOnTheNextTick() {
+        // A planned path whose next cell stops being soft mid-flight (a chunk unloaded under it, a wall placed):
+        // setNextInPath rejects the step and drops the path. The path list is the PathFinding's own result, so
+        // re-reading that result on the next tick would hand back the rejected cell as an unchecked "first" step
+        // and aim the robot straight into it. The goto must re-plan from where it is (here: no way through, so
+        // it fails) and never aim at the rejected cell.
+        Set<BlockPos> soft = new HashSet<>();
+        for (int x = 0; x <= 6; x++) {
+            soft.add(new BlockPos(x, 0, 0));
+        }
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 6, 0, 0);
+        gotoBlock.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+
+        for (int i = 0; i < 100 && flyer.aims.isEmpty(); i++) {
+            gotoBlock.update();
+        }
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the search plans a path and aims its first step");
+
+        // Fly to the aimed cell, then one step on: arrive, overshoot, and the next step is aimed (and checked).
+        flyToAimedCellAndOvershoot(flyer, gotoBlock);
+        BlockPos current = flyer.aims.getLast();
+        BlockPos rejected = current.east();
+        Assertions.assertTrue(soft.contains(rejected), "fixture: the next planned step is still soft");
+
+        soft.remove(rejected);
+        int aimsBeforeRejection = flyer.aims.size();
+        flyToAimedCellAndOvershoot(flyer, gotoBlock);
+
+        for (int i = 0; i < 100 && parent.ended == null; i++) {
+            gotoBlock.update();
+        }
+        Assertions.assertFalse(flyer.aims.subList(aimsBeforeRejection, flyer.aims.size()).contains(rejected),
+                "a rejected step must never be aimed at - the goto re-plans from where the robot is instead");
+        Assertions.assertSame(gotoBlock, parent.ended, "the re-plan finds no way through the blocked corridor");
+        Assertions.assertFalse(gotoBlock.success(), "and the goto fails rather than reporting arrival");
+    }
+
+    /** Puts the robot on the centre of the cell it was last aimed at (one tick: distance 0 becomes the previous
+     *  distance), then nudges it past (one tick: the distance grew, so the AI moves on to the next step). */
+    private static void flyToAimedCellAndOvershoot(FlyingRobot flyer, AIRobotGotoBlock gotoBlock) {
+        BlockPos aimed = flyer.aims.getLast();
+        flyer.setPosition(new Vec3(aimed.getX() + 0.5, aimed.getY() + 0.5, aimed.getZ() + 0.5));
+        gotoBlock.update();
+        flyer.setPosition(new Vec3(aimed.getX() + 0.51, aimed.getY() + 0.5, aimed.getZ() + 0.5));
+        gotoBlock.update();
+    }
+
+    /** A robot in flight that records every block it is aimed at. */
+    private static class FlyingRobot extends MockRobotAccess {
+        final List<BlockPos> aims = new ArrayList<>();
+
+        @Override
+        public void aimItemAt(BlockPos pos) {
+            aims.add(pos);
+        }
+
+        @Override
+        public boolean isMoving() {
+            return true;
+        }
     }
 
     /** Records the delegate that terminated, so {@code start()}'s short-circuit is observable. */

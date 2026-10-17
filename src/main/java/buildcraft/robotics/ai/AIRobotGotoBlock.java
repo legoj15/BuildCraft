@@ -42,6 +42,9 @@ public class AIRobotGotoBlock extends AIRobotGoto {
      *  forever. Package-private so tests can shrink it. */
     int maxTotalExpansions = 50 * PathFinding.PATH_ITERATIONS;
     private int expansions;
+    /** The block-traversability oracle; null (production) reads the robot's level. Package-private so tests can
+     *  fly the robot over an in-memory grid. */
+    SoftBlockAccess blockAccess;
 
     public AIRobotGotoBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -97,7 +100,7 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                     (int) Math.floor(finalZ));
             // A robot already on the target (or where a 0 distance is reported) short-circuits above in start();
             // here we only reach this point when there is genuinely somewhere to go.
-            pathSearch = new PathFinding(SoftBlockAccess.of(robot.level()), start, end, maxDistance, 96);
+            pathSearch = new PathFinding(blocks(), start, end, maxDistance, 96);
         } else if (path != null) {
             double distance = robot.getDistance(nextX, nextY, nextZ);
 
@@ -153,18 +156,27 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             BlockPos next = path.getFirst();
             prevDistance = Double.MAX_VALUE;
 
-            if (isFirst || SoftBlockAccess.of(robot.level()).isSoft(next)) {
+            if (isFirst || blocks().isSoft(next)) {
                 setDestination(robot, next.getX() + 0.5, next.getY() + 0.5, next.getZ() + 0.5);
                 robot.aimItemAt(next);
             } else {
-                // Path invalid! (a chunk reshaped, a wall moved in the way) — give up and stop.
+                // Path invalid! (a chunk unloaded or reshaped, a wall moved in the way) — drop it and re-plan from
+                // here. Not 7.1.x: the path list IS pathSearch's result, so keeping pathSearch would hand the same
+                // list (rejected cell first) back on the next tick as an unchecked first step and aim the robot
+                // straight into it. Dropping the search re-plans with a fresh budget, as a given path already did.
                 path = null;
 
                 if (pathSearch != null) {
                     robot.setDeltaMovement(Vec3.ZERO);
+                    pathSearch = null;
+                    expansions = 0;
                 }
             }
         }
+    }
+
+    private SoftBlockAccess blocks() {
+        return blockAccess != null ? blockAccess : SoftBlockAccess.of(robot.level());
     }
 
     @Override

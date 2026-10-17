@@ -542,6 +542,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_protection_asks_only_about_chosen_cell", () -> buildcraft.factory.PumpProtectionTester::asksOnlyAboutTheCellItIsWorkingOn);
         reg.accept("buildcraftunofficial:pump_refused_pickup_not_retried", () -> buildcraft.factory.PumpProtectionTester::refusedPickupIsNotRetried);
         reg.accept("buildcraftunofficial:pump_protection_abandoned_permit_not_reused", () -> buildcraft.factory.PumpProtectionTester::abandonedPermitIsNotReused);
+        reg.accept("buildcraftunofficial:pump_protection_permit_rechecked_before_drain", () -> buildcraft.factory.PumpProtectionTester::permitIsRecheckedBeforeTheDrain);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
@@ -931,6 +932,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_asks_before_draining", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::pumpAsksBeforeDraining);
         reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_block", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockThatRefused);
         reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_pickup", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockWhosePickupRefused);
+        reg.accept("buildcraftunofficial:robot_pump_board_reasks_for_new_owner", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardAsksAgainForANewOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);

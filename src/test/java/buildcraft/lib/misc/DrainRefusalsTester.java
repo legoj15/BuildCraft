@@ -17,8 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * The refusal memory pumps (and the pump robot board) keep so a cell something refused to give up is not queued
  * again on every rebuild: remembered while the cell's state is unchanged, forgotten when it changes or when the
- * memory ages out (a window that grows with the refused pool, never a clear-everything cap). Pure logic over an explicit game-time argument, so no world is
- * needed.
+ * memory ages out (a window that grows with the refused pool, never a clear-everything cap). Pure logic over an
+ * explicit game-time argument (and, where staleness matters, an explicit state lookup), so no world is needed.
  */
 public class DrainRefusalsTester {
 
@@ -76,14 +76,14 @@ public class DrainRefusalsTester {
     }
 
     /**
-     * A claimed pool bigger than any fixed cap must not be forgotten wholesale: one refusal per tick (the pump's
-     * rate) over thousands of cells keeps every one of them remembered. A clear-everything cap made the pump re-queue
-     * and re-probe the whole pool on the next rebuild, i.e. a probe on nearly every tick, forever.
+     * Size never evicts a live refusal: one refusal per tick (the pump's rate) over thousands of cells keeps every
+     * one of them remembered until its own window ends, however many cells the pool has. (Forgetting live refusals
+     * would have the pump re-queue and re-probe them on the next rebuild, a probe on nearly every tick.)
      */
     @Test
     public void aLargePoolIsNotForgottenEarly() {
         DrainRefusals refusals = new DrainRefusals();
-        int cells = 5000; // past the old 2048 clear-all cap, inside the five-minute window at one refusal per tick
+        int cells = 5000; // thousands of cells, all still inside their windows when they are checked
         for (int i = 0; i < cells; i++) {
             refusals.remember(new BlockPos(i, 64, 0), WATER, i);
         }
@@ -108,7 +108,7 @@ public class DrainRefusalsTester {
             pool[i] = new BlockPos(i % 100, 64, i / 100);
         }
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-        long measureFrom = 40L * cells; // well past the first sweep and its first re-asks
+        long measureFrom = 40L * cells; // well past the first expiries and their re-asks
         long measureTo = measureFrom + 20L * cells;
         int probes = 0;
         for (long tick = 0; tick < measureTo; tick++) {
@@ -148,6 +148,53 @@ public class DrainRefusalsTester {
         Assertions.assertTrue(refusals.size() < 2000,
                 "size " + refusals.size() + ": expired refusals were kept instead of swept");
         Assertions.assertTrue(refusals.isRefused(new BlockPos(999, 80, 0), WATER, later), "live refusals stay");
+    }
+
+    /**
+     * The window stretches only for refusals that are still live. Once a big pool's refusals have all expired, a
+     * single new refusal gets the plain {@link DrainRefusals#MEMORY_TICKS} window, not one sized for cells nobody
+     * remembers any more.
+     */
+    @Test
+    public void expiredRefusalsDoNotStretchANewWindow() {
+        DrainRefusals refusals = new DrainRefusals();
+        for (int i = 0; i < 5000; i++) {
+            refusals.remember(new BlockPos(i, 64, 0), WATER, i);
+        }
+        long later = 1000L * DrainRefusals.MEMORY_TICKS; // past the expiry of every pool refusal
+        refusals.remember(CELL, WATER, later);
+        Assertions.assertTrue(refusals.isRefused(CELL, WATER, later + DrainRefusals.MEMORY_TICKS - 1),
+                "precondition: the new refusal is remembered for the plain window");
+        Assertions.assertFalse(refusals.isRefused(CELL, WATER, later + DrainRefusals.MEMORY_TICKS),
+                "a lone live refusal must be asked again after the plain window, not one stretched by "
+                        + "expired entries");
+    }
+
+    /**
+     * Cells that have changed since they refused no longer count either: a pool that was emptied (or turned into
+     * something else) by other means must not stretch the window of the next refusal, even though nothing looked
+     * those cells up again. The state lookup is how the memory tells; a cell it cannot read stays counted.
+     */
+    @Test
+    public void changedCellsDoNotStretchANewWindow() {
+        DrainRefusals refusals = new DrainRefusals();
+        for (int i = 0; i < 5000; i++) {
+            refusals.remember(new BlockPos(i, 64, 0), WATER, i);
+        }
+        long now = 5000;
+        refusals.remember(CELL, WATER, now, pos -> pos.equals(CELL) ? WATER : LAVA); // the pool is lava now
+        Assertions.assertEquals(1, refusals.size(), "the changed cells' refusals are dropped");
+        Assertions.assertFalse(refusals.isRefused(CELL, WATER, now + DrainRefusals.MEMORY_TICKS),
+                "a lone live refusal gets the plain window, not one stretched by cells that have changed");
+
+        DrainRefusals unreadable = new DrainRefusals();
+        for (int i = 0; i < 5000; i++) {
+            unreadable.remember(new BlockPos(i, 64, 0), WATER, i);
+        }
+        unreadable.remember(CELL, WATER, now, pos -> null); // e.g. every pool cell is in an unloaded chunk
+        Assertions.assertEquals(5001, unreadable.size(), "a cell whose state cannot be read is kept");
+        Assertions.assertTrue(unreadable.isRefused(CELL, WATER, now + DrainRefusals.MEMORY_TICKS),
+                "and still counts toward the window, since it may well still be refusing");
     }
 
     @Test

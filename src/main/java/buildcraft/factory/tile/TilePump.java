@@ -127,7 +127,8 @@ public class TilePump extends TileMiner implements IDebuggable {
      */
     private final DrainRefusals refusals = new DrainRefusals();
 
-    /** The cell protection mods have cleared for the bucket being pumped; null between buckets. */
+    /** The cell protection mods cleared when the current bucket started; null between buckets. Only spares the
+     *  per-tick start check while the bucket charges: the fluid is never taken on this alone (see {@link #mine}). */
     @Nullable
     private BlockPos permittedPos;
 
@@ -381,19 +382,17 @@ public class TilePump extends TileMiner implements IDebuggable {
     /**
      * Asks protection mods whether the pump may take fluid from {@code pos}, as the pump's owner (the generic
      * "[BuildCraft]" identity for an unowned pump), through the same probe the quarry and mining well use. Only the
-     * cell the pump is about to drain is asked about, never the whole pool it could reach, and once per bucket: a
-     * cleared cell stays cleared until its bucket is credited or the pump moves off it ({@link #nextPos}), whichever
-     * comes first.
+     * cell the pump is working on is ever asked about, never the whole pool it could reach.
      */
-    private boolean isDrainPermitted(BlockPos pos) {
-        if (pos.equals(permittedPos)) {
-            return true;
-        }
-        if (level instanceof ServerLevel serverLevel && !BlockUtil.canMachineBreak(serverLevel, pos, getOwner())) {
-            return false;
-        }
-        permittedPos = pos;
-        return true;
+    private boolean mayDrain(BlockPos pos) {
+        return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachineBreak(serverLevel, pos, getOwner());
+    }
+
+    /** Forgets {@code currentPos} after it refused (a protection mod, or its own pickup) and moves to the next cell. */
+    private void skipRefusedCell() {
+        refusals.remember(level, currentPos);
+        paths.remove(currentPos);
+        nextPos();
     }
 
     private boolean canDrain(BlockPos blockPos) {
@@ -440,9 +439,9 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     private void nextPos() {
-        // Every way off a cell runs through here (a credited bucket, a refusal, a scooped or cut-off cell, a
-        // rebuild), so this is where a permit ends: an abandoned bucket was never credited, and a later re-queue of
-        // the same cell (perhaps claimed by then) must ask again rather than ride the old permit.
+        // Moving to another cell ends the permit: a later re-queue of this one must ask again at the start. The
+        // other way a bucket is abandoned (mine() waiting out rebuildDelay on a scooped or cut-off cell) clears it
+        // itself. Neither is what keeps a claim out: the drain itself always asks again (see mine()).
         permittedPos = null;
         while (!queue.isEmpty()) {
             currentPos = queue.removeLast();
@@ -493,13 +492,17 @@ public class TilePump extends TileMiner implements IDebuggable {
 
         long target = 10 * MjAPI.MJ;
         if (currentPos != null && paths.containsKey(currentPos)) {
-            // Ask before spending power on the cell, so a claimed cell costs nothing and the pump moves
-            // straight on to the next one (one cell per tick, so a fully claimed pool is not probed all at once).
-            if (canDrain(currentPos) && !isDrainPermitted(currentPos)) {
-                refusals.remember(level, currentPos);
-                paths.remove(currentPos);
-                nextPos();
-                return;
+            // Ask when the bucket starts, before spending power on the cell, so a claimed cell costs nothing and
+            // the pump moves straight on to the next one (one cell per tick, so a fully claimed pool is not probed
+            // all at once). The permit only spares this check while the bucket charges.
+            boolean askedThisTick = false;
+            if (canDrain(currentPos) && !currentPos.equals(permittedPos)) {
+                if (!mayDrain(currentPos)) {
+                    skipRefusedCell();
+                    return;
+                }
+                permittedPos = currentPos;
+                askedThisTick = true;
             }
             progress += (int) battery.extractPower(0, target - progress);
             if (progress < target) {
@@ -528,16 +531,22 @@ public class TilePump extends TileMiner implements IDebuggable {
                         && FluidUtilBC.areFluidsEqual(drain.getFluid(), Fluids.WATER)
                         && isInfiniteSourceAt(level, targetPos);
 
+                // Ask again now, at the moment the fluid is taken, unless the start check just asked in this same
+                // tick: a bucket that charged over several ticks was cleared before a claim placed since then. The
+                // pump has not touched the world, so the charge is kept for the next cell.
+                if (!askedThisTick && !mayDrain(currentPos)) {
+                    skipRefusedCell();
+                    return;
+                }
+
                 // Take the world's bucket BEFORE crediting the tank: a pickup can refuse
                 // (a modded BucketPickup), and crediting first would mint fluid every pass.
                 // Skip a refusing cell rather than stalling on it until the next rebuild; the
                 // power spent on the refused attempt is gone, so the next cell pays in full.
                 // The refusal is remembered, or the rebuild would queue the same cell again.
                 if (!isInfiniteWaterSource && BlockUtil.drainBlock(level, currentPos, true) == null) {
-                    refusals.remember(level, currentPos);
                     progress = 0;
-                    paths.remove(currentPos);
-                    nextPos();
+                    skipRefusedCell();
                     return;
                 }
 
@@ -568,6 +577,9 @@ public class TilePump extends TileMiner implements IDebuggable {
                 return;
             }
 
+            // The bucket is abandoned (the cell was scooped, or its path cut): its permit ends here too, or
+            // the cell coming back before the rebuild would skip the start check.
+            permittedPos = null;
             if (rebuildDelay > 0) {
                 return;
             }

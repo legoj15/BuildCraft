@@ -5,7 +5,11 @@
  */
 package buildcraft.lib.misc;
 
+import javax.annotation.Nullable;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -30,10 +34,13 @@ import net.minecraft.world.level.block.state.BlockState;
  * <p>There is deliberately no entry cap: forgetting live refusals early is exactly what makes a machine thrash (the
  * next rebuild re-queues the forgotten cells and the machine probes one per tick, forever). The map only ever holds
  * cells this machine reached and was refused, so it is bounded by the machine's own reach (a pump's flood fill
- * already keeps a path entry for every one of those cells); expired entries are swept as it grows. The memory is
- * transient: it belongs to the machine instance and is never saved. Server thread only. The game-time-taking
- * overloads are the real API and keep the logic testable without a world; the {@link Level} overloads read the
- * state and the clock from the world.
+ * already keeps a path entry for every one of those cells). Only live refusals stretch the window: once the pool is
+ * past the size where the window is the plain five minutes, every new refusal first drops the entries that have
+ * expired, and those whose cell has changed (read through a {@link StateLookup}; a cell it cannot read is kept), so
+ * a pool that was drained or changed by other means does not inflate the next window. The memory is transient: it
+ * belongs to the machine instance and is never saved. Server thread only. The game-time-taking overloads are the
+ * real API and keep the logic testable without a world; the {@link Level} overloads read the state and the clock
+ * from the world, without loading chunks.
  */
 public final class DrainRefusals {
 
@@ -44,8 +51,18 @@ public final class DrainRefusals {
      *  about once per this many ticks on average, however large it is. */
     public static final long RECHECK_SPACING_TICKS = 20;
 
-    /** The size below which expired entries are not swept; above it, a sweep runs each time the map doubles. */
-    private static final int MIN_SWEEP_SIZE = 256;
+    /** Up to this many other live refusals the window is the plain {@link #MEMORY_TICKS}, so counting them exactly
+     *  (and pruning the stale ones to do it) only starts above it. Also bounds the stale entries kept below it. */
+    private static final int PLAIN_WINDOW_POOL = (int) (MEMORY_TICKS / RECHECK_SPACING_TICKS);
+
+    /** A cell's current state, for telling which remembered refusals are stale. */
+    @FunctionalInterface
+    public interface StateLookup {
+        /** The state at {@code pos} now, or null when it cannot be read cheaply (an unloaded chunk): such a refusal
+         *  is kept, since it may well still hold. */
+        @Nullable
+        BlockState stateAt(BlockPos pos);
+    }
 
     private record Refusal(BlockState state, long expiresAt) {
     }
@@ -53,18 +70,42 @@ public final class DrainRefusals {
     /** Keyed on {@link BlockPos#asLong()}: a large claimed pool can mean thousands of entries. */
     private final Long2ObjectOpenHashMap<Refusal> refused = new Long2ObjectOpenHashMap<>();
 
-    private int sweepAt = MIN_SWEEP_SIZE;
-
-    /** Records that {@code pos}, holding {@code state}, refused at {@code gameTime}. */
+    /** Records that {@code pos}, holding {@code state}, refused at {@code gameTime}. Only expiry tells a stale entry
+     *  here; prefer {@link #remember(BlockPos, BlockState, long, StateLookup)} where the world can be read. */
     public void remember(BlockPos pos, BlockState state, long gameTime) {
+        remember(pos, state, gameTime, null);
+    }
+
+    /**
+     * Records that {@code pos}, holding {@code state}, refused at {@code gameTime}. Its window is
+     * {@code max(MEMORY_TICKS, RECHECK_SPACING_TICKS per other live refusal)}, where an entry is live while it has not
+     * expired and {@code lookup} (when given) does not report its cell as changed.
+     */
+    public void remember(BlockPos pos, BlockState state, long gameTime, @Nullable StateLookup lookup) {
         long key = pos.asLong();
-        if (refused.size() >= sweepAt && !refused.containsKey(key)) {
-            refused.values().removeIf(refusal -> gameTime >= refusal.expiresAt());
-            sweepAt = Math.max(MIN_SWEEP_SIZE, refused.size() * 2);
+        refused.remove(key);
+        if (refused.size() > PLAIN_WINDOW_POOL) {
+            pruneStale(gameTime, lookup);
         }
-        long others = refused.size() - (refused.containsKey(key) ? 1 : 0);
-        long window = Math.max(MEMORY_TICKS, others * RECHECK_SPACING_TICKS);
+        long window = Math.max(MEMORY_TICKS, refused.size() * RECHECK_SPACING_TICKS);
         refused.put(key, new Refusal(state, gameTime + window));
+    }
+
+    /** Drops every entry that has expired, or whose cell {@code lookup} reports as holding another state. */
+    private void pruneStale(long gameTime, @Nullable StateLookup lookup) {
+        ObjectIterator<Long2ObjectMap.Entry<Refusal>> it = refused.long2ObjectEntrySet().fastIterator();
+        while (it.hasNext()) {
+            Long2ObjectMap.Entry<Refusal> entry = it.next();
+            Refusal refusal = entry.getValue();
+            if (gameTime >= refusal.expiresAt()) {
+                it.remove();
+            } else if (lookup != null) {
+                BlockState now = lookup.stateAt(BlockPos.of(entry.getLongKey()));
+                if (now != null && !now.equals(refusal.state())) {
+                    it.remove();
+                }
+            }
+        }
     }
 
     /**
@@ -84,9 +125,11 @@ public final class DrainRefusals {
         return true;
     }
 
-    /** {@link #remember(BlockPos, BlockState, long)} for the cell's current state and the world's clock. */
+    /** {@link #remember(BlockPos, BlockState, long, StateLookup)} for the cell's current state and the world's clock;
+     *  remembered cells in unloaded chunks are not read (that would load them), only aged out. */
     public void remember(Level level, BlockPos pos) {
-        remember(pos, level.getBlockState(pos), level.getGameTime());
+        remember(pos, level.getBlockState(pos), level.getGameTime(),
+                cell -> level.isLoaded(cell) ? level.getBlockState(cell) : null);
     }
 
     /** {@link #isRefused(BlockPos, BlockState, long)} against the world's current state and clock. */
@@ -102,6 +145,5 @@ public final class DrainRefusals {
     /** Forgets every refusal. */
     public void clear() {
         refused.clear();
-        sweepAt = MIN_SWEEP_SIZE;
     }
 }

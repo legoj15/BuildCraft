@@ -5,6 +5,11 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.Collections;
+import java.util.UUID;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -16,6 +21,8 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.robots.DockingStation;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.GameProfileUtil;
@@ -144,6 +151,64 @@ public class RobotPumpProtectionTester {
     }
 
     /**
+     * A refusal is about who asked as well as where: the pump AI asks as the home station's owner, so when the robot
+     * is relinked to a station someone else owns, a block the old owner was refused is a candidate again (the new
+     * owner may well be allowed there). Only an unchanged cell asked by the same owner stays skipped.
+     */
+    public static void boardAsksAgainForANewOwner(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos wellRel = new BlockPos(2, 1, 2);
+        buildCup(helper, wellRel);
+        helper.setBlock(wellRel, Blocks.WATER);
+        BlockPos well = helper.absolutePos(wellRel);
+        EntityRobot robot = unaddedRobot(helper, wellRel.above());
+        GameProfile alice = new GameProfile(UUID.fromString("5b7a9f4e-0000-4000-8000-00000000a11c"), "Alice");
+        GameProfile bob = new GameProfile(UUID.fromString("5b7a9f4e-0000-4000-8000-000000000b0b"), "Bob");
+        robot.setMainStation(new OwnedStation(helper.absolutePos(new BlockPos(1, 1, 1)), alice));
+        BoardRobotPump board = new BoardRobotPump(robot);
+        check(board.isSearchCandidate(level, well), "precondition: the source is a candidate");
+
+        AIRobotPumpBlock pumper = new AIRobotPumpBlock(robot, well);
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(well, true)) {
+            runPumpAi(pumper);
+            check(claim.asks() == 1 && GameProfileUtil.getId(alice).equals(claim.askedBy.get(0).getUUID()),
+                    "precondition: the robot asked once, as its home station's owner");
+        }
+        check(pumper.refused(), "precondition: the pump AI was refused");
+        board.delegateAIEnded(pumper);
+        check(!board.isSearchCandidate(level, well), "precondition: the refusal is remembered for the same owner");
+
+        robot.setMainStation(new OwnedStation(helper.absolutePos(new BlockPos(3, 1, 1)), bob));
+        check(board.isSearchCandidate(level, well),
+                "relinked to a station another player owns, the robot must ask again rather than skip the block "
+                        + "on a refusal that was given to someone else");
+        check(level.getFluidState(well).isSource(), "the refused source is untouched");
+        robot.setMainStation(null);
+        helper.succeed();
+    }
+
+    /** A bare home station owned by {@code owner}: just enough for {@link buildcraft.robotics.RobotProtection}. */
+    private static final class OwnedStation extends DockingStation {
+        private final GameProfile owner;
+
+        OwnedStation(BlockPos pos, GameProfile owner) {
+            super(pos, Direction.UP);
+            this.owner = owner;
+        }
+
+        @Override
+        public GameProfile getOwner() {
+            return owner;
+        }
+
+        @Override
+        public Iterable<StatementSlot> getActiveActions() {
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * A modded block that reports a source but refuses its bucket: the AI reports the refusal (not a silent
      * nothing), and the board remembers it. Before, the board sent the robot back to the same block every pass.
      */
@@ -154,6 +219,7 @@ public class RobotPumpProtectionTester {
         buildCup(helper, wellRel);
         helper.setBlock(wellRel, TestOnlyBlocks.refusingSource());
         BlockPos well = helper.absolutePos(wellRel);
+        RefusingSourceBlock.resetAttempts(well);
         EntityRobot robot = unaddedRobot(helper, wellRel.above());
         BoardRobotPump board = new BoardRobotPump(robot);
         check(board.isSearchCandidate(level, well), "precondition: the refusing block looks like a pumpable source");

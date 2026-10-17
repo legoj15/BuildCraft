@@ -37,10 +37,20 @@ public final class RefusingSourceBlock extends Block implements BucketPickup {
         super(properties);
     }
 
-    /** How many times something tried to pick this block up at {@code pos}. Keyed by absolute position. */
+    /** How many times something tried to pick this block up at {@code pos} since the last
+     *  {@link #resetAttempts}. Keyed by absolute position. */
     public static int attemptsAt(BlockPos pos) {
         AtomicInteger count = ATTEMPTS.get(pos);
         return count == null ? 0 : count.get();
+    }
+
+    /** Zeroes the count at each of {@code positions}. The counts are global and outlive a test, and arenas land at
+     *  random positions that a later test can reuse, so a test that reads {@link #attemptsAt} calls this for its
+     *  own positions first. Only the given positions are touched, so tests running beside it are unaffected. */
+    public static void resetAttempts(BlockPos... positions) {
+        for (BlockPos pos : positions) {
+            ATTEMPTS.remove(pos);
+        }
     }
 
     @Override

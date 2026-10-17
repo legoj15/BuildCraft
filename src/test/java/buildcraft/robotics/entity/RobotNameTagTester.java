@@ -104,6 +104,57 @@ public class RobotNameTagTester {
         helper.succeed();
     }
 
+    /** {@code Player.interactOn} grew the hit-location argument at 26.1, alongside {@code Entity.interact}. */
+    private static InteractionResult interactOn(Player player, EntityRobot robot) {
+        //? if >=26.1 {
+        return player.interactOn(robot, InteractionHand.MAIN_HAND, new Vec3(0.5, 0.5, 0.5));
+        //?} else {
+        /*return player.interactOn(robot, InteractionHand.MAIN_HAND);*/
+        //?}
+    }
+
+    /**
+     * A creative player keeps the name tag, as with every named mob. Vanilla's {@code NameTagItem} itself shrinks the
+     * stack unconditionally; what spares a creative player is {@code Player.interactOn}, which restores the held
+     * stack's count after ANY entity's {@code interact} consumed the action ({@code hasInfiniteMaterials}) - the
+     * robot's own {@code interact} (what the tests above call) is reached through exactly that, so the rename needs no
+     * creative check of its own. This pins the real entry point's outcome: the robot is named either way, the creative
+     * player's stack is whole and the survival player's is one short.
+     */
+    public static void creativeNameTagIsNotUsedUp(GameTestHelper helper) {
+        EntityRobot robot = spawnRobot(helper);
+        Player creative = helper.makeMockPlayer(GameType.CREATIVE);
+        Player survival = helper.makeMockPlayer(GameType.SURVIVAL);
+        try {
+            // makeMockPlayer only overrides gameMode(); a real player's abilities follow the game type.
+            GameType.CREATIVE.updatePlayerAbilities(creative.getAbilities());
+            GameType.SURVIVAL.updatePlayerAbilities(survival.getAbilities());
+
+            creative.setItemInHand(InteractionHand.MAIN_HAND, nameTag("Robbie", 3));
+            InteractionResult result = interactOn(creative, robot);
+            helper.assertTrue(result.consumesAction(), "the creative click names the robot, got " + result);
+            helper.assertTrue(robot.hasCustomName() && "Robbie".equals(robot.getCustomName().getString()),
+                    "the robot is called Robbie, got " + robot.getCustomName());
+            helper.assertTrue(creative.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 3,
+                    "a creative player keeps the whole stack of tags, got "
+                            + creative.getItemInHand(InteractionHand.MAIN_HAND).getCount());
+
+            survival.setItemInHand(InteractionHand.MAIN_HAND, nameTag("Wall-E", 3));
+            result = interactOn(survival, robot);
+            helper.assertTrue(result.consumesAction(), "the survival click renames the robot, got " + result);
+            helper.assertTrue("Wall-E".equals(robot.getCustomName().getString()),
+                    "the robot is now Wall-E, got " + robot.getCustomName());
+            helper.assertTrue(survival.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 2,
+                    "a survival player pays one tag, got "
+                            + survival.getItemInHand(InteractionHand.MAIN_HAND).getCount());
+        } finally {
+            creative.discard();
+            survival.discard();
+            robot.discard();
+        }
+        helper.succeed();
+    }
+
     /** A sneaking wrench turns a named robot back into its item, and that item carries the name: the robot drop is
      *  the first stack of {@code getDrops()} and the one that lands in the world. */
     public static void namedRobotKeepsItsNameThroughWrenchPickup(GameTestHelper helper) {

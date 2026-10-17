@@ -1152,6 +1152,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);
         reg.accept("buildcraftunofficial:robot_wears_equips_and_peels", () -> buildcraft.robotics.entity.RobotWearablesTester::wearsEquipsAndPeelsWearables);
         reg.accept("buildcraftunofficial:robot_name_tag_names_robot", () -> buildcraft.robotics.entity.RobotNameTagTester::nameTagNamesTheRobot);
+        reg.accept("buildcraftunofficial:robot_name_tag_creative_keeps_tag", () -> buildcraft.robotics.entity.RobotNameTagTester::creativeNameTagIsNotUsedUp);
         reg.accept("buildcraftunofficial:robot_name_kept_through_wrench_pickup", () -> buildcraft.robotics.entity.RobotNameTagTester::namedRobotKeepsItsNameThroughWrenchPickup);
         reg.accept("buildcraftunofficial:robot_builder_board_state_machine", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardStateMachine);
         reg.accept("buildcraftunofficial:robot_builder_board_supplies_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSuppliesBuilderMachine);

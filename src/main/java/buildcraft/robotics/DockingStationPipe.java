@@ -26,6 +26,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRequestProvider;
@@ -37,6 +38,7 @@ import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IFlowPower;
+import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.misc.CapUtil;
@@ -48,6 +50,7 @@ import buildcraft.robotics.statements.ActionStationForbidRobot;
 import buildcraft.robotics.statements.ActionStationProvideFluids;
 import buildcraft.robotics.statements.ActionStationProvideItems;
 import buildcraft.silicon.plug.PluggableGate;
+import buildcraft.transport.BCTransportConfig;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 
@@ -289,10 +292,28 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return h.getPipe().getBehaviour() instanceof PipeBehaviourWood wood ? wood.getCurrentDir() : null;
     }
 
+    /** A station is a charger when its pipe carries power it can hand to a docked robot: MJ kinesis directly, or
+     *  Forge-Energy (RF) kinesis through {@link #acceptsForgeEnergy()}. This is what {@code AIRobotRecharge}
+     *  searches for and what {@code AIRobotMain} consults before shutting a docked robot down, so an RF station
+     *  must say yes exactly when it can really deliver -- see {@link #acceptsForgeEnergy()}. */
     @Override
     public boolean providesPower() {
         IPipeHolder h = getHolder();
-        return h != null && h.getPipe() != null && h.getPipe().getFlow() instanceof IFlowPower;
+        boolean mjKinesis = h != null && h.getPipe() != null && h.getPipe().getFlow() instanceof IFlowPower;
+        return mjKinesis || acceptsForgeEnergy();
+    }
+
+    /** Whether this station's pipe is an RF kinesis pipe whose Forge Energy the station may convert into a docked
+     *  robot's battery (see {@code RobotStationPluggable#getInternalCapability}). Gated like every other BC
+     *  machine's FE surface and read live: MJ&lt;-&gt;RF autoconversion must be on (nothing under
+     *  {@code powerMode = MJ_ONLY}, whose contract is that machines take MJ exclusively), and the RF pipes must
+     *  not be switched off by {@code disableRfPipe}. The first check after the flow type is the cheap, config-free
+     *  one, so MJ and item stations never touch config. */
+    public boolean acceptsForgeEnergy() {
+        IPipeHolder h = getHolder();
+        return h != null && h.getPipe() != null && h.getPipe().getFlow() instanceof IFlowRedstoneFlux
+            && MjAPI.isRfAutoConversionEnabled()
+            && !BCTransportConfig.disableRfPipe.get();
     }
 
     // ── Request network (Ph8) ─────────────────────────────────────────────

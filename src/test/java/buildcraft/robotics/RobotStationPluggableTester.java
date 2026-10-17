@@ -44,8 +44,11 @@ import buildcraft.api.robots.RobotManager;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.lib.BCLibConfig;
+import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.FeHandlerAccess;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.api.transport.IInjectable;
@@ -530,6 +533,196 @@ public class RobotStationPluggableTester {
                     "a hand-placed station must register a DockingStationPipe like any other, got " + station);
             helper.succeed();
         });
+    }
+
+    // ---------- Forge-Energy (RF kinesis): converted into the robot battery at the configured ratio ----------
+
+    /** The RF twin of {@link #testKinesisPipeChargesDockedRobot}. An RF kinesis pipe carries FE, not MJ, so the
+     *  MJ-only station never charged a robot docked on it ({@code PipeFlowRedstoneFlux} asks the station for
+     *  an FE handler and got nothing). With autoconversion on, the station now exposes one that converts into
+     *  the robot's charge receiver at {@code mjRfConversionAmount}.
+     *
+     *  <p>Rig: a test-driven FE source pushes a single known packet into the free face of a wood RF pipe whose
+     *  other face carries the station. The ratio is set to the config maximum (0.2 MJ per RF, 5 RF per MJ) so a
+     *  default-ratio mix-up cannot pass: 50 FE must land as exactly 10 MJ, no more (lossless) and no less. */
+    public static void testRfKinesisPipeChargesDockedRobotAtConfiguredRatio(GameTestHelper helper) {
+        RfStationTestSupport.ConfigScope scope = new RfStationTestSupport.ConfigScope(
+                BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.2, false);
+        try {
+            BlockPos pipePos = new BlockPos(2, 2, 5);
+            TilePipeHolder pipe = placePowerPipe(helper, pipePos, BCTransportItems.PIPE_WOOD_RF.get());
+            install(pipe, Direction.WEST);
+            pipe.getPipe().markForUpdate();
+            BlockPos absPipePos = helper.absolutePos(pipePos);
+
+            final int feSent = 50;
+            final long mjPerRf = MjAPI.MJ / 5;
+            final long expectedMj = feSent * mjPerRf;
+
+            TestRobot[] robot = { null };
+            boolean[] injected = { false };
+            scope.succeedWhen(helper, 150, () -> {
+                DockingStation station = RobotManager.registryProvider.getRegistry(helper.getLevel())
+                        .getStation(absPipePos, Direction.WEST);
+                if (station == null) {
+                    return false;
+                }
+                if (robot[0] == null) {
+                    robot[0] = new TestRobot(helper.getLevel());
+                    station.takeAsMain(robot[0]);
+                    robot[0].dock(station);
+                    helper.assertTrue(MjAPI.getRfConversion().mjPerRf == mjPerRf,
+                            "fixture: the config ratio must resolve to 5 RF per MJ, got "
+                                    + MjAPI.getRfConversion().mjPerRf + " micro-MJ per RF");
+                    helper.assertTrue(robot[0].getBattery().getStored() == 0, "fixture must start drained");
+                    return false;
+                }
+                if (!injected[0]) {
+                    // The pipe's own first tick (which sizes its buffer) can land after the station's, so a
+                    // zero-accepted push just means "not configured yet" -- retry next tick.
+                    Object source = RfStationTestSupport.pipeEnergyHandler(pipe, Direction.EAST);
+                    helper.assertTrue(source != null, "an RF kinesis pipe must expose its FE handler");
+                    int accepted = FeHandlerAccess.insert(source, feSent, true);
+                    if (accepted > 0) {
+                        helper.assertTrue(accepted == feSent,
+                                "the wood RF pipe should swallow a " + feSent + " FE packet whole, took "
+                                        + accepted);
+                        injected[0] = true;
+                    }
+                    return false;
+                }
+                long stored = robot[0].getBattery().getStored();
+                helper.assertTrue(stored <= expectedMj, "the conversion must be lossless and exact: " + feSent
+                        + " FE at 5 RF/MJ is " + expectedMj + " micro-MJ, but the robot holds " + stored);
+                if (stored == expectedMj) {
+                    RfStationTestSupport.removeStation(helper, absPipePos, Direction.WEST);
+                    return true;
+                }
+                return false;
+            }, "a robot docked on a station attached to an RF kinesis pipe never received the " + feSent
+                    + " FE it was sent as " + expectedMj + " micro-MJ -- the pipe cannot see the station as a "
+                    + "Forge-Energy destination");
+        } catch (Throwable thrown) {
+            scope.close();
+            throw thrown;
+        }
+    }
+
+    /** Every gate on the FE path, plus the "nothing else changed" controls. The FE surface follows the same
+     *  rules as every other BC machine: nothing under {@code MJ_ONLY} (its contract is that machines take MJ
+     *  exclusively), nothing when {@code disableRfPipe} turns the RF pipes off, and -- like the MJ path -- only
+     *  for a robot actually docked, not merely reserving. {@code providesPower()} is what makes
+     *  {@code AIRobotRecharge}/{@code AIRobotMain} treat the station as a charger, so it must be true for an RF
+     *  station exactly when that station can really deliver (never a charger that cannot charge, or a robot
+     *  would fly to it and starve), and must not move for MJ or item stations. */
+    public static void testRfStationForgeEnergyIsGatedLikeEveryMachine(GameTestHelper helper) {
+        BlockPos rfPos = new BlockPos(1, 2, 2);
+        BlockPos mjPos = new BlockPos(3, 2, 2);
+        BlockPos itemPos = new BlockPos(5, 2, 2);
+        TilePipeHolder rfPipe = placePowerPipe(helper, rfPos, BCTransportItems.PIPE_WOOD_RF.get());
+        TilePipeHolder mjPipe = placePowerPipe(helper, mjPos, BCTransportItems.PIPE_STONE_POWER.get());
+        TilePipeHolder itemPipe = placeItemPipe(helper, itemPos);
+        RobotStationPluggable rfPlug = install(rfPipe, Direction.UP);
+        RobotStationPluggable mjPlug = install(mjPipe, Direction.UP);
+        RobotStationPluggable itemPlug = install(itemPipe, Direction.UP);
+        BlockPos rfAbs = helper.absolutePos(rfPos);
+        BlockPos mjAbs = helper.absolutePos(mjPos);
+        BlockPos itemAbs = helper.absolutePos(itemPos);
+
+        EntityArenaUtil.tickUntil(helper, 60,
+                () -> {
+                    IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
+                    return registry.getStation(rfAbs, Direction.UP) != null
+                            && registry.getStation(mjAbs, Direction.UP) != null
+                            && registry.getStation(itemAbs, Direction.UP) != null;
+                },
+                () -> {
+                    IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
+                    DockingStationPipe rfStation = (DockingStationPipe) registry.getStation(rfAbs, Direction.UP);
+                    DockingStationPipe mjStation = (DockingStationPipe) registry.getStation(mjAbs, Direction.UP);
+                    DockingStationPipe itemStation = (DockingStationPipe) registry.getStation(itemAbs, Direction.UP);
+                    TestRobot robot = new TestRobot(helper.getLevel());
+                    rfStation.takeAsMain(robot);
+                    robot.dock(rfStation);
+
+                    RfStationTestSupport.ConfigScope scope = new RfStationTestSupport.ConfigScope(
+                            BCLibConfig.PowerMode.MJ_ONLY, 0.1, false);
+                    try {
+                        // MJ_ONLY: no FE surface, and the station is not a charger.
+                        helper.assertTrue(rfPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "MJ_ONLY: a docked RF station must not expose Forge Energy");
+                        helper.assertTrue(!rfStation.providesPower(),
+                                "MJ_ONLY: an RF station cannot charge, so it must not advertise power");
+
+                        // disableRfPipe: the whole RF pipe feature is off.
+                        scope.apply(BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.1, true);
+                        helper.assertTrue(rfPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "disableRfPipe: a docked RF station must not expose Forge Energy");
+                        helper.assertTrue(!rfStation.providesPower(),
+                                "disableRfPipe: an RF station must not advertise power");
+
+                        // Enabled + docked: the converting handler.
+                        scope.apply(BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.1, false);
+                        helper.assertTrue(rfStation.providesPower(),
+                                "an RF kinesis station must advertise power so AIRobotRecharge targets it");
+                        Object fe = rfPlug.getInternalCapability(CapUtil.CAP_ENERGY);
+                        helper.assertTrue(fe != null, "autoconvert + docked: the RF station must expose Forge Energy");
+                        long mjPerRf = MjAPI.getRfConversion().mjPerRf;
+                        helper.assertTrue(mjPerRf == MjAPI.MJ / 10, "fixture: default ratio is 10 RF per MJ");
+                        long capacityFe = FeHandlerAccess.capacity(fe);
+                        helper.assertTrue(capacityFe == robot.getBattery().getCapacity() / mjPerRf,
+                                "the handler's capacity is the robot's, in FE: " + capacityFe);
+
+                        int simulated = FeHandlerAccess.insert(fe, 100, false);
+                        helper.assertTrue(simulated == 100, "a simulated 100 FE insert must report 100, got "
+                                + simulated);
+                        helper.assertTrue(robot.getBattery().getStored() == 0,
+                                "a simulated (rolled-back) insert must not charge the robot");
+                        int committed = FeHandlerAccess.insert(fe, 100, true);
+                        helper.assertTrue(committed == 100, "a committed 100 FE insert must report 100, got "
+                                + committed);
+                        helper.assertTrue(robot.getBattery().getStored() == 100 * mjPerRf,
+                                "100 FE at 10 RF/MJ is exactly 10 MJ, the robot holds "
+                                        + robot.getBattery().getStored());
+                        helper.assertTrue(FeHandlerAccess.stored(fe) == 100,
+                                "the handler must read the robot's charge back in FE");
+                        helper.assertTrue(FeHandlerAccess.extract(fe, 50) == 0,
+                                "the robot is not an FE source: nothing may be extracted");
+
+                        // Reserved but not docked: no charge path, but the station still advertises power.
+                        robot.undock();
+                        helper.assertTrue(rfPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "reserved-but-undocked: no Forge Energy surface (same gate as the MJ path)");
+                        helper.assertTrue(rfStation.providesPower(),
+                                "an RF station advertises power whether or not a robot is parked on it");
+
+                        // Controls: nothing moved for MJ kinesis or item pipes.
+                        TestRobot mjRobot = new TestRobot(helper.getLevel());
+                        mjStation.takeAsMain(mjRobot);
+                        mjRobot.dock(mjStation);
+                        helper.assertTrue(mjPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "an MJ kinesis station must never expose Forge Energy");
+                        helper.assertTrue(mjPlug.getInternalCapability(MjAPI.CAP_RECEIVER) != null,
+                                "an MJ kinesis station still exposes its MJ receiver");
+                        helper.assertTrue(mjStation.providesPower(), "an MJ kinesis station still provides power");
+                        helper.assertTrue(itemPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "an item-pipe station must never expose Forge Energy");
+                        helper.assertTrue(!itemStation.providesPower(), "an item-pipe station provides no power");
+
+                        // The gate is read live: back to MJ_ONLY with a docked robot closes it again.
+                        robot.dock(rfStation);
+                        scope.apply(BCLibConfig.PowerMode.MJ_ONLY, 0.1, false);
+                        helper.assertTrue(rfPlug.getInternalCapability(CapUtil.CAP_ENERGY) == null,
+                                "flipping back to MJ_ONLY must close the Forge Energy surface again");
+                    } finally {
+                        scope.close();
+                        RfStationTestSupport.removeStation(helper, rfAbs, Direction.UP);
+                        RfStationTestSupport.removeStation(helper, mjAbs, Direction.UP);
+                        RfStationTestSupport.removeStation(helper, itemAbs, Direction.UP);
+                    }
+                    helper.succeed();
+                },
+                "the RF / MJ / item stations never registered");
     }
 
     /** Minimal concrete {@link EntityRobotBase} for tests — a real {@link MjBattery} and dock-state

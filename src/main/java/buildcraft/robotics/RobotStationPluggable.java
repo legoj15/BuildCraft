@@ -26,6 +26,8 @@ import buildcraft.api.transport.pluggable.PipePluggable;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.pluggable.PluggableModelKey;
 
+import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.mj.MjReceiverEnergyHandler;
 import buildcraft.robotics.client.model.key.KeyPlugRobotStation;
 
 import org.jspecify.annotations.Nullable;
@@ -36,7 +38,8 @@ import org.jspecify.annotations.Nullable;
  * lazily on first server-side tick (modern {@link PipePluggable} has no {@code validate()} hook to piggyback
  * on the way 7.1.x did) and on {@link #onRemove()}, and exposes an MJ receiver capability that only accepts
  * power while a robot is actually <em>docked</em> (not merely reserving) — {@code station.robotTaking()} can
- * be non-null for a robot that has reserved but not yet arrived.
+ * be non-null for a robot that has reserved but not yet arrived. On an RF (Forge Energy) kinesis pipe the
+ * inward face additionally converts FE into the docked robot's battery; see {@link #getInternalCapability}.
  */
 public class RobotStationPluggable extends PipePluggable implements IDockingStationProvider {
 
@@ -240,7 +243,17 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
      * pluggable still be a power destination.
      *
      * <p>Gated on {@link #dockedRobot()} exactly like {@link #getCapability}, so a robot that has
-     * merely reserved the station (but not arrived) still receives nothing. */
+     * merely reserved the station (but not arrived) still receives nothing.
+     *
+     * <p><b>Forge Energy.</b> An RF kinesis pipe ({@code PipeFlowRedstoneFlux}) speaks FE, not MJ, and asks
+     * this same inward seam for the energy capability; without an answer its power never reached a docked
+     * robot, which {@code AIRobotMain} then shut down for lack of charge. The answer is a
+     * {@link MjReceiverEnergyHandler} over the robot's own charge receiver, so FE is converted at the configured
+     * {@code mjRfConversionAmount} and still lands through the receiver (the "being charged" latch sees it).
+     * It is offered only when {@link DockingStationPipe#acceptsForgeEnergy()} -- the station sits on an RF pipe
+     * and both the power mode and {@code disableRfPipe} allow FE -- and, like the MJ path, only for a robot
+     * actually docked. Deliberately not mirrored on the outward {@link #getCapability} face: FE reaches a station
+     * only from the pipe it is mounted on. */
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getInternalCapability(@Nonnull Object cap) {
@@ -248,6 +261,11 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
             IMjReceiver receiver = chargeReceiver();
             if (receiver != null) {
                 return (T) receiver;
+            }
+        } else if (cap == CapUtil.CAP_ENERGY && station != null && station.acceptsForgeEnergy()) {
+            IMjReceiver receiver = chargeReceiver();
+            if (receiver != null) {
+                return (T) new MjReceiverEnergyHandler(receiver);
             }
         }
         return null;

@@ -31,14 +31,17 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreStatements;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.FeHandlerAccess;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
+import buildcraft.robotics.RfStationTestSupport;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ai.AIRobotUnload;
 import buildcraft.robotics.entity.EntityRobot;
@@ -471,5 +474,59 @@ public class PickerCarrierTester {
                     helper.succeed();
                 },
                 "a robot below SAFETY_POWER never docked at the powered station and recharged past it");
+    }
+
+    /** The Forge-Energy twin of {@link #lowPowerRobotRechargesAtPoweredStation}: the same ladder, but the only
+     *  power in the arena is FE. A test-driven source keeps pushing a full packet per tick into the free face of
+     *  a wood RF kinesis pipe whose other face carries the station; with autoconversion on, a robot below
+     *  {@code SAFETY_POWER} must search the RF station out ({@code providesPower}), fly to it, dock, and have its
+     *  battery converted up past the threshold. Before the station could take FE, the search found no charger at
+     *  all and a docked robot would have shut down at {@code SHUTDOWN_POWER}. Own environment for the same
+     *  reason as the MJ test (the station search is global) and because it holds {@code powerMode} flipped for
+     *  the length of the run. */
+    public static void lowPowerRobotRechargesAtRfStation(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(1, 4, 6);
+        BlockPos robotRel = new BlockPos(3, 4, 6);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        RfStationTestSupport.ConfigScope scope = new RfStationTestSupport.ConfigScope(
+                BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.2, false);
+        try {
+            TilePipeHolder rfPipe = placePowerPipe(helper, pipeRel, BCTransportItems.PIPE_WOOD_RF.get());
+            rfPipe.replacePluggable(Direction.WEST,
+                    new RobotStationPluggable(BCRoboticsPlugs.robotStation, rfPipe, Direction.WEST));
+            rfPipe.getPipe().markForUpdate();
+
+            EntityRobot[] robot = { null };
+            scope.succeedWhen(helper, 380, () -> {
+                DockingStationPipe station = stationAt(helper, pipeRel, Direction.WEST);
+                if (station == null) {
+                    return false;
+                }
+                // A full packet every tick. Nothing accumulates while no robot is docked: the pipe's buffer
+                // fills once and then simply refuses.
+                Object source = RfStationTestSupport.pipeEnergyHandler(rfPipe, Direction.EAST);
+                if (source != null) {
+                    FeHandlerAccess.insert(source, 1000, true);
+                }
+                if (robot[0] == null) {
+                    robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    // Below SAFETY_POWER so the ladder preempts into AIRobotRecharge on the first cycle;
+                    // comfortably above SHUTDOWN_POWER so the robot stays alive.
+                    robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);
+                    return false;
+                }
+                if (robot[0].getDockingStation() == station
+                        && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER) {
+                    robot[0].discard();
+                    RfStationTestSupport.removeStation(helper, helper.absolutePos(pipeRel), Direction.WEST);
+                    return true;
+                }
+                return false;
+            }, "a robot below SAFETY_POWER never docked at the RF-kinesis station and recharged past it");
+        } catch (Throwable thrown) {
+            scope.close();
+            throw thrown;
+        }
     }
 }

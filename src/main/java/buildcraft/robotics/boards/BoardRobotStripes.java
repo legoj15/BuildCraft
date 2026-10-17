@@ -8,11 +8,9 @@
 package buildcraft.robotics.boards;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
-import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.ResourceIdBlock;
@@ -25,7 +23,13 @@ import buildcraft.robotics.ai.AIRobotStripesHandler;
  *  uses the held item there through the stripes handler registry — a mobile stripes pipe. Ported from
  *  7.1.x {@code BoardRobotStripes}; the reservation lifecycle rides the port's
  *  {@link AIRobotSearchAndGotoBlock}, which takes the found cell's reservation on search success and
- *  leaves releasing it to this board (7.1.x's AI did the same through {@code takeResource}). */
+ *  leaves releasing it to this board (7.1.x's AI did the same through {@code takeResource}).
+ *
+ *  <p>The block is the cell the stripes handler is using at this moment and is deliberately NOT saved. The handler
+ *  ({@link AIRobotStripesHandler}) is not resumable, so a board reloaded mid-use has nothing to continue on that
+ *  cell, and the unload freed its reservation: carrying the block into the new session would only leave a stale
+ *  cell to save again and to release (a second time) at the end. The farmer, planter and pump keep theirs because
+ *  their action AIs resume, and re-claim the block before they move. */
 public class BoardRobotStripes extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
@@ -68,6 +72,11 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
         }
     }
 
+    /** The cell the stripes handler is using, or null between uses. */
+    BlockPos blockFound() {
+        return blockFound;
+    }
+
     private void releaseBlockFound() {
         if (blockFound != null) {
             robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
@@ -76,29 +85,10 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
     }
 
     /** Releases AND forgets the block: the same board instance resumes after an abort (a recharge, say), and a
-     *  remembered block it no longer holds would be saved, reloaded and worked again. */
+     *  remembered block it no longer holds would be released a second time, by then possibly from under the robot
+     *  that took it meanwhile. */
     @Override
     public void end() {
         releaseBlockFound();
-    }
-
-    @Override
-    public void writeSelfToNBT(CompoundTag nbt) {
-        super.writeSelfToNBT(nbt);
-
-        if (blockFound != null) {
-            int[] arr = {blockFound.getX(), blockFound.getY(), blockFound.getZ()};
-            nbt.putIntArray("blockFound", arr);
-        }
-    }
-
-    @Override
-    public void loadSelfFromNBT(CompoundTag nbt) {
-        super.loadSelfFromNBT(nbt);
-
-        int[] arr = NbtApiUtil.getIntArray(nbt, "blockFound", null);
-        if (arr != null && arr.length == 3) {
-            blockFound = new BlockPos(arr[0], arr[1], arr[2]);
-        }
     }
 }

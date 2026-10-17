@@ -7,6 +7,7 @@ package buildcraft.robotics;
 
 import java.security.InvalidParameterException;
 import java.util.Collections;
+import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -96,10 +97,99 @@ public class RobotRegistryTest {
     }
 
     @Test
+    public void testOwnerCheckedReleaseLeavesAnotherRobotsClaim() {
+        // A robot that lost a block while it was unloaded (the registry freed it, another robot took it) still
+        // remembers the block and releases it when its job ends; that release must not drop the new holder's claim.
+        RobotRegistry r = new RobotRegistry(null);
+        ResourceId id = resource(1, 2, 3);
+        r.take(id, ROBOT_B);
+
+        r.release(id, ROBOT_A);
+
+        Assertions.assertEquals(ROBOT_B, r.rawHolderOf(id), "a release by a non-holder leaves the claim alone");
+        Assertions.assertTrue(r.resourcesReservedBy(ROBOT_B).contains(id), "...and the holder's reverse index");
+
+        r.release(id, ROBOT_B);
+
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, r.rawHolderOf(id), "the holder's own release frees it");
+        Assertions.assertFalse(r.resourcesReservedBy(ROBOT_B).contains(id), "...and clears its reverse index");
+        Assertions.assertDoesNotThrow(() -> r.release(resource(9, 9, 9), ROBOT_A), "an unheld resource is harmless");
+        Assertions.assertDoesNotThrow(() -> r.release((ResourceId) null, ROBOT_A), "so is a null resource");
+    }
+
+    @Test
     public void testReleaseUnknownResourceIsNoOp() {
         RobotRegistry r = new RobotRegistry(null);
         Assertions.assertDoesNotThrow(() -> r.release(resource(9, 9, 9)), "releasing an unheld resource is harmless");
         Assertions.assertDoesNotThrow(() -> r.release(null), "releasing a null resource is harmless");
+    }
+
+    // ---- search-phase block cells: owned, so a dying robot can give them back ----
+
+    @Test
+    public void testBlockCellsAreOwnedByTheRobotThatReservedThem() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos cell = new BlockPos(1, 2, 3);
+        Set<BlockPos> mine = r.getBlockReservations(ROBOT_A);
+        Set<BlockPos> theirs = r.getBlockReservations(ROBOT_B);
+
+        Assertions.assertTrue(mine.add(cell), "a free cell can be reserved");
+        Assertions.assertTrue(r.getBlockReservations().contains(cell),
+                "the dimension-wide set every concurrent search reads must see the cell");
+        Assertions.assertTrue(theirs.contains(cell), "another robot's view sees it too, so its search skips it");
+        Assertions.assertFalse(theirs.add(cell), "a second robot cannot reserve a reserved cell");
+        Assertions.assertFalse(theirs.remove(cell), "a robot cannot unreserve a cell another robot reserved");
+        Assertions.assertTrue(r.getBlockReservations().contains(cell), "...so the cell is still reserved");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).contains(cell),
+                "the registry remembers whose cell it is");
+
+        Assertions.assertTrue(mine.remove(cell), "the owner can unreserve its own cell");
+        Assertions.assertFalse(r.getBlockReservations().contains(cell), "...which frees it for everyone");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).isEmpty(), "...and clears the owner index");
+    }
+
+    @Test
+    public void testReleaseBlockReservationsFreesOnlyThatRobotsCells() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos a1 = new BlockPos(1, 2, 3);
+        BlockPos a2 = new BlockPos(4, 5, 6);
+        BlockPos b1 = new BlockPos(7, 8, 9);
+        r.getBlockReservations(ROBOT_A).add(a1);
+        r.getBlockReservations(ROBOT_A).add(a2);
+        r.getBlockReservations(ROBOT_B).add(b1);
+
+        r.releaseBlockReservations(ROBOT_A);
+
+        Assertions.assertFalse(r.getBlockReservations().contains(a1), "A's first cell is freed");
+        Assertions.assertFalse(r.getBlockReservations().contains(a2), "A's second cell is freed");
+        Assertions.assertTrue(r.getBlockReservations().contains(b1), "B's cell is untouched");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).isEmpty(), "A's owner index is clean");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_B).contains(b1), "B's owner index is intact");
+        Assertions.assertTrue(r.getBlockReservations(ROBOT_B).add(a1),
+                "a freed cell can be reserved by someone else");
+    }
+
+    /** The ownerless accessor is a read-only window: a cell added or removed through it would bypass the owner index,
+     *  so {@link RobotRegistry#releaseBlockReservations} (which frees by position) could later free a cell that
+     *  another robot had re-reserved in between, or never free one at all. */
+    @Test
+    public void testRawBlockReservationSetIsReadOnly() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos cell = new BlockPos(1, 2, 3);
+        BlockPos other = new BlockPos(4, 5, 6);
+        Set<BlockPos> raw = r.getBlockReservations();
+        r.getBlockReservations(ROBOT_A).add(cell);
+
+        Assertions.assertTrue(raw.contains(cell), "the raw window sees an owned reservation");
+        Assertions.assertEquals(1, raw.size(), "...and counts it");
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> raw.add(other),
+                "a cell reserved through the raw window would have no owner to free it");
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> raw.remove(cell),
+                "a cell freed through the raw window would stay in its owner's index");
+        Assertions.assertThrows(UnsupportedOperationException.class, raw::clear,
+                "...and so would every cell a bulk clear dropped");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).contains(cell) && raw.contains(cell),
+                "the reservation and its owner index are untouched");
     }
 
     // ---- station reservation bookkeeping ----

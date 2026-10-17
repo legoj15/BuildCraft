@@ -20,6 +20,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.robotics.StackRequest;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
@@ -38,6 +39,10 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
     private final ArrayList<ItemStack> deliveryBlacklist = new ArrayList<>();
 
     private StackRequest currentRequest = null;
+
+    /** Whether this board holds the registry reservation on {@link #currentRequest} in this session. Not saved: the
+     *  unload that saved a mid-delivery board freed it, so {@link #preempt} re-claims it after a reload. */
+    private boolean currentRequestClaimed;
 
     public BoardRobotDelivery(IRobotAccess iRobot) {
         super(iRobot);
@@ -76,6 +81,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             } else {
                 currentRequest = ((AIRobotSearchStackRequest) ai).request;
+                // The search reserved the order before reporting it.
+                currentRequestClaimed = true;
 
                 // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only
                 // ever drives a real robot.
@@ -95,14 +102,52 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         }
     }
 
+    /** The order this board is working, or null between orders. */
+    StackRequest currentRequest() {
+        return currentRequest;
+    }
+
+    /** An ended board gives its order back - most often {@code AIRobotMain} aborting it for a recharge, whose
+     *  start frees every reservation anyway. The same board instance resumes afterwards, and one that still
+     *  remembered the order (and still believed it held it) would skip the {@link #preempt} re-claim and deliver an
+     *  order another robot took meanwhile a second time. Not 7.1.x, whose board had no {@code end()}. */
+    @Override
+    public void end() {
+        releaseCurrentRequest();
+    }
+
     private void releaseCurrentRequest() {
         if (currentRequest != null) {
-            robot.getRegistry().release(currentRequest.getResourceId(robot.level()));
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry != null) {
+                registry.release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
+            }
             DockingStation station = currentRequest.getStation(robot.level());
             if (station != null) {
                 station.release((EntityRobotBase) robot);
             }
             currentRequest = null;
+            currentRequestClaimed = false;
+        }
+    }
+
+    /** Runs before the delegate on every cycle. A board reloaded mid-order remembers the order, but the unload freed
+     *  its reservation: re-claim it before the resumed load or delivery moves, or - when another robot took the
+     *  order meanwhile, or its station is gone - drop it and stop, rather than fill one order twice. Not 7.1.x,
+     *  which delivered unreserved. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (currentRequest != null && !currentRequestClaimed) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (registry.reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())) {
+                currentRequestClaimed = true;
+            } else {
+                releaseCurrentRequest();
+                abortDelegateAI();
+            }
         }
     }
 

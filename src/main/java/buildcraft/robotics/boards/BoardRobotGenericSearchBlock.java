@@ -28,6 +28,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.lib.misc.ProtectionRefusals;
 import buildcraft.robotics.RobotProtection;
@@ -51,6 +52,11 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     public static final int REFUSAL_RETRY_TICKS = 1200;
 
     private BlockPos blockFound;
+
+    /** Whether this board has confirmed it holds the registry reservation on {@link #blockFound}. Not saved: a
+     *  board loaded from NBT remembers its block, but the unload that saved it freed the reservation, so the
+     *  first cycle after a reload has to claim it again ({@link #preempt}). */
+    private boolean blockFoundClaimed;
 
     /** The blocks the linked station's gate "Filter" action names, refreshed every {@link #update()}.
      *  Empty means "no restriction" (7.1.x: {@code blockFilter.size() == 0} passed everything). Replaced
@@ -157,9 +163,37 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
                 blockFound = searchAndGoto.getBlockFound();
+                // Normally the search-and-goto took the reservation before it reported the block; if it did not
+                // (a flight that came back from NBT unreserved), preempt re-claims or drops it on the next cycle.
+                blockFoundClaimed = searchAndGoto.holdsReservation();
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
+        }
+    }
+
+    /** Runs before the delegate on every cycle, so it sees a reloaded board before its resumed action AI (or
+     *  {@code update()}) touches the remembered block. Not 7.1.x: there the reloaded robot went on working the
+     *  block unreserved while any other robot's search was free to take it too. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (blockFound != null && !blockFoundClaimed) {
+            reclaimBlockFound();
+        }
+    }
+
+    /** Re-takes the reservation on a remembered block. If another robot took it meanwhile, the block is theirs:
+     *  stop whatever this board was doing to it and search again next cycle. */
+    private void reclaimBlockFound() {
+        IRobotRegistry registry = robot.getRegistry();
+        if (registry == null) {
+            return;
+        }
+        if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+            blockFoundClaimed = true;
+        } else {
+            blockFound = null;
+            abortDelegateAI();
         }
     }
 
@@ -173,11 +207,13 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     }
 
     /** Releases the registry reservation on the found block (7.1.x did the same in {@code end} and after
-     *  a finished action AI). */
+     *  a finished action AI). Owner-checked: if this robot no longer holds the block (it lost it across an
+     *  unload), the release leaves the current holder's claim alone. */
     protected void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
+            blockFoundClaimed = false;
         }
     }
 

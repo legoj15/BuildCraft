@@ -31,6 +31,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.lib.misc.GameProfileUtil;
@@ -56,6 +57,10 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     private static final int BUCKET = 1000;
 
     private BlockPos blockFound;
+
+    /** Whether this board holds the registry reservation on {@link #blockFound} in this session. Not saved: the
+     *  unload that saved a mid-job board freed it, so {@link #preempt} re-claims it after a reload. */
+    private boolean blockFoundClaimed;
 
     /** The gate fluid filter of the robot's home station, refreshed on every search pass. Null means
      *  "no station, no filter" — pump anything. */
@@ -158,6 +163,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
                 blockFound = searchAndGoto.getBlockFound();
+                blockFoundClaimed = searchAndGoto.holdsReservation();
                 startDelegateAI(new AIRobotPumpBlock(robot, blockFound));
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
@@ -178,6 +184,27 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         }
     }
 
+    /** Runs before the delegate on every cycle. A board reloaded mid-job remembers its block, but the unload freed
+     *  the reservation: re-claim it before the resumed action AI touches the block, or - when another robot took
+     *  it meanwhile - give up the block and the action rather than work it alongside that robot. With no resumed
+     *  action there is nothing to re-claim it for, so it is simply forgotten. Not 7.1.x, which worked it
+     *  unreserved. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (blockFound != null && !blockFoundClaimed) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (ai != null && registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+                blockFoundClaimed = true;
+            } else {
+                blockFound = null;
+                abortDelegateAI();
+            }
+        }
+    }
+
     @Override
     public void end() {
         releaseBlockFound();
@@ -189,8 +216,9 @@ public class BoardRobotPump extends RedstoneBoardRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
+            blockFoundClaimed = false;
         }
     }
 

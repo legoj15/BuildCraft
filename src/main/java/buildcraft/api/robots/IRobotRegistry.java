@@ -27,8 +27,21 @@ public interface IRobotRegistry {
      *  {@code PathFindingSearch} (a search that finds a target reserves its block here so no second search
      *  pathfinds to the same target). Runtime-only state — never persisted: a save/load cycle simply
      *  re-derives reservations as the searches resume. 7.1.x kept the same table as a static
-     *  dimension-keyed map; the modern seam hands the caller its own {@link Set}. */
+     *  dimension-keyed map; the modern seam hands the caller its own {@link Set}. This is the ownerless view, for
+     *  reads: a search reserves and frees through {@link #getBlockReservations(long)}, and a registry that tracks
+     *  owners (BuildCraft's does) hands this out read-only, since a cell changed here would bypass the owner
+     *  index. */
     Set<BlockPos> getBlockReservations();
+
+    /** The same dimension-wide reservation set as {@link #getBlockReservations()}, but every cell added through
+     *  the returned view is remembered as {@code robotId}'s, so the registry can free it when that robot
+     *  unloads or dies ({@link #killRobot}/{@link #unloadRobot}/{@link #releaseResources}) instead of leaving a
+     *  cell pinned by a search whose AI never got to run {@code end()}. The view reads (contains, size,
+     *  iteration) see every robot's cells; {@code remove} only frees a cell this robot reserved. The default
+     *  hands back the ownerless set, for registries that do not track owners. */
+    default Set<BlockPos> getBlockReservations(long robotId) {
+        return getBlockReservations();
+    }
 
     boolean isTaken(ResourceId resourceId);
 
@@ -41,6 +54,28 @@ public interface IRobotRegistry {
     boolean take(ResourceId resourceId, long robotId);
 
     void release(ResourceId resourceId);
+
+    /** Releases {@code resourceId} only if {@code robotId} is the robot holding it. A robot's own job should give its
+     *  block back through this, never through the unchecked {@link #release(ResourceId)}: a robot that unloads
+     *  loses every reservation, another robot may take the block meanwhile, and the reloaded robot still remembers
+     *  the block it was working on - its end-of-job release must not drop the new holder's claim. */
+    default void release(ResourceId resourceId, long robotId) {
+        if (resourceId != null && robotIdTaking(resourceId) == robotId) {
+            release(resourceId);
+        }
+    }
+
+    /** Re-takes a reservation a robot remembers from before an unload (or a server restart, after which a claim
+     *  whose robot was not loaded yet is dropped the first time anyone asks about it): true when {@code robotId}
+     *  holds {@code resourceId} on return - it still held it, or it was free and is now taken. False means another
+     *  robot holds it, and the caller must give that job up rather than work it unreserved. */
+    default boolean reclaim(ResourceId resourceId, long robotId) {
+        if (resourceId == null) {
+            return false;
+        }
+        long holder = robotIdTaking(resourceId);
+        return holder == robotId || (holder == EntityRobotBase.NULL_ROBOT_ID && take(resourceId, robotId));
+    }
 
     void releaseResources(EntityRobotBase robot);
 

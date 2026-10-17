@@ -16,6 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.path.IBlockFilter;
 
@@ -32,6 +33,9 @@ import buildcraft.robotics.path.IBlockFilter;
 public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     private BlockPos blockFound;
+    /** Whether this AI holds the registry reservation on {@link #blockFound} in this session. Not saved: the unload
+     *  that saved a mid-flight AI freed the reservation, so a reloaded flight has to claim the block again
+     *  ({@link #preempt}) before it may land on it. */
     private boolean taken;
     private AIRobotSearchBlock search;
 
@@ -81,13 +85,48 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     @Override
     public void update() {
+        if (filter == null) {
+            // Loaded from NBT with no flight left to resume (the filter is not saved, so a fresh search cannot be
+            // run either): report the block if the reload kept it reserved, otherwise fail and let the board
+            // search again with its own filter.
+            if (!taken) {
+                blockFound = null;
+            }
+            terminate();
+            return;
+        }
         startDelegateAI(new AIRobotSearchBlock(robot, random, filter, approve, maxDistanceToEnd));
+    }
+
+    /** A flight reloaded from NBT remembers its block but no longer holds it. Re-claim it before the resumed goto
+     *  leg moves; if another robot took it meanwhile, drop it and the leg (then {@link #update()} fails the AI),
+     *  instead of landing on a block someone else is working. Not 7.1.x, which flew on and worked it unreserved. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (blockFound != null && !taken) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+                taken = true;
+            } else {
+                blockFound = null;
+                abortDelegateAI();
+            }
+        }
     }
 
     /** Reserves the found block (the search's {@code takeResource()}); the caller releases it via the
      *  registry when done. */
     public boolean takeResource() {
         return search != null && (taken = search.takeResource());
+    }
+
+    /** Whether the reported block is reserved for this robot by this AI in this session - what a board may rely on
+     *  when it takes the block over. */
+    public boolean holdsReservation() {
+        return blockFound != null && taken;
     }
 
     @Override
@@ -120,9 +159,19 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
         }
     }
 
+    /** A delegate that is aborted (rather than ending on its own) means the composition is dead - it is how this
+     *  AI's own {@code abort()} reaches its running leg - so the block reserved for the flight goes back to the
+     *  registry. Without this only a goto that FAILED released it, and an AI aborted mid-flight left the block
+     *  untargetable until the robot's next sleep or recharge. (A robot that unloads or dies never reaches here;
+     *  the registry frees the reservation itself.) */
+    @Override
+    public void delegateAIAborted(AIRobot ai) {
+        releaseBlockFound();
+    }
+
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
             taken = false;
         }

@@ -6,10 +6,13 @@
 
 package buildcraft.robotics;
 
+import net.minecraft.world.level.Level;
+
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.slf4j.Logger;
@@ -160,6 +163,13 @@ public class BCRobotics {
         // Claims held by robots that have left a running world already expire on their own.)
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BoardRobotPicker.clearTargets());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> BoardRobotPicker.clearTargets());
+        // ...and when a single level unloads (a server stop posts this per level, before ServerStopped): the claims
+        // of that level's robots go with it. Server levels only — the table is server-thread state.
+        NeoForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
+            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+                BoardRobotPicker.releaseClaimsIn(level);
+            }
+        });
 
         // Ph7: the Programming Table + Integration Table recipes. Registered per-server-start (and per MP-client
         // login) because the recipe objects build Ingredients in their constructors, which requires items to be

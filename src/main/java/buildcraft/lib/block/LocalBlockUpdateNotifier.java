@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 /**
  * Listens for block updates in a given level and notifies all registered
@@ -58,6 +59,19 @@ public class LocalBlockUpdateNotifier {
                     Math.abs(keyPos.getZ() - eventPos.getZ()) <= updateRange) {
                 subscriber.setLevelUpdated(world, eventPos, oldState, newState, flags);
             }
+        }
+    }
+
+    /** Forgets an unloading server level's notifier. The map key is weak, but the VALUE is not: a notifier holds
+     *  its subscribers (laser block entities) strongly, and a block entity holds its level, so the entry keeps its
+     *  own key reachable and a stopped server's whole world stayed pinned by this static map — a laser still
+     *  registered at shutdown never runs {@code setRemoved}, so nothing else ever dropped it. A server stop posts
+     *  this event once per level, after the final save. Server levels only: the map is server-side state and is
+     *  not synchronised, so the client thread's own level unload must not touch it. */
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+            instanceMap.remove(level);
         }
     }
 

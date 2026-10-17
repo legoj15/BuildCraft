@@ -70,16 +70,16 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
         }
     }
 
+    /** Releases AND forgets the block: the same board instance resumes after an abort (a recharge, say), and a
+     *  remembered block it no longer holds would be saved, reloaded and worked again. */
     @Override
     public void end() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
-        }
+        releaseBlockFound();
     }
 
     @Override

@@ -1284,6 +1284,13 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     public void setMainStation(DockingStation station) {
         if (mainStation != null && mainStation != station) {
             mainStation.unsafeRelease(this);
+            // unsafeRelease never touches the registry, so the old home would otherwise stay in this robot's
+            // station index as a claim it no longer holds. Only when the station really let go: a station that
+            // still names this robot (the unsafeRelease was a no-op) is still this robot's to track.
+            IRobotRegistry registry = getRegistry();
+            if (registry != null && mainStation.robotIdTaking() != robotId) {
+                registry.release(mainStation, robotId);
+            }
         }
         if (station != null) {
             linkedStationPos = station.getPos();

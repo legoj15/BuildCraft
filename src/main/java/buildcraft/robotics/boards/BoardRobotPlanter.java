@@ -21,6 +21,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -40,6 +41,10 @@ import buildcraft.robotics.statements.ActionRobotFilter;
 public class BoardRobotPlanter extends RedstoneBoardRobot {
 
     private BlockPos blockFound;
+
+    /** Whether this board holds the registry reservation on {@link #blockFound} in this session. Not saved: the
+     *  unload that saved a mid-job board freed it, so {@link #preempt} re-claims it after a reload. */
+    private boolean blockFoundClaimed;
 
     public BoardRobotPlanter(IRobotAccess iRobot) {
         super(iRobot);
@@ -85,6 +90,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
                 blockFound = searchAndGoto.getBlockFound();
+                blockFoundClaimed = searchAndGoto.holdsReservation();
                 startDelegateAI(new AIRobotPlant(robot, blockFound));
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
@@ -94,6 +100,27 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
                 startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        }
+    }
+
+    /** Runs before the delegate on every cycle. A board reloaded mid-job remembers its block, but the unload freed
+     *  the reservation: re-claim it before the resumed action AI touches the block, or - when another robot took
+     *  it meanwhile - give up the block and the action rather than work it alongside that robot. With no resumed
+     *  action there is nothing to re-claim it for, so it is simply forgotten. Not 7.1.x, which worked it
+     *  unreserved. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (blockFound != null && !blockFoundClaimed) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (ai != null && registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+                blockFoundClaimed = true;
+            } else {
+                blockFound = null;
+                abortDelegateAI();
             }
         }
     }
@@ -109,8 +136,9 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
+            blockFoundClaimed = false;
         }
     }
 

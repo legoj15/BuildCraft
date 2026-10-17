@@ -111,7 +111,9 @@ public class AIRobotSearchBlock extends AIRobot {
         if (blockScanner == null) {
             blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
                     blockIter, pathFound, maxDistanceToEnd, 96, zone,
-                    robot.getRegistry().getBlockReservations(), approveFound);
+                    // Owner-tagged view: the registry frees this robot's cells itself if it unloads or dies
+                    // between the search locking onto a cell and this AI collecting it (takeResource).
+                    robot.getRegistry().getBlockReservations(robot.getRobotId()), approveFound);
         }
         if (blockScanner.isDone()) {
             path = blockScanner.getResult();
@@ -142,6 +144,22 @@ public class AIRobotSearchBlock extends AIRobot {
     public void unreserve() {
         if (blockScanner != null && blockFound != null) {
             blockScanner.unreserve(blockFound);
+        }
+    }
+
+    /** A search that locks onto a cell reserves it in {@code iterate()}, but only reports it (and lets the caller
+     *  {@link #takeResource()} it) on the NEXT cycle's {@code update()}. An abort in between would leave the
+     *  cell reserved for a search that no longer exists. A search that finished normally has set
+     *  {@link #blockFound} by now and its caller takes over the reservation, so only the uncollected one is
+     *  given back. (A robot that unloads or dies in the window never reaches here; the registry frees its cells
+     *  itself.) */
+    @Override
+    public void end() {
+        if (blockScanner != null && blockFound == null) {
+            BlockPos locked = blockScanner.getResultTarget();
+            if (locked != null) {
+                blockScanner.unreserve(locked);
+            }
         }
     }
 

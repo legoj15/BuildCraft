@@ -81,8 +81,14 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
         super.onChunkUnloaded();
         chunkUnloading = true;
         if (level != null && !level.isClientSide()) {
-            // Just unload the tile reference — keep the position and connections in the cache
-            getLocalCache().unloadMarker(getBlockPos());
+            // Just unload the tile reference — keep the position and connections in the cache. Never builds the
+            // sub-cache: after a level unload dropped it (a server stop posts the event before closing the level,
+            // whose chunks then unload), rebuilding it would pin the stopped level again. A sub-cache rebuilt
+            // later from saved data holds this position as an unloaded marker anyway.
+            MarkerSubCache<C> cache = getCache().getSubCacheIfPresent(level);
+            if (cache != null) {
+                cache.unloadMarker(getBlockPos());
+            }
         }
     }
 

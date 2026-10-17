@@ -19,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
+import buildcraft.robotics.RobotRegistry;
 
 /**
  * Pure-JUnit characterization of {@link PathFindingSearch}: the nearest-matching-block scanner that drives a
@@ -77,6 +78,33 @@ public class PathFindingSearchTest {
         Assertions.assertEquals(grid.start(), s.getResult().getFirst(), "path starts at the robot");
         Assertions.assertEquals(target, s.getResult().getLast(), "path ends at the target");
         Assertions.assertTrue(reservations.contains(target), "the found target must be reserved");
+    }
+
+    /** A search that has locked onto a target holds its cell until its AI collects it. If the robot unloads or
+     *  dies in that window the AI never runs, so the cell must be reclaimable by the robot's id alone. */
+    @Test
+    public void testSearchCellIsOwnedByItsRobotAndFreedWithIt() {
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S....",
+                ".....",
+                "..T..");
+        BlockPos target = new BlockPos(2, Y, 2);
+        RobotRegistry registry = new RobotRegistry(null);
+        long robotId = 4242L;
+
+        PathFindingSearch s = search(grid, grid.start(), registry.getBlockReservations(robotId), null);
+        run(s);
+
+        Assertions.assertEquals(target, s.getResultTarget(), "fixture: the search locked onto the target");
+        Assertions.assertTrue(registry.getBlockReservations().contains(target),
+                "fixture: the locked target is reserved in the dimension-wide set");
+
+        registry.releaseBlockReservations(robotId);
+
+        Assertions.assertFalse(registry.getBlockReservations().contains(target),
+                "the robot going away must free the cell its finished search had reserved");
+        Assertions.assertTrue(registry.getBlockReservations(5151L).add(target),
+                "...so another robot's search can reserve it");
     }
 
     @Test

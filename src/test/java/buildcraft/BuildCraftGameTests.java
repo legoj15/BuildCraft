@@ -944,6 +944,36 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_registry_remove_station_releases_claim", () -> buildcraft.robotics.RobotRegistryLiveTester::removeStationReleasesTheRobotsClaim);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
+        // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the
+        // registry's reverse indexes end up naming only what the robot still holds: freed stations leave the
+        // station index, a replaced main station leaves it, a finished search's cell (an owner-tagged entry in the
+        // dimension's shared set) is released with its robot, and the same through the entity's own removal hooks
+        // on a real ticking robot. Plus the static tables that would pin a stopped server's levels.
+        reg.accept("buildcraftunofficial:robot_registry_release_trims_station_index", () -> buildcraft.robotics.RobotRegistryLiveTester::releaseResourcesTrimsFreedStationsFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_registry_unload_trims_station_index", () -> buildcraft.robotics.RobotRegistryLiveTester::unloadRobotTrimsFreedStationsFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_main_station_swap_trims_index", () -> buildcraft.robotics.RobotRegistryLiveTester::replacingTheMainStationTrimsTheOldOneFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_kill", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotDies);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_unload", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotUnloads);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_by_release_resources", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedByReleaseResources);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_abort", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheSearchIsAborted);
+        reg.accept("buildcraftunofficial:robot_search_cell_hands_over_to_registry", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellHandsOverToTheRegistryReservation);
+        reg.accept("buildcraftunofficial:robot_search_goto_released_on_abort", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchAndGotoReservationIsReleasedWhenAbortedMidFlight);
+        reg.accept("buildcraftunofficial:robot_break_board_reload_yields_taken_block", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::reloadedBreakBoardYieldsABlockAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_break_board_reload_reclaims_free_block", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::reloadedBreakBoardReclaimsAFreeBlock);
+        reg.accept("buildcraftunofficial:robot_break_board_release_is_owner_checked", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::finishedBreakDoesNotFreeAnotherRobotsClaim);
+        reg.accept("buildcraftunofficial:robot_reloaded_flight_yields_taken_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedFlightYieldsABlockAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_flight_reclaims_free_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedFlightReclaimsAFreeBlock);
+        reg.accept("buildcraftunofficial:robot_board_rechecks_unreserved_flight_result", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::boardDoesNotTrustAnUnreservedFlightResult);
+        reg.accept("buildcraftunofficial:robot_reloaded_action_boards_yield_taken_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsYieldABlockAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_action_boards_reclaim_free_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsReclaimAFreeBlock);
+        reg.accept("buildcraftunofficial:robot_reloaded_delivery_yields_taken_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryYieldsAnOrderAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_delivery_reclaims_free_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryReclaimsAFreeOrder);
+        reg.accept("buildcraftunofficial:robot_delivery_recharge_abort_gives_up_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryAbortedByARechargeGivesUpItsOrder);
+        reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
+        reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
+        reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
+        reg.accept("buildcraftunofficial:marker_chunk_unload_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache);
+
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself
         // autonomously finding the supply station and pulling the tank's bucket into its own tank.

@@ -296,6 +296,100 @@ public class RobotRegistryLiveTester {
         }
     }
 
+    /** The station reverse index must say exactly what the robot still holds. {@code releaseResources} frees the
+     *  stations a robot only reserved and keeps its home and dock; a freed station that stayed in the index was a
+     *  stale claim, and {@code removeStation} could not trim it later (its holder is no longer the robot). */
+    public static void releaseResourcesTrimsFreedStationsFromTheIndex(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            long id = a.getRobotId();
+            LiveStation home = f.station(1, 1, Direction.UP);
+            LiveStation dock = f.station(2, 1, Direction.UP);
+            LiveStation reserved = f.station(3, 1, Direction.UP);
+            home.takeAsMain(a);
+            dock.take(a);
+            a.dock(dock);
+            reserved.take(a);
+
+            f.registry.releaseResources(a);
+
+            helper.assertFalse(reserved.isTaken(), "precondition: the merely reserved station was freed");
+            helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(reserved)),
+                    "a station the release freed must leave the robot's station index");
+            helper.assertTrue(f.registry.stationsReservedBy(id).contains(indexOf(home)),
+                    "the home it keeps stays indexed");
+            helper.assertTrue(f.registry.stationsReservedBy(id).contains(indexOf(dock)),
+                    "the dock it keeps stays indexed");
+
+            // Removing the freed station afterwards must leave nothing behind either.
+            f.registry.removeStation(reserved);
+            helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(reserved)),
+                    "removing a freed station leaves no ghost claim");
+            helper.succeed();
+        }
+    }
+
+    /** Same invariant on the unload path: the plain reservation is freed AND de-indexed, the home and dock stay. */
+    public static void unloadRobotTrimsFreedStationsFromTheIndex(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            long id = a.getRobotId();
+            LiveStation home = f.station(1, 2, Direction.UP);
+            LiveStation dock = f.station(2, 2, Direction.UP);
+            LiveStation reserved = f.station(3, 2, Direction.UP);
+            home.takeAsMain(a);
+            dock.take(a);
+            a.dock(dock);
+            reserved.take(a);
+
+            f.registry.unloadRobot(a);
+
+            helper.assertFalse(reserved.isTaken(), "precondition: the merely reserved station was freed");
+            helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(reserved)),
+                    "an unloaded robot's freed station must leave its station index");
+            helper.assertTrue(f.registry.stationsReservedBy(id).contains(indexOf(home)),
+                    "the home stays indexed for the reload");
+            helper.assertTrue(f.registry.stationsReservedBy(id).contains(indexOf(dock)),
+                    "the dock stays indexed for the reload");
+
+            // The station is free, so a different robot can take it and the first robot's later death must not
+            // reach into the new holder's claim.
+            EntityRobot b = f.robot();
+            helper.assertTrue(reserved.take(b), "a freed station can be reserved by another robot");
+            f.registry.killRobot(a);
+            helper.assertTrue(reserved.robotTaking() == b, "the first robot's death leaves the new holder alone");
+            helper.assertTrue(f.registry.stationsReservedBy(b.getRobotId()).contains(indexOf(reserved)),
+                    "...and the new holder's index entry");
+            helper.succeed();
+        }
+    }
+
+    /** Re-homing a robot frees its old main station. That release is deliberately {@code unsafeRelease} (the plain
+     *  one refuses a main), which does not touch the registry — so the old station used to stay in the robot's
+     *  station index as a claim it no longer holds. */
+    public static void replacingTheMainStationTrimsTheOldOneFromTheIndex(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            long id = a.getRobotId();
+            LiveStation oldHome = f.station(1, 3, Direction.UP);
+            LiveStation newHome = f.station(2, 3, Direction.UP);
+            helper.assertTrue(oldHome.takeAsMain(a), "precondition: the robot homes at the first station");
+
+            helper.assertTrue(newHome.takeAsMain(a), "the robot re-homes at the second station");
+
+            helper.assertFalse(oldHome.isTaken(), "the old home is free");
+            helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(oldHome)),
+                    "...and must leave the robot's station index");
+            helper.assertTrue(f.registry.stationsReservedBy(id).contains(indexOf(newHome)),
+                    "the new home is indexed");
+
+            f.registry.killRobot(a);
+            helper.assertFalse(newHome.isTaken(), "killing the robot frees the new home");
+            helper.assertTrue(f.registry.stationsReservedBy(id).isEmpty(), "...and leaves the index empty");
+            helper.succeed();
+        }
+    }
+
     /** {@code removeStation} with a LIVE robot on each kind of claim: a robot docked at a visited station is
      *  undocked; a robot whose HOME it was loses its home (and its dock, if it sat there); and in every case the
      *  station leaves the robot's station index, rather than lingering there as a stale claim on a station that no

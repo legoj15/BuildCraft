@@ -7,11 +7,13 @@
 package buildcraft.robotics;
 
 import java.security.InvalidParameterException;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,6 +100,15 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     // persisted — a save/load cycle re-derives them as the searches resume (7.1.x's static
     // dimension-keyed table, now per-SavedData-instance since this registry IS the dimension).
     private final Set<BlockPos> blockReservations = new HashSet<>();
+    // Runtime-only reverse index of the above: which robot reserved which cell. 7.1.x's table had no owner, so a
+    // robot that unloaded or died between "search found a cell" and "the AI collected it" (the AI is the only
+    // thing that ever unreserved) left the cell pinned until the dimension reloaded. Guarded by the same monitor
+    // as blockReservations.
+    private final Map<Long, Set<BlockPos>> blockReservationsByRobot = new HashMap<>();
+    // The ownerless accessor's read-only window onto blockReservations: a cell added or removed through a raw,
+    // mutable set would bypass the owner index, and releaseBlockReservations (which frees by position) could then
+    // free a cell another robot had re-reserved in between.
+    private final Set<BlockPos> blockReservationsReadOnly = new ReadOnlyBlockReservations();
 
     public RobotRegistry(@Nullable ServerLevel level) {
         this.world = level;
@@ -190,9 +201,107 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         return robotsLoaded.get(id);
     }
 
+    /** Read-only: every reservation goes through {@link #getBlockReservations(long)}, so each cell has an owner. */
     @Override
     public Set<BlockPos> getBlockReservations() {
-        return blockReservations;
+        return blockReservationsReadOnly;
+    }
+
+    @Override
+    public Set<BlockPos> getBlockReservations(long robotId) {
+        return new OwnedBlockReservations(robotId);
+    }
+
+    /** Frees every search cell {@code robotId} reserved and forgets the robot's entry. Run by every release path
+     *  ({@link #killRobot}, {@link #unloadRobot}, {@link #releaseResources}); public so the search-cell
+     *  bookkeeping can be driven without a live robot entity. */
+    public void releaseBlockReservations(long robotId) {
+        synchronized (blockReservations) {
+            Set<BlockPos> cells = blockReservationsByRobot.remove(robotId);
+            if (cells != null) {
+                blockReservations.removeAll(cells);
+            }
+        }
+    }
+
+    /** The reads every view of the shared cell set offers, under the set's monitor. Without an override of
+     *  {@code add}/{@code remove} it is read-only ({@link AbstractSet} refuses {@code add}, and the snapshot
+     *  iterator refuses removal). */
+    private abstract class BlockReservationsView extends AbstractSet<BlockPos> {
+        @Override
+        public boolean contains(Object o) {
+            synchronized (blockReservations) {
+                return blockReservations.contains(o);
+            }
+        }
+
+        @Override
+        public int size() {
+            synchronized (blockReservations) {
+                return blockReservations.size();
+            }
+        }
+
+        @Override
+        public Iterator<BlockPos> iterator() {
+            synchronized (blockReservations) {
+                // A snapshot, read-only: a live iterator over a set other searches mutate would throw, and
+                // removal must go through an owned view's remove() or it would skip the owner index.
+                return Collections.unmodifiableSet(new HashSet<>(blockReservations)).iterator();
+            }
+        }
+    }
+
+    /** What {@link #getBlockReservations()} hands out. */
+    private final class ReadOnlyBlockReservations extends BlockReservationsView {
+        @Override
+        public boolean remove(Object o) {
+            throw new UnsupportedOperationException("free a search cell through getBlockReservations(robotId)");
+        }
+
+        @Override
+        public void clear() {
+            throw new UnsupportedOperationException("free search cells through releaseBlockReservations(robotId)");
+        }
+    }
+
+    /** The shared dimension-wide cell set, with {@code add}/{@code remove} owner-tagged to one robot. Reads see
+     *  every robot's cells (a search must skip a cell any other search holds); {@code add} refuses a cell that is
+     *  already reserved by anyone; {@code remove} only frees a cell this robot reserved, so a stale search that
+     *  finishes after its robot was released can never free the cell a different robot has since taken. All of it
+     *  runs under the shared set's monitor, which is also what {@code PathFindingSearch} synchronises on. */
+    private final class OwnedBlockReservations extends BlockReservationsView {
+        private final long robotId;
+
+        OwnedBlockReservations(long robotId) {
+            this.robotId = robotId;
+        }
+
+        @Override
+        public boolean add(BlockPos pos) {
+            synchronized (blockReservations) {
+                if (!blockReservations.add(pos)) {
+                    return false;
+                }
+                blockReservationsByRobot.computeIfAbsent(robotId, k -> new HashSet<>()).add(pos);
+                return true;
+            }
+        }
+
+        @Override
+        public boolean remove(Object o) {
+            synchronized (blockReservations) {
+                Set<BlockPos> mine = blockReservationsByRobot.get(robotId);
+                if (mine == null || !mine.remove(o)) {
+                    return false;
+                }
+                if (mine.isEmpty()) {
+                    blockReservationsByRobot.remove(robotId);
+                }
+                blockReservations.remove(o);
+                return true;
+            }
+        }
     }
 
     @Override
@@ -268,6 +377,21 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
+    /** The raw holder is compared (not {@link #robotIdTaking}), so this neither needs the robot loaded nor
+     *  sweeps a stale claim on the way. */
+    @Override
+    public synchronized void release(ResourceId resourceId, long robotId) {
+        if (resourceId != null && resourcesTaken.get(resourceId) instanceof Long holder && holder == robotId) {
+            release(resourceId);
+        }
+    }
+
+    /** The interface's check-then-take, held under the registry monitor so no other claim lands in between. */
+    @Override
+    public synchronized boolean reclaim(ResourceId resourceId, long robotId) {
+        return IRobotRegistry.super.reclaim(resourceId, robotId);
+    }
+
     @Override
     public synchronized void releaseResources(EntityRobotBase robot) {
         releaseResources(robot, false);
@@ -289,8 +413,13 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             resourcesTakenByRobot.remove(robotId);
         }
 
-        if (stationsTakenByRobot.containsKey(robotId)) {
-            for (StationIndex s : new HashSet<>(getStationsTakenByRobot(robotId))) {
+        // The search-phase cells (not ResourceIds): the AI that would have collected them is the one thing that
+        // can no longer be relied on to run.
+        releaseBlockReservations(robotId);
+
+        Set<StationIndex> held = stationsTakenByRobot.get(robotId);
+        if (held != null) {
+            for (StationIndex s : new HashSet<>(held)) {
                 DockingStation d = stations.get(s);
                 if (d != null) {
                     if (!d.canRelease()) {
@@ -303,9 +432,17 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
                         d.unsafeRelease(robot);
                     }
                 }
+                // The index must say exactly what the robot still holds. unsafeRelease frees the station but, by
+                // design, never touches this registry (it is normally CALLED from here), so every station freed
+                // above has to leave the index here too — a freed station left in it was a stale claim that
+                // removeStation could never trim afterwards (its holder is no longer this robot). Kept: the home
+                // and the dock (a plain release or an unload must not strand the robot), which still name it.
+                if (!forceAll && (d == null || d.robotIdTaking() != robotId)) {
+                    held.remove(s);
+                }
             }
 
-            if (forceAll) {
+            if (forceAll || held.isEmpty()) {
                 stationsTakenByRobot.remove(robotId);
             }
         }
@@ -504,6 +641,13 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     Set<StationIndex> stationsReservedBy(long robotId) {
         Set<StationIndex> s = stationsTakenByRobot.get(robotId);
         return s == null ? Collections.emptySet() : s;
+    }
+
+    Set<BlockPos> blockCellsReservedBy(long robotId) {
+        synchronized (blockReservations) {
+            Set<BlockPos> s = blockReservationsByRobot.get(robotId);
+            return s == null ? Collections.emptySet() : new HashSet<>(s);
+        }
     }
 
     long nextRobotIdPeek() {

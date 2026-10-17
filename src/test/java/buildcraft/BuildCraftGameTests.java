@@ -602,6 +602,13 @@ public class BuildCraftGameTests {
         // once — the dropsHandled guard keeps the loot path from double-dropping over the code path.
         reg.accept("buildcraftunofficial:pipe_command_break_drops_pipe", () -> buildcraft.transport.PipeDropsTester::testCommandBreakDropsPipeViaLoot);
         reg.accept("buildcraftunofficial:pipe_player_break_no_double_drop", () -> buildcraft.transport.PipeDropsTester::testPlayerBreakNoDoubleDrop);
+        // Emzuli / Emerald (Diamond-Wood) pipe GUI edits (filters, slot colours, filter mode) must mark the
+        // chunk dirty: the filter handlers were built with no change callback, so an edit was never saved
+        // on its own (a ticking pipe's per-tick dirtying merely masked it).
+        reg.accept("buildcraftunofficial:pipe_emzuli_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::emzuliFilterEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_emzuli_colour_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::emzuliColourEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_woodiamond_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondFilterEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_woodiamond_mode_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondModeEditMarksChunkDirty);
         // Force insertion (robot stations / obsidian / stripes pipes) must give items a real entry leg
         // and deliver them end-to-end — the zero-length leg was the server-side half of the
         // robot-cargo-invisible-in-pipes bug (see PipeFlowForceInsertTester javadoc).

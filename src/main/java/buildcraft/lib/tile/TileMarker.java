@@ -97,8 +97,9 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
         super.setRemoved();
         if (level != null && !level.isClientSide() && !chunkUnloading) {
             // Block was actually broken — fully remove from cache and tear down connections. Never builds the
-            // sub-cache, like onChunkUnloaded: a block entity removed after a level unload dropped it (a stopped
-            // level discards its block entities) would otherwise rebuild it and pin the stopped level again.
+            // sub-cache, like onChunkUnloaded: defence in depth, since a removal after a level unload dropped the
+            // sub-cache would otherwise rebuild it and pin the stopped level (a closing level reports the chunk
+            // unload first, so no known path gets here today).
             MarkerSubCache<C> cache = getCache().getSubCacheIfPresent(level);
             if (cache != null) {
                 cache.removeMarker(getBlockPos());

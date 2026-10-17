@@ -34,3 +34,4 @@ Round 3 (wf_34f60214-e96): `impl` per packet, `reviewer`, `impl-opus` on blockin
 - Merge conflicts (ProtectionMod move; search AI owner view + approval filter) resolved by the orchestrator.
 - Third-party round 2: shop26 + glm-flash on rounds 2–3; post-merge dgx (Flash-Next) + glm-5.3 cross-packet review of the whole session diff.
 - Pump-own-tube fix (GLM-5.3 cross-packet finding): `impl` (Sonnet) done first pass, both tests red→green; `reviewer` approve.
+- Third-party round 2 (shop26 + glm-flash on rounds 2–3): 4 lows, all real → `impl` (Sonnet) fixed first pass (6d15f7344), `reviewer` approve and traced one more (abandoned-bucket charge) → `impl` fixed (c2a255503). dgx Flash-Next post-merge review deferred past the session's waiter (results arrive via the notify hook).

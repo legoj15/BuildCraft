@@ -38,7 +38,9 @@ Mechanics worth knowing:
   within its subtype level (the Robots overview carries −10 so it leads its chapter).
 - `GuideTxtSystemTagTest` runs the real JSON-INSN interpreter over `guide.txt`/`util.txt` and pins: every
   main-book entry has one of the eight systems, every system/subtype key exists in `en_us` and `zh_cn`,
-  the robot content and statements are registered, no retired subtype is used, aliases are defined once.
+  the robot content and statements are registered, no retired subtype is used, aliases are defined once,
+  and no subtype label repeats its system's label (subtype `robot` reads "Robot Basics" inside the Robots
+  system, in both the system and the type view, so the tree never shows "Robots > Robots").
 
 ## Authoring rules learned the hard way
 
@@ -47,9 +49,12 @@ Mechanics worth knowing:
   Register the statement with a `trigger`/`action` line and link `buildcraftunofficial:trigger/<name>`.
   `type="item_stack"` links by item id do work (`buildcraftunofficial:map_location`).
 - **A board is not an item.** Every board is the one `redstone_board` item with a board id in its data,
-  and the JSON `stack` field strips data, so board pages are `external` entries (`board "<name>"` alias
-  → `board/<name>.md`, title `buildcraft.guide.page.board_<name>`). External entries draw no icon — the
-  Boards subchapter is text-only until `PageEntryExternal` learns an optional icon stack.
+  and the JSON `stack` field strips data, so board pages are `external` entries (`board "<name>" "<board id>"` alias
+  → `board/<name>.md`, title `buildcraft.guide.page.board_<name>`). An external entry draws an icon only when its
+  JSON has `"icon": {"<kind>": "<argument>"}`: `item` is built in (an item id), and robotics registers `board` (a board
+  registry id, drawn as the programmed board stack — `RoboticsGuideIcons`), so lib never names robotics. An icon
+  that cannot be resolved draws nothing; a malformed `icon` field disables the entry. `GuideTxtSystemTagTest` keeps the board
+  pages and the registered boards in step (a new board needs a `board` line in `guide.txt`, a page and a title key).
 - **Concept pages** use the `concept "<sys>" "<subtype>" "<name>" "<sort>"` alias (external, titled through
   `buildcraft.guide.page.<name>`).
 - `<recipes_usages>` shows Programming Table and Integration Table steps (robotics registers

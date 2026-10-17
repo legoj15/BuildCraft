@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,6 +38,8 @@ import net.minecraft.resources.Identifier;
 
 import org.junit.jupiter.api.Test;
 
+import buildcraft.api.boards.RedstoneBoardNBT;
+import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.registry.IReloadableRegistry.PackType;
 import buildcraft.api.statements.StatementManager;
 import buildcraft.lib.script.ScriptableRegistry;
@@ -347,6 +350,36 @@ class GuideTxtSystemTagTest {
             }
         }
         assertEquals(ROBOT_STATEMENTS.size(), robotSystemStatements.size());
+    }
+
+    /** Every board page is an {@code external} entry (a board is not an item of its own), so its icon is the
+     *  {@code board} icon kind robotics registers: the programmed Redstone Board. The pages and the registry must
+     *  agree both ways, or a new board ships without a page icon, or a page names a board that no longer exists (the
+     *  icon would silently draw nothing). */
+    @Test
+    void everyBoardPageDrawsTheBoardItDocumentsAndEveryBoardHasAPage() {
+        Set<String> pageBoards = new TreeSet<>();
+        List<String> bad = new ArrayList<>();
+        for (Entry e : mainBook()) {
+            if (!"board".equals(e.str("tag_subtype"))) {
+                continue;
+            }
+            assertEquals("external", e.str("type"), describe(e));
+            JsonElement icon = e.json().get("icon");
+            if (icon == null || !icon.isJsonObject() || !icon.getAsJsonObject().has("board")) {
+                bad.add("no {\"board\": id} icon: " + describe(e));
+            } else if (!pageBoards.add(icon.getAsJsonObject().get("board").getAsString())) {
+                bad.add("a second page for the same board: " + describe(e));
+            }
+        }
+        assertTrue(bad.isEmpty(), String.join("\n", bad));
+
+        Set<String> registered = new TreeSet<>();
+        for (RedstoneBoardNBT<?> board : RedstoneBoardRegistry.instance.getAllBoardNBTs()) {
+            registered.add(board.getID());
+        }
+        assertTrue(registered.size() > 10, "liveness: the board registry is populated, got " + registered);
+        assertEquals(registered, pageBoards, "board pages differ from the registered boards (the empty board has a page too)");
     }
 
     // ---------------------------------------------------------------------------------------------------------

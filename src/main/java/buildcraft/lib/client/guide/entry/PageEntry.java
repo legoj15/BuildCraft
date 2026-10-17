@@ -6,7 +6,7 @@ import com.google.gson.JsonObject;
 
 import buildcraft.lib.client.guide.data.JsonTypeTags;
 
-public final class PageEntry<T> extends PageValue<T> {
+public class PageEntry<T> extends PageValue<T> {
 
     public final JsonTypeTags typeTags;
     public final Identifier book;

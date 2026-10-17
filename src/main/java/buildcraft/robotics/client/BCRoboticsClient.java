@@ -162,6 +162,8 @@ public class BCRoboticsClient {
         modEventBus.register(BCRoboticsClient.class);
         // Guide book: Programming/Integration Table steps on board and robot pages (type="programming"/"integration").
         buildcraft.robotics.client.guide.RoboticsGuideRecipes.register();
+        // Guide book: the programmed-board icon of the Robots > Boards pages (icon kind "board").
+        buildcraft.robotics.client.guide.RoboticsGuideIcons.register();
         // The exhaust thins itself by the particle setting (7.1.x's rule); the common-side robot reads it
         // through this seam so EntityRobot never names a client class. The ParticleStatus enum moved
         // package at 1.21.10 and lost getId() by 26.1, so it is read through the option by constant name

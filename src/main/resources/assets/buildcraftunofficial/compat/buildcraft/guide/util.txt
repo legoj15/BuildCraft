@@ -140,17 +140,19 @@ alias plug 2 `item_plug "%0" "%1" "buildcraftunofficial:%1"`
 alias paper 2 `item_typed "%0" "paperwork" "%1" "buildcraftunofficial:%1"`
 alias chipset 2 `item_typed "%0" "chipset" "%1" "buildcraftunofficial:%1"`
 
-// Robot board pages: `board "<name>"` -> board/<name>.md. A board is not an item of its own
+// Robot board pages: `board "<name>" "<board id>"` -> board/<name>.md. A board is not an item of its own
 // (every board is the one redstone_board item carrying a board id in its data), so these are
 // `external` entries titled through buildcraft.guide.page.board_<name>, filed under
-// Robots > Boards (Items > Boards by type). No icon: external entries draw none.
-alias board 1 `add "board/%0" \`{
+// Robots > Boards (Items > Boards by type). The icon is the programmed board itself: robotics
+// registers the "board" icon kind, whose argument is the board's registry id.
+alias board 2 `add "board/%0" \`{
     "type": "external",
     "book": "${0}",
     "tag_system": "robots",
     "tag_type": "item",
     "tag_subtype": "board",
-    "title": "board_%0"
+    "title": "board_%0",
+    "icon": { "board": "%1" }
 }\``
 // Concept page with an explicit TOC placement and weight: `concept "<sys>" "<subtype>" "<name>" "<sort>"`
 // -> concept/<name>.md, titled through buildcraft.guide.page.<name>.

@@ -26,7 +26,7 @@ public class StatementParameterItemStackExact implements IStatementParameter {
     protected int availableSlots;
 
     public StatementParameterItemStackExact() {
-        this(ItemStack.EMPTY, 0);
+        this(ItemStack.EMPTY, -1);
     }
 
     public StatementParameterItemStackExact(int availableSlots) {
@@ -44,10 +44,11 @@ public class StatementParameterItemStackExact implements IStatementParameter {
                 ? ItemStack.CODEC.parse(NbtApiUtil.registryAwareOps(), nbt.get("stack"))
                         .resultOrPartial().orElse(ItemStack.EMPTY)
                 : ItemStack.EMPTY;
+        // A missing key means "unlimited" (-1), as in upstream 7.1.x; the writer always emits it.
         //? if >=1.21.10 {
-        param.availableSlots = nbt.getIntOr("availableSlots", 0);
+        param.availableSlots = nbt.getIntOr("availableSlots", -1);
         //?} else {
-        /*param.availableSlots = nbt.getInt("availableSlots");*/
+        /*param.availableSlots = nbt.contains("availableSlots") ? nbt.getInt("availableSlots") : -1;*/
         //?}
         return param;
     }

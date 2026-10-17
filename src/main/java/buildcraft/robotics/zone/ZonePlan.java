@@ -193,8 +193,16 @@ public class ZonePlan implements IZone {
         return get(xBlock, zBlock);
     }
 
+    /** A random marked column at a y in 7.1.x's fixed {@code 0..254}; see {@link #getRandomBlockPos(Random, int, int)}. */
     @Override
     public BlockPos getRandomBlockPos(Random rand) {
+        return getRandomBlockPos(rand, 0, 254);
+    }
+
+    /** A random marked column at a y in {@code minY..maxY} (both inclusive), or null when nothing is marked. A zone
+     *  plan is columns only, so the height is the caller's level build range. */
+    @Override
+    public BlockPos getRandomBlockPos(Random rand, int minY, int maxY) {
         if (chunkMapping.isEmpty()) {
             return null;
         }
@@ -203,7 +211,7 @@ public class ZonePlan implements IZone {
 
         for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
             if (chunkId == 0) {
-                BlockPos i = e.getValue().getRandomBlockPos(rand);
+                BlockPos i = e.getValue().getRandomBlockPos(rand, minY, maxY);
                 int x = (unpackChunkX(e.getKey()) << 4) + i.getX();
                 int z = (unpackChunkZ(e.getKey()) << 4) + i.getZ();
 

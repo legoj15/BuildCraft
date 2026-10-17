@@ -402,7 +402,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
             case ZONE: {
                 ZonePlan plan = new ZonePlan();
                 plan.readFromNBT(getCustomTag(item));
-                return plan;
+                // A plan marking nothing (no chunkMapping: crafted or legacy data) is no zone. Every caller reads null
+                // as "no zone"; the empty plan instead reached the robot searches, whose sampler gets null from it.
+                return plan.isEmpty() ? null : plan;
             }
             case AREA:
                 return getBox(item);

@@ -273,6 +273,24 @@ public class ZonePlanTest {
     }
 
     @Test
+    public void testRandomBlockPosSpansTheGivenBuildRange() {
+        ZonePlan plan = build(new int[][] { {5, 5}, {-30, 40} });
+
+        Random rand = new Random(17L);
+        boolean below = false;
+        boolean above = false;
+        for (int i = 0; i < 4000; i++) {
+            BlockPos p = plan.getRandomBlockPos(rand, -64, 319);
+            Assertions.assertTrue(plan.get(p.getX(), p.getZ()), "inside the zone");
+            Assertions.assertTrue(p.getY() >= -64 && p.getY() <= 319, "y within the build range: " + p);
+            below |= p.getY() < 0;
+            above |= p.getY() > 254;
+        }
+        Assertions.assertTrue(below && above, "the pick spans the whole build range, not 7.1.x's 0..254");
+        Assertions.assertNull(new ZonePlan().getRandomBlockPos(rand, -64, 319), "an empty plan still picks nothing");
+    }
+
+    @Test
     public void testRandomBlockPosOnEmptyPlanIsNull() {
         Assertions.assertNull(new ZonePlan().getRandomBlockPos(new Random(0L)));
     }

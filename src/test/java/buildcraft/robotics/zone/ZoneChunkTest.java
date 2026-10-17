@@ -176,6 +176,35 @@ public class ZoneChunkTest {
         }
     }
 
+    @Test
+    public void testRandomBlockPosSpansTheGivenBuildRange() {
+        // 7.1.x drew y from nextInt(255), the old 0..254 world; a 26.x world runs from -64 to 319, and a robot
+        // searching its zone must be able to land anywhere in it.
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.set(4, 11, true);
+
+        Random rand = new Random(42L);
+        boolean below = false;
+        boolean above = false;
+        for (int i = 0; i < 4000; i++) {
+            BlockPos p = chunk.getRandomBlockPos(rand, -64, 319);
+            Assertions.assertTrue(p.getY() >= -64 && p.getY() <= 319, "y within the build range: " + p);
+            Assertions.assertTrue(chunk.get(p.getX(), p.getZ()), "still a set column");
+            below |= p.getY() < 0;
+            above |= p.getY() > 254;
+        }
+        Assertions.assertTrue(below, "samples reach below y=0");
+        Assertions.assertTrue(above, "samples reach above y=254");
+    }
+
+    @Test
+    public void testRandomBlockPosHonoursASingleLayerRange() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.set(0, 0, true);
+        Assertions.assertEquals(-3, chunk.getRandomBlockPos(new Random(5L), -3, -3).getY(),
+                "both bounds are inclusive");
+    }
+
     private static void assertSameCells(ZoneChunk a, ZoneChunk b) {
         for (int z = 0; z < 16; z++) {
             for (int x = 0; x < 16; x++) {

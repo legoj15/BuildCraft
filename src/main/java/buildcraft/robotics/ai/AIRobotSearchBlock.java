@@ -22,6 +22,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.BlockClaims;
+import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.path.BlockScannerExpanding;
 import buildcraft.robotics.path.BlockScannerRandom;
 import buildcraft.robotics.path.BlockScannerZoneRandom;
@@ -87,7 +88,8 @@ public class AIRobotSearchBlock extends AIRobot {
         if (!random) {
             blockIter = new BlockScannerExpanding();
         } else if (zone != null && level != null) {
-            blockIter = new BlockScannerZoneRandom(iRobot.blockPosition(), level.getRandom(), zone);
+            blockIter = new BlockScannerZoneRandom(iRobot.blockPosition(), level.getRandom(), zone,
+                    RobotUtils.minBuildY(level), RobotUtils.maxBuildY(level));
         } else if (level != null) {
             blockIter = new BlockScannerRandom(level.getRandom(), 64);
         } else {

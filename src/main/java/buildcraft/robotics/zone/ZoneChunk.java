@@ -97,7 +97,15 @@ public class ZoneChunk {
         }
     }
 
+    /** A random set column at a y in 7.1.x's fixed {@code 0..254} ({@code nextInt(255)}), for callers with no level
+     *  to take a height range from. Same draws as {@code getRandomBlockPos(rand, 0, 254)}. */
     public BlockPos getRandomBlockPos(Random rand) {
+        return getRandomBlockPos(rand, 0, 254);
+    }
+
+    /** A random set column at a y drawn from {@code minY..maxY}, both inclusive: the robot level's build range, which
+     *  on the 26.x worlds runs from -64 to 319 rather than 7.1.x's 0..254. */
+    public BlockPos getRandomBlockPos(Random rand, int minY, int maxY) {
         int x, z;
 
         if (fullSet) {
@@ -115,7 +123,7 @@ public class ZoneChunk {
             z = bitPosition / 16;
             x = bitPosition - 16 * z;
         }
-        int y = rand.nextInt(255);
+        int y = minY + rand.nextInt(maxY - minY + 1);
 
         return new BlockPos(x, y, z);
     }

@@ -11,6 +11,7 @@ import java.util.List;
 
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
@@ -27,6 +28,25 @@ import buildcraft.robotics.item.ItemRobot;
  */
 public final class RobotUtils {
     private RobotUtils() {
+    }
+
+    /** The lowest buildable y of {@code level}, inclusive. */
+    public static int minBuildY(Level level) {
+        //? if >=1.21.10 {
+        return level.getMinY();
+        //?} else {
+        /*return level.getMinBuildHeight();*/
+        //?}
+    }
+
+    /** The highest buildable y of {@code level}, INCLUSIVE ({@code getMaxY}; the 1.21.1 {@code getMaxBuildHeight} is
+     *  one past it). */
+    public static int maxBuildY(Level level) {
+        //? if >=1.21.10 {
+        return level.getMaxY();
+        //?} else {
+        /*return level.getMaxBuildHeight() - 1;*/
+        //?}
     }
 
     public static List<DockingStation> getStations(Object tile) {

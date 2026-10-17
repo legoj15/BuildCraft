@@ -17,7 +17,8 @@ import buildcraft.robotics.IStationFilter;
 
 /** Flies the robot to a power-providing station and recharges. Releases every resource lock first (the robot
  *  is going away), drops all motion, and terminates once the battery reaches the headroom threshold —
- *  {@code MAX_POWER - MAX_POWER/200} (Decision 3's re-pin-safe headroom, not 7.1.x's hard 500). */
+ *  {@code MAX_POWER - MAX_POWER/200} (Decision 3's re-pin-safe headroom, not 7.1.x's hard 500). A powered station
+ *  it cannot reach is passed over for the next-nearest one. */
 public class AIRobotRecharge extends AIRobot {
 
     public AIRobotRecharge(IRobotAccess iRobot) {
@@ -29,13 +30,13 @@ public class AIRobotRecharge extends AIRobot {
         robot.releaseResources();
         robot.setDeltaMovement(Vec3.ZERO);
 
-        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new IStationFilter() {
-            @Override
-            public boolean matches(DockingStation station) {
-                return station.providesPower();
-            }
-        }, null));
+        // Every powered station in order of distance, not 7.1.x's nearest only: a goto is capped at ~96 blocks, so a
+        // robot that wandered further than that from the nearest one would shut down with another in reach.
+        startDelegateAI(new AIRobotSearchAndGotoStation(robot, POWERED, null, true));
     }
+
+    /** The stations a robot can charge at. */
+    static final IStationFilter POWERED = DockingStation::providesPower;
 
     @Override
     public long getPowerCost() {

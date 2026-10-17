@@ -604,6 +604,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_protection_abandoned_permit_not_reused", () -> buildcraft.factory.PumpProtectionTester::abandonedPermitIsNotReused);
         reg.accept("buildcraftunofficial:pump_protection_permit_rechecked_before_drain", () -> buildcraft.factory.PumpProtectionTester::permitIsRecheckedBeforeTheDrain);
         reg.accept("buildcraftunofficial:pump_protection_drain_refusal_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::drainTimeRefusalSpendsTheBucketsPower);
+        reg.accept("buildcraftunofficial:pump_abandoned_bucket_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::abandonedBucketSpendsItsPower);
         reg.accept("buildcraftunofficial:drain_refusals_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsNeverLoadAChunk);
         reg.accept("buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsStillWorkOnLoadedCells);
 

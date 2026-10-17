@@ -158,10 +158,12 @@ public class StaticTablesLevelUnloadTester {
     }
 
     /** The other way a marker block entity reports in to its cache after the level's unload dropped the sub-cache:
-     *  being removed (the block entity of a stopped level's chunk is discarded as the level closes, without the
-     *  chunk-unload flag). Removing the position from a cache that is not there loses nothing - a sub-cache rebuilt
-     *  later from saved data starts from the saved markers - but looking it up with the building accessor would
-     *  pin the stopped level again, exactly like the chunk-unload report. */
+     *  being removed. The {@code TileMarker.setRemoved} guard is defence in depth: no known production path calls
+     *  {@code setRemoved} after the sub-cache is dropped (as a level closes, vanilla's
+     *  {@code LevelChunk.clearAllBlockEntities} reports the chunk unload before it removes the block entity). Removing
+     *  the position from a cache that is not there loses nothing - a sub-cache rebuilt later from saved data starts
+     *  from the saved markers - but looking it up with the building accessor would pin the stopped level again,
+     *  exactly like the chunk-unload report. */
     public static void aMarkerRemovedAfterItsLevelDoesNotRebuildTheCache(GameTestHelper helper) {
         ServerLevel other = secondaryLevel(helper);
         Block markerBlock = BuiltInRegistries.BLOCK.stream().filter(b -> b instanceof BlockMarkerVolume).findFirst()

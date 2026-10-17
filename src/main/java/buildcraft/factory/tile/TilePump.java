@@ -593,8 +593,11 @@ public class TilePump extends TileMiner implements IDebuggable {
             }
 
             // The bucket is abandoned (the cell was scooped, or its path cut): its permit ends here too, or
-            // the cell coming back before the rebuild would skip the start check.
+            // the cell coming back before the rebuild would skip the start check. The power charged for it is
+            // gone as well, like a refused cell's (skipRefusedCell): a charge kept would let the next cell, or this
+            // one once the water returns, finish with no power of its own.
             permittedPos = null;
+            progress = 0;
             if (rebuildDelay > 0) {
                 return;
             }

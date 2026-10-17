@@ -331,6 +331,60 @@ public class PumpProtectionTester {
     }
 
     /**
+     * An abandoned bucket spends its power too. The pump is cleared for the only cell of a one-cell pool while
+     * unpowered; a player scoops that cell on the very tick a full bucket of power arrives, so the bucket is charged
+     * but there is nothing to take and the pump abandons it. The water then comes back and a rebuild queues the cell
+     * again. With no new power the pump must leave it alone, however long it waits (the abandoned charge carried over
+     * made the cell free); it is drained only once a bucket of power has been received for it.
+     */
+    public static void abandonedBucketSpendsItsPower(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        TilePump pump = buildPumpedChannel(helper);
+        helper.setBlock(CELL_A, Blocks.WATER);
+        helper.setBlock(CELL_B, Blocks.STONE); // a one-cell pool: A is the only cell the pump can ever choose
+        BlockPos a = helper.absolutePos(CELL_A);
+
+        // No power: the pump picks A and is cleared for it, but cannot start the bucket.
+        try (ClaimProtectionMod open = new ClaimProtectionMod(a, false)) {
+            for (int i = 0; i < 4 && open.asks() == 0; i++) {
+                pump.serverTick();
+            }
+            check(open.asks() == 1, "precondition: the pump was cleared for A, asked " + open.asks() + " times");
+            check(pump.getTank().getAmountMb(0) == 0, "precondition: nothing pumped without power");
+        }
+
+        // A player scoops A on the tick a full bucket of power arrives: the bucket is charged, the cell is empty.
+        helper.setBlock(CELL_A, Blocks.AIR);
+        pump.getBattery().addPowerChecking(10 * MjAPI.MJ, false);
+        pump.serverTick();
+        check(pump.getTank().getAmountMb(0) == 0, "precondition: nothing is pumped from a scooped cell");
+
+        // The water comes back, and no power with it. A rebuild queues A again within the 30-tick delay; the pump
+        // starts a bucket on it (the start check asks) but has nothing to finish it with.
+        helper.setBlock(CELL_A, Blocks.WATER);
+        try (ClaimProtectionMod requeued = new ClaimProtectionMod(a, false)) {
+            for (int i = 0; i < 90; i++) {
+                pump.serverTick();
+            }
+            check(requeued.asks() >= 1, "precondition: the rebuild queued A again and the pump started a bucket on it,"
+                    + " asked " + requeued.asks() + " times");
+            check(isSource(level, a), "the re-queued cell is not drained on the abandoned bucket's charge");
+            check(pump.getTank().getAmountMb(0) == 0,
+                    "no bucket is credited without power for it, got " + pump.getTank().getAmountMb(0));
+
+            // A bucket of power received for the cell: now it is drained.
+            runPump(pump, PUMP_TICKS);
+            check(!isSource(level, a), "the cell is drained once its own bucket of power arrives");
+            check(pump.getTank().getAmountMb(0) == 1000,
+                    "exactly the one bucket is pumped, got " + pump.getTank().getAmountMb(0));
+        }
+
+        helper.setBlock(CELL_A, Blocks.AIR);
+        helper.succeed();
+    }
+
+    /**
      * A modded block that reports a water source but refuses its bucket pickup. The pump tries it, is refused, takes
      * the plain water beside it, and does not try the refusing cell again while it is unchanged. Before the pump
      * remembered refusals it re-queued the cell on every rebuild, and every retry spent a full cycle of power.

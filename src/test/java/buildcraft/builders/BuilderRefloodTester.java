@@ -386,6 +386,106 @@ public class BuilderRefloodTester {
     }
 
     /**
+     * A fragile block whose own cell touches water the Builder can never remove can never be built: the tolerated
+     * wet slab beside it spreads water into the cell and washes the snow layer away. Before this was handled the
+     * Builder never queued the placement (the fragile gate saw the water) yet never counted the cell as done, so
+     * the build reported busy for ever. Such a cell must be accepted as unbuildable and the Builder must rest.
+     *
+     * <p>Column (z = 2..3): slab, snow layer, on the single-slab geometry, with the snow cell walled in at
+     * {@code (1,2,3)}, {@code (3,2,3)} and {@code (2,2,4)} so the slab's water stays in it.
+     */
+    public static void clearModeAcceptsFragileBlockBesideToleratedWater(GameTestHelper helper) {
+        int[] column = { SLAB, SNOW };
+        TileBuilder tile = setUpBuilder(helper, column, new BlockPos[] {
+            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+            new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), new BlockPos(3, 2, 3), new BlockPos(2, 2, 4) });
+        BlockPos[] sources = { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1) };
+
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        int[] busyTicks = { 0 };
+        boolean[] finished = { false };
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            BlockState slab = helper.getBlockState(cell(0));
+            BlockState snowCell = helper.getBlockState(cell(1));
+            int inPhase = t - phaseStart[0];
+            switch (phase[0]) {
+                case 0 -> {
+                    if (isDrySlab(slab) && snowCell.is(Blocks.SNOW) && builderQuiet(builder)) {
+                        for (BlockPos source : sources) {
+                            BlockWaterloggingTester.placeSource(helper, source, Blocks.WATER, Fluids.WATER);
+                        }
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, slab=" + slab
+                                + ", snow cell=" + snowCell);
+                    }
+                }
+                case 1 -> {
+                    boolean settled = isWetSlab(slab) && !snowCell.is(Blocks.SNOW) && builderQuiet(builder);
+                    if (builder != null && !builderQuiet(builder)) {
+                        busyTicks[0]++;
+                    }
+                    quiet[0] = settled ? quiet[0] + 1 : 0;
+                    if (quiet[0] >= QUIET_TICKS) {
+                        for (var drop : EntityArenaUtil.droppedItems(helper, cell(1), 3.0)) {
+                            drop.discard();
+                        }
+                        finished[0] = true;
+                        helper.succeed();
+                    } else {
+                        expect(inPhase < 400, "phase 1: the Builder never rested with a fragile block beside "
+                                + "permanent water (busy on " + busyTicks[0] + " of " + inPhase + " ticks, slab="
+                                + slab + ", snow cell=" + snowCell + ", leftToPlace="
+                                + (builder == null ? -1 : builder.leftToPlace) + ", breakTasks="
+                                + (builder == null ? -1 : builder.breakTasks.size()) + ", placeTasks="
+                                + (builder == null ? -1 : builder.placeTasks.size()) + ")");
+                    }
+                }
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        });
+    }
+
+    /**
+     * Vanilla re-sources a cell between two water sources only over a solid or water-source floor (the
+     * infinite-water rule in {@code FlowingFluid#getNewLiquid}). A waterlogged slab with AIR below it is therefore
+     * never re-flooded once dried, however many outside sources flank it, and CLEAR must dry it rather than
+     * tolerate the water.
+     *
+     * <p>Column (z = 2..4): slab, stone, stone, on the single-slab geometry with the stone already standing, the
+     * floor under the slab removed, and the slab waterlogged before the Builder starts.
+     */
+    public static void clearModeDriesFlankedBlockWithNoFloor(GameTestHelper helper) {
+        int[] column = { SLAB, STONE, STONE };
+        TileBuilder tile = setUpBuilder(helper, column, new BlockPos[] {
+            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+            new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), cell(1), cell(2) });
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.AIR);
+        helper.setBlock(cell(0), Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true));
+        BlockWaterloggingTester.placeSource(helper, new BlockPos(1, 2, 2), Blocks.WATER, Fluids.WATER);
+        BlockWaterloggingTester.placeSource(helper, new BlockPos(2, 2, 1), Blocks.WATER, Fluids.WATER);
+
+        int[] quiet = { 0 };
+        boolean[] finished = { false };
+        drive(helper, finished, t -> {
+            BlockState a = helper.getBlockState(cell(0));
+            boolean rested = isDrySlab(a) && builderQuiet(tile.getBuilder());
+            quiet[0] = rested ? quiet[0] + 1 : 0;
+            if (quiet[0] >= QUIET_TICKS) {
+                finished[0] = true;
+                helper.succeed();
+            } else {
+                expect(t < 300, "a flanked waterlogged slab with no floor is never re-flooded, so CLEAR must dry it "
+                        + "(slab=" + a + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
+            }
+        });
+    }
+
+    /**
      * The control: with NO outside water the strict CLEAR rule must still apply. A slab someone waterlogged with a
      * bucket, where the blueprint wants it dry, has to be dried (torn out and re-placed dry), and the Builder must
      * then rest. Guards against the tolerance above being too broad; passes with and without the fix.

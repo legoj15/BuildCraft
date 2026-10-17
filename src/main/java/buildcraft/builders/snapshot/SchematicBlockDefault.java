@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -95,9 +96,20 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * extract its items only to refund them).
      */
     public static boolean hasWashingFluidNeighbour(BlockGetter level, BlockPos blockPos, BlockState state) {
+        return hasWashingFluidNeighbour(level, blockPos, state, neighbour -> true);
+    }
+
+    /**
+     * As {@link #hasWashingFluidNeighbour(BlockGetter, BlockPos, BlockState)}, counting only the neighbours whose
+     * position passes {@code which} (the Builder uses it to ask whether any washing fluid is water it will still
+     * mop).
+     */
+    public static boolean hasWashingFluidNeighbour(BlockGetter level, BlockPos blockPos, BlockState state,
+            Predicate<BlockPos> which) {
         for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
-            FluidState neighbour = level.getFluidState(blockPos.relative(dir));
-            if (!neighbour.isEmpty() && isWashedAwayBy(state, neighbour.getType())) {
+            BlockPos neighbourPos = blockPos.relative(dir);
+            FluidState neighbour = level.getFluidState(neighbourPos);
+            if (!neighbour.isEmpty() && isWashedAwayBy(state, neighbour.getType()) && which.test(neighbourPos)) {
                 return true;
             }
         }

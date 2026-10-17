@@ -458,11 +458,49 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // where the schematic is dry, and vanilla will flood the cell again no matter how often the
             // Builder dries it, tolerate the water: the lenient (NO_REPLACE) comparison isolates exactly
             // that waterlogging difference.
-            return mode == EnumFluidHandlingMode.CLEAR
-                && def.isBuilt(tile.getWorldBC(), blockPos, EnumFluidHandlingMode.NO_REPLACE)
-                && isRefloodedByUnmoppableWater(blockPos);
+            if (mode != EnumFluidHandlingMode.CLEAR) return false;
+            if (def.isBuilt(tile.getWorldBC(), blockPos, EnumFluidHandlingMode.NO_REPLACE)
+                && isRefloodedByUnmoppableWater(blockPos)) {
+                return true;
+            }
+            return isFragileUnbuildableAt(blockPos, def);
         }
         return schematic.isBuilt(tile.getWorldBC(), blockPos);
+    }
+
+    /**
+     * CLEAR mode: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand, because
+     * fluid the Builder will never remove is beside or above the cell and washes it away the moment it is placed?
+     * Such a cell is accepted as done, left empty (or holding the water that flows in), so the build can finish:
+     * the place gate would otherwise defer it for ever while the cell still counts as unbuilt, and the Builder would
+     * report busy without end.
+     *
+     * <p>Only a cell holding nothing to break qualifies: air, or flowing water (a source in the cell is still
+     * mopped, after which the cell refills with flowing water and is accepted). Excluding sources keeps accepted
+     * cells from vouching for each other: their water is flowing, so once the permanent water feeding them is gone
+     * it drains, {@link #isPermanentWaterAt} stops holding, the next check sweep sends the cell back to
+     * {@code TO_PLACE}, and the block is built.
+     */
+    private boolean isFragileUnbuildableAt(BlockPos blockPos, SchematicBlockDefault def) {
+        if (def.blockState == null || !SchematicBlockDefault.isWashedAwayByFluid(def.blockState)) return false;
+        BlockState world = tile.getWorldBC().getBlockState(blockPos);
+        boolean nothingToBreak = world.isAir()
+            || (world.getBlock() instanceof LiquidBlock && !world.getFluidState().isSource());
+        if (!nothingToBreak) return false;
+        return SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState)
+            && !SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState,
+                neighbour -> !isPermanentWaterAt(neighbour));
+    }
+
+    /**
+     * Is the fluid at {@code blockPos} fluid the Builder will never remove? Outside the box it is never mopped; an
+     * in-box schematic-air cell is re-derived from the world ({@link #isToleratedFluidAt}, since its
+     * {@code CORRECT} may predate the fluid); any other in-box cell counts when the check accepted it.
+     */
+    private boolean isPermanentWaterAt(BlockPos blockPos) {
+        if (!getBuildingInfo().box.contains(blockPos)) return true;
+        if (isAir(blockPos)) return isToleratedFluidAt(blockPos);
+        return checkResults[posToIndex(blockPos)] == CHECK_RESULT_CORRECT;
     }
 
     /**
@@ -476,8 +514,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * itself, which waterlogs the block there; a single source or flowing water is held back. So the cause can
      * be read straight off the neighbours, no attempt counting or flow tracing needed: count the horizontal water
      * sources the Builder cannot clear ({@link #isUnmoppable}). Two such sources re-flood the cell; one cannot.
-     * The solid-floor half of the vanilla rule is not mirrored: if the cell is wet with two unremovable sources
-     * beside it, tolerating the water is right whatever is below.
+     * The floor half of the rule is mirrored too: with air (or flowing water, or a source the Builder will mop)
+     * below, vanilla gives the cell only flowing water, which never waterlogs a block, so a dried block stays dry
+     * and the strict CLEAR rule applies.
      */
     private boolean isRefloodedByUnmoppableWater(BlockPos blockPos) {
         int sources = 0;
@@ -485,9 +524,25 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             BlockPos neighbour = blockPos.relative(direction);
             FluidState fluid = tile.getWorldBC().getFluidState(neighbour);
             if (!fluid.isSource() || !fluid.is(FluidTags.WATER)) continue;
-            if (isUnmoppable(neighbour) && ++sources >= 2) return true;
+            if (isUnmoppable(neighbour)) sources++;
         }
-        return false;
+        return sources >= 2 && supportsInfiniteSource(blockPos.below());
+    }
+
+    /**
+     * The floor half of vanilla's infinite-water rule ({@code FlowingFluid#getNewLiquid}): a solid block, or a water
+     * source the Builder will never remove ({@link #isUnmoppable}; one it will mop stops supporting the cell once
+     * mopped, and the next check sweep then dries the block).
+     */
+    private boolean supportsInfiniteSource(BlockPos floor) {
+        BlockState state = tile.getWorldBC().getBlockState(floor);
+        // The legacy isSolid() is deprecated, but it is exactly the floor test getNewLiquid applies; matching
+        // vanilla's re-source rule is the point, so keep vanilla's test (as TilePump does).
+        @SuppressWarnings("deprecation")
+        boolean solid = state.isSolid();
+        if (solid) return true;
+        FluidState fluid = state.getFluidState();
+        return fluid.isSource() && fluid.is(FluidTags.WATER) && isUnmoppable(floor);
     }
 
     /**

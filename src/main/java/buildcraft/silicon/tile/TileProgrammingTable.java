@@ -41,8 +41,8 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 public class TileProgrammingTable extends TileLaserTableBase {
 
     /** The option grid's dimensions — 7.1.x's GUI panel size, and the slice of {@code getOptions} it shows. */
-    public static final int OPTION_COLS = 6;
-    public static final int OPTION_ROWS = 4;
+    public static final int OPTION_COLS = ProgrammingRecipeRegistry.GRID_COLS;
+    public static final int OPTION_ROWS = ProgrammingRecipeRegistry.GRID_ROWS;
 
     public final ItemHandlerSimple invBoard = itemManager.addInvHandler(
         "board",
@@ -131,9 +131,10 @@ public class TileProgrammingTable extends TileLaserTableBase {
         }
     }
 
-    /** The recipe the table runs for {@code input}: the first registered one that accepts it, or null. The one home
-     *  for that choice, shared by {@link #findRecipe} and the JEI transfer's pre-check
-     *  ({@code RoboticsTableTransfer}) so the two cannot disagree about which recipe a board lands in. */
+    /** The recipe the table runs for {@code input}: the accepting one with the lowest id (the registry's order, the
+     *  same on every run and on client and server alike), or null. The one home for that choice, shared by
+     *  {@link #findRecipe} and the JEI transfer's pre-check ({@code RoboticsTableTransfer}) so the two cannot
+     *  disagree about which recipe a board lands in. */
     @Nullable
     public static IProgrammingRecipe matchRecipe(ItemStack input) {
         if (input.isEmpty()) {

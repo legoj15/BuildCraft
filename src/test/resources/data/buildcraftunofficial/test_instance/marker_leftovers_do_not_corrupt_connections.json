@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:marker_leftovers_do_not_corrupt_connections",
+    "environment":  "buildcraftunofficial:marker_leftovers_do_not_corrupt_connections",
+    "structure":  "minecraft:empty",
+    "max_ticks":  100,
+    "setup_ticks":  0,
+    "required":  true
+}

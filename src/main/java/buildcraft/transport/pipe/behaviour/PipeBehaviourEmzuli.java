@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -43,6 +45,7 @@ import buildcraft.transport.statements.ActionExtractionPreset;
 
 /** Emzuli pipe — filtered extraction with round-robin across 4 preset slots, each with a colour assignment.
  * Activated via gate Extraction Preset actions. */
+@SuppressWarnings("this-escape")
 public class PipeBehaviourEmzuli extends PipeBehaviourWood {
 
     public enum SlotIndex {
@@ -71,7 +74,10 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
     }
 
     public final EnumMap<SlotIndex, DyeColor> slotColours = new EnumMap<>(SlotIndex.class);
-    public final ItemHandlerSimple invFilters = new ItemHandlerSimple(4);
+    /** Phantom filter slots. Every edit (menu click, JEI ghost drop) flags the holder tile changed so the chunk saves;
+     * loading from NBT never fires the callback. */
+    public final ItemHandlerSimple invFilters =
+        new ItemHandlerSimple(4, (handler, slot, before, after) -> PipeBehaviourPersistence.markDirty(pipe));
     private final EnumSet<SlotIndex> activeSlots;
     private final byte[] activatedTtl = new byte[SlotIndex.VALUES.length];
     private SlotIndex currentSlot = null;
@@ -97,6 +103,18 @@ public class PipeBehaviourEmzuli extends PipeBehaviourWood {
                 slotColours.put(index, DyeColor.byId(c - 1));
             }
         }
+    }
+
+    /** Server-side colour assignment for a preset slot (GUI paint widget): updates it, saves it and pushes it to the
+     * players with the GUI open. {@code null} clears the assignment. */
+    public void setSlotColour(SlotIndex index, @Nullable DyeColor colour) {
+        if (colour == null) {
+            slotColours.remove(index);
+        } else {
+            slotColours.put(index, colour);
+        }
+        PipeBehaviourPersistence.markDirty(pipe);
+        pipe.getHolder().scheduleNetworkGuiUpdate(PipeMessageReceiver.BEHAVIOUR);
     }
 
     @Override

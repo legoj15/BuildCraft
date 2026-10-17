@@ -38,6 +38,7 @@ import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
 
 /** Emerald (WoodDiamond) pipe — filtered extraction with round-robin support. */
+@SuppressWarnings("this-escape")
 public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
 
     public enum FilterMode {
@@ -51,7 +52,10 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
         }
     }
 
-    public final ItemHandlerSimple filters = new ItemHandlerSimple(9);
+    /** Phantom filter slots. Every edit (menu click, JEI ghost drop) flags the holder tile changed so the chunk saves;
+     * loading from NBT never fires the callback. */
+    public final ItemHandlerSimple filters =
+        new ItemHandlerSimple(9, (handler, slot, before, after) -> PipeBehaviourPersistence.markDirty(pipe));
     public FilterMode filterMode = FilterMode.WHITE_LIST;
     public int currentFilter = 0;
     public boolean filterValid = false;
@@ -69,6 +73,13 @@ public class PipeBehaviourWoodDiamond extends PipeBehaviourWood {
         filterMode = FilterMode.get(NBTUtilBC.getByte(nbt, "mode", (byte) 0));
         currentFilter = NBTUtilBC.getByte(nbt, "currentFilter", (byte) 0) % filters.getSlots();
         filterValid = hasAnyFilter();
+    }
+
+    /** Server-side filter-mode change (GUI button): updates the mode, saves it and syncs it to watchers. */
+    public void setFilterMode(FilterMode mode) {
+        filterMode = mode;
+        PipeBehaviourPersistence.markDirty(pipe);
+        pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
     }
 
     @Override

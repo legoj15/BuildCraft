@@ -24,7 +24,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 
 @SuppressWarnings("this-escape")
 public class ContainerDiamondWoodPipe extends ContainerBC_Neptune {
-    private static final int NET_FILTER_MODE = 1;
+    public static final int NET_FILTER_MODE = 1;
 
     private final IPipeHolder pipeHolder;
     public final PipeBehaviourWoodDiamond behaviour;
@@ -72,9 +72,7 @@ public class ContainerDiamondWoodPipe extends ContainerBC_Neptune {
             net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
         if (id == NET_FILTER_MODE && !isClient) {
-            behaviour.filterMode = buffer.readEnum(FilterMode.class);
-            behaviour.pipe.getHolder().scheduleNetworkUpdate(
-                    buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver.BEHAVIOUR);
+            behaviour.setFilterMode(buffer.readEnum(FilterMode.class));
         }
     }
 

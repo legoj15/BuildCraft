@@ -10,7 +10,6 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.transport.pipe.IPipeHolder;
-import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.Widget_Neptune;
@@ -102,12 +101,7 @@ public class ContainerEmzuliPipe extends ContainerBC_Neptune {
         public void handleWidgetDataServer(IPayloadContext ctx, PacketBufferBC buffer) {
             int c = buffer.readByte();
             DyeColor colour = (c >= 0 && c < 16) ? DyeColor.byId(c) : null;
-            if (colour == null) {
-                container.behaviour.slotColours.remove(index);
-            } else {
-                container.behaviour.slotColours.put(index, colour);
-            }
-            container.behaviour.pipe.getHolder().scheduleNetworkGuiUpdate(PipeMessageReceiver.BEHAVIOUR);
+            container.behaviour.setSlotColour(index, colour);
         }
     }
 }

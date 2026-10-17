@@ -1008,6 +1008,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_reloaded_goto_station_reclaims_free_station", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedGotoStationReclaimsAFreeStation);
         reg.accept("buildcraftunofficial:robot_registry_kill_after_unload_frees_stations", () -> buildcraft.robotics.RobotRegistryLiveTester::killRobotAfterAnUnloadFreesItsStations);
         reg.accept("buildcraftunofficial:robot_undock_after_reload_frees_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::undockAfterAReloadFreesTheDock);
+        reg.accept("buildcraftunofficial:robot_station_ownership_follows_saved_robot_id", () -> buildcraft.robotics.RobotRegistryLiveTester::stationOwnershipFollowsTheSavedRobotId);
         reg.accept("buildcraftunofficial:robot_reloaded_action_boards_yield_search_cell", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsYieldABlockAnotherRobotsSearchHolds);
         reg.accept("buildcraftunofficial:robot_block_claims_one_holder_across_ledgers", () -> buildcraft.robotics.BlockClaimsTester::aBlockIsNeverHeldByTwoRobotsAcrossTheLedgers);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);

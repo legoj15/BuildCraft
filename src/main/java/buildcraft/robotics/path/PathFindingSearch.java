@@ -63,7 +63,8 @@ public class PathFindingSearch implements IIterableAlgorithm {
      * @param approveTarget asked ONCE about each target a path was found to - not about every block the scan
      *            visits, which {@code pathFound} is - before that target is reserved; a target it refuses is dropped
      *            and the search carries on with the others. For checks that are too costly to run per scanned block,
-     *            such as asking protection mods. Null approves everything.
+     *            such as asking protection mods. It is given the cell the path ends on, which is the target itself
+     *            when {@code maxDistanceToEnd} is 0. Null approves everything.
      */
     public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
             IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,

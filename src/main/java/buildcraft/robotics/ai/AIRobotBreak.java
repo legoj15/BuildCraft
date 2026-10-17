@@ -13,7 +13,6 @@ import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
@@ -33,8 +32,11 @@ import buildcraft.robotics.RobotProtection;
  *  Ported from 7.1.x {@code AIRobotBreak}.
  *
  *  <p>The per-cycle progress is one tick of {@link BlockState#getDestroyProgress} measured for a freshly reset
- *  BuildCraft fake player holding the robot's tool — the fake player is what carries the tool (and its
- *  efficiency enchantment) into vanilla's math, exactly as 7.1.x's {@code getFakePlayerWithTool} did.
+ *  fake player holding the robot's tool — the fake player is what carries the tool (and its
+ *  efficiency enchantment) into vanilla's math, exactly as 7.1.x's {@code getFakePlayerWithTool} did. It is the
+ *  home-station owner's fake player (the generic "[BuildCraft]" one for a robot with no owner), so the events that
+ *  maths posts - the break-speed and harvest checks a claim mod may listen to - name the owner, as the permission
+ *  probe below does.
  *  The 7.1.x crack-particle SFX is dropped; the crack overlay itself is kept through
  *  {@code destroyBlockProgress}.
  *
@@ -93,24 +95,18 @@ public class AIRobotBreak extends AIRobot {
             return;
         }
 
-        // The cached fake player, leased (reset on lease, scrubbed on close) for this cycle; the held tool goes in
-        // its main hand so getDestroyProgress sees the tool speed and the efficiency bonus.
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+        // The cached fake player, leased (reset on lease, scrubbed on close) for this cycle, as the home station's
+        // owner (the generic player when there is none) - the same identity the permission probe above asked as, so
+        // a break-speed or harvest listener and a claim mod see one player. The held tool goes in its main hand so
+        // getDestroyProgress sees the tool speed and the efficiency bonus.
+        try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
             breakCycle(serverLevel, state, hardness, lease.player());
         }
     }
 
     private void breakCycle(ServerLevel serverLevel, BlockState state, float hardness, FakePlayer player) {
-        player.setItemInHand(InteractionHand.MAIN_HAND, robot.getHeldItem());
-        //? if >=1.21.10 {
-        // 1.21.10 split the player's equipment table off the Inventory: setItemInHand now writes the
-        // table, while Player.getDestroySpeed still reads inventory.getSelectedItem(). Real players
-        // bridge the two while ticking; a never-ticked fake player bridges nowhere, and without this
-        // line every robot mined at hand speed — the tool's speed never entered the formula at all
-        // (found by the Ph9 break-progress game test).
-        player.getInventory().setSelectedItem(robot.getHeldItem());
-        //?}
-        // The same never-ticked-player trap, part two: vanilla's getDestroySpeed divides by 5 for a
+        RobotProtection.holdInMainHand(player, robot.getHeldItem());
+        // The same never-ticked-player trap as the hand bridge there, part two: vanilla's getDestroySpeed divides by 5 for a
         // miner that is not on the ground, and a fresh fake player's flag is false — a diamond pickaxe
         // read 1.6 instead of 8, and stone needed 151 cycles instead of 6. 7.1.x read the tool's dig
         // speed directly, with no player-standing penalty at all, so the flag is pinned instead.
@@ -126,6 +122,7 @@ public class AIRobotBreak extends AIRobot {
         if (blockDamage > 1.0F) {
             blockDamage = 0;
             ItemStack held = robot.getHeldItem();
+            // The owner's profile (the leased player's, which is the generic one when the robot has no owner).
             Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(
                     serverLevel, blockToBreak, held, player.getGameProfile());
             if (drops.isPresent()) {

@@ -29,6 +29,8 @@ public class AIRobotGotoStation extends AIRobot {
     private BlockPos stationIndex;
     private Direction stationSide;
     private boolean takeAsMain;
+    /** The station this AI took a plain (visit) claim on in {@link #start}, or null when it took none. */
+    private DockingStation visitClaim;
 
     public AIRobotGotoStation(IRobotAccess iRobot) {
         super(iRobot);
@@ -82,7 +84,11 @@ public class AIRobotGotoStation extends AIRobot {
         } else {
             // take() needs the concrete entity; a live GotoStation only ever drives a real robot, so the cast
             // is safe. Abstracting take() onto IRobotAccess would leak entity lifecycle into the AI surface.
+            boolean heldBefore = station.robotIdTaking() == robot.getRobotId();
             if (takeAsMain ? station.takeAsMain((EntityRobotBase) robot) : station.take((EntityRobotBase) robot)) {
+                // Only a plain claim this AI made is its to give back: the home link (a take-as-main goto's, or the
+                // robot's own station it flies home to) and a claim a parent took first outlive it.
+                visitClaim = !takeAsMain && !heldBefore ? station : null;
                 BlockPos approach = approachCell(stationIndex, stationSide, takeAsMain);
                 startDelegateAI(new AIRobotGotoBlock(robot,
                         approach.getX(), approach.getY(), approach.getZ()));
@@ -126,6 +132,19 @@ public class AIRobotGotoStation extends AIRobot {
             }
             robot.dock(station);
             terminate();
+        }
+    }
+
+    /** Gives back the visit claim {@link #start} took when the robot did not end up docked at the station: an abort
+     *  (the robot lives on, so no registry release runs) or a flight that failed. A robot that arrived keeps it, it
+     *  is the dock now and undocking frees it. {@code release} is owner-checked and refuses a main station, so the
+     *  robot's home link can never go through here. Not saved: a reloaded goto lost its claim to the unload. */
+    @Override
+    public void end() {
+        DockingStation station = visitClaim;
+        visitClaim = null;
+        if (station != null && station.robotIdTaking() == robot.getRobotId() && station.canRelease()) {
+            station.release((EntityRobotBase) robot);
         }
     }
 

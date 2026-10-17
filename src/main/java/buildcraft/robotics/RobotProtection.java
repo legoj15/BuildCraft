@@ -12,6 +12,10 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+
+import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
@@ -42,6 +46,23 @@ public final class RobotProtection {
      */
     public static FakePlayerUtil.Lease lease(IRobotAccess robot, ServerLevel level) {
         return FakePlayerUtil.lease(level, ownerOf(robot), null);
+    }
+
+    /**
+     * Puts the robot's tool in the leased fake player's main hand, the way a ticking player holds it: vanilla's
+     * destroy-speed maths and every claim or tool listener read the player's hand, not the stack an event carries.
+     * The lease takes the tool back out of the hand when it closes; the stack is never copied, so wear the use puts
+     * on it lands on the robot's own tool.
+     */
+    public static void holdInMainHand(FakePlayer player, ItemStack tool) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, tool);
+        //? if >=1.21.10 {
+        // 1.21.10 split the player's equipment table off the Inventory: setItemInHand now writes the table, while
+        // Player.getDestroySpeed still reads inventory.getSelectedItem(). Real players bridge the two while
+        // ticking; a never-ticked fake player bridges nowhere, and without this line a robot mined at hand speed -
+        // the tool's speed never entered the formula at all (found by the Ph9 break-progress game test).
+        player.getInventory().setSelectedItem(tool);
+        //?}
     }
 
     /** Whether protection mods let this robot break the block at {@code pos}; see {@link BlockUtil#canMachineBreak}. */

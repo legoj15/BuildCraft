@@ -135,22 +135,43 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return false;
     }
 
+    /** What the fluid in the build area means to the place-task gate; see {@link #scanAreaFluid()}. */
+    protected enum AreaFluid {
+        /** No fluid anywhere in the build box. */
+        NONE,
+        /** Fluid only inside cells the check sweep accepted as correct (a block the schematic wants waterlogged,
+         *  or one CLEAR tolerates because vanilla re-floods it from water the Builder cannot remove). It will
+         *  never be mopped, but it can still wash a fragile block away. */
+        TOLERATED_ONLY,
+        /** Fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
+        UNCLEARED
+    }
+
     /**
-     * O(n) scan of the build area for any fluid (source or flowing). Used by the place-task-add
-     * gate to defer placements in CLEAR mode until every fluid is mopped. Iteration short-
-     * circuits on the first fluid found, so the cost is a few microseconds when fluid is present
-     * (typical case while mopping) and the full O(n) only when fluid is fully cleared (one
-     * verification per tick at that point — negligible).
+     * O(n) scan of the build area for fluid (source or flowing), split into what mopping must still clear and
+     * what the check sweep already accepted. Used by the place-task-add gate: CLEAR defers placements while any
+     * fluid is {@link AreaFluid#UNCLEARED}, and (like REPLACE) keeps deferring fragile blocks while tolerated
+     * fluid remains. Counting accepted cells as "still to mop" would hold the gate shut for every other block
+     * for as long as one tolerated wet block stands, since mopping can never remove its water.
+     *
+     * <p>Iteration short-circuits on the first uncleared fluid, so the cost is a few microseconds while mopping
+     * (typical case) and the full O(n) only when the area is fully clear (one verification per tick at that
+     * point — negligible).
      */
-    protected boolean buildAreaHasAnyFluid() {
+    protected AreaFluid scanAreaFluid() {
         Snapshot.BuildingInfo info = getBuildingInfo();
-        if (info == null) return false;
+        if (info == null) return AreaFluid.NONE;
+        AreaFluid result = AreaFluid.NONE;
         for (BlockPos pos : info.box.getBlocksInArea()) {
-            if (!tile.getWorldBC().getFluidState(pos).isEmpty()) {
-                return true;
+            if (tile.getWorldBC().getFluidState(pos).isEmpty()) continue;
+            // CORRECT on a non-air cell with fluid in it: the check accepted the cell as is. A stale CORRECT
+            // is re-checked within a sweep, and an air cell is never accepted while it holds fluid.
+            if (checkResults[posToIndex(pos)] != CHECK_RESULT_CORRECT || isAir(pos)) {
+                return AreaFluid.UNCLEARED;
             }
+            result = AreaFluid.TOLERATED_ONLY;
         }
-        return false;
+        return result;
     }
 
     public void validate() {
@@ -399,7 +420,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             // get dried while the area has fluid. Carve them out of the gate so they queue
             // alongside fluid-break tasks.
             // Build-area-fluid gates (mode-dependent):
-            // - CLEAR: defer everything except waterlog-clear-only (those contribute to mopping).
+            // - CLEAR: defer everything except waterlog-clear-only (those contribute to mopping)
+            //   while fluid is left to mop. Fluid the check sweep ACCEPTED (a wet block the schematic
+            //   wants wet, or one CLEAR tolerates because vanilla re-floods it from water outside the
+            //   area, see BlueprintBuilder#isRefloodedByUnmoppableWater) can never be mopped, so it must
+            //   not hold the gate shut: once nothing else is left to mop, only fragile placements keep
+            //   waiting on it, exactly as in REPLACE.
             // - REPLACE: defer fragile placements only — solid placements proceed because they
             //   displace water on placement and aren't replaceable. Without this, fragile
             //   schematic blocks (snow_layer in the user's case) at positions where water flows
@@ -410,13 +436,14 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   counter bouncing up and down as items repeatedly cycle through extract+refund.
             //   Gating at queue-add stops the cycle entirely — items never leave inventory if
             //   the placement would defer.
-            boolean areaHasFluid = (getFluidMode() == EnumFluidHandlingMode.CLEAR
+            AreaFluid areaFluid = (getFluidMode() == EnumFluidHandlingMode.CLEAR
                     || getFluidMode() == EnumFluidHandlingMode.REPLACE)
-                && buildAreaHasAnyFluid();
-            boolean clearStillMopping = areaHasFluid
+                ? scanAreaFluid() : AreaFluid.NONE;
+            boolean clearStillMopping = areaFluid == AreaFluid.UNCLEARED
                 && getFluidMode() == EnumFluidHandlingMode.CLEAR;
-            boolean replaceFragileGated = areaHasFluid
-                && getFluidMode() == EnumFluidHandlingMode.REPLACE;
+            // Fragile blocks wait while any fluid is left: in REPLACE that is every fluid; in CLEAR it is the
+            // fluid that mopping cannot remove (a tolerated wet block), once nothing else is left to mop.
+            boolean fragileGated = areaFluid != AreaFluid.NONE && !clearStillMopping;
             if (!tile.canExcavate() || breakTasks.isEmpty()) {
                 if (blocks.length != 0) {
                     isDone = false;
@@ -433,7 +460,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     .mapToObj(this::indexToPos)
                     .filter(pos -> {
                         if (clearStillMopping) return isAllowedDuringFluidMop(pos);
-                        if (replaceFragileGated && isFragileSchematicAt(pos)) return false;
+                        if (fragileGated && isFragileSchematicAt(pos)) return false;
                         return true;
                     })
                     .filter(this::isReadyToPlace)

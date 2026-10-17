@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_clear_outside_reflood_cascade_settles",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1050,
+    "setup_ticks": 0,
+    "required": true
+}

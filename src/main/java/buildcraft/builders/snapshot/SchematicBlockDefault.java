@@ -812,9 +812,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * (preserves water aesthetically) — without the leniency the schematic would mismatch and
      * the Builder would break+place forever. Under CLEAR mode the user-stated intent is the
      * opposite: clear the water, even from waterlogged blocks. So in CLEAR we want the strict
-     * comparison so "world wet, schematic dry" is reported as NOT built and the position gets
-     * re-classified as TO_PLACE; the build path then sets the block dry, which (since waterlog
-     * is the entire fluid state for a non-LiquidBlock waterloggable block) clears the water.
+     * comparison so "world wet, schematic dry" is reported as NOT built. (The Builder's
+     * {@code canPlace} refuses any fluid cell under CLEAR, so the position is then classified
+     * TO_BREAK and mopped, not dried in place.) This strictness is deliberately mode-pure; the
+     * one case where it must give way, a block vanilla re-floods from water the Builder cannot
+     * remove, is decided by {@code BlueprintBuilder#isBlockCorrect}, which knows the build box.
      */
     public boolean isBuilt(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         if (blockState == null) return false;

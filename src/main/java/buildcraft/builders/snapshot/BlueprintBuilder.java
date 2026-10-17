@@ -23,10 +23,13 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.tuple.Pair;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -435,13 +438,51 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         ISchematicBlock schematic = getSchematicBlock(blockPos);
         if (schematic == null) return false;
         // Pass fluidMode through to the SchematicBlockDefault overload so CLEAR mode reports
-        // "world wet, schematic dry" as NOT built (i.e. queue it for drying). REPLACE/NO_REPLACE
-        // keep the lenient comparison via the no-mode default. Other ISchematicBlock impls
-        // (SchematicBlockFluid, SchematicBlockAir) don't care about waterlogging mode.
+        // "world wet, schematic dry" as NOT built (the cell is then routed to TO_BREAK, since canPlace
+        // refuses any fluid cell under CLEAR, and mopped). REPLACE/NO_REPLACE keep the lenient
+        // comparison via the no-mode default. Other ISchematicBlock impls (SchematicBlockFluid,
+        // SchematicBlockAir) don't care about waterlogging mode.
         if (schematic instanceof SchematicBlockDefault def) {
-            return def.isBuilt(tile.getWorldBC(), blockPos, tile.getFluidMode());
+            EnumFluidHandlingMode mode = tile.getFluidMode();
+            if (def.isBuilt(tile.getWorldBC(), blockPos, mode)) return true;
+            // Strict CLEAR rejected it. If the ONLY difference is that the world block is waterlogged
+            // where the schematic is dry, and vanilla will flood the cell again no matter how often the
+            // Builder dries it, tolerate the water: the lenient (NO_REPLACE) comparison isolates exactly
+            // that waterlogging difference.
+            return mode == EnumFluidHandlingMode.CLEAR
+                && def.isBuilt(tile.getWorldBC(), blockPos, EnumFluidHandlingMode.NO_REPLACE)
+                && isRefloodedByUnmoppableWater(blockPos);
         }
         return schematic.isBuilt(tile.getWorldBC(), blockPos);
+    }
+
+    /**
+     * Would vanilla waterlog a waterloggable block at {@code blockPos} again right after the Builder dries it,
+     * from water the Builder will never remove? Without this exemption CLEAR's strict {@code isBuilt} sends such
+     * a block round the break, place, re-flood loop for ever (an MJ drain that also keeps the whole base
+     * position from finishing).
+     *
+     * <p>Vanilla waterlogs a block only through the infinite-water rule ({@code FlowingFluid#getNewLiquid}):
+     * a cell with two or more horizontal water-SOURCE neighbours, over a solid or source floor, becomes a source
+     * itself, which waterlogs the block there; a single source or flowing water is held back. So the cause can
+     * be read straight off the neighbours, no attempt counting or flow tracing needed: count the horizontal water
+     * sources the Builder cannot clear. A neighbour counts when it lies outside the build box (never mopped) or
+     * is itself a cell this builder already accepted ({@code CORRECT}, e.g. a wet block tolerated by this very
+     * rule, so a row of blocks flooding each other along a shore settles instead of cascading). Two such
+     * sources re-flood the cell; one cannot. The solid-floor half of the vanilla rule is not mirrored: if the
+     * block is wet with two unremovable sources beside it, tolerating the water is right whatever is below.
+     */
+    private boolean isRefloodedByUnmoppableWater(BlockPos blockPos) {
+        int sources = 0;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos neighbour = blockPos.relative(direction);
+            FluidState fluid = tile.getWorldBC().getFluidState(neighbour);
+            if (!fluid.isSource() || !fluid.is(FluidTags.WATER)) continue;
+            boolean unmoppable = !getBuildingInfo().box.contains(neighbour)
+                || checkResults[posToIndex(neighbour)] == CHECK_RESULT_CORRECT;
+            if (unmoppable && ++sources >= 2) return true;
+        }
+        return false;
     }
 
     @Override

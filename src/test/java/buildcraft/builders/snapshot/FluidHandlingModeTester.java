@@ -794,7 +794,9 @@ public class FluidHandlingModeTester {
 
     /**
      * isBuilt's strict mode under CLEAR: schematic captured a dry fence, world has a wet fence,
-     * CLEAR fluidMode → must report NOT built (which is what triggers the dry-it placement).
+     * CLEAR fluidMode → must report NOT built (the Builder then mops the cell; only
+     * {@code BlueprintBuilder#isBlockCorrect} relaxes this, for water it can never keep out, see
+     * {@code BuilderRefloodTester}).
      */
     public static void testIsBuiltStrictInClearMode(GameTestHelper helper) {
         try {

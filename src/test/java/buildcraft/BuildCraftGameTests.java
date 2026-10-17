@@ -859,16 +859,20 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
 
         // Robotics — Zone Planner layer sync: a viewer's own paint is not echoed back to them (it would
-        // overwrite newer local strokes) while other viewers still get it; client-sent layers are
-        // clamped to the survey range with the server's own far chunks preserved, oversized layers are
-        // rejected (and the painter resynced), and unchanged layers are not re-serialised every tick.
+        // overwrite newer local strokes) while other viewers still get it, unless the paint was based on a
+        // revision the server has since moved past (then the painter is resynced); clients send only the
+        // survey square, the server keeps its own far chunks (which never count against the cap),
+        // oversized layers are rejected (and the painter resynced), and unchanged layers are not
+        // re-serialised every tick.
         reg.accept("buildcraftunofficial:zone_planner_paint_not_echoed", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintIsNotEchoedToItsOriginator);
         reg.accept("buildcraftunofficial:zone_planner_paint_reaches_other_viewers", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintStillReachesOtherViewers);
         reg.accept("buildcraftunofficial:zone_planner_paint_clamped_to_survey", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintBeyondSurveyRangeIsClamped);
-        reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintKeepingFarChunksIntactIsNotEchoed);
+        reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::farChunksStayOnTheServer);
         reg.accept("buildcraftunofficial:zone_planner_paint_oversized_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::oversizedPaintIsRejected);
         reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
         reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
+        reg.accept("buildcraftunofficial:zone_planner_paint_on_stale_base_resynced", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintOnAStaleBaseIsResynced);
+        reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_uncapped", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::farChunksNeverBlockPainting);
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.

@@ -20,7 +20,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * at a time, so another dimension or world never sees them; it is {@link #clear() cleared} when the planner GUI
  * opens, on logout and on client level unload; a chunk is {@link #invalidateChunk dropped} when it reloads or
  * unloads; and, because the client is never told when a single block changes, an entry older than a few seconds
- * is rebuilt (a few per {@link #tick}, so a wide survey view stays cheap). Everything here runs on the client
+ * is rebuilt (a few per {@link #tick}, oldest first, so a wide survey view stays cheap and its far side still
+ * refreshes); a chunk nobody has looked at for a minute is dropped. Everything here runs on the client
  * main thread; the events that drive it are wired in {@code BCRoboticsClient.GameBus}.
  */
 public enum ZonePlannerMapDataClient {

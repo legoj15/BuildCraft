@@ -239,21 +239,17 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         return ((ItemPaintbrush_BC8) stack.getItem()).getBrushFromStack(stack).colour;
     }
 
-    /** Rebuilds the in-progress paint preview as the saved layer plus the dragged rectangle set/cleared. */
+    /** Rebuilds the in-progress paint preview as the saved layer plus the dragged rectangle set/cleared,
+     *  clipped to the survey square the map outlines (the server keeps nothing painted beyond it). */
     private void applyPaintRect(BlockPos a, BlockPos b) {
         if (a == null || b == null || bufferColorIndex < 0) {
             return;
         }
-        bufferLayer = new ZonePlan(menu.tile.layers[bufferColorIndex]);
         BlockPos tile = menu.tile.getBlockPos();
-        int minX = Math.min(a.getX(), b.getX()), maxX = Math.max(a.getX(), b.getX());
-        int minZ = Math.min(a.getZ(), b.getZ()), maxZ = Math.max(a.getZ(), b.getZ());
-        boolean val = paintButton == 0;
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                bufferLayer.set(x - tile.getX(), z - tile.getZ(), val);
-            }
-        }
+        bufferLayer = ZonePlan.withRect(menu.tile.layers[bufferColorIndex],
+                a.getX() - tile.getX(), a.getZ() - tile.getZ(),
+                b.getX() - tile.getX(), b.getZ() - tile.getZ(),
+                paintButton == 0);
     }
 
     // ── Map interaction (shared logic; the per-node mouse overrides below delegate here) ──────────

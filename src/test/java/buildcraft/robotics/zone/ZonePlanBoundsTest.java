@@ -81,7 +81,7 @@ public class ZonePlanBoundsTest {
 
     @Test
     public void testBoundedReadRejectsAnAbsurdDeclaredCount() {
-        for (int declared : new int[] {Integer.MAX_VALUE, ZonePlan.MAX_CHUNKS_ON_WIRE + 1, -1}) {
+        for (int declared : new int[] {Integer.MAX_VALUE, ZonePlan.MAX_CHUNKS + 1, -1}) {
             FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
             buf.writeInt(declared); // and no entries behind it: honouring the count would run off the buffer
             ZonePlan plan = cells(7, 7);
@@ -112,6 +112,88 @@ public class ZonePlanBoundsTest {
         ZonePlan plan = new ZonePlan();
         Assertions.assertFalse(plan.readFromByteBufBounded(buf));
         Assertions.assertTrue(plan.isEmpty());
+    }
+
+    // ── What a client sends: the survey square only ─────────────────────────────────────
+
+    private static ZonePlan surveyWire(ZonePlan plan, int[] declared) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        plan.writeSurveyToByteBuf(buf);
+        declared[0] = buf.getInt(buf.readerIndex());
+        ZonePlan received = new ZonePlan();
+        Assertions.assertTrue(received.readFromByteBufBounded(buf), "a survey-only message passes the bounded reader");
+        return received;
+    }
+
+    @Test
+    public void testSurveyWireCarriesOnlyTheSquare() {
+        int[] declared = new int[1];
+        ZonePlan received = surveyWire(cells(1, 1, FAR, 0, -FAR, 40, 2, 3), declared);
+        Assertions.assertEquals(1, declared[0], "the declared count matches the chunks written");
+        Assertions.assertTrue(received.sameContent(cells(1, 1, 2, 3)), "only the in-square chunk travels");
+        Assertions.assertTrue(received.isWithinSurvey());
+    }
+
+    /** A layer can hold far chunks without limit (each map location read in adds its own zone); they never
+     *  travel up, so they can never push a paint message past the cap and make the layer unpaintable. */
+    @Test
+    public void testFarChunksNeverCountAgainstThePaintCap() {
+        ZonePlan full = new ZonePlan();
+        int r = ZonePlan.MAX_CHUNK_RADIUS;
+        for (int cx = -r; cx < r; cx++) {
+            for (int cz = -r; cz < r; cz++) {
+                full.set(cx << 4, cz << 4, true);
+            }
+        }
+        for (int i = 0; i < ZonePlan.MAX_CHUNKS; i++) {
+            full.set(FAR + ((i % 300) << 4), (i / 300) << 4, true);
+        }
+        int[] declared = new int[1];
+        ZonePlan received = surveyWire(full, declared);
+        Assertions.assertEquals(ZonePlan.MAX_CHUNKS, declared[0], "a full square is exactly the cap");
+        Assertions.assertEquals(ZonePlan.MAX_CHUNKS, received.getChunkKeys().size());
+    }
+
+    @Test
+    public void testIsWithinSurvey() {
+        Assertions.assertTrue(new ZonePlan().isWithinSurvey());
+        Assertions.assertTrue(cells(1, 1, -40, 300).isWithinSurvey());
+        Assertions.assertFalse(cells(1, 1, FAR, 0).isWithinSurvey());
+        int edge = ZonePlan.MAX_CHUNK_RADIUS * 16;
+        Assertions.assertTrue(cells(edge - 1, -edge).isWithinSurvey(), "the last block inside each edge");
+        Assertions.assertFalse(cells(edge, 0).isWithinSurvey(), "the first block past the positive edge");
+        Assertions.assertFalse(cells(0, -edge - 1).isWithinSurvey(), "the first block past the negative edge");
+    }
+
+    // ── The viewport's paint rectangle ──────────────────────────────────────────────────
+
+    @Test
+    public void testPaintRectMarksTheRectangleOnACopy() {
+        ZonePlan base = cells(50, 50);
+        ZonePlan painted = ZonePlan.withRect(base, 2, 3, -1, 0, true);
+        Assertions.assertEquals(4 * 4 + 1, painted.getAll().size(), "corners in either order, inclusive");
+        Assertions.assertTrue(painted.get(-1, 0) && painted.get(2, 3) && painted.get(50, 50));
+        Assertions.assertFalse(base.get(0, 0), "the base layer is not touched");
+
+        ZonePlan erased = ZonePlan.withRect(painted, 0, 0, 2, 3, false);
+        Assertions.assertFalse(erased.get(1, 1));
+        Assertions.assertTrue(erased.get(-1, 0) && erased.get(50, 50));
+    }
+
+    @Test
+    public void testPaintRectIsClippedToTheSurveySquare() {
+        int edge = ZonePlan.MAX_CHUNK_RADIUS * 16;
+        ZonePlan painted = ZonePlan.withRect(new ZonePlan(), edge - 2, 0, edge + 500, 1, true);
+        Assertions.assertEquals(2 * 2, painted.getAll().size(), "only the two columns inside the edge are painted");
+        Assertions.assertTrue(painted.isWithinSurvey());
+
+        ZonePlan outside = ZonePlan.withRect(cells(1, 1), FAR, FAR, FAR + 10, FAR + 10, true);
+        Assertions.assertTrue(outside.sameContent(cells(1, 1)), "a stroke wholly outside paints nothing");
+
+        // A far zone the layer was given (read from a map location) cannot be erased from the viewport either.
+        ZonePlan far = cells(FAR, 0);
+        ZonePlan wiped = ZonePlan.withRect(far, -edge - 3000, -edge - 3000, FAR + 10, edge + 3000, false);
+        Assertions.assertTrue(wiped.get(FAR, 0), "the far chunk survives an erase that spans it");
     }
 
     // ── The server-side merge ───────────────────────────────────────────────────────────

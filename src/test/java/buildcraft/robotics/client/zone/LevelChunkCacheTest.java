@@ -158,6 +158,95 @@ public class LevelChunkCacheTest {
         Assertions.assertEquals(0, stillOld, "the next tick's budget finishes the job");
     }
 
+    /**
+     * The steady state of a wide view: every chunk is looked at every tick, in the same row-major order, and there
+     * are more of them than the budget can rebuild within one refresh age. Every one must still be rebuilt within
+     * a bounded time &mdash; a budget spent in call order rebuilds only the head of the scan, forever.
+     */
+    @Test
+    public void testAWideViewIsRefreshedEverywhereNotJustAtTheHeadOfTheScan() {
+        for (int visible : new int[] {300, 1000}) {
+            assertEveryVisibleChunkIsRefreshed(visible);
+        }
+    }
+
+    private void assertEveryVisibleChunkIsRefreshed(int visible) {
+        Source src = new Source();
+        LevelChunkCache<String, String> wide = new LevelChunkCache<>(src);
+        int side = (int) Math.ceil(Math.sqrt(visible));
+        String[] last = new String[visible];
+        int[] builtAt = new int[visible];
+        // Oldest-first serves each chunk once per ceil(visible / budget) ticks once it is due.
+        int bound = LevelChunkCache.REFRESH_AFTER_TICKS
+                + (visible + LevelChunkCache.REFRESHES_PER_TICK - 1) / LevelChunkCache.REFRESHES_PER_TICK + 2;
+        int ticks = 3 * bound;
+        int worstAge = 0;
+        for (int t = 0; t < ticks; t++) {
+            if (t > 0) {
+                wide.tick();
+            }
+            for (int i = 0; i < visible; i++) {
+                String v = wide.get(overworld, i % side, i / side);
+                if (v != last[i]) {
+                    last[i] = v;
+                    builtAt[i] = t;
+                }
+                worstAge = Math.max(worstAge, t - builtAt[i]);
+            }
+        }
+        Assertions.assertTrue(worstAge <= bound, visible + " visible chunks: the stalest went " + worstAge
+                + " ticks without a rebuild (bound " + bound + ")");
+    }
+
+    @Test
+    public void testOldestDueEntriesAreRebuiltFirst() {
+        // Two generations, each twice the budget: A built at tick 0 (scanned last), B one tick later (scanned
+        // first). A's first half is rebuilt alone when it falls due; on the next tick A's second half and all of
+        // B are due together, and the older half of A must win the budget although B comes first in the scan.
+        int n = 2 * LevelChunkCache.REFRESHES_PER_TICK;
+        for (int x = 0; x < n; x++) {
+            cache.get(overworld, 100 + x, 0);
+        }
+        cache.tick();
+        String[] snapA = new String[n];
+        String[] snapB = new String[n];
+        int last = LevelChunkCache.REFRESH_AFTER_TICKS + 1;
+        for (int t = 1; t <= last; t++) {
+            for (int x = 0; x < n; x++) {
+                String b = cache.get(overworld, x, 0);
+                if (t == LevelChunkCache.REFRESH_AFTER_TICKS - 1) {
+                    snapB[x] = b;
+                }
+            }
+            for (int x = 0; x < n; x++) {
+                String a = cache.get(overworld, 100 + x, 0);
+                if (t == LevelChunkCache.REFRESH_AFTER_TICKS - 1) {
+                    snapA[x] = a;
+                }
+            }
+            if (t < last) {
+                cache.tick();
+            }
+        }
+        for (int x = 0; x < n; x++) {
+            Assertions.assertNotSame(snapA[x], cache.get(overworld, 100 + x, 0),
+                    "every chunk of the older generation is rebuilt first (A" + x + ")");
+            Assertions.assertSame(snapB[x], cache.get(overworld, x, 0),
+                    "the younger generation waits its turn (B" + x + ")");
+        }
+    }
+
+    @Test
+    public void testEntriesNobodyLooksAtAreEventuallyEvicted() {
+        cache.get(overworld, 0, 0);
+        cache.get(overworld, 1, 0);
+        for (int t = 0; t <= LevelChunkCache.EVICT_AFTER_UNUSED_TICKS; t++) {
+            cache.get(overworld, 1, 0); // still in view
+            cache.tick();
+        }
+        Assertions.assertEquals(1, cache.size(), "a chunk panned out of view does not stay cached forever");
+    }
+
     @Test
     public void testARefreshOfAChunkThatHasUnloadedDropsIt() {
         cache.get(overworld, 2, 2);

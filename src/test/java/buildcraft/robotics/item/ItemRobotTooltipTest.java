@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.VanillaSetupBaseTester;
@@ -79,6 +80,51 @@ public class ItemRobotTooltipTest extends VanillaSetupBaseTester {
                 fullLines.get(fullLines.size() - 1).getString(),
                 flatLines.get(flatLines.size() - 1).getString(),
                 "the last line is the charge readout, and a full robot must not read like a flat one");
+    }
+
+    /** The charge line is the tooltip's last line (the empty-board case has none, so callers use a board robot). */
+    private static Component chargeLineOf(long energy) {
+        List<Component> lines = ItemRobot.tooltipLines(
+                ItemRobot.createRobotStack(BoardRobotPickerNBT.INSTANCE.getID(), energy), false);
+        return lines.get(lines.size() - 1);
+    }
+
+    private static TranslatableContents translatable(Component line) {
+        Assertions.assertInstanceOf(TranslatableContents.class, line.getContents(),
+                "the charge line must be a translatable Component so each language owns its wording: " + line);
+        return (TranslatableContents) line.getContents();
+    }
+
+    @Test
+    public void aPartialChargeIsOneFormatKeyTakingThePercentage() {
+        // The line used to be Component.literal(pct + "% ").append(translatable("tip.charge.charged")): the percentage
+        // always came first, whatever the language. One format key lets the translation place the number itself.
+        Component line = chargeLineOf(buildcraft.api.robots.EntityRobotBase.MAX_POWER / 2);
+
+        TranslatableContents contents = translatable(line);
+        Assertions.assertEquals("tip.charge.percent", contents.getKey());
+        Assertions.assertArrayEquals(new Object[] { 50 }, contents.getArgs(),
+                "the only argument is the whole-number percentage; the '%' sign is the lang file's");
+        Assertions.assertTrue(line.getSiblings().isEmpty(),
+                "no glued-on siblings: anything appended around the translation fixes the word order in code");
+    }
+
+    @Test
+    public void aPartialChargeKeepsItsRampColour() {
+        long max = buildcraft.api.robots.EntityRobotBase.MAX_POWER;
+        Assertions.assertEquals(Component.literal("").withStyle(ChatFormatting.GREEN).getStyle(),
+                chargeLineOf(max * 85 / 100).getStyle(), "85% reads green");
+        Assertions.assertEquals(Component.literal("").withStyle(ChatFormatting.YELLOW).getStyle(),
+                chargeLineOf(max / 2).getStyle(), "50% reads yellow");
+        Assertions.assertEquals(Component.literal("").withStyle(ChatFormatting.DARK_RED).getStyle(),
+                chargeLineOf(max / 100).getStyle(), "1% reads dark red");
+    }
+
+    @Test
+    public void theEmptyAndFullChargeLinesStayTheirOwnKeys() {
+        long max = buildcraft.api.robots.EntityRobotBase.MAX_POWER;
+        Assertions.assertEquals("tip.charge.fullcharge", translatable(chargeLineOf(max)).getKey());
+        Assertions.assertEquals("tip.charge.nocharge", translatable(chargeLineOf(0L)).getKey());
     }
 
     @Test

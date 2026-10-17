@@ -271,8 +271,10 @@ robot places, docks, idles — that is the Ph3 MVP. (Ph4 revisits whether an emp
 still place once real boards exist.)
 
 Tooltip: charge % with the 7.1.x colour ladder. The 7.1.x `tip.gate.*` lang keys DO NOT exist on
-main — add three NEW keys under an honest namespace: `tip.charge.charged`, `tip.charge.fullcharge`,
-`tip.charge.nocharge` (en_us.json; zh_cn falls back). Do not resurrect the `tip.gate.*` prefix —
+main — add three NEW keys under an honest namespace: `tip.charge.percent` (a `%s%% Charged` format key
+taking the percentage, so each language places the number itself — originally `tip.charge.charged` with
+the code gluing `"<pct>% "` in front), `tip.charge.fullcharge`, `tip.charge.nocharge` (en_us.json; zh_cn
+translates all three). Do not resurrect the `tip.gate.*` prefix —
 it was a 7.1.x gates/robots string-sharing accident.
 
 Creative tab: empty-board entry at 0 energy + per-registered-board 0/full entries (auto-grows in

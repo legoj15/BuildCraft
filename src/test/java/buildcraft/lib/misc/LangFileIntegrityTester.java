@@ -283,6 +283,22 @@ public class LangFileIntegrityTester {
         }
     }
 
+    /** The robot's partial-charge line ({@code ItemRobot}) is one format key taking the percentage, so each language
+     *  places the number itself instead of the code gluing {@code "50% "} in front of a translated word. */
+    @Test
+    public void chargePercentFormatKeyExistsInBothLanguages() {
+        for (String file : new String[] { EN, ZH }) {
+            String value = parse(file).get("tip.charge.percent");
+            Assertions.assertNotNull(value, file + " is missing the charge-percentage format key");
+            Assertions.assertEquals(1, countFormatSpecs(value),
+                    file + ": tip.charge.percent must take exactly the percentage (one placeholder)");
+            // Vanilla reads '%%' as a literal percent sign; a bare '%' in front of a space would be misparsed.
+            Assertions.assertTrue(String.format(value, 50).contains("50%"),
+                    file + ": tip.charge.percent must render the number followed by a literal percent sign, got "
+                            + String.format(value, 50));
+        }
+    }
+
     /** The four 1.12.2-era {@code tile.*.name} titles each duplicated a modern {@code block.*} key with the same
      *  text, and the GUI titles were still pointed at the legacy copies — two keys to keep in sync for one name,
      *  and a rename done on only one of them silently splits the block's item name from its screen title. */

@@ -5,26 +5,36 @@
  */
 package buildcraft.core.item;
 
+import java.util.Random;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.core.IZone;
 import buildcraft.core.BCCoreItems;
 import buildcraft.robotics.zone.ZonePlan;
 
-/** {@link ItemMapLocation#getZone} on a ZONE map: a map whose plan marks nothing (crafted, legacy, or a ZONE map
- *  with no {@code chunkMapping}) is no zone at all. Every caller already reads null as "no zone"; an empty plan
- *  instead reached the robot searches, whose zone sampler gets null back from it and threw on every tick. */
+/** {@link ItemMapLocation#getZone} on a ZONE map. A map whose plan marks nothing (crafted, legacy, or a ZONE map
+ *  with no {@code chunkMapping}, which earlier planner builds wrote) must stay a zone that contains nothing, NOT
+ *  become "no zone": to a robot, no work zone means unbounded work (an unzoned block search, a bomber dropping
+ *  anywhere within range, load/unload falling back to any station), while an empty zone keeps it idle. The zone
+ *  samplers read the empty plan's null sample as "nothing to find". */
 public class ItemMapLocationZoneTest extends VanillaSetupBaseTester {
 
     @Test
-    public void aZoneMapThatMarksNothingIsNoZone() {
+    public void aZoneMapThatMarksNothingIsAZoneThatContainsNothing() {
         ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
         ItemMapLocation.setZone(map, new ZonePlan());
 
-        Assertions.assertNull(BCCoreItems.MAP_LOCATION.get().getZone(map), "an empty zone plan is no zone");
+        IZone zone = BCCoreItems.MAP_LOCATION.get().getZone(map);
+
+        Assertions.assertNotNull(zone, "an empty zone plan is still a zone: no zone would let a robot work anywhere");
+        Assertions.assertFalse(zone.contains(new Vec3(30.5, 64.5, 0.5)), "the empty zone contains no block");
+        Assertions.assertNull(zone.getRandomBlockPos(new Random(1), -64, 319), "the empty zone has nothing to sample");
     }
 
     @Test

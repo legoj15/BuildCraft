@@ -35,7 +35,6 @@ public class ActionRobotWorkInAreaTest extends VanillaSetupBaseTester {
     public void workAreaResolvesZoneFromMapParam() {
         ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
         ZonePlan zone = new ZonePlan();
-        zone.set(1, 1, true); // a plan that marks nothing is no zone at all (ItemMapLocation.getZone)
         ItemMapLocation.setZone(map, zone);
 
         IZone resolved = ActionRobotWorkInArea.getArea(new MockRobotAccess(),
@@ -48,7 +47,6 @@ public class ActionRobotWorkInAreaTest extends VanillaSetupBaseTester {
     public void loadUnloadAreaResolvesZoneFromMapParam() {
         ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
         ZonePlan zone = new ZonePlan();
-        zone.set(1, 1, true); // a plan that marks nothing is no zone at all (ItemMapLocation.getZone)
         ItemMapLocation.setZone(map, zone);
 
         IZone resolved = ActionRobotWorkInArea.getArea(new MockRobotAccess(),

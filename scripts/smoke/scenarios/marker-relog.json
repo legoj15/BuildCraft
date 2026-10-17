@@ -1,0 +1,72 @@
+{
+  "name": "marker-relog",
+  "description": "Volume markers across worlds and a relog (client marker cache follows its level; the join resync refills it). World A: build and connect a box, look. Leave, join world B (a copy of A with the same dimension key and the same coordinates, markers placed but NOT connected): no box may be drawn. Leave, rejoin A: the box must be back. Both worlds are left marker-free, because a world that still holds the markers sends them (or their removal) to the client and would hide a stale connection; delete saves/bc-smoke-b if either was left dirty. Run it a second time after the very first run on a node, which only creates the world the second save is copied from.",
+  "base": [0, 150, 0],
+  "extraSaves": ["bc-smoke-b"],
+  "steps": [
+    { "do": "wait", "ms": 2500 },
+    { "label": "A: platform, four markers", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear",
+      "fill {X-8} {Y-1} {Z-4} {X+8} {Y-1} {Z+14} minecraft:smooth_stone",
+      "?fill {X-8} {Y} {Z-4} {X+8} {Y+8} {Z+14} minecraft:air",
+      "setblock {X-2} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X+3} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X-2} {Y+6} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X-2} {Y+1} {Z+9} buildcraftunofficial:marker_volume"
+    ] },
+    { "do": "wait", "ms": 1500 },
+    { "do": "tp", "at": [-2, 0, 1], "yaw": 0, "pitch": 2 },
+    { "do": "aim", "at": [-2, 1, 4] },
+    { "label": "A: right-click a marker to connect the box", "do": "use" },
+    { "do": "wait", "ms": 1500 },
+    { "do": "tp", "at": [0, 0, -3], "yaw": 0, "pitch": -12 },
+    { "do": "wait", "ms": 1000 },
+    { "name": "A-connected", "do": "shot", "look": "a red laser box spans the four markers" },
+
+    { "label": "leave A", "do": "pause" },
+    { "do": "click", "widgetText": "Save and Quit to Title" },
+    { "do": "expectScreen", "contains": "TitleScreen", "timeoutSec": 60 },
+    { "do": "click", "widgetText": "Singleplayer" },
+    { "do": "expectScreen", "contains": "SelectWorldScreen", "timeoutSec": 30 },
+    { "do": "wait", "ms": 2500 },
+    { "label": "select the second world in the list (A was just played, so it is first)", "do": "click", "x": 213, "y": 100 },
+    { "label": "play it (the click can report a timeout on some nodes while the world loads; inWorld is the real check)", "do": "click", "widgetText": "Play Selected World", "allowMiss": true },
+    { "do": "inWorld" },
+    { "do": "wait", "ms": 2500 },
+
+    { "label": "B: same rig, markers NOT connected (no clearing first: removing a marker tells the client to forget it, which would hide a stale connection)", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear",
+      "fill {X-8} {Y-1} {Z-4} {X+8} {Y-1} {Z+14} minecraft:smooth_stone",
+      "setblock {X-2} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X+3} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X-2} {Y+6} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X-2} {Y+1} {Z+9} buildcraftunofficial:marker_volume"
+    ] },
+    { "do": "tp", "at": [0, 0, -3], "yaw": 0, "pitch": -12 },
+    { "do": "wait", "ms": 3000 },
+    { "name": "B-no-stale-box", "do": "shot", "look": "four markers and NO red box: world A's connection must not be drawn in world B" },
+
+    { "label": "B: take the rig down again, so both saves are marker-free for the next run", "do": "cmd", "run": [
+      "?fill {X-8} {Y} {Z-4} {X+8} {Y+8} {Z+14} minecraft:air"
+    ] },
+    { "do": "wait", "ms": 1000 },
+    { "label": "leave B", "do": "pause" },
+    { "do": "click", "widgetText": "Save and Quit to Title" },
+    { "do": "expectScreen", "contains": "TitleScreen", "timeoutSec": 60 },
+    { "do": "click", "widgetText": "Singleplayer" },
+    { "do": "expectScreen", "contains": "SelectWorldScreen", "timeoutSec": 30 },
+    { "do": "wait", "ms": 2500 },
+    { "label": "select the second world in the list (B was just played, so it is first)", "do": "click", "x": 213, "y": 100 },
+    { "label": "play it (the click can report a timeout on some nodes while the world loads; inWorld is the real check)", "do": "click", "widgetText": "Play Selected World", "allowMiss": true },
+    { "do": "inWorld" },
+    { "do": "wait", "ms": 2500 },
+
+    { "do": "tp", "at": [0, 0, -3], "yaw": 0, "pitch": -12 },
+    { "do": "wait", "ms": 3000 },
+    { "name": "A-after-relog", "do": "shot", "look": "the same red box as A-connected: the join resync brought the connection back" },
+    { "label": "A: take the rig down again (B is copied from A, and must start without markers)", "do": "cmd", "run": [
+      "?fill {X-8} {Y} {Z-4} {X+8} {Y+8} {Z+14} minecraft:air"
+    ] },
+    { "do": "wait", "ms": 1000 }
+  ]
+}

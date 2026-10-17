@@ -45,6 +45,8 @@ $Nodes = @($Nodes | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim(
 if (-not $Scenario) { $Scenario = Join-Path $PSScriptRoot 'scenarios/line8.json' }
 $ScenarioData = Get-Content -Raw -LiteralPath $Scenario | ConvertFrom-Json
 if (-not $OutDir) { $OutDir = Join-Path $Repo ("build/smoke/" + (Get-Date -Format 'yyyyMMdd-HHmmss')) }
+# Absolute: screenshot paths are handed to the CLIENT, whose working directory is its run folder, not this one.
+$OutDir = [System.IO.Path]::GetFullPath($OutDir, (Get-Location).Path)
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $BridgeFile = Join-Path $HOME '.mcdevbridge/bridge.json'
 $SaveName = 'bc-smoke'
@@ -215,6 +217,28 @@ function Stop-Client($Client) {
         & taskkill /PID $Client.Gradle.Id /T /F | Out-Null
     }
     $script:Bridge = $null
+}
+
+function Send-GameEscape {
+    # The bridge can only press a key into an OPEN screen (/screenkeys answers "no screen open" in the world), and the
+    # pause menu has no keybind, so this posts a real Esc key message to the game window. PostMessage needs no focus
+    # (GLFW turns it into a key event on the window it was posted to), so it works from this hidden background
+    # process, takes no focus from the user, and can never land in another application the way keybd_event would.
+    if (-not ('SmokeWin32' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SmokeWin32 {
+    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
+}
+'@
+    }
+    $handle = (Get-Process -Id ([int]$script:Bridge.pid)).MainWindowHandle
+    if ($handle -eq [IntPtr]::Zero) { throw 'the game window has no handle to send Esc to' }
+    # WM_KEYDOWN / WM_KEYUP, VK_ESCAPE, scancode 1 (lParam bits 16-23), repeat 1; the key-up also sets bits 30 and 31.
+    [SmokeWin32]::PostMessage($handle, 0x100, [IntPtr]0x1B, [IntPtr]0x00010001) | Out-Null
+    Start-Sleep -Milliseconds 80
+    [SmokeWin32]::PostMessage($handle, 0x101, [IntPtr]0x1B, [IntPtr]([int64]0xC0010001)) | Out-Null
 }
 
 function Invoke-MenuClick([string]$Text) {
@@ -390,6 +414,18 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $got = Wait-Until { $c = Get-ScreenClass; if (($want -eq '' -and $c -eq '') -or ($want -ne '' -and $c -match $want)) { if ($c) { $c } else { '(none)' } } } $timeout "screen matching '$want' (open: '$(Get-ScreenClass)')"
             $detail = $got
         }
+        # Esc into the game window: opens the pause menu from the world (see Send-GameEscape). Follow with
+        # `click` "Save and Quit to Title" to leave the world.
+        'pause' {
+            Send-GameEscape
+            $detail = Wait-Until { $c = Get-ScreenClass; if ($c -match 'PauseScreen') { $c } } 10 'the pause menu to open'
+        }
+        # Waits until the player is in a world with no screen open: after `click` "Play Selected World".
+        'inWorld' {
+            $timeout = if ($Step.PSObject.Properties['timeoutSec']) { $Step.timeoutSec } else { 300 }
+            Wait-InWorld $timeout
+            $detail = 'in world'
+        }
         default { throw "unknown step type '$($Step.do)'" }
     }
     [pscustomobject]@{ detail = $detail; shot = $shot }
@@ -438,6 +474,14 @@ foreach ($node in $Nodes) {
         $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
         if (-not (Test-Path $savePath) -and $saves.Count -eq 1) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
         $haveSave = Test-Path $savePath
+        # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
+        # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
+        if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
+            foreach ($extra in @($ScenarioData.extraSaves)) {
+                $extraPath = Join-Path $prep.RunDir "saves/$extra"
+                if (-not (Test-Path $extraPath)) { Copy-Item -Recurse -LiteralPath $savePath -Destination $extraPath }
+            }
+        }
         Write-Host "[$node] booting client ($(if ($haveSave) { 'quick-play' } else { 'first run: creating the world' }))"
         $client = Start-Client $node $prep.RunDir $haveSave $nodeOut
         $report.bridgeVersion = $client.BridgeVersion

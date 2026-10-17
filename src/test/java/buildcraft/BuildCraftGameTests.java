@@ -872,6 +872,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_reserved_not_docked_no_charge", () -> buildcraft.robotics.RobotStationPluggableTester::testReservedButNotDockedRobotDoesNotCharge);
         reg.accept("buildcraftunofficial:robot_station_item_output_injects", () -> buildcraft.robotics.RobotStationPluggableTester::testItemOutputInjectsIntoPipeNetwork);
         reg.accept("buildcraftunofficial:robot_station_kinesis_charges_docked_robot", () -> buildcraft.robotics.RobotStationPluggableTester::testKinesisPipeChargesDockedRobot);
+        // ...and its Forge-Energy twins: an RF kinesis pipe feeds the docked robot at the configured MJ/RF ratio,
+        // and every gate on that path (powerMode, disableRfPipe, docked-only) plus the MJ/item controls.
+        reg.accept("buildcraftunofficial:robot_station_rf_kinesis_charges_at_ratio", () -> buildcraft.robotics.RobotStationPluggableTester::testRfKinesisPipeChargesDockedRobotAtConfiguredRatio);
+        reg.accept("buildcraftunofficial:robot_station_rf_gates", () -> buildcraft.robotics.RobotStationPluggableTester::testRfStationForgeEnergyIsGatedLikeEveryMachine);
         reg.accept("buildcraftunofficial:robot_station_render_state_network_round_trip", () -> buildcraft.robotics.RobotStationPluggableTester::testRenderStateSurvivesNetworkRoundTrip);
         // ...and the one path none of the above touch: a PLAYER placing the pluggable with the item. Every
         // test above installs it programmatically, which is why the item being inert in the hand went
@@ -943,6 +947,8 @@ public class BuildCraftGameTests {
         // the permissive loop; robot_station_forbid_robot below is its replacement. Remaining here: the
         // AIRobotMain ladder's recharge leg against a live kinesis rig.
         reg.accept("buildcraftunofficial:robot_low_power_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtPoweredStation);
+        // ...and the same leg when the only power is Forge Energy on an RF kinesis pipe.
+        reg.accept("buildcraftunofficial:robot_low_power_recharges_at_rf_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtRfStation);
 
         // Robotics Ph5 — the board-catalog AIs, driven SYNCHRONOUSLY on unadded robots (search is pure block
         // computation; the goto leg's delta movement is applied by hand, as the entity tick would): the block

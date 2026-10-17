@@ -140,11 +140,3 @@ One-line technical breadcrumbs for bullets that don't need a full section:
 ## JEI old transfer overload
 
 JEI 30.30.0.203+ (26.2 node) marks the six-arg `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal but keeps it abstract, so `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler` must still declare it; their real entry point on 26.2 is the `//? if >=26.2` `transferRecipe(IRecipeTransferContext, boolean)` override, and both delegate to a private `transfer(...)`. Reopen trigger: a JEI 30.x (or later 26.2+ line) release where the six-arg method is gone. Then delete the old override behind `//? if <that line` (other nodes' JEI never had the context overload), and remove the `IRecipeTransferHandler#transferRecipe` entry from `ForRemovalApiGuardTester.PENDING`. Note that dropping it also drops support for JEI < 30.30 on 26.2, so add a `jei` version range to the mods.toml at that point.
-
-## NeoForge 26.2.0.87 recompile break
-
-Bumping the 26.2 node to NeoForge 26.2.0.87 fails in `:26.2:createMinecraftArtifacts` — NeoForm's recompile of the patched MC sources dies with `contents() in <anonymous net.minecraft.core.HolderSet$1> cannot override contents() in net.minecraft.core.HolderSet.Named; attempting to assign weaker access privileges; was public` (line 44 = the `emptyNamed` anonymous-class override in `net/minecraft/core/HolderSet.java`).
-
-Diagnosed 2026-09-11: [PR #3451](https://github.com/neoforged/NeoForge/pull/3451) (registry-based-conditions fix, in .87 only) added two accesstransformer.cfg lines widening `HolderSet$Named contents()` and `HolderSet$1 contents()` to public. ModDevGradle's recompile classpath carries the AT-applied binary while the decompiled sources still declare both methods `protected`, so javac rejects the override. Verified the patched-sources zip for .87 is clean (`protected` everywhere) — it is purely the AT/binary-vs-source mismatch. Breaks `createMinecraftArtifacts` for every ModDevGradle user on .87; 26.1.2.109 does not carry the AT change and builds fine.
-
-**Unblock:** bump the pin once NeoForge ships a fix (drop the two `HolderSet` AT lines or patch the sources to match). The SessionStart hook will re-flag the node; file/check an upstream issue at that point if still broken.

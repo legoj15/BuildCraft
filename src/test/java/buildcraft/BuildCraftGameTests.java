@@ -467,6 +467,17 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_isbuilt_lenient_in_replace", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsBuiltLenientInReplaceMode);
         reg.accept("buildcraftunofficial:fluidmode_clear_only_under_clear", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsWaterlogClearOnlyOnlyFiresUnderClear);
         reg.accept("buildcraftunofficial:fluidmode_clear_only_requires_matching_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsWaterlogClearOnlyRequiresMatchingBlock);
+        // Live Builder tick loop in CLEAR mode: a dry waterloggable beside OUTSIDE water must not loop.
+        reg.accept("buildcraftunofficial:builder_clear_outside_reflood_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesOutsideFedWaterlogging);
+        reg.accept("buildcraftunofficial:builder_clear_outside_reflood_cascade_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesCascadingWaterlogging);
+        reg.accept("buildcraftunofficial:builder_clear_still_dries_bucket_waterlogged", () -> buildcraft.builders.BuilderRefloodTester::clearModeStillDriesBucketWaterloggedBlock);
+        reg.accept("buildcraftunofficial:builder_clear_reflood_spread_into_air_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesWaterSpreadIntoAirFromToleratedBlock);
+        reg.accept("buildcraftunofficial:builder_clear_reflood_air_source_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesInfiniteSourceInAirCell);
+        reg.accept("buildcraftunofficial:builder_clear_reflood_distant_fragile_builds", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratedWaterDoesNotBlockDistantFragileBlocks);
+        reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_beside_water_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileBlockBesideToleratedWater);
+        reg.accept("buildcraftunofficial:builder_clear_flanked_no_floor_dries", () -> buildcraft.builders.BuilderRefloodTester::clearModeDriesFlankedBlockWithNoFloor);
+        reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_resourced_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileCellResourcedByOutsideWater);
+        reg.accept("buildcraftunofficial:builder_clear_fragile_outside_lava_still_mopped", () -> buildcraft.builders.BuilderRefloodTester::clearModeKeepsMoppingOutsideLavaInFragileCell);
 
         // Builder block-survival gating (canSurvive guard in SchematicBlockDefault.build()).
         reg.accept("buildcraftunofficial:builder_support_torch_on_floor", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTorchOnFloorPlaces);

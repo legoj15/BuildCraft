@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_clear_fragile_outside_lava_still_mopped",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1050,
+    "setup_ticks": 0,
+    "required": true
+}

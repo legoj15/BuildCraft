@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,6 +29,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 //?}
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -85,6 +87,33 @@ public class SchematicBlockDefault implements ISchematicBlock {
     /** {@link #isWashedAwayBy} with water as the representative fluid. */
     public static boolean isWashedAwayByFluid(BlockState state) {
         return isWashedAwayBy(state, Fluids.WATER);
+    }
+
+    /**
+     * Is there fluid beside or above {@code blockPos} that would flow in and wash {@code state} away as soon as it
+     * is placed there? The fragile-block defer in {@link #build(Level, BlockPos, EnumFluidHandlingMode)}, shared
+     * with the Builder's queue-time gate so a placement that build would refuse is never queued (which would
+     * extract its items only to refund them).
+     */
+    public static boolean hasWashingFluidNeighbour(BlockGetter level, BlockPos blockPos, BlockState state) {
+        return hasWashingFluidNeighbour(level, blockPos, state, neighbour -> true);
+    }
+
+    /**
+     * As {@link #hasWashingFluidNeighbour(BlockGetter, BlockPos, BlockState)}, counting only the neighbours whose
+     * position passes {@code which} (the Builder uses it to ask whether any washing fluid is water it will still
+     * mop).
+     */
+    public static boolean hasWashingFluidNeighbour(BlockGetter level, BlockPos blockPos, BlockState state,
+            Predicate<BlockPos> which) {
+        for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
+            BlockPos neighbourPos = blockPos.relative(dir);
+            FluidState neighbour = level.getFluidState(neighbourPos);
+            if (!neighbour.isEmpty() && isWashedAwayBy(state, neighbour.getType()) && which.test(neighbourPos)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -556,13 +585,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
             boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
                     && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
-            if (!placedAsWaterlogged) {
-                for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
-                    FluidState neighbour = level.getFluidState(blockPos.relative(dir));
-                    if (!neighbour.isEmpty() && isWashedAwayBy(newBlockState, neighbour.getType())) {
-                        return false;
-                    }
-                }
+            if (!placedAsWaterlogged && hasWashingFluidNeighbour(level, blockPos, newBlockState)) {
+                return false;
             }
         }
         // Bed FOOT pre-check: HEAD position must also be clear (or replaceable) for the bed to
@@ -812,9 +836,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * (preserves water aesthetically) — without the leniency the schematic would mismatch and
      * the Builder would break+place forever. Under CLEAR mode the user-stated intent is the
      * opposite: clear the water, even from waterlogged blocks. So in CLEAR we want the strict
-     * comparison so "world wet, schematic dry" is reported as NOT built and the position gets
-     * re-classified as TO_PLACE; the build path then sets the block dry, which (since waterlog
-     * is the entire fluid state for a non-LiquidBlock waterloggable block) clears the water.
+     * comparison so "world wet, schematic dry" is reported as NOT built. (The Builder's
+     * {@code canPlace} refuses any fluid cell under CLEAR, so the position is then classified
+     * TO_BREAK and mopped, not dried in place.) This strictness is deliberately mode-pure; the
+     * one case where it must give way, a block vanilla re-floods from water the Builder cannot
+     * remove, is decided by {@code BlueprintBuilder#isBlockCorrect}, which knows the build box.
      */
     public boolean isBuilt(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         if (blockState == null) return false;

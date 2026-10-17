@@ -5,8 +5,7 @@
  */
 package buildcraft.lib.misc;
 
-import java.util.HashMap;
-import java.util.Map;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -22,34 +21,50 @@ import net.minecraft.world.level.block.state.BlockState;
  * the refusal is kept for as long as the cell's {@link BlockState} is unchanged. Two things end it sooner:
  * <ul>
  * <li>the cell turning into something else ({@link #isRefused} drops the entry the next time it looks);</li>
- * <li>{@link #MEMORY_TICKS} passing, so a claim that was lifted while the cell stayed the same is noticed within
- *     a few minutes instead of never.</li>
+ * <li>its window passing, so a claim that was lifted while the cell stayed the same is noticed eventually instead
+ *     of never. The window is {@link #MEMORY_TICKS} (five minutes) for a small refused pool and grows with the
+ *     pool, {@link #RECHECK_SPACING_TICKS} per remembered cell, so re-asking a fully refused pool of any size
+ *     averages about one probe per {@link #RECHECK_SPACING_TICKS} rather than one per tick.</li>
  * </ul>
  *
- * <p>The memory is bounded ({@link #MAX_ENTRIES}; overflowing it forgets everything, which costs one re-ask per
- * cell) and deliberately transient: it belongs to the machine instance and is never saved. Server thread only. The
- * game-time-taking overloads are the real API and keep the logic testable without a world; the {@link Level}
- * overloads read the state and the clock from the world.
+ * <p>There is deliberately no entry cap: forgetting live refusals early is exactly what makes a machine thrash (the
+ * next rebuild re-queues the forgotten cells and the machine probes one per tick, forever). The map only ever holds
+ * cells this machine reached and was refused, so it is bounded by the machine's own reach (a pump's flood fill
+ * already keeps a path entry for every one of those cells); expired entries are swept as it grows. The memory is
+ * transient: it belongs to the machine instance and is never saved. Server thread only. The game-time-taking
+ * overloads are the real API and keep the logic testable without a world; the {@link Level} overloads read the
+ * state and the clock from the world.
  */
 public final class DrainRefusals {
 
-    /** How long a refusal is remembered while the cell stays unchanged: five minutes of game time. */
+    /** The shortest time a refusal is remembered while the cell stays unchanged: five minutes of game time. */
     public static final long MEMORY_TICKS = 6000;
 
-    /** The most refused cells one machine keeps before it forgets them all. */
-    public static final int MAX_ENTRIES = 2048;
+    /** How far each remembered refusal stretches the window of the next one, so a fully refused pool is re-asked
+     *  about once per this many ticks on average, however large it is. */
+    public static final long RECHECK_SPACING_TICKS = 20;
+
+    /** The size below which expired entries are not swept; above it, a sweep runs each time the map doubles. */
+    private static final int MIN_SWEEP_SIZE = 256;
 
     private record Refusal(BlockState state, long expiresAt) {
     }
 
-    private final Map<BlockPos, Refusal> refused = new HashMap<>();
+    /** Keyed on {@link BlockPos#asLong()}: a large claimed pool can mean thousands of entries. */
+    private final Long2ObjectOpenHashMap<Refusal> refused = new Long2ObjectOpenHashMap<>();
+
+    private int sweepAt = MIN_SWEEP_SIZE;
 
     /** Records that {@code pos}, holding {@code state}, refused at {@code gameTime}. */
     public void remember(BlockPos pos, BlockState state, long gameTime) {
-        if (refused.size() >= MAX_ENTRIES && !refused.containsKey(pos)) {
-            refused.clear();
+        long key = pos.asLong();
+        if (refused.size() >= sweepAt && !refused.containsKey(key)) {
+            refused.values().removeIf(refusal -> gameTime >= refusal.expiresAt());
+            sweepAt = Math.max(MIN_SWEEP_SIZE, refused.size() * 2);
         }
-        refused.put(pos.immutable(), new Refusal(state, gameTime + MEMORY_TICKS));
+        long others = refused.size() - (refused.containsKey(key) ? 1 : 0);
+        long window = Math.max(MEMORY_TICKS, others * RECHECK_SPACING_TICKS);
+        refused.put(key, new Refusal(state, gameTime + window));
     }
 
     /**
@@ -57,12 +72,13 @@ public final class DrainRefusals {
      * memory has not expired. A stale entry (changed or expired) is dropped on the way out.
      */
     public boolean isRefused(BlockPos pos, BlockState current, long gameTime) {
-        Refusal refusal = refused.get(pos);
+        long key = pos.asLong();
+        Refusal refusal = refused.get(key);
         if (refusal == null) {
             return false;
         }
         if (!refusal.state().equals(current) || gameTime >= refusal.expiresAt()) {
-            refused.remove(pos);
+            refused.remove(key);
             return false;
         }
         return true;
@@ -86,5 +102,6 @@ public final class DrainRefusals {
     /** Forgets every refusal. */
     public void clear() {
         refused.clear();
+        sweepAt = MIN_SWEEP_SIZE;
     }
 }

@@ -98,7 +98,9 @@ public class AIRobotSearchBlock extends AIRobot {
         if (blockScanner == null) {
             blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
                     blockIter, pathFound, maxDistanceToEnd, 96, zone,
-                    robot.getRegistry().getBlockReservations());
+                    // Owner-tagged view: the registry frees this robot's cells itself if it unloads or dies
+                    // between the search locking onto a cell and this AI collecting it (takeResource).
+                    robot.getRegistry().getBlockReservations(robot.getRobotId()));
         }
         if (blockScanner.isDone()) {
             path = blockScanner.getResult();

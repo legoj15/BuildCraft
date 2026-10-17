@@ -57,6 +57,7 @@ public abstract class MarkerCache<S extends MarkerSubCache<?>> {
         }
     }
 
+    /** Drops the unloading world's sub-cache. Wired for server levels by {@link MarkerCacheEvents}. */
     public static void onWorldUnload(Level world) {
         for (MarkerCache<?> cache : CACHES) {
             cache.onWorldUnloadImpl(world);

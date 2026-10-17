@@ -878,6 +878,21 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_registry_remove_station_releases_claim", () -> buildcraft.robotics.RobotRegistryLiveTester::removeStationReleasesTheRobotsClaim);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
+        // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the
+        // registry's reverse indexes end up naming only what the robot still holds: freed stations leave the
+        // station index, a replaced main station leaves it, a finished search's cell (an owner-tagged entry in the
+        // dimension's shared set) is released with its robot, and the same through the entity's own removal hooks
+        // on a real ticking robot. Plus the static tables that would pin a stopped server's levels.
+        reg.accept("buildcraftunofficial:robot_registry_release_trims_station_index", () -> buildcraft.robotics.RobotRegistryLiveTester::releaseResourcesTrimsFreedStationsFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_registry_unload_trims_station_index", () -> buildcraft.robotics.RobotRegistryLiveTester::unloadRobotTrimsFreedStationsFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_main_station_swap_trims_index", () -> buildcraft.robotics.RobotRegistryLiveTester::replacingTheMainStationTrimsTheOldOneFromTheIndex);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_kill", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotDies);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_unload", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotUnloads);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_by_release_resources", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedByReleaseResources);
+        reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
+        reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
+        reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
+
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself
         // autonomously finding the supply station and pulling the tank's bucket into its own tank.

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -70,6 +71,15 @@ public class BoardRobotPicker extends RedstoneBoardRobot {
 
     private static boolean isStale(AIRobotFetchItem claimant) {
         return claimant.robot instanceof Entity robot && robot.isRemoved();
+    }
+
+    /** Drops every claim held by a robot of {@code level}, which is unloading. A claim holds its fetch AI, which
+     *  holds the robot, which holds the level, and the robots of an unloading level are removed one by one
+     *  without their fetches ever ending — {@link #isStale} would catch each of them, but only the next time
+     *  somebody looks at that one claim, so until then the table pins the level. Wired (BCRobotics) to
+     *  {@code LevelEvent.Unload}; a server stop posts it once per level. */
+    public static void releaseClaimsIn(Level level) {
+        TARGETS.values().removeIf(claimant -> claimant.robot instanceof Entity robot && robot.level() == level);
     }
 
     /** Drops every claim. Wired (BCRobotics) to ServerAboutToStartEvent and ServerStoppedEvent. */

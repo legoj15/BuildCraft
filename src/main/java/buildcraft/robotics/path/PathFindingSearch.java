@@ -26,8 +26,9 @@ import buildcraft.api.core.IZone;
  * <li>block traversability / chunk-loaded checks go through the injectable {@link SoftBlockAccess};</li>
  * <li>the 7.1.x {@code static HashMap<dimensionId, HashSet<BlockIndex>>} reservation table is replaced
  *     by a caller-owned {@link Set} of reserved positions, shared across the searches that should not
- *     collide (in production, one set per dimension; in tests, a fresh set). All access is synchronised
- *     on that set, preserving the original's thread-safety contract.</li>
+ *     collide (in production, an owner-tagged view of the dimension's one set, so the registry can free a
+ *     cell whose robot unloads or dies before the search is collected; in tests, a fresh set). All access
+ *     is synchronised on that set, preserving the original's thread-safety contract.</li>
  * </ul>
  * The 7.1.x {@code (start.y + delta.y) > 0 ? … : 0} clamp is dropped — bounds are now the access
  * predicate's responsibility, which is correct on modern negative-Y worlds.
@@ -163,11 +164,10 @@ public class PathFindingSearch implements IIterableAlgorithm {
 
     private boolean reserve(BlockPos block) {
         synchronized (reservations) {
-            if (reservations.contains(block)) {
-                return false;
-            }
-            reservations.add(block);
-            return true;
+            // add() is the test-and-set: false when the cell is already reserved (by anyone). Relying on its
+            // result rather than contains()-then-add() keeps it atomic for an owner-tagged view, whose
+            // monitor is its own, not this set's.
+            return reservations.add(block);
         }
     }
 

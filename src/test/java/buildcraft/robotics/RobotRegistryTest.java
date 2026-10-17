@@ -7,6 +7,7 @@ package buildcraft.robotics;
 
 import java.security.InvalidParameterException;
 import java.util.Collections;
+import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -100,6 +101,51 @@ public class RobotRegistryTest {
         RobotRegistry r = new RobotRegistry(null);
         Assertions.assertDoesNotThrow(() -> r.release(resource(9, 9, 9)), "releasing an unheld resource is harmless");
         Assertions.assertDoesNotThrow(() -> r.release(null), "releasing a null resource is harmless");
+    }
+
+    // ---- search-phase block cells: owned, so a dying robot can give them back ----
+
+    @Test
+    public void testBlockCellsAreOwnedByTheRobotThatReservedThem() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos cell = new BlockPos(1, 2, 3);
+        Set<BlockPos> mine = r.getBlockReservations(ROBOT_A);
+        Set<BlockPos> theirs = r.getBlockReservations(ROBOT_B);
+
+        Assertions.assertTrue(mine.add(cell), "a free cell can be reserved");
+        Assertions.assertTrue(r.getBlockReservations().contains(cell),
+                "the dimension-wide set every concurrent search reads must see the cell");
+        Assertions.assertTrue(theirs.contains(cell), "another robot's view sees it too, so its search skips it");
+        Assertions.assertFalse(theirs.add(cell), "a second robot cannot reserve a reserved cell");
+        Assertions.assertFalse(theirs.remove(cell), "a robot cannot unreserve a cell another robot reserved");
+        Assertions.assertTrue(r.getBlockReservations().contains(cell), "...so the cell is still reserved");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).contains(cell),
+                "the registry remembers whose cell it is");
+
+        Assertions.assertTrue(mine.remove(cell), "the owner can unreserve its own cell");
+        Assertions.assertFalse(r.getBlockReservations().contains(cell), "...which frees it for everyone");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).isEmpty(), "...and clears the owner index");
+    }
+
+    @Test
+    public void testReleaseBlockReservationsFreesOnlyThatRobotsCells() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos a1 = new BlockPos(1, 2, 3);
+        BlockPos a2 = new BlockPos(4, 5, 6);
+        BlockPos b1 = new BlockPos(7, 8, 9);
+        r.getBlockReservations(ROBOT_A).add(a1);
+        r.getBlockReservations(ROBOT_A).add(a2);
+        r.getBlockReservations(ROBOT_B).add(b1);
+
+        r.releaseBlockReservations(ROBOT_A);
+
+        Assertions.assertFalse(r.getBlockReservations().contains(a1), "A's first cell is freed");
+        Assertions.assertFalse(r.getBlockReservations().contains(a2), "A's second cell is freed");
+        Assertions.assertTrue(r.getBlockReservations().contains(b1), "B's cell is untouched");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).isEmpty(), "A's owner index is clean");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_B).contains(b1), "B's owner index is intact");
+        Assertions.assertTrue(r.getBlockReservations(ROBOT_B).add(a1),
+                "a freed cell can be reserved by someone else");
     }
 
     // ---- station reservation bookkeeping ----

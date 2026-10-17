@@ -59,12 +59,7 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 ## Guide book follow-ups
 
 Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-robots-and-toc.md](guide-robots-and-toc.md)):
-- Board pages have no icon: they are `external` entries and `PageEntryExternal#createDrawable` returns null. Give external entries an optional `icon` stack field (a programmed board stack via `ItemRedstoneBoard.createStack`) so Robots > Boards reads like the rest of the tree.
 - The Sort By System button reuses the old Sort By Mod glyph (`textures/gui/sprites/guide/sort_system*.png`, four states). Needs a 14x14 icon that says "system".
-- Robot name tags: `RenderRobot` draws a custom name, but the robot is a bare `Entity`, so the vanilla name tag never applies and nothing else sets one. Either accept name tags in `EntityRobot#interactRobot` (and carry the name through the item on wrench pickup) or drop the render hook. The guide no longer mentions naming.
-- `RoboticsJeiSubtypes` and the two board/robot program collectors live in `buildcraft.robotics.compat.jei` but the guide's recipe lookups use them too; move them to a neutral package.
-- `GuideAssembly` still shows a raw "N MJ" cost tooltip with a stale "localizeMj not ported" comment; `LocaleUtil.localizeMj` exists and is what the new laser-table panel uses.
-- In the system view the Robots chapter's first subchapter is also called "Robots" (subtype `robot`). A better subtype label ("Robot Basics"?) would read better in both views.
 - Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
 
 ## Builder stalls beside unremovable fluid
@@ -76,18 +71,6 @@ Left from the 2026-10-17 Clear-mode reflood fix (`BlueprintBuilder.isFragileUnbu
 - Cells accepted as unbuildable vanish from the build silently — tie into the "Builder highlights blocks it can't place yet" feature.
 - Dead code from `453e756f2`: `isWaterlogClearOnly` plus `BlueprintBuilder.isWaterlogClearOnlyAt/isAllowedDuringFluidMop/hasEnoughToPlaceItems/getToPlaceItems` carve-outs can never fire (canPlace rejects every fluid cell under Clear). Remove with this work.
 
-## Filler owner shadow
-
-`TileFiller` declares `private GameProfile owner` (~line 118) over the inherited `AbstractBCBlockEntity.owner`, so the inherited `setOwner()` is invisible to its `getOwner()` — the same bug fixed for `TilePipeHolder` on 2026-10-17 (`pipe_set_owner_agrees_with_get_owner`). Its NBT shape differs (an `owner` child with name/uuid), so the fix must keep old saves loading.
-
-## Stone engine fuel components
-
-`TileEngineStone_BC8.writeData/readData` (~312-345) saves the burning fuel as `fuelId` + `fuelCount` only, so a fuel item carrying data components loses them on save/reload (and its crafting remainder can change). Same class as the Assembly Table / Builder place-task fix of 2026-10-17: save through `ItemStack.CODEC` with `NBTUtilBC.registryAwareOps()`, keep reading the old two-field shape.
-
-## Marker client cache
-
-`MarkerCache`'s client sub-cache (`cacheClient`) is never cleared, so it carries markers and connections across worlds and dimensions, and `MarkerCache.onPlayerJoinWorld` (the join-time resync upstream called from `BCLibEventDist`) is unwired. Only the server half was wired on 2026-10-17. Clearing the client cache alone would drop connections on a dimension hop, so wire the join resync with it and check in-client.
-
 ## JEI transfer decisions
 
 Open questions from the 2026-10-17 Programming/Integration Table "+" work (`RoboticsTableTransfer`, `AbstractTableTransferHandler`): the "+" takes only BLANK boards/robots (a player holding only programmed boards sees "missing materials" though the table would reprogram one); the Integration Table refuses with "Empty the table's slots first" instead of JEI's usual clear-to-inventory. Also: JEI ghost-ingredient drops onto phantom slots send only the item id (`BCGhostIngredientHandler` ~95, `BCContainerSupport` NET_GHOST_SLOT_SET, `ReiCraftingTableSupport` ~173), so a data-carrying ingredient drops as its bare item; and the Assembly Table transfer matches ingredients by exact item+components rather than `Ingredient.test`.
@@ -97,20 +80,17 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 Found in passing; none is a known player-facing bug today.
 - Optional wording (user call): upstream 7.1.27 `b84395c85` renamed the emerald-pipe tips Whitelist/Blacklist to "Limit (Only Filtered)"/"Exclude (Except Filtered)"; the Diamond-Wood GUI still uses `tip.PipeItemsEmerald.*`.
 - Optional API: upstream `d891e3b76` let addons forbid blocks from the default crop handler via IMC; the modern equivalent is a block tag read by `CropHandlerPlantable`. Only if an addon asks.
-- Refusal memory exists twice plus micro-variants: `ProtectionRefusals` (stripes pipe, robot search, quarry frame; bounded, polled with `takeExpired`), `DrainRefusals` (pumps; unbounded, window grows with the pool, walks the whole pool past 300 entries), `TilePump.permittedPos`, `AIRobotPumpBlock.refused` and `BoardRobotPump`'s clear-on-owner-change. Unify into one `RefusalMemory` (retry policy + clock + optional owner key), and give the repeated "ask claim mods as the owner, then remember the refusal" lifecycle (pump, stripes, quarry, robot boards) one `MachinePermission` helper over `BlockUtil.canMachineBreak` (2026-10-17 GLM-5.3 cross-packet review).
 - Two JEI transfer cores with different vocabularies: `RoboticsTableTransfer` (Result enum, simulate-then-commit) and `AssemblyTableTransfer` (Request record), plus the older `NET_JEI_TRANSFER_BUCKETS` path. Share one result type and one advisory/send/server-re-run skeleton. Likewise `AIRobotStripesHandler.takeBackFrom` and `PipeBehaviourStripes` decide "what is left of the used stack" separately; extract one helper so they can't drift.
 - `TileMiner.updateLength` removes and re-places every tube on each length change (with water it now un-waterlogs and re-waterlogs every cell per mined block); make it delta-aware. Only water SOURCES are kept by the tube; the pump tube is also placed into claims without asking.
 - `TilePump` rebuilds its whole flood fill every 30 ticks while its queue is empty (radius up to `pumpMaxDistance`, 512 max), costly for a huge refused or exhausted pool.
 - `TilePump.isInfiniteSourceAt` counts a neighbouring well's waterlogged tube as a water source (vanilla's regen rule agrees, but a pre-waterlogging world had a dry bore there): decide and pin with a test. A miner-tube block tag would also replace `BoardRobotPump`'s direct `buildcraft.factory` import.
 - `BlockUtil.drainBlock` goes through `SimpleWaterloggedBlock.pickupBlock`, which destroys a waterlogged block that can't survive dry (with drops).
-- `BlockUtil.breakBlockAndGetDropsWithXp` takes an owner profile and ignores it; `AIRobotHarvest` runs `CropManager.harvestCrop` with no player at all; the stripes handler's actual destroy posts no BreakEvent (only the pre-swing probe does).
 - `GlobalSavedDataSnapshots.readSnapshot` decompresses every file of a build on a content-only miss; `SnapshotIndex.contains` is a linear scan; `intactFiles`' Javadoc says files are trusted once read back, but reads never add to it.
-- `ProgrammingRecipeRegistry` is a HashMap, so `findRecipe`'s pick is nondeterministic once two recipes accept one board; the GUI/collector/transfer cap at 24 cells, so an addon board past index 23 is unreachable. `AssemblyTableCategory` restates the Assembly Table geometry the way the two robot tables did (see `ProgrammingTableLayout`).
+- Programming Table: past 24 programs a board's options are unreachable (only a registration warning today). `AssemblyTableCategory` restates the Assembly Table geometry the way the two robot tables did (see `ProgrammingTableLayout`).
 - Pipe behaviours with GUI-edited state other than Emzuli/Emerald/Diamond (Daizuli, Lapis, Gold, Iron, Stripes, Limiter) were not audited for dirty-marking; the per-tick `level.blockEntityChanged` in `TilePipeHolder.tick()` masks the bug class.
 - Game tests: many nest `runAfterDelay` inside scheduled runnables while `GameTestInfo.tickInternal` iterates a fastutil map, so a mid-iteration insert can rehash and skip or double-run entries — audit for latent flakes. A test claimed `GameTestHelper.relativePos` negates coordinates on 26.1.2 (worked around in `MarkerArenaUtil`); verify. `StripesRegistry` has no removal API, so test handlers leak into the rest of the run.
 - `ServerUnitBakingGuardTester` exempts every path containing `/gui/`, which also hides server-side menu classes in `buildcraft/lib/gui`. Item names built on the SERVER (a chat `[item]`, advancement text) always carry the FE key, since `useRfNaming` is client config — accepted limitation, documented in `BCEnergyItems`.
 - `TileQuarry.retryRefusedFrameCells` re-queues only when `canMine` is true, so a parked frame cell that turned into bare fluid keeps its gap until chunk reload; `TaskBreakBlock.finish` doesn't park a cell whose `canMine` flipped mid-break.
-- `DockingStation.unsafeRelease` only clears when the cached `robotTaking` is the same instance; `BoardRobotDelivery.releaseCurrentRequest` calls `DockingStation.release` without the `canRelease` guard `AIRobotGotoStation.end()` gained.
 
 ## In-client smoke 2026-09-26
 

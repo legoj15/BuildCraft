@@ -71,7 +71,7 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 | B10 | MED | items | Robot item tooltip lost the board's description line (7.1.x `boardNBT.addInformation` + charge line; port: charge line only). | FIXING (batch 2) |
 | B11 | LOW | movement | `AIRobotGotoStation(takeAsMain)` flies to `station + side×1`; 7.1.x's `AIRobotGoAndLinkToDock` used `×2` (plain goto-station was ×1 in both). | FIXING (batch 1, optional) |
 | B12 | LOW | statements | "Goto Station" with an empty map parameter: 7.1.x re-took the robot's current station as MAIN (redock); port returns early and does nothing. | FIXING (batch 2) |
-| B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | HALF-FIXED (Ph9 landed wearable acceptance + matching; List matching still open) |
+| B13 | LOW | statements | `StatementParameterRobot` ignores non-robot clicks; 7.1.x also accepted a List or wearable stack into Forbid/Force Robot. | FIXED (wearables Ph9; Lists 2026-10-17) |
 | B14 | LOW | station | Fluid output is the pipe's sided capability on the face opposite the station; the item output was made dead-end-proof (`insertItemsForce`) after the same shape refused unconnected faces. `PipeFlowFluids.getCapability` behaviour at a dead-end dock decides — needs a red-first game test. | FIXING (batch 2: test first) |
 | B16 | MED | entity | Home-station loss no longer shuts the robot down (7.1.x re-resolved the linked station every tick and called `shutdown("no docking station")`; port only checks the unresolved-after-load case) and `removeStation` leaves a main-station robot holding a dead `dockingStation`; `setblock air` under a station leaves it registered. Reproduced in-game on 26.2 (V3). | FIXING (batch 2, added) |
 | B15 | LOW | render | Energy exhaust is a vanilla white CLOUD; 7.1.x drew a red, size-scaled smoke puff (`EntityRobotEnergyParticle`) and scaled its rate with the particle setting. Cosmetic but the most visible robot effect. | FIXED 2026-09-26 (`robot_energy` particle, `RobotExhaust` rate/size math) |
@@ -113,8 +113,7 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 - Docking-station registry type `"pipe"` vs `"dockingStationPipe"`, tracking range 64 vs 50, lang wording
   ("Robot Station", "Picker Board"): note only.
 - `boards.blacklist` config option not ported. Follow-up if anyone asks.
-- Not ported and not on the plan list: `AIRobotDisposeItems` (spill undeliverable cargo — Delivery board, Ph8),
-  `BlockScanner` (unused on both sides), `CropHandlerPlantable.forbidBlock` API.
+- Not ported and not on the plan list: `BlockScanner` (unused on both sides), `CropHandlerPlantable.forbidBlock` API.
 
 ### Numeric parity
 
@@ -181,20 +180,9 @@ merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
 
 Tracked as one-liners in todos.md; the detail lives here.
 
-- **Station claim after reload.** Reservations are released on unload, death, abort and reload since 2026-10-17
-  (owner-checked releases; boards re-claim persisted jobs in `preempt`). One gap left: a reloaded
-  `AIRobotGotoStation` resumes its flight without re-taking the plain (non-home) station claim the unload freed, so
-  another robot can take the station meanwhile and both dock there. Fix as the block/order jobs did: an unsaved
-  `taken` flag, re-take in `preempt` or fail. Related: since 2026-10-17 any Delivery board abort (recharge, gate
-  Goto Station, shutdown) gives up its order; check the resume path against 7.1.x if players report dropped cargo.
-- **Small robot nits (2026-09-26):** the Stripes robot loops forever on an item no handler can use (7.1.x did too —
-  could stash it or sleep); a robot stack with an unregistered board id refuses placement but its tooltip doesn't say
-  why ("Unknown board" hint); `AIRobotStraightMoveTo` arrival never snaps position onto the target (7.1.x set posX/Y/Z;
-  `IRobotAccess` has no setPos), so non-station users stop up to 0.1 blocks off.
 - **Decided 2026-09-03 (user):** see "Decided: blank robots and boards" below. Still open from the same list:
   sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's
-  friendlier behaviour unless asked; `RobotUtils.getNextBoard` wraps instead of stopping at the end (widget,
-  dead code today).
+  friendlier behaviour unless asked.
 - **Ph7 (Programming Table) deviations, 2026-09-12:** craft consumes via `power -= target` instead of 7.1.x's
   zero-on-craft (the port-wide laser-table convention; unreachable in practice because `receiveLaserPower`
   clamps at exactly the target); the option-select RPC clamps bounds (7.1.x's could NPE on a stale select);
@@ -227,10 +215,7 @@ User decision, 2026-09-03 — implement in a follow-up session, tests first:
    programmed stack. Pinned by `ProgrammingRecipeTester` / `RobotIntegrationRecipeTester` (blank merge-16,
    programmed max-1, table options follow the rule) and the `robot_survival_recipes_resolve` crafting smoke.
 
-- **`StatementParameterRobot` accepts robot stacks and (since Ph9's wearable acceptance) worn items**;
-  7.1.x also took a List (match robots by list). Lists exist in the port; still unwired.
 - **`boards.blacklist` config** (7.1.x let servers hide boards) not ported. Only if asked for.
-- **`AIRobotDisposeItems`** (spill undeliverable cargo) is unported — belongs with the Delivery board (Ph8).
 - **Approach cell for home links is ×2 again (batch 1, fix 6):** a home-station link now needs two clear cells in
   front of the station, exactly 7.1.x's constraint; plain visits stay at ×1. Revert `f23935eb3` if that ever bites.
 - **Untested behaviours the slices listed** (the strongest candidates): ~~`AIRobotBreak` progress/durability/drops;

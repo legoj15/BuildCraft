@@ -181,12 +181,12 @@ merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
 
 Tracked as one-liners in todos.md; the detail lives here.
 
-- **Reservation release on unload/kill.** AIs release shared reservations only in `end()`, which is skipped when a
-  robot unloads or is killed mid-task (the picker's leak of this shape was fixed 2026-09-26 with a claim table).
-  Audit `RobotRegistry` resource/block reservations (`AIRobotSearchBlock`, the BreakBlock boards) against
-  `unloadRobot`/`killRobot`; also `releaseResources` frees a non-home, non-docked station with `unsafeRelease`
-  without removing it from `stationsTakenByRobot` (stale reverse index until `killRobot`). Check for other static
-  tables that could pin a stopped server's levels.
+- **Station claim after reload.** Reservations are released on unload, death, abort and reload since 2026-10-17
+  (owner-checked releases; boards re-claim persisted jobs in `preempt`). One gap left: a reloaded
+  `AIRobotGotoStation` resumes its flight without re-taking the plain (non-home) station claim the unload freed, so
+  another robot can take the station meanwhile and both dock there. Fix as the block/order jobs did: an unsaved
+  `taken` flag, re-take in `preempt` or fail. Related: since 2026-10-17 any Delivery board abort (recharge, gate
+  Goto Station, shutdown) gives up its order; check the resume path against 7.1.x if players report dropped cargo.
 - **Small robot nits (2026-09-26):** the Stripes robot loops forever on an item no handler can use (7.1.x did too —
   could stash it or sleep); a robot stack with an unregistered board id refuses placement but its tooltip doesn't say
   why ("Unknown board" hint); `AIRobotStraightMoveTo` arrival never snaps position onto the target (7.1.x set posX/Y/Z;

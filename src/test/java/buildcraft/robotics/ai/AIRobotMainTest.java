@@ -186,6 +186,73 @@ public class AIRobotMainTest {
         Assertions.assertNull(loaded.getOverridingAI(), "...and nothing is left pretending to be one");
     }
 
+    // ---- the back-off after a failed override ----
+
+    /** An override that fails the moment it starts (a goto to a refused or vanished station) arms a back-off: a
+     *  gate that holds re-issues its redirect every tick, and without the back-off each one aborted the board for a
+     *  redirect that failed again at once. New overrides are refused until the back-off has run its cycles. */
+    @Test
+    public void aFailedOverrideBacksOffBeforeTheNextOneIsAccepted() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new FailingOverride(robot));
+        main.preempt(null);
+        Assertions.assertNull(main.getOverridingAI(), "precondition: the failed override is no longer tracked");
+
+        main.setOverridingAI(new AIRobot(robot));
+        Assertions.assertNull(main.getOverridingAI(), "a redirect right after a failed one is refused");
+
+        for (int i = 0; i < AIRobotMain.FAILED_OVERRIDE_COOLDOWN - 1; i++) {
+            main.preempt(null);
+        }
+        main.setOverridingAI(new AIRobot(robot));
+        Assertions.assertNull(main.getOverridingAI(), "still refused one cycle before the back-off runs out");
+
+        main.preempt(null);
+        AIRobot accepted = new AIRobot(robot);
+        main.setOverridingAI(accepted);
+        Assertions.assertSame(accepted, main.getOverridingAI(), "once the back-off has run out, a redirect is taken");
+    }
+
+    /** Only a failure backs off: an override that ended well leaves the slot open for the next one at once. */
+    @Test
+    public void aSuccessfulOverrideDoesNotBackOff() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new SucceedingOverride(robot));
+        main.preempt(null);
+        Assertions.assertNull(main.getOverridingAI(), "precondition: the finished override is no longer tracked");
+
+        AIRobot next = new AIRobot(robot);
+        main.setOverridingAI(next);
+        Assertions.assertSame(next, main.getOverridingAI(), "a redirect after a successful one is taken at once");
+    }
+
+    /** Ends unsuccessfully in its own {@code start()}, as a refused goto-station does. */
+    private static class FailingOverride extends AIRobot {
+        FailingOverride(IRobotAccess iRobot) {
+            super(iRobot);
+        }
+
+        @Override
+        public void start() {
+            setSuccess(false);
+            terminate();
+        }
+    }
+
+    /** Ends successfully in its own {@code start()}, as a goto to the station the robot already sits at does. */
+    private static class SucceedingOverride extends AIRobot {
+        SucceedingOverride(IRobotAccess iRobot) {
+            super(iRobot);
+        }
+
+        @Override
+        public void start() {
+            terminate();
+        }
+    }
+
     /** A stand-in for a saveable gate redirect such as the goto-station move. */
     public static class SavedOverride extends AIRobot {
         public SavedOverride(IRobotAccess iRobot) {

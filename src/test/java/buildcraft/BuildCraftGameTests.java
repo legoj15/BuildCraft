@@ -963,6 +963,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action_at_dock_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtTheDockedStationLeavesTheRobotAlone);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_target_held_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAStationAnotherRobotHoldsLeavesTheRobotAlone);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_backs_off_after_failure", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionBacksOffAfterAFailedGoto);
 
         // Robotics coverage sweep — the RobotRegistry against LIVE (never-added) robot entities: two-robot
         // reservation exclusivity, the goto-station reservation refusal, a dead holder's claim lapsing, and

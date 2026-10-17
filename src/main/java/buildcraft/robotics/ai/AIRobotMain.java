@@ -21,8 +21,17 @@ import buildcraft.api.robots.IRobotAccess;
  *  ({@code getPower()}, {@code IRobotAccess.SHUTDOWN_POWER}/{@code SAFETY_POWER}). */
 public class AIRobotMain extends AIRobot {
 
+    /** Cycles {@link #setOverridingAI} refuses new overrides for after one ended unsuccessfully (5 s). */
+    static final int FAILED_OVERRIDE_COOLDOWN = 100;
+
     private AIRobot overridingAI;
     private int rechargeCooldown;
+    /** Counts down from {@link #FAILED_OVERRIDE_COOLDOWN} after an override failed; no new override is accepted
+     *  until it reaches zero. A gate that holds re-issues its redirect every tick, and each one aborts the board:
+     *  a redirect that keeps failing (an unreachable or refused station) would otherwise keep the board from ever
+     *  getting a cycle. Not 7.1.x, which re-issued it on the next tick. Not saved: a reload simply lets the gate
+     *  try again at once. */
+    private int overrideCooldown;
     /** Set by {@link #loadSelfFromNBT}: the saved delegate was the override. The delegate is only attached after
      *  that call, so {@link #onLoadedFromNbt} does the actual restoring. */
     private boolean overrideSaved;
@@ -39,6 +48,9 @@ public class AIRobotMain extends AIRobot {
 
     @Override
     public void preempt(AIRobot ai) {
+        if (overrideCooldown > 0) {
+            overrideCooldown--;
+        }
         if (robot.getPower() <= IRobotAccess.SHUTDOWN_POWER
                 && (robot.getDockingStation() == null || !robot.getDockingStation().providesPower())) {
             if (!(ai instanceof AIRobotShutdown)) {
@@ -76,11 +88,16 @@ public class AIRobotMain extends AIRobot {
         }
         if (ai == overridingAI) {
             overridingAI = null;
+            if (!ai.success()) {
+                overrideCooldown = FAILED_OVERRIDE_COOLDOWN;
+            }
         }
     }
 
+    /** Installs {@code ai} as the override, started on the next cycle. Ignored while another override is tracked,
+     *  and for {@link #FAILED_OVERRIDE_COOLDOWN} cycles after an override failed. */
     public void setOverridingAI(AIRobot ai) {
-        if (overridingAI == null) {
+        if (overridingAI == null && overrideCooldown <= 0) {
             overridingAI = ai;
         }
     }

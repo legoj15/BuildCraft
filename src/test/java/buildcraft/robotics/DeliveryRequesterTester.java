@@ -203,6 +203,69 @@ public class DeliveryRequesterTester {
                 "the station never registered");
     }
 
+    /** Request Items in more than one slot of the largest gate that can hold it - Gold with the Diamond modifier:
+     *  four slots of three action parameters - the first slot and the LAST (the far corner of the 4x4 slot/parameter
+     *  encoding). Every slot must surface its OWN parameters as requests, exactly once. (The 8-slot gates take no
+     *  action parameters and cannot hold the action at all - see {@code RequestItemsSlotEncodingTest} - so this
+     *  corner is the end of the road.) The provider used to match each slot to the first active Request Items
+     *  action on the gate, so the second slot's requests read the first slot's parameters and its own never
+     *  surfaced. */
+    public static void gateRequestItemsInEverySlotSurfacesItsOwnParameters(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 3, 4);
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
+
+        PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, Direction.WEST,
+                new GateVariant(EnumGateLogic.AND, EnumGateMaterial.GOLD, EnumGateModifier.DIAMOND));
+        helper.assertTrue(gate.logic.statements.length == 4, "precondition: a four-slot gate");
+        helper.assertTrue(gate.logic.variant.numActionArgs == 3, "precondition: three action parameters");
+        ItemStack[] firstSlot = { new ItemStack(Items.IRON_INGOT, 5) };
+        ItemStack[] lastSlot = { new ItemStack(Items.DIAMOND, 1), new ItemStack(Items.EMERALD, 2),
+                new ItemStack(Items.GOLD_INGOT, 3) };
+        requestInSlot(gate, 0, firstSlot);
+        requestInSlot(gate, gate.logic.statements.length - 1, lastSlot);
+        tile.replacePluggable(Direction.WEST, gate);
+        gate.logic.resolveActions();
+
+        ItemStack[] wanted = { firstSlot[0], lastSlot[0], lastSlot[1], lastSlot[2] };
+        EntityArenaUtil.tickUntil(helper, 120,
+                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+                () -> {
+                    IRequestProvider provider = stationAt(helper, pipeRel, Direction.UP).getRequestProvider();
+                    boolean[] seen = new boolean[wanted.length];
+                    for (int slot = 0; slot < provider.getRequestsCount(); slot++) {
+                        ItemStack request = provider.getRequest(slot);
+                        if (request.isEmpty()) {
+                            continue;
+                        }
+                        boolean matched = false;
+                        for (int i = 0; i < wanted.length; i++) {
+                            if (!seen[i] && ItemStack.matches(wanted[i], request)) {
+                                seen[i] = true;
+                                matched = true;
+                                break;
+                            }
+                        }
+                        helper.assertTrue(matched,
+                                "an unexpected or duplicate request at slot " + slot + ": " + request);
+                    }
+                    for (int i = 0; i < wanted.length; i++) {
+                        helper.assertTrue(seen[i], "the request for " + wanted[i] + " never surfaced");
+                    }
+                    helper.succeed();
+                },
+                "the station never registered");
+    }
+
+    /** Puts an always-on Request Items action in {@code slot} of {@code gate}, asking for {@code stacks}. */
+    private static void requestInSlot(PluggableGate gate, int slot, ItemStack... stacks) {
+        gate.logic.statements[slot].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        gate.logic.statements[slot].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS, null));
+        for (int i = 0; i < stacks.length; i++) {
+            gate.logic.statements[slot].action.set(i, new StatementParameterItemStackExact(stacks[i], 4));
+        }
+    }
+
     // ---------- insertion policy ----------
 
     /** The delivery slots only accept the item their template asks for — 7.1.x {@code isItemValidForSlot},

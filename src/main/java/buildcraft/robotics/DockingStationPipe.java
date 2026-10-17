@@ -31,6 +31,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.pipe.IFlowFluid;
@@ -317,7 +318,11 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
 
     /** 7.1.x's slot encoding, verbatim: {@code side} in bits 4-6, the gate's action-slot index in bits
      *  2-3, the action's parameter index in bits 0-1. The count 127 covers the encoding space (sides
-     *  6-7 are dead rows no direction ever fills). */
+     *  6-7 are dead rows no direction ever fills).
+     *
+     *  <p>Four action slots are enough: Request Items needs an action parameter, only the Quartz and Diamond
+     *  modifiers add those, and both halve the slot count, so no gate that can hold the action has more than four
+     *  slots (the 8-slot gates take no parameters). {@code RequestItemsSlotEncodingTest} pins that. */
     @Override
     public int getRequestsCount() {
         return 127;
@@ -350,25 +355,18 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
             return ItemStack.EMPTY;
         }
 
-        StatementSlot slotStmt = null;
-        for (StatementSlot stmt : gate.logic.getActiveActions()) {
-            if (stmt.statement == actions.get(action)) {
-                slotStmt = stmt;
-                break;
-            }
-        }
-        if (slotStmt == null) {
+        // THIS slot's own parameters, and only while its trigger group is firing. 7.1.x took the first ACTIVE
+        // action of the same kind instead, so every Request Items slot after the first read the first one's
+        // parameters and its own requests never surfaced.
+        if (!gate.logic.actionOn[action]) {
             return ItemStack.EMPTY;
         }
-        if (slotStmt.parameters.length <= param) {
+        IStatementParameter[] parameters = gate.logic.statements[action].action.getParameters();
+        if (parameters.length <= param || parameters[param] == null) {
             return ItemStack.EMPTY;
         }
 
-        if (slotStmt.parameters[param] == null) {
-            return ItemStack.EMPTY;
-        }
-
-        return slotStmt.parameters[param].getItemStack();
+        return parameters[param].getItemStack();
     }
 
     /** 7.1.x's virtual offer pushed the stack straight into the pipe transport; this routes through the

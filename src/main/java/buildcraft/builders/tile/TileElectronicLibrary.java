@@ -244,7 +244,7 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("tile.buildcraftunofficial.library.name");
+        return Component.translatable("block.buildcraftunofficial.library");
     }
 
     @Nullable

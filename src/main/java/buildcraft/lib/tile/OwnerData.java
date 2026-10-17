@@ -38,8 +38,10 @@ public final class OwnerData {
     }
 
     /** @return the owner stored under {@code ownerUUID}/{@code ownerName}, or null when the key is
-     *  absent or the stored UUID is unparseable. The name defaults to {@code "Unknown"} when the id is
-     *  present but the name is not (matching the previous per-tile reads). */
+     *  absent or the stored UUID is unparseable. The name is the empty string when the id is present
+     *  but the name is not: authlib rejects a null name, and the English placeholder this used to
+     *  substitute was persisted into the profile and shown untranslated. Display code turns the blank
+     *  into localised text via {@link buildcraft.lib.misc.GameProfileUtil#getDisplayName}. */
     @Nullable
     public static GameProfile readOwner(BCValueInput in) {
         String uuidStr = in.getStringOr("ownerUUID", "");
@@ -48,7 +50,7 @@ public final class OwnerData {
         }
         try {
             UUID uuid = UUID.fromString(uuidStr);
-            String name = in.getStringOr("ownerName", "Unknown");
+            String name = in.getStringOr("ownerName", "");
             return new GameProfile(uuid, name);
         } catch (IllegalArgumentException e) {
             return null;

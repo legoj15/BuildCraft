@@ -67,8 +67,13 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
         return this;
     }
 
+    /** Key of the "colour, then pipe name" format string ({@code "%s %s"} in English). */
+    private static final String COLOURED_NAME_KEY = "item.buildcraftunofficial.pipe.coloured";
+
     /** Prepends the paint colour name (in matching chat colour) to the item name, e.g.
      *  "Orange Diamond Kinesis Pipe" with "Orange" rendered in gold — matching 1.12.2.
+     *  The word order lives in the {@link #COLOURED_NAME_KEY} format string (colour first, pipe name
+     *  second) rather than being concatenated here, so a language can reorder or re-space it.
      *  FE pipes (identifier ending in {@code _rf}) also flip between "FE"/"RF" wording
      *  based on {@link BCEnergyConfig#useRfNaming}; other pipe types are unaffected. */
     @Override
@@ -78,8 +83,7 @@ public class ItemPipeHolder extends BlockItem implements IItemPipe {
                 : super.getName(stack);
         DyeColor col = stack.get(BCTransportItems.PIPE_COLOUR.get());
         if (col != null) {
-            Component colourName = Component.literal(ColourUtil.getTextFullTooltip(col));
-            return Component.literal("").append(colourName).append(" ").append(baseName);
+            return Component.translatable(COLOURED_NAME_KEY, ColourUtil.getTextFullTooltip(col), baseName);
         }
         return baseName;
     }

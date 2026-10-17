@@ -183,7 +183,7 @@ public class ScreenEngineIron extends GuiBC8<ContainerEngineIron> {
     @Override
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
-        String str = LocaleUtil.localize("tile.engineIron.name");
+        String str = LocaleUtil.localize("block.buildcraftunofficial.engine_iron");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
         graphics.text(font, str, titleX, 6, 0xFF404040, false);

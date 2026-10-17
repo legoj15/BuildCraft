@@ -105,7 +105,7 @@ public class ScreenEngineStone extends GuiBC8<ContainerEngineStone> {
     @Override
     protected void drawForegroundLayer() {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
-        String str = LocaleUtil.localize("tile.engineStone.name");
+        String str = LocaleUtil.localize("block.buildcraftunofficial.engine_stone");
         int strWidth = font.width(str);
         int titleX = (imageWidth - strWidth) / 2;
         graphics.text(font, str, titleX, 6, 0xFF404040, false);

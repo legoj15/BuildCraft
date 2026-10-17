@@ -298,7 +298,7 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
         // Centered title — drawn even under a full-override popup (which sorts on top at a higher
         // stratum via drawMenuOverlayLayer), consistent with the snapshot list above that already
         // draws unconditionally.
-        String titleStr = Component.translatable("tile.buildcraftunofficial.library.name").getString();
+        String titleStr = Component.translatable("block.buildcraftunofficial.library").getString();
         graphics.text(font, titleStr, (imageWidth - font.width(titleStr)) / 2, 6, 0xFF404040, false);
     }
 

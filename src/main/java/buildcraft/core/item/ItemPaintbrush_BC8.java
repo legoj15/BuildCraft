@@ -98,14 +98,15 @@ public class ItemPaintbrush_BC8 extends Item {
 
     // --- Item overrides ---
 
+    /** Key of the "colour, then brush name" format string ({@code "%s %s"} in English). The word order lives
+     *  in the lang file, not in {@link #getName}, so a language can reorder or re-space it. */
+    private static final String COLOURED_NAME_KEY = "item.buildcraftunofficial.paintbrush.coloured";
+
     @Override
     public Component getName(ItemStack stack) {
         DyeColor colour = getColour(stack);
         if (colour != null) {
-            String colourName = ColourUtil.getTextFullTooltip(colour);
-            return Component.empty()
-                .append(Component.literal(colourName + " "))
-                .append(super.getName(stack));
+            return Component.translatable(COLOURED_NAME_KEY, ColourUtil.getTextFullTooltip(colour), super.getName(stack));
         }
         return super.getName(stack);
     }

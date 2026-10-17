@@ -34,7 +34,7 @@ public class TileAutoWorkbenchItems extends TileAutoWorkbenchBase implements IBC
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("tile.autoWorkbenchBlock.name");
+        return Component.translatable("block.buildcraftunofficial.autoworkbench_item");
     }
 
     @Override

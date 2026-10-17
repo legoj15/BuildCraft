@@ -25,6 +25,8 @@ import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.lib.test.MainSourceSet;
+
 /** Structural checks on the shipped translation files.
  *
  * <p>Every assertion here corresponds to a bug that actually shipped and was found by hand during the
@@ -129,6 +131,130 @@ public class LangFileIntegrityTester {
                 "zh_cn.json carries keys that no longer exist in en_us.json " + stale
                         + " — a key deleted from en_us must be deleted from every translation in the SAME"
                         + " change, or the translation silently accumulates dead weight.");
+    }
+
+    /** Anything robotics: the robot and its entity, the docking station, the redstone board item and every
+     *  {@code buildcraft.boardRobot*} programme name/description. Matched on the KEY so a newly added board
+     *  is covered the moment its lang key lands, with no list to maintain. */
+    private static final Pattern ROBOTICS_KEY = Pattern.compile("(?i)robot|board|station");
+
+    @Test
+    public void roboticsKeysAreTranslatedInChinese() {
+        Map<String, String> en = parse(EN);
+        Map<String, String> zh = parse(ZH);
+        List<String> roboticsKeys = en.keySet().stream().filter(k -> ROBOTICS_KEY.matcher(k).find()).sorted().toList();
+
+        // Liveness: the filter must actually see the robotics block, or the checks below pass vacuously.
+        Assertions.assertTrue(roboticsKeys.contains("item.buildcraftunofficial.robot"), "filter lost the robot item");
+        Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker"), "filter lost the board names");
+        Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker.desc"), "filter lost the board descs");
+
+        assertTranslatedInChinese(en, zh, roboticsKeys, "robotics keys (matched by name)");
+    }
+
+    /** A string literal of the form {@code "..."} in Java source, escapes included. */
+    private static final Pattern JAVA_STRING_LITERAL = Pattern.compile("\"((?:[^\"\\\\\\n]|\\\\.)*)\"");
+
+    /** The name filter above misses robotics-owned strings whose keys say nothing about robots: the robot's
+     *  charge readout ({@code tip.charge.*}) and the Zone Planner help ledger ({@code buildcraft.help.zone_planner.*})
+     *  both shipped English-only in zh_cn that way. So the robotics CODE is the second source of truth: every
+     *  en_us key a {@code buildcraft/robotics/**} file names as a string literal must be translated too. */
+    @Test
+    public void langKeysNamedByRoboticsCodeAreTranslatedInChinese() {
+        Map<String, String> en = parse(EN);
+        Map<String, String> zh = parse(ZH);
+        Set<String> referenced = new HashSet<>();
+        for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
+            if (!file.relativePath().startsWith("buildcraft/robotics/")) {
+                continue;
+            }
+            Matcher m = JAVA_STRING_LITERAL.matcher(file.text());
+            while (m.find()) {
+                if (en.containsKey(m.group(1))) {
+                    referenced.add(m.group(1));
+                }
+            }
+        }
+        List<String> keys = referenced.stream().sorted().toList();
+
+        // Liveness: the scan must actually see the robotics code, or the checks below pass vacuously.
+        Assertions.assertTrue(keys.contains("tip.charge.fullcharge"), "scan lost ItemRobot's charge readout");
+        Assertions.assertTrue(keys.contains("buildcraft.help.zone_planner.map.title"), "scan lost GuiZonePlanner");
+
+        assertTranslatedInChinese(en, zh, keys, "lang keys named by robotics code");
+    }
+
+    /** Fails on any of {@code keys} that zh_cn lacks, leaves blank, or copies verbatim from English. A value with no
+     *  letters at all (a pure format string such as {@code "%s %s"}) is language-neutral and may match exactly. */
+    private static void assertTranslatedInChinese(Map<String, String> en, Map<String, String> zh, List<String> keys,
+            String what) {
+        List<String> missing = keys.stream().filter(k -> !zh.containsKey(k)).toList();
+        Assertions.assertTrue(missing.isEmpty(),
+                "zh_cn.json lacks " + missing.size() + " " + what + " that en_us.json has " + missing
+                        + " — a Chinese player sees the English text (or the raw key) for these. The robotics"
+                        + " strings were added after the 'zh_cn at 100%' sweep and nothing enforced coverage.");
+
+        List<String> untranslated = keys.stream()
+                .filter(k -> zh.containsKey(k) && (zh.get(k).isBlank()
+                        || (zh.get(k).equals(en.get(k)) && FORMAT_SPEC.matcher(en.get(k)).replaceAll("")
+                                .chars().anyMatch(Character::isLetter))))
+                .toList();
+        Assertions.assertTrue(untranslated.isEmpty(),
+                "zh_cn.json carries these " + what + " blank or copied verbatim from English " + untranslated);
+    }
+
+    /** Painted pipes and charged paintbrushes are named through a two-argument format key (colour, then the base
+     *  item name) so each language owns the word order; see {@code ColouredItemNameTest} for the Java side. */
+    @Test
+    public void colouredItemNameFormatKeysExistInBothLanguages() {
+        for (String file : new String[] { EN, ZH }) {
+            Map<String, String> lang = parse(file);
+            for (String key : new String[] { "item.buildcraftunofficial.pipe.coloured",
+                    "item.buildcraftunofficial.paintbrush.coloured" }) {
+                String value = lang.get(key);
+                Assertions.assertNotNull(value, file + " is missing the colour-name format key " + key);
+                Assertions.assertEquals(2, countFormatSpecs(value),
+                        file + ": " + key + " must take exactly the colour and the base name (two placeholders)");
+            }
+        }
+    }
+
+    /** The four 1.12.2-era {@code tile.*.name} titles each duplicated a modern {@code block.*} key with the same
+     *  text, and the GUI titles were still pointed at the legacy copies — two keys to keep in sync for one name,
+     *  and a rename done on only one of them silently splits the block's item name from its screen title. */
+    @Test
+    public void noLegacyTileNameKeys() {
+        for (String file : new String[] { EN, ZH }) {
+            List<String> legacy = parse(file).keySet().stream().filter(k -> k.startsWith("tile.")).sorted().toList();
+            Assertions.assertTrue(legacy.isEmpty(),
+                    file + " still declares legacy tile.* keys " + legacy
+                            + " — GUI titles and tile display names read the block.buildcraftunofficial.* key.");
+        }
+    }
+
+    @Test
+    public void blockKeysThatReplacedTheLegacyTileKeysExistInBothLanguages() {
+        for (String file : new String[] { EN, ZH }) {
+            Map<String, String> lang = parse(file);
+            for (String key : new String[] { "block.buildcraftunofficial.autoworkbench_item",
+                    "block.buildcraftunofficial.engine_stone", "block.buildcraftunofficial.engine_iron",
+                    "block.buildcraftunofficial.library" }) {
+                Assertions.assertTrue(lang.containsKey(key) && !lang.get(key).isBlank(),
+                        file + " must carry " + key + " — it is the GUI title for the machine");
+            }
+        }
+    }
+
+    @Test
+    public void mainCodeNeverReadsLegacyTileNameKeys() {
+        List<String> offenders = MainSourceSet.javaFiles().stream()
+                .filter(f -> f.text().contains("\"tile."))
+                .map(MainSourceSet.SourceFile::relativePath)
+                .sorted()
+                .toList();
+        Assertions.assertTrue(offenders.isEmpty(),
+                "These files still read a legacy tile.* lang key " + offenders
+                        + " — use the block.buildcraftunofficial.* key (the legacy keys no longer exist).");
     }
 
     @Test

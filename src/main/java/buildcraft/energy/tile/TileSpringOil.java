@@ -61,12 +61,18 @@ public class TileSpringOil extends AbstractBCBlockEntity implements ITileOilSpri
         int pumpCount = in.getIntOr("pumpCount", 0);
         for (int i = 0; i < pumpCount; i++) {
             String prefix = "pump_" + i + "_";
-            String name = in.getStringOr(prefix + "name", "Unknown");
+            // A missing name stays empty: GameProfile rejects null, and an English placeholder here would be
+            // written back to disk on the next save.
+            String name = in.getStringOr(prefix + "name", "");
             String idStr = in.getStringOr(prefix + "id", "");
             UUID id = null;
             try {
                 if (!idStr.isEmpty()) id = UUID.fromString(idStr);
             } catch (IllegalArgumentException ignored) {}
+            if (id == null) {
+                // Nothing to key the entry by, and GameProfile rejects a null id: drop it rather than fail the load.
+                continue;
+            }
             long tick = in.getLongOr(prefix + "tick", -1);
             int pumped = in.getIntOr(prefix + "pumped", 0);
             GameProfile gp = new GameProfile(id, name);

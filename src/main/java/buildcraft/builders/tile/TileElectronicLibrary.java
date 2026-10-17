@@ -202,11 +202,7 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
      * Adds the snapshot to the server DB and creates the used item in the output slot.
      */
     public void onUploadReceived(Snapshot snapshot) {
-        GlobalSavedDataSnapshots.get(level).addSnapshot(snapshot);
-        Snapshot.Header header = snapshot.key.header;
-        if (header == null) {
-            header = new Snapshot.Header(snapshot.key, new UUID(0, 0), new java.util.Date(), "Snapshot");
-        }
+        Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot);
         EnumSnapshotType type = snapshot.getType();
         ItemSnapshot usedItem = type == EnumSnapshotType.BLUEPRINT
             ? BCBuildersItems.BLUEPRINT_USED.get()
@@ -214,6 +210,21 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
         invUpOut.setStackInSlot(0, usedItem.createUsedStack(header));
         invUpIn.setStackInSlot(0, ItemStack.EMPTY);
         setChanged();
+    }
+
+    /**
+     * Store an uploaded snapshot in {@code store}; returns the header for the item that stands for it. The server
+     * keeps content only (like the Architect Table does) and the name travels on the item, so one build uploaded
+     * under several names shares one file and every resulting item finds it.
+     */
+    public static Snapshot.Header storeUpload(GlobalSavedDataSnapshots store, Snapshot snapshot) {
+        Snapshot.Header uploaded = snapshot.key.header;
+        snapshot.key = new Snapshot.Key(snapshot.key, (Snapshot.Header) null);
+        store.addSnapshot(snapshot);
+        if (uploaded == null) {
+            return new Snapshot.Header(snapshot.key, new UUID(0, 0), new java.util.Date(), "Snapshot");
+        }
+        return new Snapshot.Header(snapshot.key, uploaded.owner, uploaded.created, uploaded.name);
     }
 
     // --- NBT persistence ---

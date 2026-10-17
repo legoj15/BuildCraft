@@ -862,6 +862,7 @@
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.burn": "燃烧：%s 秒",
     "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.rate": "≤ %s",
     "gui.jei.transfer.buildcraftunofficial.missing": "你没有所需的材料",
+    "gui.jei.transfer.buildcraftunofficial.table_busy": "请先清空工作台的槽位",
     "gui.ledger.help": "帮助",
     "gui.ledger.help.none": "帮助不可用",
     "gui.ledger.help.none.desc": "此界面没有可用的帮助条目。",

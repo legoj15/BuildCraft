@@ -8,11 +8,15 @@ package buildcraft.robotics.ai;
 import java.lang.reflect.Field;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.RobotManager;
 
 /** The {@link AIRobotMain} preempt ladder, driven against a {@link MockRobotAccess} and a real {@code MjBattery}:
  *  shutdown wins at flat power, recharge takes over below the safety reserve (and backs off on failure), the
@@ -21,6 +25,15 @@ import buildcraft.api.robots.IRobotAccess;
 public class AIRobotMainTest {
 
     private final MockRobotAccess robot = new MockRobotAccess();
+
+    @BeforeAll
+    static void registerTestAis() {
+        // Under the full mod load BCRobotics has registered the controller already; a bare run has not.
+        if (RobotManager.getAIRobotName(AIRobotMain.class) == null) {
+            RobotManager.registerAIRobot(AIRobotMain.class, "aiRobotMain");
+        }
+        RobotManager.registerAIRobot(SavedOverride.class, "buildcraftunofficial:test_saved_override");
+    }
 
     @Test
     public void flatPowerStartsAShutdown() {
@@ -91,6 +104,98 @@ public class AIRobotMainTest {
         // The armed cooldown proves the recharge branch genuinely fired and unwound.
         Assertions.assertEquals(120, rechargeCooldown(main),
                 "the recharge branch fired (and its failure armed the cooldown)");
+    }
+
+    // ---- the overriding AI across a save/load ----
+
+    /** Saves {@code main} and reads it back the way the robot entity does. */
+    private AIRobotMain saveAndLoad(AIRobotMain main) {
+        CompoundTag nbt = new CompoundTag();
+        main.writeToNbt(nbt);
+        return (AIRobotMain) AIRobot.loadAI(nbt, robot);
+    }
+
+    /** A gate redirect that was running when the robot unloaded comes back as the controller's tracked
+     *  override. Untracked, the next gate pulse saw "no override" and stacked a second redirect over the
+     *  restored one, and a recharge that interrupted it dropped it for good. */
+    @Test
+    public void aRunningOverrideIsStillTheOverrideAfterALoad() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new SavedOverride(robot));
+        main.preempt(null);
+        Assertions.assertInstanceOf(SavedOverride.class, main.getDelegateAI(), "precondition: the override runs");
+
+        AIRobotMain loaded = saveAndLoad(main);
+
+        Assertions.assertInstanceOf(SavedOverride.class, loaded.getDelegateAI(),
+                "the override comes back as the running delegate");
+        Assertions.assertNotNull(loaded.getOverridingAI(),
+                "...and the controller knows it is an override, so a gate pulse does not stack another");
+        Assertions.assertSame(loaded.getDelegateAI(), loaded.getOverridingAI());
+    }
+
+    /** The restored override survives the interruption that used to lose it: a recharge takes the delegate
+     *  slot, and once power is comfortable the controller starts the tracked override again. */
+    @Test
+    public void aRestoredOverrideResumesAfterARecharge() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new SavedOverride(robot));
+        main.preempt(null);
+        AIRobotMain loaded = saveAndLoad(main);
+        AIRobot restored = loaded.getDelegateAI();
+
+        robot.getBattery().setStored(MjAPI.MJ); // below the safety reserve
+        loaded.preempt(loaded.getDelegateAI());
+        Assertions.assertNull(loaded.getDelegateAI(), "the recharge (which fails here) displaced the override");
+
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        loaded.preempt(loaded.getDelegateAI());
+
+        Assertions.assertSame(restored, loaded.getDelegateAI(),
+                "with power back, the tracked override is started again");
+    }
+
+    /** Only an override is flagged: a controller running its ordinary board must not read the board back as
+     *  an override (it would then re-run the board as a redirect after every interruption). */
+    @Test
+    public void aBoardDelegateIsNotMistakenForAnOverride() {
+        AIRobotMain main = new AIRobotMain(robot);
+        main.startDelegateAI(new SavedOverride(robot)); // an ordinary delegate, never set as the override
+
+        AIRobotMain loaded = saveAndLoad(main);
+
+        Assertions.assertInstanceOf(SavedOverride.class, loaded.getDelegateAI(), "precondition: it came back");
+        Assertions.assertNull(loaded.getOverridingAI(), "a plain delegate is not an override");
+    }
+
+    /** An override that cannot be saved (the base AI has no NBT form) is not saved at all, and leaves no
+     *  dangling override behind. */
+    @Test
+    public void anOverrideThatCannotBeSavedLeavesNoOverrideBehind() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new AIRobot(robot));
+        main.preempt(null);
+        Assertions.assertNotNull(main.getDelegateAI(), "precondition: the override runs");
+
+        AIRobotMain loaded = saveAndLoad(main);
+
+        Assertions.assertNull(loaded.getDelegateAI(), "the unsavable override is not restored");
+        Assertions.assertNull(loaded.getOverridingAI(), "...and nothing is left pretending to be one");
+    }
+
+    /** A stand-in for a saveable gate redirect such as the goto-station move. */
+    public static class SavedOverride extends AIRobot {
+        public SavedOverride(IRobotAccess iRobot) {
+            super(iRobot);
+        }
+
+        @Override
+        public boolean canLoadFromNBT() {
+            return true;
+        }
     }
 
     /** Reads the private {@code rechargeCooldown} field. */

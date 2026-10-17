@@ -66,6 +66,13 @@ public class AIRobot {
 
     }
 
+    /** Runs at the very end of {@link #loadFromNBT}, once {@link #loadSelfFromNBT} has run AND the saved delegate
+     *  (if any) is attached. The place for state that has to be resolved against the restored delegate, which
+     *  {@code loadSelfFromNBT} cannot see. */
+    protected void onLoadedFromNbt() {
+
+    }
+
     public boolean success() {
         return success;
     }
@@ -206,6 +213,8 @@ public class AIRobot {
                 BCLog.logger.warn("[robots] Failed to load robot delegate AI from NBT", e);
             }
         }
+
+        onLoadedFromNbt();
     }
 
     public static AIRobot loadAI(CompoundTag nbt, IRobotAccess robot) {

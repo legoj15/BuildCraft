@@ -8,7 +8,10 @@
  */
 package buildcraft.robotics.ai;
 
+import net.minecraft.nbt.CompoundTag;
+
 import buildcraft.api.core.BCLog;
+import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
@@ -20,6 +23,9 @@ public class AIRobotMain extends AIRobot {
 
     private AIRobot overridingAI;
     private int rechargeCooldown;
+    /** Set by {@link #loadSelfFromNBT}: the saved delegate was the override. The delegate is only attached after
+     *  that call, so {@link #onLoadedFromNbt} does the actual restoring. */
+    private boolean overrideSaved;
 
     public AIRobotMain(IRobotAccess iRobot) {
         super(iRobot);
@@ -86,5 +92,31 @@ public class AIRobotMain extends AIRobot {
     @Override
     public boolean canLoadFromNBT() {
         return true;
+    }
+
+    /** Remembers that the delegate is the override (a gate redirect such as Goto Station), but only when that
+     *  delegate will itself be saved. A reloaded robot then keeps tracking the redirect it resumes: untracked,
+     *  the next gate pulse found no override and stacked a second one over it, and a recharge that interrupted
+     *  it dropped it for good (7.1.x lost it the same way). */
+    @Override
+    public void writeSelfToNBT(CompoundTag nbt) {
+        AIRobot delegate = getDelegateAI();
+        if (overridingAI != null && overridingAI == delegate && delegate.canLoadFromNBT()) {
+            nbt.putBoolean("overriding", true);
+        }
+    }
+
+    @Override
+    public void loadSelfFromNBT(CompoundTag nbt) {
+        overrideSaved = NbtApiUtil.getBoolean(nbt, "overriding", false);
+    }
+
+    @Override
+    protected void onLoadedFromNbt() {
+        if (overrideSaved) {
+            overrideSaved = false;
+            // Null when the saved override's class is no longer registered: nothing to track then.
+            overridingAI = getDelegateAI();
+        }
     }
 }

@@ -109,7 +109,9 @@ public class BreakBoardReloadReservationTester {
         try (Reload r = new Reload(helper)) {
             helper.assertTrue(r.registry.take(r.log, r.robotB), "robot B claims the log while A is away");
 
-            r.board.cycle();
+            // preempt alone: the update() a full cycle runs next fetches a tool through the dimension-wide station
+            // registry, which could reserve a sibling test's station.
+            r.board.preempt(r.board.getDelegateAI());
 
             helper.assertTrue(r.registry.robotIdTaking(r.log) == r.robotB.getRobotId(),
                     "robot B still holds the log");

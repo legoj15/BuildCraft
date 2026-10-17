@@ -1,0 +1,360 @@
+/*
+ * Copyright (c) 2026 the BuildCraftUnofficial contributors
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+package buildcraft.robotics.boards;
+
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+
+import buildcraft.api.boards.RedstoneBoardRobot;
+import buildcraft.api.mj.MjAPI;
+import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.IRobotRegistry;
+import buildcraft.api.robots.ResourceId;
+import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
+import buildcraft.robotics.StackRequest;
+import buildcraft.robotics.ai.AIRobotDeliverRequested;
+import buildcraft.robotics.ai.AIRobotGotoBlock;
+import buildcraft.robotics.ai.AIRobotPlant;
+import buildcraft.robotics.ai.AIRobotPumpBlock;
+import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
+import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
+import buildcraft.robotics.entity.EntityRobot;
+
+/** A robot that unloads mid-job loses every registry reservation, but its board and AIs come back from NBT
+ *  remembering the job: the block a search-and-goto is flying to, the block a farmer/planter/pump is working, the
+ *  request a delivery board is filling. Another robot may have claimed that job meanwhile (or, after a server
+ *  restart, the stale claim was dropped the first time anyone asked about it). The reloaded robot must re-claim
+ *  its job on its first cycle, or give it up to the robot that holds it - never work it unreserved alongside.
+ *
+ *  <p>Every reload is a real {@code writeToNbt} / {@code AIRobot.loadAI} round trip with the registry's unload
+ *  release in between. Robots are unadded and registered by hand and boards are cycled synchronously (as
+ *  {@code BreakBoardReloadReservationTester}), so no tick can interfere. A board that yields its job runs only its
+ *  {@code preempt} (the first step of a cycle): the {@code update()} a full cycle would run next starts a new search
+ *  over the dimension-wide station registry, which would find - and reserve - a sibling test's stations and orders. */
+public class ReloadedJobReservationTester {
+
+    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
+
+    private static final BlockPos ROBOT_A_REL = new BlockPos(1, 2, 3);
+    private static final BlockPos ROBOT_B_REL = new BlockPos(2, 2, 3);
+    private static final BlockPos TARGET_REL = new BlockPos(4, 2, 4);
+    private static final BlockPos STATION_REL = new BlockPos(4, 2, 1);
+
+    /** Robots A and B; robot A is the one that unloads and comes back. */
+    private static final class Robots implements AutoCloseable {
+        final GameTestHelper helper;
+        final IRobotRegistry registry;
+        final EntityRobot robotA;
+        final EntityRobot robotB;
+        final List<Runnable> cleanup = new ArrayList<>();
+
+        Robots(GameTestHelper helper) {
+            this.helper = helper;
+            robotA = robot(helper, ROBOT_A_REL);
+            robotB = robot(helper, ROBOT_B_REL);
+            registry = robotA.getRegistry();
+        }
+
+        private static EntityRobot robot(GameTestHelper helper, BlockPos rel) {
+            EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
+            Vec3 spawn = Vec3.atCenterOf(helper.absolutePos(rel));
+            robot.setPos(spawn.x, spawn.y, spawn.z);
+            robot.getBattery().addPower(SEEDED_CHARGE, false);
+            IRobotRegistry reg = robot.getRegistry();
+            robot.setUniqueRobotId(reg.getNextRobotId());
+            reg.registerRobot(robot);
+            return robot;
+        }
+
+        /** Saves {@code before} as the robot entity would, unloads robot A (the registry frees everything it
+         *  held), and reads the board back. */
+        <T extends AIRobot> T reload(AIRobot before, Class<T> type) {
+            CompoundTag saved = new CompoundTag();
+            before.writeToNbt(saved);
+            before.abortDelegateAI();
+            registry.releaseResources(robotA);
+            AIRobot loaded = AIRobot.loadAI(saved, robotA);
+            helper.assertTrue(type.isInstance(loaded),
+                    "precondition: the board reloads as " + type.getSimpleName() + " - got " + loaded);
+            T board = type.cast(loaded);
+            cleanup.add(board::abortDelegateAI);
+            return board;
+        }
+
+        void free(ResourceId id) {
+            cleanup.add(() -> registry.release(id));
+        }
+
+        @Override
+        public void close() {
+            for (Runnable r : cleanup) {
+                r.run();
+            }
+            registry.killRobot(robotA);
+            registry.killRobot(robotB);
+        }
+    }
+
+    // ---------- the search-and-goto flight ----------
+
+    /** Robot A's lumberjack board, reloaded while its search-and-goto flies to a log. */
+    private static BoardRobotLumberjack reloadMidFlight(Robots r, BlockPos log) {
+        GameTestHelper helper = r.helper;
+        helper.setBlock(TARGET_REL, Blocks.OAK_LOG);
+        ResourceIdBlock logId = new ResourceIdBlock(log);
+        r.free(logId);
+
+        BoardRobotLumberjack before = new BoardRobotLumberjack(r.robotA);
+        AIRobotSearchAndGotoBlock flight = new AIRobotSearchAndGotoBlock(r.robotA, false, pos -> false);
+        before.startDelegateAI(flight);
+        CompoundTag found = new CompoundTag();
+        found.putIntArray("blockFound", new int[] { log.getX(), log.getY(), log.getZ() });
+        flight.loadSelfFromNBT(found);
+        helper.assertTrue(r.registry.take(logId, r.robotA), "precondition: robot A reserved the log it flies to");
+        LinkedList<BlockPos> path = new LinkedList<>();
+        path.add(helper.absolutePos(new BlockPos(1, 2, 4)));
+        path.add(helper.absolutePos(new BlockPos(2, 2, 4)));
+        path.add(helper.absolutePos(new BlockPos(3, 2, 4)));
+        flight.startDelegateAI(new AIRobotGotoBlock(r.robotA, path));
+
+        BoardRobotLumberjack board = r.reload(before, BoardRobotLumberjack.class);
+        helper.assertTrue(board.getDelegateAI() instanceof AIRobotSearchAndGotoBlock loaded
+                        && log.equals(loaded.getBlockFound()) && loaded.getDelegateAI() instanceof AIRobotGotoBlock,
+                "precondition: the reloaded board resumes the flight to the log - got " + board.getDelegateAI());
+        helper.assertFalse(r.registry.isTaken(logId), "precondition: the unload left the log unreserved");
+        return board;
+    }
+
+    private static boolean fliesTo(BoardRobotLumberjack board, BlockPos log) {
+        return board.getDelegateAI() instanceof AIRobotSearchAndGotoBlock flight && log.equals(flight.getBlockFound());
+    }
+
+    /** Robot B took the log while A was away: A's resumed flight must give it up, not land and break it. */
+    public static void reloadedFlightYieldsABlockAnotherRobotTook(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            BlockPos log = helper.absolutePos(TARGET_REL);
+            ResourceIdBlock logId = new ResourceIdBlock(log);
+            BoardRobotLumberjack board = reloadMidFlight(r, log);
+            helper.assertTrue(r.registry.take(logId, r.robotB), "robot B claims the log while A is away");
+
+            board.cycle();
+
+            helper.assertTrue(r.registry.robotIdTaking(logId) == r.robotB.getRobotId(), "robot B still holds the log");
+            helper.assertFalse(fliesTo(board, log),
+                    "the reloaded flight must drop a block another robot now holds - got " + board.getDelegateAI());
+            helper.assertTrue(board.blockFound() == null, "...and the board must not take it up either");
+            helper.succeed();
+        }
+    }
+
+    /** Nobody took the log: A's resumed flight re-reserves it and flies on. */
+    public static void reloadedFlightReclaimsAFreeBlock(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            BlockPos log = helper.absolutePos(TARGET_REL);
+            ResourceIdBlock logId = new ResourceIdBlock(log);
+            BoardRobotLumberjack board = reloadMidFlight(r, log);
+
+            board.cycle();
+
+            helper.assertTrue(r.registry.robotIdTaking(logId) == r.robotA.getRobotId(),
+                    "the reloaded flight must re-reserve its block before landing on it");
+            helper.assertTrue(fliesTo(board, log)
+                            && board.getDelegateAI().getDelegateAI() instanceof AIRobotGotoBlock,
+                    "...and keep flying to it - got " + board.getDelegateAI());
+            helper.succeed();
+        }
+    }
+
+    /** The board's half: a search-and-goto that reports a block it never reserved this session must not leave the
+     *  board believing it holds that block. The board re-claims (here: yields) on its next cycle. */
+    public static void boardDoesNotTrustAnUnreservedFlightResult(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            BlockPos log = helper.absolutePos(TARGET_REL);
+            ResourceIdBlock logId = new ResourceIdBlock(log);
+            helper.setBlock(TARGET_REL, Blocks.OAK_LOG);
+            r.free(logId);
+
+            BoardRobotLumberjack board = new BoardRobotLumberjack(r.robotA);
+            r.cleanup.add(board::abortDelegateAI);
+            AIRobotSearchAndGotoBlock reloadedFlight = new AIRobotSearchAndGotoBlock(r.robotA);
+            CompoundTag found = new CompoundTag();
+            found.putIntArray("blockFound", new int[] { log.getX(), log.getY(), log.getZ() });
+            reloadedFlight.loadSelfFromNBT(found);
+            helper.assertTrue(r.registry.take(logId, r.robotB), "robot B holds the log");
+
+            board.delegateAIEnded(reloadedFlight);
+            board.preempt(board.getDelegateAI());
+
+            helper.assertTrue(r.registry.robotIdTaking(logId) == r.robotB.getRobotId(), "robot B still holds the log");
+            helper.assertTrue(board.blockFound() == null,
+                    "a board handed a block nobody reserved for it must check the registry, not assume");
+            helper.succeed();
+        }
+    }
+
+    // ---------- the farmer / planter / pump action ----------
+
+    private record ActionBoard(String name, Block block, Function<EntityRobot, RedstoneBoardRobot> board,
+            BiFunction<EntityRobot, BlockPos, AIRobot> action, Class<? extends AIRobot> actionType,
+            Function<RedstoneBoardRobot, BlockPos> blockFound) {}
+
+    private static final List<ActionBoard> ACTION_BOARDS = List.of(
+            new ActionBoard("farmer", Blocks.DIRT, BoardRobotFarmer::new, AIRobotUseToolOnBlock::new,
+                    AIRobotUseToolOnBlock.class, b -> ((BoardRobotFarmer) b).blockFound()),
+            new ActionBoard("planter", Blocks.FARMLAND, BoardRobotPlanter::new, AIRobotPlant::new,
+                    AIRobotPlant.class, b -> ((BoardRobotPlanter) b).blockFound()),
+            new ActionBoard("pump", Blocks.WATER, BoardRobotPump::new, AIRobotPumpBlock::new,
+                    AIRobotPumpBlock.class, b -> ((BoardRobotPump) b).blockFound()));
+
+    /** Robot A's board reloaded mid-action on the target block. */
+    private static RedstoneBoardRobot reloadMidAction(Robots r, ActionBoard kind, BlockPos target) {
+        GameTestHelper helper = r.helper;
+        helper.setBlock(TARGET_REL, kind.block());
+        ResourceIdBlock targetId = new ResourceIdBlock(target);
+        r.free(targetId);
+
+        RedstoneBoardRobot before = kind.board().apply(r.robotA);
+        CompoundTag self = new CompoundTag();
+        self.putIntArray("blockFound", new int[] { target.getX(), target.getY(), target.getZ() });
+        before.loadSelfFromNBT(self);
+        helper.assertTrue(r.registry.take(targetId, r.robotA), "precondition: robot A reserved its block");
+        before.startDelegateAI(kind.action().apply(r.robotA, target));
+
+        RedstoneBoardRobot board = r.reload(before, RedstoneBoardRobot.class);
+        helper.assertTrue(target.equals(kind.blockFound().apply(board))
+                        && kind.actionType().isInstance(board.getDelegateAI()),
+                "precondition: the reloaded " + kind.name() + " remembers its block and resumes working it - got "
+                        + board.getDelegateAI());
+        helper.assertFalse(r.registry.isTaken(targetId), "precondition: the unload left the block unreserved");
+        return board;
+    }
+
+    /** Robot B took the block while A was away: each reloaded board must let it go, not work it alongside B. */
+    public static void reloadedActionBoardsYieldABlockAnotherRobotTook(GameTestHelper helper) {
+        BlockPos target = helper.absolutePos(TARGET_REL);
+        ResourceIdBlock targetId = new ResourceIdBlock(target);
+        for (ActionBoard kind : ACTION_BOARDS) {
+            try (Robots r = new Robots(helper)) {
+                RedstoneBoardRobot board = reloadMidAction(r, kind, target);
+                helper.assertTrue(r.registry.take(targetId, r.robotB), "robot B claims the block while A is away");
+
+                board.preempt(board.getDelegateAI());
+
+                helper.assertTrue(r.registry.robotIdTaking(targetId) == r.robotB.getRobotId(),
+                        kind.name() + ": robot B still holds the block");
+                helper.assertTrue(kind.blockFound().apply(board) == null,
+                        kind.name() + ": the reloaded board must drop a block another robot now holds");
+                helper.assertFalse(kind.actionType().isInstance(board.getDelegateAI()),
+                        kind.name() + ": ...and stop working it - two robots would otherwise work one block");
+            }
+        }
+        helper.setBlock(TARGET_REL, Blocks.AIR);
+        helper.succeed();
+    }
+
+    /** Nobody took the block: each reloaded board re-claims it and carries on. */
+    public static void reloadedActionBoardsReclaimAFreeBlock(GameTestHelper helper) {
+        BlockPos target = helper.absolutePos(TARGET_REL);
+        ResourceIdBlock targetId = new ResourceIdBlock(target);
+        for (ActionBoard kind : ACTION_BOARDS) {
+            try (Robots r = new Robots(helper)) {
+                RedstoneBoardRobot board = reloadMidAction(r, kind, target);
+
+                board.cycle();
+
+                helper.assertTrue(r.registry.robotIdTaking(targetId) == r.robotA.getRobotId(),
+                        kind.name() + ": the reloaded board must re-reserve its block - unreserved, any search can "
+                                + "take it");
+                helper.assertTrue(target.equals(kind.blockFound().apply(board))
+                                && kind.actionType().isInstance(board.getDelegateAI()),
+                        kind.name() + ": the board keeps its block and keeps working it");
+            }
+        }
+        helper.setBlock(TARGET_REL, Blocks.AIR);
+        helper.succeed();
+    }
+
+    // ---------- the delivery request ----------
+
+    /** Robot A's delivery board reloaded while it delivers an order from a registered station. */
+    private static BoardRobotDelivery reloadMidDelivery(Robots r, ResourceId[] requestId) {
+        GameTestHelper helper = r.helper;
+        LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+        r.registry.registerStation(station);
+        r.cleanup.add(() -> r.registry.removeStation(station));
+
+        StackRequest request = new StackRequest(null, 0, new ItemStack(Items.DIAMOND, 3));
+        request.setStation(station);
+        requestId[0] = request.getResourceId(helper.getLevel());
+        r.free(requestId[0]);
+
+        BoardRobotDelivery before = new BoardRobotDelivery(r.robotA);
+        CompoundTag self = new CompoundTag();
+        CompoundTag requestNbt = new CompoundTag();
+        request.writeToNBT(requestNbt);
+        self.put("currentRequest", requestNbt);
+        before.loadSelfFromNBT(self);
+        helper.assertTrue(r.registry.take(requestId[0], r.robotA), "precondition: robot A reserved the order");
+        before.startDelegateAI(new AIRobotDeliverRequested(r.robotA, request));
+
+        BoardRobotDelivery board = r.reload(before, BoardRobotDelivery.class);
+        helper.assertTrue(board.currentRequest() != null && board.getDelegateAI() instanceof AIRobotDeliverRequested,
+                "precondition: the reloaded board remembers the order and resumes delivering it - got "
+                        + board.getDelegateAI());
+        helper.assertFalse(r.registry.isTaken(requestId[0]), "precondition: the unload left the order unreserved");
+        return board;
+    }
+
+    /** Robot B took the order while A was away: A must not deliver it too. */
+    public static void reloadedDeliveryYieldsAnOrderAnotherRobotTook(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            ResourceId[] requestId = new ResourceId[1];
+            BoardRobotDelivery board = reloadMidDelivery(r, requestId);
+            helper.assertTrue(r.registry.take(requestId[0], r.robotB), "robot B claims the order while A is away");
+
+            board.preempt(board.getDelegateAI());
+
+            helper.assertTrue(r.registry.robotIdTaking(requestId[0]) == r.robotB.getRobotId(),
+                    "robot B still holds the order");
+            helper.assertTrue(board.currentRequest() == null,
+                    "the reloaded board must drop an order another robot now holds");
+            helper.assertFalse(board.getDelegateAI() instanceof AIRobotDeliverRequested,
+                    "...and stop delivering it - two robots would otherwise fill one order");
+            helper.succeed();
+        }
+    }
+
+    /** Nobody took the order: A re-claims it and carries on delivering. */
+    public static void reloadedDeliveryReclaimsAFreeOrder(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            ResourceId[] requestId = new ResourceId[1];
+            BoardRobotDelivery board = reloadMidDelivery(r, requestId);
+
+            board.cycle();
+
+            helper.assertTrue(r.registry.robotIdTaking(requestId[0]) == r.robotA.getRobotId(),
+                    "the reloaded board must re-reserve its order - unreserved, any other robot's search can take it");
+            helper.assertTrue(board.currentRequest() != null && board.getDelegateAI() instanceof AIRobotDeliverRequested,
+                    "the board keeps its order and keeps delivering it");
+            helper.succeed();
+        }
+    }
+}

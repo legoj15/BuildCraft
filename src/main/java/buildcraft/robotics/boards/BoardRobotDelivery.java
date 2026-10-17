@@ -39,6 +39,10 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
 
     private StackRequest currentRequest = null;
 
+    /** Whether this board holds the registry reservation on {@link #currentRequest} in this session. Not saved: the
+     *  unload that saved a mid-delivery board freed it, so {@link #preempt} re-claims it after a reload. */
+    private boolean currentRequestClaimed;
+
     public BoardRobotDelivery(IRobotAccess iRobot) {
         super(iRobot);
     }
@@ -76,6 +80,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             } else {
                 currentRequest = ((AIRobotSearchStackRequest) ai).request;
+                // The search reserved the order before reporting it.
+                currentRequestClaimed = true;
 
                 // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only
                 // ever drives a real robot.
@@ -95,6 +101,11 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         }
     }
 
+    /** The order this board is working, or null between orders. */
+    StackRequest currentRequest() {
+        return currentRequest;
+    }
+
     private void releaseCurrentRequest() {
         if (currentRequest != null) {
             robot.getRegistry().release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
@@ -103,6 +114,23 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 station.release((EntityRobotBase) robot);
             }
             currentRequest = null;
+            currentRequestClaimed = false;
+        }
+    }
+
+    /** Runs before the delegate on every cycle. A board reloaded mid-order remembers the order, but the unload freed
+     *  its reservation: re-claim it before the resumed load or delivery moves, or - when another robot took the
+     *  order meanwhile, or its station is gone - drop it and stop, rather than fill one order twice. Not 7.1.x,
+     *  which delivered unreserved. */
+    @Override
+    public void preempt(AIRobot ai) {
+        if (currentRequest != null && !currentRequestClaimed) {
+            if (robot.getRegistry().reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())) {
+                currentRequestClaimed = true;
+            } else {
+                releaseCurrentRequest();
+                abortDelegateAI();
+            }
         }
     }
 

@@ -95,7 +95,9 @@ public class StackRequest {
                     .ifPresent(payload -> nbt.put("stack", payload));
         }
 
-        if (station != null) {
+        // The by-value link, not the resolved object: a request loaded from NBT holds only pos+side until something
+        // asks for its station, and a save in between must not drop the order.
+        if (stationIndex != null && stationSide != null) {
             CompoundTag stationIndexNBT = new CompoundTag();
             stationIndexNBT.putInt("i", stationIndex.getX());
             stationIndexNBT.putInt("j", stationIndex.getY());

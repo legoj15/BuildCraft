@@ -363,6 +363,12 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
+    /** The interface's check-then-take, held under the registry monitor so no other claim lands in between. */
+    @Override
+    public synchronized boolean reclaim(ResourceId resourceId, long robotId) {
+        return IRobotRegistry.super.reclaim(resourceId, robotId);
+    }
+
     @Override
     public synchronized void releaseResources(EntityRobotBase robot) {
         releaseResources(robot, false);

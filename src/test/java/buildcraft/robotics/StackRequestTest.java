@@ -95,6 +95,23 @@ public class StackRequestTest extends VanillaSetupBaseTester {
         }
     }
 
+    /** A robot that reloads and saves again before anything resolves its order's station (an unload right after a
+     *  load) must not lose the order: the request still knows the station by value, so it writes it back. */
+    @Test
+    public void loadedRequestSavesItsStationAgainBeforeResolvingIt() {
+        BlockPos pos = new BlockPos(-4, 70, 9);
+        Direction side = Direction.NORTH;
+        StackRequest original = new StackRequest(null, 2, new ItemStack(Items.DIAMOND, 3));
+        original.setStation(stationDouble(pos, side));
+        CompoundTag first = new CompoundTag();
+        original.writeToNBT(first);
+
+        CompoundTag second = new CompoundTag();
+        StackRequest.loadFromNBT(first).writeToNBT(second);
+
+        Assertions.assertEquals(first, second, "a second save of an unresolved loaded request is the first save");
+    }
+
     @Test
     public void nbtWithoutStationLoadsNull() {
         StackRequest original = new StackRequest(null, 0, new ItemStack(Items.DIRT, 1));

@@ -895,6 +895,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_break_board_reload_yields_taken_block", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::reloadedBreakBoardYieldsABlockAnotherRobotTook);
         reg.accept("buildcraftunofficial:robot_break_board_reload_reclaims_free_block", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::reloadedBreakBoardReclaimsAFreeBlock);
         reg.accept("buildcraftunofficial:robot_break_board_release_is_owner_checked", () -> buildcraft.robotics.boards.BreakBoardReloadReservationTester::finishedBreakDoesNotFreeAnotherRobotsClaim);
+        reg.accept("buildcraftunofficial:robot_reloaded_flight_yields_taken_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedFlightYieldsABlockAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_flight_reclaims_free_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedFlightReclaimsAFreeBlock);
+        reg.accept("buildcraftunofficial:robot_board_rechecks_unreserved_flight_result", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::boardDoesNotTrustAnUnreservedFlightResult);
+        reg.accept("buildcraftunofficial:robot_reloaded_action_boards_yield_taken_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsYieldABlockAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_action_boards_reclaim_free_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsReclaimAFreeBlock);
+        reg.accept("buildcraftunofficial:robot_reloaded_delivery_yields_taken_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryYieldsAnOrderAnotherRobotTook);
+        reg.accept("buildcraftunofficial:robot_reloaded_delivery_reclaims_free_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryReclaimsAFreeOrder);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
         reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);

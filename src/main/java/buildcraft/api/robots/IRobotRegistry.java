@@ -63,6 +63,18 @@ public interface IRobotRegistry {
         }
     }
 
+    /** Re-takes a reservation a robot remembers from before an unload (or a server restart, after which a claim
+     *  whose robot was not loaded yet is dropped the first time anyone asks about it): true when {@code robotId}
+     *  holds {@code resourceId} on return - it still held it, or it was free and is now taken. False means another
+     *  robot holds it, and the caller must give that job up rather than work it unreserved. */
+    default boolean reclaim(ResourceId resourceId, long robotId) {
+        if (resourceId == null) {
+            return false;
+        }
+        long holder = robotIdTaking(resourceId);
+        return holder == robotId || (holder == EntityRobotBase.NULL_ROBOT_ID && take(resourceId, robotId));
+    }
+
     void releaseResources(EntityRobotBase robot);
 
     DockingStation getStation(BlockPos pos, Direction side);

@@ -27,7 +27,6 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
-import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
@@ -140,8 +139,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
                 blockFound = searchAndGoto.getBlockFound();
-                // The search-and-goto took the reservation before it reported the block.
-                blockFoundClaimed = true;
+                // Normally the search-and-goto took the reservation before it reported the block; if it did not
+                // (a flight that came back from NBT unreserved), preempt re-claims or drops it on the next cycle.
+                blockFoundClaimed = searchAndGoto.holdsReservation();
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
@@ -165,10 +165,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (registry == null) {
             return;
         }
-        ResourceIdBlock id = new ResourceIdBlock(blockFound);
-        long robotId = robot.getRobotId();
-        long holder = registry.robotIdTaking(id);
-        if (holder == robotId || (holder == EntityRobotBase.NULL_ROBOT_ID && registry.take(id, robotId))) {
+        if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
             blockFoundClaimed = true;
         } else {
             blockFound = null;

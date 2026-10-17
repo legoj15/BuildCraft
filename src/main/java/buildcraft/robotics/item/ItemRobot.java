@@ -351,7 +351,9 @@ public class ItemRobot extends Item {
         } else if (energy <= 0) {
             text = Component.translatable("tip.charge.nocharge");
         } else {
-            text = Component.literal(pct + "% ").append(Component.translatable("tip.charge.charged"));
+            // One format key taking the percentage, so each language places the number itself (the code used to
+            // glue "<pct>% " in front of a translated word, fixing the word order for every language).
+            text = Component.translatable("tip.charge.percent", pct);
         }
         return text.withStyle(chargeColour(pct));
     }

@@ -336,6 +336,12 @@ public class BCCore {
                 MessageDebugResponse.STREAM_CODEC,
                 MessageDebugResponse::handle
         );
+        // Action-bar messages naming an energy figure: the server sends the raw amount, the client formats it
+        registrar.playToClient(
+                buildcraft.lib.net.MessageEnergyOverlay.TYPE,
+                buildcraft.lib.net.MessageEnergyOverlay.STREAM_CODEC,
+                buildcraft.lib.net.MessageEnergyOverlay::handle
+        );
         // Snapshots / Blueprints
         registrar.playToServer(
                 buildcraft.builders.snapshot.SnapshotRequestPayload.TYPE,

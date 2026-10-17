@@ -42,6 +42,9 @@ public abstract class ActionPowerLimit extends BCStatement implements IActionInt
         return false;
     }
 
+    /** Client-side only: statement descriptions are reached through {@code IGuiSlot#getTooltip}, from the gate GUI and
+     *  the guide, so reading the client-only FE/RF naming toggle ({@code rfNamedKey}) is correct here. A string the
+     *  SERVER sends must not be built like this -- see {@code MessageEnergyOverlay}. */
     @Override
     public String getDescription() {
         if (isRf()) {

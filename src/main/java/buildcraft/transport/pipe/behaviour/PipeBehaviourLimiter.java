@@ -12,11 +12,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.HitResult;
 
 import buildcraft.api.core.EnumPipePart;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IFlowPowerLike;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
@@ -32,6 +30,7 @@ import buildcraft.api.transport.pipe.PipeEventRedstoneFlux;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.net.MessageEnergyOverlay;
 
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 import buildcraft.transport.statements.ActionPowerLimit;
@@ -114,7 +113,10 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
             }
 
             boolean isRf = pipe.getFlow() instanceof PipeFlowRedstoneFlux;
-            final int limit;
+            // The new limit as a per-tick amount: micro-MJ for kinesis pipes, FE/RF for RF pipes. The player's
+            // client formats it (unit, language, flow display mode); this runs on the server, which has none of
+            // those client settings, so it sends the raw figure instead of a string it built itself.
+            final long limit;
             if (limitShift == MAX_SHIFT) {
                 limit = 0;
             } else if (isRf) {
@@ -122,10 +124,10 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
                 limit = transferInfo.transferPerTick >> limitShift;
             } else {
                 PowerTransferInfo transferInfo = PipeApi.getPowerTransferInfo(pipe.getDefinition());
-                limit = (int) ((transferInfo.transferPerTick >> limitShift) / MjAPI.MJ);
+                limit = transferInfo.transferPerTick >> limitShift;
             }
-            String key = "chat.pipe." + (isRf ? "rf" : "power") + ".iron.mode";
-            buildcraft.lib.misc.MessageUtil.sendOverlayMessage(player,Component.translatable(key, limit));
+            buildcraft.lib.misc.MessageUtil.sendEnergyOverlay(player, "chat.pipe.iron.mode",
+                isRf ? MessageEnergyOverlay.Kind.RF_FLOW : MessageEnergyOverlay.Kind.MJ_FLOW, limit);
 
             requestReconfigure();
         }

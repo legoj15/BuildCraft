@@ -13,6 +13,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.network.PacketDistributor;
+
+import buildcraft.lib.net.MessageEnergyOverlay;
 
 public class MessageUtil {
 
@@ -53,6 +56,29 @@ public class MessageUtil {
         //?} else {
         /*player.displayClientMessage(message, true);*/
         //?}
+    }
+
+    /**
+     * Show a player an action-bar message that names an energy figure, formatted by THEIR client. The figure's unit
+     * label, number format and language all come from client-side display settings the server cannot read, so the
+     * server ships the raw amount ({@link MessageEnergyOverlay}) and the client builds the text. Never format such a
+     * figure with {@code LocaleUtil} here and pass the string to {@link #sendOverlayMessage}: on a dedicated server
+     * it would be baked in the server's defaults and language. The payload does carry THIS (server) JVM's
+     * {@code powerMode} and MJ⇄RF ratio: those are COMMON config the server's machines really convert at, and a
+     * remote client's own copy is never synced to them.
+     *
+     * @param key    base translation key of the message, taking the formatted figure as its one {@code %s}
+     * @param kind   which unit family {@code amount} is in
+     * @param amount the figure ({@link MessageEnergyOverlay.Kind} says in what unit)
+     */
+    public static void sendEnergyOverlay(Player player, String key, MessageEnergyOverlay.Kind kind, long amount) {
+        MessageEnergyOverlay overlay = MessageEnergyOverlay.of(key, kind, amount);
+        if (player instanceof ServerPlayer serverPlayer) {
+            PacketDistributor.sendToPlayer(serverPlayer, overlay);
+        } else {
+            // A client-side player: there is no server to hop through, and this JVM is the one that formats.
+            sendOverlayMessage(player, overlay.resolve());
+        }
     }
 
     /**

@@ -121,6 +121,7 @@ public class RobotActionAIsTester {
         helper.setBlock(youngRel,
                 Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 3));
 
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
         EntityRobot robot = unaddedRobot(helper, robotRel);
         AIRobotHarvest harvester = new AIRobotHarvest(robot, helper.absolutePos(matureRel));
         int cycles = 0;
@@ -134,14 +135,19 @@ public class RobotActionAIsTester {
         helper.assertTrue(!level.getBlockState(helper.absolutePos(youngRel)).isAir(),
                 "the young wheat is left to grow");
 
-        boolean droppedWheat = false;
-        for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
-            droppedWheat |= item.getItem().is(Items.WHEAT);
-            item.discard();
-        }
-        helper.assertTrue(droppedWheat,
+        // The drops are spawned this tick; an entity added to a chunk whose entity section is not loaded yet
+        // is invisible to entity scans until it is, so poll on observed state rather than reading tick 0
+        // (flaked on 1.21.11, 2026-10-17).
+        EntityArenaUtil.tickUntil(helper, 60,
+                () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).stream()
+                        .anyMatch(item -> item.getItem().is(Items.WHEAT)),
+                () -> {
+                    for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
+                        item.discard();
+                    }
+                    helper.succeed();
+                },
                 "the harvest drops its loot at the robot (wheat among it)");
-        helper.succeed();
     }
 
     /** A robot holding exactly one wheat seed plants it through the fake-player crop handler: farmland

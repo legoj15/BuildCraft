@@ -753,6 +753,8 @@
     "buildcraftunofficial.configuration.pipes": "Pipes",
     "buildcraftunofficial.configuration.builders": "Builders",
     "buildcraftunofficial.configuration.quarry": "Quarry",
+    "buildcraftunofficial.configuration.library": "Electronic Library",
+    "buildcraftunofficial.configuration.libraryMaxUploadMb": "Library Max Upload (MB)",
     "buildcraftunofficial.configuration.mjPerItem": "MJ Cost per Item",
     "buildcraftunofficial.configuration.mjPerMillibucket": "MJ Cost per mB Fluid",
     "buildcraftunofficial.configuration.basePowerRate": "Base Power Rate",

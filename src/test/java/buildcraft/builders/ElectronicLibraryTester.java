@@ -487,4 +487,158 @@ public class ElectronicLibraryTester {
             store.removeSnapshot(other.key);
         });
     }
+
+    private static TileElectronicLibrary libraryAt(GameTestHelper helper, BlockPos pos) {
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
+        return tile;
+    }
+
+    /** A mock player with a library menu open on {@code tile}, watching it the way a real one does. */
+    private static ContainerElectronicLibrary watcher(GameTestHelper helper, TileElectronicLibrary tile,
+                                                      Player player) {
+        ContainerElectronicLibrary menu = new ContainerElectronicLibrary(0, player.getInventory(), tile);
+        player.containerMenu = menu;
+        tile.onPlayerOpen(player);
+        return menu;
+    }
+
+    /**
+     * A watcher's half-sent upload does not outlive the request it answers: when the tile withdraws the request
+     * (the selection changed) or gives up on it (nothing arrived for the answer timeout) the chunks the menu holds
+     * are freed at once, not at the next chunk or when the menu closes, and the rest of that stream is ignored when
+     * it arrives rather than glued onto the next upload.
+     */
+    public static void testWithdrawnRequestReleasesBuffers(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        TileElectronicLibrary tile = libraryAt(helper, pos);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary menu = watcher(helper, tile, player);
+
+        Snapshot.Key asked = libraryKey(1);
+        Snapshot.Key other = libraryKey(2);
+        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        tile.selected = asked;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the first request", tile::isUploadRequested, () -> {
+                sendChunk(menu, false, chunk);
+                sendChunk(menu, false, chunk);
+                assertTrue(menu.getBufferedUploadBytes() == 2 * chunk.length,
+                    "a requested upload is buffered, held " + menu.getBufferedUploadBytes());
+                tile.selected = other; // the request is no longer wanted
+            }),
+            new Step("the withdrawn request", () -> !tile.isUploadRequested(), () -> {
+                assertTrue(menu.getBufferedUploadBytes() == 0,
+                    "a withdrawn request frees what its stream held, held " + menu.getBufferedUploadBytes());
+                // The rest of the stream was already on its way.
+                sendChunk(menu, false, chunk);
+                sendChunk(menu, true, chunk);
+                assertTrue(menu.getBufferedUploadBytes() == 0, "and is not buffered when it arrives");
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "nor turned into an item");
+                assertFalse(tile.isUploadRefused(), "nor counted against the build");
+                tile.selected = asked;
+            }),
+            new Step("the second request", tile::isUploadRequested, () -> {
+                sendChunk(menu, false, chunk);
+                assertTrue(menu.getBufferedUploadBytes() == chunk.length, "the new request is buffered cleanly, held "
+                    + menu.getBufferedUploadBytes());
+                // ...and the sender goes quiet.
+            }),
+            new Step("the unanswered request timing out", () -> !tile.isUploadRequested(), () -> {
+                assertTrue(menu.getBufferedUploadBytes() == 0,
+                    "a request that timed out frees what its stream held, held " + menu.getBufferedUploadBytes());
+                sendChunk(menu, true, chunk);
+                assertTrue(menu.getBufferedUploadBytes() == 0, "and its late tail is ignored");
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "making no item");
+            }));
+        runSteps(helper, 330, steps, () -> tile.onPlayerClose(player));
+    }
+
+    /**
+     * An unreadable or wrong upload from one watcher ends that watcher's answer, not the tile's request: another
+     * watcher's good answer still makes the item, the first watcher's later answers to the same request are not
+     * taken, and only when every watcher has been refused (or has left) is the build marked refused.
+     */
+    public static void testBadStreamAbortsOnlyItsWatcher(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        TileElectronicLibrary tile = libraryAt(helper, pos);
+        Player first = helper.makeMockPlayer(GameType.SURVIVAL);
+        Player second = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary firstMenu = watcher(helper, tile, first);
+        ContainerElectronicLibrary secondMenu = watcher(helper, tile, second);
+
+        Template wanted = template(0, 2, 4);
+        Template other = template(1);
+        GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
+        byte[] garbage = {1, 2, 3};
+        tile.selected = wanted.key;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the first request", tile::isUploadRequested, () -> {
+                sendChunk(firstMenu, true, garbage);
+                assertTrue(tile.isUploadRequested(), "one watcher's unreadable stream does not end the request");
+                assertFalse(tile.isUploadRefused(), "nor mark the build refused while another watcher may answer");
+                assertTrue(firstMenu.getBufferedUploadBytes() == 0, "its own stream is dropped");
+
+                // That watcher's later answers to the same request are not taken, even a good one...
+                try {
+                    sendUpload(firstMenu, wanted);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "a refused watcher's second answer is ignored");
+                assertTrue(tile.isUploadRequested(), "and the request is still waiting");
+
+                // ...but another watcher's is.
+                try {
+                    sendUpload(secondMenu, wanted);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertFalse(tile.invUpOut.getStackInSlot(0).isEmpty(), "the other watcher's answer made the item");
+                assertFalse(tile.isUploadRequested(), "and ended the request");
+                assertTrue(store.getSnapshot(wanted.key) != null, "which was stored");
+                tile.invUpOut.setStackInSlot(0, ItemStack.EMPTY);
+                tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+            }),
+            new Step("the request for the next blank", tile::isUploadRequested, () -> {
+                try {
+                    sendUpload(firstMenu, other); // the wrong build: this watcher is refused
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertTrue(tile.isUploadRequested(), "the wrong build from one watcher leaves the request waiting");
+                assertFalse(tile.isUploadRefused(), "and the build unrefused");
+                sendChunk(secondMenu, true, garbage); // the last watcher is refused too
+                assertTrue(tile.isUploadRefused(), "once every watcher is refused, so is the build");
+                assertFalse(tile.isUploadRequested(), "and it is not asked for again");
+                assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "no item came of any of it");
+                assertFalse(tile.invUpIn.getStackInSlot(0).isEmpty(), "and the blank is still there");
+                tile.invUpIn.setStackInSlot(0, ItemStack.EMPTY);
+            }),
+            new Step("taking the blank out to clear the refusal", () -> !tile.isUploadRefused(),
+                () -> tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()))),
+            new Step("the request for the third blank", tile::isUploadRequested, () -> {
+                sendChunk(firstMenu, true, garbage);
+                assertTrue(tile.isUploadRequested(), "one refused, one still to answer");
+                tile.onPlayerClose(second);
+                assertTrue(tile.isUploadRefused(), "the watcher left standing is refused: so is the build");
+                assertFalse(tile.isUploadRequested(), "and nobody is left to ask");
+            }));
+        runSteps(helper, 380, steps, () -> {
+            tile.onPlayerClose(first);
+            tile.onPlayerClose(second);
+            store.removeSnapshot(wanted.key);
+            store.removeSnapshot(other.key);
+        });
+    }
 }

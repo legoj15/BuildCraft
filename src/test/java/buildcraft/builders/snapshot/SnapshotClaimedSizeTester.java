@@ -82,6 +82,25 @@ public class SnapshotClaimedSizeTester {
     }
 
     @Test
+    public void anUntrustedReadRefusesAClaimPastItsCellCapForEverySnapshotType() throws InvalidInputDataException {
+        // A template's data never has to match its size (trailing zero bits are dropped), so a huge claim comes with
+        // no data to give it away; a blueprint's is caught by its list as well, but the cap refuses both up front.
+        BlockPos huge = new BlockPos(1290, 1290, 1290);
+        Assertions.assertThrows(InvalidInputDataException.class,
+            () -> Snapshot.readFromNBT(claiming(template(), huge), 1_000_000));
+        Assertions.assertThrows(InvalidInputDataException.class,
+            () -> Snapshot.readFromNBT(claiming(blueprint(), huge), 1_000_000));
+
+        // The cap is a cell count: exactly at it is allowed, one more is not.
+        Assertions.assertNotNull(Snapshot.readFromNBT(Snapshot.writeToNBT(template()), 2));
+        Assertions.assertNotNull(Snapshot.readFromNBT(Snapshot.writeToNBT(blueprint()), 2));
+        Assertions.assertThrows(InvalidInputDataException.class,
+            () -> Snapshot.readFromNBT(Snapshot.writeToNBT(template()), 1));
+        Assertions.assertThrows(InvalidInputDataException.class,
+            () -> Snapshot.readFromNBT(Snapshot.writeToNBT(blueprint()), 1));
+    }
+
+    @Test
     public void aNegativeSizeIsRefused() {
         BlockPos negative = new BlockPos(-2, 1, 1);
         Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(claiming(blueprint(), negative)));

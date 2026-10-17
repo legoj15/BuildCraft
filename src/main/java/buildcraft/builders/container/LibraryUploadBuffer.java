@@ -15,8 +15,9 @@ import javax.annotation.Nullable;
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.nbt.NbtSquisher;
 
-import buildcraft.core.BCCoreConfig;
+import buildcraft.core.BCUnifiedConfig;
 
+import buildcraft.builders.BCBuildersConfig;
 import buildcraft.builders.snapshot.Snapshot;
 
 /**
@@ -29,8 +30,9 @@ import buildcraft.builders.snapshot.Snapshot;
  * rather than left to grow. What the bytes unpack to is bounded too, by {@link #decode}: the transfer is compressed,
  * so its size on the wire says little about its size in memory.
  * <p>
- * The limits follow the largest scan the config allows ({@link Limits#current}), so a blueprint markers can frame is
- * never refused for its size; they only stop a payload built to be larger than any such scan.
+ * One config option, {@link BCBuildersConfig#libraryMaxUploadMb}, sizes all of it ({@link Limits#current}): the bytes
+ * on the wire, what they unpack to, and the cells a snapshot of any type may claim. Its default is a small multiple of
+ * the largest scan the default config can make; a server that allows larger scans raises it.
  * <p>
  * Not thread-safe; a menu's messages arrive on the server thread one at a time.
  */
@@ -40,19 +42,6 @@ public final class LibraryUploadBuffer {
     /** What the game's NBT accounter charges for one blueprint cell: an {@code IntTag} (12) plus its slot in the
      *  list (4). Blueprints store one per cell, so this dominates a large scan; pinned by a test on every node. */
     static final long EXPANDED_BYTES_PER_CELL = 16;
-    /** Room past the cells for the palette, the entities and the header. */
-    static final long EXPANDED_HEADROOM = 64L * 1024 * 1024;
-    /** One cell's worst case on the wire: its four bytes of int when nothing about them compresses. */
-    static final long UPLOAD_BYTES_PER_CELL = 4;
-    /** Room past the cells for the palette, the entities and the header, compressed. */
-    static final long UPLOAD_HEADROOM = 16L * 1024 * 1024;
-
-    /** The cells in the largest box markers {@code markerMaxDistance} apart enclose: a marker connects to one up to
-     *  that many blocks away, so the box is one longer than the distance on each side. */
-    static long largestMarkerScanCells(int markerMaxDistance) {
-        long side = markerMaxDistance + 1L;
-        return side * side * side;
-    }
 
     /**
      * How much one upload may hold.
@@ -62,26 +51,31 @@ public final class LibraryUploadBuffer {
      * @param maxExpandedBytes NBT they may unpack to, by the game's own heap estimate
      */
     public record Limits(int maxUploadBytes, int maxChunks, long maxExpandedBytes) {
-        /** The least the limits ever are: what they were before they followed the config. A volume box is not
-         *  bounded by the marker range, so a scan of one that fit then keeps fitting. */
-        public static final Limits FLOOR = of(16 * 1024 * 1024, 256L * 1024 * 1024);
-
-        private static Limits of(long uploadBytes, long expandedBytes) {
-            int upload = (int) Math.min(uploadBytes, Integer.MAX_VALUE - CHUNK_BYTES);
+        /**
+         * The limits for an upload of {@code megabytes} MB: that many bytes on the wire and unpacked. Nothing a
+         * snapshot holds is larger unpacked than packed by more than a blueprint's four wire bytes to sixteen
+         * accounted ones a cell, so a size that fits the unpacked limit has room on the wire.
+         */
+        public static Limits ofMegabytes(int megabytes) {
+            long bytes = megabytes * 1024L * 1024L;
+            int upload = (int) Math.min(bytes, Integer.MAX_VALUE - CHUNK_BYTES);
             // A full upload at the sender's chunk size, plus one of slack.
-            return new Limits(upload, upload / CHUNK_BYTES + 1, expandedBytes);
+            return new Limits(upload, upload / CHUNK_BYTES + 1, bytes);
         }
 
-        /** Room for the largest marker scan at {@code markerMaxDistance}, and never less than {@link #FLOOR}. */
-        public static Limits forMarkerDistance(int markerMaxDistance) {
-            long cells = largestMarkerScanCells(markerMaxDistance);
-            return of(Math.max(FLOOR.maxUploadBytes, cells * UPLOAD_BYTES_PER_CELL + UPLOAD_HEADROOM),
-                Math.max(FLOOR.maxExpandedBytes, cells * EXPANDED_BYTES_PER_CELL + EXPANDED_HEADROOM));
+        /** The most cells a snapshot of any type may claim in its header: what {@link #maxExpandedBytes} pays for at
+         *  the worst per-cell cost (a blueprint's). */
+        public int maxCells() {
+            return (int) Math.min(Integer.MAX_VALUE, maxExpandedBytes / EXPANDED_BYTES_PER_CELL);
         }
 
         /** The limits for the config as it is now. */
         public static Limits current() {
-            return forMarkerDistance(BCCoreConfig.markerMaxDistance.get());
+            // Not loaded before the common config is (a menu cannot open before then; this guards the tools that
+            // build limits at class-load time).
+            int megabytes = BCUnifiedConfig.SPEC.isLoaded() ? BCBuildersConfig.libraryMaxUploadMb.get()
+                : BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT;
+            return ofMegabytes(megabytes);
         }
     }
 
@@ -146,6 +140,16 @@ public final class LibraryUploadBuffer {
         discarding = !last;
     }
 
+    /**
+     * Free what an upload in progress holds because the request it answers is over (withdrawn, timed out, answered
+     * by someone else), and ignore the rest of its stream up to its final chunk. A buffer holding nothing is left as
+     * it is: no stream is in flight, so the next chunk starts a new upload and not the tail of an old one.
+     */
+    void release() {
+        if (chunks.isEmpty()) return;
+        skip(false);
+    }
+
     /** Uploads dropped for going past the limits since this buffer was made. */
     int droppedUploads() {
         return dropped;
@@ -173,16 +177,18 @@ public final class LibraryUploadBuffer {
     /** Unpack an assembled upload into a snapshot (its key recomputed from its content), within this buffer's
      *  {@link Limits#maxExpandedBytes}. */
     Snapshot decode(byte[] assembled) throws IOException {
-        return decode(assembled, limits.maxExpandedBytes());
+        return decode(assembled, limits.maxExpandedBytes(), limits.maxCells());
     }
 
     /**
-     * @throws IOException if the data is not a snapshot, or would unpack past {@code maxExpandedBytes}
+     * @throws IOException if the data is not a snapshot, would unpack past {@code maxExpandedBytes}, or claims a size
+     *                     of more than {@code maxCells} cells
      */
-    static Snapshot decode(byte[] assembled, long maxExpandedBytes) throws IOException {
+    static Snapshot decode(byte[] assembled, long maxExpandedBytes, int maxCells) throws IOException {
         Snapshot snapshot;
         try {
-            snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(assembled), maxExpandedBytes));
+            snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(assembled), maxExpandedBytes),
+                maxCells);
         } catch (RuntimeException e) {
             // A hand-built payload can be well-formed NBT that is not a snapshot; reading it can fail any way it likes.
             throw new IOException("Not a readable snapshot: " + e, e);

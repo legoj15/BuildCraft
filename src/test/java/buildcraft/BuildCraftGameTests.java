@@ -980,6 +980,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_delivery_recharge_abort_gives_up_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryAbortedByARechargeGivesUpItsOrder);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
         reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
+        reg.accept("buildcraftunofficial:robot_goto_station_abort_frees_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedGotoStationFreesItsPlainClaim);
+        reg.accept("buildcraftunofficial:robot_goto_station_failed_leg_frees_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::failedGotoStationFreesItsPlainClaim);
+        reg.accept("buildcraftunofficial:robot_goto_station_docked_keeps_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::dockedGotoStationKeepsItsClaim);
+        reg.accept("buildcraftunofficial:robot_goto_station_abort_keeps_home_link", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedGotoStationKeepsTheHomeLink);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_abort_keeps_new_home", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedTakeAsMainGotoKeepsTheNewHome);
+        reg.accept("buildcraftunofficial:robot_shutdown_releases_claims", () -> buildcraft.robotics.RobotAbortReleaseTester::shutdownReleasesWhatTheRobotHolds);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
         reg.accept("buildcraftunofficial:marker_chunk_unload_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache);
 
@@ -1044,6 +1050,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
+        reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

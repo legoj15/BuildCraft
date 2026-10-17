@@ -133,6 +133,29 @@ public class AIRobotRequestNetworkTest extends VanillaSetupBaseTester {
                 "a successful search RESERVES the request — two robots cannot both take it");
     }
 
+    /** The search takes its request only as it ENDS, in the same call that started it (the station search under it is
+     *  a single sweep), and the board that started it owns the reservation from then on. So there is no moment at
+     *  which an abort could find the search holding a request, and no release belongs in its {@code end()}: that runs
+     *  on a normal termination too, before the board has even been told, and would hand back the very order it just
+     *  reserved. (7.1.x's search was the same; its board gives the order back.) */
+    @Test
+    public void searchHoldsNothingAcrossACycleAndHandsTheRequestToItsBoard() {
+        DockingStation station = stationWith(providerOwing(new ItemStack(Items.DIAMOND, 5)));
+        RecordingRegistry registry = new RecordingRegistry(station);
+        MockRobotAccess robot = robotOn(registry);
+
+        AIRobotSearchStackRequest ai =
+                new AIRobotSearchStackRequest(robot, stack -> true, new ArrayList<>());
+        ai.start();
+
+        Assertions.assertTrue(ai.success(), "precondition: the search found and reserved the request");
+        Assertions.assertNull(ai.getDelegateAI(),
+                "the search is finished by the time start() returns - it is never active while holding a request");
+        ai.abort();
+        Assertions.assertTrue(registry.taken.contains(ai.request.getResourceId(null)),
+                "an abort after the hand-over must leave the reservation with the board that now owns it");
+    }
+
     @Test
     public void searchSkipsAnAlreadyTakenRequest() {
         DockingStation station = stationWith(providerOwing(new ItemStack(Items.DIAMOND, 5)));

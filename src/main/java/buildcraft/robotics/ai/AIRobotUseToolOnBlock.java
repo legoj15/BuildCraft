@@ -35,7 +35,10 @@ import buildcraft.robotics.RobotProtection;
  *  <p>Two 7.1.x behaviours kept verbatim: on a FAILED use the hand is cleared and the held item dropped
  *  at the robot's feet only when it is undamageable (a damageable tool that failed — wrong block — is
  *  kept for the next attempt); and 7.1.x's NBT key was the typo {@code "blockFound"} — this port writes
- *  the field's real name (no 7.1.x save format is read, so nothing migrates). */
+ *  the field's real name (no 7.1.x save format is read, so nothing migrates).
+ *
+ *  <p>The tool is in the fake player's main hand for the use (so a claim or tool listener reading the hand sees
+ *  it) and the robot takes back what is in that hand afterwards. */
 public class AIRobotUseToolOnBlock extends AIRobot {
 
     private BlockPos useToBlock;
@@ -67,21 +70,30 @@ public class AIRobotUseToolOnBlock extends AIRobot {
             if (useToBlock != null && robot.level() instanceof ServerLevel serverLevel) {
                 ItemStack held = robot.getHeldItem();
                 boolean used;
+                ItemStack inHand;
                 // As the home station's owner (the generic player when there is none), so a claim mod judges
                 // the owner and an advancement the tool grants reaches them.
                 try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                     FakePlayer player = lease.player();
                     player.setPos(robot.position());
+                    // The tool is in the player's main hand for the use, as it would be for a real player: a claim
+                    // or tool listener reads the hand, not the stack the context carries.
+                    RobotProtection.holdInMainHand(player, held);
                     // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
                     BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
                     UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
                     used = held.useOn(useOnContext).consumesAction();
+                    // Read before the lease closes and takes the hand's contents away.
+                    inHand = player.getMainHandItem();
                 }
                 if (used) {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no
                     // 7.1.x-style explicit damageItem here — a tool wears exactly as it would in a
-                    // player's hand, and a broken one leaves the hand empty.
-                    if (held.isEmpty()) {
+                    // player's hand, and a broken one leaves the hand empty. The robot takes back what is in
+                    // the hand afterwards: the same (now worn) stack, unless the item swapped it for another.
+                    if (inHand != held) {
+                        robot.setItemInUse(inHand);
+                    } else if (held.isEmpty()) {
                         robot.setItemInUse(ItemStack.EMPTY);
                     }
                 } else {

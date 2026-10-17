@@ -14,7 +14,8 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
-/** Undocks a robot and lets it fall to the ground, parking it where it stops. The shutdown entry point —
+/** Undocks a robot, gives back the reservations its cut-short work held, and lets it fall to the ground, parking it
+ *  where it stops. The shutdown entry point —
  *  {@code EntityRobot.shutdown(String)} starts this AI. The parked robot stays an entity (7.1.x behaviour
  *  too); it only converts back into drops when a player hits it with an attack or wrench. */
 public class AIRobotShutdown extends AIRobot {
@@ -33,6 +34,12 @@ public class AIRobotShutdown extends AIRobot {
     @Override
     public void start() {
         robot.undock();
+        // Whatever the cut-short work still holds goes back now, as at the start of a recharge: this AI never ends on
+        // its own, and a parked robot is loaded and alive, so no unload or death would ever free its block
+        // reservations, search cells or station claims - they would pin those blocks and stations for every other
+        // robot for good. The home link is kept (a plain release never touches it): a shutdown robot is parked, not
+        // orphaned. Not 7.1.x, whose shutdown released nothing.
+        robot.releaseResources();
         robot.setDeltaMovement(new Vec3(motionX, -0.075f, motionZ));
     }
 

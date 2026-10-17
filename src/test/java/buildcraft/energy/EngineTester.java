@@ -171,6 +171,38 @@ public class EngineTester {
     }
 
     /**
+     * Characterises the fuel-container path: burning a lava bucket must leave the empty bucket in the fuel
+     * slot (the stone engine asks the consumed stack for its crafting remainder). Pins the per-line remainder
+     * call (stack-sensitive on every node) so a link or behaviour change shows up as a failure here.
+     */
+    public static void testStirlingEngineLavaBucketLeavesBucket(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
+        helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
+
+        helper.runAfterDelay(2, () -> {
+            //? if >=1.21.10 {
+            TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos, TileEngineStone_BC8.class);
+            //?} else {
+            /*TileEngineStone_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+
+            engine.setFuelStack(new ItemStack(Items.LAVA_BUCKET));
+            engine.serverTick(engine.getLevel(), enginePos, engine.getBlockState(), engine);
+            if (!engine.isBurning()) {
+                throw new IllegalStateException("Stirling Engine failed to ignite with a LAVA_BUCKET!");
+            }
+            ItemStack left = engine.getFuelStack();
+            if (!left.is(Items.BUCKET) || left.getCount() != 1) {
+                throw new IllegalStateException("Burning a lava bucket must leave exactly one empty bucket in the "
+                        + "fuel slot, found: " + left);
+            }
+
+            helper.succeed();
+        });
+    }
+
+    /**
      * Regression for "stored energy doesn't release unless fueled" (RC4 feedback): a redstone-powered
      * Stirling engine with a charged MJ buffer but NO fuel (burnTime stays 0, so isBurning()==false)
      * must still deliver its stored buffer to an adjacent receiver. Under the pre-fix isBurning() send

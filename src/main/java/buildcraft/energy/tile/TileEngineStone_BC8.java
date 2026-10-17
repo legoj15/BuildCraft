@@ -228,12 +228,11 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
 
                 // Handle container items (e.g., empty bucket from lava bucket)
                 //? if >=26.1 {
-                // The item-level remainder is deprecated in favour of the stack-sensitive one, but NeoForge moved
-                // that from IItemStackExtension to ItemInstanceExtension mid-26.1.x (neoforged/NeoForge#3157,
-                // 2026-05), so no stack-sensitive call links across the single 26.1.x jar's whole [26.1.0,26.2)
-                // range. Deprecated, not for removal; switch once the 26.1 floor passes that build.
-                @SuppressWarnings("deprecation")
-                net.minecraft.world.item.ItemStackTemplate containerTemplate = consumed.getItem().getCraftingRemainder();
+                // NeoForge's stack-sensitive remainder (a template, null if none), not the deprecated item-level
+                // Item#getCraftingRemainder(), which ignores a stack-dependent remainder. Compiles against both
+                // nodes' floors (26.1.0.1-beta, 26.2.0.0-beta) and pins; the declaring interface moved
+                // mid-26.1.x but the ItemStack call site and descriptor are unchanged.
+                net.minecraft.world.item.ItemStackTemplate containerTemplate = consumed.getCraftingRemainder();
                 ItemStack container = containerTemplate != null ? containerTemplate.create() : ItemStack.EMPTY;
                 //?} elif >=1.21.10 {
                 /*// 1.21.10 / 1.21.11: NeoForge's stack-sensitive remainder (EMPTY if none), like 1.21.1 below — deliberately

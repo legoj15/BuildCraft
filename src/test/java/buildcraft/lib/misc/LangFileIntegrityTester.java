@@ -165,6 +165,17 @@ public class LangFileIntegrityTester {
                         + " — drop them from the allowlist.");
     }
 
+    /** The full unit names are the default label in every power readout, so an English value here shows up on
+     *  every machine screen of a Chinese client. The zh tooltips already say "Minecraft 焦耳" / "Forge 能量". */
+    @Test
+    public void fullUnitNamesAreTranslatedInChinese() {
+        Map<String, String> en = parse(EN);
+        Map<String, String> zh = parse(ZH);
+        for (String key : List.of("buildcraft.unit.mj.full", "buildcraft.unit.energy.full")) {
+            Assertions.assertNotEquals(en.get(key), zh.get(key), key + " is still the English text in zh_cn.json");
+        }
+    }
+
     /** The Zone Planner is one machine with one Chinese name, the block's. Its help-ledger title and the prose that
      *  points at "the planner" once drifted into a second spelling (规划器, "-er" for a device, vs the block's
      *  规划机, "-machine"), so a player saw two different names for the same GUI. */

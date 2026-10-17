@@ -33,6 +33,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.robotics.RobotProtection;
@@ -46,7 +47,8 @@ import buildcraft.robotics.path.IBlockFilter;
  *  ({@code AIRobotGotoStationAndUnloadFluids}); otherwise it searches for a {@code "fluidSource"} block
  *  and pumps it with {@code AIRobotPumpBlock}. Ported from 7.1.x {@code BoardRobotPump}: the block filter
  *  is {@code fluidSource && !isTaken && matchesGateFilter}, the last term being the home station's gate
- *  fluid filter (7.1.x {@code updateFilter()}), refreshed on every search pass.
+ *  fluid filter (7.1.x {@code updateFilter()}), refreshed on every search pass. (Not 7.1.x: the filter also
+ *  refuses a miner tube, whose waterlogged water is the machine's own plumbing.)
  *
  *  <p>The 7.1.x pump read its tank through {@code getTankInfo}; the modern equivalent is
  *  {@code robot.getFluidHandler()}. As in 7.1.x, a finished pump pass releases the block regardless of
@@ -127,6 +129,9 @@ public class BoardRobotPump extends RedstoneBoardRobot {
      *  sent to, and the answer comes back through {@link #delegateAIEnded}. */
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null
+                // A Mining Well / Pump tube drilled through water is waterlogged, a source like any other; it is the
+                // machine's own plumbing, so the pond around it is pumped but the tube is left wet (as TilePump does).
+                && !level.getBlockState(pos).is(BCFactoryBlocks.TUBE.get())
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
                 && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
                 && matchesGateFilter(level.getBlockState(pos))

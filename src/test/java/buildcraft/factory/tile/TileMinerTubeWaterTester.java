@@ -7,11 +7,13 @@ package buildcraft.factory.tile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluids;
 
+import buildcraft.api.mj.MjAPI;
 import buildcraft.factory.BCFactoryBlocks;
 
 /**
@@ -202,5 +204,109 @@ public class TileMinerTubeWaterTester {
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
         }
+    }
+
+    // ---------- The pump's flood fill must treat its own tube as transparent ----------
+
+    private static final BlockPos PUMP = new BlockPos(2, 6, 2);
+    private static final BlockPos SEED = new BlockPos(2, 2, 2);
+    private static final BlockPos WET_TUBE_LOW = new BlockPos(2, 3, 2);
+    private static final BlockPos WET_TUBE_HIGH = new BlockPos(2, 4, 2);
+    private static final BlockPos DRY_TUBE = new BlockPos(2, 5, 2);
+    private static final BlockPos POOL_LOW = new BlockPos(3, 2, 2);
+    /** Beside the low wet tube cell: the pool water touches the tube's water. */
+    private static final BlockPos POOL_HIGH = new BlockPos(3, 3, 2);
+
+    private static boolean isWaterlogged(BlockState state) {
+        return state.is(BCFactoryBlocks.TUBE.get()) && state.getValue(BlockStateProperties.WATERLOGGED);
+    }
+
+    /**
+     * A pump's own waterlogged tube is not part of the pool it drains. The tube column passes through water that
+     * touches a three-cell pool (the cell under the tube, plus two beside it); the flood fill used to queue the
+     * tube's water as pool cells -- it is a water source -- and the pump un-waterlogged its own tube bucket by bucket.
+     *
+     * <p>Column (local coordinates; the pump's first {@code mine()} rebuilds the tube column itself, which keeps
+     * the water in the wet cells waterlogged):
+     * <pre>
+     *   y=6  pump                    y=3  wet tube  | pool (x=3)
+     *   y=5  dry tube                y=2  pool seed | pool (x=3)
+     *   y=4  wet tube                y=1  stone floor
+     * </pre>
+     * Driven synchronously and gated on the observed pool: the pump is powered and ticked until all three pool cells
+     * are empty, and before every tick both wet tube cells must still be waterlogged tubes. (When the last bucket
+     * goes the pump retracts its tube, which turns the wet cells back into plain water -- so the end state is checked
+     * as "the water is still there", and exactly three buckets, the pool's, were pumped.)
+     */
+    public static void testPumpNeverDrainsOwnWaterloggedTube(GameTestHelper helper) {
+        try {
+            for (int y = 2; y <= 5; y++) {
+                helper.setBlock(new BlockPos(1, y, 2), Blocks.STONE);
+                helper.setBlock(new BlockPos(2, y, 1), Blocks.STONE);
+                helper.setBlock(new BlockPos(2, y, 3), Blocks.STONE);
+                helper.setBlock(new BlockPos(3, y, 1), Blocks.STONE);
+                helper.setBlock(new BlockPos(3, y, 3), Blocks.STONE);
+                helper.setBlock(new BlockPos(4, y, 2), Blocks.STONE);
+            }
+            helper.setBlock(new BlockPos(3, 4, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(3, 5, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 1, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(3, 1, 2), Blocks.STONE);
+            helper.setBlock(SEED, Blocks.WATER);
+            helper.setBlock(POOL_LOW, Blocks.WATER);
+            helper.setBlock(POOL_HIGH, Blocks.WATER);
+            BlockState tube = BCFactoryBlocks.TUBE.get().defaultBlockState();
+            BlockState wetTube = tube.setValue(BlockStateProperties.WATERLOGGED, true);
+            helper.setBlock(WET_TUBE_LOW, wetTube);
+            helper.setBlock(WET_TUBE_HIGH, wetTube);
+            helper.setBlock(DRY_TUBE, tube);
+            helper.setBlock(PUMP, BCFactoryBlocks.PUMP.get());
+
+            ServerLevel level = helper.getLevel();
+            TilePump pump = (TilePump) level.getBlockEntity(helper.absolutePos(PUMP));
+            assertTrue(pump != null, "the pump must have a block entity");
+            BlockPos[] pool = { SEED, POOL_LOW, POOL_HIGH };
+            BlockPos[] wetCells = { WET_TUBE_LOW, WET_TUBE_HIGH };
+
+            int ticks = 0;
+            while (poolHoldsWater(level, helper, pool)) {
+                assertTrue(ticks++ < 200, "the pump never drained the pool, tank = " + pump.getTank().getAmountMb(0)
+                        + " mB");
+                for (BlockPos wet : wetCells) {
+                    BlockState state = level.getBlockState(helper.absolutePos(wet));
+                    assertTrue(isWaterlogged(state), "the pump drained its own tube: " + wet + " is " + state
+                            + " after " + (ticks - 1) + " ticks and " + pump.getTank().getAmountMb(0) + " mB pumped");
+                }
+                pump.getBattery().addPowerChecking(10 * MjAPI.MJ, false);
+                pump.serverTick();
+            }
+
+            assertTrue(pump.getTank().getAmountMb(0) == 3000,
+                    "exactly the pool's three buckets must be pumped, got " + pump.getTank().getAmountMb(0) + " mB");
+            for (BlockPos wet : wetCells) {
+                BlockState state = level.getBlockState(helper.absolutePos(wet));
+                assertTrue(state.getFluidState().isSource() && state.getFluidState().getType() == Fluids.WATER,
+                        "the tube's water must still be there once the pool is drained, " + wet + " is " + state);
+            }
+
+            // Leave no live water behind. The pump itself stays: breaking it would spill its tank as shard items.
+            for (int y = 2; y <= 5; y++) {
+                helper.setBlock(new BlockPos(2, y, 2), Blocks.AIR);
+            }
+            helper.setBlock(POOL_LOW, Blocks.AIR);
+            helper.setBlock(POOL_HIGH, Blocks.AIR);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    private static boolean poolHoldsWater(ServerLevel level, GameTestHelper helper, BlockPos[] pool) {
+        for (BlockPos cell : pool) {
+            if (!level.getFluidState(helper.absolutePos(cell)).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

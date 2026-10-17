@@ -16,6 +16,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -24,6 +25,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
+import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.ClaimProtectionMod;
@@ -185,6 +187,33 @@ public class RobotPumpProtectionTester {
                         + "on a refusal that was given to someone else");
         check(level.getFluidState(well).isSource(), "the refused source is untouched");
         robot.setMainStation(null);
+        helper.succeed();
+    }
+
+    /**
+     * A Mining Well / Pump tube drilled through a pond holds the pond's water (it is waterlogged), but that water is
+     * the machine's own plumbing: the pump board must not pick it as a source to drain, while the plain source beside
+     * it stays a candidate.
+     */
+    public static void boardSkipsWaterloggedMinerTube(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos tubeRel = new BlockPos(2, 1, 2);
+        BlockPos plainRel = new BlockPos(4, 1, 2);
+        buildCup(helper, tubeRel);
+        buildCup(helper, plainRel);
+        helper.setBlock(tubeRel, BCFactoryBlocks.TUBE.get().defaultBlockState()
+                .setValue(BlockStateProperties.WATERLOGGED, true));
+        helper.setBlock(plainRel, Blocks.WATER);
+        BlockPos tube = helper.absolutePos(tubeRel);
+        BlockPos plain = helper.absolutePos(plainRel);
+        check(level.getFluidState(tube).isSource(), "precondition: the waterlogged tube holds a water source");
+        EntityRobot robot = unaddedRobot(helper, tubeRel.above());
+        BoardRobotPump board = new BoardRobotPump(robot);
+
+        check(board.isSearchCandidate(level, plain), "precondition: the plain water source is a candidate");
+        check(!board.isSearchCandidate(level, tube), "the pump board must not target the water inside a miner tube");
+        helper.setBlock(tubeRel, Blocks.AIR);
+        helper.setBlock(plainRel, Blocks.AIR);
         helper.succeed();
     }
 

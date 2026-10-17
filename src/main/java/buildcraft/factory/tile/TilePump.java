@@ -325,6 +325,12 @@ public class TilePump extends TileMiner implements IDebuggable {
                     }
                     boolean isNew = checked.add(offsetPos.asLong());
                     if (isNew) {
+                        // The miner's own plumbing is transparent to the fill, exactly as in probeDown: a tube
+                        // drilled through water is waterlogged -- a source the fill would otherwise queue, path
+                        // through and let the pump un-waterlog bucket by bucket.
+                        if (level.getBlockState(offsetPos).is(BCFactoryBlocks.TUBE.get())) {
+                            continue;
+                        }
                         Fluid fluidAt = BlockUtil.getFluidWithFlowing(level, offsetPos);
                         boolean eq = FluidUtilBC.areFluidsEqual(fluidAt, queueFluid);
                         if (eq) {

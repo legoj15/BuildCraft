@@ -587,6 +587,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_tube_keeps_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testTubeKeepsWaterInBore);
         reg.accept("buildcraftunofficial:mining_well_retract_restores_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testRetractRestoresWater);
         reg.accept("buildcraftunofficial:pump_probe_ignores_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpProbeIgnoresWaterloggedTube);
+        // ...and so does the flood fill: a waterlogged tube is a water source, but never one of the pump's buckets.
+        reg.accept("buildcraftunofficial:pump_never_drains_own_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpNeverDrainsOwnWaterloggedTube);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
@@ -1047,6 +1049,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_block", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockThatRefused);
         reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_pickup", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockWhosePickupRefused);
         reg.accept("buildcraftunofficial:robot_pump_board_reasks_for_new_owner", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardAsksAgainForANewOwner);
+        reg.accept("buildcraftunofficial:robot_pump_board_skips_miner_tube", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsWaterloggedMinerTube);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);

@@ -17,8 +17,9 @@ import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.robotics.item.ItemRobot;
 
-/** A statement parameter holding a robot board. Matching a robot against it compares the board id in
- *  the stack against the robot's installed board. */
+/** A statement parameter naming robots: a robot stack (by installed board), a List (by what the list holds - the
+ *  robot's board stack or anything it wears) or a wearable (by what the robot wears). Matching a robot against it
+ *  is {@link #matches}; the click rules for putting a stack in are {@link #onClick}. */
 public class StatementParameterRobot extends StatementParameterItemStack {
 
     public StatementParameterRobot() {
@@ -88,9 +89,16 @@ public class StatementParameterRobot extends StatementParameterItemStack {
                     ? new StatementParameterRobot(ItemRobot.createRobotStack(nextBoard.getID(), 0))
                     : new StatementParameterRobot();
         }
-        if (clickedStack.getItem() instanceof ItemRobot) {
-            // A held robot stack selects its board (the base's count-1 copy inlined — the base ignores
-            // the clicked stack, so the widget must handle it itself).
+        if (clickedStack.isEmpty()) {
+            // An empty click over a List or wearable parameter clears it (7.1.x: the base's empty-hand rule).
+            return new StatementParameterRobot();
+        }
+        if (clickedStack.getItem() instanceof ItemRobot || clickedStack.getItem() instanceof IList
+                || EntityRobot.isWearable(clickedStack)) {
+            // A held robot stack selects its board; a held List names robots by what the list holds (matches()
+            // above); a held wearable names the robots wearing one. 7.1.x took any stack here, but only these
+            // three kinds can ever match a robot, so anything else is refused. The base's count-1 copy, inlined —
+            // the base ignores the clicked stack, so the widget must handle it itself.
             ItemStack copy = clickedStack.copy();
             copy.setCount(1);
             return new StatementParameterRobot(copy);

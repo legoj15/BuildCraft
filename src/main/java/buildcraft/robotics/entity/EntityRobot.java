@@ -681,7 +681,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *  completed name-only SkullOwner profiles through the session service on equip
      *  ({@code initSkullItem}); modern heads carry complete profiles in their component already, so
      *  there is nothing to complete. */
-    private static boolean isWearable(ItemStack stack) {
+    public static boolean isWearable(ItemStack stack) {
         if (stack.getItem() instanceof IRobotOverlayItem overlay) {
             return overlay.isValidRobotOverlay(stack);
         }

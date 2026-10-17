@@ -42,4 +42,17 @@ public class ItemRobotNotProgrammedLangTest {
         Assertions.assertFalse(zhText.isBlank(), "the Chinese line must not be blank");
         Assertions.assertNotEquals(enText, zhText, "the Chinese line must be translated, not copied");
     }
+
+    /** The tooltip's "Unknown board" hint for a robot whose board nothing registers: same rule, same sweep. */
+    @Test
+    public void unknownBoardIsTranslatedInEnglishAndChinese() {
+        String key = "buildcraft.robot.unknown_board";
+        JsonObject en = lang("en_us.json");
+        JsonObject zh = lang("zh_cn.json");
+        Assertions.assertTrue(en.has(key), "en_us must carry the unknown-board hint");
+        Assertions.assertTrue(zh.has(key), "zh_cn must carry the unknown-board hint");
+        Assertions.assertEquals("Unknown board", en.get(key).getAsString());
+        Assertions.assertNotEquals(en.get(key).getAsString(), zh.get(key).getAsString(),
+                "the Chinese line must be translated, not copied");
+    }
 }

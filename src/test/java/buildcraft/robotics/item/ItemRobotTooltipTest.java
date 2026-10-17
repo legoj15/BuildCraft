@@ -189,6 +189,46 @@ public class ItemRobotTooltipTest extends VanillaSetupBaseTester {
                         + "line. Got: " + tooltip);
     }
 
+    private static final String UNKNOWN_BOARD_KEY = "buildcraft.robot.unknown_board";
+
+    private static boolean hasUnknownBoardLine(List<Component> lines) {
+        return lines.stream().anyMatch(line -> line.getContents() instanceof TranslatableContents contents
+                && UNKNOWN_BOARD_KEY.equals(contents.getKey()));
+    }
+
+    @Test
+    public void aRobotWhoseBoardIsNotRegisteredSaysSo() {
+        // A removed addon's board, one renamed between releases, hand-edited data: the placement guard refuses
+        // such a stack (it would resolve to the empty board), and the tooltip must say why instead of showing a
+        // plain charged robot that "won't go on the station".
+        ItemStack stack = ItemRobot.createRobotStack("buildcraftunofficial:boardRobotFromARemovedAddon",
+                buildcraft.api.robots.EntityRobotBase.MAX_POWER / 2);
+
+        List<Component> lines = ItemRobot.tooltipLines(stack, false);
+
+        Assertions.assertTrue(hasUnknownBoardLine(lines),
+                "a robot with an unregistered board must carry the Unknown board line, got " + asStrings(lines));
+        Assertions.assertEquals("tip.charge.percent",
+                ((TranslatableContents) lines.get(lines.size() - 1).getContents()).getKey(),
+                "the charge readout stays last, the hint sits above it");
+    }
+
+    @Test
+    public void aKnownBoardOrABlankRobotNeverSaysUnknown() {
+        Assertions.assertFalse(hasUnknownBoardLine(ItemRobot.tooltipLines(pickerStack(), false)),
+                "a registered board is not unknown");
+        Assertions.assertFalse(hasUnknownBoardLine(ItemRobot.tooltipLines(
+                ItemRobot.createRobotStack(RedstoneBoardRegistry.instance.getEmptyRobotBoard().getID(), 0), false)),
+                "a blank robot is just blank - it shows nothing at all");
+        Assertions.assertFalse(hasUnknownBoardLine(ItemRobot.tooltipLines(
+                new ItemStack(buildcraft.robotics.BCRoboticsItems.ROBOT.get()), false)),
+                "a bare /give-n stack is a blank robot, not an unknown board");
+    }
+
+    private static ItemStack pickerStack() {
+        return ItemRobot.createRobotStack(BoardRobotPickerNBT.INSTANCE.getID(), 0);
+    }
+
     @Test
     public void aBareStackDoesNotThrow() {
         ItemStack bare = new ItemStack(buildcraft.robotics.BCRoboticsItems.ROBOT.get());

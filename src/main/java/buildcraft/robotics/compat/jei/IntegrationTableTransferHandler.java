@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 import buildcraft.robotics.container.RoboticsTableTransfer;
+import buildcraft.robotics.recipe.IntegrationRecipeJei;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 import buildcraft.silicon.tile.TileIntegrationTable;

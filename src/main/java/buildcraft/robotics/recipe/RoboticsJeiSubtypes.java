@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.robotics.compat.jei;
+package buildcraft.robotics.recipe;
 
 import java.util.Objects;
 
@@ -16,7 +16,9 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 
-/** The JEI identity of the two program-carrying robotics items, kept JEI-free so it is unit-testable.
+/** The JEI identity of the two program-carrying robotics items, kept JEI-free so it is unit-testable. It sits in
+ *  {@code buildcraft.robotics.recipe}, not {@code compat.jei}, because the guide book's table lookups
+ *  ({@code buildcraft.robotics.client.guide}) match stacks by the same identity and must not depend on JEI's package.
  *
  *  <p>Both items keep their program in {@code CUSTOM_DATA}, which JEI ignores by default — without these keys every
  *  board and every robot collapsed into ONE entry each (JEI logged 51 duplicates in the robots tab), so "recipe" on a

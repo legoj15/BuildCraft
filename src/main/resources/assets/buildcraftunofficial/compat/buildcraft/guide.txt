@@ -426,25 +426,26 @@ action "robots" "robot" "robot_filter_tool"       "buildcraft:robot.work_filter_
 
 // ---- Robots / Boards (board) ---------------------------------------------
 // One page per board the Programming Table offers (see the `board` alias in util.txt);
-// prose at board/<name>.md. Keep in step with BCRobotics#registerBoards.
-board "picker"
-board "carrier"
-board "tank"
-board "lumberjack"
-board "harvester"
-board "miner"
-board "planter"
-board "farmer"
-board "pump"
-board "knight"
-board "butcher"
-board "delivery"
-board "leaf_cutter"
-board "shovelman"
-board "bomber"
-board "stripes"
-board "builder"
-board "empty"
+// prose at board/<name>.md; the second argument is the board's registry id (its icon). Keep in step with
+// BCRobotics#registerAIsAndBoards: GuideTxtSystemTagTest fails when a board has no page or a page has no board.
+board "picker" "buildcraftunofficial:boardRobotPicker"
+board "carrier" "buildcraftunofficial:boardRobotCarrier"
+board "tank" "buildcraftunofficial:boardRobotFluidCarrier"
+board "lumberjack" "buildcraftunofficial:boardRobotLumberjack"
+board "harvester" "buildcraftunofficial:boardRobotHarvester"
+board "miner" "buildcraftunofficial:boardRobotMiner"
+board "planter" "buildcraftunofficial:boardRobotPlanter"
+board "farmer" "buildcraftunofficial:boardRobotFarmer"
+board "pump" "buildcraftunofficial:boardRobotPump"
+board "knight" "buildcraftunofficial:boardRobotKnight"
+board "butcher" "buildcraftunofficial:boardRobotButcher"
+board "delivery" "buildcraftunofficial:boardRobotDelivery"
+board "leaf_cutter" "buildcraftunofficial:boardRobotLeaveCutter"
+board "shovelman" "buildcraftunofficial:boardRobotShovelman"
+board "bomber" "buildcraftunofficial:boardRobotBomber"
+board "stripes" "buildcraftunofficial:boardRobotStripes"
+board "builder" "buildcraftunofficial:boardRobotBuilder"
+board "empty" "buildcraftunofficial:empty_robot_board"
 
 // ---- Robots / Docking Stations (station) ---------------------------------
 // The Docking Station pluggable (item id robot_station — renamed back to "Docking Station"

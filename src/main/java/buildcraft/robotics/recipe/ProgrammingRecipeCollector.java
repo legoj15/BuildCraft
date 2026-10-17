@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.robotics.compat.jei;
+package buildcraft.robotics.recipe;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,7 +21,8 @@ import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
 /** Turns every {@link IProgrammingRecipe} into JEI entries — one per option the table can actually program — at JEI
- *  plugin init. JEI-free, so the whole mapping is unit-tested ({@code ProgrammingRecipeCollectorTester}).
+ *  plugin init. JEI-free, so the whole mapping is unit-tested ({@code ProgrammingRecipeCollectorTester}), and shared
+ *  with the guide book's Programming Table lookup, which is why it lives here and not in {@code compat.jei}.
  *
  *  <p>{@code IProgrammingRecipe} has no "list your inputs" method — only {@code canCraft(stack)} (7.1.x's API), so
  *  inputs are found by probing each registered item's default stack. For the board recipe that finds the bare

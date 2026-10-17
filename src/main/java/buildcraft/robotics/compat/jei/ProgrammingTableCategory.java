@@ -22,6 +22,8 @@ import buildcraft.lib.compat.jei.JeiMjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.robotics.container.ProgrammingTableLayout;
+import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
+import buildcraft.robotics.recipe.ProgrammingRecipeJei;
 import buildcraft.silicon.BCSiliconItems;
 
 /**

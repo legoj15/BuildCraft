@@ -85,7 +85,7 @@
     {
       "name": "contents-type",
       "do": "shot",
-      "look": "Blocks/Items/Pipes tree with Builders, Markers, Crafting Tables, Boards, Robots, Docking Stations subchapters; no Automation/Basic/Specialized"
+      "look": "Blocks/Items/Pipes tree with Builders, Markers, Crafting Tables, Boards, Robot Basics, Docking Stations subchapters; no Automation/Basic/Specialized"
     },
     {
       "label": "next page",
@@ -160,7 +160,7 @@
     {
       "name": "robots-chapter",
       "do": "shot",
-      "look": "Robots chapter: Robots subchapter with Getting Started with Robots first, then Boards (18), Docking Stations"
+      "look": "Robots chapter: Robot Basics subchapter with Getting Started with Robots first, then Boards (18), Docking Stations"
     },
     {
       "label": "next page",
@@ -582,7 +582,7 @@
     {
       "name": "type-items-robots",
       "do": "shot",
-      "look": "Items > Robots: Getting Started with Robots, Redstone Board, Robot"
+      "look": "Items > Robot Basics: Getting Started with Robots, Redstone Board, Robot"
     },
     {
       "label": "open Robot",

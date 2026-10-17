@@ -18,6 +18,7 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.RoboticsTableTransfer;
+import buildcraft.robotics.recipe.ProgrammingRecipeJei;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
 /**

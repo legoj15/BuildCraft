@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.robotics.compat.jei;
+package buildcraft.robotics.recipe;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,7 +24,8 @@ import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 
 /** Builds the Integration Table's JEI entries: blank robot + one programmed board → that robot, one per robot
- *  program. JEI-free, so the mapping is unit-tested ({@code IntegrationRecipeCollectorTester}).
+ *  program. JEI-free, so the mapping is unit-tested ({@code IntegrationRecipeCollectorTester}), and shared with the
+ *  guide book's Integration Table lookup, which is why it lives here and not in {@code compat.jei}.
  *
  *  <p>{@code IntegrationRecipe} only answers "what do these inputs make" — it cannot list its inputs (7.1.x's
  *  {@code generateExample*} methods are gone), so the robot programs are probed from the board registry. Every

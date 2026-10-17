@@ -17,9 +17,9 @@ import buildcraft.lib.client.guide.parts.GuidePartFactory;
 import buildcraft.lib.client.guide.parts.recipe.IStackRecipes;
 
 import buildcraft.robotics.BCRoboticsRecipes;
-import buildcraft.robotics.compat.jei.IntegrationRecipeCollector;
-import buildcraft.robotics.compat.jei.IntegrationRecipeJei;
 import buildcraft.robotics.item.ItemRobot;
+import buildcraft.robotics.recipe.IntegrationRecipeCollector;
+import buildcraft.robotics.recipe.IntegrationRecipeJei;
 import buildcraft.silicon.BCSiliconItems;
 
 /** The guide's Integration Table lookup ({@code type="integration"}): blank Robot + programmed board → that robot.

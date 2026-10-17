@@ -18,7 +18,7 @@ import buildcraft.lib.client.guide.parts.recipe.GuideLaserTableFactory;
 import buildcraft.lib.recipe.ChangingItemStack;
 import buildcraft.lib.recipe.ChangingObject;
 
-import buildcraft.robotics.compat.jei.RoboticsJeiSubtypes;
+import buildcraft.robotics.recipe.RoboticsJeiSubtypes;
 
 /** The matching and folding both robotics table lookups share. A step matches a stack when they are the same
  *  {@linkplain RoboticsJeiSubtypes#sameVariant variant} — the same board program, the same robot program — so a

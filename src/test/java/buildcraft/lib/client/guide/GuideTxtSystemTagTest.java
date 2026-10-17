@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -37,6 +38,8 @@ import net.minecraft.resources.Identifier;
 
 import org.junit.jupiter.api.Test;
 
+import buildcraft.api.boards.RedstoneBoardNBT;
+import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.registry.IReloadableRegistry.PackType;
 import buildcraft.api.statements.StatementManager;
 import buildcraft.lib.script.ScriptableRegistry;
@@ -218,6 +221,36 @@ class GuideTxtSystemTagTest {
         assertTrue(missing.isEmpty(), "missing guide chapter translations:\n" + String.join("\n", missing));
     }
 
+    /** In the Sort By System view a subtype is a chapter inside its system's chapter, so a subtype that reads exactly
+     *  like its system ("Robots" inside "Robots") looks like a duplicated node. Checked per (system, subtype) pair in
+     *  both languages, using the labels the contents page actually shows. */
+    @Test
+    void noSubtypeLabelRepeatsItsSystemLabel() {
+        Map<String, Map<String, String>> langs = Map.of("en_us", lang("en_us.json"), "zh_cn", lang("zh_cn.json"));
+        Set<String> pairs = new TreeSet<>();
+        for (Entry e : mainBook()) {
+            String sub = e.str("tag_subtype");
+            if (!sub.isEmpty()) {
+                pairs.add(e.str("tag_system") + "/" + sub);
+            }
+        }
+        List<String> clashes = new ArrayList<>();
+        for (String pair : pairs) {
+            String system = pair.substring(0, pair.indexOf('/'));
+            String sub = pair.substring(pair.indexOf('/') + 1);
+            for (Map.Entry<String, Map<String, String>> language : langs.entrySet()) {
+                String systemLabel = language.getValue().get("buildcraft.guide.chapter.system." + system);
+                String subLabel = language.getValue().get("buildcraft.guide.chapter.subtype." + sub);
+                if (systemLabel != null && systemLabel.equals(subLabel)) {
+                    clashes.add(language.getKey() + ": system '" + system + "' / subtype '" + sub + "' are both '"
+                        + systemLabel + "'");
+                }
+            }
+        }
+        assertTrue(clashes.isEmpty(), "a subtype chapter repeats its system chapter's label:\n"
+            + String.join("\n", clashes));
+    }
+
     @Test
     void everyTitleOverrideHasALangKeyInBothLanguages() {
         // `title` is a suffix under buildcraft.guide.page.; a missing key shows the raw suffix as the page title.
@@ -317,6 +350,36 @@ class GuideTxtSystemTagTest {
             }
         }
         assertEquals(ROBOT_STATEMENTS.size(), robotSystemStatements.size());
+    }
+
+    /** Every board page is an {@code external} entry (a board is not an item of its own), so its icon is the
+     *  {@code board} icon kind robotics registers: the programmed Redstone Board. The pages and the registry must
+     *  agree both ways, or a new board ships without a page icon, or a page names a board that no longer exists (the
+     *  icon would silently draw nothing). */
+    @Test
+    void everyBoardPageDrawsTheBoardItDocumentsAndEveryBoardHasAPage() {
+        Set<String> pageBoards = new TreeSet<>();
+        List<String> bad = new ArrayList<>();
+        for (Entry e : mainBook()) {
+            if (!"board".equals(e.str("tag_subtype"))) {
+                continue;
+            }
+            assertEquals("external", e.str("type"), describe(e));
+            JsonElement icon = e.json().get("icon");
+            if (icon == null || !icon.isJsonObject() || !icon.getAsJsonObject().has("board")) {
+                bad.add("no {\"board\": id} icon: " + describe(e));
+            } else if (!pageBoards.add(icon.getAsJsonObject().get("board").getAsString())) {
+                bad.add("a second page for the same board: " + describe(e));
+            }
+        }
+        assertTrue(bad.isEmpty(), String.join("\n", bad));
+
+        Set<String> registered = new TreeSet<>();
+        for (RedstoneBoardNBT<?> board : RedstoneBoardRegistry.instance.getAllBoardNBTs()) {
+            registered.add(board.getID());
+        }
+        assertTrue(registered.size() > 10, "liveness: the board registry is populated, got " + registered);
+        assertEquals(registered, pageBoards, "board pages differ from the registered boards (the empty board has a page too)");
     }
 
     // ---------------------------------------------------------------------------------------------------------

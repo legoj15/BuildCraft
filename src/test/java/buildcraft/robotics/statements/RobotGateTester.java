@@ -11,11 +11,11 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -23,6 +23,8 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.StatementSlot;
 
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreStatements;
@@ -36,7 +38,6 @@ import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ai.AIRobotSleep;
-import buildcraft.robotics.ai.AIRobotUnload;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
@@ -55,9 +56,9 @@ import buildcraft.transport.tile.TilePipeHolder;
 /**
  * Ph6 game tests for the robotics gate statements, driven against a LIVE pipe holder + {@link PluggableGate}
  * with a real robot: the sleep trigger + wakeup action preempting a sleeping picker (observable through the
- * picker fetching a dropped item the wake made it re-scan for), the forbid-robot action refusing a carrier's
- * unload at a gate-forbidden station (the D1 pin — the refusal is visible through the LIVE station's
- * {@code getActiveActions()} aggregation, which the JUnit predicate tests never reach), and the
+ * picker fetching a dropped item the wake made it re-scan for), the forbid-robot action keeping a carrier's
+ * station search off an otherwise accepting station (the D1 pin — the forbid is visible through the LIVE
+ * station's {@code getActiveActions()} aggregation, which the JUnit predicate tests never reach), and the
  * goto-station action redirecting a docked robot to a second station via a SPOT map-location parameter.
  *
  * <p>The gate fixture follows {@code GateRedstoneSyncTester}; the robot fixtures follow
@@ -79,22 +80,38 @@ public class RobotGateTester {
 
     // ---------- fixtures ----------
 
-    private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
+    private static TilePipeHolder placePipe(GameTestHelper helper, BlockPos relPos, Item pipeItem) {
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
         //?} else {
         /*TilePipeHolder tile = helper.getBlockEntity(relPos);*/
         //?}
-        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
         return tile;
     }
 
     /** A wooden-pipe supply station on {@code side}, returning the tile the station sits on. */
     private static TilePipeHolder installStation(GameTestHelper helper, BlockPos relPos, Direction side) {
-        TilePipeHolder tile = placeItemPipe(helper, relPos);
+        return installStation(helper, relPos, side, BCTransportItems.PIPE_WOOD_ITEM.get());
+    }
+
+    /** A station on {@code side} of a pipe of the given kind, returning the tile the station sits on. */
+    private static TilePipeHolder installStation(GameTestHelper helper, BlockPos relPos, Direction side,
+                                                 Item pipeItem) {
+        TilePipeHolder tile = placePipe(helper, relPos, pipeItem);
         tile.replacePluggable(side, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, side));
         return tile;
+    }
+
+    /** Whether any gate on the station's pipe currently holds {@code action} active. */
+    private static boolean hasActiveAction(DockingStation station, IStatement action) {
+        for (StatementSlot slot : station.getActiveActions()) {
+            if (slot.statement == action) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static PluggableGate addGate(TilePipeHolder tile, Direction side, GateVariant variant) {
@@ -117,6 +134,41 @@ public class RobotGateTester {
         robot.setPos(pos.x, pos.y, pos.z);
         helper.getLevel().addFreshEntity(robot);
         return robot;
+    }
+
+    /** A charged robot placed on {@code home} the way {@code ItemRobot.useOn} places one: the id comes from
+     *  the registry before the entity reaches the world, the station is taken as MAIN (its linked station,
+     *  whose gates name the robot's zones) and the robot docks there, so its board's first cycle already runs
+     *  with its home and zones in place. */
+    private static EntityRobot addHomedRobot(GameTestHelper helper, DockingStation home,
+                                             RedstoneBoardRobotNBT boardNBT) {
+        EntityRobot robot = new EntityRobot(helper.getLevel(), boardNBT);
+        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        robot.setUniqueRobotId(RobotManager.registryProvider.getRegistry(helper.getLevel()).getNextRobotId());
+        Vec3 pos = Vec3.atCenterOf(home.getPos().relative(home.side()));
+        robot.setPos(pos.x, pos.y, pos.z);
+        home.takeAsMain(robot);
+        robot.dock(robot.getLinkedStation());
+        helper.getLevel().addFreshEntity(robot);
+        return robot;
+    }
+
+    /** An AREA map-location stack covering the relative box {@code minRel..maxRel}, written with the keys
+     *  {@code ItemMapLocation.getAreaBox} reads and {@code mapType} = {@code AREA}. */
+    private static ItemStack areaMap(GameTestHelper helper, BlockPos minRel, BlockPos maxRel) {
+        ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
+        BlockPos a = helper.absolutePos(minRel);
+        BlockPos b = helper.absolutePos(maxRel);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("xMin", Math.min(a.getX(), b.getX()));
+        tag.putInt("yMin", Math.min(a.getY(), b.getY()));
+        tag.putInt("zMin", Math.min(a.getZ(), b.getZ()));
+        tag.putInt("xMax", Math.max(a.getX(), b.getX()));
+        tag.putInt("yMax", Math.max(a.getY(), b.getY()));
+        tag.putInt("zMax", Math.max(a.getZ(), b.getZ()));
+        tag.putString("mapType", "AREA");
+        map.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return map;
     }
 
     /** A SPOT map-location stack pointing at {@code relPos} with the {@code side} byte, written the same way
@@ -224,77 +276,98 @@ public class RobotGateTester {
 
     // ---------- forbid robot (the D1 pin) ----------
 
-    /** A carrier with cargo near a station whose gate carries the forbid-robot action naming the carrier's
-     *  board: the D1 pin, asserted honestly against 7.1.x semantics. 7.1.x's {@code AIRobotSearchStation}
-     *  SKIPS forbidden stations, so the carrier never docks at it at all — it sleeps with its cargo, and a
-     *  dry-run unload through the LIVE station's {@code getActiveActions()} aggregation refuses. This is
-     *  what kills the Ph4 permissive loop ({@code carrierUnloadsAtTheStationItLoadedFrom}): once
-     *  {@code DockingStationPipe.getActiveActions()} exposes the gate's forbid action, the unload is refused
-     *  (and the search no longer even proposes the station), so the carrier sleeps with its cargo instead of
-     *  cycling load -> unload -> load. */
+    /** A carrier with cargo, homed in the same cell as a station it would otherwise unload into, where that
+     *  station's gate carries the forbid-robot action naming the carrier's board: the D1 pin. 7.1.x's
+     *  {@code AIRobotSearchStation} SKIPS forbidden stations, so the carrier never flies to it — it finds no
+     *  unload target, goes back to sleep at home and keeps its cargo.
+     *
+     *  <p>Two things make this an honest pin rather than a vacuous one:
+     *  <ul>
+     *  <li><b>The forbidden station is otherwise a valid target.</b> A second gate on its pipe holds Accept
+     *      Items. Without it the station refuses every unload anyway ({@code canRobotAcceptItem} needs an
+     *      accept action since D1), so the search would skip it whether or not the forbid worked. The old
+     *      version of this test also asserted that {@code AIRobotUnload.unload} refused at the forbidden
+     *      station, which was that same missing action talking: unload never consults the forbid (7.1.x
+     *      neither), only the search does.</li>
+     *  <li><b>The search is pinned to this cell.</b> The carrier's home station carries a Load/Unload Area
+     *      action whose AREA map is this arena cell, so the search cannot reach other tests' stations. The
+     *      station search covers the whole dimension; without the zone the carrier flew off to a free,
+     *      accepting station in some other arena (more of them free up since stations are released by robot
+     *      id), never settled, and timed out on 26.2 and 1.21.11.</li>
+     *  </ul>
+     *  The home station sits on a fluid pipe, so it has no item output and is not an unload target itself.
+     *  The robot is placed exactly as {@code ItemRobot.useOn} places one (registry id, take as main, dock,
+     *  then add), so the board's very first search already sees its zone. */
     public static void forbidRobotActionRefusesUnloadAtStation(GameTestHelper helper) {
-        BlockPos pipeRel = new BlockPos(1, 3, 3);
+        BlockPos forbiddenRel = new BlockPos(1, 3, 3);
         BlockPos chestRel = new BlockPos(1, 2, 3);
-        BlockPos robotRel = new BlockPos(3, 4, 3);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        BlockPos homeRel = new BlockPos(4, 3, 3);
+        EntityArenaUtil.forceLoadEntityArena(helper, homeRel);
 
-        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+        TilePipeHolder forbiddenTile = installStation(helper, forbiddenRel, Direction.UP);
         helper.setBlock(chestRel, Blocks.CHEST);
-        //? if >=1.21.10 {
-        ChestBlockEntity chest = helper.getBlockEntity(chestRel, ChestBlockEntity.class);
-        //?} else {
-        /*ChestBlockEntity chest = helper.getBlockEntity(chestRel);*/
-        //?}
-        chest.setItem(0, new ItemStack(Items.DIAMOND, 5));
 
-        PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
-        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
-        gate.logic.statements[0].action.set(
+        PluggableGate forbidGate = addGate(forbiddenTile, Direction.WEST, PARAM_GATE);
+        forbidGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        forbidGate.logic.statements[0].action.set(
                 ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT, null));
-        gate.logic.statements[0].action.set(0, new StatementParameterRobot(
+        forbidGate.logic.statements[0].action.set(0, new StatementParameterRobot(
                 ItemRobot.createRobotStack(BoardRobotCarrierNBT.INSTANCE.getID(), 0)));
+        // Accept Items with no filter: accepts everything, so only the forbid can keep the carrier away.
+        PluggableGate acceptGate = addGate(forbiddenTile, Direction.EAST, PARAM_GATE);
+        acceptGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        acceptGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS, null));
+
+        TilePipeHolder homeTile = installStation(helper, homeRel, Direction.UP, BCTransportItems.PIPE_STONE_FLUID.get());
+        PluggableGate zoneGate = addGate(homeTile, Direction.WEST, PARAM_GATE);
+        zoneGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        zoneGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA, null));
+        zoneGate.logic.statements[0].action.set(0, new StatementParameterMapLocation(
+                areaMap(helper, BlockPos.ZERO, new BlockPos(5, 6, 6))));
 
         EntityRobot[] robot = { null };
-        int[] phase = { 0 }; // 0: station registered, 1: spawn + seed, then settle
+        DockingStationPipe[] forbidden = { null };
+        boolean[] dockedAtForbidden = { false };
         // One flat tickUntil (see sleepTriggerAndWakeupPreemptsPicker for the no-nested-scheduling rule).
-        EntityArenaUtil.tickUntil(helper, 420,
+        EntityArenaUtil.tickUntil(helper, 300,
                 () -> {
-                    if (phase[0] == 0) {
-                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                    if (robot[0] == null) {
+                        // Both stations registered AND every gate resolved: the forbid, the accept and the zone
+                        // all reach the robot through getActiveActions(), which is empty until a gate has ticked.
+                        DockingStationPipe home = stationAt(helper, homeRel, Direction.UP);
+                        forbidden[0] = stationAt(helper, forbiddenRel, Direction.UP);
+                        if (home == null || forbidden[0] == null
+                                || !hasActiveAction(forbidden[0], BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT)
+                                || !hasActiveAction(forbidden[0], BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS)
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA)) {
                             return false;
                         }
-                        phase[0] = 1;
-                        // Seed the carrier with the chest's diamonds: it goes straight to the unload search,
-                        // which must skip the forbidden station.
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
-                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        robot[0] = addHomedRobot(helper, home, BoardRobotCarrierNBT.INSTANCE);
                         robot[0].setInventoryStack(0, new ItemStack(Items.DIAMOND, 5));
                         return false;
                     }
-                    // The robot settles into sleep when the search excludes the ONLY station; a dock would
-                    // also settle it — and is the D1 regression this test exists to catch.
-                    return robot[0].isSleeping() || robot[0].getDockingStation() != null;
+                    DockingStation dockedAt = robot[0].getDockingStation();
+                    if (dockedAt != null && dockedAt.getPos().equals(forbidden[0].getPos())
+                            && dockedAt.side() == forbidden[0].side()) {
+                        dockedAtForbidden[0] = true;
+                    }
+                    // Settled: asleep at home (the forbid working), or the regression showing itself.
+                    return robot[0].isSleeping() || dockedAtForbidden[0]
+                            || !ItemStack.matches(robot[0].getInventoryStack(0), new ItemStack(Items.DIAMOND, 5));
                 },
                 () -> {
-                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    // Only THIS station is the regression: the station search is dimension-wide, so a carrier that
-                    // skipped it may well dock at a free station in another arena (stations a killed robot held
-                    // are freed by id now, so more of them are free), which is the forbid action working.
-                    DockingStation dockedAt = robot[0].getDockingStation();
-                    helper.assertTrue(dockedAt == null || !(dockedAt.getPos().equals(station.getPos())
-                                    && dockedAt.side() == station.side()),
-                            "the carrier must never dock at the gate-forbidden station — 7.1.x "
-                                    + "search skips stations the forbid action names - docked at " + dockedAt);
-                    // Re-seeded: a carrier that docked elsewhere may already have unloaded there.
-                    robot[0].setInventoryStack(0, new ItemStack(Items.DIAMOND, 5));
-                    helper.assertFalse(AIRobotUnload.unload(robot[0], station, false),
-                            "the gate-forbidden station must refuse the carrier's unload — the "
-                                    + "forbid action names this robot's board, and the refusal "
-                                    + "flows through the station's live getActiveActions()");
-                    helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
-                            new ItemStack(Items.DIAMOND, 5)),
-                            "the refused unload must leave the cargo in the robot");
+                    boolean sleeping = robot[0].isSleeping();
+                    ItemStack cargo = robot[0].getInventoryStack(0).copy();
                     robot[0].discard();
+                    helper.assertFalse(dockedAtForbidden[0],
+                            "the carrier must never dock at the gate-forbidden station — 7.1.x "
+                                    + "search skips stations the forbid action names");
+                    helper.assertTrue(ItemStack.matches(cargo, new ItemStack(Items.DIAMOND, 5)),
+                            "the carrier must keep its cargo: the only accepting station in its zone is "
+                                    + "forbidden to it - holding " + cargo);
+                    helper.assertTrue(sleeping, "the carrier must settle into sleep at its home station");
                     helper.succeed();
                 },
                 "the carrier neither docked at the forbidden station nor settled into sleep");

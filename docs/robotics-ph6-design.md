@@ -168,8 +168,12 @@ are constructed):
   with a null-guarded linked station).
 - `robot_station_forbid_robot` — the D1 pin: carrier at a station whose gate forbids its board unloads
   **elsewhere** (replaces/extends the Ph4 `robot_carrier_unloads_at_loaded_station` pin — the permissive
-  loop is killed by the refuse-default; the updated pin asserts the unload is refused at the forbidden
-  station).
+  loop is killed by the refuse-default). As landed (2026-10-17 rewrite): the forbidden station also holds
+  Accept Items, so only the forbid keeps the carrier off it, and the carrier's home station pins the search
+  to the arena cell with a Load/Unload Area map. The first version asserted `AIRobotUnload.unload` refused
+  at a station with no accept action, which passes with the forbid skip deleted (unload never reads the
+  forbid, in 7.1.x either; only `AIRobotSearchStation` does), and its unzoned dimension-wide search flew
+  the carrier into other arenas' stations and timed out on 26.2 and 1.21.11.
 - `robot_goto_station_action` — action on a gate at station B; robot docked at A flies to B and takes
   it as main (takeAsMain flag).
 

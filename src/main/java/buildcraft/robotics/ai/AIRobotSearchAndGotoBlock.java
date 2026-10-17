@@ -103,6 +103,16 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
         }
     }
 
+    /** A delegate that is aborted (rather than ending on its own) means the composition is dead - it is how this
+     *  AI's own {@code abort()} reaches its running leg - so the block reserved for the flight goes back to the
+     *  registry. Without this only a goto that FAILED released it, and an AI aborted mid-flight left the block
+     *  untargetable until the robot's next sleep or recharge. (A robot that unloads or dies never reaches here;
+     *  the registry frees the reservation itself.) */
+    @Override
+    public void delegateAIAborted(AIRobot ai) {
+        releaseBlockFound();
+    }
+
     private void releaseBlockFound() {
         if (blockFound != null) {
             robot.getRegistry().release(new ResourceIdBlock(blockFound));

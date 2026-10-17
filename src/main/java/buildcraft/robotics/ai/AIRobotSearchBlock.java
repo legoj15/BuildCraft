@@ -134,6 +134,22 @@ public class AIRobotSearchBlock extends AIRobot {
         }
     }
 
+    /** A search that locks onto a cell reserves it in {@code iterate()}, but only reports it (and lets the caller
+     *  {@link #takeResource()} it) on the NEXT cycle's {@code update()}. An abort in between would leave the
+     *  cell reserved for a search that no longer exists. A search that finished normally has set
+     *  {@link #blockFound} by now and its caller takes over the reservation, so only the uncollected one is
+     *  given back. (A robot that unloads or dies in the window never reaches here; the registry frees its cells
+     *  itself.) */
+    @Override
+    public void end() {
+        if (blockScanner != null && blockFound == null) {
+            BlockPos locked = blockScanner.getResultTarget();
+            if (locked != null) {
+                blockScanner.unreserve(locked);
+            }
+        }
+    }
+
     @Override
     public boolean canLoadFromNBT() {
         return true;

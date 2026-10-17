@@ -889,6 +889,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_cell_released_on_kill", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotDies);
         reg.accept("buildcraftunofficial:robot_search_cell_released_on_unload", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheRobotUnloads);
         reg.accept("buildcraftunofficial:robot_search_cell_released_by_release_resources", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedByReleaseResources);
+        reg.accept("buildcraftunofficial:robot_search_cell_released_on_abort", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellIsReleasedWhenTheSearchIsAborted);
+        reg.accept("buildcraftunofficial:robot_search_cell_hands_over_to_registry", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchCellHandsOverToTheRegistryReservation);
+        reg.accept("buildcraftunofficial:robot_search_goto_released_on_abort", () -> buildcraft.robotics.ai.SearchCellReservationTester::searchAndGotoReservationIsReleasedWhenAbortedMidFlight);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
         reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);

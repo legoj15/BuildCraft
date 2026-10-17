@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.IRobotRegistry;
+import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -103,6 +104,80 @@ public class SearchCellReservationTester {
                     "an unloaded robot's search cell must be freed - the AI that would have collected it is "
                             + "not saved, so nothing else ever will");
             helper.succeed();
+        }
+    }
+
+    /** The search is aborted (a gate action overrides the robot's AI, the robot is ordered elsewhere) in that same
+     *  window. The robot lives on, so no registry release path runs: the AI's own {@code end()} is the only thing
+     *  that can give the cell back, and it must not wait for the robot's next sleep or recharge to do so. */
+    public static void searchCellIsReleasedWhenTheSearchIsAborted(GameTestHelper helper) {
+        try (Window w = new Window(helper)) {
+            w.search.abort();
+
+            helper.assertFalse(w.registry.getBlockReservations().contains(w.logPos),
+                    "an aborted search must give its locked-on cell back at once - the robot is still alive, so "
+                            + "no kill/unload release will ever do it");
+            helper.succeed();
+        }
+    }
+
+    /** A search that ends normally hands its cell to the caller, which reserves the block in the registry before
+     *  the search lets go of it - the end() fix for the abort window must not open a gap there. */
+    public static void searchCellHandsOverToTheRegistryReservation(GameTestHelper helper) {
+        try (Window w = new Window(helper)) {
+            // One more cycle collects the result: success, and the AI terminates itself.
+            w.search.cycle();
+            helper.assertTrue(w.search.success() && w.logPos.equals(w.search.blockFound),
+                    "precondition: the next cycle reports the found block");
+            helper.assertTrue(w.search.takeResource(), "the caller reserves the found block");
+
+            helper.assertTrue(w.registry.isTaken(new buildcraft.api.robots.ResourceIdBlock(w.logPos)),
+                    "the registry now holds the block for this robot");
+            helper.assertFalse(w.registry.getBlockReservations().contains(w.logPos),
+                    "the search's own cell reservation is gone once the registry reservation replaces it");
+            helper.succeed();
+        }
+    }
+
+    /** The composed search-then-fly AI holds a REGISTRY reservation on the found block for the whole flight. If it is
+     *  aborted mid-flight (the robot lives on) nothing else ever releases that block until the robot's next sleep or
+     *  recharge - the block is untargetable for every other robot meanwhile. Unlike the search cell, this one is a
+     *  ResourceId the registry already frees on kill/unload; it is the abort path that was open. */
+    public static void searchAndGotoReservationIsReleasedWhenAbortedMidFlight(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos logPos = helper.absolutePos(LOG_REL);
+        helper.setBlock(LOG_REL, Blocks.OAK_LOG);
+
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        Vec3 spawn = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
+        robot.setPos(spawn.x, spawn.y, spawn.z);
+        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        IRobotRegistry registry = robot.getRegistry();
+        robot.setUniqueRobotId(registry.getNextRobotId());
+        registry.registerRobot(robot);
+        ResourceIdBlock block = new ResourceIdBlock(logPos);
+
+        AIRobotSearchAndGotoBlock ai = new AIRobotSearchAndGotoBlock(robot, false,
+                pos -> level.getBlockState(pos).is(Blocks.OAK_LOG) && pos.equals(logPos));
+        try {
+            // The robot is never moved, so the flight leg stays in progress once the search has found the block.
+            for (int i = 0; i < 20000 && ai.getBlockFound() == null; i++) {
+                ai.cycle();
+            }
+            helper.assertTrue(ai.getBlockFound() != null && ai.getDelegateAI() != null,
+                    "precondition: the search found the block and the flight leg has started");
+            helper.assertTrue(registry.isTaken(block), "precondition: the registry holds the block for the flight");
+
+            ai.abort();
+
+            helper.assertFalse(registry.isTaken(block),
+                    "aborting the flight must give the found block back - the robot is still alive, so no "
+                            + "kill/unload release will ever do it");
+            helper.succeed();
+        } finally {
+            ai.abort();
+            registry.release(block);
+            registry.killRobot(robot);
         }
     }
 

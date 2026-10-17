@@ -66,6 +66,16 @@ public class BoardProgrammingRecipe implements IProgrammingRecipe {
         return input.getItem() instanceof ItemRedstoneBoard;
     }
 
+    /** A board "converted" into its own board id (blank into blank, or a programmed board into itself) changes
+     *  nothing, so the table skips it rather than charging for - or consuming - a no-op. Ids are compared through the
+     *  registry, so every blank form (a bare crafted board, an explicit empty-board stack) counts as one board. */
+    @Override
+    public boolean isRedundant(ItemStack input, ItemStack option) {
+        RedstoneBoardNBT<?> from = ItemRedstoneBoard.getBoardNBT(input);
+        RedstoneBoardNBT<?> to = ItemRedstoneBoard.getBoardNBT(option);
+        return from != null && to != null && from.getID().equals(to.getID());
+    }
+
     @Override
     public ItemStack craft(ItemStack input, ItemStack option) {
         return option.copy();

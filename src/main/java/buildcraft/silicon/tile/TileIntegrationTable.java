@@ -30,22 +30,25 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 
 public class TileIntegrationTable extends TileLaserTableBase {
+    // Pipe access follows the machine, as in 7.1.x (canInsertItem: the centre and the ring; canExtractItem: the
+    // output slot only) and the Programming Table: the robot and the boards go IN, only the finished robot comes
+    // OUT. Pipes used to be able to drain the inputs and stuff the output.
     public final ItemHandlerSimple invTarget = itemManager.addInvHandler(
         "target",
         1,
-        ItemHandlerManager.EnumAccess.BOTH,
+        ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public final ItemHandlerSimple invToIntegrate = itemManager.addInvHandler(
         "toIntegrate",
         3 * 3 - 1,
-        ItemHandlerManager.EnumAccess.BOTH,
+        ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public final ItemHandlerSimple invResult = itemManager.addInvHandler(
         "result",
         1,
-        ItemHandlerManager.EnumAccess.INSERT,
+        ItemHandlerManager.EnumAccess.EXTRACT,
         EnumPipePart.VALUES
     );
     public IntegrationRecipe recipe;
@@ -54,6 +57,9 @@ public class TileIntegrationTable extends TileLaserTableBase {
         super(BCSiliconBlockEntities.INTEGRATION_TABLE.get(), pos, state);
     }
 
+    /** Consumes the recipe's inputs: the centre stack and, precisely, the ring requirements. Both are checked
+     *  against the current contents before either inventory is touched, and the inventories change only when both
+     *  pass, so a failed call (a stray stack in the ring, say) never costs the player an input. */
     private boolean extract(IngredientStack item, ImmutableList<IngredientStack> items, boolean simulate) {
         ItemStack targetStack = invTarget.getStackInSlot(0);
         if (targetStack.isEmpty()) return false;
@@ -63,8 +69,9 @@ public class TileIntegrationTable extends TileLaserTableBase {
         // ingredient test below already decides identity.
         if (targetStack.getCount() < item.count) return false;
         if (!item.ingredient.test(targetStack)) return false;
-        if (!extract(invToIntegrate, items, simulate, true)) return false;
+        if (!extract(invToIntegrate, items, true, true)) return false;
         if (!simulate) {
+            extract(invToIntegrate, items, false, true);
             targetStack = targetStack.copy();
             targetStack.setCount(targetStack.getCount() - item.count);
             invTarget.setStackInSlot(0, targetStack);
@@ -102,7 +109,11 @@ public class TileIntegrationTable extends TileLaserTableBase {
 
         updateRecipe();
 
-        if (getTarget() > 0 && power >= getTarget()) {
+        // The cost is read BEFORE the inputs are consumed: once they are gone the recipe has no output and
+        // getTarget() reads 0, which used to make the deduction below a no-op, so one charge programmed every
+        // robot after it.
+        long cost = getTarget();
+        if (cost > 0 && power >= cost) {
             ItemStack output = getOutput();
             // Gate the whole craft on the consumption actually succeeding — the return value used to be
             // ignored, which could emit the output while leaving every input where it was (a dupe,
@@ -116,7 +127,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
                     result = output.copy();
                 }
                 invResult.setStackInSlot(0, result);
-                power -= getTarget();
+                power -= cost;
             }
         }
     }

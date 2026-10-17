@@ -8,7 +8,6 @@ package buildcraft.silicon.tile;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -134,30 +133,45 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
 
     // --- Ingredient extraction helper ---
 
+    /** Takes {@code items} out of {@code inv}, all or nothing: every requirement is worked out against a scratch copy
+     *  of the slot counts first (so two requirements can't both claim the same items), and the inventory is touched
+     *  only once the whole set is known to fit. A failed call, simulated or not, leaves {@code inv} exactly as it was.
+     *
+     *  @param precise also demand that the inventory holds nothing but the requirements: the number of occupied slots
+     *                 must equal the number of requirements, so a stray stack anywhere makes the call fail. */
     protected boolean extract(ItemHandlerSimple inv, Collection<IngredientStack> items, boolean simulate,
         boolean precise) {
-        AtomicLong remainingStacks = new AtomicLong(inv.stacks.stream().filter(stack -> !stack.isEmpty()).count());
-        boolean allItemsConsumed = items.stream().allMatch((definition) -> {
+        int slots = inv.getSlots();
+        int[] counts = new int[slots];
+        long remainingStacks = 0;
+        for (int i = 0; i < slots; i++) {
+            ItemStack slotStack = inv.getStackInSlot(i);
+            counts[i] = slotStack.isEmpty() ? 0 : slotStack.getCount();
+            if (counts[i] > 0) remainingStacks++;
+        }
+        for (IngredientStack definition : items) {
             int remaining = definition.count;
-            for (int i = 0; i < inv.getSlots() && remaining > 0; i++) {
-                ItemStack slotStack = inv.getStackInSlot(i);
-                if (slotStack.isEmpty()) continue;
-                if (definition.ingredient.test(slotStack)) {
-                    int spend = Math.min(remaining, slotStack.getCount());
+            for (int i = 0; i < slots && remaining > 0; i++) {
+                if (counts[i] <= 0) continue;
+                if (definition.ingredient.test(inv.getStackInSlot(i))) {
+                    int spend = Math.min(remaining, counts[i]);
                     remaining -= spend;
-                    if (!simulate) {
-                        slotStack = slotStack.copy();
-                        slotStack.setCount(slotStack.getCount() - spend);
-                        inv.setStackInSlot(i, slotStack);
-                    }
+                    counts[i] -= spend;
                 }
             }
-            if (remaining == 0) {
-                remainingStacks.decrementAndGet();
-                return true;
+            if (remaining > 0) return false;
+            remainingStacks--;
+        }
+        if (precise && remainingStacks != 0) return false;
+        if (!simulate) {
+            for (int i = 0; i < slots; i++) {
+                ItemStack slotStack = inv.getStackInSlot(i);
+                if (slotStack.isEmpty() || counts[i] == slotStack.getCount()) continue;
+                slotStack = slotStack.copy();
+                slotStack.setCount(counts[i]);
+                inv.setStackInSlot(i, slotStack);
             }
-            return false;
-        });
-        return allItemsConsumed && (!precise || remainingStacks.get() == 0);
+        }
+        return true;
     }
 }

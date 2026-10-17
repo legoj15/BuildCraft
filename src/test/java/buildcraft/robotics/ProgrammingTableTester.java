@@ -27,6 +27,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
 import buildcraft.api.boards.RedstoneBoardNBT;
@@ -36,7 +38,9 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.BCCoreItems;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.tile.item.IBCItemHandler;
 
+import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.robotics.item.ItemRedstoneBoard;
@@ -123,6 +127,117 @@ public class ProgrammingTableTester {
         helper.succeed();
     }
 
+    /** The blank-board option costs nothing and sorts top-left; picking it for a programmed board must still run (it
+     *  used to wait on a target above zero that a free option can never have), turning the board back to blank. */
+    public static void programmingTableResetsBoardToBlank(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.PROGRAMMING_TABLE.get());
+        TileProgrammingTable table = blockEntity(helper, pos, TileProgrammingTable.class);
+        table.invBoard.setStackInSlot(0, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+        table.serverTick(); // resolves the recipe and the option grid
+
+        int blank = optionIndexOf(table, BoardRobotEmptyNBT.ID);
+        if (blank < 0) {
+            helper.fail("the blank board is not among the offered options");
+        }
+        table.selectOption(blank);
+        if (!table.hasWork()) {
+            helper.fail("resetting a programmed board to blank is work, even though it is free");
+        }
+        if (table.getTarget() != 0) {
+            helper.fail("the blank option should cost nothing, got " + table.getTarget());
+        }
+        table.serverTick();
+
+        ItemStack result = table.invResult.getStackInSlot(0);
+        if (result.isEmpty() || !BoardRobotEmptyNBT.ID.equals(boardIdOf(result))) {
+            helper.fail("expected a blank board in the result slot, got " + result);
+        }
+        if (!table.invBoard.getStackInSlot(0).isEmpty()) {
+            helper.fail("the programmed input board was not consumed");
+        }
+        if (table.power != 0) {
+            helper.fail("a free craft must not touch the charge, got " + table.power);
+        }
+        // The finished craft takes the selection with the board (7.1.x re-matched straight after a craft). Were
+        // the free blank option still selected, the next programmed board to land in the slot would be wiped on
+        // arrival.
+        if (table.optionId != -1) {
+            helper.fail("the blank option is still selected after its craft emptied the input, optionId = "
+                    + table.optionId);
+        }
+        ItemStack next = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+        table.invResult.setStackInSlot(0, ItemStack.EMPTY);
+        table.invBoard.setStackInSlot(0, next.copy());
+        table.serverTick();
+        if (!ItemStack.matches(next, table.invBoard.getStackInSlot(0))
+                || !table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("the next programmed board was blanked on arrival");
+        }
+        helper.succeed();
+    }
+
+    /** An option that would turn a board into the same board id is skipped: there is nothing to convert, so the table
+     *  neither asks for power nor consumes the board (a blank into blank, and a programmed board into itself). */
+    public static void programmingTableSkipsSameBoardOption(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.PROGRAMMING_TABLE.get());
+        TileProgrammingTable table = blockEntity(helper, pos, TileProgrammingTable.class);
+
+        // Blank into blank.
+        ItemStack blankBoard = ItemRedstoneBoard.createStack(null);
+        table.invBoard.setStackInSlot(0, blankBoard.copy());
+        table.serverTick();
+        int blank = optionIndexOf(table, BoardRobotEmptyNBT.ID);
+        if (blank < 0) {
+            helper.fail("the blank board is not among the offered options");
+        }
+        table.selectOption(blank);
+        if (table.hasWork()) {
+            helper.fail("a blank board into the blank option is not work");
+        }
+        table.serverTick();
+        if (!table.invResult.getStackInSlot(0).isEmpty()
+                || !ItemStack.matches(blankBoard, table.invBoard.getStackInSlot(0))) {
+            helper.fail("the table ran a blank-into-blank conversion");
+        }
+
+        // A programmed board into itself, with the full price banked: still skipped, charge untouched. The board
+        // arrives with no selection (the blank option picked above would otherwise run on it, as it is a real change).
+        ItemStack picker = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+        table.selectOption(-1);
+        table.invBoard.setStackInSlot(0, picker.copy());
+        table.serverTick();
+        int pickerOption = optionIndexOf(table, BoardRobotPickerNBT.ID);
+        if (pickerOption < 0) {
+            helper.fail("the picker board is not among the offered options");
+        }
+        table.selectOption(pickerOption);
+        table.power = GREEN_BOARD_MICRO_MJ;
+        if (table.getTarget() != 0) {
+            helper.fail("a picker into the picker option must cost nothing, got " + table.getTarget());
+        }
+        table.serverTick();
+        if (!table.invResult.getStackInSlot(0).isEmpty()
+                || !ItemStack.matches(picker, table.invBoard.getStackInSlot(0))) {
+            helper.fail("the table ran a picker-into-picker conversion");
+        }
+        if (table.power != GREEN_BOARD_MICRO_MJ) {
+            helper.fail("a skipped conversion spent charge, got " + table.power);
+        }
+
+        // Control: a different option on the same board still runs.
+        table.selectOption(blank);
+        table.serverTick();
+        if (!BoardRobotEmptyNBT.ID.equals(boardIdOf(table.invResult.getStackInSlot(0)))) {
+            helper.fail("a conversion to a different board must still run, got "
+                    + table.invResult.getStackInSlot(0));
+        }
+        helper.succeed();
+    }
+
     public static void laserTargetsProgrammingTable(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
         BlockPos laserPos = new BlockPos(0, 1, 2);
@@ -183,6 +298,144 @@ public class ProgrammingTableTester {
         }
         if (!table.invTarget.getStackInSlot(0).isEmpty() || !table.invToIntegrate.getStackInSlot(0).isEmpty()) {
             helper.fail("the robot and the board were not both consumed");
+        }
+        if (table.power != 0) {
+            helper.fail("a craft must spend the laser charge it ran on, but "
+                    + (table.power / MjAPI.MJ) + " MJ is still banked");
+        }
+        helper.succeed();
+    }
+
+    /** One charge programs one robot: the craft deducts exactly its cost (a stale over-filled buffer keeps only the
+     *  surplus), so a second robot has to wait for its own 5000 MJ instead of riding the first one's. */
+    public static void integrationTableSpendsItsCostPerCraft(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.INTEGRATION_TABLE.get());
+        TileIntegrationTable table = blockEntity(helper, pos, TileIntegrationTable.class);
+        long surplus = 7_000_000L;
+        table.invTarget.setStackInSlot(0, ItemRobot.createRobotStack(null, 1_000L));
+        table.invToIntegrate.setStackInSlot(0, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+        table.serverTick();
+        table.power = ROBOT_INTEGRATION_MICRO_MJ + surplus;
+        table.serverTick();
+
+        if (table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("the first robot was not programmed");
+        }
+        if (table.power != surplus) {
+            helper.fail("a craft must spend exactly its cost: expected " + surplus + " micro-MJ left, got "
+                    + table.power);
+        }
+
+        // A second robot and board, the output slot cleared: the leftover surplus is nowhere near 5000 MJ.
+        table.invResult.setStackInSlot(0, ItemStack.EMPTY);
+        table.invTarget.setStackInSlot(0, ItemRobot.createRobotStack(null, 2_000L));
+        table.invToIntegrate.setStackInSlot(0, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+        table.serverTick();
+        if (!table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("a second robot was programmed on the first one's charge");
+        }
+        if (table.invTarget.getStackInSlot(0).isEmpty() || table.invToIntegrate.getStackInSlot(0).isEmpty()) {
+            helper.fail("the second robot or its board was consumed without a charge");
+        }
+
+        // Deliver only the shortfall: now it crafts, and the bank is empty again.
+        table.receiveLaserPower(ROBOT_INTEGRATION_MICRO_MJ);
+        table.serverTick();
+        if (table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("the second robot was not programmed once its own charge arrived");
+        }
+        if (table.power != 0) {
+            helper.fail("the second craft left " + table.power + " micro-MJ banked");
+        }
+        helper.succeed();
+    }
+
+    /** A robot in the centre, a board in the ring and ANY other stack in the ring: the recipe reads as valid (so the
+     *  table asks for and banks the 5000 MJ) but the precise ring requirement can never be met. Nothing may be
+     *  consumed while it can't; clearing the stray stack must let the very same charge go through. */
+    public static void integrationTableExtraRingStackKeepsTheBoard(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.INTEGRATION_TABLE.get());
+        TileIntegrationTable table = blockEntity(helper, pos, TileIntegrationTable.class);
+        ItemStack robot = ItemRobot.createRobotStack(null, 123_456L);
+        ItemStack board = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+        table.invTarget.setStackInSlot(0, robot.copy());
+        table.invToIntegrate.setStackInSlot(0, board.copy());
+        table.invToIntegrate.setStackInSlot(3, new ItemStack(Items.PAPER));
+        table.serverTick();
+        table.receiveLaserPower(ROBOT_INTEGRATION_MICRO_MJ);
+        table.serverTick();
+        table.serverTick();
+
+        if (!ItemStack.matches(board, table.invToIntegrate.getStackInSlot(0))) {
+            helper.fail("the board was consumed although the craft could not complete, got "
+                    + table.invToIntegrate.getStackInSlot(0));
+        }
+        if (!ItemStack.matches(robot, table.invTarget.getStackInSlot(0))) {
+            helper.fail("the centre robot was touched by a craft that could not complete");
+        }
+        if (!table.invToIntegrate.getStackInSlot(3).is(Items.PAPER)) {
+            helper.fail("the stray stack was altered");
+        }
+        if (!table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("a robot came out of a ring the recipe rejects: " + table.invResult.getStackInSlot(0));
+        }
+        if (table.power != ROBOT_INTEGRATION_MICRO_MJ) {
+            helper.fail("no craft ran, so the charge must be untouched, got " + table.power);
+        }
+
+        // Not wedged: take the stray stack away and the same charge programs the robot.
+        table.invToIntegrate.setStackInSlot(3, ItemStack.EMPTY);
+        table.serverTick();
+        ItemStack result = table.invResult.getStackInSlot(0);
+        if (result.isEmpty() || !BoardRobotPickerNBT.ID.equals(ItemRobot.getBoardId(result))) {
+            helper.fail("the table stayed wedged after the stray stack was removed, got " + result);
+        }
+        if (table.power != 0) {
+            helper.fail("the craft left " + table.power + " micro-MJ banked");
+        }
+        helper.succeed();
+    }
+
+    /** Pipe access mirrors the machine (7.1.x {@code canInsertItem}/{@code canExtractItem}, and the Programming
+     *  Table): the robot and the board go IN, only the programmed robot comes OUT. */
+    public static void integrationTablePipeAccessInputsInResultOut(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.INTEGRATION_TABLE.get());
+        TileIntegrationTable table = blockEntity(helper, pos, TileIntegrationTable.class);
+        // The side handler concatenates the three inventories: 0 = centre, 1..8 = ring, 9 = result.
+        IBCItemHandler pipe = table.getItemHandler(Direction.UP);
+        if (pipe == null) {
+            helper.fail("the Integration Table exposes no item handler to pipes");
+        }
+        ItemStack robot = ItemRobot.createRobotStack(null, 500L);
+        ItemStack board = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+
+        if (pipeInsert(pipe, 0, robot) != 1) {
+            helper.fail("a pipe cannot insert the robot into the centre slot");
+        }
+        if (pipeInsert(pipe, 1, board) != 1) {
+            helper.fail("a pipe cannot insert a board into the ring");
+        }
+        if (pipeInsert(pipe, 9, new ItemStack(Items.PAPER)) != 0
+                || !table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push items into the output slot");
+        }
+        if (pipeExtract(pipe, 0, 1) != 0 || table.invTarget.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can pull the robot back out of the centre slot");
+        }
+        if (pipeExtract(pipe, 1, 1) != 0 || table.invToIntegrate.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can pull the board back out of the ring");
+        }
+
+        ItemStack programmed = ItemRobot.createRobotStack(BoardRobotPickerNBT.ID, 500L);
+        table.invResult.setStackInSlot(0, programmed.copy());
+        if (pipeExtract(pipe, 9, 1) != 1 || !table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe cannot take the finished robot out of the output slot");
         }
         helper.succeed();
     }
@@ -350,6 +603,37 @@ public class ProgrammingTableTester {
         return helper.getBlockEntity(pos, type);
         //?} else {
         /*return type.cast(helper.getBlockEntity(pos));*/
+        //?}
+    }
+
+    /** How many items of {@code stack} a pipe-side handler takes into {@code slot} (node-neutral: Transfer API on
+     *  1.21.10+, classic handler on 1.21.1). */
+    private static int pipeInsert(IBCItemHandler handler, int slot, ItemStack stack) {
+        //? if >=1.21.10 {
+        try (Transaction tx = Transaction.openRoot()) {
+            int inserted = handler.insert(slot, ItemResource.of(stack), stack.getCount(), tx);
+            tx.commit();
+            return inserted;
+        }
+        //?} else {
+        /*return stack.getCount() - handler.insertItem(slot, stack.copy(), false).getCount();*/
+        //?}
+    }
+
+    /** How many items a pipe-side handler yields from {@code slot}, up to {@code amount}. */
+    private static int pipeExtract(IBCItemHandler handler, int slot, int amount) {
+        //? if >=1.21.10 {
+        ItemResource resource = handler.getResource(slot);
+        if (resource.isEmpty()) {
+            return 0;
+        }
+        try (Transaction tx = Transaction.openRoot()) {
+            int extracted = handler.extract(slot, resource, amount, tx);
+            tx.commit();
+            return extracted;
+        }
+        //?} else {
+        /*return handler.extractItem(slot, amount, false).getCount();*/
         //?}
     }
 

@@ -1042,6 +1042,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:laser_targets_programming_table", () -> buildcraft.robotics.ProgrammingTableTester::laserTargetsProgrammingTable);
         reg.accept("buildcraftunofficial:integration_table_programs_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableProgramsRobot);
         reg.accept("buildcraftunofficial:integration_table_tops_up_drained_robot", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableTopsUpDrainedRobot);
+        // The tables' audit fixes: a craft spends its laser charge, a stray ring stack no longer eats the board,
+        // pipes feed the inputs and drain only the result, and the Programming Table's free options behave.
+        reg.accept("buildcraftunofficial:integration_table_spends_its_cost_per_craft", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableSpendsItsCostPerCraft);
+        reg.accept("buildcraftunofficial:integration_table_extra_ring_stack_keeps_the_board", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableExtraRingStackKeepsTheBoard);
+        reg.accept("buildcraftunofficial:integration_table_pipe_access_inputs_in_result_out", () -> buildcraft.robotics.ProgrammingTableTester::integrationTablePipeAccessInputsInResultOut);
+        reg.accept("buildcraftunofficial:programming_table_resets_board_to_blank", () -> buildcraft.robotics.ProgrammingTableTester::programmingTableResetsBoardToBlank);
+        reg.accept("buildcraftunofficial:programming_table_skips_same_board_option", () -> buildcraft.robotics.ProgrammingTableTester::programmingTableSkipsSameBoardOption);
         reg.accept("buildcraftunofficial:robot_survival_recipes_resolve", () -> buildcraft.robotics.ProgrammingTableTester::robotSurvivalRecipesResolve);
         reg.accept("buildcraftunofficial:robot_name_tag_data_round_trip", () -> buildcraft.robotics.ProgrammingTableTester::robotNameTagDataRoundTrip);
         // JEI "+" transfer into the two tables (server side: container message -> real inventory, same-tick

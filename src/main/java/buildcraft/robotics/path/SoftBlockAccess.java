@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.path;
 
+import java.util.function.Predicate;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
@@ -29,7 +31,9 @@ public interface SoftBlockAccess {
      * @return true if a flying robot may occupy {@code pos} — i.e. the block there is "soft" (air,
      *         replaceable foliage, fluids, …). Positions outside the world (below the floor, above the
      *         ceiling) must return false; that is how the pathfinder avoids routing through the void,
-     *         replacing 7.1.x's explicit {@code y < 0} guard.
+     *         replacing 7.1.x's explicit {@code y < 0} guard. So must a position whose chunk is not
+     *         {@link #isChunkLoaded loaded}: the robot treats the edge of the loaded world as a wall, and
+     *         the production adapter never reads (and so never loads) a block there.
      */
     boolean isSoft(BlockPos pos);
 
@@ -42,22 +46,33 @@ public interface SoftBlockAccess {
         return true;
     }
 
-    /** Production adapter: a robot may occupy a cell when it is in-world and {@link BuildCraftAPI#isSoftBlock soft}. */
-    static SoftBlockAccess of(Level level) {
+    /**
+     * The loaded-chunk gate every production read goes through: {@code soft} is consulted only for a cell whose
+     * chunk {@code chunkLoaded} reports loaded, and every other cell is not soft. On a server,
+     * {@code Level.getBlockState} on an unloaded chunk loads (or generates) it synchronously on the server thread,
+     * so an ungated read by a robot near the edge of view distance stalls the server on every search or path that
+     * brushes the boundary - the neighbour checks of a search target and every A* expansion included.
+     */
+    static SoftBlockAccess loadedOnly(Predicate<BlockPos> chunkLoaded, Predicate<BlockPos> soft) {
         return new SoftBlockAccess() {
             @Override
             public boolean isSoft(BlockPos pos) {
-                if (level.isOutsideBuildHeight(pos)) {
-                    return false;
-                }
-                return BuildCraftAPI.isSoftBlock(level, pos);
+                return chunkLoaded.test(pos) && soft.test(pos);
             }
 
             @Override
             public boolean isChunkLoaded(BlockPos pos) {
-                return level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()),
-                        SectionPos.blockToSectionCoord(pos.getZ()));
+                return chunkLoaded.test(pos);
             }
         };
+    }
+
+    /** Production adapter: a robot may occupy a cell when its chunk is loaded and it is in-world and
+     *  {@link BuildCraftAPI#isSoftBlock soft} (see {@link #loadedOnly}). */
+    static SoftBlockAccess of(Level level) {
+        return loadedOnly(
+                pos -> level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()),
+                        SectionPos.blockToSectionCoord(pos.getZ())),
+                pos -> !level.isOutsideBuildHeight(pos) && BuildCraftAPI.isSoftBlock(level, pos));
     }
 }

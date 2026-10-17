@@ -20,7 +20,7 @@ import buildcraft.api.core.IStackFilter;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -76,7 +76,7 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
             IBlockFilter blockFilter = pos -> level != null
                     && !BuildCraftAPI.getWorldProperty("replaceable").get(level, pos)
                     && CropManager.canSustainPlant(level, seed, pos)
-                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos));
+                    && !BlockClaims.isClaimed(robot.getRegistry(), pos);
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, blockFilter, 1));
         }
     }

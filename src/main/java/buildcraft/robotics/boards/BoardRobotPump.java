@@ -30,7 +30,7 @@ import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.misc.DrainRefusals;
 import buildcraft.lib.misc.GameProfileUtil;
@@ -129,7 +129,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 // machine's own plumbing, so the pond around it is pumped but the tube is left wet (as TilePump does).
                 && !level.getBlockState(pos).is(BCFactoryBlocks.TUBE.get())
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
-                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))
                 && !refusalsForCurrentOwner().isRefused(level, pos);
     }

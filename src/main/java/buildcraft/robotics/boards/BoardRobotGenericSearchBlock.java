@@ -27,7 +27,7 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.lib.misc.ProtectionRefusals;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
@@ -97,7 +97,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  robot (remembered by {@link #approveSearchTarget}; unchanged blocks only, for a bounded time). */
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
-                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && !refusals.isRefused(pos, level.getBlockState(pos), level.getGameTime());
     }
 

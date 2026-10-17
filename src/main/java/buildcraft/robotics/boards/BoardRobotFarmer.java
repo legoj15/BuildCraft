@@ -18,7 +18,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -64,7 +64,7 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
             IBlockFilter blockFilter = pos -> level != null
                     && BuildCraftAPI.getWorldProperty("dirt").get(level, pos)
                     && level.getBlockState(pos.above()).isAir()
-                    && !robot.getRegistry().isTaken(new ResourceIdBlock(pos));
+                    && !BlockClaims.isClaimed(robot.getRegistry(), pos);
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, false, blockFilter));
         }
     }

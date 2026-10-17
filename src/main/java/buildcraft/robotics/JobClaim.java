@@ -14,7 +14,6 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
-import buildcraft.api.robots.ResourceIdBlock;
 
 /** The claim latch of one job a robot works - the block a board or a search-and-goto targets, the order a delivery
  *  board fills - shared by every board and AI that holds one, so they all follow one rule:
@@ -58,16 +57,17 @@ public final class JobClaim<J> {
         void release(IRobotAccess robot, IRobotRegistry registry, J job);
     }
 
-    /** A block job: the registry's {@code ResourceIdBlock} claim. */
+    /** A block job: the job ledger's {@code ResourceIdBlock} claim, through {@link BlockClaims} (so a re-claim is
+     *  refused while another robot's search holds the cell). */
     private static final Claimer<BlockPos> BLOCK = new Claimer<>() {
         @Override
         public boolean reclaim(IRobotAccess robot, IRobotRegistry registry, BlockPos pos) {
-            return registry.reclaim(new ResourceIdBlock(pos), robot.getRobotId());
+            return BlockClaims.claim(registry, pos, robot.getRobotId());
         }
 
         @Override
         public void release(IRobotAccess robot, IRobotRegistry registry, BlockPos pos) {
-            registry.release(new ResourceIdBlock(pos), robot.getRobotId());
+            BlockClaims.release(registry, pos, robot.getRobotId());
         }
     };
 

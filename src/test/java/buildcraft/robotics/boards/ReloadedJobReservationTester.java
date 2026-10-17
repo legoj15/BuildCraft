@@ -340,6 +340,33 @@ public class ReloadedJobReservationTester {
         helper.succeed();
     }
 
+    /** Robot B's SEARCH locked onto the block while A was away (the cell ledger, before B's AI collects it as a job):
+     *  A's reloaded board must yield it too. A block is one robot's in either ledger; re-claiming it past a search
+     *  cell would hand it to two robots at once. */
+    public static void reloadedActionBoardsYieldABlockAnotherRobotsSearchHolds(GameTestHelper helper) {
+        BlockPos target = helper.absolutePos(TARGET_REL);
+        ResourceIdBlock targetId = new ResourceIdBlock(target);
+        for (ActionBoard kind : ACTION_BOARDS) {
+            try (Robots r = new Robots(helper)) {
+                RedstoneBoardRobot board = reloadMidAction(r, kind, target);
+                java.util.Set<BlockPos> searchOfB = r.registry.getBlockReservations(r.robotB.getRobotId());
+                helper.assertTrue(searchOfB.add(target), "robot B's search locks onto the block while A is away");
+                r.cleanup.add(() -> searchOfB.remove(target));
+
+                board.preempt(board.getDelegateAI());
+
+                helper.assertFalse(r.registry.robotIdTaking(targetId) == r.robotA.getRobotId(),
+                        kind.name() + ": robot A must not take the block robot B's search holds");
+                helper.assertTrue(kind.blockFound().apply(board) == null,
+                        kind.name() + ": the reloaded board must drop it");
+                helper.assertTrue(r.registry.getBlockReservations().contains(target),
+                        kind.name() + ": ...and B's search keeps its cell");
+            }
+        }
+        helper.setBlock(TARGET_REL, Blocks.AIR);
+        helper.succeed();
+    }
+
     /** Nobody took the block: each reloaded board re-claims it and carries on. */
     public static void reloadedActionBoardsReclaimAFreeBlock(GameTestHelper helper) {
         BlockPos target = helper.absolutePos(TARGET_REL);

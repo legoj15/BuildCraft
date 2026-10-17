@@ -13,7 +13,7 @@ import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -53,7 +53,7 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
         } else {
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, pos ->
                     robot.level().isEmptyBlock(pos)
-                            && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))));
+                            && !BlockClaims.isClaimed(robot.getRegistry(), pos)));
         }
     }
 

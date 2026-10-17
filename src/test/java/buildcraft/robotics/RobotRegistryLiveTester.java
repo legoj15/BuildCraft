@@ -12,6 +12,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.robots.DockingStation;
@@ -96,6 +97,10 @@ public class RobotRegistryLiveTester {
 
     /** A pipe-less station at a real position in this level. */
     public static final class LiveStation extends DockingStation {
+        public LiveStation() {
+            super();
+        }
+
         public LiveStation(BlockPos pos, Direction side) {
             super(pos, side);
         }
@@ -291,6 +296,57 @@ public class RobotRegistryLiveTester {
             helper.assertFalse(dock.isTaken(), "undocking frees the dock even after a reload");
             helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(dock)),
                     "...and the registry stops indexing it under the robot");
+            helper.succeed();
+        }
+    }
+
+    /** Station ownership is decided by the saved robot id, never by the cached entity, across a reload: an unload
+     *  (and reading a station back from NBT) drops the cache, but the station is still the robot's. Another robot
+     *  must be refused a home or dock whose holder is merely unloaded, the holder's own re-take must leave its home
+     *  link as it was, and a reloaded robot undocking from a NON-home station read back from NBT (its cached holder
+     *  null) must still free it - 7.1.x tested the cached entity, so the unloaded robot's stations were up for grabs
+     *  and the reloaded robot's undock left its dock reserved for good. */
+    public static void stationOwnershipFollowsTheSavedRobotId(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            EntityRobot b = f.robot();
+            long id = a.getRobotId();
+            LiveStation home = f.station(1, 3, Direction.UP);
+            LiveStation dock = f.station(2, 3, Direction.UP);
+            helper.assertTrue(home.takeAsMain(a), "precondition: a homes at its station");
+            helper.assertTrue(dock.take(a), "precondition: a takes a second, non-home station");
+            a.dock(dock);
+            f.registry.unloadRobot(a);
+            helper.assertTrue(home.robotTaking() == null && dock.robotTaking() == null,
+                    "precondition: the unload dropped the stations' cached holder");
+
+            helper.assertFalse(dock.take(b), "another robot cannot take the dock of an unloaded robot");
+            helper.assertFalse(home.take(b), "...nor its home");
+            helper.assertFalse(home.takeAsMain(b), "...nor re-home onto it");
+            helper.assertTrue(dock.linkedId() == id && home.linkedId() == id,
+                    "the refused claims leave both stations with the unloaded robot");
+
+            EntityRobot reloaded = f.unregisteredRobot();
+            reloaded.setUniqueRobotId(id);
+            f.registry.registerRobot(reloaded);
+            helper.assertTrue(home.take(reloaded), "the holder's own re-take of its home succeeds");
+            helper.assertTrue(home.isMainStation(), "...and leaves the home link a home link");
+
+            // The station as a saved registry reads it back: holder id set, cached holder null.
+            CompoundTag saved = new CompoundTag();
+            dock.writeToNbt(saved);
+            LiveStation restored = new LiveStation();
+            restored.world = helper.getLevel();
+            restored.readFromNbt(saved);
+            helper.assertTrue(restored.robotTaking() == reloaded, "the restored dock resolves to the reloaded robot");
+            restored.invalidateRobotTakingEntity();
+            helper.assertTrue(restored.isTaken() && !restored.isMainStation(),
+                    "precondition: the restored dock is a plain claim");
+
+            restored.release(reloaded);
+
+            helper.assertFalse(restored.isTaken(), "undocking frees a non-home station whose cached holder is gone");
+            helper.assertTrue(home.isTaken(), "...and the robot's home is untouched");
             helper.succeed();
         }
     }

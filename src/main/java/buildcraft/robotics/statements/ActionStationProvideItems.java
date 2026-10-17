@@ -18,7 +18,6 @@ import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.statements.BCStatement;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
-import buildcraft.lib.inventory.filter.ArrayStackOrListFilter;
 import buildcraft.lib.inventory.filter.StatementParameterStackFilter;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.robotics.BCRoboticsSprites;
@@ -56,7 +55,11 @@ public class ActionStationProvideItems extends BCStatement implements IActionInt
      *  <p>Two consequences worth spelling out, both 7.1.x's: two actions filtered on different items make
      *  the station supply both (requiring every filtered action to match would make it supply nothing), and
      *  an UNFILTERED action standing next to a filtered one does not make the station permissive — it never
-     *  returns true on its own, and the filtered one has already set {@code hasFilter}. */
+     *  returns true on its own, and the filtered one has already set {@code hasFilter}.
+     *
+     *  <p>The candidate goes to {@code matches(ItemStack)}, so each filter stack (a BuildCraft List included) is
+     *  the FILTER and {@code stack} the thing tested. Wrapping the candidate in a filter of its own would turn
+     *  the question round - "does the List match this candidate-as-filter" - which a List always answers no. */
     public static boolean canExtractItem(DockingStation station, ItemStack stack) {
         boolean hasFilter = false;
 
@@ -65,7 +68,7 @@ public class ActionStationProvideItems extends BCStatement implements IActionInt
                 StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
                 if (param.hasFilter()) {
                     hasFilter = true;
-                    if (param.matches(new ArrayStackOrListFilter(stack))) {
+                    if (param.matches(stack)) {
                         return true;
                     }
                 }

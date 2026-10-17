@@ -37,8 +37,9 @@ public class TriggerRobotLinked extends BCStatement implements ITriggerInternal 
         return reserved ? BCRoboticsSprites.TRIGGER_ROBOT_RESERVED : BCRoboticsSprites.TRIGGER_ROBOT_LINKED;
     }
 
-    /** True when a robot is docked at one of the gate's pipe's stations; the reserved variant fires only
-     *  when the dock is the robot's MAIN station (7.1.x verbatim). */
+    /** True when a robot holds one of the gate's pipe's stations (7.1.x verbatim). The reserved variant fires
+     *  for ANY claim - the robot's home, the dock it sits at, or a station it is only flying to - while the
+     *  linked variant fires only when the claim is the robot's MAIN (home) station. */
     @Override
     public boolean isTriggerActive(IStatementContainer source, IStatementParameter[] parameters) {
         for (DockingStation station : RobotUtils.getStations(source.getTile())) {

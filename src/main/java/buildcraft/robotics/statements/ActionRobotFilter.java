@@ -120,13 +120,19 @@ public class ActionRobotFilter extends BCStatement implements IActionInternal {
         return fluid -> fluid != null && !fluid.isEmpty() && fluids.contains(fluid.getFluid());
     }
 
-    /** Whether any active {@code actionClass} action interacts with {@code filter} (7.1.x verbatim): the
-     *  action's parameters are stacked into a filter, and an action with no filter set passes everything. */
-    public static boolean canInteractWithItem(DockingStation station, IStackFilter filter, Class<?> actionClass) {
+    /** Whether any active {@code actionClass} action interacts with {@code stack} (7.1.x, with the candidate kept
+     *  on the tested side): the action's parameters are stacked into a filter, and an action with no filter set
+     *  passes everything.
+     *
+     *  <p>{@code stack} is the thing being tested and each parameter stack the FILTER, so a BuildCraft List in a
+     *  parameter slot matches what it lists. 7.1.x handed the candidate over as a filter of its own and asked each
+     *  parameter stack whether IT matched - for a List that is always no, and a List-filtered station refused
+     *  every robot. */
+    public static boolean canInteractWithItem(DockingStation station, ItemStack stack, Class<?> actionClass) {
         for (StatementSlot s : station.getActiveActions()) {
             if (actionClass.isAssignableFrom(s.statement.getClass())) {
                 StatementParameterStackFilter param = new StatementParameterStackFilter(s.parameters);
-                if (!param.hasFilter() || param.matches(filter)) {
+                if (!param.hasFilter() || param.matches(stack)) {
                     return true;
                 }
             }

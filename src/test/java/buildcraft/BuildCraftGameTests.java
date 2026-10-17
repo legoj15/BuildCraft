@@ -962,6 +962,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_at_dock_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtTheDockedStationLeavesTheRobotAlone);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_target_held_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAStationAnotherRobotHoldsLeavesTheRobotAlone);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_backs_off_after_failure", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionBacksOffAfterAFailedGoto);
 
         // Robotics coverage sweep — the RobotRegistry against LIVE (never-added) robot entities: two-robot
         // reservation exclusivity, the goto-station reservation refusal, a dead holder's claim lapsing, and
@@ -1007,6 +1010,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_reloaded_goto_station_reclaims_free_station", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedGotoStationReclaimsAFreeStation);
         reg.accept("buildcraftunofficial:robot_registry_kill_after_unload_frees_stations", () -> buildcraft.robotics.RobotRegistryLiveTester::killRobotAfterAnUnloadFreesItsStations);
         reg.accept("buildcraftunofficial:robot_undock_after_reload_frees_dock", () -> buildcraft.robotics.RobotRegistryLiveTester::undockAfterAReloadFreesTheDock);
+        reg.accept("buildcraftunofficial:robot_station_ownership_follows_saved_robot_id", () -> buildcraft.robotics.RobotRegistryLiveTester::stationOwnershipFollowsTheSavedRobotId);
         reg.accept("buildcraftunofficial:robot_reloaded_action_boards_yield_search_cell", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsYieldABlockAnotherRobotsSearchHolds);
         reg.accept("buildcraftunofficial:robot_block_claims_one_holder_across_ledgers", () -> buildcraft.robotics.BlockClaimsTester::aBlockIsNeverHeldByTwoRobotsAcrossTheLedgers);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
@@ -1066,6 +1070,7 @@ public class BuildCraftGameTests {
         // Ph8: the request network (Requester block, virtual gate provider, delivery loop).
         reg.accept("buildcraftunofficial:requester_station_neighbour_scan", () -> buildcraft.robotics.DeliveryRequesterTester::stationFindsRequesterThroughNeighbourScan);
         reg.accept("buildcraftunofficial:requester_gate_request_items_provider", () -> buildcraft.robotics.DeliveryRequesterTester::gateRequestItemsActionMakesTheStationAProvider);
+        reg.accept("buildcraftunofficial:requester_gate_request_items_every_slot", () -> buildcraft.robotics.DeliveryRequesterTester::gateRequestItemsInEverySlotSurfacesItsOwnParameters);
         reg.accept("buildcraftunofficial:requester_accepts_only_templated_items", () -> buildcraft.robotics.DeliveryRequesterTester::requesterAcceptsOnlyTemplatedItems);
         reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsARequesterOrder);
         reg.accept("buildcraftunofficial:requester_stack_request_nbt_round_trip", () -> buildcraft.robotics.DeliveryRequesterTester::stackRequestNbtRoundTripsAgainstALiveRegistry);

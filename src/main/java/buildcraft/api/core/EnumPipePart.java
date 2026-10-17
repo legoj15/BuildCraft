@@ -6,7 +6,6 @@ import java.util.Map;
 import com.google.common.collect.Maps;
 
 import net.minecraft.nbt.Tag;
-import net.minecraft.nbt.NumericTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
@@ -112,15 +111,21 @@ public enum EnumPipePart implements StringRepresentable {
         return fromFacing(face.getOpposite());
     }
 
+    /** The part named by a tag {@link #writeToNbt()} wrote; {@code CENTER} for an absent tag, one of another kind,
+     *  or a name no part has. */
     public static EnumPipePart readFromNbt(Tag base) {
-        if (base == null) {
-            return CENTER;
+        if (base instanceof StringTag stringTag) {
+            //? if >=1.21.10 {
+            String name = stringTag.value();
+            //?} else {
+            /*String name = stringTag.getAsString();*/
+            //?}
+            EnumPipePart part = nameMap.get(name);
+            if (part != null) {
+                return part;
+            }
         }
-        if (base instanceof StringTag) {
-            return CENTER;
-        } else {
-            return CENTER;
-        }
+        return CENTER;
     }
 
     public Tag writeToNbt() {

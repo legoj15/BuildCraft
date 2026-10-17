@@ -33,9 +33,11 @@ import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
 
+import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
+import buildcraft.robotics.RobotRegistry;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
@@ -445,12 +447,15 @@ public class RobotGateTester {
     }
 
     /** The same action with its map-location parameter LEFT EMPTY. 7.1.x defaulted {@code newStation} to
-     *  the gate's OWN station — {@code AIRobotGoAndLinkToDock(robot, station)} — so an unparameterised
-     *  Goto Station still redirected the docked robot, at its own station. The port returned early on an
+     *  the gate's OWN station - {@code AIRobotGoAndLinkToDock(robot, station)} - so an unparameterised
+     *  Goto Station still redirected the robot linked to that station, home. The port returned early on an
      *  empty parameter and did nothing at all.
      *
-     *  <p>Asserted on the redirect being handed out, which is the whole of the difference: the parameter
-     *  is unset, so nothing else in the world changes. */
+     *  <p>The robot here is LINKED to the station but not docked at it (the gate's trigger is plain TRUE, so
+     *  it fires regardless): that is the one place the empty-parameter default still has something to do. A
+     *  robot docked at the station is {@link #gotoStationActionAtTheDockedStationLeavesTheRobotAlone}'s case.
+     *  Asserted on the redirect being handed out, which is the whole of the difference: the parameter is
+     *  unset, so nothing else in the world changes. */
     public static void gotoStationActionWithNoParameterTargetsItsOwnStation(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 2);
@@ -459,8 +464,7 @@ public class RobotGateTester {
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
 
         PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
-        gate.logic.statements[0].trigger.set(
-                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
         gate.logic.statements[0].action.set(
                 ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
         // Deliberately NO action.set(0, ...): the slot holds the empty StatementParameterItemStack the
@@ -484,17 +488,18 @@ public class RobotGateTester {
                         return false;
                     }
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    station.take(robot[0]);
-                    robot[0].dock(station);
+                    helper.assertTrue(station.takeAsMain(robot[0]),
+                            "the free station must take the robot as its main (home) link");
+                    helper.assertTrue(robot[0].getDockingStation() == null,
+                            "the robot is linked to the station but not docked at it");
 
                     gate.logic.resolveActions();
-                    helper.assertTrue(gate.logic.triggerOn[0],
-                            "the in-station trigger must fire while the robot is docked here");
 
                     buildcraft.api.robots.AIRobot override = robot[0].getOverridingAI();
                     helper.assertTrue(override != null,
-                            "a Goto Station action with an EMPTY parameter must still redirect the docked "
-                                    + "robot — 7.1.x defaulted the destination to the gate's own station");
+                            "a Goto Station action with an EMPTY parameter must still send the robot linked "
+                                    + "to the gate's station home - 7.1.x defaulted the destination to the "
+                                    + "gate's own station");
                     helper.assertTrue(override instanceof buildcraft.robotics.ai.AIRobotGotoStation,
                             "the redirect must be a goto-station move, got " + override);
                     return true;
@@ -504,5 +509,274 @@ public class RobotGateTester {
                     helper.succeed();
                 },
                 "the station never registered, or the robot never received its id");
+    }
+
+    /** A robot already docked at the station the action names - an empty parameter defaults to the gate's own
+     *  station, a map location may name it outright - must be left alone. The redirect would end in
+     *  {@code AIRobotGotoStation.start()} the moment it began (the robot is already there), and the gate
+     *  re-fires every tick while it is on: each tick installed a fresh override that aborted the board's AI and
+     *  ended at once, so the robot sat frozen for as long as the gate held. */
+    public static void gotoStationActionAtTheDockedStationLeavesTheRobotAlone(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(2, 3, 2);
+        BlockPos robotRel = new BlockPos(3, 4, 3);
+
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+
+        PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+
+        EntityRobot[] robot = { null };
+        int[] phase = { 0 }; // 0: station, 1: id + dock + both checks, 2: let the live gate keep firing
+        int[] settled = { 0 };
+        EntityArenaUtil.tickUntil(helper, 300,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    if (phase[0] == 1) {
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        helper.assertTrue(station.takeAsMain(robot[0]), "the free station takes the robot");
+                        robot[0].dock(station);
+
+                        // Empty parameter: the destination defaults to the gate's own station, the one the
+                        // robot is docked at.
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the in-station trigger must fire while the robot is docked here");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "an empty-parameter Goto Station must not redirect a robot already docked at "
+                                        + "the gate's own station, got " + robot[0].getOverridingAI());
+
+                        // A map location naming the very station the robot sits at is the same no-op.
+                        gate.logic.statements[0].action.set(0,
+                                new StatementParameterMapLocation(spotMap(helper, pipeRel, Direction.UP)));
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0], "the trigger still fires");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "a Goto Station naming the station the robot is docked at must not redirect it, "
+                                        + "got " + robot[0].getOverridingAI());
+                        phase[0] = 2;
+                        return false;
+                    }
+                    // The live gate now re-resolves every tick while the robot stays docked: it must never
+                    // be pulled off its dock or caught holding a redirect.
+                    helper.assertTrue(robot[0].getDockingStation() == station,
+                            "the robot must stay docked at its station while the gate holds");
+                    helper.assertTrue(robot[0].getOverridingAI() == null,
+                            "no redirect may be installed while the gate holds, got "
+                                    + robot[0].getOverridingAI());
+                    return ++settled[0] >= 20;
+                },
+                () -> {
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the station never registered, or the robot never received its id");
+    }
+
+    /** A robot the registry knows about (id assigned) but that is not in the world: a stand-in holder for a
+     *  station, which never ticks and so never wanders off to reserve a neighbouring test's stations. Killed
+     *  through the registry when the test ends. */
+    private static EntityRobot registeredOffWorldRobot(GameTestHelper helper) {
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+        robot.setPos(pos.x, pos.y, pos.z);
+        registry(helper).registerRobot(robot);
+        return robot;
+    }
+
+    private static RobotRegistry registry(GameTestHelper helper) {
+        return (RobotRegistry) RobotManager.registryProvider.getRegistry(helper.getLevel());
+    }
+
+    /** A robot docked at its home A, whose gate sends it to station B while another robot holds B. The goto could
+     *  only fail its claim at once, and a gate that holds re-fires every tick: each tick installed a fresh redirect
+     *  that aborted the board's AI and failed on the spot, so the robot's board never got a cycle. The action must
+     *  leave the robot alone: it settles into its sleep and keeps that same sleep AI for as long as the gate holds. */
+    public static void gotoStationActionAtAStationAnotherRobotHoldsLeavesTheRobotAlone(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeARel = new BlockPos(1, 3, 2);
+        BlockPos pipeBRel = new BlockPos(4, 3, 2);
+        BlockPos robotRel = new BlockPos(2, 4, 3);
+
+        TilePipeHolder tileA = installStation(helper, pipeARel, Direction.UP);
+        installStation(helper, pipeBRel, Direction.UP);
+
+        PluggableGate gate = addGate(tileA, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+        gate.logic.statements[0].action.set(0,
+                new StatementParameterMapLocation(spotMap(helper, pipeBRel, Direction.UP)));
+
+        EntityRobot[] robot = { null };
+        EntityRobot[] holder = { null };
+        buildcraft.api.robots.AIRobot[] sleep = { null };
+        int[] phase = { 0 }; // 0: stations, 1: id + home + B held + first resolve, 2: settled asleep under the gate
+        int[] settled = { 0 };
+        EntityArenaUtil.tickUntil(helper, 300,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeARel, Direction.UP) == null
+                                || stationAt(helper, pipeBRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    DockingStationPipe stationA = stationAt(helper, pipeARel, Direction.UP);
+                    DockingStationPipe stationB = stationAt(helper, pipeBRel, Direction.UP);
+                    if (phase[0] == 1) {
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        holder[0] = registeredOffWorldRobot(helper);
+                        // Advanced before any assertion: a failed assertion must fail the test, not re-run this
+                        // one-shot setup on the next poll.
+                        phase[0] = 2;
+                        holder[0] = registeredOffWorldRobot(helper);
+                        helper.assertTrue(stationB.takeAsMain(holder[0]), "precondition: the other robot holds B");
+                        helper.assertTrue(stationA.takeAsMain(robot[0]), "the free station A takes the robot home");
+                        robot[0].dock(stationA);
+
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the in-station trigger must fire while the robot is docked at A");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "a Goto Station naming a station another robot holds must not redirect the robot, "
+                                        + "got " + robot[0].getOverridingAI());
+                        return false;
+                    }
+                    // The live gate keeps re-firing: the robot must stay home, unredirected, and once its board has
+                    // put it to sleep that same sleep must survive tick after tick (no abort-and-restart churn).
+                    helper.assertTrue(robot[0].getDockingStation() == stationA, "the robot must stay docked at A");
+                    helper.assertTrue(robot[0].getOverridingAI() == null,
+                            "no redirect may be installed while B is held, got " + robot[0].getOverridingAI());
+                    helper.assertTrue(stationB.robotIdTaking() == holder[0].getRobotId(),
+                            "the other robot's hold on B must be left alone");
+                    buildcraft.api.robots.AIRobot active = robot[0].mainAI.getActiveAI();
+                    if (sleep[0] == null) {
+                        if (active instanceof AIRobotSleep) {
+                            sleep[0] = active;
+                        }
+                        return false;
+                    }
+                    helper.assertTrue(active == sleep[0],
+                            "the robot's board AI must run undisturbed while the gate holds, but its sleep was "
+                                    + "replaced by " + active);
+                    return ++settled[0] >= 20;
+                },
+                () -> {
+                    robot[0].discard();
+                    registry(helper).killRobot(holder[0]);
+                    helper.succeed();
+                },
+                "the robot never settled into its sleep at A under the gate");
+    }
+
+    /** A redirect that fails (here: another robot takes B between the gate handing it out and the robot starting
+     *  it) must not be re-issued on the next tick, or a gate that holds aims the robot at an unreachable station
+     *  every tick and its board never gets a cycle. After the failure the robot's controller refuses new
+     *  redirects for a while, even with B free again; once that back-off runs out, the gate's next pulse sends the
+     *  robot to B after all. */
+    public static void gotoStationActionBacksOffAfterAFailedGoto(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeARel = new BlockPos(1, 3, 2);
+        BlockPos pipeBRel = new BlockPos(4, 3, 2);
+        BlockPos robotRel = new BlockPos(2, 4, 3);
+
+        TilePipeHolder tileA = installStation(helper, pipeARel, Direction.UP);
+        installStation(helper, pipeBRel, Direction.UP);
+
+        PluggableGate gate = addGate(tileA, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+        gate.logic.statements[0].action.set(0,
+                new StatementParameterMapLocation(spotMap(helper, pipeBRel, Direction.UP)));
+
+        EntityRobot[] robot = { null };
+        EntityRobot[] holder = { null };
+        // 0: stations, 1: id + dock + redirect handed out + B taken under it, 2: the redirect failed -> free B,
+        // 3: B free, the gate holding, the back-off refusing redirects, 4: the back-off ran out -> docked at B
+        int[] phase = { 0 };
+        int[] refused = { 0 };
+        EntityArenaUtil.tickUntil(helper, 500,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeARel, Direction.UP) == null
+                                || stationAt(helper, pipeBRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    DockingStationPipe stationA = stationAt(helper, pipeARel, Direction.UP);
+                    DockingStationPipe stationB = stationAt(helper, pipeBRel, Direction.UP);
+                    if (phase[0] == 1) {
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        phase[0] = 2; // before any assertion, so a failure cannot re-run this one-shot setup
+                        helper.assertTrue(stationA.takeAsMain(robot[0]), "the free station A takes the robot home");
+                        robot[0].dock(stationA);
+                        gate.logic.resolveActions();
+                        helper.assertTrue(robot[0].getOverridingAI() != null,
+                                "precondition: with B free the gate hands the robot a redirect");
+                        // Before the robot's next cycle starts that redirect, another robot takes B under it.
+                        holder[0] = registeredOffWorldRobot(helper);
+                        helper.assertTrue(stationB.take(holder[0]), "precondition: the other robot takes B");
+                        return false;
+                    }
+                    if (phase[0] == 2) {
+                        if (robot[0].getOverridingAI() != null) {
+                            return false; // the robot has not cycled yet
+                        }
+                        helper.assertTrue(robot[0].getDockingStation() == stationA,
+                                "the refused redirect must leave the robot docked at A");
+                        stationB.release(holder[0]);
+                        helper.assertFalse(stationB.isTaken(), "precondition: B is free again");
+                        phase[0] = 3;
+                        return false;
+                    }
+                    if (phase[0] == 3) {
+                        // The gate re-fires every tick with B free: the back-off must still refuse it.
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "a redirect that just failed must not be re-issued on the gate's next pulse, got "
+                                        + robot[0].getOverridingAI());
+                        helper.assertTrue(robot[0].getDockingStation() == stationA, "the robot stays home");
+                        if (++refused[0] >= 20) {
+                            phase[0] = 4;
+                        }
+                        return false;
+                    }
+                    // The back-off is temporary: the gate sends the robot to B once it runs out.
+                    return robot[0].getDockingStation() == stationB;
+                },
+                () -> {
+                    robot[0].discard();
+                    registry(helper).killRobot(holder[0]);
+                    helper.succeed();
+                },
+                "the redirect never failed, or the robot never reached B once the back-off ran out");
     }
 }

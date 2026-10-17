@@ -53,9 +53,12 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
      *  A parameter that IS set but names no live station still does nothing, exactly as 7.1.x — a player
      *  pointing at a station that has since been destroyed must not be silently re-homed.
      *
-     *  <p>Note that the destination being the robot's current station makes this mostly a re-dock:
-     *  {@code DockingStation.takeAsMain} returns early for a station the robot has already taken, so it
-     *  does not promote that station to MAIN. That is 7.1.x's behaviour too, not an omission here. */
+     *  <p>A robot already docked at the destination is left alone (an empty parameter on a docked robot's own
+     *  station is the common case), and so is one sent to a station another robot holds. 7.1.x redirected both
+     *  anyway, the redirect ended on the spot, and the gate re-fired it every tick: the robot's board was
+     *  restarted each tick and the robot never got on with its work. The docked case's redirect also never
+     *  promoted the station to MAIN ({@code DockingStation.takeAsMain} returns early for a station the robot
+     *  already holds), so skipping it loses nothing. See {@link #shouldRedirect}. */
     @Override
     public void actionActivate(IStatementContainer container, IStatementParameter[] parameters) {
         IStatementParameter param = parameters != null && parameters.length > 0 ? parameters[0] : null;
@@ -69,11 +72,29 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
                     IRobotRegistry registry = RobotManager.registryProvider.getRegistry(robot.level());
                     newStation = getStation((StatementParameterItemStack) param, registry);
                 }
-                if (newStation != null) {
+                if (shouldRedirect(robot, newStation)) {
                     robot.overrideAI(new AIRobotGotoStation(robot, newStation, true));
                 }
             }
         }
+    }
+
+    /** Whether sending {@code robot} to {@code target} can lead anywhere. A gate that holds fires this every tick, and
+     *  every redirect handed out aborts the robot's board AI, so a redirect that is bound to end on the spot must not
+     *  be handed out at all, or the robot is frozen for as long as the gate stays on:
+     *  <ul>
+     *  <li>the robot is already docked at the target: the goto ends in its own {@code start()};</li>
+     *  <li>another robot holds the target (its home, its dock or a visit claim): the goto's {@code takeAsMain} is
+     *  refused and it fails in {@code start()}. Compared by id, as the claim itself is. 7.1.x handed this one out
+     *  too, every tick.</li>
+     *  </ul>
+     *  A redirect that fails later (no path to the station) is the controller's to throttle: {@code AIRobotMain}
+     *  refuses new overrides for a while after one fails. */
+    static boolean shouldRedirect(EntityRobot robot, DockingStation target) {
+        if (target == null || target == robot.getDockingStation()) {
+            return false;
+        }
+        return !target.isTaken() || target.robotIdTaking() == robot.getRobotId();
     }
 
     /** The station a {@code StatementParameterItemStack} map-location param points at, or null. */

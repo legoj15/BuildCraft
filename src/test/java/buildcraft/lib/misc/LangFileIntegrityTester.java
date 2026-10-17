@@ -149,17 +149,58 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker"), "filter lost the board names");
         Assertions.assertTrue(roboticsKeys.contains("buildcraft.boardRobotPicker.desc"), "filter lost the board descs");
 
-        List<String> missing = roboticsKeys.stream().filter(k -> !zh.containsKey(k)).toList();
-        Assertions.assertTrue(missing.isEmpty(),
-                "zh_cn.json lacks " + missing.size() + " robotics keys that en_us.json has " + missing
-                        + " — a Chinese player sees the English text (or the raw key) for these. The robot and"
-                        + " board keys were added after the 'zh_cn at 100%' sweep and nothing enforced coverage.");
+        assertTranslatedInChinese(en, zh, roboticsKeys, "robotics keys (matched by name)");
+    }
 
-        List<String> untranslated = roboticsKeys.stream()
-                .filter(k -> zh.containsKey(k) && (zh.get(k).isBlank() || zh.get(k).equals(en.get(k))))
+    /** A string literal of the form {@code "..."} in Java source, escapes included. */
+    private static final Pattern JAVA_STRING_LITERAL = Pattern.compile("\"((?:[^\"\\\\\\n]|\\\\.)*)\"");
+
+    /** The name filter above misses robotics-owned strings whose keys say nothing about robots: the robot's
+     *  charge readout ({@code tip.charge.*}) and the Zone Planner help ledger ({@code buildcraft.help.zone_planner.*})
+     *  both shipped English-only in zh_cn that way. So the robotics CODE is the second source of truth: every
+     *  en_us key a {@code buildcraft/robotics/**} file names as a string literal must be translated too. */
+    @Test
+    public void langKeysNamedByRoboticsCodeAreTranslatedInChinese() {
+        Map<String, String> en = parse(EN);
+        Map<String, String> zh = parse(ZH);
+        Set<String> referenced = new HashSet<>();
+        for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
+            if (!file.relativePath().startsWith("buildcraft/robotics/")) {
+                continue;
+            }
+            Matcher m = JAVA_STRING_LITERAL.matcher(file.text());
+            while (m.find()) {
+                if (en.containsKey(m.group(1))) {
+                    referenced.add(m.group(1));
+                }
+            }
+        }
+        List<String> keys = referenced.stream().sorted().toList();
+
+        // Liveness: the scan must actually see the robotics code, or the checks below pass vacuously.
+        Assertions.assertTrue(keys.contains("tip.charge.fullcharge"), "scan lost ItemRobot's charge readout");
+        Assertions.assertTrue(keys.contains("buildcraft.help.zone_planner.map.title"), "scan lost GuiZonePlanner");
+
+        assertTranslatedInChinese(en, zh, keys, "lang keys named by robotics code");
+    }
+
+    /** Fails on any of {@code keys} that zh_cn lacks, leaves blank, or copies verbatim from English. A value with no
+     *  letters at all (a pure format string such as {@code "%s %s"}) is language-neutral and may match exactly. */
+    private static void assertTranslatedInChinese(Map<String, String> en, Map<String, String> zh, List<String> keys,
+            String what) {
+        List<String> missing = keys.stream().filter(k -> !zh.containsKey(k)).toList();
+        Assertions.assertTrue(missing.isEmpty(),
+                "zh_cn.json lacks " + missing.size() + " " + what + " that en_us.json has " + missing
+                        + " — a Chinese player sees the English text (or the raw key) for these. The robotics"
+                        + " strings were added after the 'zh_cn at 100%' sweep and nothing enforced coverage.");
+
+        List<String> untranslated = keys.stream()
+                .filter(k -> zh.containsKey(k) && (zh.get(k).isBlank()
+                        || (zh.get(k).equals(en.get(k)) && FORMAT_SPEC.matcher(en.get(k)).replaceAll("")
+                                .chars().anyMatch(Character::isLetter))))
                 .toList();
         Assertions.assertTrue(untranslated.isEmpty(),
-                "zh_cn.json carries these robotics keys blank or copied verbatim from English " + untranslated);
+                "zh_cn.json carries these " + what + " blank or copied verbatim from English " + untranslated);
     }
 
     /** Painted pipes and charged paintbrushes are named through a two-argument format key (colour, then the base

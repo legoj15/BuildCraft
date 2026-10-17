@@ -183,4 +183,48 @@ public class RobotStripesTester {
         helper.assertTrue(dropped.isEmpty(), "nothing is dropped at the robot's feet, found " + dropped);
         helper.succeed();
     }
+
+    /**
+     * A stripes use that no handler takes reports FAILURE (7.1.x reported nothing at all), so the board can tell
+     * "used it" from "tried and could not" and stop looping on an item nothing can use. The item stays in hand and
+     * the world is untouched; a handled use (cobblestone on the same cell) still reports success.
+     */
+    public static void stripesReportsFailureForAnItemNoHandlerCanUse(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
+
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        Vec3 at = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));
+        robot.setPos(at.x, at.y, at.z);
+        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
+        AABB dropZone = new AABB(at, at).inflate(1.5);
+        for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+            e.discard();
+        }
+
+        robot.setItemInUse(new ItemStack(Items.STICK, 3));
+        AIRobotStripesHandler unusable = new AIRobotStripesHandler(robot, target);
+        unusable.start();
+        for (int i = 0; i < 61; i++) {
+            unusable.cycle();
+        }
+        helper.assertFalse(unusable.success(), "no handler can use a stick - the use must report failure");
+        helper.assertTrue(ItemStack.matches(new ItemStack(Items.STICK, 3), robot.getHeldItem()),
+                "a failed use leaves the item in hand, holds " + robot.getHeldItem());
+        helper.assertTrue(level.getBlockState(target).isAir(), "a failed use changes nothing in the world");
+
+        robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 2));
+        AIRobotStripesHandler usable = new AIRobotStripesHandler(robot, target);
+        usable.start();
+        for (int i = 0; i < 61; i++) {
+            usable.cycle();
+        }
+        helper.assertTrue(usable.success(), "a handled use (cobblestone on air) reports success");
+        helper.assertTrue(level.getBlockState(target).is(Blocks.COBBLESTONE), "...and the block went down");
+
+        level.setBlock(target, Blocks.AIR.defaultBlockState(), 3);
+        List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
+        dropped.forEach(Entity::discard);
+        helper.succeed();
+    }
 }

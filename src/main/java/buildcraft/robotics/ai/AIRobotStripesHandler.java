@@ -34,7 +34,10 @@ import buildcraft.robotics.RobotProtection;
  *  {@code AIRobotStripesHandler}: 7.1.x's manual iteration over {@code PipeManager.stripesHandlers} is
  *  the modern single {@link PipeApi#stripeRegistry}{@code .handleItem} call, which walks the same
  *  handler set the stripes pipe uses. Both {@link IStripesActivator} outputs drop the stack at the
- *  robot's feet, as 7.1.x's {@code InvUtils.dropItems} did — a robot has no pipe to send through. */
+ *  robot's feet, as 7.1.x's {@code InvUtils.dropItems} did — a robot has no pipe to send through.
+ *
+ *  <p>Reports {@link #success()} {@code false} when no handler took the item at this cell (7.1.x reported
+ *  nothing), which {@code BoardRobotStripes} counts to stop retrying an item nothing can use. */
 public class AIRobotStripesHandler extends AIRobot implements IStripesActivator {
     private BlockPos useToBlock;
     private int useCycles = 0;
@@ -90,6 +93,11 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
                 BlockPos activatorPos = useToBlock.relative(direction.getOpposite());
                 if (PipeApi.stripeRegistry.handleItem(robot.level(), activatorPos, direction, stack, player, this)) {
                     takeBackFrom(player, stack, original);
+                } else {
+                    // Nothing took the item here. 7.1.x ended the cycle silently, so its board could not tell this
+                    // from a use and retried the same item on the next cell for ever; the failure is what lets the
+                    // board count them and give an unusable item up.
+                    setSuccess(false);
                 }
             }
             terminate();

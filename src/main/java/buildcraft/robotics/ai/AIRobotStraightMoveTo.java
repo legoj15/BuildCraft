@@ -17,7 +17,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 /** Flies the robot in a straight line to an exact position — the final approach of {@link AIRobotGotoStation}.
  *  It never re-plans; once the distance stops shrinking the move is over, so the robot is placed exactly on
- *  the destination rather than eased forever.
+ *  the destination rather than eased forever (the snap goes through {@link IRobotAccess#setPos}).
  *
  *  <p>Two deliberate departures from 7.1.x, both pinned by {@code AIRobotStraightMoveToTest}:
  *  <ul>
@@ -35,6 +35,10 @@ public class AIRobotStraightMoveTo extends AIRobotGoto {
 
     private double x, y, z;
 
+    /** Whether {@link #x}/{@link #y}/{@link #z} were ever set. A move loaded from a tag with no target (corrupt or
+     *  hand-edited data) must end where it stands, not snap the robot to the world origin. */
+    private boolean hasTarget;
+
     /** Set by {@link #loadSelfFromNBT}: the destination/velocity {@code start()} would have set are gone. */
     private boolean resumeAfterLoad;
 
@@ -47,6 +51,7 @@ public class AIRobotStraightMoveTo extends AIRobotGoto {
         x = ix;
         y = iy;
         z = iz;
+        hasTarget = true;
         robot.aimItemAt(BlockPos.containing(x, y, z));
     }
 
@@ -68,10 +73,12 @@ public class AIRobotStraightMoveTo extends AIRobotGoto {
         if (distance < prevDistance) {
             prevDistance = distance;
         } else {
-            // Arrived: stop moving. 7.1.x snapped the position here; modern IRobotAccess has no setPos, but the
-            // robot's velocity is now zero so the entity tick parks it where it is, and the docking snap (for a
-            // station) puts it exactly on the mount face once the caller docks.
+            // Arrived: stop moving and put the robot exactly on the target, as 7.1.x did (posX/Y/Z = x/y/z). Without
+            // the snap a robot that does not dock afterwards rests wherever its last 0.1-block step left it.
             robot.setDeltaMovement(Vec3.ZERO);
+            if (hasTarget) {
+                robot.setPos(x, y, z);
+            }
             terminate();
         }
     }
@@ -98,6 +105,7 @@ public class AIRobotStraightMoveTo extends AIRobotGoto {
             x = NBTUtilBC.getDouble(nbt, "x", 0);
             y = NBTUtilBC.getDouble(nbt, "y", 0);
             z = NBTUtilBC.getDouble(nbt, "z", 0);
+            hasTarget = true;
             resumeAfterLoad = true;
         }
     }

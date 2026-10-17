@@ -62,6 +62,40 @@ public class AIRobotStraightMoveToTest {
     }
 
     @Test
+    public void arrivalSnapsTheRobotExactlyOntoTheTarget() {
+        // 7.1.x wrote posX/Y/Z = target on arrival; without the snap a robot that is not about to dock (nothing
+        // snaps it afterwards) rests wherever its last 0.1-block step happened to leave it.
+        robot.moveTo(0, 64, 0);
+        TrackedStraightMove ai = new TrackedStraightMove(robot, 1.5, 64.5, 0.5);
+        ai.start();
+
+        robot.moveTo(1.43, 64.5, 0.5); // a step short of the target, still closing in
+        ai.update();
+        Assertions.assertFalse(ai.ended, "precondition: still on the way");
+
+        robot.moveTo(1.58, 64.5, 0.5); // the step that overshot it: 0.08 away, the distance grew
+        ai.update();
+
+        Assertions.assertTrue(ai.ended, "precondition: the overshoot ends the move");
+        Assertions.assertEquals(new Vec3(1.5, 64.5, 0.5), robot.position(),
+                "arrival must put the robot exactly on the target, not leave it a step off");
+    }
+
+    @Test
+    public void aMoveWithNoTargetEndsWhereItStandsInsteadOfSnappingToTheOrigin() {
+        // A corrupt or hand-edited save can load a move with no x/y/z. It must not teleport the robot to (0,0,0).
+        robot.moveTo(40, 70, -12);
+        TrackedStraightMove ai = new TrackedStraightMove(robot);
+        ai.loadSelfFromNBT(new CompoundTag());
+
+        ai.update();
+        ai.update();
+
+        Assertions.assertTrue(ai.ended, "nothing to fly to: the move ends");
+        Assertions.assertEquals(new Vec3(40, 70, -12), robot.position(), "...in place");
+    }
+
+    @Test
     public void aRobotThatStopsMovingEndsTheMoveRatherThanWaitingForever() {
         robot.moveTo(0, 64, 0);
         TrackedStraightMove ai = new TrackedStraightMove(robot, 5, 64, 0);

@@ -83,6 +83,9 @@ public class ItemRobot extends Item {
     /** The action-bar line a blank robot answers a placement click with. */
     public static final String NOT_PROGRAMMED_KEY = "buildcraft.robot.not_programmed";
 
+    /** The tooltip line for a robot whose board nothing registers - the reason it refuses placement. */
+    public static final String UNKNOWN_BOARD_KEY = "buildcraft.robot.unknown_board";
+
     public ItemRobot(Item.Properties properties) {
         super(properties);
     }
@@ -229,6 +232,11 @@ public class ItemRobot extends Item {
 
         EntityRobot robot = new EntityRobot(level, getRobotBoard(stack));
         robot.getBattery().setStored(getEnergy(stack));
+        Component name = stack.get(DataComponents.CUSTOM_NAME);
+        if (name != null) {
+            // An item renamed on an anvil names the robot it places, as vanilla's boats and armor stands do.
+            robot.setCustomName(name);
+        }
 
         RobotEvent.Place event = new RobotEvent.Place(robot, player);
         NeoForge.EVENT_BUS.post(event);
@@ -311,7 +319,9 @@ public class ItemRobot extends Item {
      *  of robots apart; a blank robot got nothing at all. Kept verbatim: a blank chassis with no program
      *  is not a functional robot, so {@link #hasEmptyBoard} suppresses both the description and the
      *  charge line for it (the port's original always-charge line was a divergence; restored 7.1.x
-     *  behaviour, user decision of the 2026-09-03 gameplay audit). */
+     *  behaviour, user decision of the 2026-09-03 gameplay audit). A robot whose board id nothing registers is not
+     *  blank - its stored data is worth showing - but cannot be placed, so it gets an "Unknown board" line
+     *  above the charge to say why. */
     public static java.util.List<Component> tooltipLines(ItemStack stack, boolean advanced) {
         java.util.List<Component> lines = new java.util.ArrayList<>();
 
@@ -332,6 +342,12 @@ public class ItemRobot extends Item {
         }
 
         if (!hasEmptyBoard(stack)) {
+            if (isUnprogrammed(stack)) {
+                // A board id nothing registers (a removed addon's board, one renamed between releases, hand-edited
+                // data): the robot resolves to the empty board, and placement refuses it. Say so - otherwise it
+                // reads as a normal charged robot that just will not go on a station.
+                lines.add(Component.translatable(UNKNOWN_BOARD_KEY).withStyle(ChatFormatting.RED));
+            }
             lines.add(chargeLine(getEnergy(stack)));
         }
         return lines;

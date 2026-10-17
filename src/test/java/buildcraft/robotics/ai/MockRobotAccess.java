@@ -132,6 +132,11 @@ public class MockRobotAccess implements IRobotAccess {
     }
 
     @Override
+    public void setPos(double x, double y, double z) {
+        position = new Vec3(x, y, z);
+    }
+
+    @Override
     public Vec3 getDeltaMovement() {
         return Vec3.ZERO;
     }

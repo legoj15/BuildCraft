@@ -13,10 +13,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.items.IList;
 import buildcraft.api.statements.StatementMouseClick;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemMapLocation;
+import buildcraft.lib.list.ListHandler;
+import buildcraft.robotics.ai.MockRobotAccess;
 import buildcraft.robotics.item.ItemRobot;
+import buildcraft.robotics.boards.BoardRobotKnightNBT;
+import buildcraft.robotics.boards.BoardRobotPicker;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.zone.ZonePlan;
 
@@ -77,6 +82,85 @@ public class RoboticsParameterTest extends VanillaSetupBaseTester {
                 .onClick(null, null, new ItemStack(Items.DIAMOND), LEFT);
         Assertions.assertTrue(ItemStack.isSameItemSameComponents(picker, result.getItemStack()),
                 "a non-robot click must leave the parameter unchanged");
+    }
+
+    // ---- List and worn-item parameters (7.1.x's StatementParameterRobot took any stack; matches() reads three kinds) ----
+
+    private static ItemStack listHolding(ItemStack... exemplars) {
+        ItemStack list = new ItemStack(BCCoreItems.LIST.get());
+        ListHandler.Line[] lines = ListHandler.getLines(list);
+        for (int i = 0; i < exemplars.length; i++) {
+            lines[0].stacks.set(i, exemplars[i]);
+        }
+        ListHandler.saveLines(list, lines);
+        return list;
+    }
+
+    private static MockRobotAccess pickerRobot() {
+        MockRobotAccess robot = new MockRobotAccess();
+        robot.setBoard(new BoardRobotPicker(robot));
+        return robot;
+    }
+
+    @Test
+    public void heldListStackIsAcceptedAsTheParameter() {
+        ItemStack list = listHolding(pickerStack());
+
+        StatementParameterRobot result = new StatementParameterRobot().onClick(null, null, list, LEFT);
+
+        Assertions.assertTrue(result.getItemStack().getItem() instanceof IList,
+                "a held List must become the parameter (7.1.x matched robots by list), got " + result.getItemStack());
+        Assertions.assertEquals(1, result.getItemStack().getCount());
+        Assertions.assertTrue(ListHandler.matches(result.getItemStack(), pickerStack()),
+                "the accepted list keeps its contents");
+    }
+
+    @Test
+    public void heldWearableStackIsAcceptedAsTheParameter() {
+        // Worn items resolve through EntityRobot#getWearables; with no way to pick one the matching half
+        // (added with the wearable acceptance) was unreachable from the gate GUI.
+        for (ItemStack wearable : new ItemStack[] { new ItemStack(Items.DIAMOND_HELMET),
+                new ItemStack(Items.SKELETON_SKULL) }) {
+            StatementParameterRobot result = new StatementParameterRobot().onClick(null, null, wearable, LEFT);
+            Assertions.assertTrue(ItemStack.isSameItem(wearable, result.getItemStack()),
+                    wearable + " is something a robot can wear, so it must be selectable, got "
+                            + result.getItemStack());
+        }
+    }
+
+    @Test
+    public void anEmptyClickClearsAListOrWearableParameter() {
+        StatementParameterRobot list = new StatementParameterRobot(listHolding(pickerStack()));
+        StatementParameterRobot helmet = new StatementParameterRobot(new ItemStack(Items.DIAMOND_HELMET));
+
+        Assertions.assertTrue(list.onClick(null, null, ItemStack.EMPTY, LEFT).getItemStack().isEmpty(),
+                "7.1.x's base rule: an empty hand clears the parameter - without it a List could never be removed");
+        Assertions.assertTrue(helmet.onClick(null, null, ItemStack.EMPTY, RIGHT).getItemStack().isEmpty());
+    }
+
+    @Test
+    public void aListParameterMatchesRobotsItsContentsNameAndNoOthers() {
+        MockRobotAccess robot = pickerRobot();
+
+        Assertions.assertTrue(StatementParameterRobot.matches(
+                new StatementParameterRobot(listHolding(pickerStack())), robot),
+                "a list that holds a robot stack matches the robot (the list's own rule, applied to the "
+                        + "robot's board stack)");
+        Assertions.assertFalse(StatementParameterRobot.matches(
+                new StatementParameterRobot(listHolding(new ItemStack(Items.DIAMOND))), robot),
+                "a list of diamonds names no robot");
+        Assertions.assertFalse(StatementParameterRobot.matches(
+                new StatementParameterRobot(listHolding()), robot),
+                "an empty list names nothing");
+    }
+
+    @Test
+    public void aRobotStackParameterStillMatchesByBoard() {
+        MockRobotAccess robot = pickerRobot();
+
+        Assertions.assertTrue(StatementParameterRobot.matches(new StatementParameterRobot(pickerStack()), robot));
+        Assertions.assertFalse(StatementParameterRobot.matches(new StatementParameterRobot(
+                ItemRobot.createRobotStack(BoardRobotKnightNBT.INSTANCE.getID(), 0)), robot));
     }
 
     @Test

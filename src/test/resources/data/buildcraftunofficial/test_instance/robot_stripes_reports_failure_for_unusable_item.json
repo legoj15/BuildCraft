@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_stripes_reports_failure_for_unusable_item",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 40,
+    "setup_ticks": 0,
+    "required": true
+}

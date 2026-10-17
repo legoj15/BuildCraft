@@ -7,6 +7,8 @@ package buildcraft.robotics;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -57,7 +59,13 @@ public class RobotIntegrationRecipe extends IntegrationRecipe {
         if (energy == 0) {
             energy = IRobotAccess.SAFETY_POWER;
         }
-        return ItemRobot.createRobotStack(robotBoard.getID(), energy);
+        ItemStack result = ItemRobot.createRobotStack(robotBoard.getID(), energy);
+        // The robot keeps the name it was given (a name tag's, or an anvil's on the item).
+        Component name = target.get(DataComponents.CUSTOM_NAME);
+        if (name != null) {
+            result.set(DataComponents.CUSTOM_NAME, name);
+        }
+        return result;
     }
 
     @Override

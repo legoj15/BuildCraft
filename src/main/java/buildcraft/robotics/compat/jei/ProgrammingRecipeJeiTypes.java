@@ -11,6 +11,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
+import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+
 /** Holds the JEI recipe type for the Programming Table; every entry is a {@link ProgrammingRecipeJei}. JEI 20+
  *  (the {@code >=1.21.10} nodes) deprecated {@code RecipeType} for removal in favour of {@code IRecipeType}; the
  *  1.21.1 node's JEI 19.x predates {@code IRecipeType}, so it keeps the class. */

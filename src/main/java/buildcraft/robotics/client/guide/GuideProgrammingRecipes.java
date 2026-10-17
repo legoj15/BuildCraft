@@ -17,10 +17,10 @@ import buildcraft.lib.client.guide.parts.GuidePartFactory;
 import buildcraft.lib.client.guide.parts.recipe.IStackRecipes;
 
 import buildcraft.robotics.BCRoboticsRecipes;
-import buildcraft.robotics.compat.jei.ProgrammingRecipeCollector;
-import buildcraft.robotics.compat.jei.ProgrammingRecipeJei;
-import buildcraft.robotics.compat.jei.RoboticsJeiSubtypes;
 import buildcraft.robotics.item.ItemRedstoneBoard;
+import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
+import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.recipe.RoboticsJeiSubtypes;
 import buildcraft.silicon.BCSiliconItems;
 
 /** The guide's Programming Table lookup ({@code type="programming"}): blank Redstone Board → programmed board. A

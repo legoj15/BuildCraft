@@ -20,6 +20,8 @@ import net.minecraft.resources.Identifier;
 import buildcraft.lib.compat.jei.JeiMjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
+import buildcraft.robotics.recipe.IntegrationRecipeCollector;
+import buildcraft.robotics.recipe.IntegrationRecipeJei;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.IntegrationTableLayout;
 

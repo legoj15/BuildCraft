@@ -137,7 +137,9 @@ local JVM's copy, which on a remote client is its own unsynced file.
 **JEI**: one `@JeiPlugin` per subsystem under `<subsystem>/compat/jei` (core, energy, factory,
 silicon, robotics), shared machinery in `lib/compat/jei`. Each category follows the Assembly Table
 shape: a JEI-free record + collector (unit-testable — `ProgrammingRecipeCollectorTester` is the
-model), a `*JeiTypes` holder, and a category that crops the machine's own GUI texture and prints the
+model; where the guide book reads the same entries, as for the robotics tables, they live outside
+`compat/jei` — `robotics/recipe` — and `GuideJeiIndependenceTest` keeps the guide off that package),
+a `*JeiTypes` holder, and a category that crops the machine's own GUI texture and prints the
 MJ cost through `JeiMjLabel`. Cross-node API rules, all enforced by a clean
 `-PbcLint=deprecation` sweep since 2026-09-26: recipe types are `IRecipeType` on the JEI 20+ nodes
 (`>=1.21.10`) and `RecipeType` only on 1.21.1 (its JEI 19.x predates `IRecipeType`) — one

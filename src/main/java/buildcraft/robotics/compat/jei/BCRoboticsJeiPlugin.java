@@ -20,7 +20,9 @@ import buildcraft.lib.compat.jei.JeiSubtypes;
 import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.client.gui.GuiProgrammingTable;
+import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.container.IntegrationTableLayout;
 import buildcraft.silicon.gui.GuiIntegrationTable;
 
 /**
@@ -82,12 +84,14 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // The table GUI's laser-energy bar (GuiProgrammingTable.RECT_PROGRESS) opens the category — clear of the
-        // option grid (x 43-150), which the GUI hit-tests itself.
-        registration.addRecipeClickArea(GuiProgrammingTable.class, 164, 36, 4, 70,
+        // The table GUI's laser-energy bar opens the category — clear of the option grid, which the GUI hit-tests
+        // itself. The bar's rectangle is the layout's, the same one the GUI draws and shows help for.
+        registration.addRecipeClickArea(GuiProgrammingTable.class, ProgrammingTableLayout.BAR_X,
+                ProgrammingTableLayout.BAR_Y, ProgrammingTableLayout.BAR_W, ProgrammingTableLayout.BAR_H,
                 ProgrammingRecipeJeiTypes.PROGRAMMING);
-        // Likewise the Integration Table's bar (GuiIntegrationTable.RECT_PROGRESS), clear of its slots.
-        registration.addRecipeClickArea(GuiIntegrationTable.class, 164, 22, 4, 70,
+        // Likewise the Integration Table's bar, clear of its slots.
+        registration.addRecipeClickArea(GuiIntegrationTable.class, IntegrationTableLayout.BAR_X,
+                IntegrationTableLayout.BAR_Y, IntegrationTableLayout.BAR_W, IntegrationTableLayout.BAR_H,
                 IntegrationRecipeJeiTypes.INTEGRATION);
     }
 }

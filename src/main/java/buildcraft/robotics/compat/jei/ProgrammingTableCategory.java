@@ -21,8 +21,8 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.lib.compat.jei.JeiMjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
+import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.BCSiliconItems;
-import buildcraft.silicon.tile.TileProgrammingTable;
 
 /**
  * JEI category for the Programming Table, drawn as the table's own GUI (the Assembly Table category is the pattern):
@@ -38,19 +38,17 @@ import buildcraft.silicon.tile.TileProgrammingTable;
 public class ProgrammingTableCategory extends AbstractRecipeCategory<ProgrammingRecipeJei> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/programming_table.png");
 
-    // Crop the GUI texture (176x207, see GuiProgrammingTable) to the board slots, the option grid and the power bar,
-    // leaving out the title strip and the player inventory.
-    private static final int TEX_U = 3, TEX_V = 27;
-    private static final int TEX_W = 169, TEX_H = 86;
+    // Crop the GUI texture (see ProgrammingTableLayout) to the board slots, the option grid and the power bar,
+    // leaving out the title strip and the player inventory. The one geometry this category owns; package-visible so
+    // TableLayoutTest can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = 3, TEX_V = 27;
+    static final int TEX_W = 169, TEX_H = 86;
 
-    // Slot positions from ContainerProgrammingTable, shifted by (-TEX_U, -TEX_V).
-    private static final int INPUT_X = 8 - TEX_U, INPUT_Y = 36 - TEX_V;
-    private static final int OUTPUT_X = 8 - TEX_U, OUTPUT_Y = 90 - TEX_V;
-    private static final int GRID_X = 43 - TEX_U, GRID_Y = 36 - TEX_V;
-    private static final int SLOT_PITCH = 18;
-
-    // The table GUI's selection frame (the same texture cell GuiProgrammingTable draws).
-    private static final int SELECTED_U = 196, SELECTED_V = 1, SELECTED_SIZE = 16;
+    // Slot positions from ProgrammingTableLayout, shifted by (-TEX_U, -TEX_V).
+    private static final int INPUT_X = ProgrammingTableLayout.BOARD_X - TEX_U,
+            INPUT_Y = ProgrammingTableLayout.BOARD_Y - TEX_V;
+    private static final int OUTPUT_X = ProgrammingTableLayout.RESULT_X - TEX_U,
+            OUTPUT_Y = ProgrammingTableLayout.RESULT_Y - TEX_V;
 
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
     private static final String POWER_KEY = "gui.jei.category.buildcraftunofficial.programming_table.power";
@@ -69,7 +67,9 @@ public class ProgrammingTableCategory extends AbstractRecipeCategory<Programming
                 WIDTH, HEIGHT
         );
         this.background = guiHelper.createDrawable(TEXTURE, TEX_U, TEX_V, TEX_W, TEX_H);
-        this.selected = guiHelper.createDrawable(TEXTURE, SELECTED_U, SELECTED_V, SELECTED_SIZE, SELECTED_SIZE);
+        // The table GUI's own selection frame (the same texture cell GuiProgrammingTable draws).
+        this.selected = guiHelper.createDrawable(TEXTURE, ProgrammingTableLayout.SELECTED_U,
+                ProgrammingTableLayout.SELECTED_V, ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE);
     }
 
     @Override
@@ -103,10 +103,10 @@ public class ProgrammingTableCategory extends AbstractRecipeCategory<Programming
     }
 
     private static int cellX(int index) {
-        return GRID_X + (index % TileProgrammingTable.OPTION_COLS) * SLOT_PITCH;
+        return ProgrammingTableLayout.cellX(index) - TEX_U;
     }
 
     private static int cellY(int index) {
-        return GRID_Y + (index / TileProgrammingTable.OPTION_COLS) * SLOT_PITCH;
+        return ProgrammingTableLayout.cellY(index) - TEX_V;
     }
 }

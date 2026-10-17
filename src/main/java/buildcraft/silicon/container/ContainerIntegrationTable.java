@@ -35,26 +35,26 @@ public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTa
     public ContainerIntegrationTable(int containerId, Player player, TileIntegrationTable tile) {
         super(BCSiliconMenuTypes.INTEGRATION_TABLE.get(), containerId, player, tile);
 
-        // 3x3 grid: center is target, surrounding 8 are ingredients
-        int[] indexes = {0, 1, 2, 3, 0, 4, 5, 6, 7};
-
-        for (int y = 0; y < 3; y++) {
-            for (int x = 0; x < 3; x++) {
+        // 3x3 grid, added in reading order: center is target, surrounding 8 are ingredients
+        for (int y = 0; y < IntegrationTableLayout.RING_ROWS; y++) {
+            for (int x = 0; x < IntegrationTableLayout.RING_COLS; x++) {
+                boolean centre = IntegrationTableLayout.isCentre(x, y);
                 addSlot(new SlotBase(
-                    (x == 1 && y == 1) ? tile.invTarget : tile.invToIntegrate,
-                    indexes[x + y * 3],
-                    19 + x * 25, 24 + y * 25
+                    centre ? tile.invTarget : tile.invToIntegrate,
+                    centre ? 0 : IntegrationTableLayout.ringSlot(x, y),
+                    IntegrationTableLayout.ringX(x), IntegrationTableLayout.ringY(y)
                 ));
             }
         }
 
         // Display slot showing recipe output preview
-        addSlot(new SlotDisplay(i -> tile.getOutput(), 0, 101, 36));
+        addSlot(new SlotDisplay(i -> tile.getOutput(), 0,
+                IntegrationTableLayout.PREVIEW_X, IntegrationTableLayout.PREVIEW_Y));
 
         // Actual output slot
-        addSlot(new SlotOutput(tile.invResult, 0, 138, 49));
+        addSlot(new SlotOutput(tile.invResult, 0, IntegrationTableLayout.RESULT_X, IntegrationTableLayout.RESULT_Y));
 
-        addFullPlayerInventory(8, 109);
+        addFullPlayerInventory(IntegrationTableLayout.PLAYER_INV_X, IntegrationTableLayout.PLAYER_INV_Y);
     }
 
     @Override

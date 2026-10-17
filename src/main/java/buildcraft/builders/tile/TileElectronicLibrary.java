@@ -90,6 +90,13 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
      *  selection or the blank changes, so one bad upload is not re-sent and re-parsed every few seconds. */
     @Nullable
     private Snapshot.Key uploadRefused;
+    /** The watchers whose answer to a request for {@link #uploadRefusedByKey} was refused: a bad stream from one
+     *  watcher ends only that watcher's answer, not the request, so the others can still satisfy it. They are not
+     *  asked for that build again, and their further chunks for it are ignored, until the blank or the selection
+     *  changes; once every watcher is in here the build itself is refused ({@link #uploadRefused}). */
+    private final Set<Player> uploadRefusedBy = new HashSet<>();
+    @Nullable
+    private Snapshot.Key uploadRefusedByKey;
 
     public TileElectronicLibrary(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.LIBRARY.get(), pos, state);
@@ -122,6 +129,9 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
     public void onPlayerClose(Player player) {
         super.onPlayerClose(player);
         watchingPlayers.remove(player);
+        // A watcher that leaves can no longer answer: the request may now have nobody left who could.
+        uploadRefusedBy.remove(player);
+        refuseIfNoWatcherCanAnswer();
     }
 
     public void tick() {
@@ -152,18 +162,20 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
 
         // --- Upload: request snapshot data from client, then write to server DB ---
         if (invUpIn.getStackInSlot(0).isEmpty()) {
-            uploadRefused = null; // a new blank is a new try
+            // a new blank is a new try
+            uploadRefused = null;
+            clearWatcherRefusals();
         }
         if (!canTakeUpload() || selected.equals(uploadRefused)) {
-            uploadRequested = null;
+            withdrawUploadRequest();
             progressUp = -1;
         } else if (uploadRequested != null && !uploadRequested.equals(selected)) {
             // The selection changed while waiting: the old answer is no longer wanted.
-            uploadRequested = null;
+            withdrawUploadRequest();
             progressUp = 0;
         } else if (uploadRequested != null) {
             if (--uploadWaitTicks <= 0) {
-                uploadRequested = null; // nobody answered: count up and ask again
+                withdrawUploadRequest(); // nobody answered: count up and ask again
                 progressUp = 0;
             }
         } else {
@@ -204,13 +216,57 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
         if (uploadRequested != null) uploadWaitTicks = UPLOAD_ANSWER_TIMEOUT_TICKS;
     }
 
-    /** The upload for the outstanding request could not be used; stop asking for it (see {@link #uploadRefused}). */
-    public void onUploadRefused(String why) {
+    /** Whether {@code player}'s answer to the outstanding request was already refused: the menu ignores the rest of
+     *  its chunks for it. */
+    public boolean hasRefusedUpload(Player player) {
+        return uploadRequested != null && uploadRequested.equals(uploadRefusedByKey)
+            && uploadRefusedBy.contains(player);
+    }
+
+    /**
+     * {@code from}'s upload for the outstanding request could not be used. That ends {@code from}'s answer and
+     * nothing else: the request stays out for the other watchers, and only once none of them is left to answer is the
+     * build refused and not asked for again (see {@link #uploadRefused}).
+     */
+    public void onUploadRefused(Player from, String why) {
         if (uploadRequested == null) return;
-        BCLog.logger.warn("[library] Refused the upload of {} at {}: {}", uploadRequested, worldPosition, why);
+        BCLog.logger.warn("[library] Refused the upload of {} at {} from {}: {}", uploadRequested, worldPosition,
+            from.getName().getString(), why);
+        if (!uploadRequested.equals(uploadRefusedByKey)) {
+            uploadRefusedBy.clear();
+            uploadRefusedByKey = uploadRequested;
+        }
+        uploadRefusedBy.add(from);
+        refuseIfNoWatcherCanAnswer();
+    }
+
+    /** Refuse the build when every watcher has had its answer refused (a watcher that left no longer counts). */
+    private void refuseIfNoWatcherCanAnswer() {
+        if (uploadRequested == null || uploadRefusedBy.isEmpty() || !uploadRequested.equals(uploadRefusedByKey)) return;
+        for (Player watcher : watchingPlayers) {
+            if (!uploadRefusedBy.contains(watcher)) return;
+        }
         uploadRefused = uploadRequested;
-        uploadRequested = null;
+        withdrawUploadRequest();
         progressUp = -1;
+    }
+
+    private void clearWatcherRefusals() {
+        uploadRefusedBy.clear();
+        uploadRefusedByKey = null;
+    }
+
+    /** The request is over (withdrawn, timed out, refused or answered): stop taking chunks for it and free what the
+     *  watchers' menus hold of a half-sent answer, which would otherwise stay until their next chunk or until they
+     *  close. */
+    private void withdrawUploadRequest() {
+        if (uploadRequested == null) return;
+        uploadRequested = null;
+        for (Player p : watchingPlayers) {
+            if (p.containerMenu instanceof ContainerElectronicLibrary container) {
+                container.releaseUpload();
+            }
+        }
     }
 
     /**
@@ -253,7 +309,10 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
         if (selected == null) return false;
         final Snapshot.Key key = selected;
         boolean asked = false;
+        boolean knownBad = key.equals(uploadRefusedByKey);
         for (Player p : watchingPlayers) {
+            // A watcher whose answer for this build was refused is not asked for it again.
+            if (knownBad && uploadRefusedBy.contains(p)) continue;
             if (p.containerMenu instanceof ContainerElectronicLibrary container) {
                 container.sendMessage(ContainerElectronicLibrary.NET_UPLOAD_REQUEST, buf -> key.writeToByteBuf(buf));
                 asked = true;
@@ -268,19 +327,21 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
      * snapshot goes into the server DB and the used item into the output slot. Anything else is ignored (an
      * unasked-for or second answer) or refused (the wrong build).
      *
+     * @param from the watcher who sent it
      * @return whether the upload became an item
      */
-    public boolean onUploadReceived(Snapshot snapshot) {
+    public boolean onUploadReceived(Player from, Snapshot snapshot) {
         if (uploadRequested == null || !canTakeUpload()) {
             BCLog.logger.warn("[library] Ignoring an upload at {} that no request is waiting for", worldPosition);
             return false;
         }
         if (snapshot.key == null || !java.util.Arrays.equals(snapshot.key.hash, uploadRequested.hash)) {
-            onUploadRefused("it is not the snapshot that was asked for");
+            onUploadRefused(from, "it is not the snapshot that was asked for");
             return false;
         }
         Snapshot.Header asked = uploadRequested.header;
-        uploadRequested = null;
+        withdrawUploadRequest(); // answered: other watchers' half-sent answers are not wanted either
+        clearWatcherRefusals();
         progressUp = -1;
         Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot, asked);
         EnumSnapshotType type = snapshot.getType();

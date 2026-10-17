@@ -256,6 +256,34 @@ public class LibraryUploadBufferTester {
         Assertions.assertArrayEquals(bytes(7), buffer.accept(true, bytes(7)), "skipping a final chunk skips no more");
     }
 
+    @Test
+    public void aReleasedUploadFreesWhatItHeldAndItsLateTailIsIgnored() {
+        // The request it answered ended (timed out, withdrawn) with the stream half in: nothing is kept for it, and
+        // the chunks still on their way cannot become the start of the next upload.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
+        Assertions.assertNull(buffer.accept(false, bytes(3)));
+        buffer.release();
+        Assertions.assertEquals(0, buffer.bufferedBytes(), "the chunks are freed");
+        Assertions.assertEquals(0, buffer.bufferedChunks());
+        Assertions.assertNull(buffer.accept(false, bytes(4)), "the rest of that stream is ignored");
+        Assertions.assertNull(buffer.accept(true, bytes(5)), "up to and including its final chunk");
+        Assertions.assertEquals(0, buffer.droppedUploads(), "releasing is not refusing");
+        Assertions.assertArrayEquals(bytes(6, 7), buffer.accept(true, bytes(6, 7)), "the next upload starts clean");
+    }
+
+    @Test
+    public void releasingABufferHoldingNothingLeavesTheNextUploadAlone() {
+        // No stream was in flight, so there is no tail to ignore: the next one is a fresh upload, not its leftovers.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        buffer.release();
+        Assertions.assertArrayEquals(bytes(8), buffer.accept(true, bytes(8)));
+        Assertions.assertNull(buffer.accept(false, bytes(1)));
+        Assertions.assertArrayEquals(bytes(1, 2), buffer.accept(true, bytes(2)));
+        buffer.release(); // just completed: nothing held either
+        Assertions.assertArrayEquals(bytes(9), buffer.accept(true, bytes(9)));
+    }
+
     // ── Limits: one config option sizes them all ────────────────────────────
 
     @Test

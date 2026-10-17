@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:library_withdrawn_request_releases_buffers",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 400,
+    "setup_ticks": 0,
+    "required": true
+}

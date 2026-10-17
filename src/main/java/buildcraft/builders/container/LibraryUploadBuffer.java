@@ -140,6 +140,16 @@ public final class LibraryUploadBuffer {
         discarding = !last;
     }
 
+    /**
+     * Free what an upload in progress holds because the request it answers is over (withdrawn, timed out, answered
+     * by someone else), and ignore the rest of its stream up to its final chunk. A buffer holding nothing is left as
+     * it is: no stream is in flight, so the next chunk starts a new upload and not the tail of an old one.
+     */
+    void release() {
+        if (chunks.isEmpty()) return;
+        skip(false);
+    }
+
     /** Uploads dropped for going past the limits since this buffer was made. */
     int droppedUploads() {
         return dropped;

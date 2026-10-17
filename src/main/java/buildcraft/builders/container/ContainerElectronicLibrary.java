@@ -150,6 +150,11 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         return upload == null ? 0 : upload.bufferedBytes();
     }
 
+    /** The tile's request for an upload is over: free what this menu holds of a half-sent one. Server side. */
+    public void releaseUpload() {
+        if (upload != null) upload.release();
+    }
+
     /** What one upload to this menu may hold. */
     public LibraryUploadBuffer.Limits getUploadLimits() {
         return upload().limits();
@@ -206,9 +211,9 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             boolean last = (buffer.readByte() != 0);
             byte[] chunk = buffer.readByteArray();
             LibraryUploadBuffer upload = upload();
-            if (!tile.isUploadRequested()) {
-                // Nothing was asked for (or the request was withdrawn mid-stream): keep none of it, and do not let a
-                // stale prefix run into the next upload.
+            if (!tile.isUploadRequested() || tile.hasRefusedUpload(player)) {
+                // Nothing was asked for (or the request was withdrawn mid-stream), or this player's answer to it was
+                // already refused: keep none of it, and do not let a stale prefix run into the next upload.
                 upload.skip(last);
                 return;
             }
@@ -218,7 +223,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             if (assembled != null) {
                 receiveUpload(assembled);
             } else if (upload.droppedUploads() != droppedBefore) {
-                tile.onUploadRefused("it is larger than the library's upload limit (libraryMaxUploadMb)");
+                tile.onUploadRefused(player, "it is larger than the library's upload limit (libraryMaxUploadMb)");
             }
         }
     }
@@ -269,10 +274,10 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             snapshot = upload().decode(assembled);
         } catch (java.io.IOException e) {
             BCLog.logger.warn("[library] Failed to deserialize uploaded snapshot", e);
-            tile.onUploadRefused("it is not a readable snapshot");
+            tile.onUploadRefused(player, "it is not a readable snapshot");
             return;
         }
-        tile.onUploadReceived(snapshot);
+        tile.onUploadReceived(player, snapshot);
     }
 
     @Override

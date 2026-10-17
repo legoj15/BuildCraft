@@ -147,21 +147,9 @@ public class MachineProtectionTester {
     public static void stripesPipeAsksBeforeBreaking(GameTestHelper helper) {
         requireProtectionChecksOn();
         ServerLevel level = helper.getLevel();
-        BlockPos pipeRel = new BlockPos(2, 1, 2);
-        BlockPos targetRel = pipeRel.above();
-        helper.setBlock(pipeRel, BCTransportBlocks.PIPE_HOLDER.get());
-        //? if >=1.21.10 {
-        TilePipeHolder tile = helper.getBlockEntity(pipeRel, TilePipeHolder.class);
-        //?} else {
-        /*TilePipeHolder tile = helper.getBlockEntity(pipeRel);*/
-        //?}
-        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_STRIPES_ITEM.get()));
-        if (!(tile.getPipe().getBehaviour() instanceof PipeBehaviourStripes stripes)) {
-            helper.fail("the stripes pipe item did not produce a stripes behaviour");
-            return;
-        }
-        // An unconnected stripes pipe keeps a non-null direction across ticks (it only re-derives it when null).
-        stripes.direction = Direction.UP;
+        BlockPos targetRel = new BlockPos(2, 2, 2);
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, new BlockPos(2, 1, 2));
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
         helper.setBlock(targetRel, Blocks.STONE);
         BlockPos target = helper.absolutePos(targetRel);
 
@@ -178,7 +166,9 @@ public class MachineProtectionTester {
                     "an unowned stripes pipe asks as the [BuildCraft] identity");
         }
 
-        for (int i = 0; i < 60 && !level.getBlockState(target).isAir(); i++) {
+        // The claim is lifted without the block changing - nothing fires an event for that - so the pipe notices
+        // only once its retry window has passed.
+        for (int i = 0; i < PipeBehaviourStripes.REFUSAL_RETRY_TICKS + 60 && !level.getBlockState(target).isAir(); i++) {
             stripes.receivePower(64 * MjAPI.MJ, false);
             stripes.onTick();
         }
@@ -187,6 +177,62 @@ public class MachineProtectionTester {
         // The cobblestone drop travels down the pipe; empty it so removing the arena's pipe drops nothing.
         for (TravellingItem item : ((PipeFlowItems) tile.getPipe().getFlow()).getAllItemsForRender()) {
             item.getStack().setCount(0);
+        }
+        helper.succeed();
+    }
+
+    /** A stripes pipe at {@code pipeRel}, facing up (an unconnected one keeps a non-null direction across ticks). */
+    private static TilePipeHolder placeStripesPipeFacingUp(GameTestHelper helper, BlockPos pipeRel) {
+        helper.setBlock(pipeRel, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pipeRel, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipeRel);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_STRIPES_ITEM.get()));
+        if (!(tile.getPipe().getBehaviour() instanceof PipeBehaviourStripes stripes)) {
+            throw new IllegalStateException("the stripes pipe item did not produce a stripes behaviour");
+        }
+        stripes.direction = Direction.UP;
+        return tile;
+    }
+
+    /**
+     * A stripes pipe whose block was refused backs off: it asks once, then neither spends power on the block nor asks
+     * again until the block turns into something else (which is a new question, asked at once). Before the fix the
+     * refusal reset the progress but kept the direction, so the pipe re-accumulated the whole break cost and re-asked
+     * once per cycle for as long as the claim stood.
+     */
+    public static void stripesPipeBacksOffFromARefusedBlock(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos targetRel = new BlockPos(2, 2, 2);
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, new BlockPos(2, 1, 2));
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        helper.setBlock(targetRel, Blocks.STONE);
+        BlockPos target = helper.absolutePos(targetRel);
+        // The pipe's battery holds 256 MJ: that much arrives while it fills, and anything beyond it was spent.
+        long batteryCapacity = 256 * MjAPI.MJ;
+
+        try (ProtectionMod claim = new ProtectionMod(target, true)) {
+            long accepted = 0;
+            for (int i = 0; i < 60; i++) {
+                accepted += 64 * MjAPI.MJ - stripes.receivePower(64 * MjAPI.MJ, false);
+                stripes.onTick();
+            }
+            check(level.getBlockState(target).is(Blocks.STONE), "a refused stripes pipe must not break the block");
+            check(accepted <= batteryCapacity, "a refused stripes pipe spends no power on the block: it took "
+                    + accepted / MjAPI.MJ + " MJ, a full battery is " + batteryCapacity / MjAPI.MJ);
+            check(claim.askedBy.size() == 1, "a refused stripes pipe asks once and then backs off, asked "
+                    + claim.askedBy.size() + " times");
+
+            // The block changes under the same claim: a new block is a new question, asked at once.
+            helper.setBlock(targetRel, Blocks.DIRT);
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claim.askedBy.size() == 2, "a changed block is asked about at once, asked "
+                    + claim.askedBy.size() + " times");
+            check(level.getBlockState(target).is(Blocks.DIRT), "and is still refused");
         }
         helper.succeed();
     }

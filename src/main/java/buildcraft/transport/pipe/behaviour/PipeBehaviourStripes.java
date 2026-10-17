@@ -44,10 +44,14 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.ProtectionRefusals;
 
 import buildcraft.transport.BCTransportStatements;
 
 public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
+    /** How many pipe ticks a refused block is left alone before the owner is asked again (10 s at 20 tps). */
+    public static final int REFUSAL_RETRY_TICKS = 200;
+
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
     // The behaviour must itself be an IMjRedstoneReceiver (the pulsar plug + power-adaptor placement test
     // the pipe behaviour directly via getBehaviour() instanceof IMjRedstoneReceiver), so it can't extend
@@ -57,6 +61,12 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     @Nullable
     public Direction direction = null;
     private long progress;
+    /** Whether protection mods were already asked about the block in front for the current break cycle. */
+    private boolean askedThisCycle;
+    /** Blocks protection mods refused, so a refused block is left alone instead of re-charged every cycle. */
+    private final ProtectionRefusals refusals = new ProtectionRefusals(REFUSAL_RETRY_TICKS, 4);
+    /** Ticks this pipe has run: the refusal clock (it also advances in a hand-driven test loop, unlike game time). */
+    private long ticksRun;
 
     public PipeBehaviourStripes(IPipe pipe) {
         super(pipe);
@@ -179,23 +189,28 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
             }
         }
         battery.tick(world, pipe.getHolder().getPipePos());
+        ticksRun++;
         if (direction != null) {
             BlockPos offset = pos.relative(direction);
             long target = BlockUtil.computeBlockBreakPower(world, offset);
-            if (target > 0) {
+            // A block protection mods refused is left alone (no power, no asking) until it changes or the retry
+            // window passes: 1.12.2 re-charged the whole break and re-asked every cycle for as long as the claim stood.
+            if (target > 0 && !refusals.isRefused(offset, world.getBlockState(offset), ticksRun)) {
                 int offsetHash = offset.hashCode();
                 if (progress < target) {
+                    // Ask before the first power of a cycle, so a refused block costs none; the answer holds for the
+                    // cycle, and the break itself asks once more in case a claim appeared meanwhile.
+                    if (!askedThisCycle) {
+                        if (!mayBreak((ServerLevel) world, offset)) {
+                            return;
+                        }
+                        askedThisCycle = true;
+                    }
                     progress += battery.extractPower(0, Math.min(target - progress, MjAPI.MJ * 10));
                     if (progress > 0) {
                         world.destroyBlockProgress(offsetHash, offset, (int) (progress * 9 / target));
                     }
-                } else if (!BlockUtil.canMachineBreak((ServerLevel) world, offset, pipe.getHolder().getOwner())) {
-                    // Refused by a protection mod (asked as the pipe's owner, like the quarry and builder do):
-                    // the block stays, the crack clears and the spent power is gone — 1.12.2 likewise reset its
-                    // progress when the owner's fake player had its break event cancelled.
-                    world.destroyBlockProgress(offsetHash, offset, -1);
-                    progress = 0;
-                } else {
+                } else if (mayBreak((ServerLevel) world, offset)) {
                     BlockUtil.breakBlockAndGetDropsWithXp(
                         (ServerLevel) world,
                         offset,
@@ -212,11 +227,32 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                         }
                     });
                     progress = 0;
+                    askedThisCycle = false;
                 }
             }
         } else {
             progress = 0;
+            askedThisCycle = false;
         }
+    }
+
+    /**
+     * Asks protection mods whether the pipe may break the block at {@code offset}, as the pipe's owner (like the
+     * quarry and builder do). A refusal is remembered and the cycle is dropped: the block stays, the crack clears and
+     * the spent power is gone, as 1.12.2 reset its progress when the owner's fake player had its break event
+     * cancelled - but the pipe now leaves that block alone afterwards, see {@link #REFUSAL_RETRY_TICKS}.
+     */
+    private boolean mayBreak(ServerLevel world, BlockPos offset) {
+        if (BlockUtil.canMachineBreak(world, offset, pipe.getHolder().getOwner())) {
+            return true;
+        }
+        refusals.remember(offset, world.getBlockState(offset), ticksRun);
+        if (progress > 0) {
+            world.destroyBlockProgress(offset.hashCode(), offset, -1);
+        }
+        progress = 0;
+        askedThisCycle = false;
+        return false;
     }
 
     @PipeEventHandler

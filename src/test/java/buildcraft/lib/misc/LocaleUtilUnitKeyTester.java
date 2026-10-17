@@ -119,10 +119,12 @@ public class LocaleUtilUnitKeyTester {
         Assertions.assertEquals("800 MB_PLURAL_X FOR EACH SECOND",
                 LocaleUtil.formatFluidFlow(40, FlowDisplay.PER_SECOND, true, true));
         // 100 mB/t is 2000 mB/s, which does cross into buckets — the only way to reach the bucket keys.
-        // Note the "2.0", not "2": the flow formatter keeps a trailing .0 where formatFluidTank trims it
-        // ("2 / 4 B"). Characterizing the behaviour as it stands; the asymmetry is logged in todos.md.
-        Assertions.assertEquals("2.0 B_PLURAL_X FOR EACH SECOND",
+        // "2", not "2.0": the flow readout trims a trailing .0 exactly like formatFluidTank does ("2 / 4 B"),
+        // so the two bucket-scale readouts agree on a whole number of buckets.
+        Assertions.assertEquals("2 B_PLURAL_X FOR EACH SECOND",
                 LocaleUtil.formatFluidFlow(100, FlowDisplay.PER_SECOND, true, true));
+        Assertions.assertEquals("2 B_X@SEC",
+                LocaleUtil.formatFluidFlow(100, FlowDisplay.PER_SECOND, false, true));
     }
 
     @Test

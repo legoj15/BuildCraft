@@ -383,14 +383,51 @@ public class LocaleUtilNumberFormatTester {
 
     @Test
     public void fluidFlow_abbreviate_largeBucketRatesApplyKMG() {
-        // 10,000 mB/tick * 20 = 200,000 mB/sec = 200 buckets/sec — should render as "200.0 B/s",
-        // not as some hybrid "200.0k mB/s". k/M/G/T applies on top of buckets once the bucket
-        // count itself crosses 1000.
-        Assertions.assertEquals("200.0 B/s",
+        // 10,000 mB/tick * 20 = 200,000 mB/sec = 200 buckets/sec — should render as "200 B/s",
+        // not as some hybrid "200k mB/s". k/M/G/T applies on top of buckets once the bucket
+        // count itself crosses 1000. A whole number drops its trailing ".0" (as the tank readout does).
+        Assertions.assertEquals("200 B/s",
                 LocaleUtil.formatFluidFlow(10_000, FlowDisplay.PER_SECOND, false, true));
-        // 100,000 mB/tick * 20 = 2,000,000 mB/sec = 2000 buckets/sec → "2.0k B/s".
-        Assertions.assertEquals("2.0k B/s",
+        // 100,000 mB/tick * 20 = 2,000,000 mB/sec = 2000 buckets/sec → "2k B/s".
+        Assertions.assertEquals("2k B/s",
                 LocaleUtil.formatFluidFlow(100_000, FlowDisplay.PER_SECOND, false, true));
+        // 125,000 mB/tick * 20 = 2,500 buckets/sec: a fractional tier keeps its single decimal.
+        Assertions.assertEquals("2.5k B/s",
+                LocaleUtil.formatFluidFlow(125_000, FlowDisplay.PER_SECOND, false, true));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_wholeBucketsTrimTrailingZero_likeTheTankReadout() {
+        // 100 mB/tick * 20 = 2000 mB/s = exactly 2 buckets: the flow readout must say "2 B/s" the same way
+        // the tank readout says "2 / 4 B" — never "2.0 B/s".
+        Assertions.assertEquals("2 B/s",
+                LocaleUtil.formatFluidFlow(100, FlowDisplay.PER_SECOND, false, true));
+        Assertions.assertEquals("2 buckets per second",
+                LocaleUtil.formatFluidFlow(100, FlowDisplay.PER_SECOND, true, true));
+        Assertions.assertEquals("2 B/s (100 mB/t)",
+                LocaleUtil.formatFluidFlow(100, FlowDisplay.BOTH, false, true));
+        // A fractional bucket count keeps its one decimal, and the tank readout still agrees on whole buckets.
+        Assertions.assertEquals("1.6 B/s",
+                LocaleUtil.formatFluidFlow(80, FlowDisplay.PER_SECOND, false, true));
+        Assertions.assertEquals("2 / 4 B", LocaleUtil.formatFluidTank(2000, 4000, false, true));
+    }
+
+    @Test
+    public void fluidFlow_abbreviate_trimFollowsTheDecimalSeparator() {
+        // The trim must key off the configured decimal separator, not a hard-coded '.'. Only the
+        // package-visible bucket formatter takes the separators explicitly, so go through it.
+        Assertions.assertEquals("2",
+                LocaleUtil.formatBucketFlowValue(2.0, ThousandsSeparator.COMMA, DecimalSeparator.COMMA));
+        Assertions.assertEquals("2,5k",
+                LocaleUtil.formatBucketFlowValue(2500.0, ThousandsSeparator.DOT, DecimalSeparator.COMMA));
+        Assertions.assertEquals("2.5",
+                LocaleUtil.formatBucketFlowValue(2.5, ThousandsSeparator.COMMA, DecimalSeparator.DOT));
+    }
+
+    @Test
+    public void mjAbbreviation_keepsForcedOneDecimal_unaffectedByFluidFlowTrim() {
+        // The fluid-flow trim is scoped to the bucket branch; MJ abbreviation keeps its fixed single decimal.
+        Assertions.assertEquals("10.0k", LocaleUtil.formatMjAmount(10_000.0, 2, true));
     }
 
     // --- Static tank-volume formatting (localizeFluidStatic / localizeFluidTank) ---

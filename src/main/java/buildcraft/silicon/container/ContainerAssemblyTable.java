@@ -8,7 +8,6 @@ package buildcraft.silicon.container;
 
 import java.util.ArrayList;
 
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -16,11 +15,9 @@ import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-import buildcraft.lib.compat.jei.JeiTransferUtil;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
-import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
@@ -84,16 +81,9 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
         if (id == NET_JEI_TRANSFER_ITEMS && !isClient && tile != null) {
             // JEI "+" pressed on an assembly recipe: move the chosen ingredients from the player's
-            // inventory into the table's input inv. The client already verified availability.
-            boolean maxTransfer = buffer.readBoolean();
-            int count = buffer.readVarInt();
-            for (int i = 0; i < count; i++) {
-                CompoundTag tag = buffer.readNbt();
-                ItemStack want = tag == null ? ItemStack.EMPTY : NBTUtilBC.itemStackFromNBT(tag);
-                if (want.isEmpty()) continue;
-                int limit = maxTransfer ? Integer.MAX_VALUE : want.getCount();
-                JeiTransferUtil.moveMatchingToHandler(player.getInventory(), want, limit, tile.inv);
-            }
+            // inventory into the table's input inv. Only stacks the player really holds can move.
+            AssemblyTableTransfer.apply(player.getInventory(), tile.inv,
+                    AssemblyTableTransfer.read(buffer, player.level().registryAccess()));
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);

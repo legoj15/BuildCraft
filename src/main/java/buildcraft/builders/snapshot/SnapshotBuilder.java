@@ -19,13 +19,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.google.common.collect.ImmutableList;
+import com.mojang.serialization.DynamicOps;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -33,6 +38,7 @@ import buildcraft.api.mj.MjAPI;
 
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.RegistryUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -970,6 +976,44 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         }
     }
 
+    /**
+     * One place-task item as NBT, for both the save and the client sync: the full stack, data components
+     * included, under {@code stack} at count 1 (ItemStack.CODEC caps the count it accepts, and a blueprint's
+     * merged required-item entry can exceed a stack) with the real count beside it. The items are what a
+     * Template/Filler places and what a cancelled Blueprint task refunds, so a component lost here is a gate
+     * variant, a name, or a Blueprint fluid marker (a bucket tagged with the fluid it stands for) lost too.
+     */
+    private static CompoundTag placeItemToNbt(ItemStack stack, DynamicOps<Tag> ops) {
+        CompoundTag tag = new CompoundTag();
+        if (!stack.isEmpty()) {
+            ItemStack.CODEC.encodeStart(ops, stack.copyWithCount(1))
+                .resultOrPartial()
+                .ifPresent(payload -> tag.put("stack", payload));
+            tag.putInt("count", stack.getCount());
+        }
+        return tag;
+    }
+
+    /**
+     * Reverse of {@link #placeItemToNbt}. Also reads the pre-codec {@code {id, count}} entries that worlds
+     * saved before it still hold (their components were already lost; item and count are kept).
+     */
+    private static ItemStack placeItemFromNbt(CompoundTag tag, DynamicOps<Tag> ops) {
+        int count = NBTUtilBC.getInt(tag, "count", 1);
+        ItemStack stack = ItemStack.EMPTY;
+        Tag payload = tag.get("stack");
+        if (payload != null) {
+            stack = ItemStack.CODEC.parse(ops, payload).resultOrPartial().orElse(ItemStack.EMPTY);
+        } else if (tag.contains("id")) {
+            Identifier id = Identifier.tryParse(NBTUtilBC.getString(tag, "id", ""));
+            Item item = id == null ? null : RegistryUtilBC.getValue(BuiltInRegistries.ITEM, id);
+            if (item != null && item != Items.AIR) {
+                stack = new ItemStack(item);
+            }
+        }
+        return stack.isEmpty() || count <= 0 ? ItemStack.EMPTY : stack.copyWithCount(count);
+    }
+
     public class PlaceTask {
         public final BlockPos pos;
         public final List<ItemStack> items;
@@ -985,17 +1029,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         @SuppressWarnings("WeakerAccess")
         public PlaceTask(PacketBufferBC buffer) {
             pos = buffer.readBlockPos();
+            DynamicOps<Tag> ops = NBTUtilBC.registryAwareOps();
             items = IntStream.range(0, buffer.readInt())
                 .mapToObj(j -> {
                     CompoundTag itemTag = buffer.readNbt();
-                    Tag payload = itemTag == null ? null : itemTag.get("stack");
-                    ItemStack stack = payload == null
-                        ? ItemStack.EMPTY
-                        : ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), payload)
-                            .resultOrPartial()
-                            .orElse(ItemStack.EMPTY);
-                    int count = buffer.readInt();
-                    return stack.isEmpty() ? ItemStack.EMPTY : stack.copyWithCount(count);
+                    return itemTag == null ? ItemStack.EMPTY : placeItemFromNbt(itemTag, ops);
                 })
                 .collect(Collectors.toList());
             power = buffer.readLong();
@@ -1003,6 +1041,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
         @SuppressWarnings("WeakerAccess")
         public PlaceTask(CompoundTag nbt) {
+            this(nbt, NBTUtilBC.registryAwareOps());
+        }
+
+        @SuppressWarnings("WeakerAccess")
+        public PlaceTask(CompoundTag nbt, DynamicOps<Tag> ops) {
             pos = new BlockPos(
                 (int) NBTUtilBC.getLong(nbt, "pos_x", 0),
                 (int) NBTUtilBC.getLong(nbt, "pos_y", 0),
@@ -1010,21 +1053,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             );
             items = ImmutableList.copyOf(
                 NBTUtilBC.readCompoundList(nbt.get("items"))
-                    .map(tag -> {
-                        if (tag.contains("id")) {
-                            String idStr = NBTUtilBC.getString(tag, "id", "");
-                            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(idStr);
-                            if (id != null) {
-                                net.minecraft.world.item.Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, id);
-                                if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                                    return new net.minecraft.world.item.ItemStack(item, NBTUtilBC.getInt(tag, "count", 1));
-                                }
-                            }
-                        }
-                        return net.minecraft.world.item.ItemStack.EMPTY;
-                    })
+                    .map(tag -> placeItemFromNbt(tag, ops))
                     .filter(stack -> !stack.isEmpty())
-                    .collect(java.util.stream.Collectors.toList())
+                    .collect(Collectors.toList())
             );
             power = NBTUtilBC.getLong(nbt, "power", 0L);
         }
@@ -1036,35 +1067,22 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         public void writePayload(PacketBufferBC buffer) {
             buffer.writeBlockPos(pos);
             buffer.writeInt(items.size());
-            items.forEach(item -> {
-                CompoundTag tag = new CompoundTag();
-                if (!item.isEmpty()) {
-                    ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), item.copyWithCount(1))
-                            .resultOrPartial()
-                            .ifPresent(payload -> tag.put("stack", payload));
-                }
-                buffer.writeNbt(tag);
-                buffer.writeInt(item.getCount());
-            });
+            DynamicOps<Tag> ops = NBTUtilBC.registryAwareOps();
+            items.forEach(item -> buffer.writeNbt(placeItemToNbt(item, ops)));
             buffer.writeLong(power);
         }
 
         public CompoundTag writeToNBT() {
+            return writeToNBT(NBTUtilBC.registryAwareOps());
+        }
+
+        public CompoundTag writeToNBT(DynamicOps<Tag> ops) {
             CompoundTag nbt = new CompoundTag();
             nbt.putLong("pos_x", pos.getX());
             nbt.putLong("pos_y", pos.getY());
             nbt.putLong("pos_z", pos.getZ());
-            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
-            for (net.minecraft.world.item.ItemStack stack : items) {
-                if (!stack.isEmpty()) {
-                    net.minecraft.nbt.CompoundTag itemNbt = new net.minecraft.nbt.CompoundTag();
-                    net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-                    itemNbt.putString("id", itemId.toString());
-                    itemNbt.putInt("count", stack.getCount());
-                    list.add(itemNbt);
-                }
-            }
-            nbt.put("items", list);
+            nbt.put("items", NBTUtilBC.writeCompoundList(
+                items.stream().filter(stack -> !stack.isEmpty()).map(stack -> placeItemToNbt(stack, ops))));
             nbt.putLong("power", power);
             return nbt;
         }

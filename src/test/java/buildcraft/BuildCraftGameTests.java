@@ -313,6 +313,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:jei_transfer_moves_items", () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferMovesItems);
         reg.accept("buildcraftunofficial:jei_transfer_moves_bucket", () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferMovesBucket);
         reg.accept("buildcraftunofficial:jei_transfer_skips_missing", () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferSkipsMissing);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_moves_component_ingredients", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferMovesComponentCarryingIngredients);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_only_moves_what_player_holds", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferOnlyMovesWhatThePlayerHolds);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_honours_max_flag", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferHonoursTheMaxFlag);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_drops_oversized_request", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferDropsAnOversizedRequest);
 
         // Energy Converter (Dynamo MJ + FE Engine)
         reg.accept("buildcraftunofficial:dynamo_upgrade_slot_filtering", () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeSlotFiltering);

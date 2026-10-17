@@ -224,45 +224,11 @@ public class NBTUtilBC {
         return Stream.empty();
     }
 
-    // ItemStack serialization helpers
-
-    /** LOSSY: saves only the item's registry id + count — it does NOT save components (enchantments,
-     * custom name, damage, custom_data, …). Use {@code ItemStack.CODEC} (via the registry-aware ops)
-     * for any disk-persisted stack that must keep full fidelity. This helper is retained only for the
-     * lightweight JEI/network transfer paths that intentionally need just id+count.
-     * Returns an empty CompoundTag if the stack is empty. */
-    @Nonnull
-    public static CompoundTag itemStackToNBT(@Nonnull net.minecraft.world.item.ItemStack stack) {
-        if (stack.isEmpty()) {
-            return new CompoundTag();
-        }
-        CompoundTag nbt = new CompoundTag();
-        net.minecraft.resources.Identifier itemId =
-            net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
-        nbt.putString("id", itemId.toString());
-        nbt.putInt("count", stack.getCount());
-        return nbt;
-    }
-
-    /** Loads an ItemStack from a CompoundTag saved by {@link #itemStackToNBT}. */
-    @Nonnull
-    public static net.minecraft.world.item.ItemStack itemStackFromNBT(@Nonnull CompoundTag nbt) {
-        if (nbt.isEmpty()) {
-            return net.minecraft.world.item.ItemStack.EMPTY;
-        }
-        String idStr = getString(nbt, "id", "");
-        if (idStr.isEmpty()) {
-            return net.minecraft.world.item.ItemStack.EMPTY;
-        }
-        net.minecraft.resources.Identifier itemId = net.minecraft.resources.Identifier.parse(idStr);
-        net.minecraft.world.item.Item item =
-            buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, itemId);
-        if (item == null || item == net.minecraft.world.item.Items.AIR) {
-            return net.minecraft.world.item.ItemStack.EMPTY;
-        }
-        int count = getInt(nbt, "count", 1);
-        return new net.minecraft.world.item.ItemStack(item, count);
-    }
+    // ItemStack serialization: there is deliberately NO id+count helper here. One existed (itemStackToNBT /
+    // itemStackFromNBT) and silently dropped every data component, which broke the Assembly Table JEI "+"
+    // transfer for any component-carrying ingredient. For disk/NBT use ItemStack.CODEC through
+    // registryAwareOps(); for the wire use ItemStack.OPTIONAL_STREAM_CODEC on a RegistryFriendlyByteBuf
+    // (see AssemblyTableTransfer).
 
     // ───────────────────────────────────────────────────────────────────────────
     // Version-neutral NBT accessors. On 1.21.5+ the vanilla CompoundTag/ListTag getX

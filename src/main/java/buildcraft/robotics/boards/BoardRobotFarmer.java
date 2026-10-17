@@ -19,6 +19,7 @@ import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.ai.AIRobotFetchAndEquipItemStack;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -99,7 +100,11 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
     @Override
     public void preempt(AIRobot ai) {
         if (blockFound != null && !blockFoundClaimed) {
-            if (ai != null && robot.getRegistry().reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (ai != null && registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
                 blockFoundClaimed = true;
             } else {
                 blockFound = null;

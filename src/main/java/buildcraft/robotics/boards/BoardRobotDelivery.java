@@ -20,6 +20,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.robotics.StackRequest;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
@@ -106,9 +107,21 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         return currentRequest;
     }
 
+    /** An ended board gives its order back - most often {@code AIRobotMain} aborting it for a recharge, whose
+     *  start frees every reservation anyway. The same board instance resumes afterwards, and one that still
+     *  remembered the order (and still believed it held it) would skip the {@link #preempt} re-claim and deliver an
+     *  order another robot took meanwhile a second time. Not 7.1.x, whose board had no {@code end()}. */
+    @Override
+    public void end() {
+        releaseCurrentRequest();
+    }
+
     private void releaseCurrentRequest() {
         if (currentRequest != null) {
-            robot.getRegistry().release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry != null) {
+                registry.release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
+            }
             DockingStation station = currentRequest.getStation(robot.level());
             if (station != null) {
                 station.release((EntityRobotBase) robot);
@@ -125,7 +138,11 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
     @Override
     public void preempt(AIRobot ai) {
         if (currentRequest != null && !currentRequestClaimed) {
-            if (robot.getRegistry().reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (registry.reclaim(currentRequest.getResourceId(robot.level()), robot.getRobotId())) {
                 currentRequestClaimed = true;
             } else {
                 releaseCurrentRequest();

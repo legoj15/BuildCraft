@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.resources.ResourceKey;
@@ -76,5 +78,14 @@ public abstract class MarkerCache<S extends MarkerSubCache<?>> {
         Map<ResourceKey<Level>, S> cache = world.isClientSide() ? cacheClient : cacheServer;
         ResourceKey<Level> key = world.dimension();
         return cache.computeIfAbsent(key, k -> createSubCache(world));
+    }
+
+    /** The world's sub-cache if one is built, never building one. For unload-side callers: a marker reporting
+     *  its chunk unload after {@link #onWorldUnload} dropped the dimension's sub-cache (a server stop posts the
+     *  unload event before it closes the level) must not rebuild it, or the stopped level is pinned again. */
+    @Nullable
+    public S getSubCacheIfPresent(Level world) {
+        Map<ResourceKey<Level>, S> cache = world.isClientSide() ? cacheClient : cacheServer;
+        return cache.get(world.dimension());
     }
 }

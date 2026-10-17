@@ -98,7 +98,10 @@ public class BreakBoardReloadReservationTester {
             if (board != null) {
                 board.abortDelegateAI();
             }
-            registry.release(log);
+            // Owner-checked, like a robot's own release: never drops a claim some other robot of the shared
+            // registry holds.
+            registry.release(log, robotA.getRobotId());
+            registry.release(log, robotB.getRobotId());
             registry.killRobot(robotA);
             registry.killRobot(robotB);
         }

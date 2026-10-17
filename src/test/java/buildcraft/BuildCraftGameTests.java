@@ -902,9 +902,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_reloaded_action_boards_reclaim_free_block", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedActionBoardsReclaimAFreeBlock);
         reg.accept("buildcraftunofficial:robot_reloaded_delivery_yields_taken_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryYieldsAnOrderAnotherRobotTook);
         reg.accept("buildcraftunofficial:robot_reloaded_delivery_reclaims_free_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::reloadedDeliveryReclaimsAFreeOrder);
+        reg.accept("buildcraftunofficial:robot_delivery_recharge_abort_gives_up_order", () -> buildcraft.robotics.boards.ReloadedJobReservationTester::deliveryAbortedByARechargeGivesUpItsOrder);
         reg.accept("buildcraftunofficial:robot_removal_kill_releases_everything", () -> buildcraft.robotics.RobotRemovalRoutesTester::removedRobotReleasesEverythingItHolds);
         reg.accept("buildcraftunofficial:robot_removal_unload_releases_what_it_does_not_keep", () -> buildcraft.robotics.RobotRemovalRoutesTester::unloadedRobotReleasesWhatItDoesNotKeep);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
+        reg.accept("buildcraftunofficial:marker_chunk_unload_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache);
 
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself

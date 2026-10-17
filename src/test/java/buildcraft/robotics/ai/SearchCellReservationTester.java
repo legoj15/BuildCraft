@@ -79,7 +79,8 @@ public class SearchCellReservationTester {
             search.abort();
             registry.killRobot(robot);
             // A failing run must not leave the cell pinned for the sibling tests that share the registry.
-            registry.getBlockReservations().remove(logPos);
+            // Through the robot's own view: the raw set is read-only, and a raw removal would skip the owner index.
+            registry.getBlockReservations(robot.getRobotId()).remove(logPos);
         }
     }
 

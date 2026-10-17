@@ -32,8 +32,10 @@ import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
 import buildcraft.robotics.StackRequest;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
+import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotPumpBlock;
+import buildcraft.robotics.ai.AIRobotRecharge;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
 import buildcraft.robotics.ai.AIRobotUseToolOnBlock;
 import buildcraft.robotics.entity.EntityRobot;
@@ -99,8 +101,13 @@ public class ReloadedJobReservationTester {
             return board;
         }
 
+        /** Owner-checked, like a robot's own release: drops the claim only from whichever test robot still holds it,
+         *  never one some other robot of the shared registry holds. */
         void free(ResourceId id) {
-            cleanup.add(() -> registry.release(id));
+            cleanup.add(() -> {
+                registry.release(id, robotA.getRobotId());
+                registry.release(id, robotB.getRobotId());
+            });
         }
 
         @Override
@@ -354,6 +361,57 @@ public class ReloadedJobReservationTester {
                     "the reloaded board must re-reserve its order - unreserved, any other robot's search can take it");
             helper.assertTrue(board.currentRequest() != null && board.getDelegateAI() instanceof AIRobotDeliverRequested,
                     "the board keeps its order and keeps delivering it");
+            helper.succeed();
+        }
+    }
+    /** A delivery cut short by a recharge: {@code AIRobotMain} aborts the board to start {@link AIRobotRecharge},
+     *  whose start frees every reservation the robot holds - the order included. While robot A charges, robot B
+     *  takes the order. When A's main AI resumes the same board instance, it must not go back to delivering an
+     *  order it no longer holds: the order would be filled twice. */
+    public static void deliveryAbortedByARechargeGivesUpItsOrder(GameTestHelper helper) {
+        try (Robots r = new Robots(helper)) {
+            LiveStation station = new LiveStation(helper.absolutePos(STATION_REL), Direction.UP);
+            r.registry.registerStation(station);
+            r.cleanup.add(() -> r.registry.removeStation(station));
+
+            StackRequest request = new StackRequest(null, 0, new ItemStack(Items.DIAMOND, 3));
+            request.setStation(station);
+            ResourceId requestId = request.getResourceId(helper.getLevel());
+            r.free(requestId);
+
+            BoardRobotDelivery board = new BoardRobotDelivery(r.robotA);
+            CompoundTag self = new CompoundTag();
+            CompoundTag requestNbt = new CompoundTag();
+            request.writeToNBT(requestNbt);
+            self.put("currentRequest", requestNbt);
+            board.loadSelfFromNBT(self);
+            helper.assertTrue(r.registry.take(requestId, r.robotA), "precondition: robot A reserved the order");
+
+            AIRobotMain main = new AIRobotMain(r.robotA);
+            r.cleanup.add(main::abortDelegateAI);
+            main.startDelegateAI(board);
+            board.startDelegateAI(new AIRobotDeliverRequested(r.robotA, request));
+            board.preempt(board.getDelegateAI());
+            helper.assertTrue(board.currentRequest() != null && board.getDelegateAI() instanceof AIRobotDeliverRequested
+                            && r.registry.robotIdTaking(requestId) == r.robotA.getRobotId(),
+                    "precondition: robot A is delivering the order it holds - got " + board.getDelegateAI());
+
+            // What AIRobotMain.startDelegateAI(new AIRobotRecharge(robot)) does, minus the recharge's own station
+            // search (it would reserve a sibling test's charger): abort the board, then the recharge's start
+            // releases everything the robot holds.
+            main.abortDelegateAI();
+            r.registry.releaseResources(r.robotA);
+            helper.assertTrue(r.registry.take(requestId, r.robotB), "robot B claims the order while A recharges");
+
+            // The recharge is over: AIRobotMain.update() hands control back to the same board instance.
+            main.startDelegateAI(board);
+            board.preempt(board.getDelegateAI());
+
+            helper.assertTrue(r.registry.robotIdTaking(requestId) == r.robotB.getRobotId(),
+                    "robot B still holds the order");
+            helper.assertTrue(board.currentRequest() == null,
+                    "the resumed board must not keep an order its recharge released - it would deliver it a "
+                            + "second time alongside robot B");
             helper.succeed();
         }
     }

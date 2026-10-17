@@ -8,16 +8,20 @@ package buildcraft.lib.misc;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
 
 import buildcraft.core.marker.VolumeCache;
+import buildcraft.core.block.BlockMarkerVolume;
 import buildcraft.core.marker.VolumeSubCache;
+import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.robotics.BCRoboticsEntities;
@@ -123,5 +127,33 @@ public class StaticTablesLevelUnloadTester {
             BoardRobotPicker.releaseTarget(arenaItem, arenaFetch);
             BoardRobotPicker.releaseTarget(otherItem, otherFetch);
         }
+    }
+    /** The unload event dropped a level's marker sub-cache, but the level's chunks can still unload after it (a
+     *  server stop posts the event before it closes the level), and each marker block entity in them reports its
+     *  chunk unload to the cache. That report must not build the dimension's sub-cache again: a rebuilt one would
+     *  re-pin the stopped level (and hand its markers to the next world with that dimension) - the very leak the
+     *  unload hook exists to stop. A sub-cache rebuilt later from saved data holds the same "marker without a
+     *  loaded tile" entry the report would have written, so skipping it loses nothing.
+     *
+     *  <p>The marker block entity is never placed in a level or registered in any cache (only its chunk-unload hook
+     *  runs, against the secondary level), so there is nothing for the shared marker caches to leak. */
+    public static void aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache(GameTestHelper helper) {
+        ServerLevel other = secondaryLevel(helper);
+        Block markerBlock = BuiltInRegistries.BLOCK.stream().filter(b -> b instanceof BlockMarkerVolume).findFirst()
+                .orElse(null);
+        helper.assertTrue(markerBlock != null, "precondition: the volume marker block is registered");
+        TileMarkerVolume marker = new TileMarkerVolume(new BlockPos(0, 64, 0), markerBlock.defaultBlockState());
+        marker.setLevel(other);
+
+        NeoForge.EVENT_BUS.post(new LevelEvent.Unload(other));
+        helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
+                "precondition: the unload dropped the level's marker sub-cache");
+
+        marker.onChunkUnloaded();
+
+        helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
+                "a marker's chunk unload after its level unloaded must not rebuild the sub-cache - it would pin the "
+                        + "stopped level again");
+        helper.succeed();
     }
 }

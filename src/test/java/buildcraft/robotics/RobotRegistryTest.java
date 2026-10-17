@@ -169,6 +169,29 @@ public class RobotRegistryTest {
                 "a freed cell can be reserved by someone else");
     }
 
+    /** The ownerless accessor is a read-only window: a cell added or removed through it would bypass the owner index,
+     *  so {@link RobotRegistry#releaseBlockReservations} (which frees by position) could later free a cell that
+     *  another robot had re-reserved in between, or never free one at all. */
+    @Test
+    public void testRawBlockReservationSetIsReadOnly() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos cell = new BlockPos(1, 2, 3);
+        BlockPos other = new BlockPos(4, 5, 6);
+        Set<BlockPos> raw = r.getBlockReservations();
+        r.getBlockReservations(ROBOT_A).add(cell);
+
+        Assertions.assertTrue(raw.contains(cell), "the raw window sees an owned reservation");
+        Assertions.assertEquals(1, raw.size(), "...and counts it");
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> raw.add(other),
+                "a cell reserved through the raw window would have no owner to free it");
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> raw.remove(cell),
+                "a cell freed through the raw window would stay in its owner's index");
+        Assertions.assertThrows(UnsupportedOperationException.class, raw::clear,
+                "...and so would every cell a bulk clear dropped");
+        Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).contains(cell) && raw.contains(cell),
+                "the reservation and its owner index are untouched");
+    }
+
     // ---- station reservation bookkeeping ----
 
     @Test

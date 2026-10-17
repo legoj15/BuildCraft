@@ -105,6 +105,10 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     // thing that ever unreserved) left the cell pinned until the dimension reloaded. Guarded by the same monitor
     // as blockReservations.
     private final Map<Long, Set<BlockPos>> blockReservationsByRobot = new HashMap<>();
+    // The ownerless accessor's read-only window onto blockReservations: a cell added or removed through a raw,
+    // mutable set would bypass the owner index, and releaseBlockReservations (which frees by position) could then
+    // free a cell another robot had re-reserved in between.
+    private final Set<BlockPos> blockReservationsReadOnly = new ReadOnlyBlockReservations();
 
     public RobotRegistry(@Nullable ServerLevel level) {
         this.world = level;
@@ -197,9 +201,10 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         return robotsLoaded.get(id);
     }
 
+    /** Read-only: every reservation goes through {@link #getBlockReservations(long)}, so each cell has an owner. */
     @Override
     public Set<BlockPos> getBlockReservations() {
-        return blockReservations;
+        return blockReservationsReadOnly;
     }
 
     @Override
@@ -219,12 +224,53 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
+    /** The reads every view of the shared cell set offers, under the set's monitor. Without an override of
+     *  {@code add}/{@code remove} it is read-only ({@link AbstractSet} refuses {@code add}, and the snapshot
+     *  iterator refuses removal). */
+    private abstract class BlockReservationsView extends AbstractSet<BlockPos> {
+        @Override
+        public boolean contains(Object o) {
+            synchronized (blockReservations) {
+                return blockReservations.contains(o);
+            }
+        }
+
+        @Override
+        public int size() {
+            synchronized (blockReservations) {
+                return blockReservations.size();
+            }
+        }
+
+        @Override
+        public Iterator<BlockPos> iterator() {
+            synchronized (blockReservations) {
+                // A snapshot, read-only: a live iterator over a set other searches mutate would throw, and
+                // removal must go through an owned view's remove() or it would skip the owner index.
+                return Collections.unmodifiableSet(new HashSet<>(blockReservations)).iterator();
+            }
+        }
+    }
+
+    /** What {@link #getBlockReservations()} hands out. */
+    private final class ReadOnlyBlockReservations extends BlockReservationsView {
+        @Override
+        public boolean remove(Object o) {
+            throw new UnsupportedOperationException("free a search cell through getBlockReservations(robotId)");
+        }
+
+        @Override
+        public void clear() {
+            throw new UnsupportedOperationException("free search cells through releaseBlockReservations(robotId)");
+        }
+    }
+
     /** The shared dimension-wide cell set, with {@code add}/{@code remove} owner-tagged to one robot. Reads see
      *  every robot's cells (a search must skip a cell any other search holds); {@code add} refuses a cell that is
      *  already reserved by anyone; {@code remove} only frees a cell this robot reserved, so a stale search that
      *  finishes after its robot was released can never free the cell a different robot has since taken. All of it
      *  runs under the shared set's monitor, which is also what {@code PathFindingSearch} synchronises on. */
-    private final class OwnedBlockReservations extends AbstractSet<BlockPos> {
+    private final class OwnedBlockReservations extends BlockReservationsView {
         private final long robotId;
 
         OwnedBlockReservations(long robotId) {
@@ -254,29 +300,6 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
                 }
                 blockReservations.remove(o);
                 return true;
-            }
-        }
-
-        @Override
-        public boolean contains(Object o) {
-            synchronized (blockReservations) {
-                return blockReservations.contains(o);
-            }
-        }
-
-        @Override
-        public int size() {
-            synchronized (blockReservations) {
-                return blockReservations.size();
-            }
-        }
-
-        @Override
-        public Iterator<BlockPos> iterator() {
-            synchronized (blockReservations) {
-                // A snapshot, read-only: a live iterator over a set other searches mutate would throw, and
-                // removal must go through remove() or it would skip the owner index.
-                return Collections.unmodifiableSet(new HashSet<>(blockReservations)).iterator();
             }
         }
     }

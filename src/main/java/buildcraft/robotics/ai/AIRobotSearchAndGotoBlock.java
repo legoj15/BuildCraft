@@ -14,6 +14,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.robotics.path.IBlockFilter;
 
@@ -86,7 +87,11 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     @Override
     public void preempt(AIRobot ai) {
         if (blockFound != null && !taken) {
-            if (robot.getRegistry().reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
+            IRobotRegistry registry = robot.getRegistry();
+            if (registry == null) {
+                return;
+            }
+            if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
                 taken = true;
             } else {
                 blockFound = null;

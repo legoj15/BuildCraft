@@ -27,8 +27,10 @@ public interface IRobotRegistry {
      *  {@code PathFindingSearch} (a search that finds a target reserves its block here so no second search
      *  pathfinds to the same target). Runtime-only state — never persisted: a save/load cycle simply
      *  re-derives reservations as the searches resume. 7.1.x kept the same table as a static
-     *  dimension-keyed map; the modern seam hands the caller its own {@link Set}. This is the raw, ownerless
-     *  set: a search should reserve through {@link #getBlockReservations(long)} instead. */
+     *  dimension-keyed map; the modern seam hands the caller its own {@link Set}. This is the ownerless view, for
+     *  reads: a search reserves and frees through {@link #getBlockReservations(long)}, and a registry that tracks
+     *  owners (BuildCraft's does) hands this out read-only, since a cell changed here would bypass the owner
+     *  index. */
     Set<BlockPos> getBlockReservations();
 
     /** The same dimension-wide reservation set as {@link #getBlockReservations()}, but every cell added through

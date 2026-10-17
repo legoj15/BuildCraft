@@ -84,8 +84,9 @@ public class RobotRemovalRoutesTester {
         }
 
         void cleanUp() {
-            registry.getBlockReservations().remove(cell);
-            registry.release(resource);
+            // Owner-checked, through the robot's own view: the raw cell set is read-only.
+            registry.getBlockReservations(id).remove(cell);
+            registry.release(resource, id);
             for (DockingStation station : new DockingStation[] { home, dock, reserved }) {
                 if (registry.getStation(station.getPos(), station.side()) == station) {
                     registry.removeStation(station);

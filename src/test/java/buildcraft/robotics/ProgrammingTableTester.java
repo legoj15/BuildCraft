@@ -440,6 +440,51 @@ public class ProgrammingTableTester {
         helper.succeed();
     }
 
+    /** A pipe (or a hand) may only feed the table what it can craft from, as 7.1.x's {@code isItemValidForSlot}:
+     *  the centre takes a robot, and the ring takes a board only once a robot is in and only while the ring would
+     *  still hold exactly what the recipe consumes. A second board used to be accepted, and since the precise
+     *  ring check then failed forever and a pipe cannot pull an input back out, the table jammed. */
+    public static void integrationTablePipeRingTakesOnlyWhatCrafts(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.INTEGRATION_TABLE.get());
+        TileIntegrationTable table = blockEntity(helper, pos, TileIntegrationTable.class);
+        IBCItemHandler pipe = table.getItemHandler(Direction.UP);
+        if (pipe == null) {
+            helper.fail("the Integration Table exposes no item handler to pipes");
+        }
+        ItemStack board = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+
+        if (pipeInsert(pipe, 0, new ItemStack(Items.PAPER)) != 0 || !table.invTarget.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push something that is not a robot into the centre slot");
+        }
+        if (pipeInsert(pipe, 1, board.copy()) != 0 || !table.invToIntegrate.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push a board into the ring before there is a robot to program");
+        }
+        if (pipeInsert(pipe, 0, ItemRobot.createRobotStack(null, 500L)) != 1) {
+            helper.fail("a pipe cannot insert the robot into the centre slot");
+        }
+        if (pipeInsert(pipe, 1, new ItemStack(Items.PAPER)) != 0 || !table.invToIntegrate.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push something that is not a board into the ring");
+        }
+        if (pipeInsert(pipe, 1, board.copy()) != 1) {
+            helper.fail("a pipe cannot insert the board into the ring once the robot is in");
+        }
+        if (pipeInsert(pipe, 2, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE)) != 0
+                || !table.invToIntegrate.getStackInSlot(1).isEmpty()) {
+            helper.fail("a pipe can push a second board into the ring, which jams the table");
+        }
+
+        table.serverTick();
+        table.receiveLaserPower(ROBOT_INTEGRATION_MICRO_MJ);
+        table.serverTick();
+        ItemStack result = table.invResult.getStackInSlot(0);
+        if (!BoardRobotPickerNBT.ID.equals(ItemRobot.getBoardId(result))) {
+            helper.fail("the pipe-fed table should still program the robot, got " + result);
+        }
+        helper.succeed();
+    }
+
     public static void integrationTableTopsUpDrainedRobot(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
         BlockPos pos = new BlockPos(2, 1, 2);

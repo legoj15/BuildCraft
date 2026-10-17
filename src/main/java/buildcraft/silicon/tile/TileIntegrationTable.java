@@ -9,6 +9,7 @@ package buildcraft.silicon.tile;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -30,18 +31,22 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 
 public class TileIntegrationTable extends TileLaserTableBase {
-    // Pipe access follows the machine, as in 7.1.x (canInsertItem: the centre and the ring; canExtractItem: the
-    // output slot only) and the Programming Table: the robot and the boards go IN, only the finished robot comes
-    // OUT. Pipes used to be able to drain the inputs and stuff the output.
+    // Access follows 7.1.x: canInsertItem/canExtractItem (pipes) put the robot and the board IN and take only the
+    // finished robot OUT, and isItemValidForSlot (pipes and hands alike) lets in only what can be crafted from --
+    // a robot in the centre, and a board in the ring only once there is a robot to program and only while the ring
+    // would still hold exactly what the recipe consumes (7.1.x capped the robot recipe at one expansion). A pipe
+    // cannot pull an input back out, so letting in a second board or a stray stack used to jam the table.
     public final ItemHandlerSimple invTarget = itemManager.addInvHandler(
         "target",
         1,
+        (slot, stack) -> isCentreInput(stack),
         ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
     public final ItemHandlerSimple invToIntegrate = itemManager.addInvHandler(
         "toIntegrate",
         3 * 3 - 1,
+        (slot, stack) -> canRingTake(invTarget.getStackInSlot(0), slot, stack),
         ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );
@@ -77,6 +82,30 @@ public class TileIntegrationTable extends TileLaserTableBase {
             invTarget.setStackInSlot(0, targetStack);
         }
         return true;
+    }
+
+    /** True if some registered recipe takes {@code stack} as its centre item. */
+    private static boolean isCentreInput(ItemStack stack) {
+        for (IntegrationRecipe candidate : IntegrationRecipeRegistry.INSTANCE.getAllRecipes()) {
+            if (candidate.getCenterStack().ingredient.test(stack)) return true;
+        }
+        return false;
+    }
+
+    /** True if ring slot {@code slot} may hold {@code stack} with {@code centre} in the centre: the ring, with that
+     *  stack in that slot, must make a recipe whose requirements it holds exactly (the craft's own precise check),
+     *  so nothing that goes in can stop the table crafting. Public so the JEI transfer can ask the question for the
+     *  robot it is about to put in the centre. */
+    public boolean canRingTake(ItemStack centre, int slot, ItemStack stack) {
+        if (centre.isEmpty()) return false;
+        NonNullList<ItemStack> ring = NonNullList.withSize(invToIntegrate.getSlots(), ItemStack.EMPTY);
+        for (int i = 0; i < ring.size(); i++) {
+            ring.set(i, i == slot ? stack : invToIntegrate.getStackInSlot(i));
+        }
+        IntegrationRecipe candidate = IntegrationRecipeRegistry.INSTANCE.getRecipeFor(centre, ring);
+        if (candidate == null) return false;
+        ItemStack output = candidate.getOutput(centre, ring);
+        return !output.isEmpty() && planExtraction(ring, candidate.getRequirements(output), true) != null;
     }
 
     private boolean isSpaceEnough(ItemStack stack) {

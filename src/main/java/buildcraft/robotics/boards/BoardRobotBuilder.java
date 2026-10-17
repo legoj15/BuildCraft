@@ -63,7 +63,8 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  * {@code BlueprintBuilder} computes a missing-items list, and 7.1.x's markers were blueprint-only too.
  *
  * <p>Two failure paths the port added (7.1.x's slot flights had neither): a delivery flight that FAILS
- * keeps the cargo aboard and benches that machine for {@link #UNREACHABLE_RETRY_TICKS}; a recharge that
+ * keeps the cargo aboard and benches that machine for {@link #UNREACHABLE_RETRY_TICKS} (while every needy
+ * machine is benched the robot sleeps with the cargo rather than disposing of it); a recharge that
  * fails (no free power station) sends the robot home to sleep instead of re-running the search every cycle.
  */
 public class BoardRobotBuilder extends RedstoneBoardRobot {
@@ -100,10 +101,15 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         }
 
         if (builderToSupply == null || !needsItems(builderToSupply)) {
-            builderToSupply = findClosestBuilder();
+            builderToSupply = findClosestBuilder(false);
 
             if (builderToSupply == null) {
-                if (robot.containsItems()) {
+                if (robot.containsItems() && findClosestBuilder(true) != null) {
+                    // The only machines that still want this cargo are benched after a failed flight: the
+                    // need has not vanished, so keep the cargo aboard and sleep out the bench window
+                    // (disposing would drop it on the ground whenever no station accepts it).
+                    startDelegateAI(new AIRobotGotoSleep(robot));
+                } else if (robot.containsItems()) {
                     startDelegateAI(new AIRobotDisposeItems(robot));
                 } else {
                     startDelegateAI(new AIRobotGotoSleep(robot));
@@ -222,7 +228,9 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
         return missing.isEmpty() ? ItemStack.EMPTY : missing.get(0);
     }
 
-    private TileBuilder findClosestBuilder() {
+    /** The closest needy Builder in range and zone. {@code includeBenched} also counts machines benched
+     *  after a failed flight — used only to tell "the need vanished" from "the need is out of reach". */
+    private TileBuilder findClosestBuilder(boolean includeBenched) {
         double minDistance = Double.MAX_VALUE;
         TileBuilder minBuilder = null;
 
@@ -235,7 +243,7 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
             if (builder.getLevel() != robot.level()) {
                 continue;
             }
-            if (!needsItems(builder) || isSkipped(builder, now)) {
+            if (!needsItems(builder) || (!includeBenched && isSkipped(builder, now))) {
                 continue;
             }
             BlockPos pos = builder.getBuilderPos();

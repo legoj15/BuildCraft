@@ -43,6 +43,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
@@ -331,6 +332,29 @@ public class BuilderBoardTester {
                 }
             }
             helper.assertTrue(aboard == 4, "the whole cargo is still aboard, got " + aboard);
+
+            // The NEXT pass: the only needy machine is benched, so the search comes back empty while the
+            // cargo is still aboard. That must not read as "the need vanished" (dispose, which drops the
+            // stack on the ground when no station accepts it) — the robot sleeps with the cargo and retries
+            // once the bench window has passed.
+            board.cycle();
+            helper.assertTrue(board.getDelegateAI() instanceof AIRobotGotoSleep,
+                    "with the only candidate benched the robot sleeps with its cargo, got "
+                            + board.getDelegateAI());
+            for (int i = 0; i < 40; i++) {
+                board.cycle();
+                helper.assertFalse(board.getDelegateAI() instanceof AIRobotDisposeItems,
+                        "the benched machine's cargo must never be disposed of");
+            }
+            int stillAboard = 0;
+            for (int slot = 0; slot < robot.getInventorySize(); slot++) {
+                ItemStack stack = robot.getInventoryStack(slot);
+                if (stack.is(Items.STONE)) {
+                    stillAboard += stack.getCount();
+                }
+            }
+            helper.assertTrue(stillAboard == 4,
+                    "the cargo is still aboard after the following passes, got " + stillAboard);
 
             long now = level.getGameTime();
             helper.assertTrue(board.isSkipped(builder, now),

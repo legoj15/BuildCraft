@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_random_search_without_candidate_fails",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

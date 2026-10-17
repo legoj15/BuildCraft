@@ -163,8 +163,21 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             // next robot placed would be handed a live one's id.
             raiseNextRobotIdPast(robot.getRobotId());
         }
-        if (robotsLoaded.containsKey(robot.getRobotId())) {
-            BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " was not unregistered properly");
+        EntityRobotBase holder = robotsLoaded.get(robot.getRobotId());
+        if (holder != null && holder != robot) {
+            if (holder.isAlive()) {
+                // Two live robots carrying one id. The counter cannot prevent every case: after a registry reset, a
+                // robot nothing in the data names (its home station gone) can sit in an unloaded chunk while its id
+                // is re-issued to a newly placed robot. The robot registered first keeps the id - its station link
+                // and reservations are filed under it - and the arriving one starts over under a fresh id (whatever
+                // it held under the old one belongs to the first holder now).
+                long fresh = getNextRobotId();
+                BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " arrived while another live robot "
+                        + "holds that id; giving the arriving robot the id " + fresh);
+                robot.setUniqueRobotId(fresh);
+            } else {
+                BCLog.logger.warn("[robots] Robot with id " + robot.getRobotId() + " was not unregistered properly");
+            }
         }
 
         addRobotLoaded(robot);
@@ -193,7 +206,8 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
     }
 
     private void removeRobotLoaded(EntityRobotBase robot) {
-        robotsLoaded.remove(robot.getRobotId());
+        // Only this robot's own entry: a stale holder going away must not drop the robot that replaced it.
+        robotsLoaded.remove(robot.getRobotId(), robot);
         robotsLoadedSet.remove(robot);
     }
 

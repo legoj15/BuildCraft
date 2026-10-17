@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.util.function.Function;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DynamicOps;
 
 import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
@@ -112,14 +113,34 @@ public final class LegacySavedData {
             return null;
         }
         RegistryOps<Tag> ops = level.registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        T parsed = codec.apply(level).parse(ops, payload)
-                .resultOrPartial(error -> BCLog.logger.error("[saved data] Could not read the pre-26.1 file {}: {}",
-                        legacy, error))
-                .orElse(null);
+        T parsed = parseLegacyPayload(codec.apply(level), ops, payload, legacy);
         if (parsed != null) {
             BCLog.logger.info("[saved data] Carried {} over from the pre-26.1 location {}", id, legacy);
         }
         return parsed;
+    }
+
+    /**
+     * Decodes the payload of {@code legacyFile}, or null (logged) when it cannot be: the data then starts fresh. Runs
+     * inside the storage's factory call, which - unlike vanilla's own read of a 26.1+ file - has no catch around it,
+     * so a decode that throws (a 1.21.x volume box with a malformed id dies in {@code UUID.fromString}) must be
+     * stopped here or it fails the level load.
+     *
+     * <p>A partial result is accepted, as {@code SavedDataStorage.readSavedData} accepts one for vanilla's own files:
+     * whatever decoded is more than a fresh start keeps. Either way the outcome becomes the 26.1+ file on the next
+     * save and the old file is not read again (it stays on disk untouched, so the original is never lost).
+     */
+    public static <T> @Nullable T parseLegacyPayload(Codec<T> codec, DynamicOps<Tag> ops, Tag payload,
+            Path legacyFile) {
+        try {
+            return codec.parse(ops, payload)
+                    .resultOrPartial(error -> BCLog.logger.error(
+                            "[saved data] Could not read the pre-26.1 file {}: {}", legacyFile, error))
+                    .orElse(null);
+        } catch (RuntimeException e) {
+            BCLog.logger.error("[saved data] Could not read the pre-26.1 file " + legacyFile + "; starting fresh", e);
+            return null;
+        }
     }
 
     /**

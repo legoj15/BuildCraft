@@ -14,8 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 //? if >=26.1 {
+import com.mojang.serialization.Codec;
+
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.datafix.DataFixTypes;
 //?}
@@ -130,6 +134,37 @@ public class LegacySavedDataTest {
 
         Assertions.assertArrayEquals(before, Files.readAllBytes(legacy),
                 "the old file stays as the backup until the new one has been saved at least once");
+    }
+    // ---- parsing the payload: a bad file must start the data fresh, never fail the level load ----
+
+    private static final Path PROBE = Path.of("probe.dat");
+
+    @Test
+    public void aPayloadTheCodecReadsComesBackParsed() {
+        Integer parsed = LegacySavedData.parseLegacyPayload(
+                CompoundTag.CODEC.xmap(tag -> NBTUtilBC.getInt(tag, "value", -1), value -> payload(value)),
+                NbtOps.INSTANCE, payload(42), PROBE);
+
+        Assertions.assertEquals(42, parsed);
+    }
+
+    /** A 1.21.x volume-box file whose box id is malformed: the decode itself throws (UUID.fromString), which the
+     *  storage's factory must not let escape - vanilla's own read catches it and starts fresh. */
+    @Test
+    public void aPayloadTheDecodeThrowsOnIsSkippedNotFatal() {
+        Codec<Integer> throwing = CompoundTag.CODEC.xmap(tag -> {
+            throw new IllegalArgumentException("Invalid UUID string: not-a-uuid");
+        }, value -> payload(value));
+
+        Assertions.assertNull(Assertions.assertDoesNotThrow(
+                () -> LegacySavedData.parseLegacyPayload(throwing, NbtOps.INSTANCE, payload(1), PROBE)),
+                "a decode that throws starts the data fresh instead of failing the level load");
+    }
+
+    @Test
+    public void aPayloadTheCodecRejectsIsSkipped() {
+        Assertions.assertNull(LegacySavedData.parseLegacyPayload(CompoundTag.CODEC, NbtOps.INSTANCE, IntTag.valueOf(3),
+                PROBE), "a payload of the wrong shape starts the data fresh");
     }
     //?}
 }

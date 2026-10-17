@@ -978,6 +978,9 @@ public class BuildCraftGameTests {
         // the counter has not passed raises it), and a 1.21.x-era saved-data file is picked up by the real 26.1+
         // storage instead of being orphaned.
         reg.accept("buildcraftunofficial:robot_registry_loaded_robot_raises_id_counter", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotLoadedAheadOfTheCounterRaisesTheCounter);
+        // ...and two robots never share an id: one arriving with a live robot's id is given a fresh one.
+        reg.accept("buildcraftunofficial:robot_registry_id_collision_reissues_arriving", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne);
+        reg.accept("buildcraftunofficial:robot_registry_id_of_dead_holder_is_kept", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithADeadRobotsIdKeepsIt);
         reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 

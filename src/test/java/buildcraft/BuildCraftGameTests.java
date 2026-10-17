@@ -670,6 +670,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_emzuli_colour_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::emzuliColourEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_woodiamond_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondFilterEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_woodiamond_mode_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondModeEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_diamond_item_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondItemFilterEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_diamond_fluid_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondFluidFilterEditMarksChunkDirty);
         // Force insertion (robot stations / obsidian / stripes pipes) must give items a real entry leg
         // and deliver them end-to-end — the zero-length leg was the server-side half of the
         // robot-cargo-invisible-in-pipes bug (see PipeFlowForceInsertTester javadoc).

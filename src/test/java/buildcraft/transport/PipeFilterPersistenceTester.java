@@ -22,9 +22,11 @@ import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
 
+import buildcraft.transport.container.ContainerDiamondPipe;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
 import buildcraft.transport.container.ContainerEmzuliPipe;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond;
@@ -32,8 +34,8 @@ import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
- * Persistence pins for the Emzuli and Diamond-Wood (Emerald) pipes: every GUI edit of their saved state must
- * mark the chunk dirty, so the edit is written at the next save.
+ * Persistence pins for the Emzuli, Diamond-Wood (Emerald) and Diamond (sorting) pipes: every GUI edit of their saved
+ * state must mark the chunk dirty, so the edit is written at the next save.
  *
  * <p>These pipes keep their filter inventory (and the Emzuli slot colours / Emerald filter mode) inside the
  * behaviour, which {@code TilePipeHolder.writeData} serialises live under {@code pipe -> beh}. What vanilla
@@ -159,6 +161,49 @@ public class PipeFilterPersistenceTester {
         helper.assertTrue(chunk.isUnsaved(), "an Emerald pipe filter-mode edit must mark the chunk dirty");
         helper.assertTrue(((PipeBehaviourWoodDiamond) reloadedBehaviour(tile)).filterMode == FilterMode.BLACK_LIST,
                 "the filter mode survives the pipe's saved NBT");
+
+        helper.succeed();
+    }
+
+    // --- Diamond (sorting) ---
+
+    /** Phantom filter slot of the Diamond menu that the tests edit (6 rows of 9, one row per pipe side). */
+    private static final int DIAMOND_SLOT = 13;
+
+    public static void diamondItemFilterEditMarksChunkDirty(GameTestHelper helper) {
+        diamondFilterEditMarksChunkDirty(helper, BCTransportItems.PIPE_DIAMOND_ITEM.get(), "Diamond item pipe");
+    }
+
+    public static void diamondFluidFilterEditMarksChunkDirty(GameTestHelper helper) {
+        diamondFilterEditMarksChunkDirty(helper, BCTransportItems.PIPE_DIAMOND_FLUID.get(), "Diamond fluid pipe");
+    }
+
+    private static void diamondFilterEditMarksChunkDirty(GameTestHelper helper, Item pipeItem, String what) {
+        TilePipeHolder tile = placePipe(helper, pipeItem);
+        PipeBehaviourDiamond behaviour = (PipeBehaviourDiamond) tile.getPipe().getBehaviour();
+        ContainerDiamondPipe menu = new ContainerDiamondPipe(0,
+                helper.makeMockPlayer(GameType.CREATIVE).getInventory(), behaviour);
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+
+        markChunkSaved(helper, chunk);
+        menu.getSlot(DIAMOND_SLOT).set(new ItemStack(Items.IRON_INGOT));
+        helper.assertTrue(chunk.isUnsaved(), "a " + what + " filter edit must mark the chunk dirty");
+        helper.assertTrue(behaviour.filters.getStackInSlot(DIAMOND_SLOT).is(Items.IRON_INGOT),
+                "the edit reached the filter inventory");
+        helper.assertTrue(((PipeBehaviourDiamond) reloadedBehaviour(tile)).filters
+                .getStackInSlot(DIAMOND_SLOT).is(Items.IRON_INGOT), "the filter survives the pipe's saved NBT");
+
+        markChunkSaved(helper, chunk);
+        ghostDrop(menu, DIAMOND_SLOT + 1, "minecraft:gold_ingot");
+        helper.assertTrue(chunk.isUnsaved(), "a JEI ghost drop onto a " + what + " filter must mark the chunk dirty");
+        helper.assertTrue(behaviour.filters.getStackInSlot(DIAMOND_SLOT + 1).is(Items.GOLD_INGOT),
+                "the ghost drop reached the filter inventory");
+
+        markChunkSaved(helper, chunk);
+        menu.getSlot(DIAMOND_SLOT).set(ItemStack.EMPTY);
+        helper.assertTrue(chunk.isUnsaved(), "clearing a " + what + " filter must mark the chunk dirty");
+        helper.assertTrue(((PipeBehaviourDiamond) reloadedBehaviour(tile)).filters
+                .getStackInSlot(DIAMOND_SLOT).isEmpty(), "the cleared slot stays cleared in the saved NBT");
 
         helper.succeed();
     }

@@ -32,10 +32,11 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.robotics.BCRoboticsItems;
 
-/** The standalone board item — the thing a programming table (Ph7) eventually turns into a robot. It carries no
- *  charge; the board id rides in {@code CUSTOM_DATA} exactly as {@link ItemRobot} carries board+charge, and
- *  every accessor reads through {@code NbtApiUtil}-style guards. Ph4 ships no board recipe (D5): the item is
- *  reachable through the creative tab and game tests only. */
+/** The standalone board item: the Programming Table turns any board into any other, and the Integration Table fits
+ *  one into a robot. It carries no charge; the board id rides in {@code CUSTOM_DATA} exactly as {@link ItemRobot}
+ *  carries board+charge, and every accessor reads through {@code NbtApiUtil}-style guards. A blank board is
+ *  survival-craftable (paper around a redstone dust, the {@code redstone_board} recipe) and stacks to 16; a programmed
+ *  one stays at 1 (see {@link #createStack}). */
 public class ItemRedstoneBoard extends Item {
 
     /** The board id sub-compound, keyed after 7.1.x's {@code ItemRobot} blob ({board:{id:...}}) — 7.1.x's

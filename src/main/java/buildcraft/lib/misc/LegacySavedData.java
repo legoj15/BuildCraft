@@ -40,6 +40,10 @@ import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
 
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.core.BCLog;
@@ -66,10 +70,18 @@ import buildcraft.api.core.BCLog;
  * file's counters kept ({@link Recoverable#absorbBlank}). A 26.1+ file with real content is never overridden.</li>
  * </ul>
  *
- * <p>The old file is read, not consumed, until the recovered data is about to be written: when the storage encodes
- * the instance for its first save, the old file is renamed to {@code <name>.dat.migrated}. Without that, an old file
- * would be re-read whenever the 26.1+ file is empty again (every box removed, every robot gone), resurrecting data the
- * player deleted. A crash before the first save leaves the old file where it was, so the next launch repeats the read.
+ * <p>The old file is read, not consumed, until the 26.1+ file is seen on disk holding the carried-over data: after
+ * each save of the level ({@code LevelEvent.Save}) and once more when the server has stopped, the 26.1+ file is read
+ * back and compared with what the storage encoded, and only a match renames the old file to
+ * {@code <name>.dat.migrated}. Without the rename, an old file would be re-read whenever the 26.1+ file is empty again
+ * (every box removed, every robot gone), resurrecting data the player deleted. The encode alone proves nothing:
+ * vanilla clears the dirty flag right after it and writes later, on another thread, only logging a write that fails
+ * (a file held open by a virus scanner or a sync client). So a write that never lands leaves the old file in place
+ * and the data is marked dirty again at the next save's check, and a session in which no write landed at all leaves
+ * the old file to be carried over again at the next launch. A move of the old file that fails is retried after every
+ * save. What is left: a crash between a landed write and the next check (up to one autosave interval), or a move
+ * that fails all session, leaves the old file beside a 26.1+ file with content; that file wins at every launch, and
+ * the old one comes back only if the 26.1+ file is later empty at a launch.
  *
  * <p>Every BuildCraft saved-data type is built this way
  * ({@code LegacySavedDataGuardTester} enforces it). The id of a type must never change: it is the file name under both
@@ -134,9 +146,63 @@ public final class LegacySavedData {
      */
     static volatile Function<ServerLevel, Path> worldRoot = level -> level.getServer().getWorldPath(LevelResource.ROOT);
 
-    /** Data that came from an old-layout file and has not been saved yet, to that file. Weak keys, by identity: an
-     *  instance dropped with its storage must not be pinned here. */
-    private static final ConcurrentMap<SavedData, Path> CARRIED_OVER = new MapMaker().weakKeys().makeMap();
+    /** Data that came from an old-layout file whose 26.1+ file has not been seen holding it yet, to its hand-over.
+     *  Weak keys, by identity: an instance dropped with its storage must not be pinned here. */
+    private static final ConcurrentMap<SavedData, CarriedOver> CARRIED_OVER = new MapMaker().weakKeys().makeMap();
+
+    /**
+     * Where one carried-over instance is in its hand-over. Touched from the server thread only (the storage encodes
+     * there, and both events fire there); volatile for the unit tests' sake as much as anything.
+     */
+    private static final class CarriedOver {
+        final Layout layout;
+        /** The last two payloads the storage encoded: an autosave's write of the latest may still be under way when
+         *  the check runs, and the one before it landing is just as good a proof. Null until the first encode. */
+        volatile @Nullable Tag latest;
+        volatile @Nullable Tag previous;
+        /** True from an encode until the check after it: a mismatch then may only mean the write has not finished. */
+        volatile boolean freshEncode;
+        /** The 26.1+ file was seen holding the data: only the move of the old file is left. */
+        volatile boolean written;
+
+        CarriedOver(Layout layout) {
+            this.layout = layout;
+        }
+
+        Path dataFolder() {
+            // <data folder>/<namespace>/<name>.dat
+            return layout.current().toAbsolutePath().normalize().getParent().getParent();
+        }
+
+        void encoded(Tag payload) {
+            previous = latest;
+            latest = payload;
+            freshEncode = true;
+        }
+
+        boolean holds(@Nullable Tag onDisk) {
+            return onDisk != null && (onDisk.equals(latest) || onDisk.equals(previous));
+        }
+    }
+
+    /** Hooks the hand-over checks ({@link #checkWrites}) to the server's saves. Called once, from {@code BCLib}. */
+    public static void registerListeners() {
+        NeoForge.EVENT_BUS.addListener((LevelEvent.Save event) -> {
+            if (!CARRIED_OVER.isEmpty() && event.getLevel() instanceof ServerLevel level) {
+                checkWrites(dataFolderOf(level), true);
+            }
+        });
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> {
+            // Every storage was closed, and every write joined, before this fires.
+            CARRIED_OVER.forEach((data, carried) -> check(data, carried, false));
+            CARRIED_OVER.clear();
+        });
+    }
+
+    /** The folder the 26.1+ storage of {@code level} keeps its saved data in ({@code ServerChunkCache}). */
+    private static Path dataFolderOf(ServerLevel level) {
+        return DimensionType.getStorageFolder(level.dimension(), worldRoot.apply(level)).resolve("data");
+    }
 
     /**
      * A saved-data type named {@code minecraft:<name>} that starts from the pre-26.1 file when this dimension has one
@@ -170,10 +236,9 @@ public final class LegacySavedData {
         }
         Path root = worldRoot.apply(level);
         Identifier dimension = level.dimension().identifier();
-        // Where the 26.1+ storage of this dimension keeps the file (ServerChunkCache: <dimension folder>/data, then
-        // <namespace>/<name>.dat), and where the build before it did.
-        Path current = DimensionType.getStorageFolder(level.dimension(), root).resolve("data")
-                .resolve(id.getNamespace()).resolve(id.getPath() + ".dat");
+        // Where the 26.1+ storage of this dimension keeps the file (<namespace>/<name>.dat in its data folder), and
+        // where the build before it did.
+        Path current = dataFolderOf(level).resolve(id.getNamespace()).resolve(id.getPath() + ".dat");
         Path legacy = legacyDataFolder(root, dimension.getNamespace(), dimension.getPath())
                 .resolve(id.getPath() + ".dat");
         return new Layout(current, legacy, level.registryAccess().createSerializationContext(NbtOps.INSTANCE));
@@ -191,7 +256,7 @@ public final class LegacySavedData {
         }
         T parsed = parseLegacyPayload(codec, layout.ops(), payload, layout.legacy());
         if (parsed != null) {
-            CARRIED_OVER.put(parsed, layout.legacy());
+            CARRIED_OVER.put(parsed, new CarriedOver(layout));
             BCLog.logger.info("[saved data] Carried {} over from the pre-26.1 location {}: {}", id, layout.legacy(),
                     parsed.describeContent());
         }
@@ -201,7 +266,8 @@ public final class LegacySavedData {
     /**
      * The codec the storage reads and writes the 26.1+ file with. Reading is {@code plain}'s, except that data which
      * decodes to no content is replaced by the old file's when there is one ({@link #recoverOverBlank}); writing is
-     * {@code plain}'s, followed by retiring the old file that data was carried over from.
+     * {@code plain}'s, and for carried-over data the payload is kept, so a later {@link #checkWrites} can tell whether
+     * the 26.1+ file on disk holds it. Nothing is moved here: the write comes after the encode, on another thread.
      */
     private static <T extends SavedData & Recoverable> Codec<T> recovering(Identifier id, Codec<T> plain,
             DataFixTypes fixType, Supplier<@Nullable Layout> layout) {
@@ -221,8 +287,9 @@ public final class LegacySavedData {
             @Override
             public <O> DataResult<O> encode(T input, DynamicOps<O> ops, O prefix) {
                 DataResult<O> encoded = plain.encode(input, ops, prefix);
-                if (encoded.result().isPresent()) {
-                    retireCarriedOverFile(input);
+                CarriedOver carried = CARRIED_OVER.get(input);
+                if (carried != null && encoded.result().orElse(null) instanceof Tag payload) {
+                    carried.encoded(payload.copy());
                 }
                 return encoded;
             }
@@ -251,24 +318,91 @@ public final class LegacySavedData {
         // The storage did not create this instance, so it does not know to save it: do it here, or the recovery
         // would be repeated (and could be undone by a later save of an empty file) until something else dirties it.
         recovered.setDirty();
-        CARRIED_OVER.put(recovered, layout.legacy());
+        CARRIED_OVER.put(recovered, new CarriedOver(layout));
         BCLog.logger.info("[saved data] Recovered {} from the pre-26.1 file {}: the 26.1+ file {} held no content. "
                 + "Recovered: {}", id, layout.legacy(), layout.current(), recovered.describeContent());
         return recovered;
     }
 
     /**
-     * Renames the old file {@code data} was carried over from to {@code <name>.dat.migrated} (numbered if that name is
-     * taken), now that the storage is writing {@code data} out; a no-op for data that was not carried over. The
-     * storage encodes data for its file write immediately before the write, so a crash can only fall between the two
-     * for the few milliseconds the write takes; the renamed file is still beside the world either way.
+     * Checks, for the data carried over into the storage whose folder is {@code dataFolder}, whether its 26.1+ file
+     * now holds what the storage encoded, and retires the old file of each one that does. Called after a level's
+     * storage saved ({@code LevelEvent.Save}, {@code storageOpen} true) and once the server stopped and every write
+     * was joined ({@code storageOpen} false).
      */
-    private static void retireCarriedOverFile(SavedData data) {
-        Path legacy = CARRIED_OVER.get(data);
-        if (legacy != null && retire(legacy)) {
+    static void checkWrites(Path dataFolder, boolean storageOpen) {
+        Path folder = dataFolder.toAbsolutePath().normalize();
+        CARRIED_OVER.forEach((data, carried) -> {
+            if (folder.equals(carried.dataFolder())) {
+                check(data, carried, storageOpen);
+            }
+        });
+    }
+
+    /**
+     * One step of the hand-over of {@code data} from its old file to its 26.1+ file. The old file goes only once the
+     * 26.1+ file is seen on disk holding an encoding of {@code data}: vanilla encodes, clears the dirty flag and only
+     * then writes, on another thread, logging a failed write and nothing else, so neither the encode nor the dirty
+     * flag says whether the data reached the disk.
+     */
+    private static void check(SavedData data, CarriedOver carried, boolean storageOpen) {
+        Layout layout = carried.layout;
+        if (!carried.written) {
+            if (carried.latest == null) {
+                // Never saved: the old file is still the only copy and is read again at the next launch.
+                if (!storageOpen) {
+                    CARRIED_OVER.remove(data);
+                }
+                return;
+            }
+            if (!carried.holds(readPayload(layout.current()))) {
+                if (!storageOpen) {
+                    BCLog.logger.warn("[saved data] No write of the data carried over from the pre-26.1 file {} "
+                            + "reached {} before the server stopped; the pre-26.1 file stays, and the data is "
+                            + "carried over from it again at the next launch", layout.legacy(), layout.current());
+                    CARRIED_OVER.remove(data);
+                } else if (carried.freshEncode) {
+                    // Encoded by the save that just ran: an autosave's write may still be under way.
+                    carried.freshEncode = false;
+                } else {
+                    // Encoded by an earlier save whose write never landed: write it again at the next one.
+                    BCLog.logger.warn("[saved data] {} does not hold the data carried over from the pre-26.1 file {} "
+                            + "(the write failed); writing it again at the next save, and the pre-26.1 file stays "
+                            + "until a write lands", layout.current(), layout.legacy());
+                    data.setDirty();
+                }
+                return;
+            }
+            carried.written = true;
+        }
+        if (retire(layout.legacy())) {
+            CARRIED_OVER.remove(data);
+        } else if (!storageOpen) {
+            BCLog.logger.warn("[saved data] The pre-26.1 file {} could not be moved aside before the server stopped. "
+                    + "Its data is in {} now: move or delete the old file by hand, or it is read again if that file "
+                    + "is ever empty at a launch", layout.legacy(), layout.current());
             CARRIED_OVER.remove(data);
         }
     }
+
+    /** The {@code data} payload of the 26.1+ file {@code file} as it is on disk, or null when there is none. */
+    private static @Nullable Tag readPayload(Path file) {
+        if (!Files.isRegularFile(file)) {
+            return null;
+        }
+        try {
+            return NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap()).get("data");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** How {@link #retire} moves a file; a test makes it fail. */
+    interface Mover {
+        void move(Path from, Path to) throws IOException;
+    }
+
+    static volatile Mover mover = (from, to) -> Files.move(from, to);
 
     /** Moves {@code legacyFile} aside, never over an earlier backup. True when it is gone from its place. */
     static boolean retire(Path legacyFile) {
@@ -281,13 +415,13 @@ public final class LegacySavedData {
             for (int attempt = 1; Files.exists(target); attempt++) {
                 target = legacyFile.resolveSibling(name + MIGRATED_SUFFIX + "." + attempt);
             }
-            Files.move(legacyFile, target);
+            mover.move(legacyFile, target);
             BCLog.logger.info("[saved data] The pre-26.1 file {} was carried over; kept as {}", legacyFile,
                     target.getFileName());
             return true;
         } catch (IOException e) {
             BCLog.logger.warn("[saved data] Could not move the carried-over pre-26.1 file " + legacyFile
-                    + " aside; it will be tried again at the next save", e);
+                    + " aside; it is tried again after the next save", e);
             return false;
         }
     }
@@ -300,7 +434,8 @@ public final class LegacySavedData {
      *
      * <p>A partial result is accepted, as {@code SavedDataStorage.readSavedData} accepts one for vanilla's own files:
      * whatever decoded is more than a fresh start keeps. Either way the outcome becomes the 26.1+ file on the next
-     * save and the old file is retired then (it stays on disk, renamed, so the original is never lost).
+     * save and the old file is retired once that file is seen holding it (it stays on disk, renamed, so the original
+     * is never lost).
      */
     public static <T> @Nullable T parseLegacyPayload(Codec<T> codec, DynamicOps<Tag> ops, Tag payload,
             Path legacyFile) {

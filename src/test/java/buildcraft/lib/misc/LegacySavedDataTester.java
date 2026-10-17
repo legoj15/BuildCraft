@@ -39,6 +39,9 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.SavedDataStorage;
 
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
+
 import buildcraft.api.robots.ResourceIdBlock;
 import buildcraft.api.transport.EnumWirePart;
 import buildcraft.core.marker.PathSavedData;
@@ -263,6 +266,14 @@ public class LegacySavedDataTester {
         SavedDataStorage storage() {
             return new SavedDataStorage(level, currentFolder(), DataFixers.getDataFixer(), level.registryAccess());
         }
+
+        /** Saves {@code storage} the way a level does: the storage first, then {@code LevelEvent.Save}, which is what
+         *  the migration's real listener answers by checking the write landed (it finds this temporary world through
+         *  the redirected world root) - so this also proves the listener is registered. */
+        void saveLikeALevel(SavedDataStorage storage) {
+            storage.saveAndJoin();
+            NeoForge.EVENT_BUS.post(new LevelEvent.Save(level));
+        }
     }
 
     private static void runScenario(GameTestHelper helper, Scenario scenario) {
@@ -380,7 +391,7 @@ public class LegacySavedDataTester {
                 check(env, got.isDirty(), "the recovered data must be marked for saving");
                 check(env, Files.isRegularFile(legacy), "the 1.21.x file must stay until the data is written");
 
-                storage.saveAndJoin();
+                env.saveLikeALevel(storage);
             }
             check(env, !Files.exists(legacy), "the 1.21.x file must be retired once its data is written");
             check(env, Files.isRegularFile(migrated) && Arrays.equals(legacyBytes, Files.readAllBytes(migrated)),
@@ -419,7 +430,7 @@ public class LegacySavedDataTester {
                         + "expected [" + expected + "], got [" + got.describeContent() + "]");
 
                 got.setDirty();
-                storage.saveAndJoin();
+                env.saveLikeALevel(storage);
             }
             check(env, Files.isRegularFile(legacy) && Arrays.equals(legacyBytes, Files.readAllBytes(legacy)),
                     "the 1.21.x file must be left exactly as it was");
@@ -445,7 +456,7 @@ public class LegacySavedDataTester {
                         + expected + "], got [" + got.describeContent() + "]");
                 check(env, Files.isRegularFile(legacy), "the 1.21.x file must stay until the data is written");
 
-                storage.saveAndJoin();
+                env.saveLikeALevel(storage);
             }
             check(env, !Files.exists(legacy) && Files.isRegularFile(migrated)
                     && Arrays.equals(legacyBytes, Files.readAllBytes(migrated)),

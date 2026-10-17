@@ -120,6 +120,29 @@ public class LegacySavedDataRecoveryTest {
         writeRaw(file, payload, dataVersion);
     }
 
+    /** What the server does after a level's storage saved ({@code LevelEvent.Save}): check the writes landed. */
+    private static void afterSave(World world) {
+        LegacySavedData.checkWrites(world.dataFolder, true);
+    }
+
+    /** What the server does once it stopped and every write was joined ({@code ServerStoppedEvent}). */
+    private static void afterStop(World world) {
+        LegacySavedData.checkWrites(world.dataFolder, false);
+    }
+
+    /** Makes every write of the 26.1+ file fail, as a file held open by a virus scanner or a sync client does: a
+     *  non-empty folder in its place, which the storage's atomic move cannot replace on any platform. */
+    private static void blockWrites(World world) throws IOException {
+        Files.deleteIfExists(world.currentFile);
+        Files.createDirectories(world.currentFile);
+        Files.writeString(world.currentFile.resolve("in-the-way"), "x");
+    }
+
+    private static void unblockWrites(World world) throws IOException {
+        Files.deleteIfExists(world.currentFile.resolve("in-the-way"));
+        Files.deleteIfExists(world.currentFile);
+    }
+
     private static int valueIn(Path file) throws IOException {
         CompoundTag wrapper = NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap());
         return NBTUtilBC.getInt(NBTUtilBC.getCompound(wrapper, "data"), "value", -1);
@@ -170,6 +193,9 @@ public class LegacySavedDataRecoveryTest {
                     "until the data is written the old file is only read - a crash must repeat the read");
 
             storage.saveAndJoin();
+            Assertions.assertTrue(Files.isRegularFile(world.legacyFile),
+                    "the old file stays until the 26.1+ file is seen to hold the data, not when it is encoded");
+            afterSave(world);
         }
 
         Assertions.assertFalse(Files.exists(world.legacyFile), "the old file must not be read again");
@@ -202,6 +228,7 @@ public class LegacySavedDataRecoveryTest {
         try (SavedDataStorage storage = world.storage()) {
             storage.computeIfAbsent(world.type);
             storage.saveAndJoin();
+            afterSave(world);
         }
 
         // The player removes everything and the world saves: the 26.1+ file holds no content again.
@@ -229,6 +256,7 @@ public class LegacySavedDataRecoveryTest {
         try (SavedDataStorage storage = world.storage()) {
             storage.computeIfAbsent(world.type);
             storage.saveAndJoin();
+            afterSave(world);
         }
 
         Assertions.assertEquals("an earlier backup", Files.readString(world.migratedFile), "the earlier backup stays");
@@ -236,6 +264,120 @@ public class LegacySavedDataRecoveryTest {
                 world.migratedFile.resolveSibling(world.migratedFile.getFileName() + ".1")),
                 "the new one gets a numbered name instead");
         Assertions.assertFalse(Files.exists(world.legacyFile));
+    }
+
+    // ---- the old file goes only once the 26.1+ file is seen to hold the data ----
+
+    @Test
+    public void aWriteThatFailsKeepsTheLegacyFileAndIsTriedAgain(@TempDir Path tmp) throws IOException {
+        World world = new World(tmp, true);
+        writeProbe(world.legacyFile, 7, 0, DATA_VERSION_1_21_11);
+        writeProbe(world.currentFile, 0, 0, currentDataVersion());
+        byte[] legacyBytes = Files.readAllBytes(world.legacyFile);
+
+        try (SavedDataStorage storage = world.storage()) {
+            Probe probe = storage.computeIfAbsent(world.type);
+            blockWrites(world);
+            // The storage encodes the data, clears its dirty flag, then the write fails: vanilla only logs that.
+            storage.saveAndJoin();
+            afterSave(world);
+            Assertions.assertTrue(Files.isRegularFile(world.legacyFile),
+                    "the 26.1+ file never received the data, so the old file is still its only copy");
+
+            // Right after a save its write may still be under way (an autosave does not wait for it); by the next
+            // save it is known to have failed, and the data is written again at the one after.
+            storage.saveAndJoin();
+            afterSave(world);
+            Assertions.assertTrue(Files.isRegularFile(world.legacyFile));
+            Assertions.assertTrue(probe.isDirty(), "a failed write must be repeated, not dropped");
+
+            unblockWrites(world);
+            storage.saveAndJoin();
+            afterSave(world);
+        }
+
+        Assertions.assertFalse(Files.exists(world.legacyFile), "once a write landed the old file is retired");
+        Assertions.assertArrayEquals(legacyBytes, Files.readAllBytes(world.migratedFile));
+        Assertions.assertEquals(7, valueIn(world.currentFile));
+    }
+
+    @Test
+    public void aRelaunchAfterEveryWriteFailedRecoversAgain(@TempDir Path tmp) throws IOException {
+        World world = new World(tmp, true);
+        writeProbe(world.legacyFile, 7, 0, DATA_VERSION_1_21_11);
+        writeProbe(world.currentFile, 0, 0, currentDataVersion());
+
+        try (SavedDataStorage storage = world.storage()) {
+            storage.computeIfAbsent(world.type);
+            blockWrites(world);
+            storage.saveAndJoin();
+            afterSave(world);
+        } // closing saves once more, and fails once more
+        afterStop(world);
+        Assertions.assertTrue(Files.isRegularFile(world.legacyFile),
+                "no write landed in the whole session, so the old file must still be there");
+
+        // The lock is gone; the 26.1+ file is still the empty one the older build wrote.
+        unblockWrites(world);
+        writeProbe(world.currentFile, 0, 0, currentDataVersion());
+        try (SavedDataStorage relaunch = world.storage()) {
+            Assertions.assertEquals(7, relaunch.computeIfAbsent(world.type).value,
+                    "the data must be recovered again, not lost to a write that never happened");
+        }
+    }
+
+    @Test
+    public void aWriteFirstSeenAtShutdownStillRetiresTheLegacyFile(@TempDir Path tmp) throws IOException {
+        World world = new World(tmp, true);
+        writeProbe(world.legacyFile, 7, 0, DATA_VERSION_1_21_11);
+        writeProbe(world.currentFile, 0, 0, currentDataVersion());
+
+        try (SavedDataStorage storage = world.storage()) {
+            storage.computeIfAbsent(world.type);
+        } // the only save is the one closing the storage
+        Assertions.assertTrue(Files.isRegularFile(world.legacyFile));
+        afterStop(world);
+
+        Assertions.assertFalse(Files.exists(world.legacyFile));
+        Assertions.assertTrue(Files.isRegularFile(world.migratedFile));
+    }
+
+    @Test
+    public void aLegacyFileThatCannotBeMovedAsideIsTriedAgainAtTheNextSave(@TempDir Path tmp) throws IOException {
+        World world = new World(tmp, true);
+        writeProbe(world.legacyFile, 7, 0, DATA_VERSION_1_21_11);
+        writeProbe(world.currentFile, 0, 0, currentDataVersion());
+        LegacySavedData.Mover previous = LegacySavedData.mover;
+        try {
+            try (SavedDataStorage storage = world.storage()) {
+                storage.computeIfAbsent(world.type);
+                LegacySavedData.mover = (from, to) -> {
+                    throw new IOException("the old file is held open");
+                };
+                storage.saveAndJoin();
+                afterSave(world);
+                Assertions.assertTrue(Files.isRegularFile(world.legacyFile));
+                Assertions.assertEquals(7, valueIn(world.currentFile));
+
+                // The next save has nothing to write - the data is not dirty - but the move is tried again.
+                LegacySavedData.mover = previous;
+                storage.saveAndJoin();
+                afterSave(world);
+            }
+        } finally {
+            LegacySavedData.mover = previous;
+        }
+        Assertions.assertFalse(Files.exists(world.legacyFile), "the move must not wait for the data to change");
+
+        // The player then deletes everything: it must stay deleted.
+        try (SavedDataStorage storage = world.storage()) {
+            Probe probe = storage.computeIfAbsent(world.type);
+            probe.value = 0;
+            probe.setDirty();
+        }
+        try (SavedDataStorage storage = world.storage()) {
+            Assertions.assertEquals(0, storage.computeIfAbsent(world.type).value);
+        }
     }
 
     // ---- both files present, the 26.1+ one has content: it always wins ----
@@ -347,6 +489,7 @@ public class LegacySavedDataRecoveryTest {
             Assertions.assertTrue(Files.isRegularFile(world.legacyFile), "read, not consumed, until written");
 
             storage.saveAndJoin();
+            afterSave(world);
         }
 
         Assertions.assertFalse(Files.exists(world.legacyFile));
@@ -361,6 +504,7 @@ public class LegacySavedDataRecoveryTest {
         try (SavedDataStorage storage = world.storage()) {
             storage.computeIfAbsent(world.type);
             storage.saveAndJoin();
+            afterSave(world);
         }
         try (SavedDataStorage storage = world.storage()) {
             Probe probe = storage.computeIfAbsent(world.type);

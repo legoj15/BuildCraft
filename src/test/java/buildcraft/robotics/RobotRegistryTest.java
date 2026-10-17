@@ -262,6 +262,43 @@ public class RobotRegistryTest {
                 "two stations at the same pos+side cannot both register");
     }
 
+    // ---- "holds no content": what lets the 1.21.x data replace the empty file a 26.x build wrote ----
+
+    @Test
+    public void testOnlyStationsAndReservationsCountAsContent() {
+        RobotRegistry r = new RobotRegistry(null);
+        Assertions.assertTrue(r.hasNoContent(), "a new registry holds nothing");
+        r.getNextRobotId();
+        Assertions.assertTrue(r.hasNoContent(), "the id counter alone is not content");
+
+        r.registerStation(new TestDockingStation(new BlockPos(3, 5, 7), Direction.EAST));
+        Assertions.assertFalse(r.hasNoContent(), "a docking station is content");
+
+        RobotRegistry reserving = new RobotRegistry(null);
+        reserving.take(resource(1, 2, 3), ROBOT_A);
+        Assertions.assertFalse(reserving.hasNoContent(), "a resource reservation is content");
+        reserving.release(resource(1, 2, 3));
+        Assertions.assertTrue(reserving.hasNoContent(), "...and no longer once it is released");
+    }
+
+    @Test
+    public void testAbsorbingAnEmptyRegistryOnlyEverRaisesTheCounter() {
+        RobotRegistry recovered = new RobotRegistry(null);
+        RobotRegistry empty = new RobotRegistry(null);
+        empty.getNextRobotId();
+        empty.getNextRobotId();
+        empty.getNextRobotId();
+
+        recovered.absorbBlank(empty);
+        Assertions.assertEquals(empty.nextRobotIdPeek(), recovered.nextRobotIdPeek(),
+                "the three ids the empty registry handed out are not given out again");
+
+        recovered.getNextRobotId();
+        long ahead = recovered.nextRobotIdPeek();
+        recovered.absorbBlank(empty);
+        Assertions.assertEquals(ahead, recovered.nextRobotIdPeek(), "a counter further along is never lowered");
+    }
+
     // ---- SavedData NBT round-trip incl. reverse-index rebuild (seam c) ----
 
     @Test

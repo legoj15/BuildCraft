@@ -20,6 +20,8 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
+import buildcraft.lib.misc.LegacySavedData;
+
 /**
  * Shared persistence base for the marker-connection SavedData twins
  * ({@code PathSavedData} / {@code VolumeSavedData}). It holds the identical
@@ -35,7 +37,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
  * byte-identical to the pre-split twins — this is a pure code-dedup, not a
  * save-format change.
  */
-public abstract class MarkerSavedData extends SavedData {
+public abstract class MarkerSavedData extends SavedData implements LegacySavedData.Recoverable {
 
     public List<BlockPos> markerPositions = new ArrayList<>();
     public List<List<BlockPos>> markerConnections = new ArrayList<>();
@@ -45,6 +47,17 @@ public abstract class MarkerSavedData extends SavedData {
 
     public void setSubCache(MarkerSubCache<?> subCache) {
         this.subCache = subCache;
+    }
+
+    /** No marker and no connection between markers, as last read or synced. */
+    @Override
+    public boolean hasNoContent() {
+        return markerPositions.isEmpty() && markerConnections.isEmpty();
+    }
+
+    @Override
+    public String describeContent() {
+        return markerPositions.size() + " markers, " + markerConnections.size() + " connections";
     }
 
     /**

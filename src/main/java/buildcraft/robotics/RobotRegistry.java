@@ -56,7 +56,7 @@ import org.jspecify.annotations.Nullable;
  * serializers (seam c): they touch no {@link Level}, so the full reservation + reverse-index round-trip is
  * exercised as pure JUnit without bootstrapping the game.
  */
-public class RobotRegistry extends SavedData implements IRobotRegistry {
+public class RobotRegistry extends SavedData implements IRobotRegistry, LegacySavedData.Recoverable {
 
     //? if >=26.1 {
     public static final SavedDataType<RobotRegistry> TYPE = LegacySavedData.type(
@@ -112,6 +112,28 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
 
     public RobotRegistry(@Nullable ServerLevel level) {
         this.world = level;
+    }
+
+    /** No docking station and no resource reservation. Robots themselves are entities, not part of this data, and the
+     *  id counter alone is not content (it is carried over by {@link #absorbBlank}). */
+    @Override
+    public synchronized boolean hasNoContent() {
+        return stations.isEmpty() && resourcesTaken.isEmpty();
+    }
+
+    @Override
+    public synchronized String describeContent() {
+        return stations.size() + " docking stations, " + resourcesTaken.size() + " reserved resources, next robot id "
+                + nextRobotID;
+    }
+
+    /** Keeps the id counter of the empty registry this one replaces when it is further along: robots created while the
+     *  empty registry was the only one hold ids from it. */
+    @Override
+    public synchronized void absorbBlank(SavedData blank) {
+        if (blank instanceof RobotRegistry other && other.nextRobotID > nextRobotID) {
+            nextRobotID = other.nextRobotID;
+        }
     }
 
     //? if <1.21.10 {

@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
+import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
@@ -23,16 +24,9 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TOOLTIP = new buildcraft.lib.gui.pos.GuiRectangle(60, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(30, 17, 8, 62);
 
+    /** The server sends the base (FE) title key, since it cannot see this player's FE/RF toggle; map it here. */
     public ScreenEngineFE(ContainerEngineFE menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title, SIZE_X, SIZE_Y);
-    }
-
-    /** Prefer the RF-naming sibling ({@code key + ".rf"}) when the toggle is on, but only if that
-     *  variant actually exists in the lang file — so keys with no .rf entry (the upgrade help
-     *  title) keep their base wording instead of rendering as a raw key. */
-    private static String rfNamed(String key) {
-        String rfKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
-        return !rfKey.equals(key) && net.minecraft.locale.Language.getInstance().has(rfKey) ? rfKey : key;
+        super(menu, playerInv, BCEnergyConfig.clientMenuTitle(title), SIZE_X, SIZE_Y);
     }
 
     @Override
@@ -54,8 +48,8 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
 
             mainGui.shownElements.add(new DummyHelpElement(
                 RECT_UPGRADE_HELP.offset(mainGui.rootElement),
-                new ElementHelpInfo(rfNamed("buildcraft.help.rf_engine.upgrades.title"), 0xFF_66_99_FF,
-                    rfNamed("buildcraft.help.rf_engine.upgrades"))
+                new ElementHelpInfo(BCEnergyConfig.rfNamedKey("buildcraft.help.rf_engine.upgrades.title"), 0xFF_66_99_FF,
+                    BCEnergyConfig.rfNamedKey("buildcraft.help.rf_engine.upgrades"))
             ));
 
 
@@ -67,7 +61,7 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                         lines.add(LocaleUtil.localize("buildcraft.gui.rf_engine.upgrade_types"));
                         buildcraft.energy.tile.TileEngineFE.initUpgrades();
                         String unitLabel = LocaleUtil.localize(
-                            rfNamed("buildcraft.gui.rf_engine.upgrade_rate_unit"));
+                            BCEnergyConfig.rfNamedKey("buildcraft.gui.rf_engine.upgrade_rate_unit"));
                         for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineFE.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();
@@ -91,10 +85,10 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     // so it must stay MJ even under powerMode == DISPLAY_RF.
                     String mj = LocaleUtil.localizeMjFlowForcedMj(mjPerTick);
                     String conversion = LocaleUtil.localize(
-                        rfNamed("buildcraft.help.rf_engine.battery"), rf, mj);
+                        BCEnergyConfig.rfNamedKey("buildcraft.help.rf_engine.battery"), rf, mj);
                     ElementHelpInfo help = ElementHelpInfo
                         .preTranslated(
-                            rfNamed("buildcraft.help.rf_engine.battery.title"),
+                            BCEnergyConfig.rfNamedKey("buildcraft.help.rf_engine.battery.title"),
                             0xFF_33_AA_33, conversion);
                     elements.add(help.target(this));
                 }

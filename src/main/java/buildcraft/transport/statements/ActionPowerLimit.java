@@ -1,7 +1,5 @@
 package buildcraft.transport.statements;
 
-import net.minecraft.locale.Language;
-
 import buildcraft.api.core.render.ISprite;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.statements.IActionInternal;
@@ -44,13 +42,6 @@ public abstract class ActionPowerLimit extends BCStatement implements IActionInt
         return false;
     }
 
-    /** Prefer the RF-naming sibling ({@code key + ".rf"}) when the toggle is on, but only if that
-     *  variant actually exists in the lang file — so keys without an .rf entry are left alone. */
-    private static String rfNamed(String key) {
-        String rfKey = BCEnergyConfig.rfFeKey(key);
-        return !rfKey.equals(key) && Language.getInstance().has(rfKey) ? rfKey : key;
-    }
-
     @Override
     public String getDescription() {
         if (isRf()) {
@@ -63,7 +54,7 @@ public abstract class ActionPowerLimit extends BCStatement implements IActionInt
             } else {
                 max = pipeInfo.transferPerTick >> limitShift;
             }
-            return String.format(LocaleUtil.localize(rfNamed("gate.action.pipe.rf_limit")), max);
+            return String.format(LocaleUtil.localize(BCEnergyConfig.rfNamedKey("gate.action.pipe.rf_limit")), max);
         }
         PowerTransferInfo pipeInfo = PipeApi.powerTransferData.get(pipe);
         final Object max;

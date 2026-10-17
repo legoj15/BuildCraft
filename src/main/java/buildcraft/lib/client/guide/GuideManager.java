@@ -729,11 +729,7 @@ public enum GuideManager {
      *  the two builders ({@link #addChild} and {@link #fileExtraEntry}) can't disagree and split
      *  one chapter into two. */
     private static String localizeChapter(String key) {
-        String rfKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
-        if (!rfKey.equals(key) && net.minecraft.locale.Language.getInstance().has(rfKey)) {
-            return LocaleUtil.localize(rfKey);
-        }
-        return LocaleUtil.localize(key);
+        return LocaleUtil.localize(buildcraft.energy.BCEnergyConfig.rfNamedKey(key));
     }
 
     /** Build a category TOC entry plus the matching markdown-linkable {@link PageLink}.

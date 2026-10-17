@@ -26,7 +26,10 @@ public class BCEnergyItems {
     /** FE/RF naming-aware BlockItem: flips display name based on {@link BCEnergyConfig#useRfNaming}.
      *  Uses {@code useBlockDescriptionPrefix()} so the auto-generated descriptionId resolves to the
      *  {@code block.buildcraftunofficial.engine_rf} lang entry (matching how registerSimpleBlockItem
-     *  sets up other engines), letting {@link BCEnergyConfig#rfFeKey} pick up the {@code .rf} sibling. */
+     *  sets up other engines), letting {@link BCEnergyConfig#rfFeKey} pick up the {@code .rf} sibling.
+     *  The name is decided lazily, in whichever JVM asks for it, never at registration: item names are drawn
+     *  client-side, where the toggle exists. A server has no toggle and answers with the FE key, which only
+     *  shows up if a server bakes the name into a message it sends (a chat item bracket, say). */
     public static final DeferredItem<BlockItem> ENGINE_FE = RegistrationUtilBC.registerItem(ITEMS,
             BCEnergyBlocks.ENGINE_FE.getId().getPath(),
             props -> new BlockItem(BCEnergyBlocks.ENGINE_FE.get(), props) {

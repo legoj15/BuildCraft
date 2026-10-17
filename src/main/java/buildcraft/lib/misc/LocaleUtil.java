@@ -116,7 +116,7 @@ public class LocaleUtil {
      *  when {@link BCEnergyConfig#useFullUnitNames} is off. The RF-named variants live under the
      *  usual {@code .rf} sibling key (see {@link BCEnergyConfig#rfFeKey}). */
     public static String energyUnit() {
-        boolean rf = BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get();
+        boolean rf = BCEnergyConfig.rfNamingEnabled();
         if (shouldUseFullNames()) {
             return unitText(rf ? "buildcraft.unit.energy.full.rf" : "buildcraft.unit.energy.full",
                     rf ? "Redstone Flux" : "Forge Energy");
@@ -168,29 +168,33 @@ public class LocaleUtil {
 
     /** {@code "<value> <unit>"} — under abbreviation switches the unit from mB to B (1000 mB = 1 B)
      *  and applies k/M/G/T on top of buckets only if it crosses the next tier (a 50,000 mB/s pipe
-     *  would read as "50.0 buckets per second", not "50.0k mB" or "5.0E1 buckets"). The
-     *  formatAbbreviated helper handles values < 1000 by returning the raw 1-decimal form. */
+     *  would read as "50 buckets per second", not "50k mB" or "5.0E1 buckets"). The bucket count carries
+     *  an optional single decimal, same as the tank readout: 2 buckets is "2", 1.6 is "1.6". */
     private static String formatFluidAmount(long mb, boolean fullSuffix, boolean abbreviate) {
         if (abbreviate && Math.abs(mb) >= 1000L) {
             double buckets = mb / 1000.0;
-            return formatAbbreviated(buckets, currentThousandsSep(), currentDecimalSep())
+            return formatBucketFlowValue(buckets, currentThousandsSep(), currentDecimalSep())
                     + " " + bucketsUnit(fullSuffix, false);
         }
         return formatLong(mb, currentThousandsSep(), currentDecimalSep(), false)
                 + " " + fluidUnit(fullSuffix, false);
     }
 
+    /** The numeric part of a bucket-scale flow readout: the k/M/G/T tiers of {@link #formatAbbreviated} with
+     *  the single decimal made OPTIONAL, so a whole count drops its ".0" ("2", "2k") exactly as the tank
+     *  readout's {@link #formatBuckets} does, while a fraction keeps it ("1.6", "2.5k"). Scoped to the fluid
+     *  flow bucket branch on purpose: MJ readouts share {@code formatAbbreviated} and keep their fixed
+     *  one-decimal form ("10.0k"). */
+    static String formatBucketFlowValue(double buckets, BCLibConfig.ThousandsSeparator t,
+                                        BCLibConfig.DecimalSeparator d) {
+        return formatAbbreviated(buckets, t, d, false);
+    }
+
     /** Buckets with an OPTIONAL single decimal — "1" for a whole bucket, "1.1" for a fraction, "16" for
-     *  a full tank — matching the "1 bucket" / "1.1 B" form players expect. (The flow display keeps its
-     *  own forced-one-decimal formatAbbreviated with k/M tiers; tank volumes don't need tiers.) */
+     *  a full tank — matching the "1 bucket" / "1.1 B" form players expect. (The flow display shares the
+     *  optional decimal via {@link #formatBucketFlowValue} but adds k/M tiers; tank volumes don't need tiers.) */
     private static String formatBuckets(long mb, BCLibConfig.ThousandsSeparator t, BCLibConfig.DecimalSeparator d) {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setDecimalSeparator(d.ch);
-        if (t != BCLibConfig.ThousandsSeparator.NONE) {
-            symbols.setGroupingSeparator(t.ch);
-        }
-        String pattern = (t == BCLibConfig.ThousandsSeparator.NONE ? "0" : "#,##0") + ".#";
-        return new DecimalFormat(pattern, symbols).format(mb / 1000.0);
+        return numberFormat(t, d, 1, false).format(mb / 1000.0);
     }
 
     /** The numeric part only (no unit) of a fluid volume, in either mB or buckets. */
@@ -423,9 +427,18 @@ public class LocaleUtil {
     /** Walks {@code value} down through powers of 1000 and renders the result with one decimal
      *  followed by the matching k/M/G/T suffix. Handles the tier-crossing rounding edge — a value
      *  like 999,950 divides to 999.95, which would format as "1000.0k" at one-decimal precision;
-     *  the second loop iteration bumps it to the next tier so the output reads "1.0M" instead. */
+     *  the second loop iteration bumps it to the next tier so the output reads "1.0M" instead. The
+     *  decimal is always present ("2.0k"); see the four-argument overload for the trimmed form. */
     private static String formatAbbreviated(double value, BCLibConfig.ThousandsSeparator t,
                                             BCLibConfig.DecimalSeparator d) {
+        return formatAbbreviated(value, t, d, true);
+    }
+
+    /** As {@link #formatAbbreviated(double, BCLibConfig.ThousandsSeparator, BCLibConfig.DecimalSeparator)}, but
+     *  with {@code forceDecimal == false} the single decimal is optional, so a whole number reads "2k" rather
+     *  than "2.0k" (the tier suffix follows the number either way). */
+    private static String formatAbbreviated(double value, BCLibConfig.ThousandsSeparator t,
+                                            BCLibConfig.DecimalSeparator d, boolean forceDecimal) {
         String[] suffixes = { "", "k", "M", "G", "T" };
         double v = value;
         int tier = 0;
@@ -437,7 +450,7 @@ public class LocaleUtil {
             v /= 1000.0;
             tier++;
         }
-        return numberFormat(t, d, 1).format(v) + suffixes[tier];
+        return numberFormat(t, d, 1, forceDecimal).format(v) + suffixes[tier];
     }
 
     private static BCLibConfig.ThousandsSeparator currentThousandsSep() {
@@ -457,6 +470,13 @@ public class LocaleUtil {
      *  is dominated by the surrounding render path. */
     private static DecimalFormat numberFormat(BCLibConfig.ThousandsSeparator t,
                                               BCLibConfig.DecimalSeparator d, int decimals) {
+        return numberFormat(t, d, decimals, true);
+    }
+
+    /** {@code forceDecimals == false} makes the fractional digits optional ({@code "0.#"} rather than
+     *  {@code "0.0"}): a whole number prints with no decimal point at all. Rounding is unchanged. */
+    private static DecimalFormat numberFormat(BCLibConfig.ThousandsSeparator t,
+                                              BCLibConfig.DecimalSeparator d, int decimals, boolean forceDecimals) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
         symbols.setDecimalSeparator(d.ch);
         if (t != BCLibConfig.ThousandsSeparator.NONE) {
@@ -466,7 +486,7 @@ public class LocaleUtil {
         StringBuilder pattern = new StringBuilder(t == BCLibConfig.ThousandsSeparator.NONE ? "0" : "#,##0");
         if (decimals > 0) {
             pattern.append('.');
-            for (int i = 0; i < decimals; i++) pattern.append('0');
+            for (int i = 0; i < decimals; i++) pattern.append(forceDecimals ? '0' : '#');
         }
         return new DecimalFormat(pattern.toString(), symbols);
     }

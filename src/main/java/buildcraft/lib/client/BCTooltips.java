@@ -41,11 +41,7 @@ public class BCTooltips {
         if (key != null) {
             // Prefer an RF-naming sibling (key + ".rf") if the user has the toggle on
             // AND that variant exists in the lang file. Falls back to the base key otherwise.
-            String rfFeKey = buildcraft.energy.BCEnergyConfig.rfFeKey(key);
-            String resolved = !rfFeKey.equals(key)
-                    && net.minecraft.locale.Language.getInstance().has(rfFeKey)
-                    ? rfFeKey
-                    : key;
+            String resolved = buildcraft.energy.BCEnergyConfig.rfNamedKey(key);
             if (net.minecraft.locale.Language.getInstance().has(resolved)) {
                 String translated = net.minecraft.client.resources.language.I18n.get(resolved);
                 for (String line : translated.split("\n")) {

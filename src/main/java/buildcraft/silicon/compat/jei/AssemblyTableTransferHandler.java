@@ -32,9 +32,9 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.lib.compat.jei.JeiTransferUtil;
 import buildcraft.lib.gui.ContainerBC_Neptune;
-import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
+import buildcraft.silicon.container.AssemblyTableTransfer;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 
 /**
@@ -134,13 +134,9 @@ public class AssemblyTableTransferHandler implements IRecipeTransferHandler<Cont
         }
 
         if (doTransfer) {
-            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS, buf -> {
-                buf.writeBoolean(maxTransfer);
-                buf.writeVarInt(need.size());
-                for (ItemStack n : need) {
-                    buf.writeNbt(NBTUtilBC.itemStackToNBT(n));
-                }
-            });
+            var registries = player.level().registryAccess();
+            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS,
+                    buf -> AssemblyTableTransfer.write(buf, registries, maxTransfer, need));
         }
         return null;
     }

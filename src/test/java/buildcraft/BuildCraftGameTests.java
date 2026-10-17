@@ -1062,6 +1062,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_harvest_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::harvestActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
         reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);

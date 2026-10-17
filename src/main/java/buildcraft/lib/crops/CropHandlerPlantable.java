@@ -6,6 +6,8 @@
 
 package buildcraft.lib.crops;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -124,10 +126,17 @@ public enum CropHandlerPlantable implements ICropHandler {
 
     @Override
     public boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops) {
+        return harvestCrop(world, pos, drops, null);
+    }
+
+    /** As {@code player} when given: the drops' breaker and the cause of the block-destroy event. */
+    @Override
+    public boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops, @Nullable Player player) {
         if (!world.isClientSide() && world instanceof ServerLevel serverLevel) {
             BlockState state = world.getBlockState(pos);
-            Block.getDrops(state, serverLevel, pos, world.getBlockEntity(pos)).forEach(drops::add);
-            world.destroyBlock(pos, false);
+            Block.getDrops(state, serverLevel, pos, world.getBlockEntity(pos), player, ItemStack.EMPTY)
+                    .forEach(drops::add);
+            world.destroyBlock(pos, false, player);
             return !drops.isEmpty();
         }
         return false;

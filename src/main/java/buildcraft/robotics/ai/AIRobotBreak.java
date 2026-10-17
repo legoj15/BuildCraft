@@ -122,9 +122,8 @@ public class AIRobotBreak extends AIRobot {
         if (blockDamage > 1.0F) {
             blockDamage = 0;
             ItemStack held = robot.getHeldItem();
-            // The owner's profile (the leased player's, which is the generic one when the robot has no owner).
-            Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(
-                    serverLevel, blockToBreak, held, player.getGameProfile());
+            // By the leased player itself (the owner's, or the generic one when the robot has no owner).
+            Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(serverLevel, blockToBreak, held, player);
             if (drops.isPresent()) {
                 for (ItemStack stack : drops.get()) {
                     // 7.1.x's harvestBlock dropped at the broken block; keep that (the harvester/plant

@@ -22,6 +22,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.robotics.RobotProtection;
 
 /** Plants the held seed at {@code blockFound} through the
  *  {@link buildcraft.api.crops.CropManager} (sustainability check + crop placement via a fake player).
@@ -63,9 +64,11 @@ public class AIRobotPlant extends AIRobot {
         if (delay++ > 40) {
             if (robot.level() instanceof ServerLevel serverLevel) {
                 // The fake player stands where the robot stands; the handler puts the seed in its main
-                // hand itself before the useOn, and closing the lease takes it back out.
+                // hand itself before the useOn, and closing the lease takes it back out. It is the home
+                // station's owner (the generic player when there is none), so a claim mod judges the owner
+                // and a planting advancement reaches them.
                 ItemStack held = robot.getHeldItem();
-                try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+                try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                     FakePlayer player = lease.player();
                     player.setPos(robot.position());
                     if (!CropManager.plantCrop(serverLevel, player, held, blockFound)) {

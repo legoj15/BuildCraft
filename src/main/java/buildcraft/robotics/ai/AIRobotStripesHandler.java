@@ -75,8 +75,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
             // handler put in its hands.
             // As the home station's owner (like the stripes pipe's owner), so a block placed in a claim is asked
             // about as that player, and an advancement a used item grants reaches them.
-            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease((ServerLevel) robot.level(),
-                    RobotProtection.ownerOf(robot), null)) {
+            try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, (ServerLevel) robot.level())) {
                 FakePlayer player = lease.player();
                 player.setPos(useToBlock.getX() + 0.5, useToBlock.getY(), useToBlock.getZ() + 0.5);
                 player.setXRot(0);

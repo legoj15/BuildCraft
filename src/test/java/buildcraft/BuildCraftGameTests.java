@@ -925,6 +925,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_drains_source_into_tank", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpDrainsSourceIntoTank);
         reg.accept("buildcraftunofficial:robot_pump_keeps_waterlogged_marker", () -> buildcraft.robotics.ai.RobotActionAIsTester::pumpKeepsWaterloggedMarker);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
+        reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

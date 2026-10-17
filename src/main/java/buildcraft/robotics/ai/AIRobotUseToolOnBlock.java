@@ -25,6 +25,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.robotics.RobotProtection;
 
 /** Right-clicks the held tool on the block at {@code useToBlock} (the farmer's hoe-on-dirt), damaging the
  *  tool per use. Ported from 7.1.x {@code AIRobotUseToolOnBlock} (7.1.x used the block's
@@ -66,7 +67,9 @@ public class AIRobotUseToolOnBlock extends AIRobot {
             if (useToBlock != null && robot.level() instanceof ServerLevel serverLevel) {
                 ItemStack held = robot.getHeldItem();
                 boolean used;
-                try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel)) {
+                // As the home station's owner (the generic player when there is none), so a claim mod judges
+                // the owner and an advancement the tool grants reaches them.
+                try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                     FakePlayer player = lease.player();
                     player.setPos(robot.position());
                     // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.

@@ -155,6 +155,8 @@ public class AIRobotGotoStation extends AIRobot {
                         stationIndex.getY() + 0.5 + stationSide.getStepY() * 0.5,
                         stationIndex.getZ() + 0.5 + stationSide.getStepZ() * 0.5));
             } else {
+                // Explicit, not left to the constructor's starting value: a failed approach is a failed goto.
+                setSuccess(false);
                 terminate();
             }
         } else {

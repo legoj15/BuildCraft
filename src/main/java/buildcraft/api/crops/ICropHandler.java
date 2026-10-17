@@ -1,5 +1,7 @@
 package buildcraft.api.crops;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -49,6 +51,15 @@ public interface ICropHandler {
      * @param drops a list to return the harvest's drops.
      * @return true if the block was successfully harvested. */
     boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops);
+
+    /** Harvest the crop as {@code player} (a machine's fake player, say): the player a real harvest would name as the
+     * breaker, for the drops' loot context and the block-destroy event. Handlers that predate this ignore the player.
+     *
+     * @param player the harvester, or null for none
+     * @return true if the block was successfully harvested. */
+    default boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops, @Nullable Player player) {
+        return harvestCrop(world, pos, drops);
+    }
 
 }
 

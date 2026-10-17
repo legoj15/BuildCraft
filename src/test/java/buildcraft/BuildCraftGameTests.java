@@ -226,9 +226,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_backs_off", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeBacksOffFromARefusedBlock);
+        reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks_again_for_new_target", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksAgainForANewTarget);
         reg.accept("buildcraftunofficial:machine_protection_robots_ask", () -> buildcraft.lib.misc.MachineProtectionTester::robotsAskBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_asks_chosen_only", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchAsksOnlyAboutTheChosenTarget);
         reg.accept("buildcraftunofficial:machine_protection_robot_search_remembers_refusals", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchSkipsRefusedTargetsAndRemembersThem);
+        reg.accept("buildcraftunofficial:machine_protection_robot_search_refusals_belong_to_owner", () -> buildcraft.lib.misc.MachineProtectionTester::robotSearchRefusalsBelongToTheOwner);
+        reg.accept("buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft", () -> buildcraft.lib.misc.MachineProtectionTester::namelessOwnerAsksAsBuildCraft);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_remainder", () -> buildcraft.robotics.ai.RobotStripesTester::stripesPlacesOnReservedCellAndKeepsRemainder);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_used_stack_on_hand_swap", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand);
         reg.accept("buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone", () -> buildcraft.robotics.ai.RobotStripesTester::stripesKeepsASwappedHandStackWhenTheUsedOneIsGone);
@@ -608,8 +611,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_protection_permit_rechecked_before_drain", () -> buildcraft.factory.PumpProtectionTester::permitIsRecheckedBeforeTheDrain);
         reg.accept("buildcraftunofficial:pump_protection_drain_refusal_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::drainTimeRefusalSpendsTheBucketsPower);
         reg.accept("buildcraftunofficial:pump_abandoned_bucket_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::abandonedBucketSpendsItsPower);
-        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsNeverLoadAChunk);
-        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsStillWorkOnLoadedCells);
+        reg.accept("buildcraftunofficial:refusal_memory_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.RefusalMemoryLevelTester::levelOverloadsNeverLoadAChunk);
+        reg.accept("buildcraftunofficial:refusal_memory_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.RefusalMemoryLevelTester::levelOverloadsStillWorkOnLoadedCells);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
@@ -1070,6 +1073,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:robot_harvest_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::harvestActsAsTheStationOwner);
+        reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
         reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);

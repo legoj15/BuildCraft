@@ -28,7 +28,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.BlockClaims;
-import buildcraft.lib.misc.ProtectionRefusals;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -47,9 +47,6 @@ import buildcraft.robotics.statements.ActionRobotFilter;
  *  {@code update()} and only fall through to {@code super.update()} when nothing is found yet. */
 public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
-    /** Game ticks a refused block is left alone before the owner's claim is asked about it again (1 minute). */
-    public static final int REFUSAL_RETRY_TICKS = 1200;
-
     /** The block found. Saved; a reloaded one is re-claimed whether or not an action resumed, because the break
      *  boards' {@code update()} goes back to breaking a remembered block. */
     private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM);
@@ -61,8 +58,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     private volatile Set<Block> gateBlockFilter = Set.of();
 
     /** Blocks protection mods refused this robot, so a refused block is not chosen again (and not asked about
-     *  again) every search. Transient: a reloaded board simply asks again. */
-    private final ProtectionRefusals refusals = new ProtectionRefusals(REFUSAL_RETRY_TICKS, 256);
+     *  again) every search. Keyed on the home station's owner, whom the robot asks as: a refusal says nothing about
+     *  anyone else. Policy {@link RefusalMemory#ROBOT_SEARCH}. Transient: a reloaded board simply asks again. */
+    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
 
     public BoardRobotGenericSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -98,14 +96,14 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
-                && !refusals.isRefused(pos, level.getBlockState(pos), level.getGameTime());
+                && !refusals.isRefused(level, pos, RobotProtection.ownerOf(robot));
     }
 
     /** Asked once about the block the search has settled on (not about every candidate scanned, which would post a
      *  break event per block to every listener on every search): whether protection mods let this robot break it —
      *  every subclass breaks what it finds. A refusal is remembered so the next search skips the block instead of
      *  flying back to it (and asking) forever; it lasts while the block is unchanged, up to
-     *  {@link #REFUSAL_RETRY_TICKS}, since lifting a claim fires no event. */
+     *  the {@link RefusalMemory#ROBOT_SEARCH} window, since lifting a claim fires no event. */
     public boolean approveSearchTarget(@Nullable Level level, BlockPos pos) {
         if (level == null) {
             return false;
@@ -113,7 +111,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos)) {
             return true;
         }
-        refusals.remember(pos, level.getBlockState(pos), level.getGameTime());
+        refusals.remember(level, pos, RobotProtection.ownerOf(robot));
         return false;
     }
 

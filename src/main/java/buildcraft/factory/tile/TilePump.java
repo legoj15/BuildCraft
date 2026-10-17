@@ -51,7 +51,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockUtil;
-import buildcraft.lib.misc.DrainRefusals;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.VecUtil;
@@ -123,14 +123,12 @@ public class TilePump extends TileMiner implements IDebuggable {
     /**
      * Cells that refused to be drained (a claim mod cancelled the break probe, or a modded {@code BucketPickup}
      * refused {@code pickupBlock}), skipped by the queue builders while they stay unchanged — see
-     * {@link DrainRefusals}. Transient on purpose: never saved, so a reloaded pump asks once more.
+     * {@link RefusalMemory} (policy {@link RefusalMemory#DRAIN}). Transient on purpose: never saved, so a reloaded
+     * pump asks once more. Its permit is the cell protection mods cleared when the current bucket started (none
+     * between buckets): it only spares the per-tick start check while the bucket charges, the fluid is never taken
+     * on it alone (see {@link #mine}).
      */
-    private final DrainRefusals refusals = new DrainRefusals();
-
-    /** The cell protection mods cleared when the current bucket started; null between buckets. Only spares the
-     *  per-tick start check while the bucket charges: the fluid is never taken on this alone (see {@link #mine}). */
-    @Nullable
-    private BlockPos permittedPos;
+    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
 
     /** The position just below the bottom of the pump tube. */
     private BlockPos targetPos;
@@ -387,7 +385,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     /** Whether the pump should line up a bucket from {@code pos}: {@code drainBlock} can take it, and it has not
      *  refused (and stayed the same) since. A refusing cell still carries the BFS through it, just not the queue. */
     private boolean isQueueable(BlockPos pos) {
-        return BlockUtil.getDrainableFluid(level, pos) != null && !refusals.isRefused(level, pos);
+        return BlockUtil.getDrainableFluid(level, pos) != null && !refusals.isRefused(level, pos, getOwner());
     }
 
     /**
@@ -406,7 +404,7 @@ public class TilePump extends TileMiner implements IDebuggable {
      */
     private void skipRefusedCell() {
         progress = 0;
-        refusals.remember(level, currentPos);
+        refusals.remember(level, currentPos, getOwner());
         paths.remove(currentPos);
         nextPos();
     }
@@ -458,7 +456,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         // Moving to another cell ends the permit: a later re-queue of this one must ask again at the start. The
         // other way a bucket is abandoned (mine() waiting out rebuildDelay on a scooped or cut-off cell) clears it
         // itself. Neither is what keeps a claim out: the drain itself always asks again (see mine()).
-        permittedPos = null;
+        refusals.revokePermit();
         while (!queue.isEmpty()) {
             currentPos = queue.removeLast();
             if (canDrain(currentPos)) {
@@ -512,12 +510,13 @@ public class TilePump extends TileMiner implements IDebuggable {
             // the pump moves straight on to the next one (one cell per tick, so a fully claimed pool is not probed
             // all at once). The permit only spares this check while the bucket charges.
             boolean askedThisTick = false;
-            if (canDrain(currentPos) && !currentPos.equals(permittedPos)) {
+            if (canDrain(currentPos)
+                    && !refusals.isPermitted(currentPos, level.getBlockState(currentPos), getOwner())) {
                 if (!mayDrain(currentPos)) {
                     skipRefusedCell();
                     return;
                 }
-                permittedPos = currentPos;
+                refusals.permit(currentPos, level.getBlockState(currentPos), getOwner());
                 askedThisTick = true;
             }
             progress += (int) battery.extractPower(0, target - progress);
@@ -567,7 +566,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 tank.fill(0, drain, false);
                 progress = 0;
-                permittedPos = null; // the next bucket asks again
+                refusals.revokePermit(); // the next bucket asks again
 
                 if (getOwner() != null) {
                     AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);
@@ -596,7 +595,7 @@ public class TilePump extends TileMiner implements IDebuggable {
             // the cell coming back before the rebuild would skip the start check. The power charged for it is
             // gone as well, like a refused cell's (skipRefusedCell): a charge kept would let the next cell, or this
             // one once the water returns, finish with no power of its own.
-            permittedPos = null;
+            refusals.revokePermit();
             progress = 0;
             if (rebuildDelay > 0) {
                 return;

@@ -24,6 +24,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
@@ -35,6 +36,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.MachineBreakAttributionTester;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
@@ -185,6 +187,36 @@ public class RobotOwnerIdentityTester {
             }
         }
         requireActedAs(helper, swingers, owner, "breaking");
+        helper.succeed();
+    }
+
+    /** A crop is harvested as the owner: the harvest's block-destroy game event names the owner's fake player (the
+     *  crop API used to harvest with no player at all, so the destroy, and the crop's loot, had no breaker). */
+    public static void harvestActsAsTheStationOwner(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = ownerProfile("bc_robot_harvest_owner");
+        BlockPos wheatRel = new BlockPos(2, 2, 2);
+        BlockPos robotRel = new BlockPos(3, 2, 2);
+        helper.setBlock(wheatRel.below(), Blocks.FARMLAND);
+        helper.setBlock(wheatRel.above(), Blocks.GLOWSTONE);
+        helper.setBlock(wheatRel, Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 7));
+        BlockPos wheat = helper.absolutePos(wheatRel);
+
+        EntityRobot robot = robotOwnedBy(helper, robotRel, owner);
+        try (MachineBreakAttributionTester.BreakerObserver observer =
+                     new MachineBreakAttributionTester.BreakerObserver(wheat)) {
+            AIRobotHarvest harvester = new AIRobotHarvest(robot, wheat);
+            for (int cycles = 0; cycles < 40 && level.getBlockState(wheat).is(Blocks.WHEAT); cycles++) {
+                harvester.cycle();
+            }
+            helper.assertTrue(!level.getBlockState(wheat).is(Blocks.WHEAT), "precondition: the wheat was harvested");
+            observer.requireBrokenBy(helper, owner, "harvesting");
+        } finally {
+            // The harvest drops at the robot's feet this same tick.
+            for (ItemEntity drop : EntityArenaUtil.droppedItems(helper, robotRel, 0.75)) {
+                drop.discard();
+            }
+        }
         helper.succeed();
     }
 

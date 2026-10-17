@@ -21,6 +21,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.crops.CropManager;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 
 /** Harvests a mature crop at {@code blockFound} through the
@@ -74,7 +75,7 @@ public class AIRobotHarvest extends AIRobot {
             // posted a break event; the port's handlers break the crop directly, so the robot asks here instead.
             NonNullList<ItemStack> drops = NonNullList.create();
             if (!(level instanceof ServerLevel serverLevel) || !RobotProtection.canBreak(robot, serverLevel, blockFound)
-                    || !CropManager.harvestCrop(level, blockFound, drops)) {
+                    || !harvestAsOwner(serverLevel, drops)) {
                 setSuccess(false);
                 terminate();
                 return;
@@ -85,6 +86,14 @@ public class AIRobotHarvest extends AIRobot {
                         robot.position().x, robot.position().y, robot.position().z, stack));
             }
             // No terminate on the success path — see the class javadoc for the 7.1.x quirk that follows.
+        }
+    }
+
+    /** Harvests as the home station owner's leased fake player (the one the permission probe asked as), so the crop's
+     *  drops and its block-destroy event name the owner, not nobody. */
+    private boolean harvestAsOwner(ServerLevel level, NonNullList<ItemStack> drops) {
+        try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, level)) {
+            return CropManager.harvestCrop(level, blockFound, drops, lease.player());
         }
     }
 

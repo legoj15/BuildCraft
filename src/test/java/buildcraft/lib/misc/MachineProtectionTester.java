@@ -7,6 +7,7 @@
 package buildcraft.lib.misc;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,12 +33,15 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.test.ClaimProtectionMod;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotBreak;
@@ -151,18 +155,18 @@ public class MachineProtectionTester {
         }
 
         // The claim is lifted without the block changing - nothing fires an event for that - so the pipe notices
-        // only once its retry window has passed.
-        for (int i = 0; i < PipeBehaviourStripes.REFUSAL_RETRY_TICKS + 60 && !level.getBlockState(target).isAir(); i++) {
+        // only once its retry window (game time) has passed: wait real ticks for it, gated on the block going.
+        EntityArenaUtil.tickUntil(helper, (int) RefusalMemory.STRIPES.windowTicks() + 100, () -> {
             stripes.receivePower(64 * MjAPI.MJ, false);
             stripes.onTick();
-        }
-        check(level.getBlockState(target).isAir(), "once allowed, the stripes pipe breaks the block");
-
-        // The cobblestone drop travels down the pipe; empty it so removing the arena's pipe drops nothing.
-        for (TravellingItem item : ((PipeFlowItems) tile.getPipe().getFlow()).getAllItemsForRender()) {
-            item.getStack().setCount(0);
-        }
-        helper.succeed();
+            return level.getBlockState(target).isAir();
+        }, () -> {
+            // The cobblestone drop travels down the pipe; empty it so removing the arena's pipe drops nothing.
+            for (TravellingItem item : ((PipeFlowItems) tile.getPipe().getFlow()).getAllItemsForRender()) {
+                item.getStack().setCount(0);
+            }
+            helper.succeed();
+        }, "once allowed, the stripes pipe breaks the block");
     }
 
     /** A stripes pipe at {@code pipeRel}, facing up (an unconnected one keeps a non-null direction across ticks). */
@@ -219,6 +223,73 @@ public class MachineProtectionTester {
             check(level.getBlockState(target).is(Blocks.DIRT), "and is still refused");
         }
         helper.succeed();
+    }
+
+    /**
+     * The "already asked" answer belongs to the block it was given for, not to the pipe: a pipe part-way into one
+     * block that is re-pointed at another (a gate direction action, or the auto-repoint), or whose block vanishes and
+     * is replaced, starts over on the new block and asks about it before spending any power on it. Before the fix
+     * the stale answer and the progress carried over, so the pipe charged and cracked a claimed block nobody asked
+     * about (the claim only got its say at the final break).
+     */
+    public static void stripesPipeAsksAgainForANewTarget(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos pipeRel = new BlockPos(2, 1, 2);
+        BlockPos aRel = pipeRel.above();
+        BlockPos bRel = pipeRel.east();
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, pipeRel);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        helper.setBlock(aRel, Blocks.STONE);
+        helper.setBlock(bRel, Blocks.STONE);
+        BlockPos a = helper.absolutePos(aRel);
+        BlockPos b = helper.absolutePos(bRel);
+        long targetA = BlockUtil.computeBlockBreakPower(level, a);
+
+        // Re-pointed: 60% into A, the pipe is turned to face B, which a claim refuses.
+        chargeUntilSixtyPercent(stripes, targetA);
+        try (ClaimProtectionMod claimB = new ClaimProtectionMod(b, true)) {
+            stripes.direction = Direction.EAST;
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claimB.asks() == 1, "the re-pointed pipe asks about B before working on it, asked "
+                    + claimB.asks() + " times");
+            check(stripes.getBreakProgress() == 0, "no power is spent on the refused B: progress "
+                    + stripes.getBreakProgress() / MjAPI.MJ + " MJ");
+            for (int i = 0; i < 20; i++) {
+                stripes.receivePower(64 * MjAPI.MJ, false);
+                stripes.onTick();
+                check(stripes.getBreakProgress() == 0, "B stays refused: no progress (and so no crack) on it");
+            }
+            check(level.getBlockState(b).is(Blocks.STONE), "B is not broken");
+        }
+
+        // Replaced: 60% into A, A vanishes and a claimed block takes its place.
+        stripes.direction = Direction.UP;
+        chargeUntilSixtyPercent(stripes, targetA);
+        helper.setBlock(aRel, Blocks.AIR);
+        stripes.onTick();
+        try (ClaimProtectionMod claimA = new ClaimProtectionMod(a, true)) {
+            helper.setBlock(aRel, Blocks.COBBLESTONE);
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claimA.asks() == 1, "the replacement block is asked about before any power, asked "
+                    + claimA.asks() + " times");
+            check(stripes.getBreakProgress() == 0, "and no power is spent on it: progress "
+                    + stripes.getBreakProgress() / MjAPI.MJ + " MJ");
+            check(level.getBlockState(a).is(Blocks.COBBLESTONE), "the replacement block is not broken");
+        }
+        helper.succeed();
+    }
+
+    /** Ticks {@code stripes} (facing an unclaimed block that needs {@code target}) until it is 60% of the way in. */
+    private static void chargeUntilSixtyPercent(PipeBehaviourStripes stripes, long target) {
+        for (int i = 0; i < 40 && stripes.getBreakProgress() * 10 < target * 6; i++) {
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+        }
+        check(stripes.getBreakProgress() * 10 >= target * 6 && stripes.getBreakProgress() < target,
+                "precondition: the pipe is 60% into the block, at " + stripes.getBreakProgress() + " of " + target);
     }
 
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
@@ -299,6 +370,92 @@ public class MachineProtectionTester {
         for (Entity e : level.getEntities((Entity) null, new AABB(stone).inflate(0.75),
                 e -> e instanceof ItemEntity item && item.getItem().is(Items.COBBLESTONE))) {
             e.discard();
+        }
+        helper.succeed();
+    }
+
+    /** {@code robot}'s home station, owned by {@code owner} (a bare station: no gate actions, so no Filter). */
+    private static void linkTo(EntityRobot robot, BlockPos stationPos, GameProfile owner) {
+        robot.setMainStation(new DockingStation(stationPos, Direction.UP) {
+            @Override
+            public GameProfile getOwner() {
+                return owner;
+            }
+
+            @Override
+            public Iterable<StatementSlot> getActiveActions() {
+                return Collections.emptyList();
+            }
+        });
+    }
+
+    /**
+     * A refusal is an answer about one owner: a search board whose robot is relinked to another player's station
+     * works for that player now, so a block the old owner was refused is a fresh question for the new one. The pump
+     * board already re-keyed its memory on the owner; before the fix the search boards (lumberjack, miner, ...)
+     * kept skipping the block for the new owner until the retry window ran out.
+     */
+    public static void robotSearchRefusalsBelongToTheOwner(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos logRel = new BlockPos(1, 1, 1);
+        helper.setBlock(logRel, Blocks.OAK_LOG);
+        BlockPos log = helper.absolutePos(logRel);
+        GameProfile refusedOwner = new GameProfile(UUID.nameUUIDFromBytes("bc_refused_owner".getBytes()),
+                "bc_refused_owner");
+        GameProfile allowedOwner = new GameProfile(UUID.nameUUIDFromBytes("bc_allowed_owner".getBytes()),
+                "bc_allowed_owner");
+
+        EntityRobot robot = unaddedRobot(helper, new BlockPos(3, 2, 3));
+        robot.setItemInUse(new ItemStack(Items.DIAMOND_AXE));
+        linkTo(robot, helper.absolutePos(new BlockPos(3, 1, 3)), refusedOwner);
+        BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
+
+        // A claim that keeps only the first owner out, as a claim mod with a trusted-players list does.
+        List<UUID> askedBy = new ArrayList<>();
+        Object claim = BreakEventCompat.onBreak(event -> {
+            if (event.getPos().equals(log)) {
+                Player asker = BreakEventCompat.playerOf(event);
+                askedBy.add(asker.getUUID());
+                if (asker.getUUID().equals(GameProfileUtil.getId(refusedOwner))) {
+                    BreakEventCompat.cancel(event);
+                }
+            }
+        });
+        try {
+            check(!lumberjack.approveSearchTarget(level, log), "precondition: the first owner is refused the log");
+            check(!lumberjack.isSearchCandidate(level, log), "precondition: and the refusal is remembered");
+
+            linkTo(robot, helper.absolutePos(new BlockPos(3, 1, 3)), allowedOwner);
+            check(lumberjack.isSearchCandidate(level, log),
+                    "relinked to another owner's station, the log is a candidate again: the refusal was the old owner's");
+            check(lumberjack.approveSearchTarget(level, log), "and the new owner is allowed it");
+            check(askedBy.equals(List.of(GameProfileUtil.getId(refusedOwner), GameProfileUtil.getId(allowedOwner))),
+                    "each owner was asked once, as themselves: " + askedBy);
+        } finally {
+            BreakEventCompat.removeListener(claim);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A machine whose owner was restored without a name (an old save stored only the id) asks as the generic
+     * "[BuildCraft]" identity, not as a blank-named fake player: the probe used to be posted with an empty name, which
+     * claim mods show (and some key on) as nobody at all.
+     */
+    public static void namelessOwnerAsksAsBuildCraft(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, Blocks.STONE);
+        BlockPos pos = helper.absolutePos(rel);
+        GameProfile nameless = new GameProfile(UUID.nameUUIDFromBytes("bc_nameless_owner".getBytes()), "");
+        try (ClaimProtectionMod observer = new ClaimProtectionMod(pos, false)) {
+            check(BlockUtil.canMachineBreak(level, pos, nameless), "an unclaimed block may be broken");
+            check(observer.asks() == 1, "precondition: the probe was posted once, got " + observer.asks());
+            Player asker = observer.askedBy.get(0);
+            check(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE).equals(asker.getUUID()),
+                    "a nameless owner asks as [BuildCraft], got " + asker.getGameProfile());
         }
         helper.succeed();
     }

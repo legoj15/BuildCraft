@@ -61,7 +61,7 @@ import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
-import buildcraft.lib.misc.ProtectionRefusals;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AxisOrder;
 import buildcraft.lib.misc.data.Box;
@@ -102,9 +102,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return hasPendingWork() ? super.getPowerRequested() : 0;
         }
     };
-    /** How long a refused frame-line cell is left alone before the quarry asks about it again. Package-private for
-     *  the game test. */
-    static final int FRAME_RETRY_TICKS = 200;
     /** The most refused cells probed in one tick, so a large claimed volume is re-asked a few cells at a time. */
     private static final int FRAME_RETRY_PROBES_PER_TICK = 8;
     public final Box frameBox = new Box();
@@ -125,11 +122,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // check() keeps a refused cell out of frameBreakBlockPoses while that state stands and the retry window runs, so
     // the power loop is not pinned to it; an unminable frame-line cell is a gap in the frame meanwhile. The window
     // exists because lifting a claim fires no event: retryRefusedFrameCells() probes each cell once its window ends,
-    // even after the quarry has finished and gone idle. Unbounded on purpose (a capacity would make a large claimed
-    // volume thrash, forgetting live refusals the next scan re-asks): the cells held are cells of the frame box.
-    // updatePoses() clears it, and the clock is ticksRun, the quarry's own server tick count.
-    private final ProtectionRefusals frameRefusals = new ProtectionRefusals(FRAME_RETRY_TICKS, Integer.MAX_VALUE);
-    private long ticksRun = 0;
+    // even after the quarry has finished and gone idle. Policy RefusalMemory.QUARRY_FRAME (uncapped on purpose, see
+    // the table there); updatePoses() clears it.
+    private final RefusalMemory frameRefusals = new RefusalMemory(RefusalMemory.QUARRY_FRAME);
     public Task currentTask = null;
     public Vec3 drillPos;
     public Vec3 clientDrillPos;
@@ -464,7 +459,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     /** Queues a cell for clearing, unless it was refused on the block it still holds and the retry window runs. */
     private void queueFrameBreak(BlockPos blockPos) {
-        if (frameRefusals.isRefused(blockPos, level.getBlockState(blockPos), ticksRun)) {
+        if (frameRefusals.isRefused(level, blockPos, getOwner())) {
             return;
         }
         frameBreakBlockPoses.add(blockPos);
@@ -481,7 +476,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         if (frameRefusals.isEmpty()) {
             return;
         }
-        for (BlockPos blockPos : frameRefusals.takeExpired(ticksRun, FRAME_RETRY_PROBES_PER_TICK)) {
+        for (BlockPos blockPos : frameRefusals.takeExpired(level, FRAME_RETRY_PROBES_PER_TICK)) {
             if (level.isLoaded(blockPos) && canMine(blockPos)) {
                 frameRefusals.forget(blockPos);
                 check(blockPos);
@@ -677,8 +672,6 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
 
-        ticksRun++;
-
         // Re-apply miningMaxDepth so config changes take effect on already-placed quarries
         // (saved mining box was sized under whatever config was in effect when it was placed).
         // Mining-box top stays anchored to the frame interior; only the floor depends on the
@@ -763,7 +756,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 } else if (canIgnoreInFrameBox(blockPos)) {
                     // A real block the quarry may not break: park it so check() stops re-queueing it,
                     // else this branch (which skips everything after it) would spin on it every tick.
-                    frameRefusals.remember(blockPos, level.getBlockState(blockPos), ticksRun);
+                    frameRefusals.remember(level, blockPos, getOwner());
                 }
                 check(blockPos);
                 continue power_loop;

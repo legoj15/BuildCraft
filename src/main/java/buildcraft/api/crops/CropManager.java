@@ -3,6 +3,8 @@ package buildcraft.api.crops;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -74,13 +76,20 @@ public final class CropManager {
     }
 
     public static boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops) {
+        return harvestCrop(world, pos, drops, null);
+    }
+
+    /** {@link #harvestCrop(Level, BlockPos, NonNullList)} as {@code player}; see
+     * {@link ICropHandler#harvestCrop(Level, BlockPos, NonNullList, Player)}. */
+    public static boolean harvestCrop(Level world, BlockPos pos, NonNullList<ItemStack> drops, @Nullable Player player) {
         BlockState state = world.getBlockState(pos);
         for (ICropHandler cropHandler : handlers) {
             if (cropHandler.isMature(world, state, pos)) {
-                return cropHandler.harvestCrop(world, pos, drops);
+                return cropHandler.harvestCrop(world, pos, drops, player);
             }
         }
-        return defaultHandler != null && defaultHandler.isMature(world, state, pos) && defaultHandler.harvestCrop(world, pos, drops);
+        return defaultHandler != null && defaultHandler.isMature(world, state, pos)
+                && defaultHandler.harvestCrop(world, pos, drops, player);
     }
 
 }

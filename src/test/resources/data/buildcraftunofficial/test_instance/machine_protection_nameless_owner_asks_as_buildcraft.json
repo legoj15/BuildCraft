@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells",
+    "function": "buildcraftunofficial:machine_protection_nameless_owner_asks_as_buildcraft",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

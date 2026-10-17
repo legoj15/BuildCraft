@@ -8,12 +8,7 @@
  */
 package buildcraft.robotics.boards;
 
-import java.util.Objects;
-import java.util.UUID;
-
 import javax.annotation.Nullable;
-
-import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -32,9 +27,8 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.BlockClaims;
 import buildcraft.factory.BCFactoryBlocks;
-import buildcraft.lib.misc.DrainRefusals;
-import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.robotics.JobClaim;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndUnloadFluids;
@@ -65,14 +59,9 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     private IFluidFilter fluidFilter;
 
     /** Blocks the pump AI was refused (by a protection mod or the block's own pickup), skipped by the search
-     *  while they stay unchanged. Every entry was refused to {@link #refusalsOwner}: the AI asks as the home
-     *  station's owner, so a refusal says nothing about anyone else. Transient: a reloaded board asks once more. */
-    private final DrainRefusals refusals = new DrainRefusals();
-
-    /** The UUID of the home-station owner every entry in {@link #refusals} was refused to (null: no owner, the
-     *  generic "[BuildCraft]" identity). */
-    @Nullable
-    private UUID refusalsOwner;
+     *  while they stay unchanged. Keyed on the home station's owner, whom the AI asks as: a refusal says nothing
+     *  about anyone else. Policy {@link RefusalMemory#DRAIN}. Transient: a reloaded board asks once more. */
+    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
 
     public BoardRobotPump(IRobotAccess iRobot) {
         super(iRobot);
@@ -131,20 +120,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))
-                && !refusalsForCurrentOwner().isRefused(level, pos);
-    }
-
-    /** {@link #refusals}, first emptied if the robot now works for someone other than the owner they were refused
-     *  to (it was relinked to another player's station): that owner's refusals are not this one's, so the
-     *  memory is keyed on the owner as well as the cell and its state. */
-    private DrainRefusals refusalsForCurrentOwner() {
-        GameProfile owner = RobotProtection.ownerOf(robot);
-        UUID ownerId = owner == null ? null : GameProfileUtil.getId(owner);
-        if (!Objects.equals(ownerId, refusalsOwner)) {
-            refusals.clear();
-            refusalsOwner = ownerId;
-        }
-        return refusals;
+                && !refusals.isRefused(level, pos, RobotProtection.ownerOf(robot));
     }
 
     @Override
@@ -174,7 +150,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             // board's. Without it the robot flew straight back to the same block on every pass.
             Level level = robot.level();
             if (pumpAi.refused() && level != null && pumpAi.blockToPump() != null) {
-                refusalsForCurrentOwner().remember(level, pumpAi.blockToPump());
+                refusals.remember(level, pumpAi.blockToPump(), RobotProtection.ownerOf(robot));
             }
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {

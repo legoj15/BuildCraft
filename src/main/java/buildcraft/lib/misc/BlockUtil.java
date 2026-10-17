@@ -19,7 +19,6 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -146,20 +145,19 @@ public class BlockUtil {
      * owner-bound FakePlayer positioned at {@code pos} and returns {@code !event.isCanceled()},
      * so third-party protection mods (FTB Chunks, GriefPrevention, OpenPartiesAndClaims, server
      * protection plugins) can gate the break by cancelling the event. A machine with no recorded
-     * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}.
+     * owner (or an owner without a name) asks as {@link FakePlayerUtil#BUILDCRAFT_PROFILE}: see
+     * {@link MachineIdentity}, the rule the machine's own fake player follows too.
      * <p>
      * Runs once per scanned block in quarry / mining-well / builder loops (and per break for stripes
      * pipes and robots), so the player is the cached one, leased for the duration of the event. The
      * event is a probe — {@link BreakEventCompat#isProbe} tells BuildCraft's own break listeners to
      * ignore it.
      */
-    public static boolean canMachineBreak(ServerLevel level, BlockPos pos, GameProfile owner) {
+    public static boolean canMachineBreak(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
         if (BCCoreConfig.minePlayerProtected.get()) {
             return true;
         }
-        GameProfile profile = (owner != null && GameProfileUtil.getName(owner) != null)
-                ? owner : FakePlayerUtil.BUILDCRAFT_PROFILE;
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, pos)) {
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
             BlockState state = level.getBlockState(pos);
             return BreakEventCompat.canBreak(level, pos, state, lease.player());
         }
@@ -417,21 +415,45 @@ public class BlockUtil {
      * @param world  the server world
      * @param pos    the position of the block
      * @param tool   the tool to use for breaking (affects drop calculation)
-     * @param owner  the player profile responsible for the break
+     * @param owner  the machine's owner: the break is done as their fake player (see {@link MachineIdentity})
      * @return an Optional containing the list of dropped items, or empty if the break failed
      */
     public static Optional<List<ItemStack>> breakBlockAndGetDrops(
-            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, GameProfile owner) {
+            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, @Nullable GameProfile owner) {
         return breakBlockAndGetDropsWithXp(world, pos, tool, owner).map(BreakResult::drops);
+    }
+
+    /** {@link #breakBlockAndGetDrops(ServerLevel, BlockPos, ItemStack, GameProfile)} by a player the caller already
+     *  holds (a robot's leased fake player, mid-cycle). */
+    public static Optional<List<ItemStack>> breakBlockAndGetDrops(
+            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, Player breaker) {
+        return breakBlockAndGetDropsWithXp(world, pos, tool, breaker).map(BreakResult::drops);
     }
 
     /**
      * Like {@link #breakBlockAndGetDrops} but also returns the XP the wielded tool would have
      * awarded. Callers spawn the orb wherever they want (e.g. the machine block instead of the
      * broken position) — this helper never creates an orb itself.
+     *
+     * <p>The break is done by the owner's leased fake player (the "[BuildCraft]" one for an unowned
+     * or nameless owner, {@link MachineIdentity}): it is the breaker of the loot and XP context and
+     * the cause of the block-destroy game event, so sculk sensors, loot modifiers and claim or log
+     * mods see who broke the block, as 1.12.2's fake-player harvest did.
      */
     public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
-            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, GameProfile owner) {
+            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, @Nullable GameProfile owner) {
+        if (world.getBlockState(pos).isAir()) {
+            return Optional.of(new BreakResult(List.of(), 0, FluidStack.EMPTY));
+        }
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(world, MachineIdentity.of(owner), pos)) {
+            return breakBlockAndGetDropsWithXp(world, pos, tool, lease.player());
+        }
+    }
+
+    /** {@link #breakBlockAndGetDropsWithXp(ServerLevel, BlockPos, ItemStack, GameProfile)} by a player the caller
+     *  already holds. */
+    public static Optional<BreakResult> breakBlockAndGetDropsWithXp(
+            ServerLevel world, BlockPos pos, @Nonnull ItemStack tool, Player breaker) {
         BlockState state = world.getBlockState(pos);
         if (state.isAir()) {
             return Optional.of(new BreakResult(List.of(), 0, FluidStack.EMPTY));
@@ -467,17 +489,16 @@ public class BlockUtil {
 
         // 6-arg getDrops so the loot context's TOOL parameter carries the wielded tool's
         // enchantments — silk_touch returns the block itself, fortune multiplies ore drops.
-        // The 4-arg overload defaults TOOL to ItemStack.EMPTY and loses both. Entity is
-        // null — none of our machines are "the breaker" in a way the loot context cares
-        // about (THIS_ENTITY is only read by entity-specific drop rules like player kills).
+        // The 4-arg overload defaults TOOL to ItemStack.EMPTY and loses both. The breaker is
+        // the loot context's THIS_ENTITY, as a player's own break would be.
         List<ItemStack> drops = tierGated
                 ? new ArrayList<>()
-                : new ArrayList<>(Block.getDrops(state, world, pos, be, (Entity) null, tool));
+                : new ArrayList<>(Block.getDrops(state, world, pos, be, breaker, tool));
 
         // XP via NeoForge's IBlockStateExtension.getExpDrop — same tool/breaker shape as
         // getDrops above. Zeroed under a tier-gated break to parallel the empty drops list
         // (no harvest, no XP), matching the order vanilla `Block.dropFromBlock` uses.
-        int xp = tierGated ? 0 : state.getExpDrop(world, pos, be, (Entity) null, tool);
+        int xp = tierGated ? 0 : state.getExpDrop(world, pos, be, breaker, tool);
 
         // Pure-fluid blocks (LiquidBlock instances — Blocks.WATER, Blocks.LAVA, BC oil/fuel,
         // etc.) need a hard setBlock(AIR), NOT world.destroyBlock(). Vanilla destroyBlock calls
@@ -506,7 +527,7 @@ public class BlockUtil {
         if (state.getBlock() instanceof LiquidBlock) {
             world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         } else {
-            world.destroyBlock(pos, false);
+            world.destroyBlock(pos, false, breaker);
         }
         resyncChangedBlocks(world, supportsBefore);
 

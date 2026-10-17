@@ -195,7 +195,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * <p>The sweep stops at the first uncleared fluid, so it is cheap while mopping (typical case), but a clear
      * area, and one holding only tolerated fluid, are only known after every cell has been read. That is why the
      * gate does not call this directly: {@link #areaFluid} asks for it only once a placement actually reaches the
-     * gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks. The walk itself allocates nothing per
+     * gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks, except to let a fragile placement
+     * through (see {@link #areaFluid} for what a reused answer may get wrong). The walk itself allocates nothing per
      * cell (one reused cursor); a fluid-holding cell costs a few position objects while its tolerance is derived.
      */
     protected AreaFluid scanAreaFluid() {
@@ -237,10 +238,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * What the fluid in the build area means to the place-task gate, from the last sweep if it is recent enough.
      * Only a placement that reaches the gate asks, so a Builder with nothing to place never sweeps; and the result
      * is reused for {@link #FLUID_SCAN_INTERVAL} ticks (a sweep reads every cell of the box and, with tolerated
-     * water standing, never stops early). The gate only decides what is queued, and the check sweep it leans on
-     * is already slower than that, so a result a flow step old costs at worst a placement queued a few ticks
-     * early or late; {@code SchematicBlockDefault#build} still refuses a fragile block with fluid beside it at the
-     * moment of placement. A change of fluid mode, or of snapshot, discards the result.
+     * water standing, never stops early). A change of fluid mode, or of snapshot, discards the result.
+     *
+     * <p>What a stale result can and cannot do:
+     * <ul>
+     * <li>A stale answer that holds a placement back only delays it, by at most one interval.</li>
+     * <li>A stale answer that lets a FRAGILE placement through is never trusted:
+     *     {@link #passesFreshFluidGate} re-sweeps before its items are taken. Without that, water entering the box
+     *     after the sweep could reach the block a few flow steps after it is placed and wash it away (its item
+     *     drops): {@code SchematicBlockDefault#build} refuses only when fluid is already beside or above it.</li>
+     * <li>A stale answer CAN let a non-fragile placement through up to one interval after fluid entered the box
+     *     (in CLEAR, before the mop has started). That is accepted: such a block is not washed away, and
+     *     {@code BlueprintBuilder#canPlace} still refuses, live, a CLEAR placement into a cell holding fluid.</li>
+     * </ul>
      */
     private AreaFluid areaFluid(EnumFluidHandlingMode mode) {
         if (cachedAreaFluid == null || cachedAreaFluidMode != mode || cachedAreaFluidAge >= FLUID_SCAN_INTERVAL) {
@@ -263,6 +273,21 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             return !(fluid == AreaFluid.TOLERATED_ONLY && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos));
         }
         return !(fluid != AreaFluid.NONE && isFragileSchematicAt(pos));
+    }
+
+    /**
+     * The last step before a placement that passed {@link #passesFluidGate} takes its items: a fragile placement is
+     * let through only on a sweep taken this tick (re-sweeping if the reused one is older), so water that entered
+     * the box since cannot wash it away (see {@link #areaFluid}). It runs after every other queue filter, so only a
+     * placement about to be queued pays for the sweep, and at most once per tick: a fragile block that is refused,
+     * or that cannot stand yet, keeps to one sweep per {@link #FLUID_SCAN_INTERVAL}.
+     */
+    private boolean passesFreshFluidGate(EnumFluidHandlingMode mode, BlockPos pos) {
+        if (mode != EnumFluidHandlingMode.CLEAR && mode != EnumFluidHandlingMode.REPLACE) return true;
+        if (cachedAreaFluid != null && cachedAreaFluidMode == mode && cachedAreaFluidAge == 0) return true;
+        if (!isFragileSchematicAt(pos)) return true;
+        cachedAreaFluid = null;
+        return passesFluidGate(mode, pos);
     }
 
     /** Full box sweeps {@link #scanAreaFluid()} has run so far (diagnostic; see {@code fluidSweeps}). */
@@ -549,7 +574,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   Gating at queue-add stops the cycle entirely — items never leave inventory if
             //   the placement would defer.
             //
-            // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it.
+            // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it, from
+            // a sweep up to FLUID_SCAN_INTERVAL ticks old. passesFreshFluidGate, the last filter before items are
+            // taken, re-sweeps before a fragile placement is let through on an old answer.
             EnumFluidHandlingMode fluidMode = getFluidMode();
             if (!tile.canExcavate() || breakTasks.isEmpty()) {
                 if (blocks.length != 0) {
@@ -569,6 +596,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     .filter(this::isReadyToPlace)
                     .limit(MAX_QUEUE_SIZE - placeTasks.size())
                     .filter(this::canPlace)
+                    .filter(pos -> passesFreshFluidGate(fluidMode, pos))
                     .map(blockPos ->
                         new PlaceTask(
                             blockPos,

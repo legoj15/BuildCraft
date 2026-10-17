@@ -488,6 +488,7 @@ public class BuildCraftGameTests {
         // The whole-box fluid sweep behind the place-task gate must not run every tick.
         reg.accept("buildcraftunofficial:builder_fluid_sweep_bounded_with_tolerated_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::toleratedWaterDoesNotMakeTheBuilderSweepEveryTick);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_allocates_nothing_per_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::sweepAllocatesNothingPerCell);
+        reg.accept("buildcraftunofficial:builder_fluid_sweep_no_stale_fragile_placement", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::fragilePlacementIsNotLetThroughOnAStaleSweep);
 
         // Builder block-survival gating (canSurvive guard in SchematicBlockDefault.build()).
         reg.accept("buildcraftunofficial:builder_support_torch_on_floor", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTorchOnFloorPlaces);

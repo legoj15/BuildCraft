@@ -370,6 +370,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_lava_blocks_drill", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testLavaBlocksDrillButWaterDoesNot);
         // A waterlogged block on the frame line is broken (with drops) before the frame goes in, never framed over.
         reg.accept("buildcraftunofficial:quarry_frame_breaks_waterlogged_block", () -> buildcraft.builders.tile.TileQuarryFluidPassabilityTester::testFrameLineWaterloggedBlockIsBrokenNotOverwritten);
+        // A cell in the frame volume the quarry may never mine (bedrock, a claim-protected block) is skipped, not
+        // spun on forever: the rest of the frame is built and the drill starts.
+        reg.accept("buildcraftunofficial:quarry_frame_completes_around_bedrock", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundBedrock);
+        reg.accept("buildcraftunofficial:quarry_frame_completes_around_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundClaimProtectedBlock);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -529,6 +533,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_drills_past_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellDrillsPastWaterToSolidBelow);
         reg.accept("buildcraftunofficial:mining_well_stays_complete_over_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testFinishedWellStaysCompleteOverWater);
         reg.accept("buildcraftunofficial:mining_well_mines_waterlogged_block", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellMinesWaterloggedBlock);
+
+        // The miner tube is waterloggable: drilling a bore through a pond keeps the water inside the tube and
+        // retracting (or breaking the well) puts the source back, instead of deleting a column of the pond.
+        reg.accept("buildcraftunofficial:mining_well_tube_keeps_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testTubeKeepsWaterInBore);
+        reg.accept("buildcraftunofficial:mining_well_retract_restores_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testRetractRestoresWater);
+        reg.accept("buildcraftunofficial:pump_probe_ignores_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpProbeIgnoresWaterloggedTube);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);

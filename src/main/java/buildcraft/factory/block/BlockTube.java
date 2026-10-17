@@ -8,32 +8,91 @@ package buildcraft.factory.block;
 
 import com.mojang.serialization.MapCodec;
 
+import org.jetbrains.annotations.Nullable;
+
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+//? if >=1.21.10 {
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+//?} else {
+/*import net.minecraft.world.level.LevelAccessor;*/
+//?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.factory.tile.TileMiner;
+import buildcraft.lib.block.BCWaterlogging;
 
 /**
  * The tube block placed below a mining well / quarry as it drills down.
  * Unbreakable and invisible — its visuals are handled by the pump's laser
  * renderer (RenderPump). The block only provides collision.
+ *
+ * <p>Waterloggable, so a bore drilled through a pond keeps the pond's water inside the tube instead of
+ * overwriting it, and a retracting tube leaves the water source back (see {@link #stateFor}). Shared pattern:
+ * {@link BCWaterlogging}.
  */
-public class BlockTube extends Block {
+@SuppressWarnings("this-escape")
+public class BlockTube extends Block implements SimpleWaterloggedBlock {
     private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 16, 12);
 
     public static final MapCodec<BlockTube> CODEC = simpleCodec(BlockTube::new);
 
     public BlockTube(Properties properties) {
         super(properties);
+        registerDefaultState(defaultBlockState().setValue(BCWaterlogging.WATERLOGGED, false));
     }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(BCWaterlogging.WATERLOGGED);
+    }
+
+    /** The tube state to put into the cell at {@code pos}: waterlogged when that cell currently holds a water
+     *  source, so the miner replacing the water with a tube does not delete it. */
+    public BlockState stateFor(BlockGetter level, BlockPos pos) {
+        return BCWaterlogging.placementState(defaultBlockState(), level, pos);
+    }
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return BCWaterlogging.fluidState(state);
+    }
+
+    @Nullable
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return BCWaterlogging.placementState(defaultBlockState(), context);
+    }
+
+    // Keep the contained water flowing/levelling when neighbours change (standard SimpleWaterloggedBlock pattern).
+    @Override
+    //? if >=1.21.10 {
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
+            Direction direction, BlockPos neighbourPos, BlockState neighbourState,
+            net.minecraft.util.RandomSource random) {
+        BCWaterlogging.tickContainedWater(state, ticks, level, pos);
+        return super.updateShape(state, level, ticks, pos, direction, neighbourPos, neighbourState, random);
+    }
+    //?} else {
+    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighbourState,
+            LevelAccessor level, BlockPos pos, BlockPos neighbourPos) {
+        BCWaterlogging.tickContainedWater(state, level, pos);
+        return super.updateShape(state, direction, neighbourState, level, pos, neighbourPos);
+    }*/
+    //?}
 
     @Override
     protected MapCodec<? extends Block> codec() {

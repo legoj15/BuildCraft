@@ -93,6 +93,12 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     }
 
     public void onRemove() {
+        removeTubes();
+    }
+
+    /** Removes the whole tube column under the miner. {@code removeBlock} swaps each tube for its fluid state, so
+     *  a waterlogged tube leaves its water source behind and a dry one leaves air. */
+    private void removeTubes() {
         for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth.get(); y--) {
             BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
             if (level.getBlockState(blockPos).is(BCFactoryBlocks.TUBE.get())) {
@@ -115,19 +121,12 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
         int newY = getTargetPos() != null ? getTargetPos().getY() : worldPosition.getY();
         int newLength = worldPosition.getY() - newY;
         if (newLength != wantedLength) {
-            // Remove old tubes
-            for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth.get(); y--) {
-                BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
-                if (level.getBlockState(blockPos).is(BCFactoryBlocks.TUBE.get())) {
-                    level.removeBlock(blockPos, false);
-                } else {
-                    break;
-                }
-            }
-            // Place new tubes
+            // Remove old tubes (waterlogged ones leave their water source behind)
+            removeTubes();
+            // Place new tubes; a cell holding a water source gets a waterlogged tube so the water survives
             for (int y = worldPosition.getY() - 1; y > newY; y--) {
                 BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
-                level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().defaultBlockState());
+                level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().stateFor(level, blockPos));
             }
             currentLength = wantedLength = newLength;
             setChanged();

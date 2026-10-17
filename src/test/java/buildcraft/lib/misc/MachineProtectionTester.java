@@ -70,11 +70,11 @@ public class MachineProtectionTester {
     }
 
     /** Records every break event at {@code pos}, cancelling them all when {@code refuse} is set. */
-    private static final class ProtectionMod implements AutoCloseable {
-        final List<Player> askedBy = new ArrayList<>();
+    public static final class ProtectionMod implements AutoCloseable {
+        public final List<Player> askedBy = new ArrayList<>();
         private final Object token;
 
-        ProtectionMod(BlockPos pos, boolean refuse) {
+        public ProtectionMod(BlockPos pos, boolean refuse) {
             token = BreakEventCompat.onBreak(event -> {
                 if (event.getPos().equals(pos)) {
                     askedBy.add(BreakEventCompat.playerOf(event));

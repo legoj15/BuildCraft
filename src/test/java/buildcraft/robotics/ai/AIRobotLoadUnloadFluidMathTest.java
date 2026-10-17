@@ -19,6 +19,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 //?} else {
 /*import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -202,6 +203,30 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(0, station.getAmount());
     }
 
+    /** The exact loss this pins: a station that REPORTS room (so the amount is sized from it) but then
+     *  refuses the fill. The 1.21.1 branch used to drain the robot's tank for real and only then learn the
+     *  fill was refused, destroying the carried bucket; the 1.21.10+ branch runs both halves in one
+     *  rolled-back transaction. Both nodes must leave the fluid aboard, on the dry run and on the real
+     *  call. */
+    @Test
+    public void unloadKeepsTheCarriedFluidWhenTheStationRefusesTheFill() {
+        FluidStation station = new FluidStation(BUCKET, true);
+        setRobotFluid(BUCKET);
+
+        int simulated = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotUnloadFluids.unload(robot, station, false));
+        Assertions.assertEquals(0, simulated, "a station that refuses the fill takes nothing, even on the dry run");
+        Assertions.assertEquals(BUCKET, robotAmount(), "a dry run never touches the robot's tank");
+
+        int unloaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotUnloadFluids.unload(robot, station, true));
+
+        Assertions.assertEquals(0, unloaded, "nothing moved: the station refused the fill");
+        Assertions.assertEquals(BUCKET, robotAmount(),
+                "the refused fill must leave the carried bucket aboard — draining first destroys it");
+        Assertions.assertEquals(0, station.getAmount(), "and the station gained nothing");
+    }
+
     // ── a station that PASSES the gate policy but has no fluid handler ──────
     // A Provide/Accept Fluids gate action makes canRobotExtractFluid/canRobotAcceptFluid say yes, but a
     // station whose pipe has no wooden-fluid-pipe extraction face still hands back a null handler.
@@ -276,8 +301,19 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         private final FluidStacksResourceHandler tank;
 
         FluidStation(int capacity) {
+            this(capacity, false);
+        }
+
+        /** {@code refuseFill}: the tank still reports its capacity (so a caller sizes the transfer from the
+         *  room it sees) but every insert returns 0 — a station that lies about having room. */
+        FluidStation(int capacity, boolean refuseFill) {
             super();
-            tank = new FluidStacksResourceHandler(1, capacity);
+            tank = new FluidStacksResourceHandler(1, capacity) {
+                @Override
+                public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                    return refuseFill ? 0 : super.insert(index, resource, amount, transaction);
+                }
+            };
         }
 
         @Override
@@ -312,8 +348,19 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         private final FluidTank tank;
 
         FluidStation(int capacity) {
+            this(capacity, false);
+        }
+
+        // refuseFill: the tank still reports its capacity (so a caller sizes the transfer from the room it
+        // sees) but every fill returns 0 — a station that lies about having room.
+        FluidStation(int capacity, boolean refuseFill) {
             super();
-            tank = new FluidTank(capacity);
+            tank = new FluidTank(capacity) {
+                @Override
+                public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
+                    return refuseFill ? 0 : super.fill(resource, action);
+                }
+            };
         }
 
         @Override

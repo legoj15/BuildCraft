@@ -76,7 +76,7 @@ public final class LevelChunkCache<L, V> {
      */
     @Nullable
     public V get(L level, int chunkX, int chunkZ) {
-        if (owner.get() != level) {
+        if (!owner.refersTo(level)) {
             entries.clear();
             owner = new WeakReference<>(level);
         }
@@ -104,8 +104,8 @@ public final class LevelChunkCache<L, V> {
     }
 
     /** Drops one chunk's entry if it belongs to {@code level} (a chunk that reloaded or unloaded). */
-    public void invalidate(Object level, int chunkX, int chunkZ) {
-        if (owner.get() == level) {
+    public void invalidate(L level, int chunkX, int chunkZ) {
+        if (owner.refersTo(level)) {
             entries.remove(key(chunkX, chunkZ));
         }
     }

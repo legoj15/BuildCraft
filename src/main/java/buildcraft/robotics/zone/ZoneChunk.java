@@ -124,10 +124,30 @@ public class ZoneChunk {
         return !fullSet && (property == null || property.isEmpty());
     }
 
+    /** A chunk's bit set covers 16x16 = 256 columns, so its byte form is 32 bytes at most. */
+    private static final int MAX_BIT_BYTES = 16 * 16 / 8;
+
+    /** Whether both chunks mark the same columns ("every column" is the same whether it is flagged full or set
+     *  bit by bit). */
+    public boolean sameContent(ZoneChunk other) {
+        return effectiveBits().equals(other.effectiveBits());
+    }
+
+    private BitSet effectiveBits() {
+        if (fullSet) {
+            BitSet all = new BitSet(16 * 16);
+            all.set(0, 16 * 16);
+            return all;
+        }
+        return property == null ? new BitSet(0) : property;
+    }
+
     public ZoneChunk readFromByteBuf(FriendlyByteBuf buf) {
         int flags = buf.readUnsignedByte();
         if ((flags & 1) != 0) {
-            property = BitSet.valueOf(buf.readByteArray());
+            // Bounded: this is also read from client-sent paint messages, and an unbounded array would let a
+            // sender pin a megabyte BitSet in a layer that is then persisted and re-sent.
+            property = BitSet.valueOf(buf.readByteArray(MAX_BIT_BYTES));
         }
         fullSet = (flags & 2) != 0;
 

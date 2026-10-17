@@ -17,6 +17,7 @@ import net.minecraft.world.inventory.SimpleContainerData;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.tile.TileZonePlanner;
 import buildcraft.robotics.zone.ZonePlan;
@@ -110,8 +111,39 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     public static final int NET_PAINT_LAYER = 10;
     public static final int NET_SYNC_LAYER = 11;
 
-    /** Per-viewer snapshot of the last layer bytes pushed to this menu's client, for change detection. */
-    private byte[][] lastSentLayers;
+    /** What this viewer's menu knows about one layer: the instance and modification count it last examined
+     *  (so an untouched layer costs two compares per tick, not a serialisation) and the bytes last pushed to
+     *  (or known to be already held by) this viewer's client. */
+    private static final class LayerView {
+        ZonePlan seen;
+        int seenMod;
+        byte[] sent;
+
+        void markSent(ZonePlan layer, byte[] bytes) {
+            seen = layer;
+            seenMod = layer.modCount();
+            sent = bytes;
+        }
+
+        /** Forces the next diff to push the layer, whatever it holds. */
+        void forget() {
+            seen = null;
+            sent = null;
+        }
+    }
+
+    /** Per-viewer, per-layer sync state; created on first use. */
+    private LayerView[] views;
+
+    private LayerView view(int index) {
+        if (views == null) {
+            views = new LayerView[tile.layers.length];
+        }
+        if (views[index] == null) {
+            views[index] = new LayerView();
+        }
+        return views[index];
+    }
 
     /** Client → server: a painted/erased layer. */
     public void sendPaint(int index, ZonePlan layer) {
@@ -128,18 +160,23 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             return;
         }
         ZonePlan[] layers = tile.layers;
-        if (lastSentLayers == null) {
-            lastSentLayers = new byte[layers.length][];
-        }
         for (int i = 0; i < layers.length; i++) {
-            byte[] current = serialize(layers[i]);
-            if (!Arrays.equals(current, lastSentLayers[i])) {
-                lastSentLayers[i] = current;
+            ZonePlan layer = layers[i];
+            LayerView view = view(i);
+            // This runs every tick for every open planner: only a layer that was replaced or edited since the
+            // last look is serialised and compared.
+            if (view.seen == layer && view.seenMod == layer.modCount()) {
+                continue;
+            }
+            view.seen = layer;
+            view.seenMod = layer.modCount();
+            byte[] current = serialize(layer);
+            if (!Arrays.equals(current, view.sent)) {
+                view.sent = current;
                 final int idx = i;
-                final ZonePlan layer = layers[i];
                 sendMessage(NET_SYNC_LAYER, buf -> {
                     buf.writeByte(idx);
-                    layer.writeToByteBuf(buf);
+                    buf.writeBytes(current);
                 });
             }
         }
@@ -158,20 +195,8 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
         if (id == NET_PAINT_LAYER && !isClient) {
             int idx = buffer.readUnsignedByte();
-            if (tile != null && idx >= 0 && idx < tile.layers.length) {
-                ZonePlan plan = new ZonePlan();
-                plan.readFromByteBuf(buffer);
-                tile.layers[idx] = plan;
-                tile.setChanged();
-                // The painter's client already shows this layer (it applied the stroke before sending it), so the
-                // per-tick diff must not push it back at them: by the time the echo lands they may have drawn a
-                // newer stroke, and the echo would wipe it until the next sync. Recording the stored bytes as
-                // "already sent" suppresses the echo for this viewer only; every other open menu keeps its own
-                // snapshot and still receives the change.
-                if (lastSentLayers == null) {
-                    lastSentLayers = new byte[tile.layers.length][];
-                }
-                lastSentLayers[idx] = serialize(plan);
+            if (tile != null && idx < tile.layers.length) {
+                receivePaint(idx, buffer);
             }
             return;
         }
@@ -185,5 +210,35 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);
+    }
+
+    /**
+     * Server side of a paint: the client sent its whole copy of one layer. That is untrusted input, so it is
+     * read with a size cap, and only its chunks inside the survey square are taken (the layer's own chunks
+     * beyond it, e.g. a zone read in from a far-away map location, are kept as they were).
+     *
+     * <p>The painter's client already shows what it sent, so when nothing had to be altered the stored bytes are
+     * recorded as already sent to this viewer: the per-tick diff then does not push the layer back at them. An
+     * echo would land a round trip late, wiping any newer stroke they have drawn meanwhile until the next sync.
+     * Only this menu's view is touched; every other open planner still receives the change. When the server
+     * stored something other than what was sent (clamped, or the message was refused), the painter IS resynced
+     * to the real layer.
+     */
+    private void receivePaint(int idx, PacketBufferBC buffer) {
+        LayerView view = view(idx);
+        ZonePlan received = new ZonePlan();
+        if (!received.readFromByteBufBounded(buffer)) {
+            BCLog.logger.warn("[robotics.zone] Refused a malformed or oversized layer from a Zone Planner viewer");
+            view.forget();
+            return;
+        }
+        ZonePlan stored = ZonePlan.clampToSurvey(received, tile.layers[idx]);
+        tile.layers[idx] = stored;
+        tile.setChanged();
+        if (stored.sameContent(received)) {
+            view.markSent(stored, serialize(stored));
+        } else {
+            view.forget();
+        }
     }
 }

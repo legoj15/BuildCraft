@@ -149,4 +149,150 @@ public class ZonePlannerPaintSyncTester {
         helper.assertTrue(watcher.syncsFor(LAYER) == 1, "the other viewer is sent the new layer");
         helper.succeed();
     }
+
+    // ── Bounds on what a client may send ────────────────────────────────────────────────────
+
+    /** Tile-relative block x of a chunk (1000) far outside the survey square. */
+    private static final int FAR = 16_000;
+
+    /** A client may paint inside the survey square only: a chunk it tries to add beyond that is dropped, and a
+     *  zone the layer already has out there (read in from a map location) survives the paint untouched. The
+     *  painter is told what the server really holds, since it differs from what they sent. */
+    public static void paintBeyondSurveyRangeIsClamped(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        tile.layers[LAYER] = cells(FAR, 0);
+        RecordingMenu menu = new RecordingMenu(viewer(helper), tile);
+        menu.broadcastChanges();
+        menu.sent.clear();
+
+        // The client's copy: the far chunk it was given, a legitimate new stroke, and a far chunk it made up.
+        menu.paint(LAYER, cells(FAR, 0, 3, 3, -FAR, 40));
+
+        ZonePlan stored = tile.layers[LAYER];
+        helper.assertTrue(stored.get(3, 3), "the stroke inside the square is stored");
+        helper.assertFalse(stored.get(-FAR, 40), "a chunk added far outside the square is dropped");
+        helper.assertTrue(stored.get(FAR, 0), "the layer's own far chunk is preserved");
+
+        menu.broadcastChanges();
+        helper.assertTrue(menu.syncsFor(LAYER) == 1,
+                "the painter is sent the clamped layer, which differs from what they sent");
+        helper.succeed();
+    }
+
+    /** The common case with a far chunk present: the client hands back exactly what it was given plus its
+     *  stroke, nothing is altered, so nothing is echoed. */
+    public static void paintKeepingFarChunksIntactIsNotEchoed(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        tile.layers[LAYER] = cells(FAR, 0);
+        RecordingMenu menu = new RecordingMenu(viewer(helper), tile);
+        menu.broadcastChanges();
+        menu.sent.clear();
+
+        menu.paint(LAYER, cells(FAR, 0, 3, 3));
+
+        helper.assertTrue(tile.layers[LAYER].get(FAR, 0) && tile.layers[LAYER].get(3, 3),
+                "both the far chunk and the new stroke are stored");
+        menu.broadcastChanges();
+        helper.assertTrue(menu.syncsFor(LAYER) == 0, "an unaltered paint is not echoed to its painter");
+        helper.succeed();
+    }
+
+    /** A message declaring more chunks than any layer can hold is refused outright: nothing is stored, and the
+     *  painter, who may be showing the rejected layer, is resynced to the real one. */
+    public static void oversizedPaintIsRejected(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        tile.layers[LAYER] = cells(1, 1);
+        ZonePlan before = tile.layers[LAYER];
+        RecordingMenu menu = new RecordingMenu(viewer(helper), tile);
+        menu.broadcastChanges();
+        menu.sent.clear();
+
+        // One more entry than the wire cap, each a distinct full chunk far from the planner.
+        int count = ZonePlan.MAX_CHUNKS_ON_WIRE + 1;
+        PacketBufferBC buf = new PacketBufferBC(Unpooled.buffer());
+        buf.writeByte(LAYER);
+        buf.writeInt(count);
+        for (int i = 0; i < count; i++) {
+            buf.writeInt(1000 + i % 200);
+            buf.writeInt(1000 + i / 200);
+            buf.writeByte(2); // fullSet, no bit array
+        }
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        buf.release();
+        menu.deliver(ContainerZonePlanner.NET_PAINT_LAYER, bytes);
+
+        helper.assertTrue(tile.layers[LAYER] == before && before.get(1, 1) && !before.get(16_000, 16_000),
+                "the layer is unchanged by an oversized message");
+
+        menu.broadcastChanges();
+        helper.assertTrue(menu.syncsFor(LAYER) == 1, "the painter is resynced to the layer the server kept");
+        helper.succeed();
+    }
+
+    /** A message cut short mid-chunk is a rejection too, not a half-stored layer. */
+    public static void truncatedPaintIsRejected(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        tile.layers[LAYER] = cells(1, 1);
+        ZonePlan before = tile.layers[LAYER];
+        RecordingMenu menu = new RecordingMenu(viewer(helper), tile);
+        menu.broadcastChanges();
+        menu.sent.clear();
+
+        PacketBufferBC buf = new PacketBufferBC(Unpooled.buffer());
+        buf.writeByte(LAYER);
+        buf.writeInt(3); // promises three chunks...
+        buf.writeInt(0);
+        buf.writeInt(0);
+        buf.writeByte(2); // ...delivers one
+        byte[] bytes = new byte[buf.readableBytes()];
+        buf.readBytes(bytes);
+        buf.release();
+        menu.deliver(ContainerZonePlanner.NET_PAINT_LAYER, bytes);
+
+        helper.assertTrue(tile.layers[LAYER] == before && !before.get(0, 0),
+                "the layer is unchanged by a truncated message");
+        menu.broadcastChanges();
+        helper.assertTrue(menu.syncsFor(LAYER) == 1, "the painter is resynced");
+        helper.succeed();
+    }
+
+    // ── Cost of the per-tick diff ───────────────────────────────────────────────────────────
+
+    /** A plan that counts how often it is serialised. */
+    private static final class CountingPlan extends ZonePlan {
+        int writes;
+
+        @Override
+        public void writeToByteBuf(net.minecraft.network.FriendlyByteBuf buf) {
+            writes++;
+            super.writeToByteBuf(buf);
+        }
+    }
+
+    /** {@code broadcastChanges} runs every tick for every open planner; a layer nobody touched must cost
+     *  nothing (no re-serialising), while a change still goes down. */
+    public static void unchangedLayersAreNotReserialisedEveryTick(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        CountingPlan counting = new CountingPlan();
+        counting.set(1, 1, true);
+        tile.layers[LAYER] = counting;
+        RecordingMenu menu = new RecordingMenu(viewer(helper), tile);
+
+        menu.broadcastChanges(); // the initial sync serialises it
+        int afterFirst = counting.writes;
+        helper.assertTrue(afterFirst > 0, "baseline: the first broadcast serialised the layer");
+
+        for (int tick = 0; tick < 20; tick++) {
+            menu.broadcastChanges();
+        }
+        helper.assertTrue(counting.writes == afterFirst,
+                "20 idle ticks re-serialised the layer " + (counting.writes - afterFirst) + " times");
+
+        menu.sent.clear();
+        counting.set(2, 2, true);
+        menu.broadcastChanges();
+        helper.assertTrue(menu.syncsFor(LAYER) == 1, "a real change is still pushed");
+        helper.succeed();
+    }
 }

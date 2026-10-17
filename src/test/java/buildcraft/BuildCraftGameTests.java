@@ -864,6 +864,11 @@ public class BuildCraftGameTests {
         // rejected (and the painter resynced), and unchanged layers are not re-serialised every tick.
         reg.accept("buildcraftunofficial:zone_planner_paint_not_echoed", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintIsNotEchoedToItsOriginator);
         reg.accept("buildcraftunofficial:zone_planner_paint_reaches_other_viewers", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintStillReachesOtherViewers);
+        reg.accept("buildcraftunofficial:zone_planner_paint_clamped_to_survey", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintBeyondSurveyRangeIsClamped);
+        reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::paintKeepingFarChunksIntactIsNotEchoed);
+        reg.accept("buildcraftunofficial:zone_planner_paint_oversized_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::oversizedPaintIsRejected);
+        reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
+        reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
 
         // Robotics Ph2 — docking station pluggable: placement auto-registers/removal auto-deregisters
         // in the RobotRegistry, RobotUtils discovery through a real pipe holder, the take/release

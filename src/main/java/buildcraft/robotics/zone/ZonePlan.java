@@ -39,7 +39,22 @@ import buildcraft.lib.misc.NBTUtilBC;
  * {@code ZoneChunk.getRandomBlockPos} from NPE-ing on a chunk with no columns.
  */
 public class ZonePlan implements IZone {
+    /** Width, in blocks, of the Zone Planner's survey view: the map window is 213 px wide and zooms out to
+     *  0.125 px/block ({@code GuiZonePlanner}, {@code ZoneMapCamera.MIN_PX_PER_BLOCK}), "about 1,700 blocks". */
+    public static final int SURVEY_SPAN_BLOCKS = 1704;
+    /** How far from its planner, in chunks, a layer may reach: half the survey span, rounded up. Layers are
+     *  stored tile-relative, so this bounds the chunk coordinates of a layer's keys. */
+    public static final int MAX_CHUNK_RADIUS = ((SURVEY_SPAN_BLOCKS / 2) + 15) >> 4;
+    /** Every chunk of the survey square: the most a layer painted inside it can hold. */
+    public static final int MAX_CHUNKS = (2 * MAX_CHUNK_RADIUS) * (2 * MAX_CHUNK_RADIUS);
+    /** Most chunk entries one wire message may declare. Comfortably above {@link #MAX_CHUNKS} (a full square
+     *  plus a ring of chunks read in from a far-away map location), far below what a packet could declare. */
+    public static final int MAX_CHUNKS_ON_WIRE = 1 << 15;
+
     private final HashMap<Long, ZoneChunk> chunkMapping = new HashMap<>();
+    /** Bumped on every mutation made through this class (not through {@link #getChunkMapping()}'s raw map), so a
+     *  watcher can tell "unchanged since I last looked" without re-serialising. */
+    private int modCount;
 
     public ZonePlan() {}
 
@@ -88,10 +103,65 @@ public class ZonePlan implements IZone {
         }
 
         property.set(x & 0xF, z & 0xF, val);
+        modCount++;
 
         if (property.isEmpty()) {
             chunkMapping.remove(key);
         }
+    }
+
+    /** A counter that moves whenever this plan is mutated through its own methods (never through the raw map
+     *  {@link #getChunkMapping()} exposes). Equal counter on the same instance means unchanged. */
+    public int modCount() {
+        return modCount;
+    }
+
+    /** Whether a tile-relative chunk lies inside the survey square: {@code [-r, r - 1]} on each axis, since
+     *  block offsets floor into chunks. */
+    public static boolean inSurveyRange(int chunkX, int chunkZ) {
+        return chunkX >= -MAX_CHUNK_RADIUS && chunkX < MAX_CHUNK_RADIUS
+                && chunkZ >= -MAX_CHUNK_RADIUS && chunkZ < MAX_CHUNK_RADIUS;
+    }
+
+    /**
+     * What the server stores when a client sends a whole layer: the client's chunks inside the survey square,
+     * plus {@code existing}'s own chunks outside it. A viewer can only see and paint within the square, so it can
+     * neither introduce a far chunk nor erase or rewrite one (a zone read in from a map location may sit
+     * anywhere; the client gets such chunks in its copy and hands them back untouched). Neither input is changed.
+     */
+    public static ZonePlan clampToSurvey(ZonePlan received, ZonePlan existing) {
+        ZonePlan out = new ZonePlan();
+        for (Map.Entry<Long, ZoneChunk> e : received.chunkMapping.entrySet()) {
+            long key = e.getKey();
+            if (inSurveyRange(unpackChunkX(key), unpackChunkZ(key)) && !e.getValue().isEmpty()) {
+                out.chunkMapping.put(key, new ZoneChunk(e.getValue()));
+            }
+        }
+        for (Map.Entry<Long, ZoneChunk> e : existing.chunkMapping.entrySet()) {
+            long key = e.getKey();
+            if (!inSurveyRange(unpackChunkX(key), unpackChunkZ(key)) && !e.getValue().isEmpty()) {
+                out.chunkMapping.put(key, new ZoneChunk(e.getValue()));
+            }
+        }
+        return out;
+    }
+
+    /** True when both plans mark exactly the same columns, however they were built (unlike comparing the wire
+     *  bytes, which follow the hash map's iteration order). */
+    public boolean sameContent(ZonePlan other) {
+        if (other == this) {
+            return true;
+        }
+        if (chunkMapping.size() != other.chunkMapping.size()) {
+            return false;
+        }
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+            ZoneChunk theirs = other.chunkMapping.get(e.getKey());
+            if (theirs == null || !e.getValue().sameContent(theirs)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public List<int[]> getAll() {
@@ -144,6 +214,7 @@ public class ZonePlan implements IZone {
 
     public void readFromNBT(CompoundTag nbt) {
         chunkMapping.clear();
+        modCount++;
         ListTag list = NBTUtilBC.getList(nbt, "chunkMapping", net.minecraft.nbt.Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag zoneChunkTag = NBTUtilBC.getCompound(list, i);
@@ -218,6 +289,7 @@ public class ZonePlan implements IZone {
 
     public ZonePlan readFromByteBuf(FriendlyByteBuf buf) {
         chunkMapping.clear();
+        modCount++;
         int size = buf.readInt();
         for (int i = 0; i < size; i++) {
             long key = packChunkKey(buf.readInt(), buf.readInt());
@@ -229,6 +301,36 @@ public class ZonePlan implements IZone {
             chunkMapping.put(key, value);
         }
         return this;
+    }
+
+    /**
+     * {@link #readFromByteBuf} for a payload from an untrusted sender (a client's paint message): refuses a
+     * declared chunk count above {@link #MAX_CHUNKS_ON_WIRE} before reading any entry, caps each chunk's bit
+     * set at its real size, and reports a truncated or malformed message as a rejection rather than throwing.
+     * Coordinates are NOT filtered here &mdash; see {@link #clampToSurvey}. On {@code false} this plan is left
+     * empty.
+     */
+    public boolean readFromByteBufBounded(FriendlyByteBuf buf) {
+        chunkMapping.clear();
+        modCount++;
+        try {
+            int size = buf.readInt();
+            if (size < 0 || size > MAX_CHUNKS_ON_WIRE) {
+                return false;
+            }
+            for (int i = 0; i < size; i++) {
+                long key = packChunkKey(buf.readInt(), buf.readInt());
+                ZoneChunk value = new ZoneChunk();
+                value.readFromByteBuf(buf);
+                if (!value.isEmpty()) {
+                    chunkMapping.put(key, value);
+                }
+            }
+            return true;
+        } catch (RuntimeException malformed) { // IndexOutOfBounds (truncated), DecoderException (oversized array)
+            chunkMapping.clear();
+            return false;
+        }
     }
 
     public void writeToByteBuf(FriendlyByteBuf buf) {

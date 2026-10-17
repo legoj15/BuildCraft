@@ -534,6 +534,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_stays_complete_over_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testFinishedWellStaysCompleteOverWater);
         reg.accept("buildcraftunofficial:mining_well_mines_waterlogged_block", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellMinesWaterloggedBlock);
 
+        // The miner tube is waterloggable: drilling a bore through a pond keeps the water inside the tube and
+        // retracting (or breaking the well) puts the source back, instead of deleting a column of the pond.
+        reg.accept("buildcraftunofficial:mining_well_tube_keeps_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testTubeKeepsWaterInBore);
+        reg.accept("buildcraftunofficial:mining_well_retract_restores_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testRetractRestoresWater);
+        reg.accept("buildcraftunofficial:pump_probe_ignores_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpProbeIgnoresWaterloggedTube);
+
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
         reg.accept("buildcraftunofficial:pump_probe_dry_spring_under_water", () -> buildcraft.factory.PumpSpringProbeTester::testDrySpringUnderWaterReportsNoOil);

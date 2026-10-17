@@ -258,6 +258,12 @@ public class TilePump extends TileMiner implements IDebuggable {
             if (pumpPos.getY() - pos.getY() > maxDepth) {
                 break;
             }
+            BlockState state = level.getBlockState(pos);
+            // A tube is the miner's own plumbing, never the fluid to pump -- even when it is waterlogged
+            // (a bore drilled through a pond keeps the pond's water inside the tube).
+            if (state.is(BCFactoryBlocks.TUBE.get())) {
+                continue;
+            }
             Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
             if (fluid != null) {
                 if (firstFluid == null) {
@@ -268,11 +274,10 @@ public class TilePump extends TileMiner implements IDebuggable {
                 }
                 continue;
             }
-            BlockState state = level.getBlockState(pos);
             if (state.is(BCCoreBlocks.SPRING_OIL.get())) {
                 return new ColumnProbe(firstFluid, firstOil, pos);
             }
-            if (level.isEmptyBlock(pos) || state.is(BCFactoryBlocks.TUBE.get())) {
+            if (level.isEmptyBlock(pos)) {
                 continue;
             }
             break;

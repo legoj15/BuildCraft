@@ -8,6 +8,7 @@ package buildcraft.lib.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 //? if >=1.21.10 {
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
@@ -49,7 +50,14 @@ public final class BCWaterlogging {
     /** {@code state} with {@link #WATERLOGGED} set when it is being placed into a water source, so placing
      *  the block underwater keeps the water instead of deleting it. */
     public static BlockState placementState(BlockState state, BlockPlaceContext context) {
-        FluidState fluid = context.getLevel().getFluidState(context.getClickedPos());
+        return placementState(state, context.getLevel(), context.getClickedPos());
+    }
+
+    /** {@link #placementState(BlockState, BlockPlaceContext)} for code that places the block without a player
+     *  context (a machine growing a tube column): {@code state} with {@link #WATERLOGGED} set when the cell at
+     *  {@code pos} currently holds a water source. Flowing water is not kept, as for vanilla slabs. */
+    public static BlockState placementState(BlockState state, BlockGetter level, BlockPos pos) {
+        FluidState fluid = level.getFluidState(pos);
         return state.setValue(WATERLOGGED, fluid.getType() == Fluids.WATER);
     }
 

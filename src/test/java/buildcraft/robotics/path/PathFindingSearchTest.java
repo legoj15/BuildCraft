@@ -307,4 +307,36 @@ public class PathFindingSearchTest {
             return BlockPos.ZERO;
         }
     }
+
+    @Test
+    public void testAnExhaustedScanStillWaitsForItsRunningPathFinders() {
+        // A wide open layer split by a wall with one gap at the far end: the robot starts west of the wall, the
+        // target sits east of it, so the path finder must flood most of the west half before it finds the gap -
+        // far more than the one PATH_ITERATIONS budget a single iterate() gives it. The scan itself is one delta,
+        // used up by that first iterate().
+        MockSoftGrid grid = new MockSoftGrid().fill(0, Y, 0, 79, Y, 79);
+        Set<BlockPos> wall = new HashSet<>();
+        for (int z = 0; z < 79; z++) {
+            wall.add(new BlockPos(40, Y, z));
+        }
+        BlockPos start = new BlockPos(38, Y, 2);
+        BlockPos target = new BlockPos(42, Y, 2);
+        SoftBlockAccess access = new SoftBlockAccess() {
+            @Override
+            public boolean isSoft(BlockPos pos) {
+                return !wall.contains(pos) && !pos.equals(target) && grid.isSoft(pos);
+            }
+        };
+        PathFindingSearch s = new PathFindingSearch(access, start, List.of(target.subtract(start)).iterator(),
+                target::equals, NO_END_SLACK, 400f, null, new HashSet<>());
+
+        s.iterate();
+        Assertions.assertNull(s.getResultTarget(), "precondition: the path finder is still running after one round");
+
+        Assertions.assertFalse(s.isDone(),
+                "the scan is used up but a path finder is still running: the search is not done, or its last "
+                        + "target is dropped");
+        run(s);
+        Assertions.assertEquals(target, s.getResultTarget(), "the running path finder finds the target");
+    }
 }

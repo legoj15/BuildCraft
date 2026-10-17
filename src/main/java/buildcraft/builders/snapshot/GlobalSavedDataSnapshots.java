@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -36,10 +37,13 @@ import net.neoforged.fml.loading.FMLPaths;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.nbt.NbtSquisher;
 
 public class GlobalSavedDataSnapshots {
     private static final String SNAPSHOT_FILE_EXTENSION = ".bcnbt";
+    /** Bytes of the header hash kept in a named snapshot's file name; enough to tell one build's names apart. */
+    private static final int HEADER_DIGEST_BYTES = 8;
     /** How often the background scan looks for files added or removed outside the game. */
     private static final long RESCAN_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(5);
     /** One daemon thread shared by both sides: after the first, scans only stat files that are already indexed. */
@@ -66,10 +70,12 @@ public class GlobalSavedDataSnapshots {
     private final File snapshotsFile;
 
     private GlobalSavedDataSnapshots(Side side) {
-        snapshotsFile = new File(
-            FMLPaths.GAMEDIR.get().toFile(),
-            "snapshots-" + side.name().toLowerCase(Locale.ROOT)
-        );
+        this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)));
+    }
+
+    /** A store over {@code directory}; the game uses one per side under the game directory. */
+    GlobalSavedDataSnapshots(File directory) {
+        snapshotsFile = directory;
         if (!snapshotsFile.exists()) {
             if (!snapshotsFile.mkdirs()) {
                 throw new RuntimeException("Failed to make the directories required for snapshots: " + snapshotsFile);
@@ -97,15 +103,39 @@ public class GlobalSavedDataSnapshots {
     private static final org.apache.logging.log4j.Logger LOGGER =
             org.apache.logging.log4j.LogManager.getLogger("BCSavedSnapshots");
 
+    /**
+     * The file a snapshot is saved to: {@code <hash>.bcnbt} for bare content, {@code <hash>-<name digest>.bcnbt} when
+     * the key carries a header, so one build kept under several names (the Electronic Library) gets one file per
+     * name. Every name starts with the content hash, which is what {@link #readSnapshot} and the index rely on.
+     */
+    static String fileName(Snapshot.Key key) {
+        String name = key.toString();
+        if (key.header != null) {
+            byte[] digest = HashUtil.computeHash(key.header.serializeNBT());
+            name += "-" + HashUtil.convertHashToString(Arrays.copyOf(digest, HEADER_DIGEST_BYTES));
+        }
+        return name + SNAPSHOT_FILE_EXTENSION;
+    }
+
+    /** Whether a file holding {@code stored} answers a lookup for {@code wanted}: the same key, or (unless
+     *  {@code exact}) the same content when the lookup names no header (blueprint items look content up by hash). */
+    private static boolean answers(Snapshot.Key stored, Snapshot.Key wanted, boolean exact) {
+        return Objects.equals(stored, wanted)
+            || !exact && stored != null && wanted.header == null && Arrays.equals(stored.hash, wanted.hash);
+    }
+
     private Pair<Snapshot, File> readSnapshot(Snapshot.Key key) {
+        return readSnapshot(key, false);
+    }
+
+    /** The first file answering {@code key}; with {@code exact}, only a file holding that very key (deletes). */
+    private Pair<Snapshot, File> readSnapshot(Snapshot.Key key, boolean exact) {
         String targetPrefix = key.toString();
-        // addSnapshot names every file exactly <hash>.bcnbt, so try that before scanning the directory.
-        File exact = new File(snapshotsFile, targetPrefix + SNAPSHOT_FILE_EXTENSION);
-        if (exact.isFile()) {
-            Snapshot snapshot = readSnapshotFile(exact);
-            if (snapshot != null && Objects.equals(snapshot.key, key)) {
-                return Pair.of(snapshot, exact);
-            }
+        // Try the file addSnapshot would write before scanning for older or hand-copied ones (<hash>*.bcnbt).
+        File exactFile = new File(snapshotsFile, fileName(key));
+        if (exactFile.isFile()) {
+            Pair<Snapshot, File> found = matching(exactFile, key, exact);
+            if (found != null) return found;
         }
         File[] files = snapshotsFile.listFiles();
         if (files == null) {
@@ -113,17 +143,27 @@ public class GlobalSavedDataSnapshots {
             return null;
         }
         for (File snapshotFile : files) {
-            if (snapshotFile.equals(exact)) continue;
+            if (snapshotFile.equals(exactFile)) continue;
             if (snapshotFile.getName().startsWith(targetPrefix) &&
                 snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION)) {
-                Snapshot snapshot = readSnapshotFile(snapshotFile);
-                if (snapshot != null && Objects.equals(snapshot.key, key)) {
-                    return Pair.of(snapshot, snapshotFile);
-                }
+                Pair<Snapshot, File> found = matching(snapshotFile, key, exact);
+                if (found != null) return found;
             }
         }
         LOGGER.debug("readSnapshot: no file in {} holds key {}", snapshotsFile, targetPrefix);
         return null;
+    }
+
+    /** The snapshot in {@code snapshotFile} if it answers {@code key}; a content-only lookup gets it without its
+     *  header, so anything derived from it (a Replacer copy) carries no stale name. */
+    @Nullable
+    private static Pair<Snapshot, File> matching(File snapshotFile, Snapshot.Key key, boolean exact) {
+        Snapshot snapshot = readSnapshotFile(snapshotFile);
+        if (snapshot == null || !answers(snapshot.key, key, exact)) return null;
+        if (key.header == null && snapshot.key.header != null) {
+            snapshot.key = new Snapshot.Key(snapshot.key, (Snapshot.Header) null);
+        }
+        return Pair.of(snapshot, snapshotFile);
     }
 
     @Nullable
@@ -150,11 +190,8 @@ public class GlobalSavedDataSnapshots {
     }
 
     public void addSnapshot(Snapshot snapshot) {
-        File snapshotFile = new File(
-            snapshotsFile,
-            snapshot.key.toString() + SNAPSHOT_FILE_EXTENSION
-        );
-        if (!snapshotFile.exists()) {
+        if (!alreadyStored(snapshot.key)) {
+            File snapshotFile = new File(snapshotsFile, fileName(snapshot.key));
             try (FileOutputStream fileOutputStream = new FileOutputStream(snapshotFile)) {
                 NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), fileOutputStream);
             } catch (IOException e) {
@@ -164,18 +201,41 @@ public class GlobalSavedDataSnapshots {
                 index.put(snapshotFile.getName(), snapshot.key, snapshotFile.lastModified(), snapshotFile.length());
             }
         }
-        snapshotsCache.invalidate(snapshot.key);
+        invalidate(snapshot.key);
     }
 
+    /**
+     * Whether saving {@code key} would add nothing, checked by file name so a save never decompresses a large
+     * snapshot: the file {@link #fileName} gives it exists, or (for a named key) an older {@code <hash>.bcnbt} from
+     * before names split files holds it. A {@code <hash>.bcnbt} holding a name also answers a content-only save,
+     * since a content-only lookup finds it.
+     */
+    private boolean alreadyStored(Snapshot.Key key) {
+        if (new File(snapshotsFile, fileName(key)).isFile()) return true;
+        if (key.header == null) return false;
+        File legacy = new File(snapshotsFile, key + SNAPSHOT_FILE_EXTENSION);
+        return legacy.isFile() && matching(legacy, key, true) != null;
+    }
+
+    /** Delete every file holding exactly {@code key} (an old-style and a new-style file can both hold one entry);
+     *  other names of the same build stay, even when {@code key} is content-only. */
     public void removeSnapshot(Snapshot.Key key) {
-        Optional.ofNullable(readSnapshot(key)).map(Pair::getRight).ifPresent(snapshotFile -> {
+        Pair<Snapshot, File> found;
+        while ((found = readSnapshot(key, true)) != null) {
+            File snapshotFile = found.getRight();
             if (!snapshotFile.delete()) {
                 BCLog.logger.error("Failed to delete the snapshot file: " + snapshotFile);
-            } else {
-                index.remove(snapshotFile.getName());
+                break;
             }
-            snapshotsCache.invalidate(key);
-        });
+            index.remove(snapshotFile.getName());
+        }
+        invalidate(key);
+    }
+
+    /** Drop {@code key} from the cache, and the content-only lookup that a file holding it also answers. */
+    private void invalidate(Snapshot.Key key) {
+        snapshotsCache.invalidate(key);
+        snapshotsCache.invalidate(new Snapshot.Key(key, (Snapshot.Header) null));
     }
 
     @Nullable

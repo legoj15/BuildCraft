@@ -53,9 +53,11 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
      *  A parameter that IS set but names no live station still does nothing, exactly as 7.1.x — a player
      *  pointing at a station that has since been destroyed must not be silently re-homed.
      *
-     *  <p>Note that the destination being the robot's current station makes this mostly a re-dock:
-     *  {@code DockingStation.takeAsMain} returns early for a station the robot has already taken, so it
-     *  does not promote that station to MAIN. That is 7.1.x's behaviour too, not an omission here. */
+     *  <p>A robot already docked at the destination is left alone (an empty parameter on a docked robot's own
+     *  station is the common case). 7.1.x redirected it anyway, the redirect ended on the spot, and the gate
+     *  re-fired it every tick: the robot's board was restarted each tick and the robot never got on with its
+     *  work. Such a redirect also never promoted the station to MAIN ({@code DockingStation.takeAsMain} returns
+     *  early for a station the robot already holds), so skipping it loses nothing. */
     @Override
     public void actionActivate(IStatementContainer container, IStatementParameter[] parameters) {
         IStatementParameter param = parameters != null && parameters.length > 0 ? parameters[0] : null;
@@ -69,7 +71,10 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
                     IRobotRegistry registry = RobotManager.registryProvider.getRegistry(robot.level());
                     newStation = getStation((StatementParameterItemStack) param, registry);
                 }
-                if (newStation != null) {
+                // A robot already docked where it is being sent has nowhere to go: the goto would end in its own
+                // start() on the spot, and a gate that holds fires this every tick - each one aborting the board's
+                // AI for a redirect that does nothing, which froze the robot for as long as the gate stayed on.
+                if (newStation != null && newStation != robot.getDockingStation()) {
                     robot.overrideAI(new AIRobotGotoStation(robot, newStation, true));
                 }
             }

@@ -372,12 +372,15 @@ public class RobotGateTester {
     }
 
     /** The same action with its map-location parameter LEFT EMPTY. 7.1.x defaulted {@code newStation} to
-     *  the gate's OWN station — {@code AIRobotGoAndLinkToDock(robot, station)} — so an unparameterised
-     *  Goto Station still redirected the docked robot, at its own station. The port returned early on an
+     *  the gate's OWN station - {@code AIRobotGoAndLinkToDock(robot, station)} - so an unparameterised
+     *  Goto Station still redirected the robot linked to that station, home. The port returned early on an
      *  empty parameter and did nothing at all.
      *
-     *  <p>Asserted on the redirect being handed out, which is the whole of the difference: the parameter
-     *  is unset, so nothing else in the world changes. */
+     *  <p>The robot here is LINKED to the station but not docked at it (the gate's trigger is plain TRUE, so
+     *  it fires regardless): that is the one place the empty-parameter default still has something to do. A
+     *  robot docked at the station is {@link #gotoStationActionAtTheDockedStationLeavesTheRobotAlone}'s case.
+     *  Asserted on the redirect being handed out, which is the whole of the difference: the parameter is
+     *  unset, so nothing else in the world changes. */
     public static void gotoStationActionWithNoParameterTargetsItsOwnStation(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 2);
@@ -386,8 +389,7 @@ public class RobotGateTester {
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
 
         PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
-        gate.logic.statements[0].trigger.set(
-                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
         gate.logic.statements[0].action.set(
                 ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
         // Deliberately NO action.set(0, ...): the slot holds the empty StatementParameterItemStack the
@@ -411,20 +413,97 @@ public class RobotGateTester {
                         return false;
                     }
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    station.take(robot[0]);
-                    robot[0].dock(station);
+                    helper.assertTrue(station.takeAsMain(robot[0]),
+                            "the free station must take the robot as its main (home) link");
+                    helper.assertTrue(robot[0].getDockingStation() == null,
+                            "the robot is linked to the station but not docked at it");
 
                     gate.logic.resolveActions();
-                    helper.assertTrue(gate.logic.triggerOn[0],
-                            "the in-station trigger must fire while the robot is docked here");
 
                     buildcraft.api.robots.AIRobot override = robot[0].getOverridingAI();
                     helper.assertTrue(override != null,
-                            "a Goto Station action with an EMPTY parameter must still redirect the docked "
-                                    + "robot — 7.1.x defaulted the destination to the gate's own station");
+                            "a Goto Station action with an EMPTY parameter must still send the robot linked "
+                                    + "to the gate's station home - 7.1.x defaulted the destination to the "
+                                    + "gate's own station");
                     helper.assertTrue(override instanceof buildcraft.robotics.ai.AIRobotGotoStation,
                             "the redirect must be a goto-station move, got " + override);
                     return true;
+                },
+                () -> {
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the station never registered, or the robot never received its id");
+    }
+
+    /** A robot already docked at the station the action names - an empty parameter defaults to the gate's own
+     *  station, a map location may name it outright - must be left alone. The redirect would end in
+     *  {@code AIRobotGotoStation.start()} the moment it began (the robot is already there), and the gate
+     *  re-fires every tick while it is on: each tick installed a fresh override that aborted the board's AI and
+     *  ended at once, so the robot sat frozen for as long as the gate held. */
+    public static void gotoStationActionAtTheDockedStationLeavesTheRobotAlone(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(2, 3, 2);
+        BlockPos robotRel = new BlockPos(3, 4, 3);
+
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+
+        PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+
+        EntityRobot[] robot = { null };
+        int[] phase = { 0 }; // 0: station, 1: id + dock + both checks, 2: let the live gate keep firing
+        int[] settled = { 0 };
+        EntityArenaUtil.tickUntil(helper, 300,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    if (phase[0] == 1) {
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        helper.assertTrue(station.takeAsMain(robot[0]), "the free station takes the robot");
+                        robot[0].dock(station);
+
+                        // Empty parameter: the destination defaults to the gate's own station, the one the
+                        // robot is docked at.
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the in-station trigger must fire while the robot is docked here");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "an empty-parameter Goto Station must not redirect a robot already docked at "
+                                        + "the gate's own station, got " + robot[0].getOverridingAI());
+
+                        // A map location naming the very station the robot sits at is the same no-op.
+                        gate.logic.statements[0].action.set(0,
+                                new StatementParameterMapLocation(spotMap(helper, pipeRel, Direction.UP)));
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0], "the trigger still fires");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "a Goto Station naming the station the robot is docked at must not redirect it, "
+                                        + "got " + robot[0].getOverridingAI());
+                        phase[0] = 2;
+                        return false;
+                    }
+                    // The live gate now re-resolves every tick while the robot stays docked: it must never
+                    // be pulled off its dock or caught holding a redirect.
+                    helper.assertTrue(robot[0].getDockingStation() == station,
+                            "the robot must stay docked at its station while the gate holds");
+                    helper.assertTrue(robot[0].getOverridingAI() == null,
+                            "no redirect may be installed while the gate holds, got "
+                                    + robot[0].getOverridingAI());
+                    return ++settled[0] >= 20;
                 },
                 () -> {
                     robot[0].discard();

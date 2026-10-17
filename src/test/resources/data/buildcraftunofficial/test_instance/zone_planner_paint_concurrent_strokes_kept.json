@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:zone_planner_paint_far_chunks_uncapped",
+    "function": "buildcraftunofficial:zone_planner_paint_concurrent_strokes_kept",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

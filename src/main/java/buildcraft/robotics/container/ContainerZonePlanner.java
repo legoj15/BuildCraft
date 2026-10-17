@@ -6,7 +6,9 @@
 
 package buildcraft.robotics.container;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import io.netty.buffer.Unpooled;
 
@@ -104,31 +106,32 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     // override here returned ItemStack.EMPTY, which silently disabled shift-click entirely.)
 
     // ── Zone-layer sync ──────────────────────────────────────────────────────────────────
-    // The viewport edits zone layers client-side; the server tile owns them (the slot I/O reads
-    // them) and persists them. NET_PAINT_LAYER carries an edit up; the server's per-tick diff
-    // (broadcastChanges) pushes any changed layer back down via NET_SYNC_LAYER — covering both
-    // viewport paints and the paintbrush/map-location slot transfer.
+    // The viewport edits zone layers client-side; the server tile owns them (the slot I/O reads them) and
+    // persists them. A stroke goes up as the edit itself, NET_PAINT_RECT (a rectangle and whether it marks or
+    // clears), which the server applies to ITS copy of the layer, so strokes from several viewers all land
+    // whatever order they arrive in. The server's per-tick diff (broadcastChanges) pushes any changed layer down
+    // via NET_SYNC_LAYER, covering viewport paints and the paintbrush/map-location slot transfers alike.
     //
-    // Every NET_SYNC_LAYER carries a per-viewer revision of that layer; the client sends the revision
-    // its paint was drawn on with NET_PAINT_LAYER. That lets the server tell "this paint was made on
-    // exactly what I hold" (no echo needed) from "this paint crossed a sync still in flight" (resync).
-    public static final int NET_PAINT_LAYER = 10;
+    // The painter shows its stroke at once, before the server has seen it. Every NET_PAINT_RECT is answered with
+    // NET_PAINT_ACK (its sequence number); until then the stroke is pending, and the client re-applies its pending
+    // strokes on top of each NET_SYNC_LAYER it receives. A sync sent before the server applied the stroke would
+    // otherwise wipe it off the painter's screen, and one sent after it already contains it. The channel is
+    // ordered, so a sync that arrives after the ack always contains the stroke.
+    public static final int NET_PAINT_RECT = 10;
     public static final int NET_SYNC_LAYER = 11;
+    public static final int NET_PAINT_ACK = 12;
 
     /** Server side: what this viewer's menu knows about one layer: the instance and modification count it last
-     *  examined (so an untouched layer costs two compares per tick, not a serialisation), the bytes last pushed
-     *  to (or known to be already held by) this viewer's client, and the revision of the last push. */
+     *  examined (so an untouched layer costs two compares per tick, not a serialisation), and the bytes last
+     *  pushed to this viewer's client ({@code null} when unknown, which makes the next change push). */
     private static final class LayerView {
         ZonePlan seen;
         int seenMod;
         byte[] sent;
-        int revision;
 
-        /** Records that the client holds {@code layer} (as {@code bytes}) without a message being sent. */
-        void markSent(ZonePlan layer, byte[] bytes) {
-            seen = layer;
-            seenMod = layer.modCount();
-            sent = bytes;
+        /** True when this viewer has been pushed (or already holds) the layer exactly as the server has it. */
+        boolean isUpToDate(ZonePlan layer) {
+            return seen == layer && seenMod == layer.modCount();
         }
 
         /** Forces the next diff to push the layer, whatever it holds. */
@@ -136,18 +139,21 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             seen = null;
             sent = null;
         }
+    }
 
-        /** True when a paint drawn on {@code baseRevision} was drawn on exactly what the server holds now: the
-         *  viewer had received the last push, and the layer has not changed since this view last looked. */
-        boolean isCurrent(ZonePlan layer, int baseRevision) {
-            return baseRevision == revision && seen == layer && seenMod == layer.modCount();
+    /** Client side: a stroke shown locally but not yet acknowledged by the server. */
+    private record PendingStroke(int seq, int layer, int x0, int z0, int x1, int z1, boolean val) {
+        void applyTo(ZonePlan plan) {
+            plan.paintRect(x0, z0, x1, z1, val);
         }
     }
 
     /** Per-viewer, per-layer sync state (server side); created on first use. */
     private LayerView[] views;
-    /** Client side: the revision of each layer's last NET_SYNC_LAYER, sent back with a paint as its base. */
-    private int[] clientRevisions;
+    /** Client side: strokes sent but not yet acknowledged, oldest first. */
+    private final List<PendingStroke> pending = new ArrayList<>();
+    /** Client side: the sequence number of the last stroke sent. */
+    private int lastSeq;
 
     private LayerView view(int index) {
         if (views == null) {
@@ -159,20 +165,26 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         return views[index];
     }
 
-    /** Client side: the revision of the last sync received for a layer (0 before the first). */
-    public int clientRevision(int index) {
-        return clientRevisions == null ? 0 : clientRevisions[index];
-    }
-
-    /** Client → server: a painted/erased layer. Only its chunks inside the survey square travel: the viewport
-     *  cannot paint beyond it (see {@link ZonePlan#withRect}), and the server keeps its own copy of whatever the
-     *  layer holds further out, so sending those back would only cost bandwidth and count against the cap. */
-    public void sendPaint(int index, ZonePlan layer) {
-        int base = clientRevision(index);
-        sendMessage(NET_PAINT_LAYER, buf -> {
+    /**
+     * Client side: paints (or, with {@code val == false}, erases) the tile-relative block rectangle between two
+     * corners on one layer: on this client's copy at once, and on the server's by message. Both clip it to the
+     * survey square ({@link ZonePlan#paintRect}). It is applied to the layer as it is NOW, not as it was when the
+     * stroke began, so a sync that landed while the button was held is kept.
+     */
+    public void paintRect(int index, int x0, int z0, int x1, int z1, boolean val) {
+        PendingStroke stroke = new PendingStroke(++lastSeq, index, x0, z0, x1, z1, val);
+        pending.add(stroke);
+        ZonePlan local = new ZonePlan(clientLayer(index));
+        stroke.applyTo(local);
+        applySyncedLayer(index, local);
+        sendMessage(NET_PAINT_RECT, buf -> {
             buf.writeByte(index);
-            buf.writeVarInt(base);
-            layer.writeSurveyToByteBuf(buf);
+            buf.writeVarInt(stroke.seq());
+            buf.writeInt(x0);
+            buf.writeInt(z0);
+            buf.writeInt(x1);
+            buf.writeInt(z1);
+            buf.writeBoolean(val);
         });
     }
 
@@ -188,7 +200,7 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             LayerView view = view(i);
             // This runs every tick for every open planner: only a layer that was replaced or edited since the
             // last look is serialised and compared.
-            if (view.seen == layer && view.seenMod == layer.modCount()) {
+            if (view.isUpToDate(layer)) {
                 continue;
             }
             view.seen = layer;
@@ -196,11 +208,9 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             byte[] current = serialize(layer);
             if (!Arrays.equals(current, view.sent)) {
                 view.sent = current;
-                int revision = ++view.revision;
                 final int idx = i;
                 sendMessage(NET_SYNC_LAYER, buf -> {
                     buf.writeByte(idx);
-                    buf.writeVarInt(revision);
                     buf.writeBytes(current);
                 });
             }
@@ -218,74 +228,98 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_PAINT_LAYER && !isClient) {
-            int idx = buffer.readUnsignedByte();
-            if (tile != null && idx < tile.layers.length) {
-                receivePaint(idx, buffer);
-            }
+        if (id == NET_PAINT_RECT && !isClient) {
+            receivePaint(buffer);
             return;
         }
         if (id == NET_SYNC_LAYER && isClient) {
             int idx = buffer.readUnsignedByte();
             if (tile != null && idx < tile.layers.length) {
-                int revision = buffer.readVarInt();
                 ZonePlan plan = new ZonePlan();
                 plan.readFromByteBuf(buffer);
-                if (clientRevisions == null) {
-                    clientRevisions = new int[tile.layers.length];
+                for (PendingStroke stroke : pending) {
+                    if (stroke.layer() == idx) {
+                        stroke.applyTo(plan);
+                    }
                 }
-                clientRevisions[idx] = revision;
                 applySyncedLayer(idx, plan);
             }
+            return;
+        }
+        if (id == NET_PAINT_ACK && isClient) {
+            int seq = buffer.readVarInt();
+            pending.removeIf(stroke -> stroke.seq() <= seq);
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);
     }
 
-    /** Client side: installs a layer the server pushed. Overridable so a test can play a viewer's client without
-     *  writing into the server's tile. */
+    /** Client side: this viewer's copy of a layer. Overridable (with {@link #applySyncedLayer}) so a test can
+     *  play a viewer's client without touching the server's tile. */
+    protected ZonePlan clientLayer(int index) {
+        ZonePlan layer = tile.layers[index];
+        return layer == null ? new ZonePlan() : layer;
+    }
+
+    /** Client side: installs a layer the server pushed, or a local stroke. */
     protected void applySyncedLayer(int index, ZonePlan layer) {
         tile.layers[index] = layer;
     }
 
+    /** Client side: strokes still awaiting the server's ack (for tests). */
+    public int pendingStrokes() {
+        return pending.size();
+    }
+
     /**
-     * Server side of a paint: the client sent the survey-square part of its copy of one layer, and the revision
-     * that copy was drawn on. That is untrusted input, so it is read with a size cap (a full square), and only
-     * its chunks inside the square are taken; the layer's own chunks beyond it (e.g. a zone read in from a
-     * far-away map location) are kept as they were.
+     * Server side of a stroke: applies it to the server's copy of the layer, whatever has changed there since
+     * the painter last heard (another viewer's stroke, a slot transfer), and acknowledges it. A malformed
+     * message changes nothing and resyncs the painter, who is showing the stroke; the ack still goes first, so
+     * the resync is not overlaid with it.
      *
-     * <p>The painter's client already shows what it painted, so the layer is not pushed back at them when the
-     * paint was drawn on exactly what the server held ({@link LayerView#isCurrent}) and nothing had to be
-     * dropped: the stored bytes are recorded as already sent. An echo would land a round trip late, wiping any
-     * newer stroke they have drawn meanwhile until the next sync. Only this menu's view is touched; every other
-     * open planner still receives the change. In every other case the painter IS resynced: a paint drawn on an
-     * older revision (another viewer's stroke, or a slot transfer, landed first and its sync is still on the
-     * way, and would otherwise overwrite this stroke on the painter's screen), a message carrying chunks beyond
-     * the square, or one that was refused.
+     * <p>The painter is not sent the result when the layer was, before this stroke, exactly what was last pushed
+     * to them: their copy (that push plus their pending strokes, re-applied on arrival) already equals the
+     * server's. Every other open planner still receives the change.
      */
-    private void receivePaint(int idx, PacketBufferBC buffer) {
-        LayerView view = view(idx);
-        ZonePlan received = new ZonePlan();
-        int base;
+    private void receivePaint(PacketBufferBC buffer) {
+        int idx;
+        int seq;
         try {
-            base = buffer.readVarInt();
+            idx = buffer.readUnsignedByte();
+            seq = buffer.readVarInt();
         } catch (RuntimeException malformed) {
-            base = -1;
+            BCLog.logger.warn("[robotics.zone] Ignored a malformed paint message from a Zone Planner viewer");
+            return;
         }
-        if (base < 0 || !received.readFromByteBufBounded(buffer)) {
-            BCLog.logger.warn("[robotics.zone] Refused a malformed or oversized layer from a Zone Planner viewer");
+        sendMessage(NET_PAINT_ACK, buf -> buf.writeVarInt(seq));
+        if (tile == null || idx >= tile.layers.length) {
+            return;
+        }
+        LayerView view = view(idx);
+        int x0;
+        int z0;
+        int x1;
+        int z1;
+        boolean val;
+        try {
+            x0 = buffer.readInt();
+            z0 = buffer.readInt();
+            x1 = buffer.readInt();
+            z1 = buffer.readInt();
+            val = buffer.readBoolean();
+        } catch (RuntimeException malformed) {
+            BCLog.logger.warn("[robotics.zone] Ignored a malformed paint message from a Zone Planner viewer");
             view.forget();
             return;
         }
-        ZonePlan existing = tile.layers[idx];
-        boolean current = view.isCurrent(existing, base);
-        ZonePlan stored = ZonePlan.clampToSurvey(received, existing);
-        tile.layers[idx] = stored;
-        tile.setChanged();
-        if (current && received.isWithinSurvey()) {
-            view.markSent(stored, serialize(stored));
-        } else {
-            view.forget();
+        ZonePlan layer = tile.layers[idx];
+        boolean painterHadIt = view.isUpToDate(layer);
+        if (layer.paintRect(x0, z0, x1, z1, val)) {
+            tile.setChanged();
+            if (painterHadIt) {
+                view.seenMod = layer.modCount();
+                view.sent = null;
+            }
         }
     }
 }

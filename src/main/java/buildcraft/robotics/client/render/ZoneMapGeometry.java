@@ -240,8 +240,8 @@ public final class ZoneMapGeometry {
         }
     }
 
-    /** Outlines the survey square: strokes are clipped to it ({@link ZonePlan#withRect}) and the server keeps
-     *  nothing painted beyond it. Drawn as a band one terrain sample wide just inside each edge, on the terrain
+    /** Outlines the survey square: strokes are clipped to it ({@link ZonePlan#paintRect}), on the client and
+     *  on the server alike. Drawn as a band one terrain sample wide just inside each edge, on the terrain
      *  surface; only the visible stretch of each edge is walked, and unmapped columns are skipped (with vanilla
      *  render distances the edge usually lies beyond the loaded terrain, which cannot be painted either). */
     private static void emitSurveyBorder(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam, int wPx, int hPx,

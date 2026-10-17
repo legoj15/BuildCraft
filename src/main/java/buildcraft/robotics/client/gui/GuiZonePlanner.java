@@ -72,12 +72,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private final ZoneMapCamera camera;
     private boolean panning = false;
     private double lastDragX, lastDragY;
-    /** In-progress paint preview (null when not painting); committed to the layer on release. */
+    /** In-progress paint preview (null when not painting). Display only: on release the stroke itself (the
+     *  rectangle {@link #paintStart}..{@link #paintEnd}) is applied to the layer as it is then and sent. */
     private ZonePlan bufferLayer = null;
     private int bufferColorIndex = -1;
     /** 0 = paint (left button), 1 = erase (right button). */
     private int paintButton = -1;
     private BlockPos paintStart = null;
+    private BlockPos paintEnd = null;
     private BlockPos hoverPos = null;
 
     public GuiZonePlanner(ContainerZonePlanner menu, Inventory playerInv, Component title) {
@@ -240,11 +242,12 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     /** Rebuilds the in-progress paint preview as the saved layer plus the dragged rectangle set/cleared,
-     *  clipped to the survey square the map outlines (the server keeps nothing painted beyond it). */
+     *  clipped to the survey square the map outlines (strokes cannot reach beyond it). */
     private void applyPaintRect(BlockPos a, BlockPos b) {
         if (a == null || b == null || bufferColorIndex < 0) {
             return;
         }
+        paintEnd = b;
         BlockPos tile = menu.tile.getBlockPos();
         bufferLayer = ZonePlan.withRect(menu.tile.layers[bufferColorIndex],
                 a.getX() - tile.getX(), a.getZ() - tile.getZ(),
@@ -301,12 +304,18 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             panning = false;
             return true;
         }
-        if (bufferLayer != null && bufferColorIndex >= 0) {
-            menu.tile.layers[bufferColorIndex] = bufferLayer;
-            menu.sendPaint(bufferColorIndex, bufferLayer);
+        if (bufferLayer != null && bufferColorIndex >= 0 && paintStart != null && paintEnd != null) {
+            // The stroke, not the preview: the preview was built on the layer as it stood at the last drag event,
+            // and a sync may have landed since. paintRect applies the rectangle to the layer as it is now.
+            BlockPos tile = menu.tile.getBlockPos();
+            menu.paintRect(bufferColorIndex,
+                    paintStart.getX() - tile.getX(), paintStart.getZ() - tile.getZ(),
+                    paintEnd.getX() - tile.getX(), paintEnd.getZ() - tile.getZ(),
+                    paintButton == 0);
             bufferLayer = null;
             bufferColorIndex = -1;
             paintStart = null;
+            paintEnd = null;
             paintButton = -1;
             return true;
         }

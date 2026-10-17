@@ -42,13 +42,10 @@ public class ZonePlan implements IZone {
     /** Width, in blocks, of the Zone Planner's survey view: the map window is 213 px wide and zooms out to
      *  0.125 px/block ({@code GuiZonePlanner}, {@code ZoneMapCamera.MIN_PX_PER_BLOCK}), "about 1,700 blocks". */
     public static final int SURVEY_SPAN_BLOCKS = 1704;
-    /** How far from its planner, in chunks, a layer may reach: half the survey span, rounded up. Layers are
-     *  stored tile-relative, so this bounds the chunk coordinates of a layer's keys. */
+    /** How far from its planner, in chunks, a stroke may reach: half the survey span, rounded up. Layers are
+     *  stored tile-relative, so {@link #paintRect} clips to tile-relative chunks {@code [-r, r - 1]}. (A zone read
+     *  in from a map location may sit further out; painting can never reach or erase it.) */
     public static final int MAX_CHUNK_RADIUS = ((SURVEY_SPAN_BLOCKS / 2) + 15) >> 4;
-    /** Every chunk of the survey square: the most a layer painted inside it can hold, and so the most chunk
-     *  entries a client's paint message may declare (it carries only the square; see
-     *  {@link #writeSurveyToByteBuf}). */
-    public static final int MAX_CHUNKS = (2 * MAX_CHUNK_RADIUS) * (2 * MAX_CHUNK_RADIUS);
     /** First tile-relative block coordinate (on either axis) inside the survey square. */
     public static final int SURVEY_MIN_BLOCK = -MAX_CHUNK_RADIUS << 4;
     /** Last tile-relative block coordinate (on either axis) inside the survey square. */
@@ -119,37 +116,6 @@ public class ZonePlan implements IZone {
         return modCount;
     }
 
-    /** Whether a tile-relative chunk lies inside the survey square: {@code [-r, r - 1]} on each axis, since
-     *  block offsets floor into chunks. */
-    public static boolean inSurveyRange(int chunkX, int chunkZ) {
-        return chunkX >= -MAX_CHUNK_RADIUS && chunkX < MAX_CHUNK_RADIUS
-                && chunkZ >= -MAX_CHUNK_RADIUS && chunkZ < MAX_CHUNK_RADIUS;
-    }
-
-    /**
-     * What the server stores when a client sends a layer: the client's chunks inside the survey square, plus
-     * {@code existing}'s own chunks outside it. The viewport clips every stroke to the square
-     * ({@link #withRect}) and draws its border, and a client sends only the square
-     * ({@link #writeSurveyToByteBuf}), so a viewer can neither introduce a far chunk nor erase or rewrite one (a
-     * zone read in from a map location may sit anywhere; the client is handed such chunks with the layer and
-     * never sends them back). A message that does carry far chunks has them ignored. Neither input is changed.
-     */
-    public static ZonePlan clampToSurvey(ZonePlan received, ZonePlan existing) {
-        ZonePlan out = new ZonePlan();
-        for (Map.Entry<Long, ZoneChunk> e : received.chunkMapping.entrySet()) {
-            long key = e.getKey();
-            if (inSurveyRange(unpackChunkX(key), unpackChunkZ(key)) && !e.getValue().isEmpty()) {
-                out.chunkMapping.put(key, new ZoneChunk(e.getValue()));
-            }
-        }
-        for (Map.Entry<Long, ZoneChunk> e : existing.chunkMapping.entrySet()) {
-            long key = e.getKey();
-            if (!inSurveyRange(unpackChunkX(key), unpackChunkZ(key)) && !e.getValue().isEmpty()) {
-                out.chunkMapping.put(key, new ZoneChunk(e.getValue()));
-            }
-        }
-        return out;
-    }
 
     /** True when both plans mark exactly the same columns, however they were built (unlike comparing the wire
      *  bytes, which follow the hash map's iteration order). */
@@ -309,87 +275,72 @@ public class ZonePlan implements IZone {
     }
 
     /**
-     * {@link #readFromByteBuf} for a payload from an untrusted sender (a client's paint message): refuses a
-     * declared chunk count above {@link #MAX_CHUNKS} before reading any entry, caps each chunk's bit
-     * set at its real size, and reports a truncated or malformed message as a rejection rather than throwing.
-     * Coordinates are NOT filtered here &mdash; see {@link #clampToSurvey}. On {@code false} this plan is left
-     * empty.
+     * Marks or, with {@code val == false}, clears the tile-relative block rectangle between two corners
+     * (inclusive, in either order), clipped to the survey square: the one edit the viewport makes, and the one
+     * edit a client may ask the server for. The clip means a stroke can neither reach where the map shows
+     * nothing nor erase a far zone it cannot see (one read in from a map location may sit anywhere). Chunks the
+     * rectangle covers whole are set or dropped in one step, so even a stroke across the whole square (a client
+     * message of four ints) costs a few thousand map operations, not millions of cell writes.
+     *
+     * @return true if any column changed (the modification counter then moves).
      */
-    public boolean readFromByteBufBounded(FriendlyByteBuf buf) {
-        chunkMapping.clear();
-        modCount++;
-        try {
-            int size = buf.readInt();
-            if (size < 0 || size > MAX_CHUNKS) {
-                return false;
-            }
-            for (int i = 0; i < size; i++) {
-                long key = packChunkKey(buf.readInt(), buf.readInt());
-                ZoneChunk value = new ZoneChunk();
-                value.readFromByteBuf(buf);
-                if (!value.isEmpty()) {
-                    chunkMapping.put(key, value);
-                }
-            }
-            return true;
-        } catch (RuntimeException malformed) { // IndexOutOfBounds (truncated), DecoderException (oversized array)
-            chunkMapping.clear();
-            return false;
-        }
-    }
-
-    /**
-     * {@link #writeToByteBuf} restricted to the survey square: what a client sends up with a paint. Chunks beyond
-     * the square stay out of the message: the server keeps its own copy of them ({@link #clampToSurvey}), so they
-     * would only cost bandwidth and count against {@link #readFromByteBufBounded}'s cap, which a layer that has
-     * gathered far zones from several map locations could then never pass. Same format, so the server reads it
-     * with the ordinary (bounded) reader.
-     */
-    public void writeSurveyToByteBuf(FriendlyByteBuf buf) {
-        int count = 0;
-        for (long key : chunkMapping.keySet()) {
-            if (inSurveyRange(unpackChunkX(key), unpackChunkZ(key))) {
-                count++;
-            }
-        }
-        buf.writeInt(count);
-        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
-            long key = e.getKey();
-            if (inSurveyRange(unpackChunkX(key), unpackChunkZ(key))) {
-                buf.writeInt(unpackChunkX(key));
-                buf.writeInt(unpackChunkZ(key));
-                e.getValue().writeToByteBuf(buf);
-            }
-        }
-    }
-
-    /** True when every chunk of this plan lies inside the survey square (what a current client sends). */
-    public boolean isWithinSurvey() {
-        for (long key : chunkMapping.keySet()) {
-            if (!inSurveyRange(unpackChunkX(key), unpackChunkZ(key))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * A copy of {@code base} with the tile-relative block rectangle between two corners (inclusive, in either
-     * order) marked or, with {@code val == false}, cleared &mdash; clipped to the survey square, so the viewport
-     * can neither paint where the server would drop the stroke nor erase a far zone it cannot see. A rectangle
-     * wholly outside the square leaves the copy equal to {@code base}.
-     */
-    public static ZonePlan withRect(ZonePlan base, int x0, int z0, int x1, int z1, boolean val) {
-        ZonePlan out = new ZonePlan(base);
+    public boolean paintRect(int x0, int z0, int x1, int z1, boolean val) {
         int minX = Math.max(Math.min(x0, x1), SURVEY_MIN_BLOCK);
         int maxX = Math.min(Math.max(x0, x1), SURVEY_MAX_BLOCK);
         int minZ = Math.max(Math.min(z0, z1), SURVEY_MIN_BLOCK);
         int maxZ = Math.min(Math.max(z0, z1), SURVEY_MAX_BLOCK);
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                out.set(x, z, val);
+        if (minX > maxX || minZ > maxZ) {
+            return false;
+        }
+        boolean changed = false;
+        for (int cx = minX >> 4; cx <= maxX >> 4; cx++) {
+            int lx0 = Math.max(minX, cx << 4) & 0xF;
+            int lx1 = Math.min(maxX, (cx << 4) | 0xF) & 0xF;
+            for (int cz = minZ >> 4; cz <= maxZ >> 4; cz++) {
+                int lz0 = Math.max(minZ, cz << 4) & 0xF;
+                int lz1 = Math.min(maxZ, (cz << 4) | 0xF) & 0xF;
+                long key = packChunkKey(cx, cz);
+                ZoneChunk chunk = chunkMapping.get(key);
+                if (lx0 == 0 && lx1 == 0xF && lz0 == 0 && lz1 == 0xF) {
+                    if (val && (chunk == null || !chunk.isFull())) {
+                        chunkMapping.put(key, ZoneChunk.full());
+                        changed = true;
+                    } else if (!val && chunk != null) {
+                        chunkMapping.remove(key);
+                        changed = true;
+                    }
+                    continue;
+                }
+                if (chunk == null) {
+                    if (!val) {
+                        continue;
+                    }
+                    chunk = new ZoneChunk();
+                    chunkMapping.put(key, chunk);
+                }
+                for (int lx = lx0; lx <= lx1; lx++) {
+                    for (int lz = lz0; lz <= lz1; lz++) {
+                        if (chunk.get(lx, lz) != val) {
+                            chunk.set(lx, lz, val);
+                            changed = true;
+                        }
+                    }
+                }
+                if (chunk.isEmpty()) {
+                    chunkMapping.remove(key);
+                }
             }
         }
+        if (changed) {
+            modCount++;
+        }
+        return changed;
+    }
+
+    /** {@link #paintRect} on a copy of {@code base}, which is not changed: the viewport's stroke preview. */
+    public static ZonePlan withRect(ZonePlan base, int x0, int z0, int x1, int z1, boolean val) {
+        ZonePlan out = new ZonePlan(base);
+        out.paintRect(x0, z0, x1, z1, val);
         return out;
     }
 

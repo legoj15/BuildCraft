@@ -15,9 +15,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
 
 /**
- * Pure-JUnit pins for the bounds a Zone Planner layer is held to when a client sends one: the survey-range
- * square ({@link ZonePlan#inSurveyRange}), the bounded wire reader, the server-side merge that keeps a layer's
- * own far chunks ({@link ZonePlan#clampToSurvey}), content comparison and the modification counter the
+ * Pure-JUnit pins for a Zone Planner layer's edit and bounds: the stroke rectangle ({@link ZonePlan#paintRect},
+ * the one edit a client can ask the server for) and its clip to the survey square, the chunk-at-once fast path
+ * matching cell-by-cell painting, the bounded chunk reader, content comparison and the modification counter the
  * container uses to skip re-serialising untouched layers.
  */
 public class ZonePlanBoundsTest {
@@ -39,6 +39,17 @@ public class ZonePlanBoundsTest {
         return buf;
     }
 
+    /** The plain cell-by-cell meaning of a stroke, clip included: what paintRect's fast path must match. */
+    private static void naiveRect(ZonePlan plan, int x0, int z0, int x1, int z1, boolean val) {
+        for (int x = Math.max(Math.min(x0, x1), ZonePlan.SURVEY_MIN_BLOCK);
+             x <= Math.min(Math.max(x0, x1), ZonePlan.SURVEY_MAX_BLOCK); x++) {
+            for (int z = Math.max(Math.min(z0, z1), ZonePlan.SURVEY_MIN_BLOCK);
+                 z <= Math.min(Math.max(z0, z1), ZonePlan.SURVEY_MAX_BLOCK); z++) {
+                plan.set(x, z, val);
+            }
+        }
+    }
+
     // ── The survey square ───────────────────────────────────────────────────────────────
 
     @Test
@@ -50,58 +61,94 @@ public class ZonePlanBoundsTest {
                 "the square reaches the edge of the survey view");
         Assertions.assertTrue(ZonePlan.MAX_CHUNK_RADIUS * 16 <= spanBlocks / 2 + 16,
                 "and no more than one chunk beyond it");
-        Assertions.assertEquals((2 * ZonePlan.MAX_CHUNK_RADIUS) * (2 * ZonePlan.MAX_CHUNK_RADIUS),
-                ZonePlan.MAX_CHUNKS, "MAX_CHUNKS is every chunk of the square");
+        Assertions.assertEquals(-ZonePlan.MAX_CHUNK_RADIUS * 16, ZonePlan.SURVEY_MIN_BLOCK);
+        Assertions.assertEquals(ZonePlan.MAX_CHUNK_RADIUS * 16 - 1, ZonePlan.SURVEY_MAX_BLOCK,
+                "block offsets floor into chunks, so the square is chunks [-r, r - 1]");
+    }
+
+    // ── The stroke rectangle ────────────────────────────────────────────────────────────
+
+    @Test
+    public void testPaintRectMarksAndClearsTheRectangle() {
+        ZonePlan plan = cells(50, 50);
+        Assertions.assertTrue(plan.paintRect(2, 3, -1, 0, true));
+        Assertions.assertEquals(4 * 4 + 1, plan.getAll().size(), "corners in either order, inclusive");
+        Assertions.assertTrue(plan.get(-1, 0) && plan.get(2, 3) && plan.get(50, 50));
+
+        Assertions.assertTrue(plan.paintRect(0, 0, 2, 3, false));
+        Assertions.assertFalse(plan.get(1, 1));
+        Assertions.assertTrue(plan.get(-1, 0) && plan.get(50, 50));
     }
 
     @Test
-    public void testInSurveyRangeEdges() {
-        int r = ZonePlan.MAX_CHUNK_RADIUS;
-        // Block offsets floor into chunks, so the square is [-r, r - 1] on each axis.
-        Assertions.assertTrue(ZonePlan.inSurveyRange(0, 0));
-        Assertions.assertTrue(ZonePlan.inSurveyRange(-r, -r));
-        Assertions.assertTrue(ZonePlan.inSurveyRange(r - 1, r - 1));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(r, 0));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(0, r));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(-r - 1, 0));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(0, -r - 1));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(Integer.MAX_VALUE, 0));
-        Assertions.assertFalse(ZonePlan.inSurveyRange(0, Integer.MIN_VALUE));
-    }
-
-    // ── The bounded wire reader ─────────────────────────────────────────────────────────
-
-    @Test
-    public void testBoundedReadRoundTripsAnOrdinaryLayer() {
-        ZonePlan sent = cells(1, 1, -20, 40, 300, -300);
-        ZonePlan received = new ZonePlan();
-        Assertions.assertTrue(received.readFromByteBufBounded(wire(sent)));
-        Assertions.assertTrue(received.sameContent(sent));
+    public void testWithRectLeavesTheBaseAlone() {
+        ZonePlan base = cells(50, 50);
+        ZonePlan painted = ZonePlan.withRect(base, 0, 0, 3, 3, true);
+        Assertions.assertTrue(painted.get(3, 3));
+        Assertions.assertTrue(base.sameContent(cells(50, 50)), "the base layer is not touched");
     }
 
     @Test
-    public void testBoundedReadRejectsAnAbsurdDeclaredCount() {
-        for (int declared : new int[] {Integer.MAX_VALUE, ZonePlan.MAX_CHUNKS + 1, -1}) {
-            FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-            buf.writeInt(declared); // and no entries behind it: honouring the count would run off the buffer
-            ZonePlan plan = cells(7, 7);
-            Assertions.assertFalse(plan.readFromByteBufBounded(buf), "declared " + declared);
-            Assertions.assertTrue(plan.isEmpty(), "a rejected read leaves nothing behind (declared " + declared + ")");
+    public void testPaintRectIsClippedToTheSurveySquare() {
+        int edge = ZonePlan.MAX_CHUNK_RADIUS * 16;
+        ZonePlan painted = new ZonePlan();
+        painted.paintRect(edge - 2, 0, edge + 500, 1, true);
+        Assertions.assertEquals(2 * 2, painted.getAll().size(), "only the two columns inside the edge are painted");
+        Assertions.assertTrue(painted.get(edge - 1, 0) && !painted.get(edge, 0));
+
+        ZonePlan negative = new ZonePlan();
+        negative.paintRect(-edge - 500, 0, -edge + 1, 0, true);
+        Assertions.assertEquals(2, negative.getAll().size(), "and on the negative side, [-edge, -edge + 1]");
+
+        ZonePlan outside = cells(1, 1);
+        Assertions.assertFalse(outside.paintRect(FAR, FAR, FAR + 10, FAR + 10, true), "a stroke wholly outside");
+        Assertions.assertTrue(outside.sameContent(cells(1, 1)), "paints nothing");
+
+        // A far zone the layer was given (read from a map location) cannot be erased by a stroke either.
+        ZonePlan far = cells(FAR, 0, 1, 1);
+        far.paintRect(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, false);
+        Assertions.assertTrue(far.get(FAR, 0), "the far chunk survives an erase that spans it");
+        Assertions.assertFalse(far.get(1, 1), "while the square is cleared");
+    }
+
+    @Test
+    public void testAWholeSquareStrokeSetsWholeChunks() {
+        ZonePlan plan = cells(FAR, 0);
+        plan.paintRect(Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, true);
+        int side = 2 * ZonePlan.MAX_CHUNK_RADIUS;
+        Assertions.assertEquals(side * side + 1, plan.getChunkKeys().size(), "every chunk of the square, plus the far one");
+        for (ZoneChunk chunk : plan.getChunkMapping().values()) {
+            if (chunk != plan.getChunkMapping().get(ZonePlan.packChunkKey(FAR >> 4, 0))) {
+                Assertions.assertTrue(chunk.isFull(), "covered chunks are stored whole");
+            }
         }
     }
 
+    /** The chunk-at-once fast path must mean exactly what painting each column would, for strokes aligned and
+     *  unaligned to chunk edges, negative coordinates, and erasing through full and partial chunks. */
     @Test
-    public void testBoundedReadRejectsATruncatedMessage() {
-        FriendlyByteBuf buf = wire(cells(1, 1, 40, 40));
-        FriendlyByteBuf cut = new FriendlyByteBuf(Unpooled.buffer());
-        cut.writeBytes(buf, buf.readableBytes() - 3);
-        ZonePlan plan = new ZonePlan();
-        Assertions.assertFalse(plan.readFromByteBufBounded(cut));
-        Assertions.assertTrue(plan.isEmpty(), "a half-read layer is not kept");
+    public void testPaintRectMatchesCellByCellPainting() {
+        int[][] strokes = {
+                {0, 0, 15, 15, 1}, {-16, -16, -1, -1, 1}, {-20, 5, 40, 60, 1}, {3, -40, 3, 40, 1},
+                {-8, -8, 8, 8, 0}, {10, 10, 47, 47, 1}, {16, 16, 31, 20, 0}, {-33, -1, -17, 64, 0},
+                {5, 5, 5, 5, 1}, {32, 32, 47, 47, 0},
+        };
+        ZonePlan fast = cells(7, 7, 100, -100);
+        ZonePlan slow = cells(7, 7, 100, -100);
+        for (int[] s : strokes) {
+            fast.paintRect(s[0], s[1], s[2], s[3], s[4] == 1);
+            naiveRect(slow, s[0], s[1], s[2], s[3], s[4] == 1);
+            Assertions.assertTrue(fast.sameContent(slow), "after stroke " + java.util.Arrays.toString(s));
+        }
+        for (ZoneChunk chunk : fast.getChunkMapping().values()) {
+            Assertions.assertFalse(chunk.isEmpty(), "no empty chunk is left behind");
+        }
     }
 
+    // ── The bounded chunk reader ────────────────────────────────────────────────────────
+
     @Test
-    public void testBoundedReadRejectsAnOversizedBitSet() {
+    public void testAnOversizedBitSetIsRefused() {
         // One chunk whose "bit set" is a megabyte: ZoneChunk bits are 0..255, 32 bytes at most.
         FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
         buf.writeInt(1);
@@ -109,137 +156,7 @@ public class ZonePlanBoundsTest {
         buf.writeInt(0);
         buf.writeByte(1); // flags: has a bit set
         buf.writeByteArray(new byte[1 << 20]);
-        ZonePlan plan = new ZonePlan();
-        Assertions.assertFalse(plan.readFromByteBufBounded(buf));
-        Assertions.assertTrue(plan.isEmpty());
-    }
-
-    // ── What a client sends: the survey square only ─────────────────────────────────────
-
-    private static ZonePlan surveyWire(ZonePlan plan, int[] declared) {
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        plan.writeSurveyToByteBuf(buf);
-        declared[0] = buf.getInt(buf.readerIndex());
-        ZonePlan received = new ZonePlan();
-        Assertions.assertTrue(received.readFromByteBufBounded(buf), "a survey-only message passes the bounded reader");
-        return received;
-    }
-
-    @Test
-    public void testSurveyWireCarriesOnlyTheSquare() {
-        int[] declared = new int[1];
-        ZonePlan received = surveyWire(cells(1, 1, FAR, 0, -FAR, 40, 2, 3), declared);
-        Assertions.assertEquals(1, declared[0], "the declared count matches the chunks written");
-        Assertions.assertTrue(received.sameContent(cells(1, 1, 2, 3)), "only the in-square chunk travels");
-        Assertions.assertTrue(received.isWithinSurvey());
-    }
-
-    /** A layer can hold far chunks without limit (each map location read in adds its own zone); they never
-     *  travel up, so they can never push a paint message past the cap and make the layer unpaintable. */
-    @Test
-    public void testFarChunksNeverCountAgainstThePaintCap() {
-        ZonePlan full = new ZonePlan();
-        int r = ZonePlan.MAX_CHUNK_RADIUS;
-        for (int cx = -r; cx < r; cx++) {
-            for (int cz = -r; cz < r; cz++) {
-                full.set(cx << 4, cz << 4, true);
-            }
-        }
-        for (int i = 0; i < ZonePlan.MAX_CHUNKS; i++) {
-            full.set(FAR + ((i % 300) << 4), (i / 300) << 4, true);
-        }
-        int[] declared = new int[1];
-        ZonePlan received = surveyWire(full, declared);
-        Assertions.assertEquals(ZonePlan.MAX_CHUNKS, declared[0], "a full square is exactly the cap");
-        Assertions.assertEquals(ZonePlan.MAX_CHUNKS, received.getChunkKeys().size());
-    }
-
-    @Test
-    public void testIsWithinSurvey() {
-        Assertions.assertTrue(new ZonePlan().isWithinSurvey());
-        Assertions.assertTrue(cells(1, 1, -40, 300).isWithinSurvey());
-        Assertions.assertFalse(cells(1, 1, FAR, 0).isWithinSurvey());
-        int edge = ZonePlan.MAX_CHUNK_RADIUS * 16;
-        Assertions.assertTrue(cells(edge - 1, -edge).isWithinSurvey(), "the last block inside each edge");
-        Assertions.assertFalse(cells(edge, 0).isWithinSurvey(), "the first block past the positive edge");
-        Assertions.assertFalse(cells(0, -edge - 1).isWithinSurvey(), "the first block past the negative edge");
-    }
-
-    // ── The viewport's paint rectangle ──────────────────────────────────────────────────
-
-    @Test
-    public void testPaintRectMarksTheRectangleOnACopy() {
-        ZonePlan base = cells(50, 50);
-        ZonePlan painted = ZonePlan.withRect(base, 2, 3, -1, 0, true);
-        Assertions.assertEquals(4 * 4 + 1, painted.getAll().size(), "corners in either order, inclusive");
-        Assertions.assertTrue(painted.get(-1, 0) && painted.get(2, 3) && painted.get(50, 50));
-        Assertions.assertFalse(base.get(0, 0), "the base layer is not touched");
-
-        ZonePlan erased = ZonePlan.withRect(painted, 0, 0, 2, 3, false);
-        Assertions.assertFalse(erased.get(1, 1));
-        Assertions.assertTrue(erased.get(-1, 0) && erased.get(50, 50));
-    }
-
-    @Test
-    public void testPaintRectIsClippedToTheSurveySquare() {
-        int edge = ZonePlan.MAX_CHUNK_RADIUS * 16;
-        ZonePlan painted = ZonePlan.withRect(new ZonePlan(), edge - 2, 0, edge + 500, 1, true);
-        Assertions.assertEquals(2 * 2, painted.getAll().size(), "only the two columns inside the edge are painted");
-        Assertions.assertTrue(painted.isWithinSurvey());
-
-        ZonePlan outside = ZonePlan.withRect(cells(1, 1), FAR, FAR, FAR + 10, FAR + 10, true);
-        Assertions.assertTrue(outside.sameContent(cells(1, 1)), "a stroke wholly outside paints nothing");
-
-        // A far zone the layer was given (read from a map location) cannot be erased from the viewport either.
-        ZonePlan far = cells(FAR, 0);
-        ZonePlan wiped = ZonePlan.withRect(far, -edge - 3000, -edge - 3000, FAR + 10, edge + 3000, false);
-        Assertions.assertTrue(wiped.get(FAR, 0), "the far chunk survives an erase that spans it");
-    }
-
-    // ── The server-side merge ───────────────────────────────────────────────────────────
-
-    @Test
-    public void testClampDropsNewChunksOutsideTheSquare() {
-        ZonePlan received = cells(1, 1, FAR, 0);
-        ZonePlan merged = ZonePlan.clampToSurvey(received, new ZonePlan());
-        Assertions.assertTrue(merged.get(1, 1), "the in-range stroke is kept");
-        Assertions.assertFalse(merged.get(FAR, 0), "a chunk the layer did not already have, outside the square, is dropped");
-        Assertions.assertFalse(merged.sameContent(received));
-    }
-
-    @Test
-    public void testClampKeepsTheLayersOwnFarChunksWhateverTheClientSent() {
-        // A zone read from a map location can sit anywhere; the viewport cannot show it, so a client's
-        // paint message may legitimately carry it back, or (hostile or buggy) leave it out. Either way it
-        // survives, and the client cannot move it.
-        ZonePlan existing = cells(FAR, 0, 2, 2);
-        ZonePlan receivedWithout = cells(1, 1);
-        ZonePlan merged = ZonePlan.clampToSurvey(receivedWithout, existing);
-        Assertions.assertTrue(merged.get(FAR, 0), "far chunk survives a message that omits it");
-        Assertions.assertTrue(merged.get(1, 1), "the new in-range stroke lands");
-        Assertions.assertFalse(merged.get(2, 2), "an in-range cell the client erased stays erased");
-
-        ZonePlan receivedFarOverwrite = cells(FAR + 1, 5);
-        ZonePlan merged2 = ZonePlan.clampToSurvey(receivedFarOverwrite, existing);
-        Assertions.assertTrue(merged2.get(FAR, 0), "the existing far chunk is untouched");
-        Assertions.assertFalse(merged2.get(FAR + 1, 5), "a client cannot rewrite a far chunk");
-    }
-
-    @Test
-    public void testClampIsTransparentWhenTheClientSendsBackWhatItWasGiven() {
-        ZonePlan existing = cells(FAR, 0, 2, 2);
-        ZonePlan received = cells(FAR, 0, 2, 2, 3, 3);
-        ZonePlan merged = ZonePlan.clampToSurvey(received, existing);
-        Assertions.assertTrue(merged.sameContent(received), "nothing was altered, so nothing differs from the message");
-    }
-
-    @Test
-    public void testClampDoesNotMutateItsInputs() {
-        ZonePlan received = cells(1, 1, FAR, 0);
-        ZonePlan existing = cells(FAR + 32, 0);
-        ZonePlan.clampToSurvey(received, existing);
-        Assertions.assertTrue(received.get(FAR, 0));
-        Assertions.assertFalse(existing.get(1, 1));
+        Assertions.assertThrows(RuntimeException.class, () -> new ZonePlan().readFromByteBuf(buf));
     }
 
     // ── Content comparison ──────────────────────────────────────────────────────────────
@@ -297,7 +214,10 @@ public class ZonePlanBoundsTest {
         Assertions.assertNotEquals(m2, plan.modCount(), "a wire read counts");
 
         int m3 = plan.modCount();
-        plan.readFromByteBufBounded(wire(cells(3, 3)));
-        Assertions.assertNotEquals(m3, plan.modCount(), "a bounded wire read counts");
+        plan.paintRect(0, 0, 40, 40, true);
+        int m4 = plan.modCount();
+        Assertions.assertNotEquals(m3, m4, "a stroke counts");
+        Assertions.assertFalse(plan.paintRect(0, 0, 40, 40, true), "repeating it changes nothing");
+        Assertions.assertEquals(m4, plan.modCount(), "and does not count");
     }
 }

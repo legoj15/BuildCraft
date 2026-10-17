@@ -30,6 +30,18 @@ public class ZoneChunk {
         fullSet = old.fullSet;
     }
 
+    /** A chunk with every column marked. */
+    public static ZoneChunk full() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.fullSet = true;
+        return chunk;
+    }
+
+    /** True when every column is marked. */
+    public boolean isFull() {
+        return fullSet;
+    }
+
     public boolean get(int xChunk, int zChunk) {
         return fullSet || property != null && property.get(xChunk + zChunk * 16);
     }
@@ -145,8 +157,8 @@ public class ZoneChunk {
     public ZoneChunk readFromByteBuf(FriendlyByteBuf buf) {
         int flags = buf.readUnsignedByte();
         if ((flags & 1) != 0) {
-            // Bounded: this is also read from client-sent paint messages, and an unbounded array would let a
-            // sender pin a megabyte BitSet in a layer that is then persisted and re-sent.
+            // Bounded: a chunk's bit set is 32 bytes at most, and an unbounded read would let a malformed
+            // message allocate whatever length it declares.
             property = BitSet.valueOf(buf.readByteArray(MAX_BIT_BYTES));
         }
         fullSet = (flags & 2) != 0;

@@ -32,7 +32,9 @@ import buildcraft.api.robots.IRobotAccess;
  *
  *  <p>The transfer is an exact, transactional move (the robot's extract and the station's insert under one
  *  {@code Transaction}, the insert asking for exactly what was extracted), and the 7.1.x rhythm of NOT
- *  resetting the wait counter between buckets is kept. */
+ *  resetting the wait counter between buckets is kept. The 1.21.1 branch has no transactions, so it gets
+ *  the same guarantee by ordering: simulate the drain, simulate the fill, execute only when the fill
+ *  accepts the whole amount — a station that refuses never costs the robot its fluid. */
 public class AIRobotUnloadFluids extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -124,19 +126,37 @@ public class AIRobotUnloadFluids extends AIRobot {
         if (amount <= 0) {
             return 0;
         }
-        IFluidHandler.FluidAction action = doUnload ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE;
         // The classic getFluidInTank may ALIAS the handler's internal stack (FluidTank does), which
-        // drain() then shrinks — so the fill must use the fresh stack drain returned, never
-        // carriedStack (copyWithAmount on an emptied alias hands fill an EMPTY stack and 0 comes back).
-        FluidStack drained = robotTank.drain(carriedStack.copyWithAmount(amount), action);
+        // drain() then shrinks — so the request is copied up front, and the fill always uses a fresh stack
+        // a drain returned, never carriedStack (copyWithAmount on an emptied alias hands fill an EMPTY
+        // stack and 0 comes back).
+        FluidStack wanted = carriedStack.copyWithAmount(amount);
+        // Same order as the 1.21.10+ branch's rolled-back transaction: prove BOTH halves in simulation
+        // first, and only then execute. Draining the robot first and learning afterwards that the station
+        // refuses the fill destroys the carried fluid.
+        FluidStack simulated = robotTank.drain(wanted, IFluidHandler.FluidAction.SIMULATE);
+        int extractable = simulated.getAmount();
+        if (extractable <= 0) {
+            return 0;
+        }
+        if (output.fill(simulated, IFluidHandler.FluidAction.SIMULATE) < extractable) {
+            return 0;
+        }
+        if (!doUnload) {
+            return extractable;
+        }
+        FluidStack drained = robotTank.drain(wanted.copyWithAmount(extractable), IFluidHandler.FluidAction.EXECUTE);
         int extracted = drained.getAmount();
         if (extracted <= 0) {
             return 0;
         }
-        if (output.fill(drained, action) < extracted) {
-            return 0;
+        int filled = output.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+        if (filled < extracted) {
+            // The station changed between the dry run and the real fill (cannot happen inside one server
+            // tick, but a destroyed bucket is worse than a defensive line): hand the rest back.
+            robotTank.fill(drained.copyWithAmount(extracted - filled), IFluidHandler.FluidAction.EXECUTE);
         }
-        return extracted;*/
+        return filled;*/
         //?}
     }
 

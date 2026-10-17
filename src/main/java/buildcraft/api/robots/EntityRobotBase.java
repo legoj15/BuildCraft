@@ -139,7 +139,7 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
      *  {@code ATTACK_DAMAGE} modifier (its three operations applied in order), plus sharpness
      *  ({@code 0.5 * level + 0.5}), fire aspect ignites the target for {@code 4 * level} seconds, the
      *  damage source is {@code MOB_ATTACK} attributed to the robot, knockback applies only with the
-     *  enchantment (a manual delta-movement push plus recoil, exactly 7.1.x's arithmetic — the vanilla
+     *  enchantment (a manual delta-movement push plus recoil, 7.1.x's arithmetic run along the AIM (7.1.x's server yaw never left 0, so its push always ran +Z) — the vanilla
      *  {@code knockback} overloads changed arity across the version cliff, so the push is done by hand),
      *  and the held item takes one point of durability.
      *
@@ -212,7 +212,10 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         //?}
 
         if (knockback > 0) {
-            float yaw = (float) Math.toRadians(getYRot());
+            // The robot's yRot is the AIM yaw, atan2(dz, dx) + 180 — a quarter turn off vanilla's yaw (0 =
+            // +Z), so the 90 puts vanilla's look-direction formula on the aimed direction. Fed in raw, the
+            // push would run perpendicular to the aim.
+            float yaw = (float) Math.toRadians(getYRot() + 90F);
             Vec3 targetMotion = target.getDeltaMovement();
             target.setDeltaMovement(targetMotion.x - Math.sin(yaw) * knockback * 0.5,
                     targetMotion.y + 0.1,

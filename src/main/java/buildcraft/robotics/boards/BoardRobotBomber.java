@@ -83,7 +83,9 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
             }
         } else if (ai instanceof AIRobotGotoBlock) {
             if (ai.success()) {
-                ItemStack stack = robot.getTransactor().extract(TNT_FILTER, 1, 64, false);
+                // Exactly ONE: 7.1.x's Transactor.remove took a single item per run. Asking for up to a
+                // stack here primed one TNT and silently destroyed the rest of what was extracted.
+                ItemStack stack = robot.getTransactor().extract(TNT_FILTER, 1, 1, false);
 
                 if (!stack.isEmpty()) {
                     PrimedTnt tnt = new PrimedTnt(

@@ -5,7 +5,10 @@
  */
 package buildcraft.robotics.boards;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 import net.minecraft.core.BlockPos;
@@ -20,9 +23,11 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.builders.BCBuildersBlocks;
@@ -38,9 +43,12 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotGotoStationAndLoad;
 import buildcraft.robotics.ai.AIRobotRecharge;
+import buildcraft.robotics.ai.MockRobotAccess;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -56,7 +64,7 @@ import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 
 /** Ph9's Builder-board tests. The rewritten board supplies Builder MACHINES (7.1.x fed construction
- *  markers, which no longer exist): find the closest needy one inside {@code MAX_RANGE_SQ}, fetch its
+ *  markers, which no longer exist): find the closest needy one inside the flight's reach, fetch its
  *  first missing stack, fly there, insert into its resource inventory.
  *
  *  <p>Two tests: a synchronous state-machine walk (which delegate AI each situation starts — the
@@ -138,7 +146,7 @@ public class BuilderBoardTester {
      *  <li>cargo aboard and charge healthy → the delivery flight ({@code AIRobotGotoBlock}).</li>
      *  </ul>
      *  Phases 1–3 are race-safe: whichever needy builder the search finds, the delegate type is the
-     *  same. Plus the {@code MAX_RANGE_SQ} pin: 7.1.x's registration verbatim. */
+     *  same. The search radius is pinned by {@link #builderBoardSkipsBuilderBeyondFlightReach}. */
     public static void builderBoardStateMachine(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos idleBuilderRel = new BlockPos(1, 2, 2);
@@ -173,12 +181,13 @@ public class BuilderBoardTester {
         board.update();
         delegate = board.getDelegateAI();
         // The recharge chain unwinds SYNCHRONOUSLY here (AIRobotSearchAndGotoStation finds no power
-        // station in an empty arena and terminates inside start()), leaving no delegate — in play the
-        // main loop would re-run the board next tick. The pin is that the energy gate HELD: the
-        // low-battery robot did not start the delivery flight.
-        helper.assertTrue(delegate == null || delegate instanceof AIRobotRecharge,
-                "a loaded robot at/below SAFETY_POWER recharges (unwound with no power station), "
-                        + "never flies, got " + delegate);
+        // station in an empty arena and terminates inside start()). The board answers the failed
+        // recharge by going home to sleep rather than leaving itself idle, which would start a fresh
+        // recharge every tick (builderBoardSleepsWhenNoPowerStationIsFree pins that). The energy gate
+        // HELD either way: the low-battery robot did not start the delivery flight.
+        helper.assertTrue(delegate instanceof AIRobotGotoSleep || delegate instanceof AIRobotRecharge,
+                "a loaded robot at/below SAFETY_POWER recharges (failing over to sleep with no power "
+                        + "station), never flies, got " + delegate);
 
         // Phase 3 — battery healthy again: the delivery flight.
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -187,10 +196,263 @@ public class BuilderBoardTester {
         helper.assertTrue(delegate instanceof AIRobotGotoBlock,
                 "a loaded, charged robot flies the delivery leg, got " + delegate);
 
-        // The 7.1.x search radius, pinned: three 64-block radii squared.
-        helper.assertTrue(BoardRobotBuilder.MAX_RANGE_SQ == 3 * 64 * 64,
-                "MAX_RANGE_SQ is 7.1.x's registration verbatim");
+        helper.succeed();
+    }
 
+    // ---------- delivery failures ----------
+
+    /** A robot isolated from the shared test level: its work zone is pinned to one machine
+     *  ({@code getZoneToWork()} normally comes from the linked station's gate actions; the board searches
+     *  every Builder loaded in the level, and other tests leave needy ones behind) and its registry is an
+     *  empty stub (concurrent tests register stations in the real one, and a power-providing station
+     *  anywhere would turn "no free power station" into a long flight). */
+    private static final class ZonedRobot extends EntityRobot {
+        private final IZone zone;
+        private final IRobotRegistry emptyRegistry = new MockRobotAccess.InertRobotRegistry();
+
+        ZonedRobot(ServerLevel level, IZone zone) {
+            super(BCRoboticsEntities.ROBOT.get(), level);
+            this.zone = zone;
+        }
+
+        @Override
+        public IZone getZoneToWork() {
+            return zone;
+        }
+
+        @Override
+        public IRobotRegistry getRegistry() {
+            return emptyRegistry;
+        }
+    }
+
+    /** A zone that contains exactly one block's centre. */
+    private static IZone justThisBlock(BlockPos block) {
+        Vec3 centre = Vec3.atCenterOf(block);
+        return new IZone() {
+            @Override
+            public double distanceTo(BlockPos pos) {
+                return Math.sqrt(distanceToSquared(pos));
+            }
+
+            @Override
+            public double distanceToSquared(BlockPos pos) {
+                return Vec3.atCenterOf(pos).distanceToSqr(centre);
+            }
+
+            @Override
+            public boolean contains(Vec3 point) {
+                return point.distanceToSqr(centre) < 0.25;
+            }
+
+            @Override
+            public BlockPos getRandomBlockPos(Random rand) {
+                return block;
+            }
+        };
+    }
+
+    private static ZonedRobot zonedRobot(GameTestHelper helper, BlockPos robotRel, BlockPos zoneBlock) {
+        ZonedRobot robot = new ZonedRobot(helper.getLevel(), justThisBlock(zoneBlock));
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        robot.setPos(pos.x, pos.y, pos.z);
+        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        return robot;
+    }
+
+    private static boolean builderGridIsEmpty(TileBuilder builder) {
+        for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
+            if (!builder.getResource(slot).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** The delivery flight FAILS (the robot sits in a sealed stone shell far enough from the machine that
+     *  the arrival radius does not already count: the pathfinder exhausts and reports no path). The old
+     *  board ignored the verdict and inserted the cargo into the machine the robot never reached — the
+     *  items teleported, while a robot that cannot get anywhere should still be carrying them. Now the
+     *  cargo stays aboard, nothing reaches the machine, and the unreachable machine is skipped for a
+     *  retry window (so the next pass does not instantly send the same doomed flight again) that then
+     *  expires. */
+    public static void builderBoardKeepsCargoWhenTheFlightFails(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos builderRel = new BlockPos(4, 2, 2);
+        BlockPos cellRel = new BlockPos(2, 14, 2);
+
+        TileBuilder builder = placeBuilder(helper, builderRel,
+                makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
+        helper.assertTrue(BoardRobotBuilder.needsItems(builder), "sanity: the machine reports demand");
+
+        // The full 3x3x3 shell around the robot's cell, minus the cell itself.
+        List<BlockPos> shell = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (dx != 0 || dy != 0 || dz != 0) {
+                        shell.add(cellRel.offset(dx, dy, dz));
+                    }
+                }
+            }
+        }
+        try {
+            for (BlockPos rel : shell) {
+                helper.setBlock(rel, Blocks.STONE);
+            }
+
+            ZonedRobot robot = zonedRobot(helper, cellRel, helper.absolutePos(builderRel));
+            robot.setInventoryStack(0, new ItemStack(Items.STONE, 4));
+            BoardRobotBuilder board = new BoardRobotBuilder(robot);
+
+            board.update();
+            helper.assertTrue(board.getDelegateAI() instanceof AIRobotGotoBlock,
+                    "a loaded, charged robot starts the delivery flight, got " + board.getDelegateAI());
+
+            // Hand-cycle exactly as AIRobotMain would. The sealed pathfinder gives up within a few cycles.
+            int cycles = 0;
+            while (board.getDelegateAI() != null && cycles < 200) {
+                board.cycle();
+                cycles++;
+            }
+            helper.assertTrue(board.getDelegateAI() == null,
+                    "the flight must have ended (failed) within 200 cycles");
+
+            helper.assertTrue(builderGridIsEmpty(builder),
+                    "the flight failed — nothing may be inserted into the machine the robot never reached");
+            int aboard = 0;
+            for (int slot = 0; slot < robot.getInventorySize(); slot++) {
+                ItemStack stack = robot.getInventoryStack(slot);
+                if (stack.is(Items.STONE)) {
+                    aboard += stack.getCount();
+                }
+            }
+            helper.assertTrue(aboard == 4, "the whole cargo is still aboard, got " + aboard);
+
+            // The NEXT pass: the only needy machine is benched, so the search comes back empty while the
+            // cargo is still aboard. That must not read as "the need vanished" (dispose, which drops the
+            // stack on the ground when no station accepts it) — the robot sleeps with the cargo and retries
+            // once the bench window has passed.
+            board.cycle();
+            helper.assertTrue(board.getDelegateAI() instanceof AIRobotGotoSleep,
+                    "with the only candidate benched the robot sleeps with its cargo, got "
+                            + board.getDelegateAI());
+            for (int i = 0; i < 40; i++) {
+                board.cycle();
+                helper.assertFalse(board.getDelegateAI() instanceof AIRobotDisposeItems,
+                        "the benched machine's cargo must never be disposed of");
+            }
+            int stillAboard = 0;
+            for (int slot = 0; slot < robot.getInventorySize(); slot++) {
+                ItemStack stack = robot.getInventoryStack(slot);
+                if (stack.is(Items.STONE)) {
+                    stillAboard += stack.getCount();
+                }
+            }
+            helper.assertTrue(stillAboard == 4,
+                    "the cargo is still aboard after the following passes, got " + stillAboard);
+
+            long now = level.getGameTime();
+            helper.assertTrue(board.isSkipped(builder, now),
+                    "the unreachable machine is skipped right after the failure");
+            helper.assertTrue(board.isSkipped(builder, now + BoardRobotBuilder.UNREACHABLE_RETRY_TICKS - 1),
+                    "…for the whole retry window");
+            helper.assertFalse(board.isSkipped(builder, now + BoardRobotBuilder.UNREACHABLE_RETRY_TICKS),
+                    "…and no longer once the window has passed");
+        } finally {
+            for (BlockPos rel : shell) {
+                helper.setBlock(rel, Blocks.AIR);
+            }
+            helper.setBlock(builderRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /** Cargo aboard, battery at the safety floor, and no free power station anywhere: the recharge fails
+     *  at once. The board used to ignore that and, being idle, start another doomed recharge on the very
+     *  next tick, forever. It now goes home to sleep, like every other failure path, and stays asleep
+     *  rather than re-running the search each cycle. */
+    public static void builderBoardSleepsWhenNoPowerStationIsFree(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos builderRel = new BlockPos(4, 2, 2);
+        BlockPos robotRel = new BlockPos(2, 4, 2);
+
+        try {
+            placeBuilder(helper, builderRel,
+                    makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
+
+            ZonedRobot robot = zonedRobot(helper, robotRel, helper.absolutePos(builderRel));
+            robot.setInventoryStack(0, new ItemStack(Items.STONE));
+            robot.getBattery().extractPower(SEEDED_CHARGE - IRobotAccess.SAFETY_POWER,
+                    SEEDED_CHARGE - IRobotAccess.SAFETY_POWER);
+            helper.assertTrue(robot.getPower() <= IRobotAccess.SAFETY_POWER,
+                    "sanity: the battery sits at the safety floor");
+            BoardRobotBuilder board = new BoardRobotBuilder(robot);
+
+            // Hand-cycle as AIRobotMain would. With the stub registry the recharge search fails inside
+            // its own start(), so the old board was left with NO delegate after every cycle — and, being
+            // idle, started the same doomed recharge again on the next one, forever. The fixed board
+            // hands the failure to a sleep, which then simply runs.
+            board.cycle();
+            AIRobot sleeper = board.getDelegateAI();
+            helper.assertTrue(sleeper instanceof AIRobotGotoSleep,
+                    "a failed recharge hands over to sleep instead of leaving the board idle, got "
+                            + sleeper);
+            for (int i = 0; i < 60; i++) {
+                board.cycle();
+                helper.assertTrue(board.getDelegateAI() == sleeper,
+                        "the board keeps sleeping — it must not start another recharge, got "
+                                + board.getDelegateAI());
+            }
+        } finally {
+            helper.setBlock(builderRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /** The board must not pick a Builder its own delivery flight cannot reach. 7.1.x searched three 64-block
+     *  radii (about 111 blocks) while {@code AIRobotGotoBlock} rejects any target past
+     *  {@link AIRobotGotoBlock#FLIGHT_REACH} (96) from the robot's block: a robot at a station 100 blocks from
+     *  the only needy machine picked it, failed the flight at once, benched it, slept and repeated forever with
+     *  the cargo aboard. The candidate test now uses the flight's reach — inclusive at exactly 96 blocks,
+     *  out at 97 and at 100, with the benched-inclusive search (the sleep-with-cargo check) agreeing.
+     *
+     *  <p>The robot is never added to the level, so standing it 100 blocks outside the arena touches no
+     *  other test's cell; only the finder runs (no delegate AI starts, nothing moves or drops). */
+    public static void builderBoardSkipsBuilderBeyondFlightReach(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos builderRel = new BlockPos(4, 2, 2);
+
+        try {
+            TileBuilder builder = placeBuilder(helper, builderRel,
+                    makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
+            helper.assertTrue(BoardRobotBuilder.needsItems(builder), "sanity: the machine reports demand");
+            BlockPos builderAbs = helper.absolutePos(builderRel);
+
+            ZonedRobot robot = new ZonedRobot(level, justThisBlock(builderAbs));
+            robot.getBattery().addPower(SEEDED_CHARGE, false);
+            BoardRobotBuilder board = new BoardRobotBuilder(robot);
+
+            int[] reachable = { 12, AIRobotGotoBlock.FLIGHT_REACH };
+            int[] outOfReach = { AIRobotGotoBlock.FLIGHT_REACH + 1, 100, 110 };
+            for (int offset : reachable) {
+                Vec3 pos = Vec3.atCenterOf(builderAbs.offset(offset, 0, 0));
+                robot.setPos(pos.x, pos.y, pos.z);
+                helper.assertTrue(board.findClosestBuilder(false) == builder,
+                        "a needy machine " + offset + " blocks away is inside the flight's reach");
+            }
+            for (int offset : outOfReach) {
+                Vec3 pos = Vec3.atCenterOf(builderAbs.offset(offset, 0, 0));
+                robot.setPos(pos.x, pos.y, pos.z);
+                helper.assertTrue(board.findClosestBuilder(false) == null,
+                        "a needy machine " + offset + " blocks away is beyond the flight's reach — the board"
+                                + " must not pick it");
+                helper.assertTrue(board.findClosestBuilder(true) == null,
+                        "…nor count it as a benched need worth keeping cargo for (" + offset + " blocks)");
+            }
+        } finally {
+            helper.setBlock(builderRel, Blocks.AIR);
+        }
         helper.succeed();
     }
 

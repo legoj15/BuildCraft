@@ -115,20 +115,38 @@ public class TileIntegrationTable extends TileLaserTableBase {
 
     private void updateRecipe() {
         if (recipe != null) {
-            ItemStack output = getOutput();
+            ItemStack output = recipeOutput();
             if (!output.isEmpty() && extract(recipe.getCenterStack(), recipe.getRequirements(output), true))
                 return;
         }
         recipe = IntegrationRecipeRegistry.INSTANCE.getRecipeFor(invTarget.getStackInSlot(0), invToIntegrate.stacks);
     }
 
-    public ItemStack getOutput() {
+    /** The matched recipe's output for the current inventories, from the cached {@link #recipe} as it stands. */
+    private ItemStack recipeOutput() {
         return recipe != null ? recipe.getOutput(invTarget.getStackInSlot(0), invToIntegrate.stacks) : ItemStack.EMPTY;
+    }
+
+    /** {@link #serverTick} resolves {@link #recipe} on the server, every tick, so server readers see it fresh. A
+     *  client never ticks this tile, so nothing would ever resolve it there: the readers do it themselves, from
+     *  the inventories (which the open menu keeps in step with the server's). A tile with no level behind it has
+     *  no tick either. */
+    private void refreshRecipeIfUnticked() {
+        if (level == null || level.isClientSide()) {
+            updateRecipe();
+        }
+    }
+
+    /** What the table would produce right now: the GUI's preview slot, on the client as well as the server. */
+    public ItemStack getOutput() {
+        refreshRecipeIfUnticked();
+        return recipeOutput();
     }
 
     @Override
     public long getTarget() {
-        ItemStack output = getOutput();
+        refreshRecipeIfUnticked();
+        ItemStack output = recipeOutput();
         return recipe != null && isSpaceEnough(output) ? recipe.getRequiredMicroJoules(output) : 0;
     }
 
@@ -172,7 +190,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
     @Override
     protected void readData(BCValueInput input) {
         super.readData(input);
-        recipe = null; // Will be updated on next tick
+        recipe = null; // Re-resolved on the next server tick, or on the next read when this is a client
     }
 
     @Override

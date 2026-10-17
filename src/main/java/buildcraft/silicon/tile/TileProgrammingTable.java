@@ -31,8 +31,9 @@ import buildcraft.silicon.BCSiliconBlockEntities;
 
 /** The robot Programming Table: laser energy in, one redstone board out — programmed to any board selected in the
  *  option grid. Ported from 7.1.x {@code buildcraft.silicon.TileProgrammingTable} (whose 8.0.x namesake is an empty
- *  stub). Two slots only: a board goes in (pipe-insertable, like 7.1.x's {@code canInsertItem} slot 0) and a
- *  programmed board comes out (pipe-extractable, slot 1); the "ingredients" are pure MJ.
+ *  stub). Two slots only: a board goes in (pipe-insertable, like 7.1.x's {@code canInsertItem} slot 0, but only
+ *  what a registered recipe accepts) and a programmed board comes out (pipe-extractable, slot 1); the "ingredients"
+ *  are pure MJ.
  *
  *  <p>Unlike 7.1.x, which zeroed the buffer on craft, this keeps the port-wide laser-table convention of
  *  {@code power -= target} — in practice the lasers' own {@code receiveLaserPower} clamp keeps power at exactly the
@@ -44,9 +45,12 @@ public class TileProgrammingTable extends TileLaserTableBase {
     public static final int OPTION_COLS = ProgrammingRecipeRegistry.GRID_COLS;
     public static final int OPTION_ROWS = ProgrammingRecipeRegistry.GRID_ROWS;
 
+    // Only what a recipe can run on may go in (pipes and hands alike). The slot is insert-only, so a pipe can never
+    // pull a stray stack back out: letting cobblestone in used to jam the table until a player cleared it.
     public final ItemHandlerSimple invBoard = itemManager.addInvHandler(
         "board",
         1,
+        (slot, stack) -> matchRecipe(stack) != null,
         ItemHandlerManager.EnumAccess.INSERT,
         EnumPipePart.VALUES
     );

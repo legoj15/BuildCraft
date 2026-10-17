@@ -17,6 +17,8 @@ import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.core.BCCoreItems;
+import buildcraft.lib.list.ListHandler;
 
 /** {@link ActionStationProvideItems.canExtractItem}: extraction from a station is allowed unless a
  *  filtered provide-items action is active and the stack is not what it offers. */
@@ -93,6 +95,34 @@ public class ActionStationProvideItemsTest extends VanillaSetupBaseTester {
                 "an unfiltered action next to a filtered one does NOT make the station permissive (7.1.x)");
         Assertions.assertTrue(ActionStationProvideItems.canExtractItem(station, new ItemStack(Items.DIAMOND)),
                 "the diamond-filtered action still offers diamond");
+    }
+
+    /** A BuildCraft List whose first line holds {@code exemplars}: the filter a player drops into a gate's
+     *  parameter slot to say "any of these". */
+    public static ItemStack listHolding(ItemStack... exemplars) {
+        ItemStack list = new ItemStack(BCCoreItems.LIST.get());
+        ListHandler.Line[] lines = ListHandler.getLines(list);
+        for (int i = 0; i < exemplars.length; i++) {
+            lines[0].stacks.set(i, exemplars[i]);
+        }
+        ListHandler.saveLines(list, lines);
+        return list;
+    }
+
+    /** A List in the filter slot is a filter like any other stack: the station offers what the List matches.
+     *  Pre-fix the candidate was handed to the List as if IT were the filter, so no stack ever matched and a
+     *  station with a List-filtered Provide Items action offered nothing to any robot. */
+    @Test
+    public void aListFilterOffersWhatTheListMatches() {
+        TestStation station = stationWithProvide(new StatementParameterItemStack(
+                listHolding(new ItemStack(Items.DIAMOND), new ItemStack(Items.EMERALD))));
+
+        Assertions.assertTrue(ActionStationProvideItems.canExtractItem(station, new ItemStack(Items.DIAMOND)),
+                "the List names diamond");
+        Assertions.assertTrue(ActionStationProvideItems.canExtractItem(station, new ItemStack(Items.EMERALD)),
+                "the List names emerald");
+        Assertions.assertFalse(ActionStationProvideItems.canExtractItem(station, new ItemStack(Items.STONE)),
+                "the List does not name stone");
     }
 
     private static TestStation stationWithTwoProvides(IStatementParameter first, IStatementParameter second) {

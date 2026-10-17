@@ -37,7 +37,6 @@ import buildcraft.api.transport.pipe.IFlowFluid;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IPipeHolder;
-import buildcraft.lib.inventory.filter.ArrayStackOrListFilter;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.robotics.statements.ActionRobotFilter;
@@ -442,15 +441,13 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
 
     @Override
     public boolean canRobotExtractItem(ItemStack stack) {
-        return ActionRobotFilter.canInteractWithItem(this,
-                new ArrayStackOrListFilter(stack), ActionStationProvideItems.class)
+        return ActionRobotFilter.canInteractWithItem(this, stack, ActionStationProvideItems.class)
                 && ActionStationProvideItems.canExtractItem(this, stack);
     }
 
     @Override
     public boolean canRobotAcceptItem(ItemStack stack) {
-        return ActionRobotFilter.canInteractWithItem(this,
-                new ArrayStackOrListFilter(stack), ActionStationAcceptItems.class);
+        return ActionRobotFilter.canInteractWithItem(this, stack, ActionStationAcceptItems.class);
     }
 
     @Override

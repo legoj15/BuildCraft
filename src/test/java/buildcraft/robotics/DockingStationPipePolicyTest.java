@@ -37,6 +37,7 @@ import buildcraft.robotics.statements.ActionStationAcceptItems;
 import buildcraft.robotics.statements.ActionStationForbidRobot;
 import buildcraft.robotics.statements.ActionStationProvideFluids;
 import buildcraft.robotics.statements.ActionStationProvideItems;
+import buildcraft.robotics.statements.ActionStationProvideItemsTest;
 import buildcraft.robotics.statements.StatementParameterRobot;
 
 /** The D1 station-policy overrides on {@link DockingStationPipe} — the one place the gate actions decide what a
@@ -141,6 +142,22 @@ public class DockingStationPipePolicyTest extends VanillaSetupBaseTester {
         Assertions.assertTrue(station.canRobotAcceptItem(diamond));
         Assertions.assertFalse(station.canRobotAcceptItem(stone), "a diamond-only accept refuses stone");
         Assertions.assertFalse(station.canRobotExtractItem(diamond), "Accept Items does not open extraction");
+    }
+
+    /** The whole chain a robot meets: a List dropped into a Provide/Accept Items slot filters like any stack.
+     *  Pre-fix {@code DockingStationPipe} asked the List whether the robot's stack matched it, so a station
+     *  gated by a List was closed to every robot, loading and unloading alike. */
+    @Test
+    public void aListFilterOpensTheStationToWhatTheListMatches() {
+        ItemStack list = ActionStationProvideItemsTest.listHolding(new ItemStack(Items.DIAMOND));
+
+        GatedStation provider = new GatedStation().with(new ActionStationProvideItems(), stack(list));
+        Assertions.assertTrue(provider.canRobotExtractItem(diamond), "a List naming diamond offers diamond");
+        Assertions.assertFalse(provider.canRobotExtractItem(stone), "…and not stone");
+
+        GatedStation acceptor = new GatedStation().with(new ActionStationAcceptItems(), stack(list));
+        Assertions.assertTrue(acceptor.canRobotAcceptItem(diamond), "a List naming diamond accepts diamond");
+        Assertions.assertFalse(acceptor.canRobotAcceptItem(stone), "…and not stone");
     }
 
     @Test

@@ -218,7 +218,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             if (assembled != null) {
                 receiveUpload(assembled);
             } else if (upload.droppedUploads() != droppedBefore) {
-                tile.onUploadRefused("it is larger than any scan the config allows");
+                tile.onUploadRefused("it is larger than the library's upload limit (libraryMaxUploadMb)");
             }
         }
     }

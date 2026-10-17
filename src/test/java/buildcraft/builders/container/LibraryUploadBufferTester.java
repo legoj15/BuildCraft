@@ -19,6 +19,7 @@ import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 
+import buildcraft.builders.BCBuildersConfig;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.Snapshot;
@@ -32,8 +33,11 @@ import buildcraft.lib.nbt.NbtSquisher;
  */
 public class LibraryUploadBufferTester {
 
-    /** The smallest limits the buffer ever runs with; the size tests feed a full upload of these. */
-    private static final LibraryUploadBuffer.Limits LIMITS = LibraryUploadBuffer.Limits.FLOOR;
+    /** The smallest limits the config allows; the size tests feed a full upload of these. */
+    private static final LibraryUploadBuffer.Limits LIMITS = LibraryUploadBuffer.Limits.ofMegabytes(1);
+
+    /** The worst a blueprint cell costs on the wire: its four bytes of int when nothing about them compresses. */
+    private static final long UPLOAD_BYTES_PER_CELL = 4;
 
     private static byte[] bytes(int... values) {
         byte[] out = new byte[values.length];
@@ -252,40 +256,78 @@ public class LibraryUploadBufferTester {
         Assertions.assertArrayEquals(bytes(7), buffer.accept(true, bytes(7)), "skipping a final chunk skips no more");
     }
 
-    // ── Limits: every scan the config allows fits ───────────────────────────
+    // ── Limits: one config option sizes them all ────────────────────────────
 
     @Test
-    public void theLimitsNeverFallBelowTheFloor() {
-        // What the limits were before they followed the config: a volume-box scan that fit then still fits.
-        for (int distance : new int[] {1, 64, 256}) {
-            LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.forMarkerDistance(distance);
-            Assertions.assertTrue(limits.maxUploadBytes() >= 16 * 1024 * 1024, "at " + distance);
-            Assertions.assertTrue(limits.maxChunks() >= 513, "at " + distance);
-            Assertions.assertTrue(limits.maxExpandedBytes() >= 256L * 1024 * 1024, "at " + distance);
+    public void theCapIsAConfigOptionInMegabytesThatSizesEveryLimit() {
+        Assertions.assertEquals(32, BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT, "32 MB unless the config says");
+        Assertions.assertEquals(32, BCBuildersConfig.libraryMaxUploadMb.get(), "and the config says nothing");
+        LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.ofMegabytes(32);
+        Assertions.assertEquals(32 * 1024 * 1024, limits.maxUploadBytes(), "on the wire");
+        Assertions.assertEquals(32L * 1024 * 1024, limits.maxExpandedBytes(), "unpacked, by the game's own estimate");
+        Assertions.assertEquals(32 * 1024 * 1024 / LibraryUploadBuffer.CHUNK_BYTES + 1, limits.maxChunks(),
+            "a full upload at the sender's chunk size, plus one of slack");
+        Assertions.assertEquals(32 * 1024 * 1024 / LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL, limits.maxCells(),
+            "and the cells a header may claim, at the worst per-cell cost");
+    }
+
+    @Test
+    public void theDefaultCapFitsTheLargestScanTheDefaultConfigCanMakeWithoutBeingFarPastIt() {
+        // markerMaxDistance defaults to 64: a marker connects to one up to 64 blocks away, so the largest box is 65
+        // on a side. If that default grows, the default cap has to be looked at again.
+        long side = 64 + 1L;
+        long cells = side * side * side;
+        Assertions.assertEquals(274_625L, cells);
+        long unpacked = cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL;
+        LibraryUploadBuffer.Limits limits =
+            LibraryUploadBuffer.Limits.ofMegabytes(BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT);
+        Assertions.assertTrue(limits.maxExpandedBytes() >= unpacked * 2, "room for the palette and entities past "
+            + "the cells: " + limits.maxExpandedBytes() + " for " + unpacked);
+        Assertions.assertTrue(limits.maxUploadBytes() >= cells * UPLOAD_BYTES_PER_CELL * 2, "and on the wire");
+        Assertions.assertTrue(limits.maxCells() >= cells);
+        // The point of the cap: it was ~60x the largest default scan, which bounded nothing worth bounding.
+        Assertions.assertTrue(limits.maxExpandedBytes() <= unpacked * 16, "no more than headroom: "
+            + limits.maxExpandedBytes() + " for " + unpacked);
+    }
+
+    @Test
+    public void aLargerScanFitsOnceTheCapIsRaisedForIt() {
+        // The earlier review's case: a 256-cube blueprint is 16,777,216 cells at 16 accounted bytes each. A marker
+        // reaches markerMaxDistance blocks past itself, so the largest box at the config maximum is 257 on a side.
+        long cells = 257L * 257 * 257;
+        long mb = (cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL >> 20) + 64; // the cells, and room for the rest
+        Assertions.assertTrue(mb <= BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MAX, "the option can be set that high: " + mb);
+        LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.ofMegabytes((int) mb);
+        Assertions.assertTrue(limits.maxCells() >= cells);
+        Assertions.assertTrue(limits.maxExpandedBytes() >= cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL);
+        Assertions.assertTrue(limits.maxUploadBytes() >= cells * UPLOAD_BYTES_PER_CELL);
+    }
+
+    @Test
+    public void everyCapTheOptionAllowsMakesLimitsThatFitTheirTypes() {
+        for (int mb : new int[] {BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MIN,
+            BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT, BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MAX}) {
+            LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.ofMegabytes(mb);
+            Assertions.assertEquals((long) mb * 1024 * 1024, limits.maxUploadBytes(), "wire bytes at " + mb);
+            Assertions.assertTrue(limits.maxChunks() > 0, "chunks at " + mb);
+            Assertions.assertTrue(
+                (long) limits.maxChunks() * LibraryUploadBuffer.CHUNK_BYTES >= limits.maxUploadBytes(),
+                "the chunk count admits a full upload at the sender's chunk size, at " + mb);
+            Assertions.assertTrue(limits.maxCells() > 0, "cells at " + mb);
         }
     }
 
     @Test
-    public void theLimitsCoverTheLargestMarkerScanAtTheConfigMaximum() {
-        // The review's case: a 256-cube blueprint is 16,777,216 cells at 16 accounted bytes each, exactly the old
-        // 256 MiB quota before its palette was counted. A marker reaches markerMaxDistance blocks past itself, so
-        // the largest box is one longer than that on each side.
-        int distance = 256;
-        long cells = LibraryUploadBuffer.largestMarkerScanCells(distance);
-        Assertions.assertEquals(257L * 257 * 257, cells);
-        LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.forMarkerDistance(distance);
-        Assertions.assertTrue(limits.maxExpandedBytes() >= cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL
-            + LibraryUploadBuffer.EXPANDED_HEADROOM, "unpacked: " + limits.maxExpandedBytes());
-        Assertions.assertTrue(limits.maxUploadBytes() >= cells * LibraryUploadBuffer.UPLOAD_BYTES_PER_CELL
-            + LibraryUploadBuffer.UPLOAD_HEADROOM, "on the wire: " + limits.maxUploadBytes());
-        Assertions.assertTrue((long) limits.maxChunks() * LibraryUploadBuffer.CHUNK_BYTES >= limits.maxUploadBytes(),
-            "the chunk count admits a full upload at the sender's chunk size");
-    }
-
-    @Test
     public void theLimitsFollowTheLiveConfig() {
-        Assertions.assertEquals(LibraryUploadBuffer.Limits.forMarkerDistance(
-            buildcraft.core.BCCoreConfig.markerMaxDistance.get()), LibraryUploadBuffer.Limits.current());
+        int previous = BCBuildersConfig.libraryMaxUploadMb.get();
+        try {
+            BCBuildersConfig.libraryMaxUploadMb.set(7);
+            Assertions.assertEquals(LibraryUploadBuffer.Limits.ofMegabytes(7), LibraryUploadBuffer.Limits.current());
+            BCBuildersConfig.libraryMaxUploadMb.set(100);
+            Assertions.assertEquals(LibraryUploadBuffer.Limits.ofMegabytes(100), LibraryUploadBuffer.Limits.current());
+        } finally {
+            BCBuildersConfig.libraryMaxUploadMb.set(previous);
+        }
     }
 
     /** A blueprint of {@code side}^3 cells, each holding {@code cell.applyAsInt(index)}. */
@@ -335,7 +377,7 @@ public class LibraryUploadBufferTester {
         Assertions.assertTrue(perCell <= LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL,
             "the game charges " + perCell + " bytes a cell");
         Assertions.assertTrue(accountedBytes(large) <= cellsLarge * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL
-            + LibraryUploadBuffer.EXPANDED_HEADROOM);
+            + 64 * 1024, "past the cells, a small blueprint's palette and header are a few KB");
     }
 
     @Test
@@ -345,7 +387,7 @@ public class LibraryUploadBufferTester {
         int side = 32;
         byte[] payload = squish(blueprint(side, i -> random.nextInt()));
         long cells = (long) side * side * side;
-        Assertions.assertTrue(payload.length <= cells * LibraryUploadBuffer.UPLOAD_BYTES_PER_CELL * 101 / 100 + 4096,
+        Assertions.assertTrue(payload.length <= cells * UPLOAD_BYTES_PER_CELL * 101 / 100 + 4096,
             payload.length + " bytes for " + cells + " cells");
     }
 }

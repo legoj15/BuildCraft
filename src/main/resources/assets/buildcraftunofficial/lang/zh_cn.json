@@ -632,6 +632,8 @@
     "buildcraftunofficial.configuration.pumpMaxDistance": "液泵最大距离",
     "buildcraftunofficial.configuration.pumpsConsumeWater": "液泵消耗水源方块",
     "buildcraftunofficial.configuration.quarry": "采石场",
+    "buildcraftunofficial.configuration.library": "电子档案馆",
+    "buildcraftunofficial.configuration.libraryMaxUploadMb": "档案馆最大上传大小（MB）",
     "buildcraftunofficial.configuration.quarryFrameMinHeight": "采石场框架最低高度",
     "buildcraftunofficial.configuration.quarryMaxBlockMineRate": "采石场最大方块开采速率",
     "buildcraftunofficial.configuration.quarryMaxFrameMoveSpeed": "采石场最大框架移动速度",

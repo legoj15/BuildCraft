@@ -24,8 +24,32 @@ public class BCBuildersConfig {
     /** The maximum number of blocks that the quarry is allowed to mine each second. 0 = no limit. */
     public static ModConfigSpec.DoubleValue quarryMaxBlockMineRate;
 
+    /** The default for {@link #libraryMaxUploadMb}: the largest scan the default config can make (markers 64 apart
+     *  enclose 65^3 = 274,625 cells, about 4.4 MB unpacked) with room for its palette, and not much more. */
+    public static final int LIBRARY_MAX_UPLOAD_MB_DEFAULT = 32;
+    public static final int LIBRARY_MAX_UPLOAD_MB_MIN = 1;
+    /** Past this the byte counts no longer fit an int. */
+    public static final int LIBRARY_MAX_UPLOAD_MB_MAX = 1024;
+
+    /** The largest snapshot, in megabytes, the Electronic Library accepts from a client. */
+    public static ModConfigSpec.IntValue libraryMaxUploadMb;
+
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         builder.push("builders");
+
+        builder.push("library");
+
+        libraryMaxUploadMb = builder
+                .comment("The largest blueprint or template, in megabytes, that the Electronic Library accepts from a player.",
+                         "It bounds the upload as sent, as unpacked on the server, and the size a snapshot may claim",
+                         "(at 16 bytes a cell). Anything larger is refused, so a modified client cannot make the server",
+                         "allocate without limit. The default covers the largest scan the default marker range can make",
+                         "(65 x 65 x 65 blocks) with room to spare. Raise it if you raise the marker range or let",
+                         "players scan larger volume boxes: a 256-block cube needs about 300.")
+                .defineInRange("libraryMaxUploadMb", LIBRARY_MAX_UPLOAD_MB_DEFAULT, LIBRARY_MAX_UPLOAD_MB_MIN,
+                        LIBRARY_MAX_UPLOAD_MB_MAX);
+
+        builder.pop();
 
         builder.push("quarry");
 

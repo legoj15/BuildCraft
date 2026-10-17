@@ -320,13 +320,21 @@ public class RobotBreakBlockUpdateTester {
                             s.randomTick(level, p.immutable(), level.getRandom());
                         }
                     }
-                    return !anyLeaf;
+                    if (anyLeaf) {
+                        return false;
+                    }
+                    // Gate the vines on observed state too: vines random-tick on their own (growing a face
+                    // onto a leaf, or a strand downwards), so one can briefly hang on through a face it grew
+                    // until the cascade from the last support reaches it. Asserting them on the same tick the
+                    // last leaf went was timing-dependent (flaked once on 1.21.10, 2026-10-17).
+                    for (BlockPos v : allVines) {
+                        if (!level.getBlockState(v).isAir()) {
+                            return false;
+                        }
+                    }
+                    return true;
                 },
                 () -> {
-                    for (BlockPos v : allVines) {
-                        helper.assertTrue(level.getBlockState(v).isAir(),
-                                "vine at " + v + " must fall — its trunk or its anchor leaves are gone");
-                    }
                     for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(
                             net.minecraft.world.entity.item.ItemEntity.class,
                             new AABB(Vec3.atLowerCornerOf(regionMin), Vec3.atLowerCornerOf(regionMax))
@@ -336,7 +344,8 @@ public class RobotBreakBlockUpdateTester {
                     robot.discard();
                     helper.succeed();
                 },
-                "the lumberjack robot never finished the chop-and-decay lifecycle");
+                "the lumberjack robot never finished the chop-and-decay lifecycle (trunk chopped, every leaf decayed and"
+                        + " every vine fallen)");
     }
 
     /**

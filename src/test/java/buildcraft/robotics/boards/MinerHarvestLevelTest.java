@@ -15,8 +15,7 @@ import buildcraft.VanillaSetupBaseTester;
 import buildcraft.robotics.ai.MockRobotAccess;
 
 /** The miner's tier detection: which ore property the board hunts is derived from the harvest level of
- *  the pickaxe it is holding (the modern stand-in for 7.1.x's {@code harvestLevel} NBT tag). Red until
- *  the AI step lands {@code detectHarvestLevel}'s real probe-block logic. */
+ *  the pickaxe it is holding (the modern stand-in for 7.1.x's {@code harvestLevel} NBT tag). */
 public class MinerHarvestLevelTest extends VanillaSetupBaseTester {
 
     private final MockRobotAccess robot = new MockRobotAccess();

@@ -6,7 +6,10 @@
 
 package buildcraft.lib.misc;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import net.minecraft.core.BlockPos;
@@ -73,6 +76,44 @@ public final class ProtectionRefusals {
     /** Drops the refusal at {@code pos}, if any. */
     public void forget(BlockPos pos) {
         refused.remove(pos);
+    }
+
+    /** Drops every refusal. */
+    public void clear() {
+        refused.clear();
+    }
+
+    public boolean isEmpty() {
+        return refused.isEmpty();
+    }
+
+    /**
+     * For a machine that has to notice a lifted claim without any block being asked about: hands back up to
+     * {@code limit} positions whose retry window has elapsed, so the caller can probe them (is the block mineable
+     * now?) instead of waiting for its own work to reach them. Each position returned has its window restarted in the
+     * state it was refused in, so it is not handed back again for another full window; a caller that finds the
+     * block mineable now calls {@link #forget} (or simply goes on to break it, which does not need the entry).
+     *
+     * <p>Cheap when nothing is due: entries are kept in the order their windows end (every window is the same
+     * length and the clock only moves forward), so the scan stops at the first one still running.
+     */
+    public List<BlockPos> takeExpired(long now, int limit) {
+        List<BlockPos> due = new ArrayList<>();
+        List<Refusal> dueRefusals = new ArrayList<>();
+        Iterator<Map.Entry<BlockPos, Refusal>> it = refused.entrySet().iterator();
+        while (it.hasNext() && due.size() < limit) {
+            Map.Entry<BlockPos, Refusal> entry = it.next();
+            if (now < entry.getValue().retryAt()) {
+                break;
+            }
+            due.add(entry.getKey());
+            dueRefusals.add(entry.getValue());
+        }
+        for (int i = 0; i < due.size(); i++) {
+            refused.remove(due.get(i));
+            refused.put(due.get(i), new Refusal(dueRefusals.get(i).state(), now + retryTicks));
+        }
+        return due;
     }
 
     /** How many refusals are held (for tests). */

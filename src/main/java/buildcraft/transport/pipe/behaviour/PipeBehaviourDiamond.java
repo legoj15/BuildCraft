@@ -77,10 +77,12 @@ public abstract class PipeBehaviourDiamond extends PipeBehaviour {
         filters.deserializeNBT(NBTUtilBC.getCompound(nbt, "filters"));
     }
 
-    /** Grants the "too many pipe filters" advancement (and its List recipe reward) once a
+    /** Every filter edit (menu click, JEI ghost drop) flags the holder tile changed so the chunk saves (loading from
+     * NBT never fires this), then grants the "too many pipe filters" advancement (and its List recipe reward) once a
      * player has crammed ≥ 7 of 9 filter slots on any single side — the nudge that a List
      * item would consolidate this. Mirrors the 1.12.2 PipeBehaviourDiamond hook. */
     protected void onFilterSlotChange(ItemHandlerSimple handler, int slot, ItemStack before, ItemStack after) {
+        PipeBehaviourPersistence.markDirty(pipe);
         Level level = pipe.getHolder().getPipeWorld();
         if (level.isClientSide()) {
             return;

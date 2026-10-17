@@ -38,8 +38,7 @@ import buildcraft.robotics.statements.ActionStationProvideFluids;
 /** The pump board's fluid math: {@link AIRobotLoadFluids#load} and {@link AIRobotUnloadFluids#unload}
  *  moved through a real single-slot station tank against the mock robot's real single-slot tank. Pins the
  *  7.1.x semantics — one bucket per call, filter-gated, simulation via the {@code doLoad}/{@code doUnload}
- *  flag, and exact conservation (nothing created, nothing destroyed). Red until the fluid step lands the
- *  real implementations (the skeletons return 0). */
+ *  flag, and exact conservation (nothing created, nothing destroyed). */
 public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
 
     private static final int BUCKET = 1000;

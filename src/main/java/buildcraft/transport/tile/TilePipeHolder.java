@@ -17,7 +17,6 @@ import javax.annotation.Nonnull;
 import io.netty.buffer.Unpooled;
 import javax.annotation.Nullable;
 
-import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -90,7 +89,6 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
 
     public final PipeEventBus eventBus = new PipeEventBus();
     private Pipe pipe;
-    private GameProfile owner;
     public final WireManager wireManager = new WireManager(this);
     private final PipePluggable[] pluggables = new PipePluggable[6];
     private boolean scheduleRenderUpdate = true;
@@ -153,7 +151,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     protected void readData(BCValueInput input) {
         // A stored id replaces the owner (an unparseable one clears it); a save without one leaves it untouched.
         if (!input.getStringOr("ownerUUID", "").isEmpty()) {
-            owner = OwnerData.readOwner(input);
+            setOwner(OwnerData.readOwner(input));
         }
         input.read("pipe", CompoundTag.CODEC).ifPresent(pipeTag -> {
             try {
@@ -337,7 +335,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
             }
         }
         if (placer instanceof Player player && level != null && !level.isClientSide()) {
-            owner = player.getGameProfile();
+            setOwner(player.getGameProfile());
             // UUID overload, not the Player one: a pipe extended by a Stripes pipe (StripesHandlerPipes)
             // or placed via the generic Stripes block-placement handler is placed by a transient
             // owner-profiled FakePlayer — see AdvancementUtil's UUID-overload javadoc.
@@ -778,11 +776,6 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     @Override
     public WireManager getWireManager() {
         return wireManager;
-    }
-
-    @Override
-    public GameProfile getOwner() {
-        return owner;
     }
 
     @Override

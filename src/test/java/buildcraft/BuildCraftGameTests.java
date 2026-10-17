@@ -109,6 +109,7 @@ public class BuildCraftGameTests {
         // Pipes
         reg.accept("buildcraftunofficial:pipe_routing_test_simple", () -> PipeRoutingTest::testSimplePipeExtraction);
         reg.accept("buildcraftunofficial:pipe_records_owner_on_placement", () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
+        reg.accept("buildcraftunofficial:pipe_set_owner_agrees_with_get_owner", () -> buildcraft.transport.PipeOwnerTester::testSetOwnerAndGetOwnerAgreeAndPersist);
 
         // Painted pipe connectivity — pins canColoursConnect's null/equal-colour rules
         // across the full paint pipeline (direct setColour, paintbrush event, NBT round-trip).
@@ -404,6 +405,8 @@ public class BuildCraftGameTests {
         // spun on forever: the rest of the frame is built and the drill starts.
         reg.accept("buildcraftunofficial:quarry_frame_completes_around_bedrock", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundBedrock);
         reg.accept("buildcraftunofficial:quarry_frame_completes_around_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundClaimProtectedBlock);
+        // ... and once the claim is lifted (no event fires) the quarry asks again on its own and fills the gap.
+        reg.accept("buildcraftunofficial:quarry_frame_completes_after_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAfterClaimIsLifted);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -668,6 +671,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_emzuli_colour_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::emzuliColourEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_woodiamond_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondFilterEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_woodiamond_mode_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondModeEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_diamond_item_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondItemFilterEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_diamond_fluid_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondFluidFilterEditMarksChunkDirty);
         // Force insertion (robot stations / obsidian / stripes pipes) must give items a real entry leg
         // and deliver them end-to-end — the zero-length leg was the server-side half of the
         // robot-cargo-invisible-in-pipes bug (see PipeFlowForceInsertTester javadoc).

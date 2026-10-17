@@ -200,6 +200,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
         reg.accept("buildcraftunofficial:fake_player_api_separate_from_leases", () -> buildcraft.lib.misc.FakePlayerUtilTester::testApiPlayerIsSeparateFromLeases);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_released", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsReleased);
+        reg.accept("buildcraftunofficial:fake_player_leaked_lease_swept_at_tick_start", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsSweptWhenATickStarts);
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);

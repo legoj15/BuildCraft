@@ -29,6 +29,7 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.VanillaGameEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.core.BuildCraftAPI;
 
@@ -269,8 +270,9 @@ public class FakePlayerUtilTester {
     /**
      * A {@link FakePlayerUtil.Lease} that is never closed (an addon forgetting try-with-resources) would reserve its
      * player forever, silently sending every later fetch down the uncached path. Leases never legitimately span a
-     * server tick, so the end-of-tick sweep releases (and logs) any still open. The sweep is called directly here;
-     * that it is subscribed is pinned by {@code FakePlayerUtilSubscriptionTester}.
+     * server tick, so the sweep at the start of the next tick releases (and logs) any still open. The sweep is called
+     * directly here; that it is subscribed (to the Pre phase, never Post) is pinned by
+     * {@code FakePlayerUtilSubscriptionTester}.
      */
     public static void testLeakedLeaseIsReleased(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -304,6 +306,30 @@ public class FakePlayerUtilTester {
             check(after.player().getMainHandItem().isEmpty(), "and scrubs it");
         }
 
+        helper.succeed();
+    }
+
+    /**
+     * The same sweep, reached through its real tick-start handler: the event a server tick starts with releases a
+     * lease the previous tick leaked. Nothing about a lease's own tick is touched, because no handler runs at the end
+     * of one (pinned structurally by {@code FakePlayerUtilSubscriptionTester}): a lease a Post-phase listener opens
+     * stays reserved until the NEXT tick starts, never force-released from under that listener.
+     */
+    public static void testLeakedLeaseIsSweptWhenATickStarts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile owner = uniqueProfile();
+
+        FakePlayerUtil.Lease leaked = FakePlayerUtil.lease(level, owner, null);
+        try (FakePlayerUtil.Lease blocked = FakePlayerUtil.lease(level, owner, null)) {
+            check(blocked.player() != leaked.player(), "precondition: the open lease reserves its player");
+        }
+
+        FakePlayerUtil.onServerTickStart(new ServerTickEvent.Pre(() -> true, level.getServer()));
+
+        try (FakePlayerUtil.Lease fresh = FakePlayerUtil.lease(level, owner, null)) {
+            check(fresh.player() == leaked.player(), "the tick-start sweep released the leaked lease");
+        }
+        leaked.close();
         helper.succeed();
     }
 

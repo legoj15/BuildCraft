@@ -81,7 +81,7 @@ import buildcraft.api.core.IFakePlayerProvider;
  * while another fetch is in use (the break-permission probe, template placement, stripes pipe drops and the robot
  * AIs all run from their own tick and never synchronously reach another fetch), so the reservation is a guard
  * against third-party listeners and future code. Leases never legitimately outlive a server tick: one still open
- * at the end of a tick was dropped without {@code close()}, and is released (and logged) there so it cannot
+ * when the next tick starts was dropped without {@code close()}, and is released (and logged) then so it cannot
  * reserve its player forever.
  *
  * <h2>API players are separate</h2>
@@ -188,7 +188,7 @@ public final class FakePlayerUtil {
     }
 
     private static final Map<Key, Entry> CACHE = new HashMap<>();
-    /** Entries reserved by a lease right now; anything still here at the end of a server tick was leaked. */
+    /** Entries reserved by a lease right now; anything still here when the next server tick starts was leaked. */
     private static final List<Entry> OPEN_LEASES = new ArrayList<>();
     private static boolean warnedOffThread = false;
     private static boolean warnedLeakedLease = false;
@@ -359,9 +359,13 @@ public final class FakePlayerUtil {
         evictOwner(event.getEntity().getUUID());
     }
 
-    /** Leases never span a server tick, so any still open once the tick is done were dropped without close(). */
+    /**
+     * Leases never span a server tick, so any still open when the next tick starts were dropped without close().
+     * Swept at the START of a tick, not the end: in the Post phase a lease another listener opened earlier in that
+     * same phase can still be in use, and the sweep would release it from under that listener.
+     */
     @SubscribeEvent
-    public static void onServerTickEnd(ServerTickEvent.Post event) {
+    public static void onServerTickStart(ServerTickEvent.Pre event) {
         if (!OPEN_LEASES.isEmpty()) {
             releaseLeakedLeases();
         }
@@ -413,7 +417,7 @@ public final class FakePlayerUtil {
             }
             closed = true;
             if (entry != null && entry.activeLease != this) {
-                // Released as leaked at the end of an earlier tick: the player may already belong to a newer
+                // Released as leaked when a later tick started: the player may already belong to a newer
                 // lease, which a scrub or release here would pull the rug from under.
                 return;
             }

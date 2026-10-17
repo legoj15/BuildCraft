@@ -109,6 +109,7 @@ public class BuildCraftGameTests {
         // Pipes
         reg.accept("buildcraftunofficial:pipe_routing_test_simple", () -> PipeRoutingTest::testSimplePipeExtraction);
         reg.accept("buildcraftunofficial:pipe_records_owner_on_placement", () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
+        reg.accept("buildcraftunofficial:pipe_set_owner_agrees_with_get_owner", () -> buildcraft.transport.PipeOwnerTester::testSetOwnerAndGetOwnerAgreeAndPersist);
 
         // Painted pipe connectivity — pins canColoursConnect's null/equal-colour rules
         // across the full paint pipeline (direct setColour, paintbrush event, NBT round-trip).

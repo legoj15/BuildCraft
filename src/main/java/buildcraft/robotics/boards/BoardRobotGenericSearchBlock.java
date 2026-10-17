@@ -9,9 +9,13 @@
 package buildcraft.robotics.boards;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -30,6 +34,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.ProtectionRefusals;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -65,8 +70,13 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     private volatile Set<Block> gateBlockFilter = Set.of();
 
     /** Blocks protection mods refused this robot, so a refused block is not chosen again (and not asked about
-     *  again) every search. Transient: a reloaded board simply asks again. */
+     *  again) every search. Every entry was refused to {@link #refusalsOwner}: the robot asks as its home station's
+     *  owner, so a refusal says nothing about anyone else. Transient: a reloaded board simply asks again. */
     private final ProtectionRefusals refusals = new ProtectionRefusals(REFUSAL_RETRY_TICKS, 256);
+
+    /** The UUID of the home-station owner every entry in {@link #refusals} was refused to (null: no owner). */
+    @Nullable
+    private UUID refusalsOwner;
 
     public BoardRobotGenericSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -102,7 +112,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
                 && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
-                && !refusals.isRefused(pos, level.getBlockState(pos), level.getGameTime());
+                && !refusalsForCurrentOwner().isRefused(pos, level.getBlockState(pos), level.getGameTime());
     }
 
     /** Asked once about the block the search has settled on (not about every candidate scanned, which would post a
@@ -117,8 +127,20 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos)) {
             return true;
         }
-        refusals.remember(pos, level.getBlockState(pos), level.getGameTime());
+        refusalsForCurrentOwner().remember(pos, level.getBlockState(pos), level.getGameTime());
         return false;
+    }
+
+    /** {@link #refusals}, first emptied if the robot now works for someone other than the owner they were refused
+     *  to (it was relinked to another player's station): that owner's refusals are not this one's. */
+    private ProtectionRefusals refusalsForCurrentOwner() {
+        GameProfile owner = RobotProtection.ownerOf(robot);
+        UUID ownerId = owner == null ? null : GameProfileUtil.getId(owner);
+        if (!Objects.equals(ownerId, refusalsOwner)) {
+            refusals.clear();
+            refusalsOwner = ownerId;
+        }
+        return refusals;
     }
 
     /** The state-only form of the search predicate: the board's own block test AND the gate's Filter

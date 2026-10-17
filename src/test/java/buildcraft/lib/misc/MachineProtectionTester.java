@@ -7,6 +7,7 @@
 package buildcraft.lib.misc;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,8 +33,10 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
@@ -366,6 +369,70 @@ public class MachineProtectionTester {
         for (Entity e : level.getEntities((Entity) null, new AABB(stone).inflate(0.75),
                 e -> e instanceof ItemEntity item && item.getItem().is(Items.COBBLESTONE))) {
             e.discard();
+        }
+        helper.succeed();
+    }
+
+    /** {@code robot}'s home station, owned by {@code owner} (a bare station: no gate actions, so no Filter). */
+    private static void linkTo(EntityRobot robot, BlockPos stationPos, GameProfile owner) {
+        robot.setMainStation(new DockingStation(stationPos, Direction.UP) {
+            @Override
+            public GameProfile getOwner() {
+                return owner;
+            }
+
+            @Override
+            public Iterable<StatementSlot> getActiveActions() {
+                return Collections.emptyList();
+            }
+        });
+    }
+
+    /**
+     * A refusal is an answer about one owner: a search board whose robot is relinked to another player's station
+     * works for that player now, so a block the old owner was refused is a fresh question for the new one. The pump
+     * board already re-keyed its memory on the owner; before the fix the search boards (lumberjack, miner, ...)
+     * kept skipping the block for the new owner until the retry window ran out.
+     */
+    public static void robotSearchRefusalsBelongToTheOwner(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos logRel = new BlockPos(1, 1, 1);
+        helper.setBlock(logRel, Blocks.OAK_LOG);
+        BlockPos log = helper.absolutePos(logRel);
+        GameProfile refusedOwner = new GameProfile(UUID.nameUUIDFromBytes("bc_refused_owner".getBytes()),
+                "bc_refused_owner");
+        GameProfile allowedOwner = new GameProfile(UUID.nameUUIDFromBytes("bc_allowed_owner".getBytes()),
+                "bc_allowed_owner");
+
+        EntityRobot robot = unaddedRobot(helper, new BlockPos(3, 2, 3));
+        robot.setItemInUse(new ItemStack(Items.DIAMOND_AXE));
+        linkTo(robot, helper.absolutePos(new BlockPos(3, 1, 3)), refusedOwner);
+        BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
+
+        // A claim that keeps only the first owner out, as a claim mod with a trusted-players list does.
+        List<UUID> askedBy = new ArrayList<>();
+        Object claim = BreakEventCompat.onBreak(event -> {
+            if (event.getPos().equals(log)) {
+                Player asker = BreakEventCompat.playerOf(event);
+                askedBy.add(asker.getUUID());
+                if (asker.getUUID().equals(GameProfileUtil.getId(refusedOwner))) {
+                    BreakEventCompat.cancel(event);
+                }
+            }
+        });
+        try {
+            check(!lumberjack.approveSearchTarget(level, log), "precondition: the first owner is refused the log");
+            check(!lumberjack.isSearchCandidate(level, log), "precondition: and the refusal is remembered");
+
+            linkTo(robot, helper.absolutePos(new BlockPos(3, 1, 3)), allowedOwner);
+            check(lumberjack.isSearchCandidate(level, log),
+                    "relinked to another owner's station, the log is a candidate again: the refusal was the old owner's");
+            check(lumberjack.approveSearchTarget(level, log), "and the new owner is allowed it");
+            check(askedBy.equals(List.of(GameProfileUtil.getId(refusedOwner), GameProfileUtil.getId(allowedOwner))),
+                    "each owner was asked once, as themselves: " + askedBy);
+        } finally {
+            BreakEventCompat.removeListener(claim);
         }
         helper.succeed();
     }

@@ -136,7 +136,7 @@ public class RobotRegistryTest {
         Assertions.assertTrue(mine.add(cell), "a free cell can be reserved");
         Assertions.assertTrue(r.getBlockReservations().contains(cell),
                 "the dimension-wide set every concurrent search reads must see the cell");
-        Assertions.assertTrue(theirs.contains(cell), "another robot's view sees it too, so its search skips it");
+        Assertions.assertFalse(theirs.contains(cell), "another robot's view holds only that robot's cells");
         Assertions.assertFalse(theirs.add(cell), "a second robot cannot reserve a reserved cell");
         Assertions.assertFalse(theirs.remove(cell), "a robot cannot unreserve a cell another robot reserved");
         Assertions.assertTrue(r.getBlockReservations().contains(cell), "...so the cell is still reserved");
@@ -146,6 +146,36 @@ public class RobotRegistryTest {
         Assertions.assertTrue(mine.remove(cell), "the owner can unreserve its own cell");
         Assertions.assertFalse(r.getBlockReservations().contains(cell), "...which frees it for everyone");
         Assertions.assertTrue(r.blockCellsReservedBy(ROBOT_A).isEmpty(), "...and clears the owner index");
+    }
+
+    /** The owned view is a set of the robot's own cells, read and written alike: contains, size, iteration and
+     *  removal agree with what add put there. (It used to answer size and iteration for the whole dimension while
+     *  remove refused another robot's cells, so {@code isEmpty}, {@code clear} and {@code removeAll} lied.) The
+     *  dimension-wide reads are the ownerless view's. */
+    @Test
+    public void testOwnedViewIsConsistentlyTheRobotsOwnCells() {
+        RobotRegistry r = new RobotRegistry(null);
+        BlockPos a1 = new BlockPos(1, 2, 3);
+        BlockPos a2 = new BlockPos(4, 5, 6);
+        BlockPos b1 = new BlockPos(7, 8, 9);
+        Set<BlockPos> mine = r.getBlockReservations(ROBOT_A);
+        mine.add(a1);
+        mine.add(a2);
+        r.getBlockReservations(ROBOT_B).add(b1);
+
+        Assertions.assertEquals(2, mine.size(), "size counts the robot's own cells only");
+        Assertions.assertEquals(Set.of(a1, a2), Set.copyOf(mine), "iteration yields them and nothing else");
+        Assertions.assertFalse(mine.contains(b1), "contains agrees with iteration");
+        Assertions.assertEquals(3, r.getBlockReservations().size(), "the ownerless view reads the whole dimension");
+
+        java.util.Iterator<BlockPos> it = mine.iterator();
+        BlockPos first = it.next();
+        it.remove();
+        Assertions.assertFalse(r.getBlockReservations().contains(first), "removing through the iterator frees the cell");
+
+        mine.clear();
+        Assertions.assertTrue(mine.isEmpty(), "clear frees the robot's own cells");
+        Assertions.assertEquals(Set.of(b1), Set.copyOf(r.getBlockReservations()), "...and only those");
     }
 
     @Test

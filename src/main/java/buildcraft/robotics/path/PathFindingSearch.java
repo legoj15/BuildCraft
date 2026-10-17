@@ -27,10 +27,11 @@ import buildcraft.api.core.IZone;
  * <ul>
  * <li>block traversability / chunk-loaded checks go through the injectable {@link SoftBlockAccess};</li>
  * <li>the 7.1.x {@code static HashMap<dimensionId, HashSet<BlockIndex>>} reservation table is replaced
- *     by a caller-owned {@link Set} of reserved positions, shared across the searches that should not
- *     collide (in production, an owner-tagged view of the dimension's one set, so the registry can free a
- *     cell whose robot unloads or dies before the search is collected; in tests, a fresh set). All access
- *     is synchronised on that set, preserving the original's thread-safety contract.</li>
+ *     by a caller-supplied {@link Reservations} table, shared across the searches that should not collide (in
+ *     production, {@code BlockClaims.searchCells}: reads see every robot's search cells and job claims, writes are
+ *     the searching robot's own, so the registry can free a cell whose robot unloads or dies before the search is
+ *     collected; in tests, a plain shared set). Each table operation is atomic, preserving the original's
+ *     thread-safety contract.</li>
  * </ul>
  * The 7.1.x {@code (start.y + delta.y) > 0 ? … : 0} clamp is dropped — bounds are now the access
  * predicate's responsibility, which is correct on modern negative-Y worlds.
@@ -50,14 +51,61 @@ public class PathFindingSearch implements IIterableAlgorithm {
     private final float maxDistance;
     private final Iterator<BlockPos> blockIter;
     private final double maxDistanceToEnd;
-    private final Set<BlockPos> reservations;
+    private final Reservations reservations;
     @Nullable
     private final IBlockFilter approveTarget;
+
+    /** The table concurrent searches share so that no two converge on one target: who holds a cell is read across
+     *  every searcher, and a cell is reserved and freed for this one. */
+    public interface Reservations {
+        /** Whether anyone holds {@code pos}. */
+        boolean isReserved(BlockPos pos);
+
+        /** The test-and-set: reserves {@code pos} for this searcher, false when anyone holds it already. */
+        boolean reserve(BlockPos pos);
+
+        /** Frees {@code pos} if this searcher holds it. */
+        void unreserve(BlockPos pos);
+
+        /** A plain shared set, every searcher reading and writing the same cells (synchronised on the set). */
+        static Reservations of(Set<BlockPos> shared) {
+            return new Reservations() {
+                @Override
+                public boolean isReserved(BlockPos pos) {
+                    synchronized (shared) {
+                        return shared.contains(pos);
+                    }
+                }
+
+                @Override
+                public boolean reserve(BlockPos pos) {
+                    synchronized (shared) {
+                        return shared.add(pos);
+                    }
+                }
+
+                @Override
+                public void unreserve(BlockPos pos) {
+                    synchronized (shared) {
+                        shared.remove(pos);
+                    }
+                }
+            };
+        }
+    }
 
     public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
             IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,
             Set<BlockPos> reservations) {
         this(access, start, blockIter, pathFound, maxDistanceToEnd, maxDistance, zone, reservations, null);
+    }
+
+    /** As the {@link Reservations} form, over a plain set every searcher shares. */
+    public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
+            IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,
+            Set<BlockPos> reservations, @Nullable IBlockFilter approveTarget) {
+        this(access, start, blockIter, pathFound, maxDistanceToEnd, maxDistance, zone, Reservations.of(reservations),
+                approveTarget);
     }
 
     /**
@@ -69,7 +117,7 @@ public class PathFindingSearch implements IIterableAlgorithm {
      */
     public PathFindingSearch(SoftBlockAccess access, BlockPos start, Iterator<BlockPos> blockIter,
             IBlockFilter pathFound, double maxDistanceToEnd, float maxDistance, IZone zone,
-            Set<BlockPos> reservations, @Nullable IBlockFilter approveTarget) {
+            Reservations reservations, @Nullable IBlockFilter approveTarget) {
         this.approveTarget = approveTarget;
         this.access = access;
         this.start = start;
@@ -119,10 +167,8 @@ public class PathFindingSearch implements IIterableAlgorithm {
         if (!pathFound.matches(block)) {
             return false;
         }
-        synchronized (reservations) {
-            if (reservations.contains(block)) {
-                return false;
-            }
+        if (reservations.isReserved(block)) {
+            return false;
         }
         // The target block itself is solid (that is what makes it a target); it is only reachable if at
         // least one orthogonally adjacent cell is soft enough for the robot to stand in.
@@ -189,23 +235,16 @@ public class PathFindingSearch implements IIterableAlgorithm {
     }
 
     private boolean isReserved(BlockPos block) {
-        synchronized (reservations) {
-            return reservations.contains(block);
-        }
+        return reservations.isReserved(block);
     }
 
     private boolean reserve(BlockPos block) {
-        synchronized (reservations) {
-            // add() is the test-and-set: false when the cell is already reserved (by anyone). Relying on its
-            // result rather than contains()-then-add() keeps it atomic for an owner-tagged view, whose
-            // monitor is its own, not this set's.
-            return reservations.add(block);
-        }
+        // reserve() is the test-and-set: false when the cell is already reserved (by anyone). Relying on its result
+        // rather than isReserved()-then-reserve() keeps it atomic whatever monitor the table guards itself with.
+        return reservations.reserve(block);
     }
 
     public void unreserve(BlockPos block) {
-        synchronized (reservations) {
-            reservations.remove(block);
-        }
+        reservations.unreserve(block);
     }
 }

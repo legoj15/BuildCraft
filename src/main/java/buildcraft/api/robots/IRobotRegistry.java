@@ -33,12 +33,13 @@ public interface IRobotRegistry {
      *  index. */
     Set<BlockPos> getBlockReservations();
 
-    /** The same dimension-wide reservation set as {@link #getBlockReservations()}, but every cell added through
-     *  the returned view is remembered as {@code robotId}'s, so the registry can free it when that robot
-     *  unloads or dies ({@link #killRobot}/{@link #unloadRobot}/{@link #releaseResources}) instead of leaving a
-     *  cell pinned by a search whose AI never got to run {@code end()}. The view reads (contains, size,
-     *  iteration) see every robot's cells; {@code remove} only frees a cell this robot reserved. The default
-     *  hands back the ownerless set, for registries that do not track owners. */
+    /** {@code robotId}'s own cells of the dimension-wide reservation set: every cell added through the returned view
+     *  is remembered as that robot's, so the registry can free it when the robot unloads or dies
+     *  ({@link #killRobot}/{@link #unloadRobot}/{@link #releaseResources}) instead of leaving a cell pinned by a
+     *  search whose AI never got to run {@code end()}. The view is a consistent set of the robot's own cells:
+     *  {@code contains}, {@code size}, iteration and {@code remove} see only those; {@code add} refuses (false) a cell
+     *  that ANY robot has reserved. Whether any robot holds a cell is read through {@link #getBlockReservations()}.
+     *  The default hands back the ownerless set, for registries that do not track owners. */
     default Set<BlockPos> getBlockReservations(long robotId) {
         return getBlockReservations();
     }

@@ -277,9 +277,16 @@ public class RobotGateTester {
                 },
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    helper.assertTrue(robot[0].getDockingStation() == null,
+                    // Only THIS station is the regression: the station search is dimension-wide, so a carrier that
+                    // skipped it may well dock at a free station in another arena (stations a killed robot held
+                    // are freed by id now, so more of them are free), which is the forbid action working.
+                    DockingStation dockedAt = robot[0].getDockingStation();
+                    helper.assertTrue(dockedAt == null || !(dockedAt.getPos().equals(station.getPos())
+                                    && dockedAt.side() == station.side()),
                             "the carrier must never dock at the gate-forbidden station — 7.1.x "
-                                    + "search skips stations the forbid action names");
+                                    + "search skips stations the forbid action names - docked at " + dockedAt);
+                    // Re-seeded: a carrier that docked elsewhere may already have unloaded there.
+                    robot[0].setInventoryStack(0, new ItemStack(Items.DIAMOND, 5));
                     helper.assertFalse(AIRobotUnload.unload(robot[0], station, false),
                             "the gate-forbidden station must refuse the carrier's unload — the "
                                     + "forbid action names this robot's board, and the refusal "

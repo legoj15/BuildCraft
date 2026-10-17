@@ -224,10 +224,9 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
-    /** The reads every view of the shared cell set offers, under the set's monitor. Without an override of
-     *  {@code add}/{@code remove} it is read-only ({@link AbstractSet} refuses {@code add}, and the snapshot
-     *  iterator refuses removal). */
-    private abstract class BlockReservationsView extends AbstractSet<BlockPos> {
+    /** What {@link #getBlockReservations()} hands out: every robot's cells, read-only, under the shared set's monitor.
+     *  ({@link AbstractSet} refuses {@code add}; removal throws.) */
+    private final class ReadOnlyBlockReservations extends AbstractSet<BlockPos> {
         @Override
         public boolean contains(Object o) {
             synchronized (blockReservations) {
@@ -250,10 +249,7 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
                 return Collections.unmodifiableSet(new HashSet<>(blockReservations)).iterator();
             }
         }
-    }
 
-    /** What {@link #getBlockReservations()} hands out. */
-    private final class ReadOnlyBlockReservations extends BlockReservationsView {
         @Override
         public boolean remove(Object o) {
             throw new UnsupportedOperationException("free a search cell through getBlockReservations(robotId)");
@@ -265,16 +261,72 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
-    /** The shared dimension-wide cell set, with {@code add}/{@code remove} owner-tagged to one robot. Reads see
-     *  every robot's cells (a search must skip a cell any other search holds); {@code add} refuses a cell that is
-     *  already reserved by anyone; {@code remove} only frees a cell this robot reserved, so a stale search that
-     *  finishes after its robot was released can never free the cell a different robot has since taken. All of it
-     *  runs under the shared set's monitor, which is also what {@code PathFindingSearch} synchronises on. */
-    private final class OwnedBlockReservations extends BlockReservationsView {
+    /** One robot's cells of the shared dimension-wide set, as a set of its own: {@code contains}, {@code size},
+     *  iteration and {@code remove} all see this robot's cells only, so every {@link AbstractSet} operation
+     *  ({@code isEmpty}, {@code clear}, {@code removeAll}, iterator removal) agrees with them. {@code add} reserves a
+     *  cell for this robot and refuses (false) one that ANY robot holds - the dimension-wide test-and-set. A search
+     *  reads who holds a cell through the ownerless view ({@code BlockClaims.searchCells} pairs the two); {@code
+     *  remove} only ever frees this robot's cell, so a stale search that finishes after its robot was released can
+     *  never free the cell a different robot has since taken. All of it runs under the shared set's monitor. */
+    private final class OwnedBlockReservations extends AbstractSet<BlockPos> {
         private final long robotId;
 
         OwnedBlockReservations(long robotId) {
             this.robotId = robotId;
+        }
+
+        @Override
+        public boolean contains(Object o) {
+            synchronized (blockReservations) {
+                Set<BlockPos> mine = blockReservationsByRobot.get(robotId);
+                return mine != null && mine.contains(o);
+            }
+        }
+
+        @Override
+        public int size() {
+            synchronized (blockReservations) {
+                Set<BlockPos> mine = blockReservationsByRobot.get(robotId);
+                return mine == null ? 0 : mine.size();
+            }
+        }
+
+        /** A snapshot (other searches mutate the shared set); its {@code remove} frees the cell through this view. */
+        @Override
+        public Iterator<BlockPos> iterator() {
+            Iterator<BlockPos> snapshot;
+            synchronized (blockReservations) {
+                Set<BlockPos> mine = blockReservationsByRobot.get(robotId);
+                snapshot = mine == null ? Collections.emptyIterator() : new ArrayList<>(mine).iterator();
+            }
+            return new Iterator<>() {
+                private BlockPos last;
+
+                @Override
+                public boolean hasNext() {
+                    return snapshot.hasNext();
+                }
+
+                @Override
+                public BlockPos next() {
+                    last = snapshot.next();
+                    return last;
+                }
+
+                @Override
+                public void remove() {
+                    if (last == null) {
+                        throw new IllegalStateException();
+                    }
+                    OwnedBlockReservations.this.remove(last);
+                    last = null;
+                }
+            };
+        }
+
+        @Override
+        public void clear() {
+            releaseBlockReservations(robotId);
         }
 
         @Override
@@ -422,14 +474,16 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
             for (StationIndex s : new HashSet<>(held)) {
                 DockingStation d = stations.get(s);
                 if (d != null) {
+                    // By id: a robot released after an unload (killed later, or reloaded as a new entity) is no
+                    // longer the station's cached entity, so an entity comparison would leave the station linked.
                     if (!d.canRelease()) {
                         if (forceAll) {
-                            d.unsafeRelease(robot);
+                            d.unsafeRelease(robotId);
                         } else if (resetEntities && d.robotIdTaking() == robotId) {
                             d.invalidateRobotTakingEntity();
                         }
                     } else {
-                        d.unsafeRelease(robot);
+                        d.unsafeRelease(robotId);
                     }
                 }
                 // The index must say exactly what the robot still holds. unsafeRelease frees the station but, by

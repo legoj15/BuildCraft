@@ -13,11 +13,9 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 
-import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.path.IBlockFilter;
 
 /** Composes {@link AIRobotSearchBlock} (find) and {@link AIRobotGotoBlock} (fly the found path), reporting
@@ -32,11 +30,10 @@ import buildcraft.robotics.path.IBlockFilter;
  *  reservation on the way down. */
 public class AIRobotSearchAndGotoBlock extends AIRobot {
 
-    private BlockPos blockFound;
-    /** Whether this AI holds the registry reservation on {@link #blockFound} in this session. Not saved: the unload
-     *  that saved a mid-flight AI freed the reservation, so a reloaded flight has to claim the block again
-     *  ({@link #preempt}) before it may land on it. */
-    private boolean taken;
+    /** The block found, and whether this AI holds its reservation in this session. The claim is not saved: the unload
+     *  that saved a mid-flight AI freed it, so a reloaded flight has to claim the block again ({@link #preempt})
+     *  before it may land on it. */
+    private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM);
     private AIRobotSearchBlock search;
 
     private IBlockFilter filter;
@@ -80,7 +77,7 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     }
 
     public BlockPos getBlockFound() {
-        return blockFound;
+        return blockFound.job();
     }
 
     @Override
@@ -89,8 +86,8 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
             // Loaded from NBT with no flight left to resume (the filter is not saved, so a fresh search cannot be
             // run either): report the block if the reload kept it reserved, otherwise fail and let the board
             // search again with its own filter.
-            if (!taken) {
-                blockFound = null;
+            if (!blockFound.isHolding()) {
+                blockFound.adopt(null, false);
             }
             terminate();
             return;
@@ -100,38 +97,32 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     /** A flight reloaded from NBT remembers its block but no longer holds it. Re-claim it before the resumed goto
      *  leg moves; if another robot took it meanwhile, drop it and the leg (then {@link #update()} fails the AI),
-     *  instead of landing on a block someone else is working. Not 7.1.x, which flew on and worked it unreserved. */
+     *  instead of landing on a block someone else is working ({@link JobClaim#preempt}). Not 7.1.x, which flew on
+     *  and worked it unreserved. */
     @Override
     public void preempt(AIRobot ai) {
-        if (blockFound != null && !taken) {
-            IRobotRegistry registry = robot.getRegistry();
-            if (registry == null) {
-                return;
-            }
-            if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
-                taken = true;
-            } else {
-                blockFound = null;
-                abortDelegateAI();
-            }
-        }
+        blockFound.preempt(this, ai);
     }
 
-    /** Reserves the found block (the search's {@code takeResource()}); the caller releases it via the
-     *  registry when done. */
+    /** Reserves the found block (the search's {@code takeResource()}) and takes it as this AI's job; the caller
+     *  releases it via the registry when done. */
     public boolean takeResource() {
-        return search != null && (taken = search.takeResource());
+        if (search == null || !search.takeResource()) {
+            return false;
+        }
+        blockFound.adopt(search.blockFound, true);
+        return true;
     }
 
     /** Whether the reported block is reserved for this robot by this AI in this session - what a board may rely on
      *  when it takes the block over. */
     public boolean holdsReservation() {
-        return blockFound != null && taken;
+        return blockFound.isHolding();
     }
 
     @Override
     public boolean success() {
-        return blockFound != null;
+        return !blockFound.isEmpty();
     }
 
     @Override
@@ -139,7 +130,6 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
         if (ai instanceof AIRobotSearchBlock searchAI) {
             search = searchAI;
             if (searchAI.success() && takeResource()) {
-                blockFound = searchAI.blockFound;
                 if (searchAI.path != null && searchAI.path.size() > 0) {
                     startDelegateAI(new AIRobotGotoBlock(robot, searchAI.path));
                 } else {
@@ -170,11 +160,7 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     }
 
     private void releaseBlockFound() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
-            blockFound = null;
-            taken = false;
-        }
+        blockFound.release();
     }
 
     @Override
@@ -185,20 +171,12 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
-
-        if (blockFound != null) {
-            int[] arr = {blockFound.getX(), blockFound.getY(), blockFound.getZ()};
-            nbt.putIntArray("blockFound", arr);
-        }
+        JobClaim.writeBlock(blockFound, nbt, "blockFound");
     }
 
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         super.loadSelfFromNBT(nbt);
-
-        int[] arr = NbtApiUtil.getIntArray(nbt, "blockFound", null);
-        if (arr != null && arr.length == 3) {
-            blockFound = new BlockPos(arr[0], arr[1], arr[2]);
-        }
+        JobClaim.readBlock(blockFound, nbt, "blockFound");
     }
 }

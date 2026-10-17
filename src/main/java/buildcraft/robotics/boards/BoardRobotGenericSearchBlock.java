@@ -24,13 +24,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
-import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.lib.misc.ProtectionRefusals;
+import buildcraft.robotics.JobClaim;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSearchAndGotoBlock;
@@ -51,12 +50,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     /** Game ticks a refused block is left alone before the owner's claim is asked about it again (1 minute). */
     public static final int REFUSAL_RETRY_TICKS = 1200;
 
-    private BlockPos blockFound;
-
-    /** Whether this board has confirmed it holds the registry reservation on {@link #blockFound}. Not saved: a
-     *  board loaded from NBT remembers its block, but the unload that saved it freed the reservation, so the
-     *  first cycle after a reload has to claim it again ({@link #preempt}). */
-    private boolean blockFoundClaimed;
+    /** The block found. Saved; a reloaded one is re-claimed whether or not an action resumed, because the break
+     *  boards' {@code update()} goes back to breaking a remembered block. */
+    private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM);
 
     /** The blocks the linked station's gate "Filter" action names, refreshed every {@link #update()}.
      *  Empty means "no restriction" (7.1.x: {@code blockFilter.size() == 0} passed everything). Replaced
@@ -101,7 +97,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  robot (remembered by {@link #approveSearchTarget}; unchanged blocks only, for a bounded time). */
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
-                && !robot.getRegistry().isTaken(new ResourceIdBlock(pos))
+                && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && !refusals.isRefused(pos, level.getBlockState(pos), level.getGameTime());
     }
 
@@ -162,10 +158,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotSearchAndGotoBlock searchAndGoto) {
             if (searchAndGoto.success()) {
-                blockFound = searchAndGoto.getBlockFound();
                 // Normally the search-and-goto took the reservation before it reported the block; if it did not
                 // (a flight that came back from NBT unreserved), preempt re-claims or drops it on the next cycle.
-                blockFoundClaimed = searchAndGoto.holdsReservation();
+                blockFound.adopt(searchAndGoto.getBlockFound(), searchAndGoto.holdsReservation());
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
@@ -173,28 +168,13 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     }
 
     /** Runs before the delegate on every cycle, so it sees a reloaded board before its resumed action AI (or
-     *  {@code update()}) touches the remembered block. Not 7.1.x: there the reloaded robot went on working the
-     *  block unreserved while any other robot's search was free to take it too. */
+     *  {@code update()}) touches the remembered block: re-claimed, or - another robot took it meanwhile - given up
+     *  with whatever this board was doing to it, to search again next cycle ({@link JobClaim#preempt}). Not 7.1.x:
+     *  there the reloaded robot went on working the block unreserved while any other robot's search was free to take
+     *  it too. */
     @Override
     public void preempt(AIRobot ai) {
-        if (blockFound != null && !blockFoundClaimed) {
-            reclaimBlockFound();
-        }
-    }
-
-    /** Re-takes the reservation on a remembered block. If another robot took it meanwhile, the block is theirs:
-     *  stop whatever this board was doing to it and search again next cycle. */
-    private void reclaimBlockFound() {
-        IRobotRegistry registry = robot.getRegistry();
-        if (registry == null) {
-            return;
-        }
-        if (registry.reclaim(new ResourceIdBlock(blockFound), robot.getRobotId())) {
-            blockFoundClaimed = true;
-        } else {
-            blockFound = null;
-            abortDelegateAI();
-        }
+        blockFound.preempt(this, ai);
     }
 
     @Override
@@ -203,37 +183,25 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     }
 
     protected BlockPos blockFound() {
-        return blockFound;
+        return blockFound.job();
     }
 
     /** Releases the registry reservation on the found block (7.1.x did the same in {@code end} and after
      *  a finished action AI). Owner-checked: if this robot no longer holds the block (it lost it across an
      *  unload), the release leaves the current holder's claim alone. */
     protected void releaseBlockFound() {
-        if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
-            blockFound = null;
-            blockFoundClaimed = false;
-        }
+        blockFound.release();
     }
 
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
-
-        if (blockFound != null) {
-            int[] arr = {blockFound.getX(), blockFound.getY(), blockFound.getZ()};
-            nbt.putIntArray("indexStored", arr);
-        }
+        JobClaim.writeBlock(blockFound, nbt, "indexStored");
     }
 
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         super.loadSelfFromNBT(nbt);
-
-        int[] arr = NbtApiUtil.getIntArray(nbt, "indexStored", null);
-        if (arr != null && arr.length == 3) {
-            blockFound = new BlockPos(arr[0], arr[1], arr[2]);
-        }
+        JobClaim.readBlock(blockFound, nbt, "indexStored");
     }
 }

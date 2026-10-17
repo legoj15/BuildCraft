@@ -21,7 +21,7 @@ import buildcraft.api.core.IZone;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceIdBlock;
+import buildcraft.robotics.BlockClaims;
 import buildcraft.robotics.path.BlockScannerExpanding;
 import buildcraft.robotics.path.BlockScannerRandom;
 import buildcraft.robotics.path.BlockScannerZoneRandom;
@@ -111,9 +111,10 @@ public class AIRobotSearchBlock extends AIRobot {
         if (blockScanner == null) {
             blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
                     blockIter, pathFound, maxDistanceToEnd, 96, zone,
-                    // Owner-tagged view: the registry frees this robot's cells itself if it unloads or dies
-                    // between the search locking onto a cell and this AI collecting it (takeResource).
-                    robot.getRegistry().getBlockReservations(robot.getRobotId()), approveFound);
+                    // Owner-tagged cells: the registry frees this robot's cells itself if it unloads or dies
+                    // between the search locking onto a cell and this AI collecting it (takeResource). A cell any
+                    // robot holds, as a search cell or as a job, is skipped.
+                    BlockClaims.searchCells(robot.getRegistry(), robot.getRobotId()), approveFound);
         }
         if (blockScanner.isDone()) {
             path = blockScanner.getResult();
@@ -131,14 +132,13 @@ public class AIRobotSearchBlock extends AIRobot {
     }
 
     /** Reserves the found block in the registry (7.1.x: registry take of a ResourceIdBlock) and drops the
-     *  search's own reservation. */
+     *  search's own reservation - the hand-over from the search-cell ledger to the job ledger, in
+     *  {@link BlockClaims#claim}. */
     public boolean takeResource() {
         if (blockFound == null) {
             return false;
         }
-        boolean taken = robot.getRegistry().take(new ResourceIdBlock(blockFound), robot.getRobotId());
-        unreserve();
-        return taken;
+        return BlockClaims.claim(robot.getRegistry(), blockFound, robot.getRobotId());
     }
 
     public void unreserve() {

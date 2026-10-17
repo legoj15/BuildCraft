@@ -229,6 +229,72 @@ public class RobotRegistryLiveTester {
         }
     }
 
+    /** A kill that comes after an unload: the unload kept the home and the dock linked to the robot's id but dropped
+     *  their cached entity, so the kill must free them by id. Two shapes: the reloaded entity is destroyed before
+     *  anything re-resolved the stations (its first tick), and the unloaded entity itself is killed. */
+    public static void killRobotAfterAnUnloadFreesItsStations(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            long id = a.getRobotId();
+            LiveStation home = f.station(1, 1, Direction.UP);
+            LiveStation dock = f.station(2, 1, Direction.UP);
+            home.takeAsMain(a);
+            dock.take(a);
+            a.dock(dock);
+            f.registry.unloadRobot(a);
+            helper.assertTrue(home.linkedId() == id && dock.linkedId() == id,
+                    "precondition: the unload kept the home and the dock");
+
+            EntityRobot reloaded = f.unregisteredRobot();
+            reloaded.setUniqueRobotId(id);
+            f.registry.registerRobot(reloaded);
+            f.registry.killRobot(reloaded);
+
+            helper.assertFalse(home.isTaken(), "a robot killed after a reload frees its home, by id");
+            helper.assertFalse(dock.isTaken(), "...and its dock");
+            helper.assertTrue(f.registry.stationsReservedBy(id).isEmpty(), "...and its station index is empty");
+
+            EntityRobot b = f.robot();
+            long idB = b.getRobotId();
+            LiveStation homeB = f.station(3, 1, Direction.UP);
+            LiveStation dockB = f.station(4, 1, Direction.UP);
+            homeB.takeAsMain(b);
+            dockB.take(b);
+            b.dock(dockB);
+            f.registry.unloadRobot(b);
+            f.registry.killRobot(b);
+
+            helper.assertFalse(homeB.isTaken(), "an unloaded robot that is then killed frees its home, by id");
+            helper.assertFalse(dockB.isTaken(), "...and its dock");
+            helper.assertTrue(f.registry.stationsReservedBy(idB).isEmpty(), "...and its station index is empty");
+            helper.succeed();
+        }
+    }
+
+    /** A reloaded robot undocking from the station it was docked at when it unloaded: the station's cached entity was
+     *  dropped by the unload, and the release must still find its holder by id. */
+    public static void undockAfterAReloadFreesTheDock(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            long id = a.getRobotId();
+            LiveStation dock = f.station(1, 3, Direction.UP);
+            dock.take(a);
+            a.dock(dock);
+            f.registry.unloadRobot(a);
+
+            EntityRobot reloaded = f.unregisteredRobot();
+            reloaded.setUniqueRobotId(id);
+            f.registry.registerRobot(reloaded);
+            reloaded.dock(dock);
+            reloaded.undock();
+
+            helper.assertFalse(dock.isTaken(), "undocking frees the dock even after a reload");
+            helper.assertFalse(f.registry.stationsReservedBy(id).contains(indexOf(dock)),
+                    "...and the registry stops indexing it under the robot");
+            helper.succeed();
+        }
+    }
+
     /** {@code unloadRobot} (the chunk went away): resources and plain reservations are released, but the home
      *  station and the dock the robot sits on stay HIS — that is what lets the robot come back with them — and a
      *  reloaded entity carrying the same id picks them straight back up. */

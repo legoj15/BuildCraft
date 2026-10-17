@@ -4,14 +4,20 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.energy.tile;
 
+import java.util.Optional;
+
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -30,6 +36,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.RegistryUtilBC;
 
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
@@ -308,6 +315,13 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
 
     // --- NBT ---
 
+    /** Saved fuel stack, data components included (see {@link #writeData}). */
+    private static final String FUEL_KEY = "fuel";
+    /** Saved fuel count; also half of the pre-codec {@code fuelId} + {@code fuelCount} form. */
+    private static final String FUEL_COUNT_KEY = "fuelCount";
+    /** Item id of the pre-codec form, read back for worlds saved before the fuel went through the codec. */
+    private static final String LEGACY_FUEL_ID_KEY = "fuelId";
+
     @Override
     protected void writeData(BCValueOutput output) {
         super.writeData(output);
@@ -315,9 +329,12 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         output.putInt("totalBurnTime", totalBurnTime);
         output.putLong("esum", esum);
         if (!fuelStack.isEmpty()) {
-            net.minecraft.resources.Identifier itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(fuelStack.getItem());
-            output.putString("fuelId", itemId.toString());
-            output.putInt("fuelCount", fuelStack.getCount());
+            // The full stack, data components included: a named or otherwise tagged fuel (and the container item its
+            // stack-sensitive crafting remainder hands back) must come out of a reload as it went in. ItemStack.CODEC
+            // rejects a count above the item's stack limit, which would delete the slot of an item whose limit was
+            // lowered since the save, so the stack goes in at count 1 with the real count beside it.
+            output.store(FUEL_KEY, ItemStack.CODEC, fuelStack.copyWithCount(1));
+            output.putInt(FUEL_COUNT_KEY, fuelStack.getCount());
         }
     }
 
@@ -327,21 +344,22 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         burnTime = input.getIntOr("burnTime", 0);
         totalBurnTime = input.getIntOr("totalBurnTime", 0);
         esum = input.getLongOr("esum", 0L);
-        String fuelId = input.getStringOr("fuelId", "");
-        if (!fuelId.isEmpty()) {
-            net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.tryParse(fuelId);
-            if (id != null) {
-                net.minecraft.world.item.Item item = buildcraft.lib.misc.RegistryUtilBC.getValue(net.minecraft.core.registries.BuiltInRegistries.ITEM, id);
-                int count = input.getIntOr("fuelCount", 1);
-                if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                    fuelStack = new ItemStack(item, count);
-                } else {
-                    fuelStack = ItemStack.EMPTY;
-                }
-            }
-        } else {
-            fuelStack = ItemStack.EMPTY;
+        fuelStack = readFuel(input);
+    }
+
+    private static ItemStack readFuel(BCValueInput input) {
+        int count = input.getIntOr(FUEL_COUNT_KEY, 1);
+        if (count <= 0) {
+            return ItemStack.EMPTY;
         }
+        Optional<ItemStack> stack = input.read(FUEL_KEY, ItemStack.CODEC);
+        if (stack.isPresent()) {
+            return stack.get().isEmpty() ? ItemStack.EMPTY : stack.get().copyWithCount(count);
+        }
+        // Saved before the fuel went through the codec: item id and count only (components were already lost).
+        Identifier id = Identifier.tryParse(input.getStringOr(LEGACY_FUEL_ID_KEY, ""));
+        Item item = id == null ? null : RegistryUtilBC.getValue(BuiltInRegistries.ITEM, id);
+        return item == null || item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item, count);
     }
 
     // --- IBCMenuProvider (GUI) ---

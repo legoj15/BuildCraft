@@ -349,7 +349,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("tile.engineStone.name");
+        return Component.translatable("block.buildcraftunofficial.engine_stone");
     }
 
     @Override

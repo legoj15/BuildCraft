@@ -535,7 +535,7 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("tile.engineIron.name");
+        return Component.translatable("block.buildcraftunofficial.engine_iron");
     }
 
     @Override

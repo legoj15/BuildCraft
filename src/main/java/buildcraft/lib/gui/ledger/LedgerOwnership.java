@@ -38,9 +38,10 @@ public class LedgerOwnership extends Ledger_Neptune {
         this.title = "gui.owner";
 
         // 1.12.2 used colour 0 (black) for the owner name text
+        // A profile without a name (an owner restored from a save that stored only the id) reads as unknown too.
         appendText(() -> {
-            GameProfile profile = ownerSupplier.get();
-            return profile != null ? GameProfileUtil.getName(profile) : LocaleUtil.localize("gui.owner.unknown");
+            String name = GameProfileUtil.getDisplayName(ownerSupplier.get());
+            return name != null ? name : LocaleUtil.localize("gui.owner.unknown");
         }, 0x000000);
 
         calculateMaxSize();

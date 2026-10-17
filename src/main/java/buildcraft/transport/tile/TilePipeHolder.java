@@ -61,9 +61,9 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
-import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
+import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -126,12 +126,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     // here we only override the version-neutral writeData/readData hooks it dispatches to.
 
     protected void writeData(BCValueOutput output) {
-        if (owner != null && GameProfileUtil.getId(owner) != null) {
-            output.putString("ownerUUID", GameProfileUtil.getId(owner).toString());
-            if (GameProfileUtil.getName(owner) != null) {
-                output.putString("ownerName", GameProfileUtil.getName(owner));
-            }
-        }
+        OwnerData.writeOwner(output, owner);
         if (pipe != null) {
             output.store("pipe", CompoundTag.CODEC, pipe.writeToNbt());
         }
@@ -156,13 +151,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     }
 
     protected void readData(BCValueInput input) {
-        String ownerUuid = input.getStringOr("ownerUUID", "");
-        if (!ownerUuid.isEmpty()) {
-            try {
-                owner = new GameProfile(UUID.fromString(ownerUuid), input.getStringOr("ownerName", "Unknown"));
-            } catch (IllegalArgumentException e) {
-                owner = null;
-            }
+        // A stored id replaces the owner (an unparseable one clears it); a save without one leaves it untouched.
+        if (!input.getStringOr("ownerUUID", "").isEmpty()) {
+            owner = OwnerData.readOwner(input);
         }
         input.read("pipe", CompoundTag.CODEC).ifPresent(pipeTag -> {
             try {

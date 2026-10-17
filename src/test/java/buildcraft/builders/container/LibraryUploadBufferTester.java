@@ -157,9 +157,9 @@ public class LibraryUploadBufferTester {
         byte[] payload = out.toByteArray();
         Assertions.assertTrue(payload.length < 16 * 1024, "the payload is tiny on the wire: " + payload.length);
 
-        Assertions.assertDoesNotThrow(() -> LibraryUploadBuffer.decode(payload, 64L * 1024 * 1024),
+        Assertions.assertDoesNotThrow(() -> LibraryUploadBuffer.decode(payload, 64L * 1024 * 1024, Integer.MAX_VALUE),
             "within a generous limit it is an ordinary snapshot");
-        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(payload, 64L * 1024),
+        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(payload, 64L * 1024, Integer.MAX_VALUE),
             "past the limit it is refused as unreadable rather than unpacked");
     }
 
@@ -176,10 +176,45 @@ public class LibraryUploadBufferTester {
         byte[] payload = out.toByteArray();
         Assertions.assertTrue(payload.length < 1024, "the payload is tiny on the wire: " + payload.length);
 
+        // With no cell cap in the way, so this still pins the list-length check the cap now sits in front of.
         long started = System.nanoTime();
-        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(payload));
+        Assertions.assertThrows(IOException.class,
+            () -> LibraryUploadBuffer.decode(payload, LIMITS.maxExpandedBytes(), Integer.MAX_VALUE));
         long tookMillis = (System.nanoTime() - started) / 1_000_000;
         Assertions.assertTrue(tookMillis < 2_000, "refused quickly, took " + tookMillis + " ms");
+    }
+
+    @Test
+    public void aTinyUploadClaimingAHugeTemplateIsRefused() throws IOException {
+        // A template stores one bit a cell and drops trailing zeros, so its data never has to match the claimed size:
+        // a header claiming ~2.1 billion cells with no data at all is a few hundred bytes on the wire. Nothing in the
+        // reader sizes anything from it, but every builder that later loads the item does (two byte arrays of the
+        // claimed cell count), so the library must not store a build whose size no scan could have made.
+        CompoundTag nbt = Snapshot.writeToNBT(build());
+        nbt.put("size", NBTUtilBC.writeBlockPos(new BlockPos(1290, 1290, 1290)));
+        nbt.putByteArray("data", new byte[0]);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(nbt, out);
+        byte[] payload = out.toByteArray();
+        Assertions.assertTrue(payload.length < 1024, "the payload is tiny on the wire: " + payload.length);
+
+        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(payload));
+    }
+
+    @Test
+    public void aTemplateWithinTheCellLimitStillDecodes() throws IOException {
+        // The largest size the limits admit is allowed, whatever the snapshot type.
+        int side = (int) Math.cbrt(LIMITS.maxCells());
+        Template template = build();
+        template.size = new BlockPos(side, side, side);
+        template.data = new BitSet();
+        template.data.set(0);
+        template.computeKey();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(Snapshot.writeToNBT(template), out);
+
+        Snapshot decoded = new LibraryUploadBuffer(LIMITS).decode(out.toByteArray());
+        Assertions.assertEquals(template.key, decoded.key);
     }
 
     @Test

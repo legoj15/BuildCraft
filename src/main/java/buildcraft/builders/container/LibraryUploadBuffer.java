@@ -79,6 +79,12 @@ public final class LibraryUploadBuffer {
                 Math.max(FLOOR.maxExpandedBytes, cells * EXPANDED_BYTES_PER_CELL + EXPANDED_HEADROOM));
         }
 
+        /** The most cells a snapshot of any type may claim in its header: what {@link #maxExpandedBytes} pays for at
+         *  the worst per-cell cost (a blueprint's). */
+        public int maxCells() {
+            return (int) Math.min(Integer.MAX_VALUE, maxExpandedBytes / EXPANDED_BYTES_PER_CELL);
+        }
+
         /** The limits for the config as it is now. */
         public static Limits current() {
             return forMarkerDistance(BCCoreConfig.markerMaxDistance.get());
@@ -173,16 +179,18 @@ public final class LibraryUploadBuffer {
     /** Unpack an assembled upload into a snapshot (its key recomputed from its content), within this buffer's
      *  {@link Limits#maxExpandedBytes}. */
     Snapshot decode(byte[] assembled) throws IOException {
-        return decode(assembled, limits.maxExpandedBytes());
+        return decode(assembled, limits.maxExpandedBytes(), limits.maxCells());
     }
 
     /**
-     * @throws IOException if the data is not a snapshot, or would unpack past {@code maxExpandedBytes}
+     * @throws IOException if the data is not a snapshot, would unpack past {@code maxExpandedBytes}, or claims a size
+     *                     of more than {@code maxCells} cells
      */
-    static Snapshot decode(byte[] assembled, long maxExpandedBytes) throws IOException {
+    static Snapshot decode(byte[] assembled, long maxExpandedBytes, int maxCells) throws IOException {
         Snapshot snapshot;
         try {
-            snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(assembled), maxExpandedBytes));
+            snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(assembled), maxExpandedBytes),
+                maxCells);
         } catch (RuntimeException e) {
             // A hand-built payload can be well-formed NBT that is not a snapshot; reading it can fail any way it likes.
             throw new IOException("Not a readable snapshot: " + e, e);

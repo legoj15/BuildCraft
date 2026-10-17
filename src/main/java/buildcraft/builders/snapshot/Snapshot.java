@@ -135,6 +135,22 @@ public abstract class Snapshot {
     }
 
     public static Snapshot readFromNBT(CompoundTag nbt) throws InvalidInputDataException {
+        return readFromNBT(nbt, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Read a snapshot of untrusted origin (an upload). A size that claims more than {@code maxCells} cells is
+     * refused before anything else is read, for every snapshot type: how much data a snapshot carries says nothing
+     * about its claimed size (a template drops trailing zero bits, so a header claiming two billion cells can come
+     * with no data at all), yet every builder that loads it sizes its working arrays from the claim.
+     */
+    public static Snapshot readFromNBT(CompoundTag nbt, int maxCells) throws InvalidInputDataException {
+        BlockPos claimed = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "size"));
+        int cells = checkedDataSize(claimed);
+        if (cells > maxCells) {
+            throw new InvalidInputDataException(
+                "Snapshot size " + claimed + " claims " + cells + " cells, more than the " + maxCells + " allowed");
+        }
         Tag tag = nbt.get("type");
         EnumSnapshotType type = NBTUtilBC.readEnum(tag, EnumSnapshotType.class);
         if (type == null) {

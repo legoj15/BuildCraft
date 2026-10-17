@@ -116,7 +116,7 @@ public class LocaleUtil {
      *  when {@link BCEnergyConfig#useFullUnitNames} is off. The RF-named variants live under the
      *  usual {@code .rf} sibling key (see {@link BCEnergyConfig#rfFeKey}). */
     public static String energyUnit() {
-        boolean rf = BCEnergyConfig.useRfNaming != null && BCEnergyConfig.useRfNaming.get();
+        boolean rf = BCEnergyConfig.rfNamingEnabled();
         if (shouldUseFullNames()) {
             return unitText(rf ? "buildcraft.unit.energy.full.rf" : "buildcraft.unit.energy.full",
                     rf ? "Redstone Flux" : "Forge Energy");

@@ -248,9 +248,12 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     // --- IBCMenuProvider (GUI) ---
 
+    /** Menu title sent to the client. Always the BASE (FE) key: the FE/RF toggle is a client-side setting the
+     *  server cannot see (on a dedicated server it does not exist), so {@code ScreenEngineFE} maps this to the
+     *  RF wording on the client via {@link BCEnergyConfig#clientMenuTitle(Component)}. */
     @Override
     public Component getDisplayName() {
-        return Component.translatable(BCEnergyConfig.rfFeKey(getBlockState().getBlock().getDescriptionId()));
+        return Component.translatable(getBlockState().getBlock().getDescriptionId());
     }
 
     @Override

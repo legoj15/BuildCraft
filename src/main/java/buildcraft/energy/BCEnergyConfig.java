@@ -2,8 +2,12 @@ package buildcraft.energy;
 
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -250,13 +254,75 @@ public class BCEnergyConfig {
                 .define("useFullUnitNames", true);
     }
 
+    // ---- FE/RF naming -------------------------------------------------------------------------------------
+    //
+    // useRfNaming lives on the CLIENT spec (BCUnifiedClientConfig), so the field is only ever set in a client JVM,
+    // and only becomes readable once that spec has loaded. On a dedicated server it stays null for good. Rules that
+    // follow: the server must never decide FE-vs-RF wording for anything it SENDS (it can't know the player's
+    // setting) -- it sends base keys, and the client maps them through rfNamedKey / clientMenuTitle at display
+    // time. Everything below is safe to call from either side: with no usable toggle it answers "FE".
+
+    /** True only when this JVM has the client toggle, its config has loaded, and it is switched on. False on a
+     *  dedicated server (no toggle) and in a client JVM before the client config has been read, where
+     *  {@code get()} would otherwise throw. */
+    public static boolean rfNamingEnabled() {
+        if (useRfNaming == null) {
+            return false;
+        }
+        try {
+            return useRfNaming.get();
+        } catch (IllegalStateException notLoadedYet) {
+            return false;
+        }
+    }
+
     /**
      * Returns the translation key to use given a base (FE-default) key. When the
      * {@code useRfNaming} toggle is on, returns {@code baseKey + ".rf"} so callers
-     * can pick up the RF-named sibling entry from the lang file.
+     * can pick up the RF-named sibling entry from the lang file. Does not check that the sibling exists;
+     * use {@link #rfNamedKey(String)} for keys that may have no {@code .rf} entry.
      */
     public static String rfFeKey(String baseKey) {
-        return useRfNaming != null && useRfNaming.get() ? baseKey + ".rf" : baseKey;
+        return rfFeKey(baseKey, rfNamingEnabled());
+    }
+
+    /** Pure form of {@link #rfFeKey(String)} with the toggle passed in -- the unit-test seam, since the real
+     *  toggle is a client-spec value that cannot be set from a test. */
+    public static String rfFeKey(String baseKey, boolean rfNaming) {
+        return rfNaming ? baseKey + ".rf" : baseKey;
+    }
+
+    /** {@link #rfFeKey(String)}, but only when the {@code .rf} sibling actually exists in the active language, so
+     *  a key with no sibling keeps its base wording instead of rendering as a raw key -- and the day a sibling is
+     *  added to the lang file it is picked up with no code change. This is the one definition of that lookup;
+     *  every screen, tooltip and statement that wants RF-aware text calls it. Client-side only in effect: a
+     *  dedicated server has no toggle, so it always answers with the base key. */
+    public static String rfNamedKey(String key) {
+        return rfNamedKey(key, rfNamingEnabled(), Language.getInstance()::has);
+    }
+
+    /** Pure form of {@link #rfNamedKey(String)} with the toggle and the language lookup passed in. */
+    public static String rfNamedKey(String key, boolean rfNaming, Predicate<String> hasKey) {
+        String rfKey = rfFeKey(key, rfNaming);
+        return !rfKey.equals(key) && hasKey.test(rfKey) ? rfKey : key;
+    }
+
+    /** The title a client screen should show for a menu the server opened. The server sends the BASE
+     *  translation key (it has no FE/RF toggle); this maps it to its {@code .rf} sibling on the client when the
+     *  player's toggle is on. Non-translatable titles (a renamed block entity, say) pass through untouched. */
+    public static Component clientMenuTitle(Component title) {
+        return clientMenuTitle(title, rfNamingEnabled(), Language.getInstance()::has);
+    }
+
+    /** Pure form of {@link #clientMenuTitle(Component)}. Returns {@code title} itself when nothing changes. */
+    public static Component clientMenuTitle(Component title, boolean rfNaming, Predicate<String> hasKey) {
+        if (title.getContents() instanceof TranslatableContents translatable) {
+            String mapped = rfNamedKey(translatable.getKey(), rfNaming, hasKey);
+            if (!mapped.equals(translatable.getKey())) {
+                return Component.translatable(mapped, translatable.getArgs()).withStyle(title.getStyle());
+            }
+        }
+        return title;
     }
 
     private static Set<Identifier> toIdSet(ModConfigSpec.ConfigValue<List<? extends String>> list) {

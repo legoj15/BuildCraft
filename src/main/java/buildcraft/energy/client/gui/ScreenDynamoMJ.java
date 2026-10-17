@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
+import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.container.ContainerDynamoMJ;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
@@ -23,8 +24,9 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_UPGRADE_TOOLTIP = new buildcraft.lib.gui.pos.GuiRectangle(42, 20, 74, 20);
     private static final buildcraft.lib.gui.pos.GuiRectangle RECT_RF_BATTERY = new buildcraft.lib.gui.pos.GuiRectangle(138, 17, 8, 62);
 
+    /** The server sends the base title key, since it cannot see this player's FE/RF toggle; map it here. */
     public ScreenDynamoMJ(ContainerDynamoMJ menu, Inventory playerInv, Component title) {
-        super(menu, playerInv, title, SIZE_X, SIZE_Y);
+        super(menu, playerInv, BCEnergyConfig.clientMenuTitle(title), SIZE_X, SIZE_Y);
     }
 
     @Override
@@ -46,8 +48,8 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
 
             mainGui.shownElements.add(new DummyHelpElement(
                 RECT_UPGRADE_HELP.offset(mainGui.rootElement),
-                new ElementHelpInfo("buildcraft.help.dynamo.upgrades.title", 0xFF_66_99_FF,
-                    "buildcraft.help.dynamo.upgrades")
+                new ElementHelpInfo(BCEnergyConfig.rfNamedKey("buildcraft.help.dynamo.upgrades.title"), 0xFF_66_99_FF,
+                    BCEnergyConfig.rfNamedKey("buildcraft.help.dynamo.upgrades"))
             ));
 
 
@@ -59,7 +61,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                         lines.add(LocaleUtil.localize("buildcraft.gui.rf_engine.upgrade_types"));
                         buildcraft.energy.tile.TileDynamoMJ.initUpgrades();
                         String unitLabel = LocaleUtil.localize(
-                            buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.gui.rf_engine.upgrade_rate_unit"));
+                            BCEnergyConfig.rfNamedKey("buildcraft.gui.rf_engine.upgrade_rate_unit"));
                         for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileDynamoMJ.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();
@@ -83,10 +85,10 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                     String mj = LocaleUtil.localizeMjFlowForcedMj(mjPerTick);
                     String rf = LocaleUtil.localizeRfFlow(rfPerTick);
                     String conversion = LocaleUtil.localize(
-                        buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.dynamo.battery"), mj, rf);
+                        BCEnergyConfig.rfNamedKey("buildcraft.help.dynamo.battery"), mj, rf);
                     ElementHelpInfo help = ElementHelpInfo
                         .preTranslated(
-                            buildcraft.energy.BCEnergyConfig.rfFeKey("buildcraft.help.dynamo.battery.title"),
+                            BCEnergyConfig.rfNamedKey("buildcraft.help.dynamo.battery.title"),
                             0xFF_33_AA_33, conversion);
                     elements.add(help.target(this));
                 }

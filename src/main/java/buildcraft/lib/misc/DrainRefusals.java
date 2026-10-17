@@ -125,16 +125,23 @@ public final class DrainRefusals {
         return true;
     }
 
-    /** {@link #remember(BlockPos, BlockState, long, StateLookup)} for the cell's current state and the world's clock;
-     *  remembered cells in unloaded chunks are not read (that would load them), only aged out. */
+    /** {@link #remember(BlockPos, BlockState, long, StateLookup)} for the cell's current state and the world's clock.
+     *  A cell in an unloaded chunk is not read (that would load it) and so not remembered: it has not been seen to
+     *  refuse. Other remembered cells in unloaded chunks are likewise left unread, only aged out. */
     public void remember(Level level, BlockPos pos) {
+        if (!level.isLoaded(pos)) {
+            return;
+        }
         remember(pos, level.getBlockState(pos), level.getGameTime(),
                 cell -> level.isLoaded(cell) ? level.getBlockState(cell) : null);
     }
 
-    /** {@link #isRefused(BlockPos, BlockState, long)} against the world's current state and clock. */
+    /** {@link #isRefused(BlockPos, BlockState, long)} against the world's current state and clock. A cell in an
+     *  unloaded chunk is not read (that would load it) and is reported as not refused, its entry left as it was to be
+     *  judged once the cell is loaded. */
     public boolean isRefused(Level level, BlockPos pos) {
-        return !refused.isEmpty() && isRefused(pos, level.getBlockState(pos), level.getGameTime());
+        return !refused.isEmpty() && level.isLoaded(pos)
+                && isRefused(pos, level.getBlockState(pos), level.getGameTime());
     }
 
     /** How many cells are currently remembered. */

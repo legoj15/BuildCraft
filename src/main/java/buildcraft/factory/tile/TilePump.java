@@ -399,8 +399,13 @@ public class TilePump extends TileMiner implements IDebuggable {
         return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachineBreak(serverLevel, pos, getOwner());
     }
 
-    /** Forgets {@code currentPos} after it refused (a protection mod, or its own pickup) and moves to the next cell. */
+    /**
+     * Forgets {@code currentPos} after it refused (a protection mod, or its own pickup) and moves to the next cell.
+     * The power charged for the refused bucket is gone with it, whichever refusal it was, so the next cell pays its
+     * own 10 MJ in full rather than finishing on a charge it did not earn.
+     */
     private void skipRefusedCell() {
+        progress = 0;
         refusals.remember(level, currentPos);
         paths.remove(currentPos);
         nextPos();
@@ -544,7 +549,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
                 // Ask again now, at the moment the fluid is taken, unless the start check just asked in this same
                 // tick: a bucket that charged over several ticks was cleared before a claim placed since then. The
-                // pump has not touched the world, so the charge is kept for the next cell.
+                // charge is spent on the refused attempt (skipRefusedCell), like a refused pickup's.
                 if (!askedThisTick && !mayDrain(currentPos)) {
                     skipRefusedCell();
                     return;
@@ -556,7 +561,6 @@ public class TilePump extends TileMiner implements IDebuggable {
                 // power spent on the refused attempt is gone, so the next cell pays in full.
                 // The refusal is remembered, or the rebuild would queue the same cell again.
                 if (!isInfiniteWaterSource && BlockUtil.drainBlock(level, currentPos, true) == null) {
-                    progress = 0;
                     skipRefusedCell();
                     return;
                 }

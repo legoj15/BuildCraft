@@ -266,6 +266,71 @@ public class PumpProtectionTester {
     }
 
     /**
+     * A refusal at the drain spends the bucket's power like any other refusal. The pump is cleared for a cell while
+     * unpowered, the owner claims that cell, and exactly one bucket of power arrives: the drain-time recheck refuses
+     * the cell and the pump moves on. The next cell then has to be paid for in full — with no further power it must
+     * stay untouched, and it is drained only once another bucket of power has been received. (Carrying the refused
+     * cell's charge over made the next bucket free.)
+     */
+    public static void drainTimeRefusalSpendsTheBucketsPower(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        TilePump pump = buildPumpedChannel(helper);
+        helper.setBlock(CELL_A, Blocks.WATER);
+        helper.setBlock(CELL_B, Blocks.WATER);
+        BlockPos a = helper.absolutePos(CELL_A);
+        BlockPos b = helper.absolutePos(CELL_B);
+
+        // No power: the pump picks a cell and is cleared for it, but cannot start the bucket. Which of the two it
+        // picks first is the pump's business, so watch both and read the answer off the asks.
+        BlockPos refusedAbs;
+        BlockPos otherAbs;
+        try (ClaimProtectionMod atA = new ClaimProtectionMod(a, false);
+                ClaimProtectionMod atB = new ClaimProtectionMod(b, false)) {
+            for (int i = 0; i < 4 && atA.asks() + atB.asks() == 0; i++) {
+                pump.serverTick();
+            }
+            check(atA.asks() + atB.asks() == 1,
+                    "precondition: the pump was cleared for exactly one cell, asked A " + atA.asks() + ", B " + atB.asks());
+            refusedAbs = atA.asks() == 1 ? a : b;
+            otherAbs = atA.asks() == 1 ? b : a;
+            check(pump.getTank().getAmountMb(0) == 0, "precondition: nothing pumped without power");
+        }
+
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(refusedAbs, true);
+                ClaimProtectionMod open = new ClaimProtectionMod(otherAbs, false)) {
+            // Exactly one bucket of power arrives, after the claim: the drain-time recheck refuses the cell.
+            pump.getBattery().addPowerChecking(10 * MjAPI.MJ, false);
+            pump.serverTick();
+            check(claim.asks() == 1, "precondition: the charged bucket was refused at the drain, asked "
+                    + claim.asks() + " times");
+            check(isSource(level, refusedAbs), "precondition: the refused cell is untouched");
+            check(pump.getTank().getAmountMb(0) == 0, "precondition: nothing pumped yet");
+
+            // No more power: the next cell cannot be drained, however long the pump sits on it (a rebuild included).
+            for (int i = 0; i < 45; i++) {
+                pump.serverTick();
+            }
+            check(isSource(level, otherAbs), "the next cell is not drained on the refused cell's charge");
+            check(pump.getTank().getAmountMb(0) == 0,
+                    "no bucket is credited without power for it, got " + pump.getTank().getAmountMb(0));
+
+            // A full bucket of power: now the next cell is drained.
+            runPump(pump, PUMP_TICKS);
+            check(!isSource(level, otherAbs), "the next cell is drained once its own bucket of power arrives");
+            check(isSource(level, refusedAbs), "the refused cell is still left alone");
+            check(pump.getTank().getAmountMb(0) == 1000,
+                    "exactly the one unclaimed bucket is pumped, got " + pump.getTank().getAmountMb(0));
+            check(open.asks() >= 1, "the cell that was paid for is asked about before it is drained, asked "
+                    + open.asks());
+        }
+
+        helper.setBlock(CELL_A, Blocks.AIR);
+        helper.setBlock(CELL_B, Blocks.AIR);
+        helper.succeed();
+    }
+
+    /**
      * A modded block that reports a water source but refuses its bucket pickup. The pump tries it, is refused, takes
      * the plain water beside it, and does not try the refusing cell again while it is unchanged. Before the pump
      * remembered refusals it re-queued the cell on every rebuild, and every retry spent a full cycle of power.

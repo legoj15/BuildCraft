@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -156,4 +156,29 @@ public class StaticTablesLevelUnloadTester {
                         + "stopped level again");
         helper.succeed();
     }
+
+    /** The other way a marker block entity reports in to its cache after the level's unload dropped the sub-cache:
+     *  being removed (the block entity of a stopped level's chunk is discarded as the level closes, without the
+     *  chunk-unload flag). Removing the position from a cache that is not there loses nothing - a sub-cache rebuilt
+     *  later from saved data starts from the saved markers - but looking it up with the building accessor would
+     *  pin the stopped level again, exactly like the chunk-unload report. */
+    public static void aMarkerRemovedAfterItsLevelDoesNotRebuildTheCache(GameTestHelper helper) {
+        ServerLevel other = secondaryLevel(helper);
+        Block markerBlock = BuiltInRegistries.BLOCK.stream().filter(b -> b instanceof BlockMarkerVolume).findFirst()
+                .orElse(null);
+        helper.assertTrue(markerBlock != null, "precondition: the volume marker block is registered");
+        TileMarkerVolume marker = new TileMarkerVolume(new BlockPos(0, 64, 0), markerBlock.defaultBlockState());
+        marker.setLevel(other);
+
+        NeoForge.EVENT_BUS.post(new LevelEvent.Unload(other));
+        helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
+                "precondition: the unload dropped the level's marker sub-cache");
+
+        marker.setRemoved();
+
+        helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
+                "a marker's removal after its level unloaded must not rebuild the sub-cache - it would pin the "
+                        + "stopped level again");
+        helper.succeed();
+    }
 }

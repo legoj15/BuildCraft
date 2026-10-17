@@ -603,6 +603,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_refused_pickup_not_retried", () -> buildcraft.factory.PumpProtectionTester::refusedPickupIsNotRetried);
         reg.accept("buildcraftunofficial:pump_protection_abandoned_permit_not_reused", () -> buildcraft.factory.PumpProtectionTester::abandonedPermitIsNotReused);
         reg.accept("buildcraftunofficial:pump_protection_permit_rechecked_before_drain", () -> buildcraft.factory.PumpProtectionTester::permitIsRecheckedBeforeTheDrain);
+        reg.accept("buildcraftunofficial:pump_protection_drain_refusal_spends_the_power", () -> buildcraft.factory.PumpProtectionTester::drainTimeRefusalSpendsTheBucketsPower);
+        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_never_load_chunks", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsNeverLoadAChunk);
+        reg.accept("buildcraftunofficial:drain_refusals_level_overloads_work_on_loaded_cells", () -> buildcraft.lib.misc.DrainRefusalsLevelTester::levelOverloadsStillWorkOnLoadedCells);
 
         // Distiller tank gating (1.12.2 setFilter / setCanDrain / setCanFill parity)
         reg.accept("buildcraftunofficial:distiller_input_rejects_non_distillable", () -> buildcraft.factory.DistillerTester::testInputTankRejectsNonDistillableInsert);
@@ -990,6 +993,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_shutdown_releases_claims", () -> buildcraft.robotics.RobotAbortReleaseTester::shutdownReleasesWhatTheRobotHolds);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
         reg.accept("buildcraftunofficial:marker_chunk_unload_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache);
+        reg.accept("buildcraftunofficial:marker_removal_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerRemovedAfterItsLevelDoesNotRebuildTheCache);
 
         // Fluid carrier board — the fluid twin of the Ph4 carrier pins: the wooden-FLUID-pipe supply
         // discovery (7.1.x's getFluidInput, the load half the board's loop needs) and the carrier itself

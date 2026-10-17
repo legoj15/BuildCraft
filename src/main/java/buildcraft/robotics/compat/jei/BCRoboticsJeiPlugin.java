@@ -11,6 +11,7 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
 
@@ -19,7 +20,9 @@ import buildcraft.lib.compat.jei.JeiSubtypes;
 import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.client.gui.GuiProgrammingTable;
+import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.container.IntegrationTableLayout;
 import buildcraft.silicon.gui.GuiIntegrationTable;
 
 /**
@@ -67,13 +70,28 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
     }
 
     @Override
-    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        // The table GUI's laser-energy bar (GuiProgrammingTable.RECT_PROGRESS) opens the category — clear of the
-        // option grid (x 43-150), which the GUI hit-tests itself.
-        registration.addRecipeClickArea(GuiProgrammingTable.class, 164, 36, 4, 70,
+    public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
+        // "+" on a Programming Table entry puts a blank board in the table and selects that entry's option;
+        // on an Integration Table entry it puts a blank robot in the centre and the entry's board in the ring.
+        // Both move real items out of the player's inventory (server-side, see RoboticsTableTransfer).
+        registration.addRecipeTransferHandler(
+                new ProgrammingTableTransferHandler(registration.getTransferHelper()),
                 ProgrammingRecipeJeiTypes.PROGRAMMING);
-        // Likewise the Integration Table's bar (GuiIntegrationTable.RECT_PROGRESS), clear of its slots.
-        registration.addRecipeClickArea(GuiIntegrationTable.class, 164, 22, 4, 70,
+        registration.addRecipeTransferHandler(
+                new IntegrationTableTransferHandler(registration.getTransferHelper()),
+                IntegrationRecipeJeiTypes.INTEGRATION);
+    }
+
+    @Override
+    public void registerGuiHandlers(IGuiHandlerRegistration registration) {
+        // The table GUI's laser-energy bar opens the category — clear of the option grid, which the GUI hit-tests
+        // itself. The bar's rectangle is the layout's, the same one the GUI draws and shows help for.
+        registration.addRecipeClickArea(GuiProgrammingTable.class, ProgrammingTableLayout.BAR_X,
+                ProgrammingTableLayout.BAR_Y, ProgrammingTableLayout.BAR_W, ProgrammingTableLayout.BAR_H,
+                ProgrammingRecipeJeiTypes.PROGRAMMING);
+        // Likewise the Integration Table's bar, clear of its slots.
+        registration.addRecipeClickArea(GuiIntegrationTable.class, IntegrationTableLayout.BAR_X,
+                IntegrationTableLayout.BAR_Y, IntegrationTableLayout.BAR_W, IntegrationTableLayout.BAR_H,
                 IntegrationRecipeJeiTypes.INTEGRATION);
     }
 }

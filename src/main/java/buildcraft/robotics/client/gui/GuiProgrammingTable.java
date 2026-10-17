@@ -20,6 +20,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 
 import buildcraft.robotics.container.ContainerProgrammingTable;
+import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.gui.LedgerTablePower;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
@@ -29,16 +30,17 @@ import buildcraft.silicon.tile.TileProgrammingTable;
  *  and highlights the current selection plus the vertical energy bar. */
 public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/programming_table.png");
-    private static final int SIZE_X = 176, SIZE_Y = 207;
+    // All geometry (slots, option grid, selection frame, energy bar) is ProgrammingTableLayout's, shared with the
+    // menu and the JEI category.
+    private static final int SIZE_X = ProgrammingTableLayout.SIZE_X, SIZE_Y = ProgrammingTableLayout.SIZE_Y;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
-    // 7.1.x selection highlight quad, drawn from (196, 1) in the texture's icon strip.
-    private static final GuiIcon ICON_SELECTED = new GuiIcon(TEXTURE_BASE, 196, 1, 16, 16);
-    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, 176, 18, 4, 70);
-    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(164, 36, 4, 70);
-
-    private static final int GRID_X = 43, GRID_Y = 36;
-    private static final int INPUT_X = 8, INPUT_Y = 36;
-    private static final int OUTPUT_X = 8, OUTPUT_Y = 90;
+    // 7.1.x selection highlight quad, drawn from the texture's icon strip.
+    private static final GuiIcon ICON_SELECTED = new GuiIcon(TEXTURE_BASE, ProgrammingTableLayout.SELECTED_U,
+            ProgrammingTableLayout.SELECTED_V, ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE);
+    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, ProgrammingTableLayout.BAR_FILL_U,
+            ProgrammingTableLayout.BAR_FILL_V, ProgrammingTableLayout.BAR_W, ProgrammingTableLayout.BAR_H);
+    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(ProgrammingTableLayout.BAR_X,
+            ProgrammingTableLayout.BAR_Y, ProgrammingTableLayout.BAR_W, ProgrammingTableLayout.BAR_H);
 
     public GuiProgrammingTable(ContainerProgrammingTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);
@@ -52,10 +54,12 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
         }
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
 
-        addHelp(INPUT_X, INPUT_Y, 16, 16, "input");
-        addHelp(OUTPUT_X, OUTPUT_Y, 16, 16, "output");
-        addHelp(GRID_X, GRID_Y, TileProgrammingTable.OPTION_COLS * 18 - 2,
-                TileProgrammingTable.OPTION_ROWS * 18 - 2, "boards");
+        addHelp(ProgrammingTableLayout.BOARD_X, ProgrammingTableLayout.BOARD_Y,
+                ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE, "input");
+        addHelp(ProgrammingTableLayout.RESULT_X, ProgrammingTableLayout.RESULT_Y,
+                ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE, "output");
+        addHelp(ProgrammingTableLayout.GRID_X, ProgrammingTableLayout.GRID_Y,
+                ProgrammingTableLayout.gridWidth(), ProgrammingTableLayout.gridHeight(), "boards");
         mainGui.shownElements.add(new DummyHelpElement(
                 RECT_PROGRESS.offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.programming_table.power.title", 0xFF_DD_AA_FF,
@@ -91,10 +95,9 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     }
 
     private IGuiArea getOptionArea(int index) {
-        int posX = index % TileProgrammingTable.OPTION_COLS;
-        int posY = index / TileProgrammingTable.OPTION_COLS;
-        return new GuiRectangle(16, 16).offset(mainGui.rootElement)
-                .offset(GRID_X + posX * 18, GRID_Y + posY * 18);
+        return new GuiRectangle(ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE)
+                .offset(mainGui.rootElement)
+                .offset(ProgrammingTableLayout.cellX(index), ProgrammingTableLayout.cellY(index));
     }
 
     @Override

@@ -9,6 +9,9 @@ import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.api.boards.RedstoneBoardNBT;
+import buildcraft.robotics.item.ItemRedstoneBoard;
+
 /** One JEI entry for the Programming Table: one option of one {@code IProgrammingRecipe}, shown the way the table
  *  itself presents it. JEI-free on purpose so {@link ProgrammingRecipeCollector} is unit-testable.
  *
@@ -26,4 +29,20 @@ public record ProgrammingRecipeJei(
         List<ItemStack> grid,
         int gridIndex,
         long microJoules
-) {}
+) {
+    /** The recipe this entry is an option of: {@link #id} up to the grid index {@link ProgrammingRecipeCollector}
+     *  appended. What the JEI "+" transfer asks the server to run. */
+    public String recipeId() {
+        return id.substring(0, id.lastIndexOf('/'));
+    }
+
+    /** The id of the board the clicked cell programs (null for a non-board cell): the option the JEI "+" transfer
+     *  asks the server to select. Matched by id rather than grid index so a client whose board registry differs from
+     *  the server's cannot select a different board than the one shown. */
+    public String boardId() {
+        ItemStack option = grid.get(gridIndex);
+        RedstoneBoardNBT<?> board = option.getItem() instanceof ItemRedstoneBoard
+                ? ItemRedstoneBoard.getBoardNBT(option) : null;
+        return board == null ? null : board.getID();
+    }
+}

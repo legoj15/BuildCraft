@@ -10,16 +10,19 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.slot.SlotOutput;
+import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
 /** Lives in robotics (mirroring 8.0.x's file placement) even though the tile is silicon's — the table's whole
  *  purpose is boards. 7.1.x layout: board in top-left, result below it, a 6×4 option grid of display-only stacks
- *  in the middle. The grid is not slotted interaction: the GUI hit-tests it and routes clicks through
+ *  in the middle (positions: {@link ProgrammingTableLayout}). The grid is not slotted interaction: the GUI hit-tests it and routes clicks through
  *  {@link #clickMenuButton}, exactly like the assembly table's recipe list. */
 @SuppressWarnings("this-escape")
 public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTable> {
@@ -33,17 +36,15 @@ public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTa
     public ContainerProgrammingTable(int containerId, Player player, TileProgrammingTable tile) {
         super(BCRoboticsMenuTypes.PROGRAMMING_TABLE.get(), containerId, player, tile);
 
-        addSlot(new SlotBase(tile.invBoard, 0, 8, 36));
-        addSlot(new SlotOutput(tile.invResult, 0, 8, 90));
+        addSlot(new SlotBase(tile.invBoard, 0, ProgrammingTableLayout.BOARD_X, ProgrammingTableLayout.BOARD_Y));
+        addSlot(new SlotOutput(tile.invResult, 0, ProgrammingTableLayout.RESULT_X, ProgrammingTableLayout.RESULT_Y));
 
-        for (int y = 0; y < TileProgrammingTable.OPTION_ROWS; y++) {
-            for (int x = 0; x < TileProgrammingTable.OPTION_COLS; x++) {
-                addSlot(new SlotDisplay(this::getDisplay, x + y * TileProgrammingTable.OPTION_COLS,
-                        43 + x * 18, 36 + y * 18));
-            }
+        for (int index = 0; index < TileProgrammingTable.OPTION_ROWS * TileProgrammingTable.OPTION_COLS; index++) {
+            addSlot(new SlotDisplay(this::getDisplay, index,
+                    ProgrammingTableLayout.cellX(index), ProgrammingTableLayout.cellY(index)));
         }
 
-        addFullPlayerInventory(8, 123);
+        addFullPlayerInventory(ProgrammingTableLayout.PLAYER_INV_X, ProgrammingTableLayout.PLAYER_INV_Y);
     }
 
     @Override
@@ -53,6 +54,17 @@ public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTa
         }
         tile.selectOption(id);
         return true;
+    }
+
+    @Override
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+        if (id == NET_JEI_TRANSFER_PROGRAMMING && !isClient && tile != null) {
+            // JEI "+" on a Programming Table recipe. Payload: recipe id, board id; everything is re-validated
+            // against the player's real inventory and the table's live state.
+            RoboticsTableTransfer.program(player.getInventory(), tile, buffer.readUtf(), buffer.readUtf(), true);
+            return;
+        }
+        super.readMessage(id, buffer, isClient, ctx);
     }
 
     private ItemStack getDisplay(int index) {

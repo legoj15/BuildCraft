@@ -83,6 +83,15 @@ public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
     }
 
     @Test
+    public void transferIdentifierNamesTheProgramTheRobotGets() {
+        Assertions.assertFalse(entries.isEmpty(), "liveness");
+        for (IntegrationRecipeJei entry : entries) {
+            Assertions.assertEquals(ItemRobot.getBoardId(entry.outputs().get(0)), entry.boardId(),
+                    entry.id() + ": the board the '+' transfer asks for is the program the robot ends up with");
+        }
+    }
+
+    @Test
     public void drainedRobotsAlsoLandOnTheirEntry() {
         Assertions.assertFalse(entries.isEmpty(), "liveness");
         for (IntegrationRecipeJei entry : entries) {

@@ -120,6 +120,17 @@ public class ProgrammingRecipeCollectorTester extends VanillaSetupBaseTester {
     }
 
     @Test
+    public void transferIdentifiersNameTheRecipeAndTheClickedBoard() {
+        Assertions.assertFalse(boardEntries.isEmpty(), "liveness: the board recipe produced entries");
+        for (ProgrammingRecipeJei entry : boardEntries) {
+            Assertions.assertEquals(BOARD_RECIPE_ID, entry.recipeId(),
+                    entry.id() + " names the recipe the JEI '+' transfer asks the server to run");
+            Assertions.assertEquals(ItemRedstoneBoard.getBoardNBT(entry.output()).getID(), entry.boardId(),
+                    entry.id() + " names the board the clicked cell programs, which is also what it crafts");
+        }
+    }
+
+    @Test
     public void entriesFollowTheTablesCheapestFirstOrder() {
         Assertions.assertTrue(boardEntries.size() > 1, "liveness: more than one entry to order");
         for (int i = 1; i < boardEntries.size(); i++) {

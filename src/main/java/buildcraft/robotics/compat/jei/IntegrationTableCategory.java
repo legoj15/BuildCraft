@@ -21,6 +21,7 @@ import buildcraft.lib.compat.jei.JeiMjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.container.IntegrationTableLayout;
 
 /**
  * JEI category for the Integration Table, drawn as the table's own GUI (the Programming Table category is the
@@ -34,19 +35,17 @@ import buildcraft.silicon.BCSiliconItems;
 public class IntegrationTableCategory extends AbstractRecipeCategory<IntegrationRecipeJei> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/integration_table.png");
 
-    // Crop the GUI texture (176x191, see GuiIntegrationTable) to the ring, the preview, the result and the power
-    // bar, leaving out the title strip and the player inventory.
-    private static final int TEX_U = 12, TEX_V = 18;
-    private static final int TEX_W = 160, TEX_H = 78;
+    // Crop the GUI texture (see IntegrationTableLayout) to the ring, the preview, the result and the power bar,
+    // leaving out the title strip and the player inventory. The one geometry this category owns; package-visible so
+    // TableLayoutTest can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = 12, TEX_V = 18;
+    static final int TEX_W = 160, TEX_H = 78;
 
-    // Slot positions from ContainerIntegrationTable, shifted by (-TEX_U, -TEX_V).
-    private static final int RING_X = 19 - TEX_U, RING_Y = 24 - TEX_V, RING_PITCH = 25;
-    private static final int PREVIEW_X = 101 - TEX_U, PREVIEW_Y = 36 - TEX_V;
-    private static final int OUTPUT_X = 138 - TEX_U, OUTPUT_Y = 49 - TEX_V;
-
-    /** Ring cells (column, row) per expansion index, in ContainerIntegrationTable's slot order: reading order,
-     *  skipping the centre. */
-    private static final int[][] RING_CELLS = {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {1, 2}, {2, 2}};
+    // Slot positions from IntegrationTableLayout, shifted by (-TEX_U, -TEX_V).
+    private static final int PREVIEW_X = IntegrationTableLayout.PREVIEW_X - TEX_U,
+            PREVIEW_Y = IntegrationTableLayout.PREVIEW_Y - TEX_V;
+    private static final int OUTPUT_X = IntegrationTableLayout.RESULT_X - TEX_U,
+            OUTPUT_Y = IntegrationTableLayout.RESULT_Y - TEX_V;
 
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
     private static final String POWER_KEY = "gui.jei.category.buildcraftunofficial.integration_table.power";
@@ -81,10 +80,12 @@ public class IntegrationTableCategory extends AbstractRecipeCategory<Integration
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, IntegrationRecipeJei recipe, IFocusGroup focuses) {
         // addItemStacks throughout: the single-stack forms fork at the JEI 20 cliff (see ProgrammingTableCategory).
-        builder.addInputSlot(ringX(1), ringY(1)).addItemStacks(List.of(recipe.center()));
-        for (int i = 0; i < Math.min(recipe.expansions().size(), RING_CELLS.length); i++) {
-            int[] cell = RING_CELLS[i];
-            builder.addInputSlot(ringX(cell[0]), ringY(cell[1])).addItemStacks(List.of(recipe.expansions().get(i)));
+        builder.addInputSlot(ringX(IntegrationTableLayout.CENTRE_COL), ringY(IntegrationTableLayout.CENTRE_ROW))
+                .addItemStacks(List.of(recipe.center()));
+        // Expansion i sits in the menu's ring slot i (reading order, centre skipped).
+        for (int i = 0; i < Math.min(recipe.expansions().size(), IntegrationTableLayout.RING_SLOTS); i++) {
+            builder.addInputSlot(ringX(IntegrationTableLayout.ringColumn(i)), ringY(IntegrationTableLayout.ringRow(i)))
+                    .addItemStacks(List.of(recipe.expansions().get(i)));
         }
         builder.addSlot(RecipeIngredientRole.RENDER_ONLY, PREVIEW_X, PREVIEW_Y)
                 .addItemStacks(List.of(recipe.outputs().get(0)));
@@ -92,10 +93,10 @@ public class IntegrationTableCategory extends AbstractRecipeCategory<Integration
     }
 
     private static int ringX(int column) {
-        return RING_X + column * RING_PITCH;
+        return IntegrationTableLayout.ringX(column) - TEX_U;
     }
 
     private static int ringY(int row) {
-        return RING_Y + row * RING_PITCH;
+        return IntegrationTableLayout.ringY(row) - TEX_V;
     }
 }

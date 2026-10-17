@@ -19,18 +19,25 @@ import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.silicon.container.ContainerIntegrationTable;
+import buildcraft.silicon.container.IntegrationTableLayout;
 
 public class GuiIntegrationTable extends GuiBC8<ContainerIntegrationTable> {
     private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/integration_table.png");
-    private static final int SIZE_X = 176, SIZE_Y = 191;
+    // All geometry is IntegrationTableLayout's, shared with the menu and the JEI category.
+    private static final int SIZE_X = IntegrationTableLayout.SIZE_X, SIZE_Y = IntegrationTableLayout.SIZE_Y;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
-    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 4, 70);
-    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(164, 22, 4, 70);
+    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, IntegrationTableLayout.BAR_FILL_U,
+            IntegrationTableLayout.BAR_FILL_V, IntegrationTableLayout.BAR_W, IntegrationTableLayout.BAR_H);
+    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(IntegrationTableLayout.BAR_X,
+            IntegrationTableLayout.BAR_Y, IntegrationTableLayout.BAR_W, IntegrationTableLayout.BAR_H);
 
-    // Help regions — match ContainerIntegrationTable's 3×3 input grid at (19, 24), pitch 25.
-    private static final int INPUT_X = 19, INPUT_Y = 24, INPUT_W = 3 * 25 - 9, INPUT_H = 3 * 25 - 9;
-    // Display + output slots span (101, 36) → (138+16, 49+16). One block covers both.
-    private static final int OUTPUT_X = 101, OUTPUT_Y = 36, OUTPUT_W = 138 + 16 - 101, OUTPUT_H = 49 + 16 - 36;
+    // Help regions — the 3×3 input ring...
+    private static final int INPUT_X = IntegrationTableLayout.RING_X, INPUT_Y = IntegrationTableLayout.RING_Y,
+            INPUT_W = IntegrationTableLayout.ringSpan(), INPUT_H = IntegrationTableLayout.ringSpan();
+    // ...and the display + output slots, one block covering both.
+    private static final int OUTPUT_X = IntegrationTableLayout.PREVIEW_X, OUTPUT_Y = IntegrationTableLayout.PREVIEW_Y,
+            OUTPUT_W = IntegrationTableLayout.RESULT_X + IntegrationTableLayout.CELL_SIZE - IntegrationTableLayout.PREVIEW_X,
+            OUTPUT_H = IntegrationTableLayout.RESULT_Y + IntegrationTableLayout.CELL_SIZE - IntegrationTableLayout.PREVIEW_Y;
 
     public GuiIntegrationTable(ContainerIntegrationTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);

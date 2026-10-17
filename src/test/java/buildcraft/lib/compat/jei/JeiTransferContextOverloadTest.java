@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 
+import buildcraft.robotics.compat.jei.AbstractTableTransferHandler;
 import buildcraft.silicon.compat.jei.AssemblyTableTransferHandler;
 
 /**
@@ -29,7 +30,8 @@ public class JeiTransferContextOverloadTest {
     private static final List<Class<?>> HANDLERS = List.of(
         AbstractBucketTransferHandler.class,
         BlueprintTransferHandler.class,
-        AssemblyTableTransferHandler.class);
+        AssemblyTableTransferHandler.class,
+        AbstractTableTransferHandler.class);
 
     @Test
     public void handlersOverrideTheContextOverloadWhenJeiHasIt() {

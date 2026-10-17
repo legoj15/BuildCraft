@@ -131,20 +131,32 @@ public class TileProgrammingTable extends TileLaserTableBase {
         }
     }
 
-    /** Re-derives {@link #currentRecipeId} from the input stack, resetting the selection whenever it changes — the
-     *  input board becoming something else (or nothing) invalidates the chosen option, exactly as 7.1.x did. */
-    private void findRecipe() {
-        String oldId = currentRecipeId;
-        currentRecipeId = null;
-        ItemStack input = invBoard.getStackInSlot(0);
-        if (!input.isEmpty()) {
-            for (IProgrammingRecipe recipe : ProgrammingRecipeRegistry.INSTANCE.getRecipes()) {
-                if (recipe.canCraft(input)) {
-                    currentRecipeId = recipe.getId();
-                    break;
-                }
+    /** The recipe the table runs for {@code input}: the first registered one that accepts it, or null. The one home
+     *  for that choice, shared by {@link #findRecipe} and the JEI transfer's pre-check
+     *  ({@code RoboticsTableTransfer}) so the two cannot disagree about which recipe a board lands in. */
+    @Nullable
+    public static IProgrammingRecipe matchRecipe(ItemStack input) {
+        if (input.isEmpty()) {
+            return null;
+        }
+        for (IProgrammingRecipe recipe : ProgrammingRecipeRegistry.INSTANCE.getRecipes()) {
+            if (recipe.canCraft(input)) {
+                return recipe;
             }
         }
+        return null;
+    }
+
+    /** Re-derives {@link #currentRecipeId} from the input stack, resetting the selection whenever it changes — the
+     *  input board becoming something else (or nothing) invalidates the chosen option, exactly as 7.1.x did.
+     *
+     *  <p>Runs every server tick, and is public so that code which has just changed the board slot can resolve the
+     *  recipe and option grid at once instead of leaving {@link #options} null (and {@link #selectOption} clamping
+     *  to -1) until the next tick: the JEI "+" transfer inserts a board, calls this, then selects the option. */
+    public void findRecipe() {
+        String oldId = currentRecipeId;
+        IProgrammingRecipe match = matchRecipe(invBoard.getStackInSlot(0));
+        currentRecipeId = match == null ? null : match.getId();
         boolean changed = !Objects.equals(oldId, currentRecipeId);
         if (changed) {
             optionId = -1;

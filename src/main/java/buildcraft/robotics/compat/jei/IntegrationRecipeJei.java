@@ -9,6 +9,9 @@ import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.api.boards.RedstoneBoardNBT;
+import buildcraft.robotics.item.ItemRedstoneBoard;
+
 /** One JEI entry for the Integration Table. JEI-free on purpose so {@link IntegrationRecipeCollector} is
  *  unit-testable.
  *
@@ -24,4 +27,14 @@ public record IntegrationRecipeJei(
         List<ItemStack> expansions,
         List<ItemStack> outputs,
         long microJoules
-) {}
+) {
+    /** The program id of the board in the ring (null if the entry has none): what the JEI "+" transfer asks the
+     *  server to move in, matched by program so any board stack of that program will do. */
+    public String boardId() {
+        if (expansions.isEmpty() || !(expansions.get(0).getItem() instanceof ItemRedstoneBoard)) {
+            return null;
+        }
+        RedstoneBoardNBT<?> board = ItemRedstoneBoard.getBoardNBT(expansions.get(0));
+        return board == null ? null : board.getID();
+    }
+}

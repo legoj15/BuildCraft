@@ -135,13 +135,32 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return false;
     }
 
+    /**
+     * Would fluid already beside or above {@code blockPos} wash the schematic block there away the moment it is
+     * placed? The CLEAR gate's per-cell fragile check once only tolerated fluid is left (see the place-task gate in
+     * {@link #tick()}). Default: false. Overridden in {@link BlueprintBuilder}.
+     */
+    protected boolean isFragileWashedAwayAt(BlockPos blockPos) {
+        return false;
+    }
+
+    /**
+     * Is the fluid in schematic-air cell {@code blockPos} water the Builder should leave alone, because mopping it
+     * is futile (vanilla refills it at once from water the Builder can never remove)? Such a cell counts as
+     * {@code CORRECT} in {@link #check} and as tolerated in {@link #scanAreaFluid()}. Default: false (the cell is
+     * mopped). Overridden in {@link BlueprintBuilder}.
+     */
+    protected boolean isToleratedFluidAt(BlockPos blockPos) {
+        return false;
+    }
+
     /** What the fluid in the build area means to the place-task gate; see {@link #scanAreaFluid()}. */
     protected enum AreaFluid {
         /** No fluid anywhere in the build box. */
         NONE,
         /** Fluid only inside cells the check sweep accepted as correct (a block the schematic wants waterlogged,
-         *  or one CLEAR tolerates because vanilla re-floods it from water the Builder cannot remove). It will
-         *  never be mopped, but it can still wash a fragile block away. */
+         *  or, in CLEAR, a block or air cell vanilla re-floods from water the Builder cannot remove). It will
+         *  never be mopped, but it can still wash a fragile block beside it away. */
         TOLERATED_ONLY,
         /** Fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
         UNCLEARED
@@ -150,9 +169,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     /**
      * O(n) scan of the build area for fluid (source or flowing), split into what mopping must still clear and
      * what the check sweep already accepted. Used by the place-task-add gate: CLEAR defers placements while any
-     * fluid is {@link AreaFluid#UNCLEARED}, and (like REPLACE) keeps deferring fragile blocks while tolerated
-     * fluid remains. Counting accepted cells as "still to mop" would hold the gate shut for every other block
-     * for as long as one tolerated wet block stands, since mopping can never remove its water.
+     * fluid is {@link AreaFluid#UNCLEARED}, and once only tolerated fluid is left defers just the fragile blocks
+     * that fluid touches. Counting accepted cells as "still to mop" would hold the gate shut for every other
+     * block for as long as one tolerated wet block stands, since mopping can never remove its water.
      *
      * <p>Iteration short-circuits on the first uncleared fluid, so the cost is a few microseconds while mopping
      * (typical case) and the full O(n) only when the area is fully clear (one verification per tick at that
@@ -164,9 +183,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         AreaFluid result = AreaFluid.NONE;
         for (BlockPos pos : info.box.getBlocksInArea()) {
             if (tile.getWorldBC().getFluidState(pos).isEmpty()) continue;
-            // CORRECT on a non-air cell with fluid in it: the check accepted the cell as is. A stale CORRECT
-            // is re-checked within a sweep, and an air cell is never accepted while it holds fluid.
-            if (checkResults[posToIndex(pos)] != CHECK_RESULT_CORRECT || isAir(pos)) {
+            // A non-air cell: CORRECT means the check accepted the block, fluid and all (a stale CORRECT is
+            // re-checked within a sweep). An air cell's CORRECT may be stale from before the fluid arrived, so
+            // its tolerance is re-derived from the world here rather than read off checkResults.
+            boolean tolerated = isAir(pos)
+                ? isToleratedFluidAt(pos)
+                : checkResults[posToIndex(pos)] == CHECK_RESULT_CORRECT;
+            if (!tolerated) {
                 return AreaFluid.UNCLEARED;
             }
             result = AreaFluid.TOLERATED_ONLY;
@@ -422,10 +445,14 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             // Build-area-fluid gates (mode-dependent):
             // - CLEAR: defer everything except waterlog-clear-only (those contribute to mopping)
             //   while fluid is left to mop. Fluid the check sweep ACCEPTED (a wet block the schematic
-            //   wants wet, or one CLEAR tolerates because vanilla re-floods it from water outside the
-            //   area, see BlueprintBuilder#isRefloodedByUnmoppableWater) can never be mopped, so it must
-            //   not hold the gate shut: once nothing else is left to mop, only fragile placements keep
-            //   waiting on it, exactly as in REPLACE.
+            //   wants wet, or a block / air cell CLEAR tolerates because vanilla re-floods it from water
+            //   the Builder cannot remove, see BlueprintBuilder#isRefloodedByUnmoppableWater) can never be
+            //   mopped, so it must not hold the gate shut: once nothing else is left to mop, a fragile
+            //   placement waits only while that fluid is beside or above its own cell (the same test
+            //   SchematicBlockDefault.build applies, done here so no items are extracted for a placement
+            //   build would refuse). Gating every fragile block on any tolerated fluid in the box would
+            //   defer them for ever, since that water never goes away. The REPLACE-style "anywhere in
+            //   the box" gate guards against moving fluid; tolerated fluid is settled water.
             // - REPLACE: defer fragile placements only — solid placements proceed because they
             //   displace water on placement and aren't replaceable. Without this, fragile
             //   schematic blocks (snow_layer in the user's case) at positions where water flows
@@ -441,9 +468,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 ? scanAreaFluid() : AreaFluid.NONE;
             boolean clearStillMopping = areaFluid == AreaFluid.UNCLEARED
                 && getFluidMode() == EnumFluidHandlingMode.CLEAR;
-            // Fragile blocks wait while any fluid is left: in REPLACE that is every fluid; in CLEAR it is the
-            // fluid that mopping cannot remove (a tolerated wet block), once nothing else is left to mop.
-            boolean fragileGated = areaFluid != AreaFluid.NONE && !clearStillMopping;
+            boolean clearFragileGated = areaFluid == AreaFluid.TOLERATED_ONLY
+                && getFluidMode() == EnumFluidHandlingMode.CLEAR;
+            boolean replaceFragileGated = areaFluid != AreaFluid.NONE
+                && getFluidMode() == EnumFluidHandlingMode.REPLACE;
             if (!tile.canExcavate() || breakTasks.isEmpty()) {
                 if (blocks.length != 0) {
                     isDone = false;
@@ -460,7 +488,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     .mapToObj(this::indexToPos)
                     .filter(pos -> {
                         if (clearStillMopping) return isAllowedDuringFluidMop(pos);
-                        if (fragileGated && isFragileSchematicAt(pos)) return false;
+                        if (replaceFragileGated && isFragileSchematicAt(pos)) return false;
+                        if (clearFragileGated && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos)) {
+                            return false;
+                        }
                         return true;
                     })
                     .filter(this::isReadyToPlace)
@@ -776,7 +807,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         int i = posToIndex(blockPos);
         byte prev = checkResults[i];
         if (isAir(blockPos)) {
-            if (tile.getWorldBC().isEmptyBlock(blockPos)) {
+            if (tile.getWorldBC().isEmptyBlock(blockPos) || isToleratedFluidAt(blockPos)) {
                 checkResults[i] = CHECK_RESULT_CORRECT;
             } else {
                 checkResults[i] = CHECK_RESULT_TO_BREAK;

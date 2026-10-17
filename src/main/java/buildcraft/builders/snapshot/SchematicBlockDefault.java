@@ -28,6 +28,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ProblemReporter;
 //?}
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -85,6 +86,22 @@ public class SchematicBlockDefault implements ISchematicBlock {
     /** {@link #isWashedAwayBy} with water as the representative fluid. */
     public static boolean isWashedAwayByFluid(BlockState state) {
         return isWashedAwayBy(state, Fluids.WATER);
+    }
+
+    /**
+     * Is there fluid beside or above {@code blockPos} that would flow in and wash {@code state} away as soon as it
+     * is placed there? The fragile-block defer in {@link #build(Level, BlockPos, EnumFluidHandlingMode)}, shared
+     * with the Builder's queue-time gate so a placement that build would refuse is never queued (which would
+     * extract its items only to refund them).
+     */
+    public static boolean hasWashingFluidNeighbour(BlockGetter level, BlockPos blockPos, BlockState state) {
+        for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
+            FluidState neighbour = level.getFluidState(blockPos.relative(dir));
+            if (!neighbour.isEmpty() && isWashedAwayBy(state, neighbour.getType())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -556,13 +573,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
             boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
                     && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
-            if (!placedAsWaterlogged) {
-                for (Direction dir : FRAGILE_FLUID_NEIGHBOUR_DIRS) {
-                    FluidState neighbour = level.getFluidState(blockPos.relative(dir));
-                    if (!neighbour.isEmpty() && isWashedAwayBy(newBlockState, neighbour.getType())) {
-                        return false;
-                    }
-                }
+            if (!placedAsWaterlogged && hasWashingFluidNeighbour(level, blockPos, newBlockState)) {
+                return false;
             }
         }
         // Bed FOOT pre-check: HEAD position must also be clear (or replaceable) for the bed to

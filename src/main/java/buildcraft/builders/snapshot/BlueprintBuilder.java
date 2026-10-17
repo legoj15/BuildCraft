@@ -29,6 +29,8 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -361,6 +363,13 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     @Override
+    protected boolean isFragileWashedAwayAt(BlockPos blockPos) {
+        ISchematicBlock schematic = getSchematicBlock(blockPos);
+        if (!(schematic instanceof SchematicBlockDefault def) || def.blockState == null) return false;
+        return SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState);
+    }
+
+    @Override
     protected boolean hasEnoughToPlaceItems(BlockPos blockPos) {
         if (isWaterlogClearOnlyAt(blockPos)) return true;
         return tryExtractRequired(
@@ -466,11 +475,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * a cell with two or more horizontal water-SOURCE neighbours, over a solid or source floor, becomes a source
      * itself, which waterlogs the block there; a single source or flowing water is held back. So the cause can
      * be read straight off the neighbours, no attempt counting or flow tracing needed: count the horizontal water
-     * sources the Builder cannot clear. A neighbour counts when it lies outside the build box (never mopped) or
-     * is itself a cell this builder already accepted ({@code CORRECT}, e.g. a wet block tolerated by this very
-     * rule, so a row of blocks flooding each other along a shore settles instead of cascading). Two such
-     * sources re-flood the cell; one cannot. The solid-floor half of the vanilla rule is not mirrored: if the
-     * block is wet with two unremovable sources beside it, tolerating the water is right whatever is below.
+     * sources the Builder cannot clear ({@link #isUnmoppable}). Two such sources re-flood the cell; one cannot.
+     * The solid-floor half of the vanilla rule is not mirrored: if the cell is wet with two unremovable sources
+     * beside it, tolerating the water is right whatever is below.
      */
     private boolean isRefloodedByUnmoppableWater(BlockPos blockPos) {
         int sources = 0;
@@ -478,9 +485,53 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             BlockPos neighbour = blockPos.relative(direction);
             FluidState fluid = tile.getWorldBC().getFluidState(neighbour);
             if (!fluid.isSource() || !fluid.is(FluidTags.WATER)) continue;
-            boolean unmoppable = !getBuildingInfo().box.contains(neighbour)
-                || checkResults[posToIndex(neighbour)] == CHECK_RESULT_CORRECT;
-            if (unmoppable && ++sources >= 2) return true;
+            if (isUnmoppable(neighbour) && ++sources >= 2) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Water at {@code blockPos} that the Builder will never remove: the cell lies outside the build box (never
+     * mopped), or it is a cell this builder already accepted ({@code CORRECT}: a block the schematic wants wet, a
+     * wet block tolerated by {@link #isRefloodedByUnmoppableWater}, or an air cell tolerated by
+     * {@link #isToleratedFluidAt}). Counting accepted cells is what lets a row of cells flooding each other along
+     * a shore settle instead of looping one cell further on.
+     */
+    private boolean isUnmoppable(BlockPos blockPos) {
+        return !getBuildingInfo().box.contains(blockPos)
+            || checkResults[posToIndex(blockPos)] == CHECK_RESULT_CORRECT;
+    }
+
+    /**
+     * CLEAR mode: is the water in this schematic-air cell refilled at once, whenever the Builder mops it, from
+     * water it can never remove? A tolerated wet block (or water just outside the box) is a permanent water
+     * source, so vanilla keeps spreading it into the air cells beside and below it, and each mop's neighbour
+     * update only reschedules that flow. Mopping such a cell is a forever loop, so it counts as clear.
+     *
+     * <p>Only a cell holding nothing but water qualifies (any real block is still broken), and only for the two
+     * ways vanilla fills a cell ({@code FlowingFluid#getNewLiquid}): a SOURCE made by the infinite-water rule
+     * (two unmoppable horizontal sources, as for a waterlogged block), or FLOWING water fed by an unmoppable
+     * neighbour: water directly above it, or a horizontal neighbour holding more water than it does. Requiring
+     * strictly more water sideways and allowing feeding only from above means tolerated flowing cells can never
+     * vouch for each other in a circle; every chain ends at water that really is permanent. Water fed by a source
+     * the Builder will still mop is not tolerated, so it is mopped as before (and drains once its source is gone).
+     */
+    @Override
+    protected boolean isToleratedFluidAt(BlockPos blockPos) {
+        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR || getBuildingInfo() == null) return false;
+        BlockState state = tile.getWorldBC().getBlockState(blockPos);
+        if (!(state.getBlock() instanceof LiquidBlock)) return false;
+        FluidState fluid = state.getFluidState();
+        if (fluid.isEmpty() || !fluid.is(FluidTags.WATER)) return false;
+        if (fluid.isSource()) return isRefloodedByUnmoppableWater(blockPos);
+        BlockPos above = blockPos.above();
+        if (tile.getWorldBC().getFluidState(above).is(FluidTags.WATER) && isUnmoppable(above)) return true;
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos neighbour = blockPos.relative(direction);
+            FluidState feeder = tile.getWorldBC().getFluidState(neighbour);
+            if (feeder.is(FluidTags.WATER) && feeder.getAmount() > fluid.getAmount() && isUnmoppable(neighbour)) {
+                return true;
+            }
         }
         return false;
     }

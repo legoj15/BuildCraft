@@ -58,6 +58,13 @@ public class BuilderRefloodTester {
 
     private static final int SLAB = 0;
     private static final int STONE = 1;
+    /** Schematic air: the Builder must keep the cell empty, so it is where it mops. */
+    private static final int AIR = 2;
+    /** A fragile block (any fluid washes it away), to check tolerated water does not hold every one back. */
+    private static final int SNOW = 3;
+    private static final BlockState[] KIND_STATES = {
+        Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
+        Blocks.SNOW.defaultBlockState() };
 
     private static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
@@ -73,22 +80,21 @@ public class BuilderRefloodTester {
         return new BlockPos(2, 2, 2 + i);
     }
 
-    /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab) or {@link #STONE}. */
+    /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
+     *  {@link #AIR} or {@link #SNOW} (one snow layer). */
     private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column) {
-        BlockState slab = Blocks.OAK_SLAB.defaultBlockState();
-        BlockState stone = Blocks.STONE.defaultBlockState();
-        ISchematicBlock slabSchematic = SchematicBlockManager.getSchematicBlock(
-                new SchematicBlockContext(level, samplePos, samplePos, slab, slab.getBlock()));
-        ISchematicBlock stoneSchematic = SchematicBlockManager.getSchematicBlock(
-                new SchematicBlockContext(level, samplePos, samplePos, stone, stone.getBlock()));
-        expect(slabSchematic != null && stoneSchematic != null, "the default schematic must resolve for slab+stone");
-
         Blueprint blueprint = new Blueprint();
         blueprint.size = new BlockPos(1, 1, column.length);
         blueprint.facing = Direction.EAST;
         blueprint.offset = BlockPos.ZERO;
-        blueprint.palette.add(slabSchematic);   // index SLAB
-        blueprint.palette.add(stoneSchematic);  // index STONE
+        for (int kind = 0; kind < KIND_STATES.length; kind++) {
+            BlockState state = KIND_STATES[kind];
+            ISchematicBlock schematic = SchematicBlockManager.getSchematicBlock(
+                    new SchematicBlockContext(level, samplePos, samplePos, state, state.getBlock()));
+            expect(schematic != null && schematic.isAir() == state.isAir(),
+                    "the schematic must resolve (and be air exactly for air) for " + state);
+            blueprint.palette.add(schematic); // palette index == kind
+        }
         blueprint.data = new int[column.length];
         for (int z = 0; z < column.length; z++) {
             blueprint.data[blueprint.posToIndex(0, 0, z)] = column[z];
@@ -106,6 +112,17 @@ public class BuilderRefloodTester {
 
     private static boolean isDrySlab(BlockState state) {
         return state.is(Blocks.OAK_SLAB) && !state.getValue(BlockStateProperties.WATERLOGGED);
+    }
+
+    /** Is {@code state} the dry, finished block the blueprint wants for {@code kind}? */
+    private static boolean isBuilt(int kind, BlockState state) {
+        return switch (kind) {
+            case SLAB -> isDrySlab(state);
+            case STONE -> state.is(Blocks.STONE);
+            case AIR -> state.isAir();
+            case SNOW -> state.is(Blocks.SNOW);
+            default -> throw new IllegalArgumentException("bad kind " + kind);
+        };
     }
 
     /** True while the Builder has nothing queued and nothing left to queue. */
@@ -138,6 +155,7 @@ public class BuilderRefloodTester {
         tile.getBattery().addPower(16000L * MjAPI.MJ, false);
         tile.setResource(0, new ItemStack(Items.OAK_SLAB, 8));
         tile.setResource(1, new ItemStack(Items.STONE, 8));
+        tile.setResource(2, new ItemStack(Items.SNOW, 8));
         tile.cycleFluidMode(); // NO_REPLACE -> REPLACE
         tile.cycleFluidMode(); // REPLACE -> CLEAR
         expect(tile.getFluidMode() == EnumFluidHandlingMode.CLEAR, "sanity: the Builder is in CLEAR mode");
@@ -198,11 +216,9 @@ public class BuilderRefloodTester {
             boolean allBuilt = true;
             boolean allSlabsWet = true;
             for (int i = 0; i < column.length; i++) {
+                allBuilt &= isBuilt(column[i], cells[i]);
                 if (column[i] == SLAB) {
-                    allBuilt &= isDrySlab(cells[i]);
                     allSlabsWet &= isWetSlab(cells[i]);
-                } else {
-                    allBuilt &= cells[i].is(Blocks.STONE);
                 }
             }
 
@@ -266,7 +282,7 @@ public class BuilderRefloodTester {
                     }
                 }
                 case 3 -> {
-                    boolean rebuilt = cells[last].is(Blocks.STONE) && allSlabsWet && builderQuiet(builder);
+                    boolean rebuilt = isBuilt(column[last], cells[last]) && allSlabsWet && builderQuiet(builder);
                     quiet[0] = rebuilt ? quiet[0] + 1 : 0;
                     if (quiet[0] >= QUIET_TICKS / 2) {
                         finished[0] = true;
@@ -316,6 +332,57 @@ public class BuilderRefloodTester {
                     new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(2, 2, 0), new BlockPos(3, 2, 1),
                     new BlockPos(0, 2, 3), new BlockPos(1, 2, 4), new BlockPos(3, 2, 3) },
                 new BlockPos[] { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1), new BlockPos(1, 2, 3) });
+    }
+
+    /**
+     * A tolerated wet slab is itself a water source, so it spreads flowing water into an in-box schematic-AIR cell
+     * beside it. Mopping that water is futile (the slab feeds it again within a fluid tick, and the mop's neighbour
+     * update reschedules the slab's water), so before the follow-up fix the Builder mopped that cell for ever.
+     * Flowing water fed only by water the Builder cannot remove must be tolerated like the slab.
+     *
+     * <p>Column (z = 2..4): slab, air, stone. Sources as in the single-slab test; the air cell is walled in at
+     * {@code (1,2,3)} and {@code (3,2,3)}, so the slab is its only feeder.
+     */
+    public static void clearModeToleratesWaterSpreadIntoAirFromToleratedBlock(GameTestHelper helper) {
+        runFloodScenario(helper,
+                new int[] { SLAB, AIR, STONE },
+                new BlockPos[] {
+                    new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+                    new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), new BlockPos(3, 2, 3) },
+                new BlockPos[] { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1) });
+    }
+
+    /**
+     * The air cell between a tolerated slab and an outside source has two water-source neighbours over a stone
+     * floor, so vanilla's infinite-water rule turns it into a SOURCE. Mopping it is futile for the same reason as
+     * drying the slab; it must be tolerated too.
+     *
+     * <p>Column (z = 2..5): slab, air, stone, stone. Sources {@code (1,2,2)} and {@code (2,2,1)} flood the slab;
+     * {@code (1,2,3)} plus the slab's water make the air cell a source.
+     */
+    public static void clearModeToleratesInfiniteSourceInAirCell(GameTestHelper helper) {
+        runFloodScenario(helper,
+                new int[] { SLAB, AIR, STONE, STONE },
+                new BlockPos[] {
+                    new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(2, 2, 0), new BlockPos(3, 2, 1),
+                    new BlockPos(0, 2, 3), new BlockPos(1, 2, 4), new BlockPos(3, 2, 3) },
+                new BlockPos[] { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1), new BlockPos(1, 2, 3) });
+    }
+
+    /**
+     * Tolerated water must not hold back a fragile block that no fluid touches. The snow layer at the end of the
+     * column has no fluid beside or above it, yet before the follow-up fix any tolerated water anywhere in the box
+     * kept every fragile placement deferred, so once knocked out it was never rebuilt and the build never finished.
+     *
+     * <p>Column (z = 2..4): slab, stone, snow layer, on the single-slab geometry.
+     */
+    public static void clearModeToleratedWaterDoesNotBlockDistantFragileBlocks(GameTestHelper helper) {
+        runFloodScenario(helper,
+                new int[] { SLAB, STONE, SNOW },
+                new BlockPos[] {
+                    new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+                    new BlockPos(2, 2, 0), new BlockPos(3, 2, 1) },
+                new BlockPos[] { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1) });
     }
 
     /**

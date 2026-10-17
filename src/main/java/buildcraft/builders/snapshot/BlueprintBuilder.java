@@ -470,37 +470,43 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
 
     /**
      * CLEAR mode: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand, because
-     * fluid the Builder will never remove is beside or above the cell and washes it away the moment it is placed?
+     * water the Builder will never remove is beside or above the cell and washes it away the moment it is placed?
      * Such a cell is accepted as done, left empty (or holding the water that flows in), so the build can finish:
      * the place gate would otherwise defer it for ever while the cell still counts as unbuilt, and the Builder would
      * report busy without end.
      *
-     * <p>Only a cell holding nothing to break qualifies: air, or flowing water (a source in the cell is still
-     * mopped, after which the cell refills with flowing water and is accepted). Excluding sources keeps accepted
-     * cells from vouching for each other: their water is flowing, so once the permanent water feeding them is gone
-     * it drains, {@link #isPermanentWaterAt} stops holding, the next check sweep sends the cell back to
-     * {@code TO_PLACE}, and the block is built.
+     * <p>WATER only: every washing neighbour must be {@link #isPermanentWaterAt permanent water}, and the cell itself
+     * must hold nothing to break, which is air or water vanilla gives it from that permanent water: flowing water, or
+     * a SOURCE the infinite-water rule re-makes ({@link #isRefloodedByUnmoppableWater}; mopping it is futile, the
+     * same two sources re-make it within a fluid tick). Any other source in the cell is still mopped, after which
+     * the cell refills with flowing water and is accepted. Other fluids (outside-fed lava) are not accepted: the
+     * cell keeps the plain CLEAR behaviour and is mopped.
+     *
+     * <p>Accepted cells cannot keep each other accepted once the real water is gone. Flowing water drains as soon as
+     * its permanent feeder goes; a re-made source counts only while two unmoppable horizontal sources over a solid or
+     * unmoppable-source floor flank it, exactly the configuration in which vanilla really does keep it a source. Either
+     * way, once that stops holding the next check sweep sends the cell back to {@code TO_PLACE} and the block is built.
      */
     private boolean isFragileUnbuildableAt(BlockPos blockPos, SchematicBlockDefault def) {
         if (def.blockState == null || !SchematicBlockDefault.isWashedAwayByFluid(def.blockState)) return false;
         BlockState world = tile.getWorldBC().getBlockState(blockPos);
-        boolean nothingToBreak = world.isAir()
-            || (world.getBlock() instanceof LiquidBlock && !world.getFluidState().isSource());
-        if (!nothingToBreak) return false;
+        if (!world.isAir()) {
+            if (!(world.getBlock() instanceof LiquidBlock)) return false;
+            FluidState fluid = world.getFluidState();
+            if (!fluid.is(FluidTags.WATER)) return false;
+            if (fluid.isSource() && !isRefloodedByUnmoppableWater(blockPos)) return false;
+        }
         return SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState)
             && !SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState,
                 neighbour -> !isPermanentWaterAt(neighbour));
     }
 
     /**
-     * Is the fluid at {@code blockPos} fluid the Builder will never remove? Outside the box it is never mopped; an
-     * in-box schematic-air cell is re-derived from the world ({@link #isToleratedFluidAt}, since its
-     * {@code CORRECT} may predate the fluid); any other in-box cell counts when the check accepted it.
+     * Is there WATER at {@code blockPos} that the Builder will never remove ({@link #isUnmoppable})? Lava or any
+     * other fluid never counts, so a fragile cell only lava washes is not accepted as unbuildable.
      */
     private boolean isPermanentWaterAt(BlockPos blockPos) {
-        if (!getBuildingInfo().box.contains(blockPos)) return true;
-        if (isAir(blockPos)) return isToleratedFluidAt(blockPos);
-        return checkResults[posToIndex(blockPos)] == CHECK_RESULT_CORRECT;
+        return tile.getWorldBC().getFluidState(blockPos).is(FluidTags.WATER) && isUnmoppable(blockPos);
     }
 
     /**
@@ -536,8 +542,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      */
     private boolean supportsInfiniteSource(BlockPos floor) {
         BlockState state = tile.getWorldBC().getBlockState(floor);
-        // The legacy isSolid() is deprecated, but it is exactly the floor test getNewLiquid applies; matching
-        // vanilla's re-source rule is the point, so keep vanilla's test (as TilePump does).
+        // The legacy isSolid() is deprecated, but it is exactly the floor test getNewLiquid applies on every node
+        // (1.21.1 through 26.2 all still call belowState.isSolid() there), and no non-deprecated predicate matches
+        // it: isFaceSturdy(UP) rejects a bottom slab that isSolid accepts, and blocksMotion() is deprecated too (it
+        // is isSolid minus cobweb and bamboo sapling). Matching vanilla's re-source rule is the point, so keep
+        // vanilla's own test (as TilePump does).
         @SuppressWarnings("deprecation")
         boolean solid = state.isSolid();
         if (solid) return true;
@@ -551,6 +560,12 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * wet block tolerated by {@link #isRefloodedByUnmoppableWater}, or an air cell tolerated by
      * {@link #isToleratedFluidAt}). Counting accepted cells is what lets a row of cells flooding each other along
      * a shore settle instead of looping one cell further on.
+     *
+     * <p>Every in-box cell, schematic air included, is read off {@code checkResults} rather than re-derived from the
+     * world: re-deriving an air cell would call back into {@link #isToleratedFluidAt}, which asks this of its own
+     * neighbours, and two air cells re-made into sources by each other would recurse without end. An air cell whose
+     * {@code CORRECT} predates water flowing into it can vouch for a neighbour for at most one sweep: the sweep
+     * re-checks it (to {@code TO_BREAK} if that water is moppable), and the neighbour on its next check.
      */
     private boolean isUnmoppable(BlockPos blockPos) {
         return !getBuildingInfo().box.contains(blockPos)

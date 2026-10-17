@@ -8,12 +8,16 @@ package buildcraft.builders;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntConsumer;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -72,6 +76,15 @@ public class BuilderRefloodTester {
      *  within ~5 ticks, so any live cycle breaks the streak many times over in this window. */
     private static final int QUIET_TICKS = 40;
 
+    /** How long the lava test watches the Builder not rest: several lava flow cycles (lava spreads every 30 ticks in
+     *  the overworld) and five times {@link #QUIET_TICKS}. */
+    private static final int LAVA_WATCH_TICKS = 200;
+
+    /** How many ticks {@link #drive} polls: the {@code max_ticks} of every {@code builder_clear_*} manifest, so the
+     *  watchdog, not an exhausted poll budget, ends a test whose phase windows run long (an un-polled test would
+     *  time out without saying which phase it was stuck in). Polls past the watchdog are harmless. */
+    private static final int DRIVE_TICKS = 1050;
+
     private static void expect(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
     }
@@ -112,6 +125,10 @@ public class BuilderRefloodTester {
 
     private static boolean isDrySlab(BlockState state) {
         return state.is(Blocks.OAK_SLAB) && !state.getValue(BlockStateProperties.WATERLOGGED);
+    }
+
+    private static boolean isWaterSource(BlockState state) {
+        return state.is(Blocks.WATER) && state.getFluidState().isSource();
     }
 
     /** Is {@code state} the dry, finished block the blueprint wants for {@code kind}? */
@@ -166,7 +183,13 @@ public class BuilderRefloodTester {
     /** Schedules {@code step} once per tick up front (see {@link EntityArenaUtil#tickUntil} for why) and turns a
      *  thrown {@link IllegalStateException} into a test failure. {@code step} calls {@code finish} to succeed. */
     private static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step) {
-        for (int t = 1; t <= 1000; t++) {
+        drive(helper, finished, step, () -> {});
+    }
+
+    /** As {@link #drive(GameTestHelper, boolean[], IntConsumer)}, running {@code cleanup} before a thrown failure
+     *  is reported (a step that succeeds runs its own cleanup first). */
+    private static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step, Runnable cleanup) {
+        for (int t = 1; t <= DRIVE_TICKS; t++) {
             final int tick = t;
             helper.runAfterDelay(tick, () -> {
                 if (finished[0]) return;
@@ -174,6 +197,7 @@ public class BuilderRefloodTester {
                     step.accept(tick);
                 } catch (RuntimeException e) {
                     finished[0] = true;
+                    cleanup.run();
                     helper.fail(String.valueOf(e.getMessage()));
                 }
             });
@@ -386,6 +410,69 @@ public class BuilderRefloodTester {
     }
 
     /**
+     * The fragile-acceptance scenario: build {@code column} dry, add the outside water {@code sources}, then require
+     * the Builder to rest for {@link #QUIET_TICKS} straight ticks with {@code settled} holding for the cells. The
+     * fragile block at {@code fragile} can never stand once the sources are in. Every window is phase-relative and
+     * gated on observed state.
+     */
+    private static void runFragileAcceptScenario(GameTestHelper helper, int[] column, BlockPos[] walls,
+            BlockPos[] sources, int fragile, Predicate<BlockState[]> settled, String what) {
+        TileBuilder tile = setUpBuilder(helper, column, walls);
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        int[] busyTicks = { 0 };
+        boolean[] finished = { false };
+        Runnable discardDrops = () -> {
+            for (var drop : EntityArenaUtil.droppedItems(helper, cell(fragile), 3.0)) {
+                drop.discard();
+            }
+        };
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            BlockState[] cells = new BlockState[column.length];
+            boolean allBuilt = true;
+            for (int i = 0; i < column.length; i++) {
+                cells[i] = helper.getBlockState(cell(i));
+                allBuilt &= isBuilt(column[i], cells[i]);
+            }
+            int inPhase = t - phaseStart[0];
+            switch (phase[0]) {
+                case 0 -> {
+                    if (allBuilt && builderQuiet(builder)) {
+                        for (BlockPos source : sources) {
+                            BlockWaterloggingTester.placeSource(helper, source, Blocks.WATER, Fluids.WATER);
+                        }
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, cells="
+                                + Arrays.toString(cells));
+                    }
+                }
+                case 1 -> {
+                    if (builder != null && !builderQuiet(builder)) {
+                        busyTicks[0]++;
+                    }
+                    quiet[0] = settled.test(cells) && builderQuiet(builder) ? quiet[0] + 1 : 0;
+                    if (quiet[0] >= QUIET_TICKS) {
+                        discardDrops.run();
+                        finished[0] = true;
+                        helper.succeed();
+                    } else {
+                        expect(inPhase < 400, "phase 1: the Builder never rested with " + what + " (busy on "
+                                + busyTicks[0] + " of " + inPhase + " ticks, cells=" + Arrays.toString(cells)
+                                + ", leftToPlace=" + (builder == null ? -1 : builder.leftToPlace) + ", breakTasks="
+                                + (builder == null ? -1 : builder.breakTasks.size()) + ", placeTasks="
+                                + (builder == null ? -1 : builder.placeTasks.size()) + ")");
+                    }
+                }
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        }, discardDrops);
+    }
+
+    /**
      * A fragile block whose own cell touches water the Builder can never remove can never be built: the tolerated
      * wet slab beside it spreads water into the cell and washes the snow layer away. Before this was handled the
      * Builder never queued the placement (the fragile gate saw the water) yet never counted the cell as done, so
@@ -395,57 +482,158 @@ public class BuilderRefloodTester {
      * {@code (1,2,3)}, {@code (3,2,3)} and {@code (2,2,4)} so the slab's water stays in it.
      */
     public static void clearModeAcceptsFragileBlockBesideToleratedWater(GameTestHelper helper) {
-        int[] column = { SLAB, SNOW };
+        runFragileAcceptScenario(helper,
+                new int[] { SLAB, SNOW },
+                new BlockPos[] {
+                    new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+                    new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), new BlockPos(3, 2, 3), new BlockPos(2, 2, 4) },
+                new BlockPos[] { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1) },
+                1, cells -> isWetSlab(cells[0]) && !cells[1].is(Blocks.SNOW),
+                "a fragile block beside permanent water");
+    }
+
+    /**
+     * A fragile cell flanked by two OUTSIDE water sources over a stone floor does not end up holding flowing water:
+     * vanilla's infinite-water rule makes it a water SOURCE. Mopping that source is futile (the same two sources
+     * re-make it within a fluid tick) and the snow layer can never stand there, so the cell must be accepted like a
+     * fragile cell holding flowing water. Before the fix only air or flowing water counted as "nothing to break",
+     * so the Builder mopped the re-made source for ever.
+     *
+     * <p>Column (z = 2..4): slab, snow layer, slab. The slabs keep the water in the column (a dry slab cannot take
+     * flowing water, and with one source beside it it is never waterlogged, so both stay dry). Sources
+     * {@code (1,2,3)} and {@code (3,2,3)} flank the snow cell, each walled in on every side but the column's (the
+     * Builder itself closes the east source's north side).
+     */
+    public static void clearModeAcceptsFragileCellResourcedByOutsideWater(GameTestHelper helper) {
+        runFragileAcceptScenario(helper,
+                new int[] { SLAB, SNOW, SLAB },
+                new BlockPos[] {
+                    new BlockPos(0, 2, 3), new BlockPos(1, 2, 2), new BlockPos(1, 2, 4), // around the west source
+                    new BlockPos(4, 2, 3), new BlockPos(3, 2, 4) },                      // around the east source
+                new BlockPos[] { new BlockPos(1, 2, 3), new BlockPos(3, 2, 3) },
+                1, cells -> isDrySlab(cells[0]) && isDrySlab(cells[2]) && isWaterSource(cells[1]),
+                "a fragile cell re-made into a water source by outside water");
+    }
+
+    /**
+     * The fragile-cell acceptance is water-only. Outside-fed flowing LAVA in a fragile cell is not water the
+     * Builder may leave alone: it keeps the plain CLEAR behaviour (the lava in the cell is mopped and the area is
+     * never reported built). Before the fix any fluid outside the box counted as permanent, so the cell was silently
+     * accepted with lava in it.
+     *
+     * <p>Column (z = 2..3): snow layer, stone. A lava source at {@code (1,2,2)}, walled in on every side but the
+     * column's, and {@code (2,2,1)} walled so the lava it feeds into the snow cell stays there.
+     *
+     * <p>This is a negative check, so it needs a bounded window: once the lava is seen to have washed the snow layer
+     * away (observed state, not a fixed tick), the Builder must not rest for {@link #QUIET_TICKS} straight ticks
+     * within the next {@link #LAVA_WATCH_TICKS}, several lava flow cycles. A pre-fix Builder rests within a few
+     * dozen ticks with the lava in the cell. The lava itself cannot be the gate: post-fix the Builder mops it before
+     * any poll sees it, and the cell then stays empty with the snow layer still to place (it cannot stand beside the
+     * lava source), so the Builder reports the area unfinished.
+     */
+    public static void clearModeKeepsMoppingOutsideLavaInFragileCell(GameTestHelper helper) {
+        int[] column = { SNOW, STONE };
+        BlockPos lavaSource = new BlockPos(1, 2, 2);
         TileBuilder tile = setUpBuilder(helper, column, new BlockPos[] {
-            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
-            new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), new BlockPos(3, 2, 3), new BlockPos(2, 2, 4) });
-        BlockPos[] sources = { new BlockPos(1, 2, 2), new BlockPos(2, 2, 1) };
+            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3), new BlockPos(2, 2, 1) });
+        ServerLevel level = helper.getLevel();
 
         int[] phase = { 0 };
         int[] phaseStart = { 0 };
         int[] quiet = { 0 };
+        int[] lavaSeen = { 0 };
         int[] busyTicks = { 0 };
         boolean[] finished = { false };
+        // Never leave lava behind: its random ticks can start fires, and the next test in this cell expects a void.
+        Runnable clearLava = () -> {
+            helper.setBlock(lavaSource, Blocks.STONE);
+            helper.setBlock(cell(0), Blocks.AIR);
+        };
         drive(helper, finished, t -> {
             SnapshotBuilder<?> builder = tile.getBuilder();
-            BlockState slab = helper.getBlockState(cell(0));
-            BlockState snowCell = helper.getBlockState(cell(1));
+            BlockState snowCell = helper.getBlockState(cell(0));
+            BlockState stoneCell = helper.getBlockState(cell(1));
+            boolean lava = level.getFluidState(helper.absolutePos(cell(0))).is(FluidTags.LAVA);
             int inPhase = t - phaseStart[0];
             switch (phase[0]) {
                 case 0 -> {
-                    if (isDrySlab(slab) && snowCell.is(Blocks.SNOW) && builderQuiet(builder)) {
-                        for (BlockPos source : sources) {
-                            BlockWaterloggingTester.placeSource(helper, source, Blocks.WATER, Fluids.WATER);
-                        }
+                    if (snowCell.is(Blocks.SNOW) && stoneCell.is(Blocks.STONE) && builderQuiet(builder)) {
+                        BlockWaterloggingTester.placeSource(helper, lavaSource, Blocks.LAVA, Fluids.LAVA);
                         phase[0] = 1;
                         phaseStart[0] = t;
                     } else {
-                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, slab=" + slab
-                                + ", snow cell=" + snowCell);
+                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, snow cell="
+                                + snowCell + ", stone cell=" + stoneCell);
                     }
                 }
                 case 1 -> {
-                    boolean settled = isWetSlab(slab) && !snowCell.is(Blocks.SNOW) && builderQuiet(builder);
-                    if (builder != null && !builderQuiet(builder)) {
+                    if (!snowCell.is(Blocks.SNOW)) {
+                        phase[0] = 2;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 1 (test premise): the outside lava never washed the snow "
+                                + "layer away");
+                    }
+                }
+                case 2 -> {
+                    if (lava) {
+                        lavaSeen[0]++;
+                    }
+                    boolean quietNow = builderQuiet(builder);
+                    if (!quietNow) {
                         busyTicks[0]++;
                     }
-                    quiet[0] = settled ? quiet[0] + 1 : 0;
-                    if (quiet[0] >= QUIET_TICKS) {
-                        for (var drop : EntityArenaUtil.droppedItems(helper, cell(1), 3.0)) {
-                            drop.discard();
-                        }
+                    quiet[0] = quietNow ? quiet[0] + 1 : 0;
+                    expect(quiet[0] < QUIET_TICKS, "the Builder rested with outside-fed lava washing a fragile "
+                            + "cell, accepting the cell as built (cell=" + snowCell + ", lava seen in the cell on "
+                            + lavaSeen[0] + " and the Builder busy on " + busyTicks[0] + " of " + inPhase + " ticks)");
+                    expect(!snowCell.is(Blocks.SNOW), "sanity: a snow layer cannot stand beside the lava, cell="
+                            + snowCell);
+                    if (inPhase >= LAVA_WATCH_TICKS) {
+                        clearLava.run();
                         finished[0] = true;
                         helper.succeed();
-                    } else {
-                        expect(inPhase < 400, "phase 1: the Builder never rested with a fragile block beside "
-                                + "permanent water (busy on " + busyTicks[0] + " of " + inPhase + " ticks, slab="
-                                + slab + ", snow cell=" + snowCell + ", leftToPlace="
-                                + (builder == null ? -1 : builder.leftToPlace) + ", breakTasks="
-                                + (builder == null ? -1 : builder.breakTasks.size()) + ", placeTasks="
-                                + (builder == null ? -1 : builder.placeTasks.size()) + ")");
                     }
                 }
                 default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        }, clearLava);
+    }
+
+    /**
+     * Drives a single-condition test in two phase-relative windows: up to 300 ticks for {@code rested} to first
+     * hold, then up to 200 more for it to hold {@code quietNeeded} ticks in a row (a broken streak restarts the
+     * count but not the window).
+     */
+    private static void driveUntilRested(GameTestHelper helper, BooleanSupplier rested, int quietNeeded,
+            Supplier<String> failure) {
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        boolean[] finished = { false };
+        drive(helper, finished, t -> {
+            int inPhase = t - phaseStart[0];
+            boolean now = rested.getAsBoolean();
+            switch (phase[0]) {
+                case 0 -> {
+                    if (now) {
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                        quiet[0] = 1;
+                    } else {
+                        expect(inPhase < 300, "phase 0: " + failure.get());
+                    }
+                }
+                case 1 -> quiet[0] = now ? quiet[0] + 1 : 0;
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+            if (phase[0] == 1) {
+                if (quiet[0] >= quietNeeded) {
+                    finished[0] = true;
+                    helper.succeed();
+                } else {
+                    expect(t - phaseStart[0] < 200, "phase 1 (never stayed rested): " + failure.get());
+                }
             }
         });
     }
@@ -469,20 +657,11 @@ public class BuilderRefloodTester {
         BlockWaterloggingTester.placeSource(helper, new BlockPos(1, 2, 2), Blocks.WATER, Fluids.WATER);
         BlockWaterloggingTester.placeSource(helper, new BlockPos(2, 2, 1), Blocks.WATER, Fluids.WATER);
 
-        int[] quiet = { 0 };
-        boolean[] finished = { false };
-        drive(helper, finished, t -> {
-            BlockState a = helper.getBlockState(cell(0));
-            boolean rested = isDrySlab(a) && builderQuiet(tile.getBuilder());
-            quiet[0] = rested ? quiet[0] + 1 : 0;
-            if (quiet[0] >= QUIET_TICKS) {
-                finished[0] = true;
-                helper.succeed();
-            } else {
-                expect(t < 300, "a flanked waterlogged slab with no floor is never re-flooded, so CLEAR must dry it "
-                        + "(slab=" + a + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
-            }
-        });
+        driveUntilRested(helper,
+                () -> isDrySlab(helper.getBlockState(cell(0))) && builderQuiet(tile.getBuilder()),
+                QUIET_TICKS,
+                () -> "a flanked waterlogged slab with no floor is never re-flooded, so CLEAR must dry it (slab="
+                        + helper.getBlockState(cell(0)) + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
     }
 
     /**
@@ -501,20 +680,11 @@ public class BuilderRefloodTester {
             cell(1), cell(2) });
         helper.setBlock(cell(0), Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true));
 
-        int[] quiet = { 0 };
-        boolean[] finished = { false };
-        drive(helper, finished, t -> {
-            BlockState a = helper.getBlockState(cell(0));
-            boolean rested = isDrySlab(a) && helper.getBlockState(cell(1)).is(Blocks.STONE)
-                    && helper.getBlockState(cell(2)).is(Blocks.STONE) && builderQuiet(tile.getBuilder());
-            quiet[0] = rested ? quiet[0] + 1 : 0;
-            if (quiet[0] >= QUIET_TICKS / 2) {
-                finished[0] = true;
-                helper.succeed();
-            } else {
-                expect(t < 300, "a bucket-waterlogged slab with no outside water must still be dried under "
-                        + "CLEAR (slab=" + a + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
-            }
-        });
+        driveUntilRested(helper,
+                () -> isDrySlab(helper.getBlockState(cell(0))) && helper.getBlockState(cell(1)).is(Blocks.STONE)
+                        && helper.getBlockState(cell(2)).is(Blocks.STONE) && builderQuiet(tile.getBuilder()),
+                QUIET_TICKS / 2,
+                () -> "a bucket-waterlogged slab with no outside water must still be dried under CLEAR (slab="
+                        + helper.getBlockState(cell(0)) + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
     }
 }

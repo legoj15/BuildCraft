@@ -454,8 +454,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   defer them for ever, since that water never goes away. The REPLACE-style "anywhere in
             //   the box" gate guards against moving fluid; tolerated fluid is settled water. A fragile
             //   cell whose washing fluid is ALL water the Builder will never remove can never be built
-            //   at all, so the check accepts it as done (BlueprintBuilder#isFragileUnbuildableAt)
-            //   rather than leaving it here, deferred for ever with the build reported busy.
+            //   at all. When the cell itself holds nothing to break (air, flowing water, or a water
+            //   source vanilla's infinite-water rule keeps re-making from that permanent water) the
+            //   check accepts it as done (BlueprintBuilder#isFragileUnbuildableAt) rather than leaving
+            //   it here, deferred for ever with the build reported busy. Any other fluid (lava, or a
+            //   source that will not come back) is still mopped as usual.
             // - REPLACE: defer fragile placements only — solid placements proceed because they
             //   displace water on placement and aren't replaceable. Without this, fragile
             //   schematic blocks (snow_layer in the user's case) at positions where water flows

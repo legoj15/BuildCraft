@@ -905,6 +905,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_item_places_docked_robot", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacesDockedRobotOnFreeStation);
         reg.accept("buildcraftunofficial:robot_item_rejected_when_station_taken", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemRejectedWhenStationAlreadyTaken);
         reg.accept("buildcraftunofficial:robot_item_place_event_cancellable", () -> buildcraft.robotics.item.ItemRobotPlacementTester::robotItemPlacementIsCancellableViaRobotEventPlace);
+        reg.accept("buildcraftunofficial:robot_item_renamed_item_places_named_robot", () -> buildcraft.robotics.item.ItemRobotPlacementTester::renamedRobotItemPlacesANamedRobot);
         reg.accept("buildcraftunofficial:robot_item_blank_robot_refuses_placement", () -> buildcraft.robotics.item.ItemRobotPlacementTester::blankRobotRefusesPlacement);
         reg.accept("buildcraftunofficial:robot_item_client_predicts_no_swing_for_blank", () -> buildcraft.robotics.item.ItemRobotPlacementTester::clientPredictsNoSwingForBlankRobot);
 
@@ -1068,6 +1069,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);
         reg.accept("buildcraftunofficial:robot_wears_equips_and_peels", () -> buildcraft.robotics.entity.RobotWearablesTester::wearsEquipsAndPeelsWearables);
+        reg.accept("buildcraftunofficial:robot_name_tag_names_robot", () -> buildcraft.robotics.entity.RobotNameTagTester::nameTagNamesTheRobot);
+        reg.accept("buildcraftunofficial:robot_name_kept_through_wrench_pickup", () -> buildcraft.robotics.entity.RobotNameTagTester::namedRobotKeepsItsNameThroughWrenchPickup);
         reg.accept("buildcraftunofficial:robot_builder_board_state_machine", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardStateMachine);
         reg.accept("buildcraftunofficial:robot_builder_board_supplies_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSuppliesBuilderMachine);
     }

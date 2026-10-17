@@ -632,7 +632,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** Version-neutral interaction body: fires {@code RobotEvent.Interact} and, for a sneaking player holding a
      *  wrench, peels the robot back down one layer at a time (last wearable, then the held item, then the whole
-     *  robot). Wearable ACCEPTANCE — the other half of 7.1.x's interact — is Ph9. */
+     *  robot). A name tag renamed on an anvil names the robot (7.2.x naming), and a wearable is put on (the other
+     *  half of 7.1.x's interact). */
     private InteractionResult interactRobot(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (stack.isEmpty()) {
@@ -657,6 +658,22 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
                 player.swing(hand);
             } else {
                 onRobotHit(false);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        if (stack.is(Items.NAME_TAG)) {
+            // 7.2.x robot naming. Vanilla's NameTagItem only reaches a LivingEntity (Player.interactOn offers the
+            // held item to Item#interactLivingEntity for living targets alone), and the robot is a bare Entity, so
+            // the rename lives here, with NameTagItem's rules: a tag renamed on an anvil names its target and is
+            // used up; one with no name has nothing to give and passes.
+            net.minecraft.network.chat.Component name = stack.get(DataComponents.CUSTOM_NAME);
+            if (name == null || !isAlive()) {
+                return InteractionResult.PASS;
+            }
+            if (!level().isClientSide()) {
+                setCustomName(name);
+                stack.shrink(1);
             }
             return InteractionResult.SUCCESS;
         }
@@ -979,7 +996,12 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         List<ItemStack> drops = new ArrayList<>();
         RedstoneBoardRobot robotBoard = getBoard();
         String boardId = robotBoard == null ? null : robotBoard.getNBTHandler().getID();
-        drops.add(ItemRobot.createRobotStack(boardId, battery.getStored()));
+        ItemStack robotItem = ItemRobot.createRobotStack(boardId, battery.getStored());
+        if (hasCustomName()) {
+            // The name rides the item back (and onto the next robot it places), as a renamed boat's does.
+            robotItem.set(DataComponents.CUSTOM_NAME, getCustomName());
+        }
+        drops.add(robotItem);
         if (!itemInUse.isEmpty()) {
             drops.add(itemInUse);
         }

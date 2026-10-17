@@ -232,6 +232,11 @@ public class ItemRobot extends Item {
 
         EntityRobot robot = new EntityRobot(level, getRobotBoard(stack));
         robot.getBattery().setStored(getEnergy(stack));
+        Component name = stack.get(DataComponents.CUSTOM_NAME);
+        if (name != null) {
+            // An item renamed on an anvil names the robot it places, as vanilla's boats and armor stands do.
+            robot.setCustomName(name);
+        }
 
         RobotEvent.Place event = new RobotEvent.Place(robot, player);
         NeoForge.EVENT_BUS.post(event);

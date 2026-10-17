@@ -14,6 +14,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
@@ -235,6 +236,44 @@ public class ItemRobotPlacementTester {
             // only covers the arena corner), so it survives into the NEXT batch's reuse of these very
             // coordinates and inflates that test's robot count — discard it before succeeding.
             robot.discard();
+            helper.succeed();
+        });
+    }
+
+    /** A robot item renamed on an anvil carries its name onto the robot it places (vanilla's boats and armor stands
+     *  do the same with the item's custom name), and the name survives the trip back: the placed robot's drops
+     *  are the same named item. */
+    public static void renamedRobotItemPlacesANamedRobot(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(1, 2, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        installStation(helper, pipeRel, Direction.UP);
+
+        whenStationRegistered(helper, pipeRel, () -> {
+            DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+            ItemStack stack = programmedRobot(1000L * MjAPI.MJ);
+            stack.set(DataComponents.CUSTOM_NAME, Component.literal("Anvil Annie"));
+
+            clickStationWith(helper, pipeRel, Direction.UP, stack);
+
+            List<EntityRobot> placed = robotsNear(helper, pipeRel, 2.0);
+            placed.removeIf(r -> r.getDockingStation() != station);
+            helper.assertTrue(placed.size() == 1,
+                    "precondition: the click placed one robot, found " + placed.size() + describe(placed));
+            EntityRobot robot = placed.get(0);
+            try {
+                helper.assertTrue(robot.hasCustomName() && "Anvil Annie".equals(robot.getCustomName().getString()),
+                        "the placed robot must wear the name the item was renamed to, got " + robot.getCustomName());
+
+                ItemStack back = robot.getDrops().get(0);
+                Component backName = back.get(DataComponents.CUSTOM_NAME);
+                helper.assertTrue(backName != null && "Anvil Annie".equals(backName.getString()),
+                        "the robot's item drop must carry its name back, got " + backName);
+                helper.assertTrue(BoardRobotPickerNBT.ID.equals(ItemRobot.getBoardId(back))
+                                && ItemRobot.getEnergy(back) == 1000L * MjAPI.MJ,
+                        "...without disturbing its board and charge");
+            } finally {
+                robot.discard();
+            }
             helper.succeed();
         });
     }

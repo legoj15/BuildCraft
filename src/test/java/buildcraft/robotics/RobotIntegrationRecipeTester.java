@@ -71,6 +71,24 @@ public class RobotIntegrationRecipeTester extends VanillaSetupBaseTester {
     }
 
     @Test
+    public void anAnvilNameRidesIntoTheProgrammedRobot() {
+        // The name is the robot's, not the chassis': programming a renamed robot must not strip it.
+        ItemStack named = ItemRobot.createRobotStack(null, 1_000L);
+        named.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.literal("Anvil Annie"));
+
+        ItemStack result = output(named, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+
+        net.minecraft.network.chat.Component name = result.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        Assertions.assertNotNull(name, "the programmed robot keeps the name");
+        Assertions.assertEquals("Anvil Annie", name.getString());
+        Assertions.assertNull(output(ItemRobot.createRobotStack(null, 1_000L),
+                        ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE))
+                .get(net.minecraft.core.component.DataComponents.CUSTOM_NAME),
+                "...and an unnamed one stays unnamed");
+    }
+
+    @Test
     public void zeroChargeRobotIsToppedUpToSafety() {
         ItemStack result = output(
                 ItemRobot.createRobotStack(null, 0L),

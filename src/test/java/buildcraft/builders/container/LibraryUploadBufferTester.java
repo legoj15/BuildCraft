@@ -17,11 +17,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.nbt.NbtSquisher;
 
 /**
@@ -159,6 +161,25 @@ public class LibraryUploadBufferTester {
             "within a generous limit it is an ordinary snapshot");
         Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(payload, 64L * 1024),
             "past the limit it is refused as unreadable rather than unpacked");
+    }
+
+    @Test
+    public void aTinyUploadClaimingAHugeBlueprintIsRefusedBeforeItsCellsAreMade() throws IOException {
+        // A blueprint whose header claims ~2.1 billion cells and whose data list is empty. The claimed size used to
+        // size the cell array before the list was checked against it: an 8 GiB allocation from a sub-kilobyte upload,
+        // which the NBT accounter never sees (it counts the payload, not what the reader builds from it).
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint(1, i -> 0));
+        nbt.put("size", NBTUtilBC.writeBlockPos(new BlockPos(1290, 1290, 1290)));
+        nbt.put("data", new ListTag());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(nbt, out);
+        byte[] payload = out.toByteArray();
+        Assertions.assertTrue(payload.length < 1024, "the payload is tiny on the wire: " + payload.length);
+
+        long started = System.nanoTime();
+        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(payload));
+        long tookMillis = (System.nanoTime() - started) / 1_000_000;
+        Assertions.assertTrue(tookMillis < 2_000, "refused quickly, took " + tookMillis + " ms");
     }
 
     @Test

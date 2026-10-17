@@ -400,15 +400,22 @@ public class ElectronicLibraryTester {
         GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
         long[] refusedAt = {0};
         ItemStack[] made = {ItemStack.EMPTY};
+        // The selection names the build; the answer is the same content under a header the sender made up (an
+        // overlong name and another owner). The item must carry the selection's header, not the answer's.
+        Snapshot.Key asked = new Snapshot.Key(wanted.key,
+            new Snapshot.Header(wanted.key, new UUID(3, 4), new Date(1234), "house"));
+        Template answer = wanted.copy();
+        answer.key = new Snapshot.Key(wanted.key, new Snapshot.Header(wanted.key, new UUID(9, 9), new Date(999),
+            "x".repeat(ContainerElectronicLibrary.MAX_SELECTED_NAME_LENGTH * 4)));
         Runnable upload = () -> {
             try {
-                sendUpload(menu, wanted);
+                sendUpload(menu, answer);
             } catch (IOException e) {
                 throw new IllegalStateException(e);
             }
         };
 
-        tile.selected = wanted.key;
+        tile.selected = asked;
         tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
 
         List<Step> steps = List.of(
@@ -458,6 +465,10 @@ public class ElectronicLibraryTester {
                 upload.run();
                 made[0] = tile.invUpOut.getStackInSlot(0);
                 assertFalse(made[0].isEmpty(), "the asked-for upload made its item");
+                Snapshot.Header madeHeader = ItemSnapshot.getHeader(made[0]);
+                assertTrue(madeHeader != null && "house".equals(madeHeader.name),
+                    "the item is named by the request, not the upload");
+                assertTrue(new UUID(3, 4).equals(madeHeader.owner), "and owned by the request's owner");
                 assertTrue(tile.invUpIn.getStackInSlot(0).isEmpty(), "from the blank");
                 assertTrue(store.getSnapshot(wanted.key) != null, "and was stored on the server");
                 assertFalse(tile.isUploadRequested(), "the request is answered");

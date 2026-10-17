@@ -169,8 +169,10 @@ public class GlobalSavedDataSnapshotsTester {
     public void uploadingOneBuildUnderTwoNamesGivesTwoWorkingItems() throws IOException {
         Template content = build();
         GlobalSavedDataSnapshots server = store();
-        Snapshot.Header house = TileElectronicLibrary.storeUpload(server, named(content, "house", 100));
-        Snapshot.Header cabin = TileElectronicLibrary.storeUpload(server, named(content, "cabin", 200));
+        Template houseUpload = named(content, "house", 100);
+        Template cabinUpload = named(content, "cabin", 200);
+        Snapshot.Header house = TileElectronicLibrary.storeUpload(server, houseUpload, houseUpload.key.header);
+        Snapshot.Header cabin = TileElectronicLibrary.storeUpload(server, cabinUpload, cabinUpload.key.header);
 
         Assertions.assertEquals("house", house.name);
         Assertions.assertEquals("cabin", cabin.name);
@@ -178,6 +180,28 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertNotNull(server.getSnapshot(cabin.key), "the second item resolves");
         Assertions.assertNull(house.key.header, "the server stores content only");
         Assertions.assertEquals(1, fileCount(), "the server keeps one copy of the content");
+    }
+
+    @Test
+    public void anUploadedItemIsNamedByTheRequestNotByThePayload() throws IOException {
+        // The request's header was checked when the client selected it (name length capped); the payload's was not,
+        // so an answer carrying a huge name or another player's id must not reach the item.
+        Template content = build();
+        Snapshot.Header asked = named(content, "house", 100).key.header;
+        Template payload = content.copy();
+        Snapshot.Key bare = new Snapshot.Key(payload.key, (Snapshot.Header) null);
+        payload.key = new Snapshot.Key(bare, new Snapshot.Header(bare, new UUID(9, 9), new Date(999), "x".repeat(4096)));
+
+        Snapshot.Header made = TileElectronicLibrary.storeUpload(store(), payload, asked);
+        Assertions.assertEquals("house", made.name);
+        Assertions.assertEquals(new UUID(0, 7), made.owner);
+        Assertions.assertEquals(new Date(100), made.created);
+        Assertions.assertArrayEquals(content.key.hash, made.key.hash, "the item points at the uploaded content");
+        Assertions.assertNull(made.key.header);
+
+        Snapshot.Header unnamed = TileElectronicLibrary.storeUpload(store(), payload, null);
+        Assertions.assertEquals("Snapshot", unnamed.name, "a request with no header gets the default name");
+        Assertions.assertEquals(new UUID(0, 0), unnamed.owner);
     }
 
     /** A template that cannot be serialised, so a save of it must fail without touching the disk. */

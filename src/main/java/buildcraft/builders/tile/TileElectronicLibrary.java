@@ -279,9 +279,10 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
             onUploadRefused("it is not the snapshot that was asked for");
             return false;
         }
+        Snapshot.Header asked = uploadRequested.header;
         uploadRequested = null;
         progressUp = -1;
-        Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot);
+        Snapshot.Header header = storeUpload(GlobalSavedDataSnapshots.get(level), snapshot, asked);
         EnumSnapshotType type = snapshot.getType();
         ItemSnapshot usedItem = type == EnumSnapshotType.BLUEPRINT
             ? BCBuildersItems.BLUEPRINT_USED.get()
@@ -296,15 +297,20 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
      * Store an uploaded snapshot in {@code store}; returns the header for the item that stands for it. The server
      * keeps content only (like the Architect Table does) and the name travels on the item, so one build uploaded
      * under several names shares one file and every resulting item finds it.
+     * <p>
+     * The item's name, owner and date come from {@code asked}, the header of the request the tile made (checked by
+     * {@link ContainerElectronicLibrary#isSelectable} when the client selected it), never from the upload's own
+     * header: the upload is matched to the request by content hash only, so its header is whatever the sender wrote
+     * (an unbounded name would push the item past the size clients accept for it).
      */
-    public static Snapshot.Header storeUpload(GlobalSavedDataSnapshots store, Snapshot snapshot) {
-        Snapshot.Header uploaded = snapshot.key.header;
+    public static Snapshot.Header storeUpload(GlobalSavedDataSnapshots store, Snapshot snapshot,
+                                             @Nullable Snapshot.Header asked) {
         snapshot.key = new Snapshot.Key(snapshot.key, (Snapshot.Header) null);
         store.addSnapshot(snapshot);
-        if (uploaded == null) {
+        if (asked == null) {
             return new Snapshot.Header(snapshot.key, new UUID(0, 0), new java.util.Date(), "Snapshot");
         }
-        return new Snapshot.Header(snapshot.key, uploaded.owner, uploaded.created, uploaded.name);
+        return new Snapshot.Header(snapshot.key, asked.owner, asked.created, asked.name);
     }
 
     // --- NBT persistence ---

@@ -70,7 +70,7 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
         }
     }
@@ -78,7 +78,7 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
     @Override
     public void end() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
         }
     }
 

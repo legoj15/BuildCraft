@@ -140,7 +140,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
         }
     }

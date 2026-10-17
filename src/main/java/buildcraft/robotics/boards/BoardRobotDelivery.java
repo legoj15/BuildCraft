@@ -97,7 +97,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
 
     private void releaseCurrentRequest() {
         if (currentRequest != null) {
-            robot.getRegistry().release(currentRequest.getResourceId(robot.level()));
+            robot.getRegistry().release(currentRequest.getResourceId(robot.level()), robot.getRobotId());
             DockingStation station = currentRequest.getStation(robot.level());
             if (station != null) {
                 station.release((EntityRobotBase) robot);

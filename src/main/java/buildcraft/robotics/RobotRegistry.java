@@ -354,6 +354,15 @@ public class RobotRegistry extends SavedData implements IRobotRegistry {
         }
     }
 
+    /** The raw holder is compared (not {@link #robotIdTaking}), so this neither needs the robot loaded nor
+     *  sweeps a stale claim on the way. */
+    @Override
+    public synchronized void release(ResourceId resourceId, long robotId) {
+        if (resourceId != null && resourcesTaken.get(resourceId) instanceof Long holder && holder == robotId) {
+            release(resourceId);
+        }
+    }
+
     @Override
     public synchronized void releaseResources(EntityRobotBase robot) {
         releaseResources(robot, false);

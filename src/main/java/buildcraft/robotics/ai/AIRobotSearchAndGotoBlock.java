@@ -115,7 +115,7 @@ public class AIRobotSearchAndGotoBlock extends AIRobot {
 
     private void releaseBlockFound() {
         if (blockFound != null) {
-            robot.getRegistry().release(new ResourceIdBlock(blockFound));
+            robot.getRegistry().release(new ResourceIdBlock(blockFound), robot.getRobotId());
             blockFound = null;
             taken = false;
         }

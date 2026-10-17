@@ -53,6 +53,16 @@ public interface IRobotRegistry {
 
     void release(ResourceId resourceId);
 
+    /** Releases {@code resourceId} only if {@code robotId} is the robot holding it. A robot's own job should give its
+     *  block back through this, never through the unchecked {@link #release(ResourceId)}: a robot that unloads
+     *  loses every reservation, another robot may take the block meanwhile, and the reloaded robot still remembers
+     *  the block it was working on - its end-of-job release must not drop the new holder's claim. */
+    default void release(ResourceId resourceId, long robotId) {
+        if (resourceId != null && robotIdTaking(resourceId) == robotId) {
+            release(resourceId);
+        }
+    }
+
     void releaseResources(EntityRobotBase robot);
 
     DockingStation getStation(BlockPos pos, Direction side);

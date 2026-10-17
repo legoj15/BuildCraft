@@ -97,6 +97,27 @@ public class RobotRegistryTest {
     }
 
     @Test
+    public void testOwnerCheckedReleaseLeavesAnotherRobotsClaim() {
+        // A robot that lost a block while it was unloaded (the registry freed it, another robot took it) still
+        // remembers the block and releases it when its job ends; that release must not drop the new holder's claim.
+        RobotRegistry r = new RobotRegistry(null);
+        ResourceId id = resource(1, 2, 3);
+        r.take(id, ROBOT_B);
+
+        r.release(id, ROBOT_A);
+
+        Assertions.assertEquals(ROBOT_B, r.rawHolderOf(id), "a release by a non-holder leaves the claim alone");
+        Assertions.assertTrue(r.resourcesReservedBy(ROBOT_B).contains(id), "...and the holder's reverse index");
+
+        r.release(id, ROBOT_B);
+
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, r.rawHolderOf(id), "the holder's own release frees it");
+        Assertions.assertFalse(r.resourcesReservedBy(ROBOT_B).contains(id), "...and clears its reverse index");
+        Assertions.assertDoesNotThrow(() -> r.release(resource(9, 9, 9), ROBOT_A), "an unheld resource is harmless");
+        Assertions.assertDoesNotThrow(() -> r.release((ResourceId) null, ROBOT_A), "so is a null resource");
+    }
+
+    @Test
     public void testReleaseUnknownResourceIsNoOp() {
         RobotRegistry r = new RobotRegistry(null);
         Assertions.assertDoesNotThrow(() -> r.release(resource(9, 9, 9)), "releasing an unheld resource is harmless");

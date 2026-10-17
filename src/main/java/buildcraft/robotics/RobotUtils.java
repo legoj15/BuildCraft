@@ -54,8 +54,10 @@ public final class RobotUtils {
     }
 
     /** The board following {@code current} in the registry's catalog (7.1.x verbatim): an empty or
-     *  non-robot stack lands on the first (or, reversed, last) board; a robot stack cycles to the next
-     *  (or previous) registered board, wrapping around. */
+     *  non-robot stack lands on the first (or, reversed, last) board; a robot stack steps to the next
+     *  (or previous) registered board, and past either end there is none ({@code null}) - which is how the
+     *  Forbid/Force Robot parameter's click cycle gets back to "any robot": <em>empty, first, ..., last, empty</em>.
+     *  (The port once wrapped round instead, so a picked board could never be cleared by clicking.) */
     public static RedstoneBoardRobotNBT getNextBoard(ItemStack current, boolean reverse) {
         // The registry catalog is Collection<RedstoneBoardNBT<?>>; only robot boards can follow a robot stack.
         List<RedstoneBoardRobotNBT> boards = RedstoneBoardRegistry.instance.getAllBoardNBTs().stream()
@@ -73,11 +75,6 @@ public final class RobotUtils {
             return reverse ? boards.get(boards.size() - 1) : boards.get(0);
         }
         int next = index + (reverse ? -1 : 1);
-        if (next < 0) {
-            next = boards.size() - 1;
-        } else if (next >= boards.size()) {
-            next = 0;
-        }
-        return boards.get(next);
+        return next < 0 || next >= boards.size() ? null : boards.get(next);
     }
 }

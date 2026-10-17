@@ -31,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -56,6 +57,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private static final byte REQUIRED_TRUE = 1;
     private static final byte REQUIRED_FALSE = 2;
     private static final int CHECKS_PER_TICK = 10;
+    /** Ticks a whole-box fluid sweep result stays good for the place-task gate (see {@code areaFluid}). Vanilla
+     *  water spreads one cell per 5 ticks, so a result this old is at most one flow step behind the world. */
+    public static final int FLUID_SCAN_INTERVAL = 5;
     private static final long MAX_POWER_PER_TICK = 256 * MjAPI.MJ;
 
     protected final T tile;
@@ -85,6 +89,15 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     public Vec3 visualPrevRobotPos;
     public int leftToBreak = 0;
     public int leftToPlace = 0;
+    /** How many full box sweeps {@link #scanAreaFluid()} has run. A diagnostic, so a test can pin that the sweep is
+     *  not repeated needlessly; not persisted. */
+    private int fluidSweeps;
+    /** The last {@link #scanAreaFluid()} result the place-task gate used, or null when there is none to reuse. */
+    private AreaFluid cachedAreaFluid;
+    /** The fluid mode {@link #cachedAreaFluid} was taken under: tolerance, and so the result, depends on it. */
+    private EnumFluidHandlingMode cachedAreaFluidMode;
+    /** Ticks since {@link #cachedAreaFluid} was taken. */
+    private int cachedAreaFluidAge;
 
     @SuppressWarnings("WeakerAccess")
     protected SnapshotBuilder(T tile) {
@@ -173,34 +186,88 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * O(n) scan of the build area for fluid (source or flowing), split into what mopping must still clear and
+     * O(n) sweep of the build area for fluid (source or flowing), split into what mopping must still clear and
      * what the check sweep already accepted. Used by the place-task-add gate: CLEAR defers placements while any
      * fluid is {@link AreaFluid#UNCLEARED}, and once only tolerated fluid is left defers just the fragile blocks
      * that fluid touches. Counting accepted cells as "still to mop" would hold the gate shut for every other
      * block for as long as one tolerated wet block stands, since mopping can never remove its water.
      *
-     * <p>Iteration short-circuits on the first uncleared fluid, so the cost is a few microseconds while mopping
-     * (typical case) and the full O(n) only when the area is fully clear (one verification per tick at that
-     * point — negligible).
+     * <p>The sweep stops at the first uncleared fluid, so it is cheap while mopping (typical case), but a clear
+     * area, and one holding only tolerated fluid, are only known after every cell has been read. That is why the
+     * gate does not call this directly: {@link #areaFluid} asks for it only once a placement actually reaches the
+     * gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks. The walk itself allocates nothing per
+     * cell (one reused cursor); a fluid-holding cell costs a few position objects while its tolerance is derived.
      */
     protected AreaFluid scanAreaFluid() {
+        fluidSweeps++;
         Snapshot.BuildingInfo info = getBuildingInfo();
         if (info == null) return AreaFluid.NONE;
+        BlockPos min = info.box.min();
+        BlockPos max = info.box.max();
+        if (min == null || max == null) return AreaFluid.NONE;
+        Level world = tile.getWorldBC();
         AreaFluid result = AreaFluid.NONE;
-        for (BlockPos pos : info.box.getBlocksInArea()) {
-            if (tile.getWorldBC().getFluidState(pos).isEmpty()) continue;
-            // A non-air cell: CORRECT means the check accepted the block, fluid and all (a stale CORRECT is
-            // re-checked within a sweep). An air cell's CORRECT may be stale from before the fluid arrived, so
-            // its tolerance is re-derived from the world here rather than read off checkResults.
-            boolean tolerated = isAir(pos)
-                ? isToleratedFluidAt(pos)
-                : checkResults[posToIndex(pos)] == CHECK_RESULT_CORRECT;
-            if (!tolerated) {
-                return AreaFluid.UNCLEARED;
+        // y outermost, x innermost: the order a chunk section stores its blocks in.
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int y = min.getY(); y <= max.getY(); y++) {
+            for (int z = min.getZ(); z <= max.getZ(); z++) {
+                for (int x = min.getX(); x <= max.getX(); x++) {
+                    cursor.set(x, y, z);
+                    if (world.getFluidState(cursor).isEmpty()) continue;
+                    // The tolerance checks below may hand the position on, so give them one that stays put.
+                    BlockPos pos = cursor.immutable();
+                    // A non-air cell: CORRECT means the check accepted the block, fluid and all (a stale CORRECT
+                    // is re-checked within a sweep). An air cell's CORRECT may be stale from before the fluid
+                    // arrived, so its tolerance is re-derived from the world here rather than read off
+                    // checkResults.
+                    boolean tolerated = isAir(pos)
+                        ? isToleratedFluidAt(pos)
+                        : checkResults[posToIndex(pos)] == CHECK_RESULT_CORRECT;
+                    if (!tolerated) {
+                        return AreaFluid.UNCLEARED;
+                    }
+                    result = AreaFluid.TOLERATED_ONLY;
+                }
             }
-            result = AreaFluid.TOLERATED_ONLY;
         }
         return result;
+    }
+
+    /**
+     * What the fluid in the build area means to the place-task gate, from the last sweep if it is recent enough.
+     * Only a placement that reaches the gate asks, so a Builder with nothing to place never sweeps; and the result
+     * is reused for {@link #FLUID_SCAN_INTERVAL} ticks (a sweep reads every cell of the box and, with tolerated
+     * water standing, never stops early). The gate only decides what is queued, and the check sweep it leans on
+     * is already slower than that, so a result a flow step old costs at worst a placement queued a few ticks
+     * early or late; {@code SchematicBlockDefault#build} still refuses a fragile block with fluid beside it at the
+     * moment of placement. A change of fluid mode, or of snapshot, discards the result.
+     */
+    private AreaFluid areaFluid(EnumFluidHandlingMode mode) {
+        if (cachedAreaFluid == null || cachedAreaFluidMode != mode || cachedAreaFluidAge >= FLUID_SCAN_INTERVAL) {
+            cachedAreaFluid = scanAreaFluid();
+            cachedAreaFluidMode = mode;
+            cachedAreaFluidAge = 0;
+        }
+        return cachedAreaFluid;
+    }
+
+    /**
+     * The build-area-fluid gate of the place-task add: may a placement at {@code pos} be queued while the area holds
+     * the fluid {@link #areaFluid} reports? See the long comment at the call site for the modes' reasoning.
+     */
+    private boolean passesFluidGate(EnumFluidHandlingMode mode, BlockPos pos) {
+        if (mode != EnumFluidHandlingMode.CLEAR && mode != EnumFluidHandlingMode.REPLACE) return true;
+        AreaFluid fluid = areaFluid(mode);
+        if (mode == EnumFluidHandlingMode.CLEAR) {
+            if (fluid == AreaFluid.UNCLEARED) return isAllowedDuringFluidMop(pos);
+            return !(fluid == AreaFluid.TOLERATED_ONLY && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos));
+        }
+        return !(fluid != AreaFluid.NONE && isFragileSchematicAt(pos));
+    }
+
+    /** Full box sweeps {@link #scanAreaFluid()} has run so far (diagnostic; see {@code fluidSweeps}). */
+    public int getFluidSweepCount() {
+        return fluidSweeps;
     }
 
     public void validate() {
@@ -274,6 +341,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 getBuildingInfo().box.size().getZ()
             ];
         Arrays.fill(checkResults, CHECK_RESULT_UNKNOWN);
+        cachedAreaFluid = null;
         requiredCache = new byte[
             getBuildingInfo().box.size().getX() *
                 getBuildingInfo().box.size().getY() *
@@ -325,6 +393,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         clientPlaceTasks.clear();
         prevClientPlaceTasks.clear();
         checkResults = null;
+        cachedAreaFluid = null;
         requiredCache = null;
         breakOrder = null;
         placeOrder = null;
@@ -340,6 +409,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * @return true if building is finished, false otherwise
      */
     public boolean tick() {
+
+        if (cachedAreaFluidAge < Integer.MAX_VALUE) {
+            cachedAreaFluidAge++;
+        }
 
         boolean checkResultsChanged = false;
 
@@ -475,15 +548,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   counter bouncing up and down as items repeatedly cycle through extract+refund.
             //   Gating at queue-add stops the cycle entirely — items never leave inventory if
             //   the placement would defer.
-            AreaFluid areaFluid = (getFluidMode() == EnumFluidHandlingMode.CLEAR
-                    || getFluidMode() == EnumFluidHandlingMode.REPLACE)
-                ? scanAreaFluid() : AreaFluid.NONE;
-            boolean clearStillMopping = areaFluid == AreaFluid.UNCLEARED
-                && getFluidMode() == EnumFluidHandlingMode.CLEAR;
-            boolean clearFragileGated = areaFluid == AreaFluid.TOLERATED_ONLY
-                && getFluidMode() == EnumFluidHandlingMode.CLEAR;
-            boolean replaceFragileGated = areaFluid != AreaFluid.NONE
-                && getFluidMode() == EnumFluidHandlingMode.REPLACE;
+            //
+            // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it.
+            EnumFluidHandlingMode fluidMode = getFluidMode();
             if (!tile.canExcavate() || breakTasks.isEmpty()) {
                 if (blocks.length != 0) {
                     isDone = false;
@@ -498,14 +565,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         return has;
                     })
                     .mapToObj(this::indexToPos)
-                    .filter(pos -> {
-                        if (clearStillMopping) return isAllowedDuringFluidMop(pos);
-                        if (replaceFragileGated && isFragileSchematicAt(pos)) return false;
-                        if (clearFragileGated && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos)) {
-                            return false;
-                        }
-                        return true;
-                    })
+                    .filter(pos -> passesFluidGate(fluidMode, pos))
                     .filter(this::isReadyToPlace)
                     .limit(MAX_QUEUE_SIZE - placeTasks.size())
                     .filter(this::canPlace)
@@ -793,6 +853,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * NO_REPLACE would stay stuck as TO_BREAK forever.
      */
     public void invalidateChecksForFluidPositions() {
+        cachedAreaFluid = null;
         if (checkResults == null || getBuildingInfo() == null) return;
         for (int i = 0; i < checkResults.length; i++) {
             BlockPos pos = indexToPos(i);

@@ -60,21 +60,21 @@ import buildcraft.lib.test.EntityArenaUtil;
  */
 public class BuilderRefloodTester {
 
-    private static final int SLAB = 0;
-    private static final int STONE = 1;
+    public static final int SLAB = 0;
+    public static final int STONE = 1;
     /** Schematic air: the Builder must keep the cell empty, so it is where it mops. */
-    private static final int AIR = 2;
+    public static final int AIR = 2;
     /** A fragile block (any fluid washes it away), to check tolerated water does not hold every one back. */
-    private static final int SNOW = 3;
+    public static final int SNOW = 3;
     private static final BlockState[] KIND_STATES = {
         Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
         Blocks.SNOW.defaultBlockState() };
 
-    private static final BlockPos BUILDER = new BlockPos(3, 2, 2);
+    public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
     /** Consecutive quiet ticks that count as "the Builder stopped re-queuing". The sources re-flood a dry cell
      *  within ~5 ticks, so any live cycle breaks the streak many times over in this window. */
-    private static final int QUIET_TICKS = 40;
+    public static final int QUIET_TICKS = 40;
 
     /** How long the lava test watches the Builder not rest: several lava flow cycles (lava spreads every 30 ticks in
      *  the overworld) and five times {@link #QUIET_TICKS}. */
@@ -85,11 +85,11 @@ public class BuilderRefloodTester {
      *  time out without saying which phase it was stuck in). Polls past the watchdog are harmless. */
     private static final int DRIVE_TICKS = 1050;
 
-    private static void expect(boolean cond, String msg) {
+    public static void expect(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
     }
 
-    private static BlockPos cell(int i) {
+    public static BlockPos cell(int i) {
         return new BlockPos(2, 2, 2 + i);
     }
 
@@ -119,7 +119,7 @@ public class BuilderRefloodTester {
                 new Snapshot.Header(blueprint.key, new UUID(0, 0), new Date(0), "reflood-test"));
     }
 
-    private static boolean isWetSlab(BlockState state) {
+    public static boolean isWetSlab(BlockState state) {
         return state.is(Blocks.OAK_SLAB) && state.getValue(BlockStateProperties.WATERLOGGED);
     }
 
@@ -132,7 +132,7 @@ public class BuilderRefloodTester {
     }
 
     /** Is {@code state} the dry, finished block the blueprint wants for {@code kind}? */
-    private static boolean isBuilt(int kind, BlockState state) {
+    public static boolean isBuilt(int kind, BlockState state) {
         return switch (kind) {
             case SLAB -> isDrySlab(state);
             case STONE -> state.is(Blocks.STONE);
@@ -143,14 +143,14 @@ public class BuilderRefloodTester {
     }
 
     /** True while the Builder has nothing queued and nothing left to queue. */
-    private static boolean builderQuiet(SnapshotBuilder<?> builder) {
+    public static boolean builderQuiet(SnapshotBuilder<?> builder) {
         return builder != null && builder.breakTasks.isEmpty() && builder.placeTasks.isEmpty()
                 && builder.leftToBreak == 0 && builder.leftToPlace == 0;
     }
 
     /** The shared arena: a stone floor, the given walls, and a CLEAR-mode Builder with enough MJ and items to build
      *  {@code column}, loaded with its blueprint. The column itself is NOT placed; the Builder builds it. */
-    private static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls) {
+    public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 5; z++) {
@@ -182,7 +182,7 @@ public class BuilderRefloodTester {
 
     /** Schedules {@code step} once per tick up front (see {@link EntityArenaUtil#tickUntil} for why) and turns a
      *  thrown {@link IllegalStateException} into a test failure. {@code step} calls {@code finish} to succeed. */
-    private static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step) {
+    public static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step) {
         drive(helper, finished, step, () -> {});
     }
 

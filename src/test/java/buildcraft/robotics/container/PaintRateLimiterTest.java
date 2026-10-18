@@ -75,6 +75,17 @@ public class PaintRateLimiterTest {
     }
 
     @Test
+    public void testRefilledMeansIndistinguishableFromANewBucket() {
+        PaintRateLimiter limiter = new PaintRateLimiter();
+        Assertions.assertTrue(limiter.isRefilled(0), "a new bucket is full");
+        acquireMany(limiter, 1000, 3);
+        Assertions.assertFalse(limiter.isRefilled(1000), "three strokes spent");
+        Assertions.assertFalse(limiter.isRefilled(1000 + 3 * PaintRateLimiter.TICKS_PER_STROKE - 1));
+        Assertions.assertTrue(limiter.isRefilled(1000 + 3 * PaintRateLimiter.TICKS_PER_STROKE), "refilled exactly when earned back");
+        Assertions.assertFalse(limiter.isRefilled(10), "a clock behind the last stroke is not a refill");
+    }
+
+    @Test
     public void testAClockThatStepsBackwardsDoesNotRefillOrThrow() {
         PaintRateLimiter limiter = new PaintRateLimiter();
         acquireMany(limiter, 1000, PaintRateLimiter.BURST);

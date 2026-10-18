@@ -21,6 +21,7 @@ import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.client.render.ZoneMapGeometry;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
 import buildcraft.robotics.client.zone.ZonePaintInput;
+import buildcraft.robotics.client.zone.ZonePaintStroke;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
@@ -75,13 +76,11 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private boolean panning = false;
     private double lastDragX, lastDragY;
     /** In-progress paint preview (null when not painting). Display only: on release the stroke itself (the
-     *  rectangle {@link #paintStart}..{@link #paintEnd}) is applied to the layer as it is then and sent. */
+     *  rectangle {@link #stroke} holds) is applied to the layer as it is then and sent. */
     private ZonePlan bufferLayer = null;
     private int bufferColorIndex = -1;
-    /** {@link ZonePaintInput#PAINT} (left button) or {@link ZonePaintInput#ERASE} (right button); NONE between strokes. */
-    private int paintButton = ZonePaintInput.NONE;
-    private BlockPos paintStart = null;
-    private BlockPos paintEnd = null;
+    /** The stroke being drawn, if any: owned by the mouse button that began it (see {@link ZonePaintStroke}). */
+    private final ZonePaintStroke stroke = new ZonePaintStroke();
     private BlockPos hoverPos = null;
 
     public GuiZonePlanner(ContainerZonePlanner menu, Inventory playerInv, Component title) {
@@ -246,16 +245,17 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     /** Rebuilds the in-progress paint preview as the saved layer plus the dragged rectangle set/cleared,
      *  clipped to the survey square the map outlines (strokes cannot reach beyond it). */
-    private void applyPaintRect(BlockPos a, BlockPos b) {
-        if (a == null || b == null || bufferColorIndex < 0) {
+    private void applyPaintRect() {
+        ZonePaintStroke.Stroke current = stroke.current();
+        if (current == null) {
             return;
         }
-        paintEnd = b;
         BlockPos tile = menu.tile.getBlockPos();
-        bufferLayer = ZonePlan.withRect(menu.tile.layers[bufferColorIndex],
-                a.getX() - tile.getX(), a.getZ() - tile.getZ(),
-                b.getX() - tile.getX(), b.getZ() - tile.getZ(),
-                paintButton == ZonePaintInput.PAINT);
+        bufferColorIndex = current.colorIndex();
+        bufferLayer = ZonePlan.withRect(menu.tile.layers[current.colorIndex()],
+                current.startX() - tile.getX(), current.startZ() - tile.getZ(),
+                current.endX() - tile.getX(), current.endZ() - tile.getZ(),
+                current.paints());
     }
 
     // ── Map interaction (shared logic; the per-node mouse overrides below delegate here) ──────────
@@ -265,15 +265,15 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         if (menu.tile != null && inMap(mx, my)) {
             ItemStack carried = menu.getCarried();
             if (isColouredBrush(carried)) {
-                // Left paints, right erases; any other button (middle, a side button) starts no stroke. The click
-                // is still ours either way, as it always was with a brush over the map.
-                int stroke = ZonePaintInput.strokeFor(button);
-                BlockPos start = stroke == ZonePaintInput.NONE ? null : pickColumn(mx, my);
-                if (start != null) {
-                    paintButton = stroke;
-                    bufferColorIndex = brushColour(carried).ordinal();
-                    paintStart = start;
-                    applyPaintRect(paintStart, paintStart);
+                // Left paints, right erases; any other button (middle, a side button) starts no stroke, and none
+                // starts while one is open (the press is ignored: it neither restarts nor changes the stroke). The
+                // click is still ours either way, as it always was with a brush over the map.
+                if (!stroke.isOpen() && ZonePaintInput.strokeFor(button) != ZonePaintInput.NONE) {
+                    BlockPos start = pickColumn(mx, my);
+                    if (start != null
+                            && stroke.press(button, brushColour(carried).ordinal(), start.getX(), start.getZ())) {
+                        applyPaintRect();
+                    }
                 }
                 return true;
             } else if (carried.isEmpty() && button == 0) {
@@ -294,35 +294,38 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             lastDragY = my;
             return true;
         }
-        if (bufferLayer != null && paintStart != null) {
+        if (stroke.isOpen()) {
+            // Whichever button the event names (the most recently pressed): the stroke is the starting button's.
             BlockPos cur = pickColumn(mx, my);
             if (cur != null) {
-                applyPaintRect(paintStart, cur);
+                stroke.drag(cur.getX(), cur.getZ());
+                applyPaintRect();
             }
             return true;
         }
         return false;
     }
 
-    /** @return true if a pan ended or a paint was committed to its layer. */
-    private boolean onMapReleased() {
+    /** @return true if a pan ended, a paint was committed to its layer, or a stroke is still open. */
+    private boolean onMapReleased(int button) {
         if (panning) {
             panning = false;
             return true;
         }
-        if (bufferLayer != null && bufferColorIndex >= 0 && paintStart != null && paintEnd != null) {
-            // The stroke, not the preview: the preview was built on the layer as it stood at the last drag event,
-            // and a sync may have landed since. paintRect applies the rectangle to the layer as it is now.
-            BlockPos tile = menu.tile.getBlockPos();
-            menu.paintRect(bufferColorIndex,
-                    paintStart.getX() - tile.getX(), paintStart.getZ() - tile.getZ(),
-                    paintEnd.getX() - tile.getX(), paintEnd.getZ() - tile.getZ(),
-                    paintButton == ZonePaintInput.PAINT);
-            bufferLayer = null;
-            bufferColorIndex = -1;
-            paintStart = null;
-            paintEnd = null;
-            paintButton = ZonePaintInput.NONE;
+        if (stroke.isOpen()) {
+            // Only the button that began the stroke ends it; letting go of another commits nothing.
+            ZonePaintStroke.Stroke done = stroke.release(button);
+            if (done != null) {
+                // The stroke, not the preview: the preview was built on the layer as it stood at the last drag event,
+                // and a sync may have landed since. paintRect applies the rectangle to the layer as it is now.
+                BlockPos tile = menu.tile.getBlockPos();
+                menu.paintRect(done.colorIndex(),
+                        done.startX() - tile.getX(), done.startZ() - tile.getZ(),
+                        done.endX() - tile.getX(), done.endZ() - tile.getZ(),
+                        done.paints());
+                bufferLayer = null;
+                bufferColorIndex = -1;
+            }
             return true;
         }
         return false;
@@ -357,7 +360,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if (onMapReleased()) {
+        if (onMapReleased(event.button())) {
             return true;
         }
         return super.mouseReleased(event);
@@ -381,7 +384,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (onMapReleased()) {
+        if (onMapReleased(button)) {
             return true;
         }
         return super.mouseReleased(mouseX, mouseY, button);

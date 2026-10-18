@@ -170,6 +170,84 @@ public class ZoneOverlayCacheTest {
     }
 
     @Test
+    public void testPanningReadsOnlyTheChunksThatEnteredTheWindow() {
+        // Panning moves the window a chunk at a time, usually mid-stroke of a drag: each step must cost the chunks that
+        // came into view, not the whole window again.
+        ZonePlan plan = new ZonePlan();
+        WatchedChunk[][] grid = new WatchedChunk[8][8];
+        for (int cx = 0; cx < 8; cx++) {
+            for (int cz = 0; cz < 8; cz++) {
+                grid[cx][cz] = new WatchedChunk();
+                grid[cx][cz].set(1, 1, true);
+                plan.getChunkMapping().put(ZonePlan.packChunkKey(cx, cz), grid[cx][cz]);
+            }
+        }
+        ZoneOverlayCache cache = new ZoneOverlayCache();
+        Assertions.assertEquals(16, cells(cache, 0, plan, 0, 0, new int[] {0, 0, 3, 3}, 1).size());
+        for (WatchedChunk[] column : grid) {
+            for (WatchedChunk chunk : column) {
+                chunk.reads = 0;
+            }
+        }
+
+        ZoneOverlayCache.Cells panned = cells(cache, 0, plan, 0, 0, new int[] {1, 0, 4, 3}, 1);
+        Assertions.assertEquals(16, panned.size(), "the 4x4 chunks now in view each hold one column");
+        for (int cx = 1; cx <= 3; cx++) {
+            for (int cz = 0; cz <= 3; cz++) {
+                Assertions.assertEquals(0, grid[cx][cz].reads, "chunk " + cx + "," + cz + " was already worked out");
+            }
+        }
+        for (int cz = 0; cz <= 3; cz++) {
+            Assertions.assertTrue(grid[4][cz].reads > 0, "chunk 4," + cz + " came into view and is read");
+        }
+        Assertions.assertEquals(2, cache.builds(), "two answers were put together");
+        Assertions.assertEquals(16 + 4, cache.chunkBuilds(), "but only 4 chunks were worked out for the second");
+    }
+
+    @Test
+    public void testCellsComeOutOneWorldChunkAtATimeAtEveryStride() {
+        // The renderer looks the terrain chunk up once per run of cells, so a chunk's cells must be consecutive.
+        ZonePlan plan = new ZonePlan();
+        plan.paintRect(-40, -40, 60, 60, true);
+        for (int stride : new int[] {1, 2, 4, 8}) {
+            ZoneOverlayCache.Cells cells = cells(new ZoneOverlayCache(), 0, plan, 5, 3, WIN, stride);
+            Assertions.assertTrue(cells.size() > 0);
+            Set<Long> finished = new HashSet<>();
+            long current = Long.MIN_VALUE;
+            for (int i = 0; i < cells.size(); i++) {
+                long chunk = pack(cells.x(i) >> 4, cells.z(i) >> 4);
+                if (chunk != current) {
+                    Assertions.assertTrue(finished.add(chunk), "chunk revisited at stride " + stride + ", cell " + i);
+                    current = chunk;
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testRandomLayersMatchThePlainMeaning() {
+        java.util.Random rand = new java.util.Random(0x5EED);
+        for (int round = 0; round < 60; round++) {
+            ZonePlan plan = new ZonePlan();
+            for (int stroke = 0; stroke < 6; stroke++) {
+                int x = rand.nextInt(160) - 80;
+                int z = rand.nextInt(160) - 80;
+                plan.paintRect(x, z, x + rand.nextInt(50), z + rand.nextInt(50), rand.nextInt(5) != 0);
+            }
+            int tileX = rand.nextInt(200) - 100;
+            int tileZ = rand.nextInt(200) - 100;
+            int minCX = rand.nextInt(10) - 5;
+            int minCZ = rand.nextInt(10) - 5;
+            int[] win = {minCX, minCZ, minCX + rand.nextInt(6), minCZ + rand.nextInt(6)};
+            int stride = 1 << rand.nextInt(4);
+            Assertions.assertEquals(naive(plan, tileX, tileZ, win, stride),
+                    asSet(cells(new ZoneOverlayCache(), 0, plan, tileX, tileZ, win, stride)),
+                    "round " + round + ": planner (" + tileX + ", " + tileZ + "), window " + java.util.Arrays.toString(win)
+                            + ", stride " + stride);
+        }
+    }
+
+    @Test
     public void testSameCellsAreReusedWhileNothingChanges() {
         ZoneOverlayCache cache = new ZoneOverlayCache();
         ZonePlan plan = new ZonePlan();

@@ -119,8 +119,9 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     // ordered, so a sync that arrives after the ack always contains the stroke.
     //
     // A layer push is the whole layer, so one viewer painting continuously must not make the server push it to every
-    // other viewer every tick. Two limits bound that: a viewer's stroke messages go through a PaintRateLimiter (the
-    // surplus is acknowledged, dropped, and the painter resynced, as for a malformed message), and a layer is pushed
+    // other viewer every tick. Two limits bound that: a player's stroke messages go through a PaintRateLimiter kept
+    // for them on the tile (PaintBudgets), so reopening the screen does not refill it (the surplus is acknowledged,
+    // dropped, and the painter resynced, as for a malformed message), and a layer is pushed
     // to a given viewer at most once per PUSH_INTERVAL_TICKS, the strokes that land in between going down together.
     public static final int NET_PAINT_RECT = 10;
     public static final int NET_SYNC_LAYER = 11;
@@ -172,8 +173,6 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     /** Per-viewer, per-layer sync state (server side); created on first use. */
     private LayerView[] views;
-    /** Server side: this viewer's allowance of stroke messages (see {@link PaintRateLimiter}). */
-    private final PaintRateLimiter paintBudget = new PaintRateLimiter();
     /** Client side: strokes sent but not yet acknowledged, oldest first. */
     private final List<PendingStroke> pending = new ArrayList<>();
     /** Client side: the sequence number of the last stroke sent. */
@@ -333,7 +332,8 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             return;
         }
         LayerView view = view(idx);
-        if (!paintBudget.tryAcquire(gameTime())) {
+        // The allowance is the player's at this planner (kept on the tile), not this screen's: reopening it does not refill it.
+        if (!tile.paintBudgets.tryAcquire(player.getUUID(), gameTime())) {
             // Faster than a person can stroke: acknowledged (above) so the painter's pending list drains, but not
             // applied, and the painter, who is showing it, is resynced to the layer the server kept.
             BCLog.logger.debug("[robotics.zone] Dropped a paint message from a Zone Planner viewer over the rate limit");

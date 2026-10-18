@@ -28,6 +28,7 @@ import buildcraft.core.item.ItemPaintbrush_BC8;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.container.ContainerZonePlanner;
+import buildcraft.robotics.container.PaintBudgets;
 import buildcraft.robotics.zone.ZonePlan;
 
 import buildcraft.lib.gui.IBCMenuProvider;
@@ -56,6 +57,10 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
     private int progressOutput = -1;
 
     public ZonePlan[] layers = new ZonePlan[16];
+
+    /** Server side: who has painted here lately and how much allowance each has left. On the planner, not on a
+     *  menu, so reopening the screen does not refill it (see {@link PaintBudgets}). Not saved. */
+    public final PaintBudgets paintBudgets = new PaintBudgets();
 
     public TileZonePlanner(BlockPos pos, BlockState state) {
         super(BCRoboticsBlockEntities.ZONE_PLANNER.get(), pos, state);

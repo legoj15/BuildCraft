@@ -29,6 +29,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 import buildcraft.api.transport.pipe.PipeApi;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -88,7 +89,7 @@ public class RobotStripesTester {
         BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
 
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
-        Vec3 at = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));
+        Vec3 at = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
         robot.setPos(at.x, at.y, at.z);
         robot.getBattery().addPower(5000L * MjAPI.MJ, false);
         robot.setItemInUse(marked(mode, 5));
@@ -122,13 +123,16 @@ public class RobotStripesTester {
      */
     public static void stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand(GameTestHelper helper) {
         registerSwapHandler();
-        int[] drops = new int[1];
-        ItemStack held = useMarkedStack(helper, SWAP_ASIDE, drops).getHeldItem();
+        whenRobotCellIsEntityTicking(helper, () -> {
+            int[] drops = new int[1];
+            ItemStack held = useMarkedStack(helper, SWAP_ASIDE, drops).getHeldItem();
 
-        helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 5,
-                "the robot keeps its own used stack of 5, holds " + held);
-        helper.assertTrue(drops[0] == 2, "the stack the handler put in the hand is dropped (2), dropped " + drops[0]);
-        helper.succeed();
+            helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 5,
+                    "the robot keeps its own used stack of 5, holds " + held);
+            helper.assertTrue(drops[0] == 2,
+                    "the stack the handler put in the hand is dropped (2), dropped " + drops[0]);
+            helper.succeed();
+        });
     }
 
     /**
@@ -137,13 +141,31 @@ public class RobotStripesTester {
      */
     public static void stripesKeepsASwappedHandStackWhenTheUsedOneIsGone(GameTestHelper helper) {
         registerSwapHandler();
-        int[] drops = new int[1];
-        ItemStack held = useMarkedStack(helper, SWAP_GONE, drops).getHeldItem();
+        whenRobotCellIsEntityTicking(helper, () -> {
+            int[] drops = new int[1];
+            ItemStack held = useMarkedStack(helper, SWAP_GONE, drops).getHeldItem();
 
-        helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 2,
-                "the robot keeps the swapped-in stack of 2, holds " + held);
-        helper.assertTrue(drops[0] == 0, "nothing is dropped, dropped " + drops[0]);
-        helper.succeed();
+            helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 2,
+                    "the robot keeps the swapped-in stack of 2, holds " + held);
+            helper.assertTrue(drops[0] == 0, "nothing is dropped, dropped " + drops[0]);
+            helper.succeed();
+        });
+    }
+
+    /** The robot's cell in the test arena (the robot is never added to the level, only positioned there). */
+    private static final BlockPos ROBOT_REL = new BlockPos(2, 2, 2);
+
+    /** Runs {@code body}, which drops an item and scans for it in the same tick, once the robot's chunk is
+     *  entity-ticking. The framework waits only for the 1x1 structure's own chunk, and {@code ROBOT_REL} lands in a
+     *  neighbouring chunk whenever the arena sits near a chunk edge: an item dropped there is invisible to the scan
+     *  (measured: the swap test saw 0 of its 2 dropped paper at tick 0, intermittently). Any item the body leaves
+     *  behind is swept out of this cell on every exit. */
+    private static void whenRobotCellIsEntityTicking(GameTestHelper helper, Runnable body) {
+        EntityArenaUtil.forceLoadEntityArena(helper, ROBOT_REL);
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isEntityTicking(helper, ROBOT_REL), body,
+                "the robot's chunk never became entity-ticking",
+                () -> helper.getLevel().getEntities((Entity) null, EntityArenaUtil.cellBounds(helper),
+                        e -> e instanceof ItemEntity).forEach(Entity::discard));
     }
 
     public static void stripesPlacesOnReservedCellAndKeepsRemainder(GameTestHelper helper) {

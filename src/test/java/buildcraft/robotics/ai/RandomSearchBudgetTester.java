@@ -11,17 +11,16 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
-import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.boards.BoardRobotPlanter;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -62,7 +61,8 @@ public class RandomSearchBudgetTester {
         LiveStation home = new LiveStation(helper.absolutePos(new BlockPos(1, 1, 1)), Direction.UP);
         home.world = level;
         IZone zone = new Box(helper.absolutePos(new BlockPos(0, 1, 0)), helper.absolutePos(new BlockPos(5, 4, 6)));
-        EntityRobot robot = robot(helper, new ParkedRobot(level, home, zone));
+        // Docked at, and linked to, its own station, and working a zone inside the arena cell.
+        EntityRobot robot = robot(helper, new ZonePinnedRobot(level, null, zone).parkedAt(home));
         IRobotRegistry registry = robot.getRegistry();
         registry.registerStation(home);
         robot.setItemInUse(new ItemStack(Items.WHEAT_SEEDS));
@@ -89,33 +89,6 @@ public class RandomSearchBudgetTester {
         robot.setUniqueRobotId(registry.getNextRobotId());
         registry.registerRobot(robot);
         return robot;
-    }
-
-    /** Docked at, and linked to, its own station, and working a zone inside the arena cell. */
-    private static final class ParkedRobot extends EntityRobot {
-        private final DockingStation home;
-        private final IZone zone;
-
-        ParkedRobot(Level level, DockingStation home, IZone zone) {
-            super(BCRoboticsEntities.ROBOT.get(), level);
-            this.home = home;
-            this.zone = zone;
-        }
-
-        @Override
-        public DockingStation getDockingStation() {
-            return home;
-        }
-
-        @Override
-        public DockingStation getLinkedStation() {
-            return home;
-        }
-
-        @Override
-        public IZone getZoneToWork() {
-            return zone;
-        }
     }
 
     /** Records the delegate that ended. */

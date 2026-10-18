@@ -168,4 +168,26 @@ public class PathFindingTest {
         Assertions.assertEquals(here, path.getLast(), "out-and-back returns to start (== end)");
         Assertions.assertEquals(1, chebyshev(here, path.get(1)), "the detour cell is adjacent to start");
     }
+
+    /** An expansion budget is spent on expansions only: a finder whose last allowed expansion reaches the end still
+     *  builds its path, and one allowed a single expansion fewer gives up, done with no path. */
+    @Test
+    public void testExpansionBudgetStopsExactlyAtTheLimit() {
+        MockSoftGrid grid = new MockSoftGrid().fill(0, Y, 0, 9, Y, 0);
+        BlockPos start = new BlockPos(0, Y, 0);
+        BlockPos end = new BlockPos(9, Y, 0);
+        PathFinding unbounded = new PathFinding(grid, start, end);
+        solve(unbounded);
+        int needed = unbounded.expansions();
+        Assertions.assertTrue(needed > 1, "fixture: the corridor takes several expansions, took " + needed);
+
+        PathFinding exact = new PathFinding(grid, start, end);
+        exact.setExpansionBudget(needed);
+        assertValidPath(grid, start, end, solve(exact));
+
+        PathFinding short1 = new PathFinding(grid, start, end);
+        short1.setExpansionBudget(needed - 1);
+        Assertions.assertTrue(solve(short1).isEmpty(), "one expansion short, the finder gives up with no path");
+        Assertions.assertEquals(needed - 1, short1.expansions(), "having spent exactly its budget");
+    }
 }

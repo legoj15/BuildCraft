@@ -52,16 +52,20 @@ public class AIRobotSearchBlock extends AIRobot {
     private Iterator<BlockPos> blockIter;
     private double maxDistanceToEnd;
     private IZone zone;
-    /** Whether the scanner is one of the random ones, which never run out: only those are bounded by
-     *  {@link #RANDOM_SEARCH_ROUNDS}. The expanding cube is finite and ends the search on its own. */
-    private boolean randomScanner;
     private int rounds;
 
-    /** How many {@code iterate()} rounds a RANDOM search gets before it gives up with nothing found. 7.1.x ran every
-     *  search on an {@code IterableAlgorithmRunner}, whose default bound was 1000 rounds; that bound is what ended a
-     *  random search with no candidate, and so what sent an idle planter or stripes robot to sleep. The synchronous
-     *  port runs one round per update, so without it a random search with nothing to find never ended. */
-    static final int RANDOM_SEARCH_ROUNDS = 1000;
+    /** How many {@code iterate()} rounds a search gets before it gives up with nothing found. 7.1.x ran every search
+     *  on an {@code IterableAlgorithmRunner}, whose default bound was 1000 rounds, and the synchronous port runs one
+     *  round per update. The random scanners never run out, so for them this bound is what ends a search with no
+     *  candidate (and sends an idle planter or stripes robot to sleep). The expanding cube does run out, but each
+     *  candidate it finds and cannot reach (a crop under glass) holds a path finder for up to
+     *  {@link PathFindingSearch#FINDER_EXPANSION_BUDGET} expansions, so a cube full of them is bounded only by this. */
+    static final int SEARCH_ROUNDS = 1000;
+    /** {@link #SEARCH_ROUNDS}; package-private so tests can shrink it. */
+    int maxRounds = SEARCH_ROUNDS;
+    /** The block-traversability oracle; null (production) reads the robot's level. Package-private so tests can
+     *  search an in-memory world. */
+    SoftBlockAccess blockAccess;
 
     public AIRobotSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -95,7 +99,6 @@ public class AIRobotSearchBlock extends AIRobot {
         } else {
             blockIter = null; // no world to draw randomness from — update() aborts a runner-less job
         }
-        randomScanner = random;
         blockFound = null;
         path = null;
         maxDistanceToEnd = iMaxDistanceToEnd;
@@ -122,14 +125,15 @@ public class AIRobotSearchBlock extends AIRobot {
             return;
         }
         if (blockScanner == null) {
-            blockScanner = new PathFindingSearch(SoftBlockAccess.of(robot.level()), robot.blockPosition(),
+            SoftBlockAccess access = blockAccess != null ? blockAccess : SoftBlockAccess.of(robot.level());
+            blockScanner = new PathFindingSearch(access, robot.blockPosition(),
                     blockIter, pathFound, maxDistanceToEnd, 96, zone,
                     // Owner-tagged cells: the registry frees this robot's cells itself if it unloads or dies
                     // between the search locking onto a cell and this AI collecting it (takeResource). A cell any
                     // robot holds, as a search cell or as a job, is skipped.
                     BlockClaims.searchCells(robot.getRegistry(), robot.getRobotId()), approveFound);
         }
-        if (blockScanner.isDone() || (randomScanner && rounds >= RANDOM_SEARCH_ROUNDS)) {
+        if (blockScanner.isDone() || rounds >= maxRounds) {
             // Out of rounds, a path found is still taken (getResult reports the finished path finder); otherwise the
             // search ends with nothing found, as 7.1.x's runner did.
             path = blockScanner.getResult();

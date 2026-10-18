@@ -11,8 +11,12 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.api.core.NbtApiUtil;
+import buildcraft.api.mj.MjAPI;
+import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.ResourceId;
@@ -21,6 +25,7 @@ import buildcraft.api.robots.RobotManager;
 import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoStation;
+import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotStraightMoveTo;
 import buildcraft.robotics.entity.EntityRobot;
@@ -223,6 +228,77 @@ public class RobotAbortReleaseTester {
                 requireHome(helper, f, robot, newHome, "after aborting the relink");
             } finally {
                 relink.abort();
+            }
+            helper.succeed();
+        }
+    }
+
+    /** A gate's "go to station" redirect handed out while the robot is too low on power to act on it waits as the
+     *  controller's override (the recharge outranks it) and is saved on its own. Reloaded, it must still be a
+     *  take-as-main goto: rebuilt as a plain visit, it docked the robot at the new station as a visit and the robot
+     *  went back to its old home on undock - and the gate never re-issued the redirect, because the restored
+     *  override still blocked it. A save written before the flag existed reads back as a plain visit. */
+    public static void takeAsMainOverrideSurvivesAReloadMidRecharge(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot robot = f.robot();
+            LiveStation home = f.station(1, 5);
+            LiveStation newHome = f.station(4, 1);
+            LiveStation legacyTarget = f.station(4, 3);
+            helper.assertTrue(home.takeAsMain(robot), "precondition: the robot has a home");
+
+            AIRobotMain main = new AIRobotMain(robot);
+            AIRobotMain loaded = null;
+            AIRobotMain legacy = null;
+            try {
+                robot.getBattery().setStored(MjAPI.MJ); // below the safety reserve: a recharge outranks the redirect
+                main.setOverridingAI(new AIRobotGotoStation(robot, newHome, true));
+                main.preempt(null);
+                helper.assertTrue(main.getOverridingAI() != null && main.getDelegateAI() != main.getOverridingAI(),
+                        "precondition: the redirect waits behind the recharge");
+                helper.assertFalse(newHome.isTaken(), "precondition: the waiting redirect has claimed nothing yet");
+
+                CompoundTag saved = new CompoundTag();
+                main.writeToNbt(saved);
+                loaded = (AIRobotMain) AIRobot.loadAI(saved, robot);
+                helper.assertTrue(loaded.getOverridingAI() instanceof AIRobotGotoStation,
+                        "precondition: the waiting redirect comes back as the override");
+
+                robot.getBattery().setStored(robot.getBattery().getCapacity());
+                loaded.preempt(loaded.getDelegateAI());
+                helper.assertTrue(loaded.getDelegateAI() == loaded.getOverridingAI(),
+                        "precondition: with power back, the redirect runs");
+
+                helper.assertTrue(robot.getLinkedStation() == newHome,
+                        "the reloaded redirect must make its station the robot's home, as the gate asked");
+                requireHome(helper, f, robot, newHome, "once the reloaded redirect ran");
+                helper.assertFalse(home.isTaken(), "...and the old home is let go");
+
+                // The same save as written before the flag was persisted: no key, a plain visit, as it always read.
+                robot.getBattery().setStored(MjAPI.MJ);
+                AIRobotMain waiting = new AIRobotMain(robot);
+                waiting.setOverridingAI(new AIRobotGotoStation(robot, legacyTarget, true));
+                waiting.preempt(null);
+                CompoundTag old = new CompoundTag();
+                waiting.writeToNbt(old);
+                waiting.abort();
+                CompoundTag overrideData = NbtApiUtil.getCompound(NbtApiUtil.getCompound(
+                        NbtApiUtil.getCompound(old, "data"), "override"), "data");
+                helper.assertTrue(overrideData.contains("stationIndex"), "precondition: the override data was found");
+                overrideData.remove("takeAsMain");
+                legacy = (AIRobotMain) AIRobot.loadAI(old, robot);
+                robot.getBattery().setStored(robot.getBattery().getCapacity());
+                legacy.preempt(legacy.getDelegateAI());
+                helper.assertTrue(legacyTarget.robotTaking() == robot && !legacyTarget.isMainStation(),
+                        "a save without the flag reads back as a plain visit");
+                requireHome(helper, f, robot, newHome, "after a plain visit from an old save");
+            } finally {
+                main.abort();
+                if (loaded != null) {
+                    loaded.abort();
+                }
+                if (legacy != null) {
+                    legacy.abort();
+                }
             }
             helper.succeed();
         }

@@ -111,21 +111,39 @@ public class AIRobotMain extends AIRobot {
         return true;
     }
 
-    /** Remembers that the delegate is the override (a gate redirect such as Goto Station), but only when that
-     *  delegate will itself be saved. A reloaded robot then keeps tracking the redirect it resumes: untracked,
-     *  the next gate pulse found no override and stacked a second one over it, and a recharge that interrupted
-     *  it dropped it for good (7.1.x lost it the same way). */
+    /** Saves the override (a gate redirect such as Goto Station) whenever there is one that can be saved:
+     *  <ul>
+     *  <li>running as the delegate, it is saved with the delegate, and a flag remembers that it is the override. A
+     *  reloaded robot then keeps tracking the redirect it resumes: untracked, the next gate pulse found no override
+     *  and stacked a second one over it.</li>
+     *  <li>displaced (a recharge or shutdown took the delegate slot and aborted it; {@link #preempt} starts it again
+     *  once power is back), it is saved on its own under {@code override}. Otherwise a reload before the recharge
+     *  ended dropped the redirect for good, as 7.1.x did.</li>
+     *  </ul> */
     @Override
     public void writeSelfToNBT(CompoundTag nbt) {
-        AIRobot delegate = getDelegateAI();
-        if (overridingAI != null && overridingAI == delegate && delegate.canLoadFromNBT()) {
+        if (overridingAI == null || !overridingAI.canLoadFromNBT()) {
+            return;
+        }
+        if (overridingAI == getDelegateAI()) {
             nbt.putBoolean("overriding", true);
+        } else {
+            CompoundTag override = new CompoundTag();
+            overridingAI.writeToNbt(override);
+            // Empty when the override's class is not registered: there is nothing a load could rebuild then.
+            if (!override.isEmpty()) {
+                nbt.put("override", override);
+            }
         }
     }
 
+    /** A displaced override is rebuilt here but not started: {@link #preempt} starts it once nothing outranks it. */
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         overrideSaved = NbtApiUtil.getBoolean(nbt, "overriding", false);
+        if (nbt.contains("override")) {
+            overridingAI = AIRobot.loadAI(NbtApiUtil.getCompound(nbt, "override"), robot);
+        }
     }
 
     @Override

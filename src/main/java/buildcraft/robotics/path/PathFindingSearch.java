@@ -43,6 +43,14 @@ public class PathFindingSearch implements IIterableAlgorithm {
     /** A search holds at most this many concurrent path finders; once reached, scanning pauses. */
     public static final int MAX_TARGETS = 5;
 
+    /** How many nodes one path finder may expand before its target is given up as unreachable. Not 7.1.x, whose
+     *  finders had no bound of their own: a candidate the robot cannot get to (a crop under glass, a log in a sealed
+     *  room) passes the scan's soft-neighbour check, and its finder then floods everything in reach - a 96-block
+     *  sphere, millions of cells - before it fails. The figure is {@code AIRobotGotoBlock}'s flight budget, 7.1.x's
+     *  {@code IterableAlgorithmRunner(pathSearch, 50)} rounds of {@link PathFinding#PATH_ITERATIONS}: a target a
+     *  flight would give up on is not worth more to the search that picks it. */
+    public static final int FINDER_EXPANSION_BUDGET = 50 * PathFinding.PATH_ITERATIONS;
+
     private final SoftBlockAccess access;
     private final BlockPos start;
     private final List<PathFinding> pathFinders;
@@ -150,7 +158,9 @@ public class PathFindingSearch implements IIterableAlgorithm {
                     start.getZ() + delta.getZ());
             if (access.isChunkLoaded(block)) {
                 if (isTarget(block)) {
-                    pathFinders.add(new PathFinding(access, start, block, maxDistanceToEnd, maxDistance));
+                    PathFinding finder = new PathFinding(access, start, block, maxDistanceToEnd, maxDistance);
+                    finder.setExpansionBudget(FINDER_EXPANSION_BUDGET);
+                    pathFinders.add(finder);
                 }
             }
 
@@ -185,6 +195,7 @@ public class PathFindingSearch implements IIterableAlgorithm {
 
     public void iteratePathFind(int itNumber) {
         for (PathFinding pathFinding : new ArrayList<>(pathFinders)) {
+            // A finder out of budget ends with no path, so the target is dropped below like any unreachable one.
             pathFinding.iterate(itNumber / pathFinders.size());
             if (pathFinding.isDone()) {
                 LinkedList<BlockPos> path = pathFinding.getResult();

@@ -33,6 +33,7 @@ public class AIRobotMainTest {
             RobotManager.registerAIRobot(AIRobotMain.class, "aiRobotMain");
         }
         RobotManager.registerAIRobot(SavedOverride.class, "buildcraftunofficial:test_saved_override");
+        RobotManager.registerAIRobot(CountingOverride.class, "buildcraftunofficial:test_counting_override");
     }
 
     @Test
@@ -157,6 +158,52 @@ public class AIRobotMainTest {
                 "with power back, the tracked override is started again");
     }
 
+    /** A redirect a low-power recharge displaced is still the controller's override (the recharge aborted it, but
+     *  the controller resumes it once power is back), so it must survive a save taken before that happens. Not
+     *  being the delegate, it was not saved at all: a reload mid-recharge dropped the redirect. It comes back
+     *  tracked but idle, and is started only once power is comfortable again. */
+    @Test
+    public void anOverrideDisplacedByARechargeSurvivesASaveMidRecharge() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new CountingOverride(robot));
+        main.preempt(null);
+        robot.getBattery().setStored(MjAPI.MJ); // below the safety reserve
+        main.preempt(main.getDelegateAI());
+        Assertions.assertNotSame(main.getOverridingAI(), main.getDelegateAI(),
+                "precondition: the recharge displaced the override, which is no longer the delegate");
+
+        AIRobotMain loaded = saveAndLoad(main);
+
+        AIRobot restored = loaded.getOverridingAI();
+        Assertions.assertInstanceOf(CountingOverride.class, restored, "the displaced override comes back tracked");
+        Assertions.assertNull(loaded.getDelegateAI(), "...not as a running delegate");
+        Assertions.assertEquals(0, ((CountingOverride) restored).starts, "...and not started by the load");
+
+        loaded.preempt(loaded.getDelegateAI()); // still low on power: the recharge goes first
+        Assertions.assertNotSame(restored, loaded.getDelegateAI(), "a low robot recharges before it resumes");
+
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        loaded.preempt(loaded.getDelegateAI());
+        Assertions.assertSame(restored, loaded.getDelegateAI(), "with power back, the override resumes");
+        Assertions.assertEquals(1, ((CountingOverride) restored).starts, "started exactly once");
+    }
+
+    /** A displaced override that cannot be saved leaves nothing behind, as a running one does. */
+    @Test
+    public void aDisplacedOverrideThatCannotBeSavedIsNotRestored() {
+        robot.getBattery().setStored(robot.getBattery().getCapacity());
+        AIRobotMain main = new AIRobotMain(robot);
+        main.setOverridingAI(new AIRobot(robot));
+        main.preempt(null);
+        robot.getBattery().setStored(MjAPI.MJ);
+        main.preempt(main.getDelegateAI());
+
+        AIRobotMain loaded = saveAndLoad(main);
+
+        Assertions.assertNull(loaded.getOverridingAI(), "an unsavable override is not restored");
+    }
+
     /** Only an override is flagged: a controller running its ordinary board must not read the board back as
      *  an override (it would then re-run the board as a redirect after every interruption). */
     @Test
@@ -257,6 +304,25 @@ public class AIRobotMainTest {
     public static class SavedOverride extends AIRobot {
         public SavedOverride(IRobotAccess iRobot) {
             super(iRobot);
+        }
+
+        @Override
+        public boolean canLoadFromNBT() {
+            return true;
+        }
+    }
+
+    /** A saveable redirect that counts how often it is started. */
+    public static class CountingOverride extends AIRobot {
+        int starts;
+
+        public CountingOverride(IRobotAccess iRobot) {
+            super(iRobot);
+        }
+
+        @Override
+        public void start() {
+            starts++;
         }
 
         @Override

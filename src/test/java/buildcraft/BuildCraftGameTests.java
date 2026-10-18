@@ -1083,6 +1083,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_goto_station_docked_keeps_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::dockedGotoStationKeepsItsClaim);
         reg.accept("buildcraftunofficial:robot_goto_station_abort_keeps_home_link", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedGotoStationKeepsTheHomeLink);
         reg.accept("buildcraftunofficial:robot_goto_station_relink_abort_keeps_new_home", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedTakeAsMainGotoKeepsTheNewHome);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_survives_reload_mid_recharge", () -> buildcraft.robotics.RobotAbortReleaseTester::takeAsMainOverrideSurvivesAReloadMidRecharge);
         reg.accept("buildcraftunofficial:robot_shutdown_releases_claims", () -> buildcraft.robotics.RobotAbortReleaseTester::shutdownReleasesWhatTheRobotHolds);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);
         reg.accept("buildcraftunofficial:marker_chunk_unload_after_level_unload_creates_no_cache", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::aMarkerUnloadingAfterItsLevelDoesNotRebuildTheCache);

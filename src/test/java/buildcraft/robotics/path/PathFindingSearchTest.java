@@ -20,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
 import buildcraft.robotics.RobotRegistry;
+import buildcraft.robotics.ai.AIRobotGotoBlock;
 
 /**
  * Pure-JUnit characterization of {@link PathFindingSearch}: the nearest-matching-block scanner that drives a
@@ -338,5 +339,89 @@ public class PathFindingSearchTest {
                         + "target is dropped");
         run(s);
         Assertions.assertEquals(target, s.getResultTarget(), "the running path finder finds the target");
+    }
+
+    // ---- the per-finder expansion budget ----
+
+    /** The reach every production search runs with ({@code AIRobotSearchBlock} passes the flight's reach). */
+    private static final float SEARCH_REACH = AIRobotGotoBlock.FLIGHT_REACH;
+
+    /** A slab of open air five blocks deep and 201 blocks across, with a sealed 5x5x5 stone box centred on
+     *  {@link #SEALED}: the target sits at its centre with one soft pocket beside it (so the scan's "can a robot
+     *  stand next to it" check passes, as for a crop under glass or a log in a roofed room) and nothing else of
+     *  the box is soft. A path finder sent there from {@link #ROBOT} can never arrive: it floods the slab until it
+     *  runs out of reach, which in a slab this size is far more than one finder's budget. */
+    private static final class SealedRoom implements SoftBlockAccess {
+        static final BlockPos ROBOT = new BlockPos(0, Y, 0);
+        static final BlockPos SEALED = new BlockPos(30, Y, 0);
+        static final BlockPos POCKET = SEALED.east();
+        /** A solid target out in the open, two blocks behind the robot. */
+        static final BlockPos OPEN = new BlockPos(-2, Y, 0);
+        long softCalls;
+
+        @Override
+        public boolean isSoft(BlockPos pos) {
+            softCalls++;
+            if (Math.abs(pos.getY() - Y) > 2 || Math.abs(pos.getX()) > 100 || Math.abs(pos.getZ()) > 100) {
+                return false;
+            }
+            if (pos.equals(POCKET)) {
+                return true;
+            }
+            if (pos.equals(OPEN)) {
+                return false;
+            }
+            return Math.abs(pos.getX() - SEALED.getX()) > 2 || Math.abs(pos.getY() - SEALED.getY()) > 2
+                    || Math.abs(pos.getZ() - SEALED.getZ()) > 2;
+        }
+
+        /** An upper bound on the node expansions run so far: every expansion asks about all 27 cells of the 3x3x3
+         *  block around its node, and the scan asks about up to six neighbours per candidate besides. */
+        long expansionsAtMost() {
+            return softCalls / 27;
+        }
+    }
+
+    /** Drives {@code s} until it is done or {@code maxRounds} rounds have run. */
+    private static void runAtMost(PathFindingSearch s, int maxRounds) {
+        for (int rounds = 0; !s.isDone() && rounds < maxRounds; rounds++) {
+            s.iterate();
+        }
+    }
+
+    /** A candidate the robot can never reach must cost one finder's budget, not the whole space in reach: in
+     *  production that is a 96-block sphere, millions of cells, every one expanded on the server thread. */
+    @Test
+    public void testSealedCandidateIsGivenUpWithinTheFinderBudget() {
+        SealedRoom room = new SealedRoom();
+        PathFindingSearch s = new PathFindingSearch(room, SealedRoom.ROBOT,
+                List.of(SealedRoom.SEALED.subtract(SealedRoom.ROBOT)).iterator(), SealedRoom.SEALED::equals,
+                NO_END_SLACK, SEARCH_REACH, null, new HashSet<>());
+
+        // A lone finder gets PATH_ITERATIONS expansions a round, so its budget is spent in this many rounds.
+        int budgetRounds = PathFindingSearch.FINDER_EXPANSION_BUDGET / PathFinding.PATH_ITERATIONS;
+        runAtMost(s, budgetRounds + 5);
+
+        Assertions.assertTrue(s.isDone(), "the search gives the sealed candidate up once its finder's budget is spent");
+        Assertions.assertNull(s.getResultTarget(), "and reports nothing found");
+        Assertions.assertTrue(room.expansionsAtMost() <= PathFindingSearch.FINDER_EXPANSION_BUDGET + 10,
+                "the sealed candidate may cost one finder's budget at most, but cost " + room.expansionsAtMost());
+    }
+
+    /** The budget only drops a finder that has spent it: a reachable target scanned after the sealed one is still
+     *  found, while the sealed one's finder runs beside it. */
+    @Test
+    public void testAReachableTargetIsStillFoundBesideASealedOne() {
+        SealedRoom room = new SealedRoom();
+        List<BlockPos> deltas = List.of(SealedRoom.SEALED.subtract(SealedRoom.ROBOT),
+                SealedRoom.OPEN.subtract(SealedRoom.ROBOT));
+        PathFindingSearch s = new PathFindingSearch(room, SealedRoom.ROBOT, deltas.iterator(),
+                pos -> pos.equals(SealedRoom.SEALED) || pos.equals(SealedRoom.OPEN), NO_END_SLACK, SEARCH_REACH,
+                null, new HashSet<>());
+
+        runAtMost(s, 100);
+
+        Assertions.assertEquals(SealedRoom.OPEN, s.getResultTarget(), "the reachable target is found");
+        Assertions.assertEquals(SealedRoom.OPEN, s.getResult().getLast(), "with a path that ends on it");
     }
 }

@@ -882,6 +882,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_paint_stream_capped", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::streamedStrokesReachWatchersAtACappedRate);
         reg.accept("buildcraftunofficial:zone_planner_paint_rate_limited", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokesPastTheRateLimitAreDropped);
 
+        // Robotics — Zone Planner map overlay as the viewport emits it: one quad per painted column on mapped
+        // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
+        // in place of its layer, and nothing out of view or off the mapped terrain.
+        reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
+        reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
+
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.
         reg.accept("buildcraftunofficial:zone_planner_map_cache_refreshes", () -> buildcraft.robotics.ZonePlannerMapCacheTester::terrainChangesAppearAfterTheRefreshAge);

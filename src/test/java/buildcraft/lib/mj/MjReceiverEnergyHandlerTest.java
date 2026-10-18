@@ -212,5 +212,70 @@ public class MjReceiverEnergyHandlerTest {
         Assertions.assertEquals(150, FeHandlerAccess.insert(aborted, 150, false),
             "the aborted insert left no phantom pending MJ behind");
     }
+
+    /** An insert is accepted (and the FE taken from the sender) against headroom probed at insert time; if the
+     *  receiver's free room shrinks before the root commit, the MJ it cannot take is not forgotten: it stays owed
+     *  and is paid on the next commit that goes through the handler. */
+    @Test
+    public void aShortfallAtCommitIsKeptAndPaidOnTheNextCommit() {
+        FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
+        MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
+
+        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            Assertions.assertEquals(100, handler.insert(100, tx), "10 MJ accepted against 20 MJ of room");
+            receiver.stored = 15 * MjAPI.MJ; // the receiver's free room shrinks to 5 MJ before the commit
+            tx.commit();
+        }
+        Assertions.assertEquals(20 * MjAPI.MJ, receiver.stored, "the commit paid the 5 MJ the receiver had room for");
+
+        receiver.stored = 0; // the receiver is drained again: 20 MJ of room
+        Assertions.assertEquals(10, FeHandlerAccess.insert(handler, 10, true), "1 MJ more");
+        Assertions.assertEquals(6 * MjAPI.MJ, receiver.stored,
+            "the next commit paid the 1 MJ AND the 5 MJ owed from the shortfall, which had been accepted too");
+    }
+
+    /** What is owed fills headroom the receiver has not got yet, so a later insert is not promised room that the
+     *  owed MJ will take. */
+    @Test
+    public void whatIsOwedCountsAgainstTheHeadroomOfLaterInserts() {
+        FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
+        MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
+        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            handler.insert(100, tx);
+            receiver.stored = 15 * MjAPI.MJ;
+            tx.commit();
+        }
+        Assertions.assertEquals(20 * MjAPI.MJ, receiver.stored, "precondition: 5 MJ is owed");
+
+        receiver.stored = 18 * MjAPI.MJ; // 2 MJ of room: less than the 5 MJ owed
+        Assertions.assertEquals(0, FeHandlerAccess.insert(handler, 100, false), "the room is spoken for");
+
+        receiver.stored = 10 * MjAPI.MJ; // 10 MJ of room, 5 MJ of it owed
+        Assertions.assertEquals(50, FeHandlerAccess.insert(handler, 200, false), "only the 5 MJ beyond the debt");
+        Assertions.assertEquals(50, FeHandlerAccess.insert(handler, 200, true));
+        Assertions.assertEquals(20 * MjAPI.MJ, receiver.stored, "the debt and the new MJ together exactly filled it");
+    }
+
+    /** A rolled-back transaction forgets only its own inserts, never the debt of an earlier committed one. */
+    @Test
+    public void anAbortedTransactionLeavesWhatIsOwedAlone() {
+        FakeReceiver receiver = new FakeReceiver(0, 20 * MjAPI.MJ);
+        MjReceiverEnergyHandler handler = new MjReceiverEnergyHandler(receiver);
+        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
+                 net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            handler.insert(100, tx);
+            receiver.stored = 15 * MjAPI.MJ;
+            tx.commit();
+        }
+        receiver.stored = 0;
+
+        Assertions.assertEquals(10, FeHandlerAccess.insert(handler, 10, false), "a probe, rolled back");
+        Assertions.assertEquals(0, receiver.stored, "nothing was delivered by the abort");
+
+        Assertions.assertEquals(10, FeHandlerAccess.insert(handler, 10, true));
+        Assertions.assertEquals(6 * MjAPI.MJ, receiver.stored, "the debt survived the abort and is paid now");
+    }
     //?}
 }

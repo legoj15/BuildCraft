@@ -38,6 +38,12 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
  * transaction can never promise more than the receiver would take. On 1.21.1 the classic {@code IEnergyStorage}
  * has a plain {@code simulate} flag and the delivery is immediate.
  *
+ * <p>An insert is final the moment it returns (the sender has already given up that FE), so a commit may never
+ * simply drop what the receiver turns out not to take: if its free room shrank between the insert and the commit,
+ * the difference is kept as <em>owed</em> MJ. Owed MJ counts against the headroom of every later probe, as pending
+ * MJ does, so it is never promised twice, and it is paid with the next commit that goes through this handler. The
+ * ledger lives on the handler instance, so it outlasts a transaction only for a caller that keeps the handler.
+ *
  * <p>Conversion is exact and lossless: only whole RF are accepted, the receiver is offered exactly
  * {@code rf * mjPerRf} micro-MJ, and a sub-RF remainder is never swallowed.
  */
@@ -50,6 +56,10 @@ public class MjReceiverEnergyHandler extends SnapshotJournal<Long> implements En
 
     /** Micro-MJ accepted by inserts of the transaction in flight and not yet delivered (1.21.10+ only). */
     private long pendingMj;
+
+    /** Micro-MJ accepted by committed inserts that the receiver had no room for at commit time, still to be paid
+     *  (1.21.10+ only). Only changed by a root commit, so it needs no snapshot: an abort never touches it. */
+    private long owedMj;
 
     public MjReceiverEnergyHandler(IMjReceiver receiver) {
         this.receiver = receiver;
@@ -102,11 +112,11 @@ public class MjReceiverEnergyHandler extends SnapshotJournal<Long> implements En
 
     @Override
     protected void onRootCommit(Long originalState) {
-        long toDeliver = pendingMj;
+        long toDeliver = owedMj + pendingMj;
         pendingMj = 0;
-        if (toDeliver > 0) {
-            receiver.receivePower(toDeliver, false);
-        }
+        // What the receiver would not take (its room shrank since the insert probed it) was accepted all the same:
+        // it stays owed, to be probed against and paid again, rather than vanishing with the transaction.
+        owedMj = toDeliver > 0 ? receiver.receivePower(toDeliver, false) : 0;
     }
 
     // --- EnergyHandler ---
@@ -123,7 +133,7 @@ public class MjReceiverEnergyHandler extends SnapshotJournal<Long> implements En
 
     @Override
     public int insert(int amount, TransactionContext transaction) {
-        int rf = acceptableRf(amount, pendingMj);
+        int rf = acceptableRf(amount, owedMj + pendingMj);
         if (rf <= 0) {
             return 0;
         }

@@ -153,7 +153,7 @@ public class ZoneMapCameraTest {
 
     @Test
     void columnsNearTheCameraHeightAreClipped() {
-        // The camera floats CAM_HEIGHT (96) above camY, and a column's top face is surface + 1. Columns whose top
+        // At the default zoom the camera floats CAM_HEIGHT (96) above camY, and a column's top face is surface + 1. Columns whose top
         // comes within NEAR_CLIP (9) of the camera are left out: a surface of camY + 85 tops out 10 blocks under
         // the camera and is in view, camY + 86 tops out 9 under it and is clipped.
         ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
@@ -168,6 +168,10 @@ public class ZoneMapCameraTest {
         ZoneMapCamera low = new ZoneMapCamera(0, 10, 0);
         Assertions.assertFalse(low.isNearClipped(10 + 85), "the threshold follows the camera's own height");
         Assertions.assertTrue(low.isNearClipped(10 + 86), "the threshold follows the camera's own height");
+
+        // Zoomed out, the camera rises with the view, so even the top of the world is far below it.
+        cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
+        Assertions.assertFalse(cam.isNearClipped(64 + 300), "nothing a world can hold is clipped at the survey zoom");
     }
 
     @Test
@@ -400,12 +404,13 @@ public class ZoneMapCameraTest {
 
     @Test
     void anAbsurdlyWideWindowIsClippedAroundTheCameraNotOffOneSide() {
-        // A datapack world thousands of blocks deep would ask for a huge scan; it is capped, but around the
+        // A datapack world tens of thousands of blocks deep would ask for a huge scan (the survey camera floats
+        // thousands of blocks up, so only a floor that deep de-magnifies enough); it is capped, but around the
         // camera, so neither the west nor the east of the view is the side that goes missing.
         ZoneMapCamera cam = new ZoneMapCamera(0.5, 300, 0.5);
         cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
-        int[] window = cam.visibleChunkWindow(VIEW_W, VIEW_H, -2000);
-        Assertions.assertTrue(window[2] - window[0] + 1 <= ZoneMapCamera.MAX_CHUNK_SPAN, "the scan is capped");
+        int[] window = cam.visibleChunkWindow(VIEW_W, VIEW_H, -20000);
+        Assertions.assertEquals(ZoneMapCamera.MAX_CHUNK_SPAN, window[2] - window[0] + 1, "the scan is capped across the wide axis");
         Assertions.assertEquals(0, window[0] + window[2], 1, "the cap is symmetric about the camera chunk (X)");
         Assertions.assertEquals(0, window[1] + window[3], 1, "the cap is symmetric about the camera chunk (Z)");
     }

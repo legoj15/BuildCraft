@@ -243,7 +243,7 @@ public class ZoneMapCamera {
      *  which follows the painted chunks ({@code ZoneOverlayCache} keeps no entry for an empty chunk). Since the camera
      *  rises as it zooms out ({@link #camHeight()}), the build floor barely de-magnifies at the survey zoom: a vanilla
      *  overworld (floor at -64) needs about 115 chunks for a planner at y=64 and about 125 for one at the top of the
-     *  world, so only a modded world with a build range thousands of blocks deep reaches the cap. */
+     *  world; the floor has to sit about 26,000 blocks under the planner before the cap clips anything. */
     public static final int MAX_CHUNK_SPAN = 512;
 
     /**

@@ -323,10 +323,11 @@ public class ZonePlannerOverlayTester {
         }
 
         /**
-         * Terrain far below the planner is de-magnified, so it shows at the edge of the survey view from well beyond
-         * the ground-level span of the viewport. A plane 99 blocks over a floor magnifies it by about a half: the
-         * viewport spans 852 blocks of ground at the survey zoom but about 1,700 of the floor, so a floor 1,300 blocks
-         * out is in view though it is past the ground span. It, and the tint over it, must be drawn.
+         * Terrain below the planner is de-magnified, so it shows at the edge of the survey view from beyond the
+         * ground-level span of the viewport. The survey camera floats {@link ZoneMapCamera#camHeight()} (3,072) blocks
+         * up, so a floor 99 blocks under the plane shrinks by only about 3 %: the viewport spans 852 blocks of ground
+         * out from the centre, and a little further of the floor. A floor placed just past the ground span, but
+         * projecting inside it, must be drawn, and so must the tint over it.
          */
         static void lowTerrainAtSurveyEdge(GameTestHelper helper) {
             ZonePlannerMapDataClient.INSTANCE.clear();
@@ -345,9 +346,12 @@ public class ZonePlannerOverlayTester {
                 helper.assertTrue(floor.emit(overhead, layers(layer), null, -1) == 4 * VERTICES_PER_QUAD,
                         "baseline: its four samples carry the tint");
 
-                // The same floor 1,300 blocks from the camera: past the viewport's ground span (852 blocks), but
-                // projected to about 640 blocks out, which is in view.
-                ZoneMapCamera edge = floor.cameraOver(ZoneMapCamera.MIN_PX_PER_BLOCK, 8 + 1300, 8, 99);
+                // The same floor moved out until its near edge projects 840 blocks out (inside the 852-block ground
+                // half-span), which puts its far edge past that span in the world.
+                double h = overhead.camHeight();
+                int out = (int) Math.floor(840 * (h + 99) / h) + 8; // distance from the camera to the floor's centre
+                ZoneMapCamera edge = floor.cameraOver(ZoneMapCamera.MIN_PX_PER_BLOCK, 8 + out, 8, 99);
+                helper.assertTrue(out + 8 > 852, "baseline: the floor reaches past the ground span");
                 helper.assertTrue(floor.emitTerrain(edge) > 0,
                         "the floor at the edge of the survey view is drawn, though it lies past the ground span");
                 helper.assertTrue(floor.emit(edge, layers(layer), null, -1) == 4 * VERTICES_PER_QUAD,

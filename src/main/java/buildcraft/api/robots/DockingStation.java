@@ -243,6 +243,13 @@ public abstract class DockingStation {
         return !isMainStation() && !linkIsDocked();
     }
 
+    /** Whether this station's chunk is loaded, i.e. whether a robot could fly to it now: robots path only through
+     *  loaded cells, so a station in an unloaded chunk is never a destination worth choosing. A station with no world
+     *  (a test double) has no chunk to check and counts as loaded. */
+    public boolean isChunkLoaded() {
+        return world == null || world.isLoaded(pos);
+    }
+
     public boolean isInitialized() {
         return true;
     }

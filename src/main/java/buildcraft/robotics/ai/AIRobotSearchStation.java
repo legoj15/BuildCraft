@@ -55,7 +55,10 @@ public class AIRobotSearchStation extends AIRobot {
         // (getHolder() → removeStation) — removing from a map while iterating its values is a
         // ConcurrentModificationException, which the AI cycle would swallow as a silently failed search.
         for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
-            if (!station.isInitialized()) {
+            // A station in an unloaded chunk is usable (isInitialized: a robot homed there keeps working) but not
+            // reachable: the flight cannot cross unloaded cells, so choosing it only claims it, fails, and picks it
+            // again next cycle (a Delivery robot disposed of its cargo every time).
+            if (!station.isChunkLoaded() || !station.isInitialized()) {
                 continue;
             }
 

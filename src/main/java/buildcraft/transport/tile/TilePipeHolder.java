@@ -553,10 +553,11 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     }
 
     /**
-     * Spills ONLY the in-transit cargo — traversing items (via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops})
-     * and fluid contents as fragile fluid-shard items (via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops})
-     * — when the pipe is removed by something other than a player's hand: explosions, pistons, {@code /setblock}
-     * (on 1.21.1, or in destroy mode), another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
+     * Spills ONLY the in-transit cargo — traversing items
+     * (via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops}) and fluid contents as fragile fluid-shard
+     * items (via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops}) — when the pipe is removed by
+     * something other than a player's hand: explosions, pistons, {@code /setblock} (on 1.21.1, or in destroy mode),
+     * another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
      * these cases (the block is treated as destroyed, like a chest spilling its contents on explosion). A survival
      * hand/pickaxe break instead returns everything via
      * {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy} → {@link #dropPipeItems}, which calls
@@ -723,8 +724,11 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     @Nullable
     @Override
     public BlockEntity getNeighbourTile(Direction side) {
-        if (level == null) return null;
-        return level.getBlockEntity(worldPosition.relative(side));
+        BlockPos neighbour = worldPosition.relative(side);
+        // Level.getBlockEntity loads an unloaded chunk synchronously. A ticking pipe's neighbours are always loaded,
+        // so this only matters for callers outside the tick: a robot reading a station whose chunk is unloaded.
+        if (level == null || !level.isLoaded(neighbour)) return null;
+        return level.getBlockEntity(neighbour);
     }
 
     @Nullable

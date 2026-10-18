@@ -102,7 +102,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *  </ul> */
     @Nullable
     public IPipeHolder getHolder() {
-        if (!world.isLoaded(getPos())) {
+        if (!loaded()) {
             return holder;
         }
         if (holder == null || holder.getPipe() == null
@@ -286,7 +286,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     *///?}
         IPipeHolder h = getHolder();
         Direction facing = fluidExtractionFacing(h);
-        if (facing == null || !world.isLoaded(getPos().relative(facing))) {
+        if (facing == null || world == null || !world.isLoaded(getPos().relative(facing))) {
             return null;
         }
         // The fluid source this station's pipe draws from: the block one cell out along the WOODEN FLUID
@@ -433,16 +433,23 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     /** Whether the station is usable: its pipe is there, or its chunk is simply not loaded. An unloaded home is
      *  ordinary (a robot working away from it on a server) and must not freeze the robot, which
      *  {@code EntityRobot.serverTick} does while its home reads uninitialized; before {@link #getHolder} stopped
-     *  loading chunks, the lookup quietly loaded the home's chunk to answer yes. */
+     *  loading chunks, the lookup quietly loaded the home's chunk to answer yes. Usable is not reachable: station
+     *  searches also skip a station whose chunk is not loaded ({@link #isChunkLoaded()}). */
     @Override
     public boolean isInitialized() {
-        return getHolder() != null || !world.isLoaded(getPos());
+        return getHolder() != null || !loaded();
+    }
+
+    /** Whether this station's chunk is loaded; a station not yet given a world counts as not loaded. Not
+     *  {@link #isChunkLoaded()}, which lets a world-less test double count as loaded. */
+    private boolean loaded() {
+        return world != null && world.isLoaded(getPos());
     }
 
     /** The block entity at {@code pos}, or null while its chunk is not loaded: {@code Level.getBlockEntity} would
      *  load the chunk synchronously to answer. */
     private @Nullable BlockEntity loadedBlockEntity(BlockPos pos) {
-        return world.isLoaded(pos) ? world.getBlockEntity(pos) : null;
+        return world != null && world.isLoaded(pos) ? world.getBlockEntity(pos) : null;
     }
 
     /** 7.1.x's {@code getPipe(); if (pipe == null) return false;} guard: a station whose pipe is gone

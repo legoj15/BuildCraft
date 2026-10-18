@@ -6,12 +6,14 @@
 package buildcraft.robotics;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
@@ -22,6 +24,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,12 +35,16 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
+import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.api.transport.pipe.IPipeHolder;
 
+import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreStatements;
 
 import buildcraft.lib.statement.ActionWrapper;
@@ -47,7 +54,11 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.boards.BoardRobotPlanterNBT;
+import buildcraft.robotics.ai.AIRobotSearchStation;
+import buildcraft.robotics.ai.AIRobotUnload;
+import buildcraft.robotics.ai.MockRobotAccess;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.robotics.statements.StatementParameterMapLocation;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
@@ -74,9 +85,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     {@code UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}, so {@code preRemoveSideEffects} never runs and the station's
  *     pluggable is never told it is gone), and what the smoke scenario's "clear and floor" step did to the previous
  *     run's rig. On 1.21.1 those commands do run {@code onRemove}; the test removes the block entity first so the
- *     orphan arises on every node. The orphaned {@link DockingStationPipe} stays registered, the new station pluggable adopts it, and
- *     it used to keep reading the dead block entity it had cached: neither gate had any effect, so both robots sat
- *     idle at home.</li>
+ *     orphan arises on every node. The orphaned {@link DockingStationPipe} stays registered, the new station
+ *     pluggable adopts it, and it used to keep reading the dead block entity it had cached: neither gate had any
+ *     effect, so both robots sat idle at home.</li>
  * </ul>
  * Robots are placed the way {@code ItemRobot.useOn} places them (registry id, taken as main, docked) but zone-pinned
  * to the test's cell.
@@ -97,6 +108,9 @@ public class RobotStationRigTester {
     /** The gate the smoke rig writes: {@code variant:{logic:0b,material:0b,modifier:0b}}. */
     private static final GateVariant RIG_GATE =
             new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER);
+    /** A gate whose action takes a parameter (Work in Area needs its map). */
+    private static final GateVariant PARAM_GATE =
+            new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.QUARTZ);
 
     /** The smoke rig's {@code data merge block} payload, verbatim but for the action kind. */
     private static final String RIG_NBT = "{pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},"
@@ -143,10 +157,16 @@ public class RobotStationRigTester {
     private static final int UNLOADED_HOME_BUDGET = 240;
     private static final int FILLED_AWAY_BUDGET = 200;
 
-    /** A robot working in its cell while its home station's chunk is unloaded, which is ordinary on a server: the home's
-     *  cached pipe tile was {@code setRemoved} by the unload. The robot must keep running its board (the station is not
-     *  "uninitialized" just because its chunk is away), and nothing about the station may load that chunk. A second,
-     *  never-resolved station (the state of every station read back from the save) is checked the same way. */
+    /** A robot working in its cell while its home station's chunk is unloaded, which is ordinary on a server: the
+     *  unload {@code setRemoved}s the home's cached pipe tile.
+     *  <ul>
+     *  <li>The home's gates still count: a robot linked to it takes its work zone from the home's Work in Area
+     *      action, read through the cached tile (dropping the cache would leave the robot zoneless).</li>
+     *  <li>The robot keeps running its board (the station is not "uninitialized" just because its chunk is away).</li>
+     *  <li>Nothing about the station may load that chunk: not the station, not its pipe's neighbour lookups.</li>
+     *  </ul>
+     *  A second, never-resolved station (the state of every station read back from the save) is checked the same
+     *  way. */
     public static void unloadedHomeKeepsTheRobotWorking(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos robotRel = new BlockPos(2, 3, 2);
@@ -157,11 +177,9 @@ public class RobotStationRigTester {
         helper.assertFalse(level.isLoaded(farA) || level.isLoaded(farB),
                 "precondition: the far stations' chunks are not loaded");
 
-        // A home that had resolved its pipe before the chunk went away: the pipe tile is still cached, but removed.
-        TilePipeHolder unloadedTile = new TilePipeHolder(farA, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState());
-        unloadedTile.setLevel(level);
-        unloadedTile.setRemoved();
-        DockingStationPipe home = new DockingStationPipe(unloadedTile, STATION_FACE);
+        // A home that had resolved its pipe before the chunk went away, its gate naming this cell as the work area.
+        DockingStationPipe home = unloadedStation(level, farA, BCRoboticsStatements.ACTION_ROBOT_WORK_IN_AREA,
+                new StatementParameterMapLocation(areaMap(helper, BlockPos.ZERO, new BlockPos(5, 6, 6))));
         // A station read back from the save, never resolved.
         DockingStationPipe neverResolved = new DockingStationPipe();
         CompoundTag record = new CompoundTag();
@@ -171,6 +189,20 @@ public class RobotStationRigTester {
         neverResolved.world = level;
         RobotManager.registryProvider.getRegistry(level).registerStation(home);
         RobotManager.registryProvider.getRegistry(level).registerStation(neverResolved);
+
+        // The work zone a robot homed there gets, read the way EntityRobot reads it (a board-less body, never added).
+        EntityRobot probe = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        probe.setMainStation(home);
+        IZone zone = probe.getZoneToWork();
+        helper.assertTrue(zone != null && zone.contains(Vec3.atCenterOf(helper.absolutePos(itemRel))),
+                "a robot homed on an unloaded station keeps the work zone its home gate names, got " + zone);
+        helper.assertFalse(zone.contains(Vec3.atCenterOf(farA)), "...and that zone is the cell, not everywhere");
+        IPipeHolder cached = home.getHolder();
+        for (Direction dir : Direction.values()) {
+            helper.assertTrue(cached.getNeighbourTile(dir) == null,
+                    "a pipe's neighbour lookup in an unloaded chunk answers nothing rather than loading it");
+        }
+        helper.assertFalse(level.isLoaded(farA), "the pipe's neighbour lookups loaded the unloaded chunk");
 
         EntityRobot[] robot = { null };
         ItemEntity[] diamond = { null };
@@ -217,6 +249,95 @@ public class RobotStationRigTester {
                 });
     }
 
+    /** A station in an unloaded chunk is usable but not reachable: a robot cannot fly through unloaded cells, so a
+     *  search must never pick one as a destination. When it did, the robot claimed it, failed the flight and picked it
+     *  again on its next cycle, forever (a Delivery robot disposed of its cargo every time). Here a robot with cargo
+     *  and no zone limit searches for somewhere to unload, and the only station that would take the cargo is in an
+     *  unloaded chunk. */
+    public static void searchSkipsAStationInAnUnloadedChunk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos robotRel = new BlockPos(2, 3, 2);
+        BlockPos far = helper.absolutePos(robotRel).offset(UNLOADED_OFFSET, 0, 128);
+        helper.assertFalse(level.isLoaded(far), "precondition: the far station's chunk is not loaded");
+
+        DockingStationPipe accepting = unloadedStation(level, far, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS,
+                null);
+        MockRobotAccess.InertRobotRegistry onlyFar = new MockRobotAccess.InertRobotRegistry() {
+            @Override
+            public Collection<DockingStation> getStations() {
+                return List.of(accepting);
+            }
+        };
+        ZonePinnedRobot robot = new ZonePinnedRobot(helper, null).loadUnloadZone(null).registry(onlyFar);
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        robot.setPos(pos.x, pos.y, pos.z);
+        robot.setInventoryStack(0, new ItemStack(Items.COBBLESTONE, 8));
+
+        helper.assertTrue(AIRobotUnload.unload(robot, accepting, false),
+                "precondition: the unloaded station's cached Accept Items gate would take the cargo");
+        AIRobotSearchStation search = new AIRobotSearchStation(robot,
+                station -> AIRobotUnload.unload(robot, station, false), null);
+        search.start();
+        helper.assertTrue(search.targetStation == null,
+                "a station in an unloaded chunk cannot be flown to, so the search must not pick it");
+        helper.assertFalse(level.isLoaded(far), "the search must not load the station's chunk either");
+        helper.succeed();
+    }
+
+    /** A station in a chunk that is not loaded, as a chunk unload leaves one that had resolved its pipe: a real wooden
+     *  item pipe at {@code farAbs} with the station on top and a gate holding Always On + {@code action} (with
+     *  {@code param}, if any) resolved, then {@code setRemoved}. Built without placing anything in the world, so the
+     *  chunk stays unloaded. Not registered. */
+    private static DockingStationPipe unloadedStation(ServerLevel level, BlockPos farAbs, IStatement action,
+                                                      IStatementParameter param) {
+        TilePipeHolder tile = new TilePipeHolder(farAbs, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState());
+        tile.setLevel(level);
+        CompoundTag gateData = new CompoundTag();
+        gateData.put("variant", PARAM_GATE.writeToNBT());
+        CompoundTag gatePlug = new CompoundTag();
+        gatePlug.put("data", gateData);
+        CompoundTag gateEntry = new CompoundTag();
+        gateEntry.putString("id", "buildcraftunofficial:gate");
+        gateEntry.put("data", gatePlug);
+        CompoundTag plugs = new CompoundTag();
+        plugs.put("up", parse("{id:\"buildcraftunofficial:robot_station\",data:{}}"));
+        plugs.put("north", gateEntry);
+        CompoundTag tag = parse("{pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}}}");
+        tag.put("plugs", plugs);
+        //? if >=1.21.10 {
+        tile.loadCustomOnly(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
+        //?} else {
+        /*tile.loadCustomOnly(tag, level.registryAccess());*/
+        //?}
+        PluggableGate gate = (PluggableGate) tile.getPluggable(GATE_FACE);
+        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        gate.logic.statements[0].action.set(ActionWrapper.wrap(action, null));
+        if (param != null) {
+            gate.logic.statements[0].action.set(0, param);
+        }
+        gate.logic.resolveActions();
+        tile.setRemoved();
+        return new DockingStationPipe(tile, STATION_FACE);
+    }
+
+    /** An AREA map-location stack covering the relative box {@code minRel..maxRel} (the keys
+     *  {@code ItemMapLocation.getAreaBox} reads). */
+    private static ItemStack areaMap(GameTestHelper helper, BlockPos minRel, BlockPos maxRel) {
+        ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
+        BlockPos a = helper.absolutePos(minRel);
+        BlockPos b = helper.absolutePos(maxRel);
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("xMin", Math.min(a.getX(), b.getX()));
+        tag.putInt("yMin", Math.min(a.getY(), b.getY()));
+        tag.putInt("zMin", Math.min(a.getZ(), b.getZ()));
+        tag.putInt("xMax", Math.max(a.getX(), b.getX()));
+        tag.putInt("yMax", Math.max(a.getY(), b.getY()));
+        tag.putInt("zMax", Math.max(a.getZ(), b.getZ()));
+        tag.putString("mapType", "AREA");
+        map.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return map;
+    }
+
     /** A station whose pipe was cleared to air without the removal side effects (what {@code /fill} and replace-mode
      *  {@code /setblock} do on 1.21.10+) and never rebuilt must not stay registered as a ghost: the first time it is
      *  asked for its pipe in a loaded chunk it deregisters, and the robot homed on it shuts down for want of a station
@@ -225,7 +346,8 @@ public class RobotStationRigTester {
         BlockPos pipeRel = new BlockPos(1, 3, 1);
         EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
         TilePipeHolder tile = placePipe(helper, pipeRel);
-        tile.replacePluggable(STATION_FACE, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
+        tile.replacePluggable(STATION_FACE,
+                new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
 
         EntityRobot[] robot = { null };
         DockingStationPipe[] station = { null };
@@ -242,7 +364,8 @@ public class RobotStationRigTester {
                         level.removeBlockEntity(abs);
                         level.setBlock(abs, Blocks.AIR.defaultBlockState(), 2);
                         helper.assertTrue(stationAt(helper, pipeRel) == station[0],
-                                "precondition: the pipe went without its side effects, so its station is still registered");
+                                "precondition: the pipe went without its side effects, so its station is still "
+                                        + "registered");
                         return false;
                     }
                     return stationAt(helper, pipeRel) == null
@@ -289,7 +412,8 @@ public class RobotStationRigTester {
                 },
                 () -> {
                     helper.assertTrue(robot[0].getHeldItem().is(Items.IRON_AXE),
-                            "the lumberjack cut the log with an axe from its station, holding " + robot[0].getHeldItem());
+                            "the lumberjack cut the log with an axe from its station, holding "
+                                    + robot[0].getHeldItem());
                     helper.assertTrue(chest.getItem(0).isEmpty() != chest.getItem(1).isEmpty(),
                             "exactly one axe left the chest");
                     helper.succeed();

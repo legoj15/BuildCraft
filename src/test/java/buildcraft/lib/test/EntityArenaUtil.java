@@ -193,18 +193,34 @@ public final class EntityArenaUtil {
         }
     }
 
+    /** Extent of a test's own arena cell in blocks: relative x 0..5, y 0..6, z 0..6. The framework spaces the
+     *  minecraft:empty arenas 6 apart in X and 7 apart in Z, so anything a test writes outside these bounds lands
+     *  in a neighbouring test's cell. */
+    public static final int CELL_SIZE_X = 6;
+    public static final int CELL_SIZE_Y = 7;
+    public static final int CELL_SIZE_Z = 7;
+
+    /** First relative y above every test's arena (the modern cell is {@link #CELL_SIZE_Y} tall, the 1.21.1 empty
+     *  arena 16). A block written at or above it cannot land in any other test's cell. A test that needs a flat
+     *  floor wider than its own 6x7 cell (the oil pool tests lay a 24x24 one) builds it at this height, never at
+     *  y=1: the arenas of the same batch run at the same time, so a wide floor at the arena's own level silently
+     *  overwrites a neighbour's rig between its setup and its assertions (the 2026-10 flake of
+     *  {@code pipe_force_insert_entry_leg}, whose chest the tall-tree oil test turned to stone). */
+    public static final int ABOVE_ARENAS_Y = 32;
+
     /** The test's own 6x7 arena cell (relative x 0..5, y 0..6, z 0..6) as a robot work / load-unload zone. A
      *  robot running a board's {@code update()} searches the whole dimension unless its zone says otherwise, and
      *  other arenas' stations, items and blocks are fair game to it: pin it here. */
     public static Box cellZone(GameTestHelper gth) {
-        return new Box(gth.absolutePos(BlockPos.ZERO), gth.absolutePos(new BlockPos(5, 6, 6)));
+        return new Box(gth.absolutePos(BlockPos.ZERO),
+                gth.absolutePos(new BlockPos(CELL_SIZE_X - 1, CELL_SIZE_Y - 1, CELL_SIZE_Z - 1)));
     }
 
     /** The same cell as an entity-sweep box (the block cells' outer faces): sweeping any wider reaches into the
      *  neighbouring arenas and discards THEIR drops. */
     public static AABB cellBounds(GameTestHelper gth) {
         return new AABB(Vec3.atLowerCornerOf(gth.absolutePos(BlockPos.ZERO)),
-                Vec3.atLowerCornerOf(gth.absolutePos(new BlockPos(6, 7, 7))));
+                Vec3.atLowerCornerOf(gth.absolutePos(new BlockPos(CELL_SIZE_X, CELL_SIZE_Y, CELL_SIZE_Z))));
     }
 
     /** Whether entities at {@code relPos} tick. Implies the entity section is accessible, i.e. an entity added
@@ -240,7 +256,9 @@ public final class EntityArenaUtil {
 
     /** {@link #tickUntilThen(GameTestHelper, int, BooleanSupplier, Runnable, int, Runnable, String)} with a
      *  {@code cleanup} that runs exactly once on every way out: after {@code second}, when the condition,
-     *  {@code first} or {@code second} throws, and on timeout — never between the two phases. See
+     *  {@code first} or {@code second} throws, and on timeout — never between the two phases. A condition that
+     *  first comes true on the poll's very last tick fails the poll without running {@code first}: no tick is left
+     *  to run {@code second} or the cleanup. See
      *  {@link #tickUntil(GameTestHelper, int, BooleanSupplier, Runnable, String, Runnable)}. */
     public static void tickUntilThen(GameTestHelper gth, int maxTicks, BooleanSupplier condition,
                                      Runnable first, int gapTicks, Runnable second, String failureMessage,
@@ -266,9 +284,20 @@ public final class EntityArenaUtil {
                 try {
                     if (firstFiredAt[0] < 0) {
                         if (condition.getAsBoolean()) {
-                            firstFiredAt[0] = tick;
-                            first.run();
-                            keepPolling = true;
+                            if (tick >= maxTicks) {
+                                // The poll's last tick: no later tick exists to run the second phase, the "second
+                                // phase past maxTicks" fail below, or the cleanup. Reachable with a gap of zero
+                                // (the give-up check below only trips gapTicks ticks before the end) or a poll of
+                                // one tick. Letting the first phase fire would leave the test to the framework's
+                                // timeout with its entities still in the level, so fail here instead.
+                                done[0] = true;
+                                fail.accept(failureMessage + " (condition came true on the last tick, " + maxTicks
+                                        + ", leaving none for the second phase)");
+                            } else {
+                                firstFiredAt[0] = tick;
+                                first.run();
+                                keepPolling = true;
+                            }
                         } else if (tick + gapTicks >= maxTicks) {
                             done[0] = true;
                             fail.accept(failureMessage + " (waited " + (maxTicks - gapTicks) + " ticks)");

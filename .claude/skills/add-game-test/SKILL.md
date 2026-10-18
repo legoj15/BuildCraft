@@ -80,6 +80,14 @@ one.) Entities added during the test must be discarded before `succeed()` — pa
 sweeps only ~1 block, and leaked entities fail unrelated tests; assert dropped items by
 identity, not proximity. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
 
+A test that genuinely needs a floor wider than its cell (the oil pool tests lay a 24x24 one) builds
+it at `EntityArenaUtil.ABOVE_ARENAS_Y`, never at the arena's own level: the arenas of a batch run
+at the same time, and a wide floor at y=1 overwrote the chest of `pipe_force_insert_entry_leg`
+(stone one tick in, the item dropped, a 200-tick timeout) whenever it was laid after that test had
+built its rig. `oilgen_surface_pool_floor_spares_arena_cells` pins it for the pool floor. A victim
+that checks its own rig each tick (as the force-insert test does) turns this class of flake into a
+named failure instead of a timeout.
+
 ## Entity and robot tests
 
 Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`) and

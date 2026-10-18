@@ -168,42 +168,46 @@ public class RobotStripesTester {
                         e -> e instanceof ItemEntity).forEach(Entity::discard));
     }
 
+    /** Gated on the robot's cell being entity-ticking: "nothing is dropped" is a claim about an absence, and an
+     *  item dropped into a chunk whose entities are not loaded yet is invisible to the scan, so without the gate
+     *  the assertion passes whether or not the board dropped anything. */
     public static void stripesPlacesOnReservedCellAndKeepsRemainder(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        BlockPos robotRel = new BlockPos(2, 2, 2);
-        BlockPos targetRel = new BlockPos(2, 1, 3);
-        BlockPos target = helper.absolutePos(targetRel);
+        whenRobotCellIsEntityTicking(helper, () -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
 
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
-        Vec3 at = Vec3.atCenterOf(helper.absolutePos(robotRel));
-        robot.setPos(at.x, at.y, at.z);
-        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
-        robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 5));
-        // Whatever the robot does not keep is dropped at its own position, so that is the only place checked —
-        // a tight box well inside this 6x7 cell, cleared first so nothing already lying there is misread.
-        AABB dropZone = new AABB(at, at).inflate(1.5);
-        for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
-            e.discard();
-        }
+            EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+            Vec3 at = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
+            robot.setPos(at.x, at.y, at.z);
+            robot.getBattery().addPower(5000L * MjAPI.MJ, false);
+            robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 5));
+            // Whatever the robot does not keep is dropped at its own position, so that is the only place checked —
+            // a tight box well inside this 6x7 cell, cleared first so nothing already lying there is misread.
+            AABB dropZone = new AABB(at, at).inflate(1.5);
+            for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+                e.discard();
+            }
 
-        AIRobotStripesHandler handler = new AIRobotStripesHandler(robot, target);
-        handler.start();
-        // The use fires on the 61st cycle; stop there (a terminated AI cycled again would fire once more).
-        for (int i = 0; i < 61; i++) {
-            handler.cycle();
-        }
+            AIRobotStripesHandler handler = new AIRobotStripesHandler(robot, target);
+            handler.start();
+            // The use fires on the 61st cycle; stop there (a terminated AI cycled again would fire once more).
+            for (int i = 0; i < 61; i++) {
+                handler.cycle();
+            }
 
-        helper.assertTrue(level.getBlockState(target).is(Blocks.COBBLESTONE),
-                "the block goes down on the reserved cell itself");
-        helper.assertTrue(level.getBlockState(target.north()).isAir(), "nothing is placed beside the reserved cell");
-        ItemStack held = robot.getHeldItem();
-        helper.assertTrue(held.is(Items.COBBLESTONE) && held.getCount() == 4,
-                "the robot keeps the 4 unplaced cobblestone in hand, holds " + held);
+            helper.assertTrue(level.getBlockState(target).is(Blocks.COBBLESTONE),
+                    "the block goes down on the reserved cell itself");
+            helper.assertTrue(level.getBlockState(target.north()).isAir(),
+                    "nothing is placed beside the reserved cell");
+            ItemStack held = robot.getHeldItem();
+            helper.assertTrue(held.is(Items.COBBLESTONE) && held.getCount() == 4,
+                    "the robot keeps the 4 unplaced cobblestone in hand, holds " + held);
 
-        List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
-        dropped.forEach(Entity::discard);
-        helper.assertTrue(dropped.isEmpty(), "nothing is dropped at the robot's feet, found " + dropped);
-        helper.succeed();
+            List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
+            dropped.forEach(Entity::discard);
+            helper.assertTrue(dropped.isEmpty(), "nothing is dropped at the robot's feet, found " + dropped);
+            helper.succeed();
+        });
     }
 
     /**
@@ -212,41 +216,53 @@ public class RobotStripesTester {
      * the world is untouched; a handled use (cobblestone on the same cell) still reports success.
      */
     public static void stripesReportsFailureForAnItemNoHandlerCanUse(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
-        BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
+        // Gated on the robot's cell being entity-ticking, like the other stripes tests: the "nothing was dropped"
+        // check at the end is a claim about an absence, which an item dropped into a not-yet-loaded chunk would
+        // satisfy trivially.
+        whenRobotCellIsEntityTicking(helper, () -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
 
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
-        Vec3 at = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));
-        robot.setPos(at.x, at.y, at.z);
-        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
-        AABB dropZone = new AABB(at, at).inflate(1.5);
-        for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
-            e.discard();
-        }
+            EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+            Vec3 at = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
+            robot.setPos(at.x, at.y, at.z);
+            robot.getBattery().addPower(5000L * MjAPI.MJ, false);
+            AABB dropZone = new AABB(at, at).inflate(1.5);
+            for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+                e.discard();
+            }
 
-        robot.setItemInUse(new ItemStack(Items.STICK, 3));
-        AIRobotStripesHandler unusable = new AIRobotStripesHandler(robot, target);
-        unusable.start();
-        for (int i = 0; i < 61; i++) {
-            unusable.cycle();
-        }
-        helper.assertFalse(unusable.success(), "no handler can use a stick - the use must report failure");
-        helper.assertTrue(ItemStack.matches(new ItemStack(Items.STICK, 3), robot.getHeldItem()),
-                "a failed use leaves the item in hand, holds " + robot.getHeldItem());
-        helper.assertTrue(level.getBlockState(target).isAir(), "a failed use changes nothing in the world");
+            robot.setItemInUse(new ItemStack(Items.STICK, 3));
+            AIRobotStripesHandler unusable = new AIRobotStripesHandler(robot, target);
+            unusable.start();
+            for (int i = 0; i < 61; i++) {
+                unusable.cycle();
+            }
+            helper.assertFalse(unusable.success(), "no handler can use a stick - the use must report failure");
+            helper.assertTrue(ItemStack.matches(new ItemStack(Items.STICK, 3), robot.getHeldItem()),
+                    "a failed use leaves the item in hand, holds " + robot.getHeldItem());
+            helper.assertTrue(level.getBlockState(target).isAir(), "a failed use changes nothing in the world");
+            List<Entity> droppedByFailure =
+                    level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
+            droppedByFailure.forEach(Entity::discard);
+            helper.assertTrue(droppedByFailure.isEmpty(),
+                    "a failed use drops nothing at the robot's feet, found " + droppedByFailure);
 
-        robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 2));
-        AIRobotStripesHandler usable = new AIRobotStripesHandler(robot, target);
-        usable.start();
-        for (int i = 0; i < 61; i++) {
-            usable.cycle();
-        }
-        helper.assertTrue(usable.success(), "a handled use (cobblestone on air) reports success");
-        helper.assertTrue(level.getBlockState(target).is(Blocks.COBBLESTONE), "...and the block went down");
+            robot.setItemInUse(new ItemStack(Items.COBBLESTONE, 2));
+            AIRobotStripesHandler usable = new AIRobotStripesHandler(robot, target);
+            usable.start();
+            for (int i = 0; i < 61; i++) {
+                usable.cycle();
+            }
+            helper.assertTrue(usable.success(), "a handled use (cobblestone on air) reports success");
+            helper.assertTrue(level.getBlockState(target).is(Blocks.COBBLESTONE), "...and the block went down");
 
-        level.setBlock(target, Blocks.AIR.defaultBlockState(), 3);
-        List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
-        dropped.forEach(Entity::discard);
-        helper.succeed();
+            level.setBlock(target, Blocks.AIR.defaultBlockState(), 3);
+            List<Entity> dropped = level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity);
+            dropped.forEach(Entity::discard);
+            helper.assertTrue(dropped.isEmpty(),
+                    "a handled use keeps its remainder in hand and drops nothing, found " + dropped);
+            helper.succeed();
+        });
     }
 }

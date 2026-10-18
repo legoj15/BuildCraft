@@ -248,15 +248,24 @@ public class NBTUtilBC {
         //?}
     }
 
+    /** The {@link Direction} whose ordinal is {@code ordinal}, or {@code null} when it is not one. The byte is read
+     *  unsigned: 7.1.x's {@code ForgeDirection.UNKNOWN} was 6, and a corrupt or hand-edited save holds anything, so
+     *  indexing {@code Direction.values()} with it blind threw out of the load. */
+    @Nullable
+    public static Direction directionOrNull(byte ordinal) {
+        int index = ordinal & 0xFF;
+        Direction[] sides = Direction.values();
+        return index < sides.length ? sides[index] : null;
+    }
+
     /** Reads a {@link Direction} saved as its ordinal in a byte ({@code def} when the key is missing), or {@code null}
-     *  when the byte is not one. The byte is read unsigned: 7.1.x's {@code ForgeDirection.UNKNOWN} was 6, and a corrupt
-     *  or hand-edited save holds anything, so indexing {@code Direction.values()} with it blind threw out of the load.
-     *  Callers treat {@code null} as "no direction", as the robot readers do for a station side. */
+     *  when the byte is not one (see {@link #directionOrNull}). What {@code null} means is the caller's policy: the
+     *  map location and direction parameter readers take it as "no direction", while the robot readers that share this
+     *  check each decide for themselves (a saved order is dropped, a goto loads stationless, a station record is
+     *  ignored). */
     @Nullable
     public static Direction getDirectionOrNull(CompoundTag nbt, String key, byte def) {
-        int ordinal = getByte(nbt, key, def) & 0xFF;
-        Direction[] sides = Direction.values();
-        return ordinal < sides.length ? sides[ordinal] : null;
+        return directionOrNull(getByte(nbt, key, def));
     }
 
     public static short getShort(CompoundTag nbt, String key, short def) {

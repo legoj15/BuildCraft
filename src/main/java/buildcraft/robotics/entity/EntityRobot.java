@@ -483,14 +483,14 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             if (pos.length != 3) {
                 return;
             }
-            byte side = sub.getByteOr("side", (byte) -1);
-            Direction[] sides = Direction.values();
-            if (side < 0 || side >= sides.length) {
+            byte sideByte = sub.getByteOr("side", (byte) -1);
+            Direction side = NBTUtilBC.directionOrNull(sideByte);
+            if (side == null) {
                 BCLog.logger.warn("[robots] Ignoring a robot's '" + key + "' record with an out-of-range side "
-                        + "byte " + side + " — treating it as 'no station'");
+                        + "byte " + sideByte + " — treating it as 'no station'");
                 return;
             }
-            target.accept(new BlockPos(pos[0], pos[1], pos[2]), sides[side]);
+            target.accept(new BlockPos(pos[0], pos[1], pos[2]), side);
         });
     }
 

@@ -261,10 +261,10 @@ public class AIRobotGotoStation extends AIRobot {
         // (ForgeDirection.UNKNOWN was 6). Such a goto names no real station face, so it loads stationless and
         // fails at start, as DockingStation.readFromNbt and StackRequest.loadFromNBT refuse the same byte;
         // substituting a face would fly the robot to, and claim, whatever station sits there.
-        int sideOrd = NbtApiUtil.getByte(nbt, "stationSide", (byte) 0) & 0xFF;
-        if (pos.length == 3 && sideOrd < Direction.values().length) {
+        Direction side = NBTUtilBC.getDirectionOrNull(nbt, "stationSide", (byte) 0);
+        if (pos.length == 3 && side != null) {
             stationIndex = new BlockPos(pos[0], pos[1], pos[2]);
-            stationSide = Direction.values()[sideOrd];
+            stationSide = side;
         }
         // Absent in every save written before the flag was kept: those read back as the plain visit they reloaded as.
         takeAsMain = NbtApiUtil.getBoolean(nbt, "takeAsMain", false);

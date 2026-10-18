@@ -19,7 +19,6 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.ResourceId;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.robotics.IStationFilter;
 import buildcraft.robotics.StackRequest;
@@ -30,11 +29,6 @@ import buildcraft.robotics.StackRequest;
 public class AIRobotSearchStackRequest extends AIRobot {
 
     public StackRequest request = null;
-
-    /** The id this search reserved {@link #request} under. Kept because the request can only rebuild it while its
-     *  station resolves ({@link StackRequest#getResourceId} is null once the station is gone), and whoever gives the
-     *  order up must still be able to release the reservation. Null until a reservation is taken. */
-    public ResourceId reservation = null;
 
     private Collection<ItemStack> blackList;
 
@@ -87,9 +81,7 @@ public class AIRobotSearchStackRequest extends AIRobot {
             if (!isBlacklisted(req.getStack()) && filter.matches(req.getStack())) {
                 req.setStation(station);
                 if (take) {
-                    ResourceId id = req.getResourceId(robot.level());
-                    if (robot.getRegistry().take(id, robot.getRobotId())) {
-                        reservation = id;
+                    if (robot.getRegistry().take(req.getResourceId(robot.level()), robot.getRobotId())) {
                         return req;
                     }
                 } else {

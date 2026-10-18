@@ -79,9 +79,10 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     public AIRobotGotoBlock(IRobotAccess robot, LinkedList<BlockPos> iPath) {
         this(robot);
         path = iPath;
-        finalX = path.getLast().getX();
-        finalY = path.getLast().getY();
-        finalZ = path.getLast().getZ();
+        lastBlockInPath = path.getLast();
+        finalX = lastBlockInPath.getX();
+        finalY = lastBlockInPath.getY();
+        finalZ = lastBlockInPath.getZ();
         setNextInPath();
     }
 
@@ -155,8 +156,9 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             if (lastBlockInPath != null) {
                 // Snap onto the last path cell's centre, as 7.1.x did (posX/Y/Z = cell + 0.5): the last step only
                 // ends once the robot has stalled or overshot, which leaves it a few tenths of a block off. Double
-                // maths, not 7.1.x's 0.5F, so the half-block survives far from the origin. A flight handed a stored
-                // path has no lastBlockInPath and ends where it stands, as in 7.1.x.
+                // maths, not 7.1.x's 0.5F, so the half-block survives far from the origin. Every flight has one: a
+                // fresh search sets it from its result, a flight handed a stored path (or read back from a save)
+                // from that path's last cell. Not 7.1.x, whose stored-path flights ended where they stood.
                 robot.setPos(lastBlockInPath.getX() + 0.5, lastBlockInPath.getY() + 0.5,
                         lastBlockInPath.getZ() + 0.5);
             }
@@ -194,11 +196,14 @@ public class AIRobotGotoBlock extends AIRobotGoto {
         return blockAccess != null ? blockAccess : SoftBlockAccess.of(robot.level());
     }
 
+    /** Whatever ends the flight, the robot is left still. 7.1.x did this only for a flight that had a search of its
+     *  own; one handed a stored path (a search-and-goto's, or one read back from a save) kept the velocity of its last
+     *  step when aborted, and whatever ran next that sets none of its own found the robot drifting through walls.
+     *  Safe for the flights that end by arriving too (they stopped the robot already) and for whatever follows: a
+     *  parent starts its next AI after this runs. */
     @Override
     public void end() {
-        if (pathSearch != null) {
-            robot.setDeltaMovement(Vec3.ZERO);
-        }
+        robot.setDeltaMovement(Vec3.ZERO);
     }
 
     @Override
@@ -245,6 +250,11 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             path = new LinkedList<>();
             for (long l : asLong) {
                 path.add(BlockPos.of(l));
+            }
+            if (!path.isEmpty()) {
+                // The arrival snap needs it, and a fresh search is what used to set it: without this a reloaded
+                // flight ended off-centre where an uninterrupted one snapped.
+                lastBlockInPath = path.getLast();
             }
         }
 

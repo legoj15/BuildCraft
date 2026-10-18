@@ -300,6 +300,8 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 }
             }
             $detail = "$(@($Step.run).Count) command(s)"
+            # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
+            if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
         }
         'tp' {
             $x = $Base[0] + $Step.at[0] + 0.5; $y = $Base[1] + $Step.at[1]; $z = $Base[2] + $Step.at[2] + 0.5

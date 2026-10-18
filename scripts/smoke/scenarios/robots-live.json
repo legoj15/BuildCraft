@@ -1,0 +1,393 @@
+{
+  "name": "robots-live",
+  "description": "Working robots: a Lumberjack and a Picker deployed by hand onto Docking Stations (wooden item pipes over tool chests) with a powered station on a creative-engine kinesis pipe, then the robotics GUIs (Zone Planner, Requester, Programming Table).",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "label": "load the rig's chunks",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "?forceload add {X-8} {Z-8} {X+8} {Z+8}"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        -5
+      ],
+      "yaw": 0,
+      "pitch": 20
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "label": "clear and floor",
+      "do": "cmd",
+      "run": [
+        "difficulty peaceful",
+        "time set 6000",
+        "?gamerule doDaylightCycle false",
+        "?gamerule advance_time false",
+        "weather clear",
+        "?kill @e[type=buildcraftunofficial:robot]",
+        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..20]",
+        "?fill {X-8} {Y} {Z-8} {X+8} {Y+8} {Z+8} minecraft:air",
+        "fill {X-8} {Y-1} {Z-8} {X+8} {Y-1} {Z+8} minecraft:smooth_stone"
+      ]
+    },
+    {
+      "label": "lumberjack home: axe chest + wooden item pipe extracting down + station on top + Provide Items gate",
+      "do": "cmd",
+      "run": [
+        "setblock {X} {Y} {Z} minecraft:chest",
+        "item replace block {X} {Y} {Z} container.0 with minecraft:iron_axe",
+        "item replace block {X} {Y} {Z} container.1 with minecraft:iron_axe",
+        "setblock {X} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:0b,modifier:0b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}}}}}}}"
+      ]
+    },
+    {
+      "label": "picker home: empty chest + wooden item pipe + station + Accept Items gate",
+      "do": "cmd",
+      "run": [
+        "setblock {X-4} {Y} {Z} minecraft:chest",
+        "setblock {X-4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:0b,modifier:0b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.accept_items\",side:6b}}}}}}}"
+      ]
+    },
+    {
+      "label": "charging station: creative engine under a wooden kinesis pipe",
+      "do": "cmd",
+      "run": [
+        "setblock {X+4} {Y-1} {Z} minecraft:redstone_block",
+        "setblock {X+4} {Y} {Z} buildcraftunofficial:engine_creative[facing=up]",
+        "setblock {X+4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_power\"},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}}}}"
+      ]
+    },
+    {
+      "label": "a tree for the lumberjack, loot on the ground for the picker",
+      "do": "cmd",
+      "run": [
+        "fill {X-1} {Y+3} {Z+5} {X+1} {Y+4} {Z+7} minecraft:oak_leaves[persistent=true]",
+        "fill {X} {Y} {Z+6} {X} {Y+4} {Z+6} minecraft:oak_log",
+        "summon minecraft:item {X-4} {Y} {Z+4} {Item:{id:\"minecraft:cobblestone\",count:8},PickupDelay:32767s}",
+        "summon minecraft:item {X-5} {Y} {Z+5} {Item:{id:\"minecraft:diamond\",count:2},PickupDelay:32767s}",
+        "summon minecraft:item {X-3} {Y} {Z+3} {Item:{id:\"minecraft:apple\",count:3},PickupDelay:32767s}",
+        "?clear @p"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "name": "rig-empty",
+      "do": "shot",
+      "look": "three pipes each topped by a Docking Station plug: left (picker home over a chest), centre (lumberjack home over a chest), right (wooden kinesis pipe over a running creative engine); an oak tree behind the centre; item stacks on the ground at left"
+    },
+    {
+      "label": "deploy lumberjack",
+      "do": "tp",
+      "at": [
+        0,
+        2,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotLumberjack\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "label": "deploy picker",
+      "do": "tp",
+      "at": [
+        -4,
+        2,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotPicker\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "hold",
+      "item": "minecraft:air"
+    },
+    {
+      "label": "count deployed robots",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "do": "tp",
+      "at": [
+        -1,
+        0,
+        -6
+      ],
+      "yaw": 0,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "name": "robots-docked",
+      "do": "shot",
+      "look": "two robots docked on the left and centre stations (robot model with its board-coloured skin, sitting on the plug), not floating loose or missing"
+    },
+    {
+      "do": "wait",
+      "ms": 12000
+    },
+    {
+      "name": "robots-working-12s",
+      "do": "shot",
+      "look": "the lumberjack has left its dock (fetched an axe) and is at the tree or has cut logs; the picker is flying to/among the ground items; smoke/particles normal"
+    },
+    {
+      "do": "wait",
+      "ms": 20000
+    },
+    {
+      "name": "robots-working-32s",
+      "do": "shot",
+      "look": "fewer logs on the tree; ground items picked up; robots fly smoothly (no jitter / no stuck-in-place)"
+    },
+    {
+      "do": "wait",
+      "ms": 30000
+    },
+    {
+      "name": "robots-working-62s",
+      "do": "shot",
+      "look": "tree trunk mostly or fully cut; picker has returned to its station to unload; nothing despawned or crashed"
+    },
+    {
+      "label": "lumberjack home pipe NBT",
+      "do": "cmd",
+      "run": [
+        "data get block {X} {Y+1} {Z}"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "lumberjack robot NBT",
+      "do": "cmd",
+      "run": [
+        "data get entity @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..3,limit=1]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "picker robot NBT",
+      "do": "cmd",
+      "run": [
+        "data get entity @e[type=buildcraftunofficial:robot,x={X-4},y={Y},z={Z},distance=..40,limit=1,sort=nearest]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "loose items anywhere near",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..30]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "robots alive",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "lumberjack: trunk base still standing? (expect fail = cut)",
+      "do": "cmd",
+      "run": [
+        "execute if block {X} {Y} {Z+6} minecraft:oak_log"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "picker: ground items left",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=minecraft:item,x={X-4},y={Y},z={Z+4},distance=..6]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "picker home chest",
+      "do": "cmd",
+      "run": [
+        "data get block {X-4} {Y} {Z} Items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "lumberjack home chest",
+      "do": "cmd",
+      "run": [
+        "data get block {X} {Y} {Z} Items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "robotics GUI blocks",
+      "do": "cmd",
+      "run": [
+        "setblock {X+6} {Y} {Z-4} buildcraftunofficial:zone_planner",
+        "setblock {X+6} {Y} {Z-6} buildcraftunofficial:requester",
+        "setblock {X+6} {Y} {Z-2} buildcraftunofficial:programming_table"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        4,
+        0,
+        -4
+      ],
+      "yaw": -90,
+      "pitch": 20
+    },
+    {
+      "do": "aim",
+      "at": [
+        6,
+        0,
+        -4
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "ZonePlanner"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "name": "zone-planner",
+      "do": "shot",
+      "look": "Zone Planner GUI: 3D map viewport of the surrounding terrain (the rig visible from above), paintbrush slots, map slots; no missing textures"
+    },
+    {
+      "do": "widgets",
+      "name": "zone-planner"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "aim",
+      "at": [
+        6,
+        0,
+        -6
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "Requester"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "requester",
+      "do": "shot",
+      "look": "Requester GUI: request slots with amount fields, inventory below; no overlap"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "aim",
+      "at": [
+        6,
+        0,
+        -2
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "Programming"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "programming-table",
+      "do": "shot",
+      "look": "Programming Table GUI: input/output slot, program option grid area, energy bar; no missing textures"
+    },
+    {
+      "do": "close"
+    }
+  ]
+}

@@ -42,7 +42,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail` | server commands (`/command`, OWNER, no entity — target `@p`). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`) count as success, since the world persists between runs |
+| `cmd` | `run`: string or list; `allowFail`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). `echo: true` copies the last command's reply into the report (state dumps). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`) count as success, since the world persists between runs |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at` | look at a block's centre from the current eye position; the report records what the crosshair hit |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -150,8 +151,10 @@ public class ItemMapLocation extends Item implements IMapLocation {
                     int x = NBTUtilBC.getInt(cpt, "x", 0);
                     int y = NBTUtilBC.getInt(cpt, "y", 0);
                     int z = NBTUtilBC.getInt(cpt, "z", 0);
-                    Direction side = Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
-                    tooltip.accept(Component.literal("{" + x + ", " + y + ", " + z + ", " + side + "}"));
+                    // A side byte that is not a face (corrupt or hand-edited stack) leaves the face out of the line.
+                    Direction side = NBTUtilBC.getDirectionOrNull(cpt, "side", (byte) 0);
+                    tooltip.accept(Component.literal("{" + x + ", " + y + ", " + z
+                            + (side == null ? "" : ", " + side) + "}"));
                 }
                 break;
             }
@@ -350,9 +353,11 @@ public class ItemMapLocation extends Item implements IMapLocation {
         }
     }
 
+    /** The stored face, or null when the stack's side byte is not a face. */
+    @Nullable
     public static Direction getPointFace(@Nonnull ItemStack stack) {
         CompoundTag cpt = getCustomTag(stack);
-        return Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
+        return NBTUtilBC.getDirectionOrNull(cpt, "side", (byte) 0);
     }
 
     @Override
@@ -375,7 +380,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
 
         if (type == MapLocationType.SPOT) {
             CompoundTag cpt = getCustomTag(item);
-            return Direction.values()[NBTUtilBC.getByte(cpt, "side", (byte) 0)];
+            return NBTUtilBC.getDirectionOrNull(cpt, "side", (byte) 0);
         }
         return null;
     }

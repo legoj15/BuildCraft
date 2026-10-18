@@ -115,7 +115,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             } else {
                 // The search reserved the order before reporting it.
-                StackRequest order = ((AIRobotSearchStackRequest) ai).request;
+                AIRobotSearchStackRequest search = (AIRobotSearchStackRequest) ai;
+                StackRequest order = search.request;
                 currentRequest.adopt(order, true);
 
                 // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only
@@ -123,6 +124,10 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 // the order has no requester to deliver to, so it is given up.
                 DockingStation requester = order.getStation(robot.level());
                 if (requester == null || !requester.take((EntityRobotBase) robot)) {
+                    // Give the reservation back by the id the search took it under: with the station gone the order
+                    // cannot rebuild that id (getResourceId is null), so the claim release below would leave it held
+                    // until the robot unloaded. Owner-checked, and a no-op when the claim release also frees it.
+                    robot.getRegistry().release(search.reservation, robot.getRobotId());
                     releaseCurrentRequest();
                 }
             }

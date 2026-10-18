@@ -70,7 +70,8 @@ public class StatementParameterDirection implements IStatementParameter {
     public static StatementParameterDirection readFromNbt(CompoundTag nbt) {
         StatementParameterDirection param = new StatementParameterDirection();
         if (nbt.contains("direction")) {
-            param.direction = Direction.values()[NBTUtilBC.getByte(nbt, "direction", (byte) 0)];
+            // An out-of-range byte is "no direction", the same as a parameter saved without one.
+            param.direction = NBTUtilBC.getDirectionOrNull(nbt, "direction", (byte) 0);
         }
         return param;
     }

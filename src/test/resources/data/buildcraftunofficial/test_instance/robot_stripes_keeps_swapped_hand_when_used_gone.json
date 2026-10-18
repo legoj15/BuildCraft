@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_stripes_keeps_swapped_hand_when_used_gone",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 20,
+    "max_ticks": 100,
     "setup_ticks": 0,
     "required": true
 }

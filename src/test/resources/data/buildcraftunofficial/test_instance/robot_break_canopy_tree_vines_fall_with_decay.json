@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_break_canopy_tree_vines_fall_with_decay",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 900,
+    "max_ticks": 1000,
     "setup_ticks": 0,
     "required": true
 }

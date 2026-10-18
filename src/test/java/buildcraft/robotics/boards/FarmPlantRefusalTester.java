@@ -18,21 +18,19 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.WorkClaimMod;
-import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotPlant;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.entity.EntityRobot;
@@ -74,7 +72,8 @@ public class FarmPlantRefusalTester {
             // Tight around the row the tests build (and the station), so the planter's RANDOM search has so few
             // cells to draw from that a candidate is found long before its round budget runs out.
             IZone zone = new Box(helper.absolutePos(new BlockPos(0, 1, 2)), helper.absolutePos(new BlockPos(5, 3, 4)));
-            robot = new ParkedRobot(level, home, zone);
+            // Docked at and linked to its own station, working a zone inside the arena cell.
+            robot = new ZonePinnedRobot(level, null, zone).parkedAt(home);
             Vec3 spawn = Vec3.atCenterOf(helper.absolutePos(robotRel));
             robot.setPos(spawn.x, spawn.y, spawn.z);
             robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -106,33 +105,6 @@ public class FarmPlantRefusalTester {
             }
             registry.removeStation(home);
             registry.killRobot(robot);
-        }
-    }
-
-    /** Docked at, and linked to, its own station, and working a zone inside the arena cell. */
-    private static final class ParkedRobot extends EntityRobot {
-        private final DockingStation home;
-        private final IZone zone;
-
-        ParkedRobot(Level level, DockingStation home, IZone zone) {
-            super(BCRoboticsEntities.ROBOT.get(), level);
-            this.home = home;
-            this.zone = zone;
-        }
-
-        @Override
-        public DockingStation getDockingStation() {
-            return home;
-        }
-
-        @Override
-        public DockingStation getLinkedStation() {
-            return home;
-        }
-
-        @Override
-        public IZone getZoneToWork() {
-            return zone;
         }
     }
 

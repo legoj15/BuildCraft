@@ -169,16 +169,9 @@ public class PickerCarrierTester {
         return station instanceof DockingStationPipe pipe ? pipe : null;
     }
 
-    /** Spawns a robot carrying {@code boardNBT} at {@code relPos}. The {@code (Level, RedstoneBoardRobotNBT)}
-     *  constructor calls {@code setBoard}, which creates and starts the {@code AIRobotMain} — so the robot
-     *  begins cycling the moment its first tick registers it with the registry. */
-    private static EntityRobot addBoardRobot(GameTestHelper helper, BlockPos relPos, RedstoneBoardRobotNBT boardNBT) {
-        EntityRobot robot = new EntityRobot(helper.getLevel(), boardNBT);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        helper.getLevel().addFreshEntity(robot);
-        return robot;
-    }
+    // Every live robot below comes from ZonePinnedRobot.spawn: the board's constructor starts its AIRobotMain, so the
+    // robot begins cycling the moment its first tick registers it, and a board with no zone searches the whole
+    // dimension (sibling arenas' drops and stations included). Pinned to this cell, it cannot.
 
     // ---------- registry completeness ----------
 
@@ -220,7 +213,7 @@ public class PickerCarrierTester {
         // whole 5x5 neighbourhood is FULL, and with a 3x3 force that ring-2 stayed at the arena's own level.
         EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
-        EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
+        EntityRobot robot = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
 
         // A dropped item two blocks away, pinned in mid-air with noGravity so it cannot fall through the
@@ -336,7 +329,7 @@ public class PickerCarrierTester {
                 () -> stationAt(helper, pipeRel, Direction.UP) != null,
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    EntityRobot robot = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                     spawned[0] = robot;
                     station.takeAsMain(robot);
                     robot.dock(station);
@@ -393,7 +386,7 @@ public class PickerCarrierTester {
                         return false;
                     }
                     if (robot[0] == null) {
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                     }
                     return robot[0].containsItems();
@@ -532,7 +525,10 @@ public class PickerCarrierTester {
                         return false;
                     }
                     if (robot[0] == null) {
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        // Pinned like every live board robot, though the recharge search itself takes no zone
+                        // (AIRobotRecharge reaches every powered station, as in 7.1.x): what keeps it on this
+                        // rig is the private environment and picking the NEAREST powered station, 2 blocks off.
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         // Below SAFETY_POWER so the ladder preempts into AIRobotRecharge on the first
                         // cycle; comfortably above SHUTDOWN_POWER so the robot stays alive.
                         robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);
@@ -585,7 +581,8 @@ public class PickerCarrierTester {
                     FeHandlerAccess.insert(source, 1000, true);
                 }
                 if (robot[0] == null) {
-                    robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    // Zone-pinned for uniformity; the recharge search is zone-free (see the MJ twin).
+                    robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                     // Below SAFETY_POWER so the ladder preempts into AIRobotRecharge on the first cycle;
                     // comfortably above SHUTDOWN_POWER so the robot stays alive.
                     robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);

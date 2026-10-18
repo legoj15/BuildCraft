@@ -40,6 +40,7 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.item.ItemRobot;
@@ -413,7 +414,7 @@ public class EntityRobotTester {
         // AIRobotRecharge instead, whose search finds no station it can use here and fails into its
         // 120-tick cooldown while the robot hovers at spawn. The exact-death boundary itself is pinned
         // in the next phase, at the moment of the hit.
-        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotPickerNBT.INSTANCE);
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(DAMAGE_DEBIT_PER_POINT, false);
@@ -778,7 +779,7 @@ public class EntityRobotTester {
 
         // Boarded (mainAI is the AIRobotMain ladder that owns the shutdown slot) and charged well above
         // SAFETY_POWER, so a shutdown can only have come from losing the station, never from flat power.
-        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotPickerNBT.INSTANCE);
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(5000L * MjAPI.MJ, false);

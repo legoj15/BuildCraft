@@ -10,7 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 //? if >=1.21.10 {
@@ -18,7 +17,6 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
-import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.RobotManager;
@@ -35,6 +33,7 @@ import buildcraft.robotics.BCRoboticsPlugs;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotUnloadFluids;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
@@ -99,16 +98,9 @@ public class FluidCarrierTester {
         gate.logic.resolveActions();
     }
 
-    /** Spawns a robot carrying {@code boardNBT} at {@code relPos}. The {@code (Level, RedstoneBoardRobotNBT)}
-     *  constructor calls {@code setBoard}, which creates and starts the {@code AIRobotMain} — so the robot
-     *  begins cycling the moment its first tick registers it with the registry. */
-    private static EntityRobot addBoardRobot(GameTestHelper helper, BlockPos relPos, RedstoneBoardRobotNBT boardNBT) {
-        EntityRobot robot = new EntityRobot(helper.getLevel(), boardNBT);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        helper.getLevel().addFreshEntity(robot);
-        return robot;
-    }
+    // Every live robot below comes from ZonePinnedRobot.spawn: the board's constructor starts its AIRobotMain, so the
+    // robot begins cycling the moment its first tick registers it, and a board with no zone searches the whole
+    // dimension (sibling arenas' stations included). Pinned to this cell, it cannot.
 
     /** The registered station for a pipe face, or null while {@code RobotStationPluggable.onTick()} has not
      *  yet lazily registered it. */
@@ -242,7 +234,7 @@ public class FluidCarrierTester {
                         return false;
                     }
                     if (robot[0] == null) {
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotFluidCarrierNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotFluidCarrierNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                     }
                     return carriedBy(robot[0]) > 0;
@@ -296,7 +288,7 @@ public class FluidCarrierTester {
                 () -> stationAt(helper, pipeRel, Direction.UP) != null,
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
-                    EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    EntityRobot robot = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                     spawned[0] = robot;
                     station.takeAsMain(robot);
                     robot.dock(station);

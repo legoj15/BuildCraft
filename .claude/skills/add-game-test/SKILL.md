@@ -48,7 +48,10 @@ the safety net — this skill is the manual.
    `structure` can point at a saved arena structure if the test needs a pre-built world;
    `minecraft:empty` gives you a void arena to `helper.setBlock(...)` into. `max_ticks` is the
    watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests
-   that throw or succeed immediately can use `20`.
+   that throw or succeed immediately can use `20`. **A robot test's `max_ticks` must be strictly
+   greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen` budget in the
+   test** (see "Entity and robot tests" below) — `GameTestPollBudgetTester` fails the unit run
+   otherwise, so give the poll a literal or a named `static final int` budget it can read.
 
 ## The 1.21.1 node is different (but the manifest still matters)
 
@@ -76,6 +79,50 @@ beyond 5 or z beyond 6 writes into the NEXT test's arena. (z=7 is the next ROW, 
 one.) Entities added during the test must be discarded before `succeed()` — pass-time cleanup
 sweeps only ~1 block, and leaked entities fail unrelated tests; assert dropped items by
 identity, not proximity. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
+
+## Entity and robot tests
+
+Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`) and
+`ZonePinnedRobot` (`src/test/java/buildcraft/robotics/`).
+
+- **Clean up in the poll, not at the end of the body.** `tickUntil`, `tickUntilThen` and
+  `ConfigScope.succeedWhen` each have an overload taking a trailing `Runnable cleanup`, run exactly
+  once on EVERY way out: after the success body (passing or throwing), when the condition throws,
+  and on the poll's own timeout. Discard the test's entities there
+  (`() -> EntityArenaUtil.discard(robot[0], item)`, null-safe, so it works for a robot spawned
+  mid-poll). A `discard()` as the last line of the success body is skipped by the first failed
+  assertion, and a robot left in the shared level keeps its station reservations and keeps flying
+  into later tests. Pass the cleanup on every robot test that spawns something.
+- **The framework's own timeout skips that cleanup.** If `max_ticks` fires before the poll's last
+  tick, the framework fails the test and the cleanup never runs. So `max_ticks` must be strictly
+  greater than the poll budget (`GameTestPollBudgetTester` pins this for every robot test: it reads
+  the budget from the registered method and any same-file helper it calls, resolves a literal or a
+  `static final int`, and fails on a budget it cannot read).
+- **A robot test that runs a board's `update()` must be zone-pinned.** A board with no zone
+  searches the whole dimension: a picker takes a sibling arena's drops, a carrier or delivery robot
+  flies to a sibling's station, a lumberjack chops a sibling's tree, and it is the OTHER test that
+  fails. Spawn it with `ZonePinnedRobot.spawn(helper, relPos, boardNbt)` (or
+  `new ZonePinnedRobot(helper, boardNbt)` when you place it yourself): both its work zone and its
+  load/unload zone are the test's own 6x7 cell (`EntityArenaUtil.cellZone`). Variations are chained
+  setters, never a private `EntityRobot` subclass: `new ZonePinnedRobot(level, board, zone)` for an
+  explicit work zone, `.loadUnloadZone(zone-or-null)`, `.parkedAt(station)` (docked and linked),
+  `.registry(registry)` (an isolated registry). `ZonePinnedRobotUseTester` fails on a bare
+  `new EntityRobot(level, board)` and on a test-local subclass overriding the zone getters. The one
+  exception is a test whose point is a zone supplied by the home station's gate actions (Work in
+  Area / Load/Unload Area): it builds its robot the way `ItemRobot.useOn` does and is listed in
+  that tester's allowlist. Recharge is zone-free by design (`AIRobotRecharge` searches every
+  powered station), so the pin does not narrow a recharge search: such a test stays hermetic through
+  its own `test_environment` and the nearest-station rule.
+- **Gate a same-tick scan on `EntityArenaUtil.isEntityTicking(helper, relPos)`.** The framework
+  waits only for the 1x1 structure's own chunk, so a position a couple of blocks in can sit in a
+  neighbouring chunk whose entities are not loaded yet (measured on 26.2 and 1.21.11: 20 of 50
+  samples crossed a chunk border, 6 of 50 were not entity-ticking at the first tick). An entity
+  added there is invisible to `getEntitiesOfClass` in the same tick, so a test that adds something
+  and scans for it at once polls `isEntityTicking` first (and `forceLoadEntityArena` around the
+  position).
+- **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
+  as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
+  arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.
 
 ## Tests that place markers (or touch any other dimension-wide cache)
 

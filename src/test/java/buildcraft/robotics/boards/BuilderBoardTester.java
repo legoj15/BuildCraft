@@ -37,7 +37,6 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
@@ -220,38 +219,13 @@ public class BuilderBoardTester {
 
     /** A robot isolated from the shared test level: its work zone is pinned to one machine
      *  ({@code getZoneToWork()} normally comes from the linked station's gate actions; the board searches
-     *  every Builder loaded in the level, and other tests leave needy ones behind) and its registry is an
-     *  empty stub (concurrent tests register stations in the real one, and a power-providing station
-     *  anywhere would turn "no free power station" into a long flight). */
-    private static final class ZonedRobot extends EntityRobot {
-        private final IZone zone;
-        private IRobotRegistry registry = new MockRobotAccess.InertRobotRegistry();
-
-        ZonedRobot(ServerLevel level, IZone zone) {
-            super(BCRoboticsEntities.ROBOT.get(), level);
-            this.zone = zone;
-        }
-
-        @Override
-        public IZone getZoneToWork() {
-            return zone;
-        }
-
-        /** Stations are not zone-limited (the work zone would otherwise stand in for the load zone, and it
-         *  names one machine). */
-        @Override
-        public IZone getZoneToLoadUnload() {
-            return null;
-        }
-
-        @Override
-        public IRobotRegistry getRegistry() {
-            return registry;
-        }
-
-        void setRegistry(IRobotRegistry registry) {
-            this.registry = registry;
-        }
+     *  every Builder loaded in the level, and other tests leave needy ones behind), stations are not
+     *  zone-limited (the work zone would otherwise stand in for the load zone, and it names one machine), and
+     *  its registry is an empty stub (concurrent tests register stations in the real one, and a
+     *  power-providing station anywhere would turn "no free power station" into a long flight). */
+    private static ZonePinnedRobot isolatedRobot(ServerLevel level, IZone workZone) {
+        return new ZonePinnedRobot(level, null, workZone).loadUnloadZone(null)
+                .registry(new MockRobotAccess.InertRobotRegistry());
     }
 
     /** A zone that contains exactly one block's centre. */
@@ -318,12 +292,12 @@ public class BuilderBoardTester {
         };
     }
 
-    private static ZonedRobot zonedRobot(GameTestHelper helper, BlockPos robotRel, BlockPos zoneBlock) {
+    private static ZonePinnedRobot zonedRobot(GameTestHelper helper, BlockPos robotRel, BlockPos zoneBlock) {
         return zonedRobot(helper, robotRel, justThisBlock(zoneBlock));
     }
 
-    private static ZonedRobot zonedRobot(GameTestHelper helper, BlockPos robotRel, IZone zone) {
-        ZonedRobot robot = new ZonedRobot(helper.getLevel(), zone);
+    private static ZonePinnedRobot zonedRobot(GameTestHelper helper, BlockPos robotRel, IZone zone) {
+        ZonePinnedRobot robot = isolatedRobot(helper.getLevel(), zone);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -419,7 +393,7 @@ public class BuilderBoardTester {
                 helper.setBlock(rel, Blocks.STONE);
             }
 
-            ZonedRobot robot = zonedRobot(helper, cellRel, helper.absolutePos(builderRel));
+            ZonePinnedRobot robot = zonedRobot(helper, cellRel, helper.absolutePos(builderRel));
             robot.setInventoryStack(0, new ItemStack(Items.STONE, 4));
             BoardRobotBuilder board = new BoardRobotBuilder(robot);
 
@@ -499,7 +473,7 @@ public class BuilderBoardTester {
             placeBuilder(helper, builderRel,
                     makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
 
-            ZonedRobot robot = zonedRobot(helper, robotRel, helper.absolutePos(builderRel));
+            ZonePinnedRobot robot = zonedRobot(helper, robotRel, helper.absolutePos(builderRel));
             robot.setInventoryStack(0, new ItemStack(Items.STONE));
             robot.getBattery().extractPower(SEEDED_CHARGE - IRobotAccess.SAFETY_POWER,
                     SEEDED_CHARGE - IRobotAccess.SAFETY_POWER);
@@ -547,7 +521,7 @@ public class BuilderBoardTester {
             helper.assertTrue(BoardRobotBuilder.needsItems(builder), "sanity: the machine reports demand");
             BlockPos builderAbs = helper.absolutePos(builderRel);
 
-            ZonedRobot robot = new ZonedRobot(level, justThisBlock(builderAbs));
+            ZonePinnedRobot robot = isolatedRobot(level, justThisBlock(builderAbs));
             robot.getBattery().addPower(SEEDED_CHARGE, false);
             BoardRobotBuilder board = new BoardRobotBuilder(robot);
 
@@ -597,7 +571,7 @@ public class BuilderBoardTester {
                 makeSingleBlockBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2)), Blocks.STONE));
         TileBuilder dirtBuilder = placeBuilder(helper, dirtRel,
                 makeSingleBlockBlueprint(level, helper.absolutePos(new BlockPos(0, 1, 2)), Blocks.DIRT));
-        ZonedRobot robot = zonedRobot(helper, robotRel,
+        ZonePinnedRobot robot = zonedRobot(helper, robotRel,
                 justTheseBlocks(helper.absolutePos(stoneRel), helper.absolutePos(dirtRel)));
         try {
             helper.assertTrue(BoardRobotBuilder.needsItems(stoneBuilder) && BoardRobotBuilder.needsItems(dirtBuilder),
@@ -652,7 +626,7 @@ public class BuilderBoardTester {
                 makeSingleBlockBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2)), Blocks.STONE));
         try {
             helper.assertTrue(BoardRobotBuilder.needsItems(stoneBuilder), "sanity: the machine reports demand");
-            ZonedRobot robot = zonedRobot(helper, robotRel, helper.absolutePos(stoneRel));
+            ZonePinnedRobot robot = zonedRobot(helper, robotRel, helper.absolutePos(stoneRel));
             robot.setInventoryStack(0, new ItemStack(Items.STONE, 4));
             robot.setInventoryStack(1, new ItemStack(Items.DIRT, 4));
             BoardRobotBuilder board = new BoardRobotBuilder(robot);
@@ -733,8 +707,8 @@ public class BuilderBoardTester {
 
     /** A robot at an absolute block (it is never added to the level, so it may stand outside the arena), zoned to
      *  one block. */
-    private static ZonedRobot zonedRobotAt(GameTestHelper helper, BlockPos at, BlockPos zoneBlock) {
-        ZonedRobot robot = new ZonedRobot(helper.getLevel(), justThisBlock(zoneBlock));
+    private static ZonePinnedRobot zonedRobotAt(GameTestHelper helper, BlockPos at, BlockPos zoneBlock) {
+        ZonePinnedRobot robot = isolatedRobot(helper.getLevel(), justThisBlock(zoneBlock));
         Vec3 pos = Vec3.atCenterOf(at);
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -773,8 +747,8 @@ public class BuilderBoardTester {
             // Only the out-of-reach station stocks stone: nowhere to fetch from.
             StationRegistry onlyFar = new StationRegistry();
             onlyFar.stations.add(behindTheRobot);
-            ZonedRobot first = zonedRobotAt(helper, builderAbs.offset(-80, 0, 0), builderAbs);
-            first.setRegistry(onlyFar);
+            ZonePinnedRobot first = zonedRobotAt(helper, builderAbs.offset(-80, 0, 0), builderAbs);
+            first.registry(onlyFar);
             BoardRobotBuilder board = new BoardRobotBuilder(first);
             board.cycle();
             board.cycle();
@@ -788,8 +762,8 @@ public class BuilderBoardTester {
             StationRegistry both = new StationRegistry();
             both.stations.add(behindTheRobot);
             both.stations.add(besideTheBuilder);
-            ZonedRobot second = zonedRobotAt(helper, builderAbs.offset(-80, 0, 0), builderAbs);
-            second.setRegistry(both);
+            ZonePinnedRobot second = zonedRobotAt(helper, builderAbs.offset(-80, 0, 0), builderAbs);
+            second.registry(both);
             BoardRobotBuilder secondBoard = new BoardRobotBuilder(second);
             secondBoard.cycle();
             secondBoard.cycle();
@@ -833,11 +807,11 @@ public class BuilderBoardTester {
 
             StationRegistry registry = new StationRegistry();
             registry.stations.add(station);
-            ZonedRobot robot = new ZonedRobot(level, justTheseBlocks(nearAbs, farAbs));
+            ZonePinnedRobot robot = isolatedRobot(level, justTheseBlocks(nearAbs, farAbs));
             Vec3 robotPos = Vec3.atCenterOf(nearAbs.offset(-10, 0, 0));
             robot.setPos(robotPos.x, robotPos.y, robotPos.z);
             robot.getBattery().addPower(SEEDED_CHARGE, false);
-            robot.setRegistry(registry);
+            robot.registry(registry);
             BoardRobotBuilder board = new BoardRobotBuilder(robot);
             helper.assertTrue(board.findClosestBuilder(false) == near, "sanity: the near machine is picked first");
 
@@ -908,7 +882,7 @@ public class BuilderBoardTester {
             for (BlockPos rel : shell) {
                 helper.setBlock(rel, Blocks.STONE);
             }
-            ZonedRobot robot = zonedRobot(helper, cellRel, helper.absolutePos(builderRel));
+            ZonePinnedRobot robot = zonedRobot(helper, cellRel, helper.absolutePos(builderRel));
             robot.setInventoryStack(0, new ItemStack(Items.STONE, 4));
             ClockedBoard board = new ClockedBoard(robot);
 

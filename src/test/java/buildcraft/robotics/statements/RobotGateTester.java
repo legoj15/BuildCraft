@@ -131,18 +131,12 @@ public class RobotGateTester {
         return station instanceof DockingStationPipe pipe ? pipe : null;
     }
 
-    private static EntityRobot addBoardRobot(GameTestHelper helper, BlockPos relPos, RedstoneBoardRobotNBT boardNBT) {
-        EntityRobot robot = new EntityRobot(helper.getLevel(), boardNBT);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        helper.getLevel().addFreshEntity(robot);
-        return robot;
-    }
-
     /** A charged robot placed on {@code home} the way {@code ItemRobot.useOn} places one: the id comes from
      *  the registry before the entity reaches the world, the station is taken as MAIN (its linked station,
      *  whose gates name the robot's zones) and the robot docks there, so its board's first cycle already runs
-     *  with its home and zones in place. */
+     *  with its home and zones in place. Deliberately NOT a {@code ZonePinnedRobot}: the zone coming from the
+     *  home station's gate is what the test uses (the one board robot {@code ZonePinnedRobotUseTester} allows
+     *  without a pin). */
     private static EntityRobot addHomedRobot(GameTestHelper helper, DockingStation home,
                                              RedstoneBoardRobotNBT boardNBT) {
         EntityRobot robot = new EntityRobot(helper.getLevel(), boardNBT);
@@ -418,7 +412,7 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
@@ -494,7 +488,7 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
@@ -552,7 +546,7 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
@@ -656,7 +650,7 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
@@ -742,7 +736,7 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }

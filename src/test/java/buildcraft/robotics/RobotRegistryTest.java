@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
@@ -394,6 +395,120 @@ public class RobotRegistryTest {
         Assertions.assertEquals(ROBOT_A, reloaded.linkedId(), "its link id persists");
         Assertions.assertTrue(after.stationsReservedBy(ROBOT_A).contains(new StationIndex(side, pos)),
                 "the station reverse index is rebuilt on load");
+    }
+
+    // ---- station tag shapes: "free" must read back as free ----
+
+    /** A station tag as 7.1.x wrote it (and so every 1.7.10 world a robot ever lived in): the position as an
+     *  {@code index} compound of {@code i/j/k}, then side, isMain and robotId, with {@code Long.MAX_VALUE} - the null
+     *  robot id - standing for "no robot". Every shipped build wrote the sentinel; none ever wrote 0 or -1. */
+    private static CompoundTag upstreamShapedStationTag(BlockPos pos, int side, boolean main, long robotId) {
+        CompoundTag index = new CompoundTag();
+        index.putInt("i", pos.getX());
+        index.putInt("j", pos.getY());
+        index.putInt("k", pos.getZ());
+        CompoundTag tag = new CompoundTag();
+        tag.put("index", index);
+        tag.putByte("side", (byte) side);
+        tag.putBoolean("isMain", main);
+        tag.putLong("robotId", robotId);
+        return tag;
+    }
+
+    /** The record without the robot-id key. The null id is the only meaning "no robot" ever had, so an absent key
+     *  must read as the null id too: reading it as 0 made the station look held by a robot that never existed, and
+     *  {@code take()} - which decides by the holder id - refused every robot for good. */
+    private static CompoundTag stationTagWithoutARobotId(BlockPos pos, Direction side) {
+        CompoundTag tag = new CompoundTag();
+        new TestDockingStation(pos, side).writeToNbt(tag);
+        tag.remove("robotId");
+        Assertions.assertFalse(tag.contains("robotId"), "precondition: the key is really gone");
+        return tag;
+    }
+
+    private static void assertFree(DockingStation station, String what) {
+        Assertions.assertFalse(station.isTaken(), what + ": not taken");
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, station.linkedId(), what + ": links no robot");
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, station.robotIdTaking(), what + ": has no holder id");
+        Assertions.assertNull(station.robotTaking(), what + ": resolves to no robot");
+        Assertions.assertFalse(station.isMainStation(), what + ": is nobody's home");
+    }
+
+    @Test
+    public void testStationTagWithoutARobotIdLoadsFree() {
+        BlockPos pos = new BlockPos(8, 64, 9);
+        TestDockingStation loaded = new TestDockingStation();
+        loaded.readFromNbt(stationTagWithoutARobotId(pos, Direction.SOUTH));
+
+        assertFree(loaded, "a station saved without a robot id");
+        Assertions.assertEquals(pos, loaded.getPos(), "the rest of the record still reads");
+        Assertions.assertEquals(Direction.SOUTH, loaded.side(), "...its side too");
+    }
+
+    @Test
+    public void testFreeStationRoundTripsFree() {
+        TestDockingStation free = new TestDockingStation(new BlockPos(8, 64, 9), Direction.EAST);
+        CompoundTag tag = new CompoundTag();
+        free.writeToNbt(tag);
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, NBTUtilBC.getLong(tag, "robotId", 0L),
+                "a free station is written with the null id, the sentinel every build has written");
+
+        TestDockingStation loaded = new TestDockingStation();
+        loaded.readFromNbt(tag);
+
+        assertFree(loaded, "a free station read back");
+    }
+
+    @Test
+    public void testUpstreamShapedFreeStationTagLoadsFree() {
+        BlockPos pos = new BlockPos(-3, 70, 12);
+        TestDockingStation loaded = new TestDockingStation();
+        loaded.readFromNbt(upstreamShapedStationTag(pos, Direction.WEST.ordinal(), false,
+                EntityRobotBase.NULL_ROBOT_ID));
+
+        assertFree(loaded, "a free station in the 7.1.x tag shape");
+        Assertions.assertEquals(pos, loaded.getPos(), "the legacy index compound still gives the position");
+        Assertions.assertEquals(Direction.WEST, loaded.side());
+    }
+
+    @Test
+    public void testUpstreamShapedLinkedStationTagsKeepTheirLink() {
+        BlockPos pos = new BlockPos(-3, 70, 12);
+        long robot = Long.MIN_VALUE + 7;
+
+        TestDockingStation home = new TestDockingStation();
+        home.readFromNbt(upstreamShapedStationTag(pos, Direction.UP.ordinal(), true, robot));
+        Assertions.assertTrue(home.isTaken(), "a station saved with a robot id is taken");
+        Assertions.assertEquals(robot, home.linkedId(), "...by that robot");
+        Assertions.assertTrue(home.isMainStation(), "...as its home when saved as one");
+
+        TestDockingStation visit = new TestDockingStation();
+        visit.readFromNbt(upstreamShapedStationTag(pos, Direction.UP.ordinal(), false, robot));
+        Assertions.assertEquals(robot, visit.linkedId());
+        Assertions.assertFalse(visit.isMainStation(), "...and as a plain claim otherwise");
+    }
+
+    /** Loaded into a registry, a station with no robot id must not be filed as held by a robot: the load path
+     *  indexes every station whose link is not the null id, and raises the id counter past every id it finds. */
+    @Test
+    public void testRegistryLoadsAStationWithoutARobotIdAsFreeAndUnindexed() {
+        BlockPos pos = new BlockPos(8, 64, 9);
+        CompoundTag stationTag = stationTagWithoutARobotId(pos, Direction.SOUTH);
+        stationTag.putString("stationType", "test_station");
+        ListTag stationList = new ListTag();
+        stationList.add(stationTag);
+        CompoundTag registryTag = new CompoundTag();
+        registryTag.put("stationList", stationList);
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(registryTag);
+
+        DockingStation station = loaded.getStation(pos, Direction.SOUTH);
+        Assertions.assertNotNull(station, "the station loads");
+        assertFree(station, "the loaded station");
+        Assertions.assertTrue(loaded.stationsReservedBy(0L).isEmpty(), "no robot 0 is credited with it");
+        Assertions.assertEquals(Long.MIN_VALUE, loaded.nextRobotIdPeek(),
+                "the id counter is not dragged up to a robot id that was never issued");
     }
 
     /** Minimal concrete {@link DockingStation} for registry tests: a public no-arg ctor for NBT reload plus a

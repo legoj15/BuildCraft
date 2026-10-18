@@ -189,7 +189,11 @@ public abstract class DockingStation {
         }
         side = Direction.values()[NbtApiUtil.getByte(nbt, "side", (byte) 0)];
         linkIsMain = NbtApiUtil.getBoolean(nbt, "isMain", false);
-        robotTakingId = NbtApiUtil.getLong(nbt, "robotId", 0L);
+        // "No robot" is the null id and nothing else: every build that ever wrote this key (7.1.x onwards) wrote
+        // NULL_ROBOT_ID for a free station, never 0 or -1, so there is no second sentinel to map. A record without
+        // the key therefore reads as free - defaulting it to 0 made it look held by a robot that never existed, and
+        // take()/release() (which decide by this id) refused every robot for good.
+        robotTakingId = NbtApiUtil.getLong(nbt, "robotId", EntityRobotBase.NULL_ROBOT_ID);
     }
 
     public boolean isTaken() {

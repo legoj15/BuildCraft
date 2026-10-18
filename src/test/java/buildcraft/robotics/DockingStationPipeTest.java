@@ -70,13 +70,10 @@ public class DockingStationPipeTest {
     }
 
     @Test
-    public void missingRobotIdFieldDefaultsToZeroWhichReadsAsTakenNotUnlinked() {
-        // Characterizes existing DockingStation.readFromNbt behaviour (ported from 7.1.x, predates
-        // Ph2): the default for a missing "robotId" key is 0L, not EntityRobotBase.NULL_ROBOT_ID
-        // (Long.MAX_VALUE). A station tag written without ever having been taken (e.g. hand-built, or
-        // from a pre-robots save) therefore reads back as isTaken()==true / linked to robot id 0 — NOT
-        // as the unlinked sentinel. This is pinned as-is, not "fixed": Ph2 doesn't touch this path, and
-        // changing the default could silently re-link every never-taken station in an existing world.
+    public void missingRobotIdFieldReadsAsFree() {
+        // "No robot" is the null id (Long.MAX_VALUE) and nothing else - every build that wrote a station wrote it
+        // for a free one - so a record without the key (hand-built, damaged) is a free station. It used to default
+        // to 0L, which read as taken by a robot that never existed and refused every robot (take() decides by id).
         CompoundTag tag = new CompoundTag();
         tag.putIntArray("pos", new int[] { 1, 2, 3 });
         tag.putByte("side", (byte) Direction.UP.ordinal());
@@ -85,9 +82,8 @@ public class DockingStationPipeTest {
         DockingStationPipe station = new DockingStationPipe();
         station.readFromNbt(tag);
 
-        Assertions.assertEquals(0L, station.linkedId(), "missing robotId defaults to 0L, not the sentinel");
-        Assertions.assertNotEquals(EntityRobotBase.NULL_ROBOT_ID, station.linkedId());
-        Assertions.assertTrue(station.isTaken(), "0L != NULL_ROBOT_ID, so isTaken() reads true despite no robot ever docking");
+        Assertions.assertEquals(EntityRobotBase.NULL_ROBOT_ID, station.linkedId(), "missing robotId is the sentinel");
+        Assertions.assertFalse(station.isTaken(), "...so the station is free");
     }
 
     @Test

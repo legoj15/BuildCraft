@@ -76,6 +76,25 @@ public class RobotRegistryLiveTester {
             return station;
         }
 
+        /** A station read back from {@code tag} the way the registry's load path builds one (no-arg constructor,
+         *  {@code readFromNbt}, then the level), registered so the fixture removes it again. */
+        LiveStation loadedStation(CompoundTag tag) {
+            LiveStation station = new LiveStation();
+            station.readFromNbt(tag);
+            station.world = helper.getLevel();
+            registry.registerStation(station);
+            stations.add(station);
+            return station;
+        }
+
+        /** What a station at this arena's cell wrote when no robot held it, minus the robot-id key. */
+        CompoundTag savedWithoutARobotId(int relX, int relZ, Direction side) {
+            CompoundTag tag = new CompoundTag();
+            new LiveStation(helper.absolutePos(new BlockPos(relX, 2, relZ)), side).writeToNbt(tag);
+            tag.remove("robotId");
+            return tag;
+        }
+
         ResourceId resource(int relX, int relZ) {
             return new ResourceIdBlock(helper.absolutePos(new BlockPos(relX, 1, relZ)));
         }
@@ -422,6 +441,51 @@ public class RobotRegistryLiveTester {
 
             helper.assertFalse(restored.isTaken(), "undocking frees a non-home station whose cached holder is gone");
             helper.assertTrue(home.isTaken(), "...and the robot's home is untouched");
+            helper.succeed();
+        }
+    }
+
+    /** A station whose saved record has no robot id reads back FREE: "no robot" is the null id, and the old default
+     *  of 0 made it look held by a robot that never existed - {@code take()} decides by the holder id, so every robot
+     *  was refused it for good (the old entity comparison took it anyway). Both the key-less record and the 7.1.x
+     *  shape of a free station (an {@code index} compound, the null id written out) must take a robot, as a plain
+     *  claim and as a home, and then hold against the next one. */
+    public static void stationSavedWithoutARobotIdAcceptsARobot(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot a = f.robot();
+            EntityRobot b = f.robot();
+
+            LiveStation visit = f.loadedStation(f.savedWithoutARobotId(1, 1, Direction.UP));
+            helper.assertFalse(visit.isTaken(), "a station saved without a robot id reads back free");
+            helper.assertTrue(visit.take(a), "...and accepts a robot's plain claim");
+            helper.assertTrue(visit.robotTaking() == a && visit.linkedId() == a.getRobotId(),
+                    "...which it then names as its holder");
+            helper.assertFalse(visit.take(b), "...and holds against the next robot");
+            helper.assertTrue(f.registry.stationsReservedBy(a.getRobotId()).contains(indexOf(visit)),
+                    "the claim is in the holder's station index");
+
+            LiveStation home = f.loadedStation(f.savedWithoutARobotId(2, 1, Direction.UP));
+            helper.assertTrue(home.takeAsMain(a), "a key-less station also accepts a robot as its home");
+            helper.assertTrue(home.isMainStation() && home.linkedId() == a.getRobotId(),
+                    "...as a home link to that robot");
+            helper.assertFalse(home.takeAsMain(b), "...which a second robot cannot take over");
+
+            BlockPos pos = helper.absolutePos(new BlockPos(3, 2, 1));
+            CompoundTag upstream = new CompoundTag();
+            CompoundTag index = new CompoundTag();
+            index.putInt("i", pos.getX());
+            index.putInt("j", pos.getY());
+            index.putInt("k", pos.getZ());
+            upstream.put("index", index);
+            upstream.putByte("side", (byte) Direction.UP.ordinal());
+            upstream.putBoolean("isMain", false);
+            upstream.putLong("robotId", EntityRobotBase.NULL_ROBOT_ID);
+            LiveStation old = f.loadedStation(upstream);
+            helper.assertTrue(old.getPos().equals(pos) && old.side() == Direction.UP,
+                    "precondition: the 7.1.x record still gives its position and side");
+            helper.assertFalse(old.isTaken(), "a free station in the 7.1.x shape reads back free");
+            helper.assertTrue(old.take(b), "...and accepts a robot");
+            helper.assertTrue(old.robotTaking() == b, "...which it names as its holder");
             helper.succeed();
         }
     }

@@ -15,6 +15,10 @@ import javax.annotation.Nullable;
  * erases). While it is open no other press does anything, so a second button pressed part-way through can neither
  * restart the stroke nor turn a paint into an erase, and only the release of the starting button ends it: letting go
  * of the other button commits nothing.
+ *
+ * <p>The open stroke follows the cursor through {@link #move}, driven by cursor moves rather than drag events for the
+ * reason {@link ZonePanDrag} gives: a drag stops arriving once any second button has been released, although the
+ * starting button is still down.
  */
 public final class ZonePaintStroke {
 
@@ -46,6 +50,39 @@ public final class ZonePaintStroke {
         }
         button = mouseButton;
         stroke = new Stroke(colorIndex, ZonePaintInput.strokeFor(mouseButton) == ZonePaintInput.PAINT, x, z, x, z);
+        return true;
+    }
+
+    /**
+     * The mouse button that started the open stroke ({@code 0} left, {@code 1} right), or {@link ZonePaintInput#NONE}
+     * between strokes: the button the screen asks whether it is still physically down, for {@link #move}. Not the
+     * latest one pressed, which an open stroke ignores.
+     */
+    public int button() {
+        return stroke == null ? ZonePaintInput.NONE : button;
+    }
+
+    /**
+     * The cursor moved to column {@code (x, z)}: the open stroke follows it, as the twin of
+     * {@link ZonePanDrag#move}. Minecraft's mouse handler keeps one active-button slot and clears it on <em>any</em>
+     * release, and sends drag events only while it is set, so a stroke driven by drag events alone freezes once a
+     * second button has been tapped mid-stroke (hold left with a brush, tap right, keep dragging) although the
+     * starting button is still down. Cursor moves keep arriving, so the screen forwards each one with whether the
+     * starting button is physically held.
+     *
+     * <p>Unlike a pan, a stroke is not dropped when the button turns out not to be held: the release is a separate
+     * event that commits the stroke, and it may be only a moment behind this move (or lost), so a move that finds the
+     * button up changes nothing and leaves the stroke for that release to end.
+     *
+     * @param startingButtonHeld whether {@link #button()} is physically down right now
+     * @return true if the far corner moved (the preview needs rebuilding); false if there is no open stroke, the
+     *         button is not held, or the cursor is still over the corner's column
+     */
+    public boolean move(int x, int z, boolean startingButtonHeld) {
+        if (stroke == null || !startingButtonHeld || (stroke.endX() == x && stroke.endZ() == z)) {
+            return false;
+        }
+        drag(x, z);
         return true;
     }
 

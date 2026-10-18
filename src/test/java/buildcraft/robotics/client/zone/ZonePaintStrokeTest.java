@@ -113,6 +113,81 @@ public class ZonePaintStrokeTest {
         Assertions.assertEquals(new ZonePaintStroke.Stroke(9, false, 4, 4, 4, 4), stroke.current());
     }
 
+    // ---- the stroke follows cursor moves while its own button is held ----
+
+    @Test
+    void theStrokeReportsTheButtonThatOwnsIt() {
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        Assertions.assertEquals(ZonePaintInput.NONE, stroke.button(), "no stroke, no owner");
+
+        stroke.press(LEFT, 5, 0, 0);
+        Assertions.assertEquals(LEFT, stroke.button());
+        stroke.press(RIGHT, 5, 9, 9); // ignored: the stroke stays the left button's
+        Assertions.assertEquals(LEFT, stroke.button(), "the screen must poll the starting button, not the latest");
+        stroke.release(LEFT);
+        Assertions.assertEquals(ZonePaintInput.NONE, stroke.button());
+
+        stroke.press(RIGHT, 5, 0, 0);
+        Assertions.assertEquals(RIGHT, stroke.button());
+    }
+
+    @Test
+    void aCursorMoveWhileTheStartingButtonIsHeldExtendsTheStroke() {
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        stroke.press(LEFT, 5, 10, 20);
+
+        Assertions.assertTrue(stroke.move(14, 22, true), "the far corner moved");
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(5, true, 10, 20, 14, 22), stroke.current());
+        Assertions.assertFalse(stroke.move(14, 22, true), "the same column again moves nothing, so nothing to redraw");
+    }
+
+    @Test
+    void theStrokeKeepsFollowingTheCursorAfterAnotherButtonWasTapped() {
+        // Minecraft's mouse handler clears its active button on ANY release, so after a right tap the screen gets
+        // cursor moves but no more drag events: the stroke has to follow the moves.
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        stroke.press(LEFT, 5, 10, 20);
+        Assertions.assertTrue(stroke.move(12, 12, true));
+
+        Assertions.assertFalse(stroke.press(RIGHT, 7, 99, 99), "the tap's press is ignored");
+        Assertions.assertNull(stroke.release(RIGHT), "and so is its release");
+        Assertions.assertTrue(stroke.move(30, 31, true), "the left button is still down, so the moves still count");
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(5, true, 10, 20, 30, 31), stroke.current());
+
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(5, true, 10, 20, 30, 31), stroke.release(LEFT));
+    }
+
+    @Test
+    void aCursorMoveAfterTheStartingButtonWasLetGoChangesNothingAndDropsNothing() {
+        // Unlike a pan, a stroke is worth committing: a move that finds the button already up (its release event
+        // still on the way to the screen, or lost) must neither extend the stroke nor throw it away.
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        stroke.press(LEFT, 5, 10, 20);
+        stroke.move(12, 12, true);
+
+        Assertions.assertFalse(stroke.move(40, 40, false));
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(5, true, 10, 20, 12, 12), stroke.current());
+        Assertions.assertTrue(stroke.isOpen(), "still open: the release event, when it arrives, commits it");
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(5, true, 10, 20, 12, 12), stroke.release(LEFT));
+    }
+
+    @Test
+    void aCursorMoveWithNoStrokeOpenDoesNothing() {
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        Assertions.assertFalse(stroke.move(5, 5, true));
+        Assertions.assertFalse(stroke.isOpen(), "a stray move does not conjure a stroke up");
+        Assertions.assertNull(stroke.current());
+    }
+
+    @Test
+    void aRightButtonEraseFollowsTheCursorToo() {
+        ZonePaintStroke stroke = new ZonePaintStroke();
+        stroke.press(RIGHT, 2, 0, 0);
+        Assertions.assertTrue(stroke.move(6, 7, true));
+        ZonePaintStroke.Stroke done = stroke.release(RIGHT);
+        Assertions.assertEquals(new ZonePaintStroke.Stroke(2, false, 0, 0, 6, 7), done);
+    }
+
     @Test
     void cancelDropsTheStrokeWithoutCommitting() {
         ZonePaintStroke stroke = new ZonePaintStroke();

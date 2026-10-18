@@ -135,6 +135,39 @@ public class LegacySavedDataTester {
         //?}
     }
 
+    /**
+     * The volume boxes' 26.1+ type builds its data (fresh and decoded) for the level the storage hands it, not for the
+     * level its builder was given. {@code createType(world)} used to close over its argument, so a type built for one
+     * level and handed to another level's storage would have put its boxes in the wrong world; the argument is only
+     * meaningful before 26.1 (the older factories get no level). A type built for NO level shows it: the data it makes
+     * for the storage's level must still carry that level.
+     */
+    public static void volumeBoxesTypeBuildsForTheStoragesLevel(GameTestHelper helper) {
+        //? if >=26.1 {
+        ServerLevel level = helper.getLevel();
+        SavedDataType<LevelSavedDataVolumeBoxes> type = LevelSavedDataVolumeBoxes.createType(null);
+
+        LevelSavedDataVolumeBoxes fresh = type.factory().create(level);
+        helper.assertTrue(fresh.world == level,
+                "fresh data must belong to the level the storage gave the factory, got " + fresh.world);
+
+        CompoundTag stored = new CompoundTag();
+        net.minecraft.nbt.ListTag boxes = new net.minecraft.nbt.ListTag();
+        boxes.add(new VolumeBox(level, new BlockPos(1, 64, 1)).writeToNBT());
+        stored.put("volumeBoxes", boxes);
+        LevelSavedDataVolumeBoxes decoded = type.codecFactory().create(level).parse(NbtOps.INSTANCE, stored)
+                .result().orElseThrow();
+        helper.assertTrue(decoded.world == level,
+                "decoded data must belong to the level the storage gave the codec factory, got " + decoded.world);
+        helper.assertTrue(decoded.volumeBoxes.size() == 1 && decoded.volumeBoxes.get(0).world == level,
+                "...and so must each box in it");
+        helper.succeed();
+        //?} else {
+        /*// Before 26.1 the factories are handed no level: nothing to test.
+        helper.succeed();*/
+        //?}
+    }
+
     //? if >=26.1 {
     private static void writeSavedDataFile(Path file, int value, int dataVersion) throws IOException {
         Files.createDirectories(file.getParent());

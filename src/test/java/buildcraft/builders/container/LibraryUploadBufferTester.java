@@ -273,6 +273,59 @@ public class LibraryUploadBufferTester {
     }
 
     @Test
+    public void aFreshRequestEndsTheIgnoringOfAStreamThatNeverFinished() {
+        // The request was withdrawn mid-stream and the client never sent the final chunk (modified, or wedged): the
+        // ignoring of its tail would last until one goes by, and so swallow the next honest upload whole.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
+        buffer.release();
+        Assertions.assertNull(buffer.accept(false, bytes(9)), "until then the late tail is ignored");
+
+        buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(false, bytes(3, 4)), "more to come");
+        Assertions.assertArrayEquals(bytes(3, 4, 5), buffer.accept(true, bytes(5)),
+            "the next request's upload is kept whole and in order");
+        Assertions.assertEquals(0, buffer.droppedUploads(), "a fresh request is not a refusal");
+    }
+
+    @Test
+    public void aFreshRequestEndsTheIgnoringOfAnOverflowThatNeverFinished() {
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(false, new byte[LIMITS.maxUploadBytes() + 1]));
+        Assertions.assertEquals(1, buffer.droppedUploads(), "the overflow is dropped...");
+        Assertions.assertNull(buffer.accept(true, bytes(1)), "...and the rest of that stream ignored");
+        Assertions.assertNull(buffer.accept(false, new byte[LIMITS.maxUploadBytes() + 1]));
+        // Dropped again, and this time the client never finishes the stream.
+
+        buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(2, 3), buffer.accept(true, bytes(2, 3)),
+            "the next request's upload is not swallowed by the overflow before it");
+        Assertions.assertEquals(2, buffer.droppedUploads(), "starting a request drops nothing more");
+    }
+
+    @Test
+    public void aFreshRequestEndsTheIgnoringOfAnUnaskedStreamThatNeverFinished() {
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        buffer.skip(false); // chunks arrived when nothing was asked for, and the sender never says it is done
+
+        buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(7), buffer.accept(true, bytes(7)));
+    }
+
+    @Test
+    public void aFreshRequestDropsTheChunksAnEarlierOneLeftHeld() {
+        // No release came between (the previous request's chunks are still here): they are not glued onto the new one.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
+        Assertions.assertEquals(2, buffer.bufferedBytes());
+
+        buffer.beginRequest();
+        Assertions.assertEquals(0, buffer.bufferedBytes(), "the held chunks are dropped");
+        Assertions.assertEquals(0, buffer.bufferedChunks());
+        Assertions.assertArrayEquals(bytes(3), buffer.accept(true, bytes(3)), "and the new upload starts clean");
+    }
+
+    @Test
     public void releasingABufferHoldingNothingLeavesTheNextUploadAlone() {
         // No stream was in flight, so there is no tail to ignore: the next one is a fresh upload, not its leftovers.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);

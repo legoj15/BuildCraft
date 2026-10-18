@@ -155,6 +155,12 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         if (upload != null) upload.release();
     }
 
+    /** The tile is asking this menu's player for an upload: nothing an earlier request left behind (half a stream, or
+     *  ignoring the tail of one that never ended) carries over into the answer. Server side. */
+    public void beginUploadRequest() {
+        if (upload != null) upload.beginRequest();
+    }
+
     /** What one upload to this menu may hold. */
     public LibraryUploadBuffer.Limits getUploadLimits() {
         return upload().limits();

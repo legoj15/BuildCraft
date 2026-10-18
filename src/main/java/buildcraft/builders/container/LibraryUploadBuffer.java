@@ -150,6 +150,18 @@ public final class LibraryUploadBuffer {
         skip(false);
     }
 
+    /**
+     * A fresh request for an upload is going out to the player this buffer belongs to: nothing left over from an
+     * earlier request's stream is part of the answer to it, so the chunks held are dropped and so is any ignoring of
+     * a stream's tail ({@link #release}, {@link #skip}, an overflow). Without this the ignoring lasts until a final
+     * chunk goes by, and a client that never sends one (modified, or wedged) swallows the next honest upload whole.
+     * Not counted as {@link #droppedUploads() dropped}.
+     */
+    void beginRequest() {
+        reset();
+        discarding = false;
+    }
+
     /** Uploads dropped for going past the limits since this buffer was made. */
     int droppedUploads() {
         return dropped;

@@ -562,6 +562,55 @@ public class ElectronicLibraryTester {
     }
 
     /**
+     * A withdrawn request whose stream never finishes (a modified or wedged client sends its first chunks and then
+     * nothing) does not poison the menu: the menu ignores the tail of a withdrawn stream up to its final chunk, and a
+     * final chunk that never comes used to leave that ignoring armed for good, so the next request's honest upload
+     * (every chunk of it, the final one included) was swallowed and the request had to time out and be asked again.
+     * A fresh request now clears it: the next upload of the same menu makes its item.
+     */
+    public static void testWedgedWithdrawnStreamDoesNotEatTheNextUpload(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        TileElectronicLibrary tile = libraryAt(helper, pos);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary menu = watcher(helper, tile, player);
+
+        Template wanted = template(0, 2, 4);
+        Template other = template(1);
+        GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
+        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        tile.selected = wanted.key;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the first request", tile::isUploadRequested, () -> {
+                sendChunk(menu, false, chunk);
+                sendChunk(menu, false, chunk);
+                tile.selected = other.key; // the request is no longer wanted, and the client never finishes its stream
+            }),
+            new Step("the withdrawn request", () -> !tile.isUploadRequested(), () -> {
+                assertTrue(menu.getBufferedUploadBytes() == 0, "the withdrawn stream's chunks are freed");
+                tile.selected = wanted.key;
+            }),
+            new Step("the second request", tile::isUploadRequested, () -> {
+                try {
+                    sendUpload(menu, wanted);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertFalse(tile.isUploadRefused(), "an honest upload is not refused for what came before it");
+                assertFalse(tile.invUpOut.getStackInSlot(0).isEmpty(),
+                    "the honest upload of the next request made its item, not swallowed by the unfinished stream");
+                assertFalse(tile.isUploadRequested(), "and answered the request");
+            }));
+        runSteps(helper, 330, steps, () -> {
+            tile.onPlayerClose(player);
+            store.removeSnapshot(wanted.key);
+            store.removeSnapshot(other.key);
+        });
+    }
+
+    /**
      * An unreadable or wrong upload from one watcher ends that watcher's answer, not the tile's request: another
      * watcher's good answer still makes the item, the first watcher's later answers to the same request are not
      * taken, and only when every watcher has been refused (or has left) is the build marked refused.

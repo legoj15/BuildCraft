@@ -314,6 +314,8 @@ public class TileElectronicLibrary extends TileBC_Neptune implements IBCMenuProv
             // A watcher whose answer for this build was refused is not asked for it again.
             if (knownBad && uploadRefusedBy.contains(p)) continue;
             if (p.containerMenu instanceof ContainerElectronicLibrary container) {
+                // A fresh request: whatever an earlier one left in this watcher's menu is not part of the answer.
+                container.beginUploadRequest();
                 container.sendMessage(ContainerElectronicLibrary.NET_UPLOAD_REQUEST, buf -> key.writeToByteBuf(buf));
                 asked = true;
             }

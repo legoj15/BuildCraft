@@ -650,6 +650,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:library_uploads_answer_only_their_request", () -> buildcraft.builders.ElectronicLibraryTester::testUploadsAnswerOnlyTheirRequest);
         reg.accept("buildcraftunofficial:library_withdrawn_request_releases_buffers", () -> buildcraft.builders.ElectronicLibraryTester::testWithdrawnRequestReleasesBuffers);
         reg.accept("buildcraftunofficial:library_bad_stream_aborts_only_its_watcher", () -> buildcraft.builders.ElectronicLibraryTester::testBadStreamAbortsOnlyItsWatcher);
+        reg.accept("buildcraftunofficial:library_wedged_stream_does_not_eat_next_upload", () -> buildcraft.builders.ElectronicLibraryTester::testWedgedWithdrawnStreamDoesNotEatTheNextUpload);
 
         // Block drops — every BuildCraft block should drop itself + its real inventory
         // when broken with the correct tool, drop only its inventory when broken by
@@ -1030,6 +1031,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:legacy_saved_data_empty_current_is_recovered", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeRecoversTheLegacyDataOverAnEmptyCurrentFile);
         reg.accept("buildcraftunofficial:legacy_saved_data_content_current_wins_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeKeepsACurrentFileWithContent);
         reg.accept("buildcraftunofficial:legacy_saved_data_legacy_alone_migrates_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeMigratesALegacyFileAlone);
+        // The volume boxes' 26.1+ type builds for the level the storage hands it, not the one its builder was given.
+        reg.accept("buildcraftunofficial:legacy_saved_data_volume_boxes_use_storage_level", () -> buildcraft.lib.misc.LegacySavedDataTester::volumeBoxesTypeBuildsForTheStoragesLevel);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the
@@ -1168,6 +1171,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_builder_board_keeps_cargo_on_failed_flight", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardKeepsCargoWhenTheFlightFails);
         reg.accept("buildcraftunofficial:robot_builder_board_skips_builder_beyond_flight_reach", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSkipsBuilderBeyondFlightReach);
         reg.accept("buildcraftunofficial:robot_builder_board_sleeps_without_power_station", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardSleepsWhenNoPowerStationIsFree);
+        reg.accept("buildcraftunofficial:robot_builder_board_no_cargo_dump_into_other_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardDoesNotDumpCargoIntoABuilderThatWantsSomethingElse);
+        reg.accept("buildcraftunofficial:robot_builder_board_inserts_only_required", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardInsertsOnlyWhatTheBuilderRequires);
+        reg.accept("buildcraftunofficial:robot_builder_board_fetches_only_in_reach_of_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardFetchesOnlyFromStationsInReachOfTheBuilder);
+        reg.accept("buildcraftunofficial:robot_builder_board_gives_up_on_unreachable_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardGivesUpOnABuilderItCanNeverReach);
         reg.accept("buildcraftunofficial:robot_bomber_drops_exactly_one_tnt", () -> buildcraft.robotics.boards.BomberBoardTester::bomberDropsExactlyOneTnt);
         reg.accept("buildcraftunofficial:robot_armour_scales_damage_debit", () -> buildcraft.robotics.entity.RobotWearablesTester::armourScalesTheDamageDebit);
         reg.accept("buildcraftunofficial:robot_creative_equip_keeps_held_item", () -> buildcraft.robotics.entity.RobotWearablesTester::creativeEquipKeepsTheHeldItem);

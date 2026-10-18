@@ -16,21 +16,30 @@ import buildcraft.robotics.IStationFilter;
 
 /** Finds a station the robot can LOAD {@code quantity} items matching {@code filter} from, and flies to it.
  *  The station search uses {@link AIRobotLoad#load} as a dry-run predicate, so only a station with enough
- *  compatible supply is a candidate. */
+ *  compatible supply is a candidate. An optional {@code stationFilter} narrows the candidates further (a board
+ *  that has somewhere to take the cargo next only wants stations it can leave for there). */
 public class AIRobotGotoStationToLoad extends AIRobot {
 
     private IStackFilter filter;
     private int quantity;
+    private IStationFilter stationFilter;
 
     public AIRobotGotoStationToLoad(IRobotAccess iRobot) {
         super(iRobot);
     }
 
     public AIRobotGotoStationToLoad(IRobotAccess iRobot, IStackFilter iFilter, int iQuantity) {
+        this(iRobot, iFilter, iQuantity, null);
+    }
+
+    /** @param iStationFilter an extra condition a candidate station must meet, or null for none */
+    public AIRobotGotoStationToLoad(IRobotAccess iRobot, IStackFilter iFilter, int iQuantity,
+            IStationFilter iStationFilter) {
         this(iRobot);
 
         filter = iFilter;
         quantity = iQuantity;
+        stationFilter = iStationFilter;
     }
 
     @Override
@@ -50,7 +59,8 @@ public class AIRobotGotoStationToLoad extends AIRobot {
 
         @Override
         public boolean matches(DockingStation station) {
-            return AIRobotLoad.load(robot, station, filter, quantity, false);
+            return (stationFilter == null || stationFilter.matches(station))
+                    && AIRobotLoad.load(robot, station, filter, quantity, false);
         }
     }
 }

@@ -56,11 +56,14 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     // The SavedDataType uses CompoundTag.CODEC to persist the raw tag, and we
     // decode it manually because VolumeBox needs a Level reference.
     //? if >=26.1 {
+    // 26.1+: `world` is unused. The storage hands both factories the level it belongs to, and the data is built for
+    // that one (as RobotRegistry, SavedDataWireSystems and the marker types do). The parameter stays so the call
+    // sites and tests read the same on every node; before 26.1 the factories get no level and close over it.
     public static SavedDataType<LevelSavedDataVolumeBoxes> createType(Level world) {
         return buildcraft.lib.misc.LegacySavedData.type(
                 DATA_NAME,
-                level -> new LevelSavedDataVolumeBoxes(world),
-                level -> buildCodec(world),
+                level -> new LevelSavedDataVolumeBoxes(level),
+                level -> buildCodec(level),
                 net.minecraft.util.datafix.DataFixTypes.LEVEL
         );
     }

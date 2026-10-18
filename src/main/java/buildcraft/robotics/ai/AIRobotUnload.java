@@ -16,7 +16,8 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.transport.IInjectable;
 
-/** Pushes the robot's cargo out through the docked station's item output. The station's
+/** Pushes the robot's cargo out through the docked station's item output, and its held item too when the unload was
+ *  asked to empty the hand ({@link #AIRobotUnload(IRobotAccess, boolean)}). The station's
  *  {@code canRobotAcceptItem} policy (D1) gates each stack where {@code ActionRobotFilter} did — Ph6 gave
  *  {@code DockingStationPipe} the 7.1.x gate semantics, so a gateless station refuses (accept-items action
  *  required). Modern {@code IInjectable.injectItem} returns the leftover {@code ItemStack} (7.1.x returned
@@ -24,9 +25,19 @@ import buildcraft.api.transport.IInjectable;
 public class AIRobotUnload extends AIRobot {
 
     private int waitedCycles = 0;
+    private final boolean emptiesHand;
 
+    /** Unloads the robot's cargo: succeeds once the cargo slots are empty, whatever the hand holds. What the carrier,
+     *  picker and dispose AIs ask for. */
     public AIRobotUnload(IRobotAccess iRobot) {
+        this(iRobot, false);
+    }
+
+    /** @param emptiesHand whether the hand is part of what was asked for, as it is when a combat or break board gets
+     *      rid of a worn tool: success then also needs the hand empty, not just the cargo */
+    public AIRobotUnload(IRobotAccess iRobot, boolean emptiesHand) {
         super(iRobot);
+        this.emptiesHand = emptiesHand;
     }
 
     @Override
@@ -37,7 +48,9 @@ public class AIRobotUnload extends AIRobot {
             if (unload(robot, robot.getDockingStation(), true)) {
                 waitedCycles = 0;
             } else {
-                setSuccess(!robot.containsItems());
+                // The cargo slots, and the hand too when the hand was part of the ask (containsItems never looks at
+                // it): a worn tool the station would not take is a failed unload, not a successful one.
+                setSuccess(!robot.containsItems() && !(emptiesHand && !robot.getHeldItem().isEmpty()));
                 terminate();
             }
         }

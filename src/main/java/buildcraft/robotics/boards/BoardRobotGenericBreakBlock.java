@@ -45,7 +45,7 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
                             && isExpectedTool(stack)));
         } else if (!held.isEmpty() && held.isDamageableItem()
                 && held.getDamageValue() >= held.getMaxDamage()) {
-            startDelegateAI(new AIRobotGotoStationAndUnload(robot));
+            startDelegateAI(AIRobotGotoStationAndUnload.forHeldItem(robot));
         } else if (blockFound() != null) {
             startDelegateAI(new AIRobotBreak(robot, blockFound()));
         } else {

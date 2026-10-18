@@ -1045,7 +1045,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_rig_picker_nbt", () -> buildcraft.robotics.RobotStationRigTester::pickerNbtRig);
         reg.accept("buildcraftunofficial:robot_station_rig_picker_orphaned", () -> buildcraft.robotics.RobotStationRigTester::pickerOnOrphanedStation);
         reg.accept("buildcraftunofficial:robot_station_unloaded_home_keeps_robot_working", () -> buildcraft.robotics.RobotStationRigTester::unloadedHomeKeepsTheRobotWorking);
-        reg.accept("buildcraftunofficial:robot_station_pipe_filled_away_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeFilledAwayDeregistersItsStation);
+        reg.accept("buildcraftunofficial:robot_station_search_skips_unloaded_station", () -> buildcraft.robotics.RobotStationRigTester::searchSkipsAStationInAnUnloadedChunk);
+        reg.accept("buildcraftunofficial:robot_station_pipe_filled_away_deregisters",() -> buildcraft.robotics.RobotStationRigTester::pipeFilledAwayDeregistersItsStation);
         reg.accept("buildcraftunofficial:robot_station_rig_planter_api", () -> buildcraft.robotics.RobotStationRigTester::planterApiRig);
         reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup",() -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);

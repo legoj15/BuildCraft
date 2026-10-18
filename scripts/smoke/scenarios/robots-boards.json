@@ -480,10 +480,10 @@
       "echo": true
     },
     {
-      "label": "crops planted on the plot (count; destructive)",
+      "label": "crops planted in the zone, plot + replanted row (count; destructive; about 5 per 75 s is 7.1.x pace)",
       "do": "cmd",
       "run": [
-        "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+8} minecraft:air replace minecraft:wheat"
+        "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"
       ],
       "allowFail": true,
       "echo": true

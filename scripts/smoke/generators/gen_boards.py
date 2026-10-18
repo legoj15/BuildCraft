@@ -71,7 +71,7 @@ S.append(echo("unnamed cows left (expect fail)", "execute if entity @e[type=mine
 S.append(echo("iron ore left (expect fail)", "execute if block {X+8} {Y} {Z+5} minecraft:iron_ore"))
 S.append(echo("plain stone in the ore patch untouched (expect pass)", "execute if block {X+8} {Y} {Z+6} minecraft:stone"))
 S.append(echo("gravel dug (expect fail)", "execute if block {X+14} {Y} {Z+5} minecraft:gravel"))
-S.append(echo("crops planted on the plot (count; destructive)", "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+8} minecraft:air replace minecraft:wheat"))
+S.append(echo("crops planted in the zone, plot + replanted row (count; destructive; about 5 per 75 s is 7.1.x pace)", "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"))
 S.append(echo("farmland tilled on the plot (count; destructive)", "fill {X-11} {Y-1} {Z+4} {X-5} {Y-1} {Z+8} minecraft:dirt replace minecraft:farmland"))
 S.append(echo("ripe wheat harvested (expect fail)", "execute if block {X-11} {Y} {Z+9} minecraft:wheat[age=7]"))
 S.append(echo("front floor outside zones intact (expect pass)", "execute if blocks {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+2} {X-16} {Y-1} {Z-8} all"))

@@ -217,6 +217,26 @@ public class AIRobotGotoStationTest {
     }
 
     @Test
+    public void aGotoSavedWithAnOutOfRangeSideReloadsStationless() {
+        // A corrupt or 7.1.x-era side byte (ForgeDirection.UNKNOWN was 6) names no real face. Substituting NORTH
+        // would fly the robot to, and claim, whatever station sits on that face; the station and request readers
+        // refuse such a byte, so the goto does too.
+        CompoundTag tag = new CompoundTag();
+        tag.putIntArray("stationIndex", new int[] { STATION.getX(), STATION.getY(), STATION.getZ() });
+        tag.putByte("stationSide", (byte) 6);
+        registry.station = new StubStation(STATION, Direction.NORTH);
+
+        TrackedGotoStation reloaded = new TrackedGotoStation(robot, null);
+        reloaded.loadSelfFromNBT(tag);
+        reloaded.start();
+        Assertions.assertTrue(reloaded.ended, "a goto with no real station face ends at once");
+        Assertions.assertFalse(reloaded.success(), "…as a failure, not a flight to the north face");
+        CompoundTag again = new CompoundTag();
+        reloaded.writeSelfToNBT(again);
+        Assertions.assertFalse(again.contains("stationIndex"), "and saves again as stationless");
+    }
+
+    @Test
     public void aGotoLoadedWithoutAStationSavesAgainWithoutCrashing() {
         // A robot migrated from a save whose goto carried no station (e.g. the 7.1.x legacy name) loads with no
         // station; the next entity save must not NPE on it.

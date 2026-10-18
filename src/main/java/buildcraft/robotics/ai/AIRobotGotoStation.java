@@ -257,16 +257,14 @@ public class AIRobotGotoStation extends AIRobot {
     @Override
     public void loadSelfFromNBT(CompoundTag nbt) {
         int[] pos = NBTUtilBC.getIntArray(nbt, "stationIndex", new int[0]);
-        if (pos.length == 3) {
-            stationIndex = new BlockPos(pos[0], pos[1], pos[2]);
-        }
-        // Bounds-check the side byte: a corrupt or pre-1.13 save could hold an out-of-range ordinal, and the
-        // AI must not crash the whole robot on load.
+        // Bounds-check the side byte: a corrupt or 7.1.x-era save could hold an out-of-range ordinal
+        // (ForgeDirection.UNKNOWN was 6). Such a goto names no real station face, so it loads stationless and
+        // fails at start, as DockingStation.readFromNbt and StackRequest.loadFromNBT refuse the same byte;
+        // substituting a face would fly the robot to, and claim, whatever station sits there.
         int sideOrd = NbtApiUtil.getByte(nbt, "stationSide", (byte) 0) & 0xFF;
-        if (sideOrd >= 0 && sideOrd < Direction.values().length) {
+        if (pos.length == 3 && sideOrd < Direction.values().length) {
+            stationIndex = new BlockPos(pos[0], pos[1], pos[2]);
             stationSide = Direction.values()[sideOrd];
-        } else {
-            stationSide = Direction.NORTH;
         }
         // Absent in every save written before the flag was kept: those read back as the plain visit they reloaded as.
         takeAsMain = NbtApiUtil.getBoolean(nbt, "takeAsMain", false);

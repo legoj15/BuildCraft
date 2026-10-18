@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.misc.data.Box;
+import buildcraft.lib.test.EntityArenaUtil;
 
 /**
  * Game tests for the oil-generation pipeline's structure primitives:
@@ -114,20 +115,66 @@ public class OilGenStructureTester {
         helper.succeed();
     }
 
+    /** Side of the flat floor the surface-pool tests lay: wide enough for the largest medium pool (radius 8). */
+    private static final int POOL_FLOOR_SPAN = 24;
+
+    /** Relative y of that floor: above every arena, so it cannot overwrite (or be covered by) another test's blocks. */
+    private static final int POOL_FLOOR_Y = EntityArenaUtil.ABOVE_ARENAS_Y;
+
+    /** Lays the {@link #POOL_FLOOR_SPAN}-square stone floor the surface-pool tests generate on. It is far wider than
+     *  the test's own 6x7 cell, so where it goes decides which other tests it overwrites: see
+     *  {@link EntityArenaUtil#ABOVE_ARENAS_Y}. */
+    private static void layPoolFloor(GameTestHelper helper) {
+        for (int dx = 0; dx < POOL_FLOOR_SPAN; dx++) {
+            for (int dz = 0; dz < POOL_FLOOR_SPAN; dz++) {
+                helper.setBlock(new BlockPos(dx, POOL_FLOOR_Y, dz), Blocks.STONE);
+            }
+        }
+    }
+
+    /**
+     * The pool floor must leave every block of the test's own arena cell alone. The arenas of one batch run at the
+     * same time on a grid 6 apart in X and 7 apart in Z, so a 24x24 floor at the arena's own level overwrote the
+     * cells of up to fifteen neighbours with stone, whenever it was laid after a neighbour had built its rig: the
+     * chest of {@code pipe_force_insert_entry_leg} turned to stone one tick into that test and the emerald it had
+     * force-inserted was dropped, one run in about forty. Fills the cell with glass, lays the floor, and fails on the
+     * first block that is no longer glass.
+     */
+    public static void testPoolFloorSparesTheArenaCell(GameTestHelper helper) {
+        try {
+            forEachCellPos(pos -> helper.setBlock(pos, Blocks.GLASS));
+            layPoolFloor(helper);
+            forEachCellPos(pos -> {
+                if (!helper.getBlockState(pos).is(Blocks.GLASS)) {
+                    helper.fail("The pool floor overwrote the arena cell at " + pos + " with "
+                            + helper.getBlockState(pos) + " - it must be laid above the arenas");
+                }
+            });
+        } finally {
+            forEachCellPos(pos -> helper.setBlock(pos, Blocks.AIR));
+        }
+        helper.succeed();
+    }
+
+    private static void forEachCellPos(java.util.function.Consumer<BlockPos> action) {
+        for (int x = 0; x < EntityArenaUtil.CELL_SIZE_X; x++) {
+            for (int y = 0; y < EntityArenaUtil.CELL_SIZE_Y; y++) {
+                for (int z = 0; z < EntityArenaUtil.CELL_SIZE_Z; z++) {
+                    action.accept(new BlockPos(x, y, z));
+                }
+            }
+        }
+    }
+
     /**
      * SurfacePool produces a roughly-circular oil footprint with mild radial noise:
      * centre cell is oil, far corners are unchanged. Exercises the new disc-with-noise
      * pattern.
      */
     public static void testSurfacePoolCleanShape(GameTestHelper helper) {
-        // Flat stone floor at relative y=1 (so the heightmap sees it as the surface).
-        int floorY = 1;
-        int span = 24;
-        for (int dx = 0; dx < span; dx++) {
-            for (int dz = 0; dz < span; dz++) {
-                helper.setBlock(new BlockPos(dx, floorY, dz), Blocks.STONE);
-            }
-        }
+        // Flat stone floor (so the surface scan finds it as the surface).
+        int floorY = POOL_FLOOR_Y;
+        layPoolFloor(helper);
         // Centre the pool at relative (12, floorY, 12). The factory takes absolutes.
         BlockPos relativeCenter = new BlockPos(12, floorY, 12);
         BlockPos absCenter = helper.absolutePos(relativeCenter);
@@ -160,13 +207,8 @@ public class OilGenStructureTester {
      * logs in early in-client testing) and asserts the entire trunk is cleared.
      */
     public static void testSurfacePoolClearsTallTreeFully(GameTestHelper helper) {
-        int floorY = 1;
-        int span = 24;
-        for (int dx = 0; dx < span; dx++) {
-            for (int dz = 0; dz < span; dz++) {
-                helper.setBlock(new BlockPos(dx, floorY, dz), Blocks.STONE);
-            }
-        }
+        int floorY = POOL_FLOOR_Y;
+        layPoolFloor(helper);
         BlockPos relativeCenter = new BlockPos(12, floorY, 12);
         for (int dy = 1; dy <= 15; dy++) {
             helper.setBlock(relativeCenter.above(dy), Blocks.JUNGLE_LOG);

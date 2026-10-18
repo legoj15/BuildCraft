@@ -84,7 +84,14 @@ public class PipeFlowForceInsertTester {
             return;
         }
 
-        EntityArenaUtil.tickUntil(helper, 200, () -> !chest.isEmpty(), () -> {
+        // The rig is rebuilt by nobody once the item is in flight, so a chest that stops being a chest was
+        // overwritten from outside (another test of the same batch writing across its cell): say so, instead of
+        // the item being dropped at the pipe end and the poll timing out with a message that blames the pipes.
+        EntityArenaUtil.tickUntil(helper, 200, () -> {
+            helper.assertTrue(helper.getBlockState(chestPos).is(Blocks.CHEST),
+                "the rig's chest was overwritten by another test (now " + helper.getBlockState(chestPos) + ")");
+            return !chest.isEmpty();
+        }, () -> {
             helper.assertTrue(flowA.getAllItemsForRender().isEmpty(), "item should have left pipe A");
             PipeFlowItems flowB = (PipeFlowItems) tileB.getPipe().getFlow();
             helper.assertTrue(flowB.getAllItemsForRender().isEmpty(), "item should have left pipe B");

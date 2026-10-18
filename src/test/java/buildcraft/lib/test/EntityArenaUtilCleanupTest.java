@@ -184,6 +184,68 @@ public class EntityArenaUtilCleanupTest {
         Assertions.assertEquals(List.of("cleanup"), log);
     }
 
+    /** The condition first comes true on the poll's very last tick (a zero gap lets the poll get that far: the
+     *  pre-first-phase give-up check only trips {@code gapTicks} ticks before the end). Phase one used to fire,
+     *  the poll kept going, and no tick was left to run phase two or the cleanup: the test then died at the
+     *  framework timeout with its entities still in the level. It must fail with its own message and clean up. */
+    @Test
+    void twoPhaseConditionTrueOnLastTickFailsAndCleansUp() {
+        FakeTicks ticks = new FakeTicks();
+        List<String> log = new ArrayList<>();
+        int[] polls = { 0 };
+        EntityArenaUtil.schedulePollThen(ticks, EntityArenaUtilCleanupTest::fail, 5,
+                () -> ++polls[0] >= 5, () -> log.add("first"), 0, () -> log.add("second"), "came true too late",
+                () -> log.add("cleanup"));
+        ticks.runAll();
+        Assertions.assertNotNull(ticks.thrown, "the poll must fail on its last tick, not fall through to the timeout");
+        Assertions.assertTrue(ticks.thrown.getMessage().startsWith("came true too late"), ticks.thrown.getMessage());
+        Assertions.assertEquals(List.of("cleanup"), log, "no first phase without a tick left for the second");
+    }
+
+    /** The degenerate poll of a single tick: whichever way the condition goes, tick 1 is the last tick. */
+    @Test
+    void twoPhaseSingleTickPollFailsAndCleansUpEvenWhenTheConditionIsTrue() {
+        FakeTicks ticks = new FakeTicks();
+        List<String> log = new ArrayList<>();
+        EntityArenaUtil.schedulePollThen(ticks, EntityArenaUtilCleanupTest::fail, 1,
+                () -> true, () -> log.add("first"), 1, () -> log.add("second"), "one tick is not enough",
+                () -> log.add("cleanup"));
+        ticks.runAll();
+        Assertions.assertNotNull(ticks.thrown);
+        Assertions.assertTrue(ticks.thrown.getMessage().startsWith("one tick is not enough"),
+                ticks.thrown.getMessage());
+        Assertions.assertEquals(List.of("cleanup"), log);
+    }
+
+    /** Every poll length, gap and moment the condition comes true: the poll must end in exactly one of two states,
+     *  never a silent dead end. Either both phases ran and the cleanup ran once after them, or it failed with the
+     *  cleanup run once (after whatever had run). */
+    @Test
+    void twoPhaseAlwaysEndsWithCleanupExactlyOnce() {
+        for (int maxTicks = 1; maxTicks <= 8; maxTicks++) {
+            for (int gap = 0; gap <= 9; gap++) {
+                for (int trueAt = 1; trueAt <= maxTicks + 1; trueAt++) {
+                    FakeTicks ticks = new FakeTicks();
+                    List<String> log = new ArrayList<>();
+                    int[] polls = { 0 };
+                    final int at = trueAt;
+                    EntityArenaUtil.schedulePollThen(ticks, EntityArenaUtilCleanupTest::fail, maxTicks,
+                            () -> ++polls[0] >= at, () -> log.add("first"), gap, () -> log.add("second"), "gave up",
+                            () -> log.add("cleanup"));
+                    ticks.runAll();
+                    String label = "maxTicks=" + maxTicks + " gap=" + gap + " trueAt=" + trueAt + " log=" + log;
+                    Assertions.assertEquals(1, log.stream().filter("cleanup"::equals).count(), label);
+                    Assertions.assertEquals("cleanup", log.get(log.size() - 1), label);
+                    if (log.contains("second")) {
+                        Assertions.assertNull(ticks.thrown, label);
+                    } else {
+                        Assertions.assertNotNull(ticks.thrown, label);
+                    }
+                }
+            }
+        }
+    }
+
     /** A gap at least as long as the poll: the first phase fires on tick 1, but the second would land past
      *  {@code maxTicks}. The poll must still fail with its own message on its last tick and clean up, instead of
      *  leaving the test to the framework's generic timeout with its entities still in the level. */

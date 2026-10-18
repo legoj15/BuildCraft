@@ -7,6 +7,7 @@
 package buildcraft.robotics.zone;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
@@ -92,6 +93,61 @@ public class ZoneChunk {
         return result;
     }
 
+    /** Receives one marked column of a chunk, as chunk-local coordinates 0-15. */
+    @FunctionalInterface
+    public interface ColumnVisitor {
+        void visit(int xChunk, int zChunk);
+    }
+
+    /** Visits every marked column, in the order {@link #getAll()} lists them, without allocating (a full-survey
+     *  layer holds millions of columns, so a per-column array is not affordable on a render path). */
+    public void forEachSet(ColumnVisitor visitor) {
+        if (fullSet) {
+            for (int z = 0; z < 16; z++) {
+                for (int x = 0; x < 16; x++) {
+                    visitor.visit(x, z);
+                }
+            }
+        } else if (property != null) {
+            for (int bit = property.nextSetBit(0); bit >= 0 && bit < BITS; bit = property.nextSetBit(bit + 1)) {
+                visitor.visit(bit & 15, bit >> 4);
+            }
+        }
+    }
+
+    /** The marked columns of one row (fixed {@code zChunk}) as a 16-bit mask, bit {@code x} for column {@code x}. */
+    public int rowBits(int zChunk) {
+        if (fullSet) {
+            return 0xFFFF;
+        }
+        if (property == null) {
+            return 0;
+        }
+        int end = (zChunk + 1) << 4;
+        int row = 0;
+        for (int bit = property.nextSetBit(zChunk << 4); bit >= 0 && bit < end; bit = property.nextSetBit(bit + 1)) {
+            row |= 1 << (bit & 15);
+        }
+        return row;
+    }
+
+    /** A chunk marking the columns in {@code rows} (16 masks, as {@link #rowBits} reads them); empty rows give an
+     *  empty chunk, and 16 full rows give the same chunk {@link #full()} does. */
+    public static ZoneChunk fromRows(int[] rows) {
+        BitSet bits = new BitSet(BITS);
+        for (int z = 0; z < 16; z++) {
+            int row = rows[z] & 0xFFFF;
+            while (row != 0) {
+                int x = Integer.numberOfTrailingZeros(row);
+                bits.set((z << 4) | x);
+                row &= row - 1;
+            }
+        }
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.adoptBits(bits);
+        return chunk;
+    }
+
     public void writeToNBT(CompoundTag nbt) {
         nbt.putBoolean("fullSet", fullSet);
 
@@ -105,7 +161,23 @@ public class ZoneChunk {
 
         byte[] bytes = NBTUtilBC.getByteArray(nbt, "bits", null);
         if (bytes != null) {
-            property = BitSet.valueOf(bytes);
+            // Untrusted: a corrupt or hand-edited save may carry bits past the chunk's 256 columns. Bytes beyond
+            // the 32 that hold them are cut off before the set is built (so a huge array costs nothing).
+            adoptBits(BitSet.valueOf(bytes.length > MAX_BIT_BYTES ? Arrays.copyOf(bytes, MAX_BIT_BYTES) : bytes));
+        }
+    }
+
+    /** Takes {@code bits} (already limited to indexes 0..255) as this chunk's columns, in canonical form: an empty
+     *  set is no set, and a set marking all 256 columns is the full flag. Call after {@link #fullSet} is read. */
+    private void adoptBits(BitSet bits) {
+        int count = bits.cardinality();
+        if (fullSet || count == 0) {
+            property = null;
+        } else if (count == BITS) {
+            property = null;
+            fullSet = true;
+        } else {
+            property = bits;
         }
     }
 
@@ -145,7 +217,8 @@ public class ZoneChunk {
     }
 
     /** A chunk's bit set covers 16x16 = 256 columns, so its byte form is 32 bytes at most. */
-    private static final int MAX_BIT_BYTES = 16 * 16 / 8;
+    private static final int BITS = 16 * 16;
+    private static final int MAX_BIT_BYTES = BITS / 8;
 
     /** Whether both chunks mark the same columns ("every column" is the same whether it is flagged full or set
      *  bit by bit). */
@@ -164,12 +237,14 @@ public class ZoneChunk {
 
     public ZoneChunk readFromByteBuf(FriendlyByteBuf buf) {
         int flags = buf.readUnsignedByte();
-        if ((flags & 1) != 0) {
-            // Bounded: a chunk's bit set is 32 bytes at most, and an unbounded read would let a malformed
-            // message allocate whatever length it declares.
-            property = BitSet.valueOf(buf.readByteArray(MAX_BIT_BYTES));
-        }
         fullSet = (flags & 2) != 0;
+        if ((flags & 1) != 0) {
+            // Bounded: a chunk's bit set is 32 bytes at most (so no bit past column 255 can ride in one), and an
+            // unbounded read would let a malformed message allocate whatever length it declares.
+            adoptBits(BitSet.valueOf(buf.readByteArray(MAX_BIT_BYTES)));
+        } else {
+            property = null;
+        }
 
         return this;
     }

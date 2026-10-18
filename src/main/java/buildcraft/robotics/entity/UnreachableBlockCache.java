@@ -84,7 +84,10 @@ public final class UnreachableBlockCache {
         deadlines.put(key, clock.getAsLong() + EXPIRY_TICKS);
         origins.put(key, origin.get().asLong());
         while (deadlines.size() > CAPACITY) {
-            origins.remove(deadlines.removeFirstLong());
+            // By the KEY: removeFirstLong() returns the evicted note's deadline, not its position.
+            long oldest = deadlines.firstLongKey();
+            deadlines.remove(oldest);
+            origins.remove(oldest);
         }
     }
 
@@ -102,6 +105,16 @@ public final class UnreachableBlockCache {
             return false;
         }
         return madeFromNear(origins.get(key), origin.get());
+    }
+
+    /** @return how many notes are held (expired ones not yet read count): for the bound tests */
+    int noteCount() {
+        return deadlines.size();
+    }
+
+    /** @return how many note origins are held; always {@link #noteCount()}: for the bound tests */
+    int originCount() {
+        return origins.size();
     }
 
     private static boolean madeFromNear(long madeFrom, BlockPos now) {

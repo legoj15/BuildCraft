@@ -56,6 +56,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.entity.IEntityWithComplexSpawn;
 import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.fluids.FluidType;
 
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
@@ -802,6 +803,22 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         this.setPos(x, y, z);
     }*/
     //?}
+
+    // ── Fluids ──────────────────────────────────────────────────────────────
+
+    /** A robot flies by its own AI and no current may move it. 7.1.x answered {@code handleWaterMovement} with
+     *  {@code false} for the same reason. {@code serverTick} integrates {@code deltaMovement} by hand and nothing
+     *  damps it, so a push that vanilla would shrug off became a velocity that outlived the water: a hovering
+     *  Farmer under a source sank 35 blocks into the void. The robot still counts as in the water (splash,
+     *  extinguishing); only the current is ignored, so nothing about entering or leaving it changes.
+     *
+     *  <p>This is NeoForge's per-fluid-type hook, which every vanilla push path asks (1.21.1's fluid loop, the
+     *  26.x {@code EntityFluidInteraction}). The no-argument {@code Entity#isPushedByFluid()} is deprecated in
+     *  favour of it, and the per-type default only defers to that one, so it is left alone. */
+    @Override
+    public boolean isPushedByFluid(FluidType type) {
+        return false;
+    }
 
     // ── Tick ────────────────────────────────────────────────────────────────
 

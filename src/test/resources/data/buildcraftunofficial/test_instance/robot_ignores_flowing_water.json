@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_ignores_flowing_water",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 160,
+    "setup_ticks": 0,
+    "required": true
+}

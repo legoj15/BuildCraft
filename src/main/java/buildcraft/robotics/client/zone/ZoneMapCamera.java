@@ -225,7 +225,13 @@ public class ZoneMapCamera {
     /** Most chunks the terrain scan covers along one axis: a safety cap for a world whose build range is absurdly
      *  deep (the window then clips around the camera, not off one side). 512 chunks is 8,192 blocks, the survey
      *  span (1,704 blocks) scaled by a world floor nearly five times as far below the planner as the camera
-     *  floats above it. */
+     *  floats above it.
+     *
+     *  <p>This bounds the terrain scan's walk of the window each frame; it no longer bounds the zone overlay's memory,
+     *  which follows the painted chunks ({@code ZoneOverlayCache} keeps no entry for an empty chunk). It is kept at
+     *  512 because a lower cap would start clipping real views: a vanilla overworld (floor at -64) at the survey zoom
+     *  needs about 250 chunks for a planner at y=64, 290 at y=100 and 460 at y=250, and only reaches about 535 for a
+     *  planner at the very top of the world. */
     public static final int MAX_CHUNK_SPAN = 512;
 
     /**

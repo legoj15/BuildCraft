@@ -6,8 +6,10 @@
 package buildcraft.robotics.entity;
 
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 
 import net.minecraft.core.BlockPos;
 
@@ -23,6 +25,16 @@ import net.minecraft.core.BlockPos;
  * it. The window is fixed, so notes end in the order they were made, which is what lets the capacity drop the
  * oldest. A note is only a hint for a while: a robot that moved, or a player who opened the glass, is a new question
  * once the window ends. Transient: never saved, so a reloaded robot simply tries once more. Server thread only.
+ *
+ * <p><b>A note is about the spot it was made from.</b> "Unreachable" is a fact about a flight from somewhere: the
+ * block that is sealed off from where the robot searched may be an easy flight from where it stands after it has
+ * moved (out of a pocket, across to the next field). Each note therefore remembers where the robot was when it was
+ * made, and applies only while the robot is within {@link #NOTE_RADIUS} blocks of that spot; farther away it is
+ * ignored, not erased, so a robot that comes back finds the note still there. The radius is wide enough that the
+ * hovering, drifting and short hops of a robot working one patch are the same spot (the memory exists for exactly
+ * that robot), and narrow enough that a robot sent to another job is not held back by a failure from the last one.
+ * A finder that ran out of its expansion budget is noted the same as one that proved there was no path; the spot
+ * bounds how long either can misinform.
  */
 public final class UnreachableBlockCache {
 
@@ -35,39 +47,80 @@ public final class UnreachableBlockCache {
      *  unreachable candidates before its rounds run out, so this holds several searches' worth. */
     public static final int CAPACITY = 512;
 
+    /** How far, in blocks, the robot may be from the spot a note was made at for the note to still apply: a
+     *  straight-line distance, inclusive. */
+    public static final int NOTE_RADIUS = 16;
+
+    private static final long NOTE_RADIUS_SQ = (long) NOTE_RADIUS * NOTE_RADIUS;
+
     private final LongSupplier clock;
+    private final Supplier<BlockPos> origin;
 
     /** Packed position -> the absolute game tick its note expires ON, in the order the notes were made. */
     private final Long2LongLinkedOpenHashMap deadlines = new Long2LongLinkedOpenHashMap();
 
-    /** @param clock the current game time in ticks (normally {@code level::getGameTime}) */
-    public UnreachableBlockCache(LongSupplier clock) {
+    /** Packed position -> the packed block position the robot stood at when the note was made. Holds exactly the
+     *  keys of {@link #deadlines}. */
+    private final Long2LongOpenHashMap origins = new Long2LongOpenHashMap();
+
+    /**
+     * @param clock the current game time in ticks (normally {@code level::getGameTime})
+     * @param origin where the robot is now (normally {@code robot::blockPosition}): read when a note is made, to
+     *               record the spot it was made from, and when one is asked about, to see whether the robot is
+     *               still there
+     */
+    public UnreachableBlockCache(LongSupplier clock, Supplier<BlockPos> origin) {
         this.clock = clock;
+        this.origin = origin;
         deadlines.defaultReturnValue(Long.MIN_VALUE);
     }
 
-    /** Records that {@code pos} could not be reached, starting (or restarting) its {@link #EXPIRY_TICKS} countdown. */
+    /** Records that {@code pos} could not be reached from where the robot is now, starting (or restarting) its
+     *  {@link #EXPIRY_TICKS} countdown. A position already noted from somewhere else is now noted from here. */
     public void unreachableDetected(BlockPos pos) {
         long key = pos.asLong();
         // Remove first so a re-noted position moves to the back of the order, the newest, not stays the oldest.
         deadlines.remove(key);
         deadlines.put(key, clock.getAsLong() + EXPIRY_TICKS);
+        origins.put(key, origin.get().asLong());
         while (deadlines.size() > CAPACITY) {
-            deadlines.removeFirstLong();
+            // By the KEY: removeFirstLong() returns the evicted note's deadline, not its position.
+            long oldest = deadlines.firstLongKey();
+            deadlines.remove(oldest);
+            origins.remove(oldest);
         }
     }
 
-    /** @return true while a note for {@code pos} is within {@link #EXPIRY_TICKS}; reading an expired one drops it */
+    /** @return true while a note for {@code pos} is within {@link #EXPIRY_TICKS} and was made from within
+     *          {@link #NOTE_RADIUS} blocks of where the robot is now; reading an expired one drops it */
     public boolean isKnownUnreachable(BlockPos pos) {
         long key = pos.asLong();
         long deadline = deadlines.get(key);
         if (deadline == Long.MIN_VALUE) {
             return false;
         }
-        if (clock.getAsLong() < deadline) {
-            return true;
+        if (clock.getAsLong() >= deadline) {
+            deadlines.remove(key);
+            origins.remove(key);
+            return false;
         }
-        deadlines.remove(key);
-        return false;
+        return madeFromNear(origins.get(key), origin.get());
+    }
+
+    /** @return how many notes are held (expired ones not yet read count): for the bound tests */
+    int noteCount() {
+        return deadlines.size();
+    }
+
+    /** @return how many note origins are held; always {@link #noteCount()}: for the bound tests */
+    int originCount() {
+        return origins.size();
+    }
+
+    private static boolean madeFromNear(long madeFrom, BlockPos now) {
+        long dx = (long) BlockPos.getX(madeFrom) - now.getX();
+        long dy = (long) BlockPos.getY(madeFrom) - now.getY();
+        long dz = (long) BlockPos.getZ(madeFrom) - now.getZ();
+        return dx * dx + dy * dy + dz * dz <= NOTE_RADIUS_SQ;
     }
 }

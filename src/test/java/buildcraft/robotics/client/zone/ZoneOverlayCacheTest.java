@@ -204,6 +204,112 @@ public class ZoneOverlayCacheTest {
         Assertions.assertEquals(16 + 4, cache.chunkBuilds(), "but only 4 chunks were worked out for the second");
     }
 
+    // ── Memory: what is kept ─────────────────────────────────────────────────────────────
+
+    /** Marks the whole tile-relative chunk {@code (cx, cz)}, outside the survey clip a stroke is held to (a zone read
+     *  in from a map location may sit anywhere), so a test can scatter painted chunks across a huge window. */
+    private static void paintWholeChunk(ZonePlan plan, int cx, int cz) {
+        plan.getChunkMapping().put(ZonePlan.packChunkKey(cx, cz), ZoneChunk.full());
+    }
+
+    @Test
+    public void testChunksWithNothingPaintedAreNotRetained() {
+        // The window is the chunks that can project into the viewport, hundreds across at the survey zoom of a deep
+        // world, but a layer has paint on a handful of them. Remembering "this chunk has no cells" for every chunk of
+        // the window held an entry per chunk (tens of thousands) per layer slot, for nothing.
+        ZonePlan plan = new ZonePlan();
+        paintWholeChunk(plan, 5, 5);
+        paintWholeChunk(plan, 60, -40);
+        ZoneOverlayCache cache = new ZoneOverlayCache();
+
+        ZoneOverlayCache.Cells cells = cells(cache, 0, plan, 0, 0, new int[] {-100, -100, 99, 99}, 1); // 40,000 chunks
+
+        Assertions.assertEquals(2 * 256, cells.size(), "the two painted chunks are listed whole");
+        Assertions.assertEquals(2, cache.retainedChunks(), "and only they are kept, not the 39,998 empty ones");
+    }
+
+    @Test
+    public void testTheLargestWindowOverASparseLayerRetainsOnlyThePaintedChunks() {
+        // Whatever MAX_CHUNK_SPAN is, what is kept follows the paint, not the window the camera asks for.
+        int half = ZoneMapCamera.MAX_CHUNK_SPAN / 2;
+        ZonePlan plan = new ZonePlan();
+        paintWholeChunk(plan, -half, -half);
+        paintWholeChunk(plan, 0, 0);
+        paintWholeChunk(plan, half - 1, half - 1);
+        ZoneOverlayCache cache = new ZoneOverlayCache();
+
+        ZoneOverlayCache.Cells cells = cells(cache, 0, plan, 0, 0, new int[] {-half, -half, half - 1, half - 1}, 8);
+
+        Assertions.assertEquals(3 * 4, cells.size(), "an 8-block cell grid: four cells in each painted chunk");
+        Assertions.assertEquals(3, cache.retainedChunks());
+        Assertions.assertEquals(3, cache.chunkBuilds(), "and a chunk nothing reaches is not even worked out");
+    }
+
+    @Test
+    public void testAnUnalignedPlannerRetainsAtMostFourWorldChunksPerPaintedChunk() {
+        // The layer is stored relative to the planner, so off the chunk grid one layer chunk straddles four world
+        // chunks: that, not the window, is what bounds what is kept.
+        ZonePlan plan = new ZonePlan();
+        paintWholeChunk(plan, 2, 3);
+        ZoneOverlayCache cache = new ZoneOverlayCache();
+
+        ZoneOverlayCache.Cells cells = cells(cache, 0, plan, 5, 9, new int[] {-80, -80, 80, 80}, 1);
+
+        Assertions.assertEquals(256, cells.size(), "the 16x16 painted block, shifted by the planner's offset");
+        Assertions.assertEquals(4, cache.retainedChunks());
+    }
+
+    @Test
+    public void testRetentionFollowsThePaintedChunksInViewAsTheViewMoves() {
+        // Ten clusters of 20 painted chunks, 30 chunks apart; the view visits them one by one. What is retained must
+        // track the paint in view (with some slack, so panning over an edge does not thrash), and not pile up a
+        // cluster at a time for as long as the view keeps wandering.
+        ZonePlan plan = new ZonePlan();
+        for (int cluster = 0; cluster < 10; cluster++) {
+            for (int dx = 0; dx < 5; dx++) {
+                for (int dz = 0; dz < 4; dz++) {
+                    paintWholeChunk(plan, cluster * 30 + dx, dz);
+                }
+            }
+        }
+        ZoneOverlayCache cache = new ZoneOverlayCache();
+        for (int round = 0; round < 3; round++) {
+            for (int cluster = 0; cluster < 10; cluster++) {
+                int[] win = {cluster * 30 - 1, -1, cluster * 30 + 5, 4}; // the cluster and a chunk around it
+                Assertions.assertEquals(20 * 256, cells(cache, 0, plan, 0, 0, win, 1).size());
+                Assertions.assertTrue(cache.retainedChunks() >= 20, "the cluster in view is kept");
+                Assertions.assertTrue(cache.retainedChunks() <= 2 * 20 + 64,
+                        "retained " + cache.retainedChunks() + " chunks after visiting cluster " + cluster
+                                + " (round " + round + "): more than twice the painted chunks in view, plus slack");
+            }
+        }
+    }
+
+    @Test
+    public void testSparseLayersMatchThePlainMeaningWhereverTheWindowCutsThem() {
+        // Layers confined to a box, windows that miss it, clip one side of it or swallow it whole: the cells are the
+        // same as the plain meaning in every case.
+        java.util.Random rand = new java.util.Random(0xB0B);
+        for (int round = 0; round < 80; round++) {
+            ZonePlan plan = new ZonePlan();
+            for (int stroke = 0; stroke < 4; stroke++) {
+                int x = rand.nextInt(500) - 250;
+                int z = rand.nextInt(500) - 250;
+                plan.paintRect(x, z, x + rand.nextInt(60), z + rand.nextInt(60), true);
+            }
+            int tileX = rand.nextInt(200) - 100;
+            int tileZ = rand.nextInt(200) - 100;
+            int minCX = rand.nextInt(60) - 30;
+            int minCZ = rand.nextInt(60) - 30;
+            int[] win = {minCX, minCZ, minCX + rand.nextInt(10), minCZ + rand.nextInt(10)};
+            int stride = 1 << rand.nextInt(4);
+            Assertions.assertEquals(naive(plan, tileX, tileZ, win, stride),
+                    asSet(cells(new ZoneOverlayCache(), 0, plan, tileX, tileZ, win, stride)),
+                    "round " + round + ": planner (" + tileX + ", " + tileZ + "), window "
+                            + java.util.Arrays.toString(win) + ", stride " + stride);
+        }
+    }
+
     @Test
     public void testCellsComeOutOneWorldChunkAtATimeAtEveryStride() {
         // The renderer looks the terrain chunk up once per run of cells, so a chunk's cells must be consecutive.

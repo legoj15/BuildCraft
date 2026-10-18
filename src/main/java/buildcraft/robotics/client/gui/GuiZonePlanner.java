@@ -281,7 +281,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                 if (!stroke.isOpen() && ZonePaintInput.strokeFor(button) != ZonePaintInput.NONE) {
                     BlockPos start = pickColumn(mx, my);
                     if (start != null
-                            && stroke.press(button, brushColour(carried).ordinal(), start.getX(), start.getZ())) {
+                            && stroke.press(button, brushColour(carried).ordinal(), start.getX(), start.getZ(),
+                                    GuiZonePlanner::isMouseButtonHeld)) {
                         applyPaintRect();
                     }
                 }
@@ -294,21 +295,10 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     }
 
     /** @return true if the drag is panning or painting the map. */
-    private boolean onMapDragged(double mx, double my) {
-        if (pan.isActive()) {
-            // Ours, but mouseMoved does the panning: drags stop arriving once any second button is released.
-            return true;
-        }
-        if (stroke.isOpen()) {
-            // Whichever button the event names (the most recently pressed): the stroke is the starting button's.
-            BlockPos cur = pickColumn(mx, my);
-            if (cur != null) {
-                stroke.drag(cur.getX(), cur.getZ());
-                applyPaintRect();
-            }
-            return true;
-        }
-        return false;
+    private boolean onMapDragged() {
+        // Ours, but mouseMoved does the panning and the painting: drags stop arriving once any second button is
+        // released, although the one that began the pan or the stroke may still be down.
+        return pan.isActive() || stroke.isOpen();
     }
 
     /** @return true if a pan ended, a paint was committed to its layer, or a stroke is still open. */
@@ -340,21 +330,31 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
         // Minecraft sends this on every cursor movement, a held button or not, unlike mouseDragged (see ZonePanDrag).
-        ZonePanDrag.Delta delta = pan.move(mouseX, mouseY, isPanButtonHeld());
+        ZonePanDrag.Delta delta = pan.move(mouseX, mouseY, isMouseButtonHeld(ZonePanDrag.PAN_BUTTON));
         if (delta != null) {
             camera.panByPixels(delta.dx(), delta.dy());
+        }
+        if (stroke.isOpen()) {
+            // The stroke is the starting button's: it follows the cursor while THAT button is physically down,
+            // whichever other button was tapped meanwhile (see ZonePaintStroke#move), and the left one for a macOS
+            // Ctrl+left erase, which arrives as a simulated right click (see ZonePaintStroke#press).
+            BlockPos cur = pickColumn(mouseX, mouseY);
+            if (cur != null && stroke.move(cur.getX(), cur.getZ(), GuiZonePlanner::isMouseButtonHeld)) {
+                applyPaintRect();
+            }
         }
         super.mouseMoved(mouseX, mouseY);
     }
 
-    /** Whether the pan button is physically down now, from GLFW: Minecraft tracks it only while no screen is open. */
-    private static boolean isPanButtonHeld() {
+    /** Whether {@code button} (a Minecraft button number, which is GLFW's) is physically down now, from GLFW:
+     *  Minecraft tracks only the most recently pressed one, and clears it when any is released. */
+    private static boolean isMouseButtonHeld(int button) {
         //? if >=1.21.10 {
         long window = Minecraft.getInstance().getWindow().handle();
         //?} else {
         /*long window = Minecraft.getInstance().getWindow().getWindow();*/
         //?}
-        return GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        return GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS;
     }
 
     @Override
@@ -378,7 +378,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        if (onMapDragged(event.x(), event.y())) {
+        if (onMapDragged()) {
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -402,7 +402,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (onMapDragged(mouseX, mouseY)) {
+        if (onMapDragged()) {
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);

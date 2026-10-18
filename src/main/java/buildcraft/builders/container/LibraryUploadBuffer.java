@@ -26,9 +26,11 @@ import buildcraft.builders.snapshot.Snapshot;
  * <p>
  * Everything about the stream is the client's to choose, so it is bounded here by {@link Limits}: at most
  * {@link Limits#maxUploadBytes} bytes in at most {@link Limits#maxChunks} chunks are kept, and an upload that goes
- * past either is dropped as a unit (buffer emptied, and the rest of that stream ignored) rather than left to grow.
- * Which stream a chunk belongs to is the request id the server sent with its request and the client echoes on every
- * chunk ({@link #beginRequest}): a chunk of any other request, however late it lands, is not part of the answer.
+ * past either is dropped as a unit rather than left to grow: the buffer is emptied and its request closed, so the rest
+ * of that stream is refused chunk by chunk (it carries the closed request's id) without anything waiting for its final
+ * chunk. Which stream a chunk belongs to is the request id the server sent with its request and the client echoes on
+ * every chunk ({@link #beginRequest}): a chunk of any other request, however late it lands, is not part of the
+ * answer, and a stream that never sends its final chunk cannot spill into the next one.
  * What the bytes unpack to is bounded too, by {@link #decode}: the transfer is compressed, so its size on the wire
  * says little about its size in memory.
  * <p>

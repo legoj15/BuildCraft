@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_pump_unloads_into_home_tank",
+    "environment": "buildcraftunofficial:robot_gate",
+    "structure": "minecraft:empty",
+    "max_ticks": 1200,
+    "setup_ticks": 0,
+    "required": true
+}

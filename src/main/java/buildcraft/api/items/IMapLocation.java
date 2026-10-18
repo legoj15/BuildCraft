@@ -3,6 +3,7 @@ package buildcraft.api.items;
 import java.util.List;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
@@ -65,6 +66,7 @@ public interface IMapLocation extends INamedItem {
      * 
      * @param stack
      * @return The side of the spot, or null if the stack is not a SPOT or its stored side is not a real face. */
+    @Nullable
     Direction getPointSide(@Nonnull ItemStack stack);
 }
 

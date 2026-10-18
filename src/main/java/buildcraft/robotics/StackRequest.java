@@ -24,6 +24,7 @@ import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.ResourceId;
 import buildcraft.api.robots.ResourceIdRequest;
 import buildcraft.api.robots.RobotManager;
+import buildcraft.lib.misc.NBTUtilBC;
 
 /** One open order on the request network: a provider (the Requester block, or a station whose gates hold
  *  request-items actions), a slot in that provider, and the stack still owed. The station link is kept by
@@ -130,15 +131,14 @@ public class StackRequest {
         // ForgeDirection.UNKNOWN was 6 and a corrupt byte can be anything, and indexing Direction.values() blind threw
         // out of the board's load. An order whose station side cannot be read has no station - the same case as an
         // order saved without a station link - so it is no order to resume.
-        int sideOrdinal = NbtApiUtil.getByte(nbt, "stationSide", (byte) 0) & 0xFF;
-        Direction[] sides = Direction.values();
-        if (sideOrdinal >= sides.length) {
-            BCLog.logger.warn("[robots] Dropping a saved order whose station side byte " + sideOrdinal
-                    + " is out of range");
+        Direction side = NBTUtilBC.getDirectionOrNull(nbt, "stationSide", (byte) 0);
+        if (side == null) {
+            BCLog.logger.warn("[robots] Dropping a saved order whose station side byte "
+                    + (NbtApiUtil.getByte(nbt, "stationSide", (byte) 0) & 0xFF) + " is out of range");
             return null;
         }
 
-        return new StackRequest(slot, stack, stationIndex, sides[sideOrdinal]);
+        return new StackRequest(slot, stack, stationIndex, side);
     }
 
     public ResourceId getResourceId(Level world) {

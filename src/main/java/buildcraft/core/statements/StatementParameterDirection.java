@@ -106,12 +106,11 @@ public class StatementParameterDirection implements IStatementParameter {
 
     @Override
     public IStatementParameter rotateLeft() {
-        StatementParameterDirection d = new StatementParameterDirection();
-        Direction dir = d.getDirection();
-        if (dir != null && dir.getAxis() != Axis.Y) {
-            d.direction = dir.getClockWise();
-        }
-        return d;
+        // A horizontal face turns one step clockwise seen from above, as ActionPipeDirection's does; up, down and "no
+        // direction" are on the rotation axis and stay as they are. (1.12.2 read the direction of the fresh copy, which
+        // is always null, so it never rotated at all.)
+        Direction dir = direction;
+        return new StatementParameterDirection(dir != null && dir.getAxis() != Axis.Y ? dir.getClockWise() : dir);
     }
 
     @Override

@@ -353,7 +353,8 @@ public class ItemMapLocation extends Item implements IMapLocation {
         }
     }
 
-    /** The stored face, or null when the stack's side byte is not a face. */
+    /** The stored face: DOWN when the stack has no side recorded (whatever its type - the type is not checked), null
+     *  when a side byte is recorded but is not a face. */
     @Nullable
     public static Direction getPointFace(@Nonnull ItemStack stack) {
         CompoundTag cpt = getCustomTag(stack);
@@ -375,6 +376,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
     }
 
     @Override
+    @Nullable
     public Direction getPointSide(@Nonnull ItemStack item) {
         MapLocationType type = getTypeFromStack(item);
 

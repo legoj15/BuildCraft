@@ -100,7 +100,7 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
     }
 
     /** The station a {@code StatementParameterItemStack} map-location param points at, or null. */
-    private DockingStation getStation(StatementParameterItemStack stackParam, IRobotRegistry registry) {
+    static DockingStation getStation(StatementParameterItemStack stackParam, IRobotRegistry registry) {
         ItemStack item = stackParam.getItemStack();
 
         if (!item.isEmpty() && item.getItem() instanceof IMapLocation) {

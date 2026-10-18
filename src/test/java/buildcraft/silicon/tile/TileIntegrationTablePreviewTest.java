@@ -10,10 +10,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.lib.test.ValueIoTestUtil;
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.RobotIntegrationRecipe;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
@@ -86,5 +90,136 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         Assertions.assertFalse(table.getOutput().isEmpty(), "the preview does not depend on the output slot");
         Assertions.assertEquals(0L, table.getTarget(),
                 "an occupied result slot pauses the craft, so the cost reads as zero");
+    }
+
+    // ---- The client resolves the preview once per inventory change, not once per frame ----
+    //
+    // The preview slot asks getOutput() every frame (twice: getItem and hasItem), and the progress bar and the power
+    // ledger ask getTarget(). Resolving means a registry-wide recipe match plus an extract simulation, so the result
+    // is kept until the centre stack or the ring changes.
+
+    @Test
+    public void everyFrameAfterTheFirstReadsTheCachedPreview() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+
+        for (int frame = 0; frame < 30; frame++) {
+            Assertions.assertFalse(table.getOutput().isEmpty(), "frame " + frame + ": the preview is there");
+            Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(),
+                    "frame " + frame + ": and so is the cost");
+        }
+
+        Assertions.assertEquals(1, table.previewResolves(), "thirty frames of reads resolve the recipe once");
+    }
+
+    @Test
+    public void anEmptyTableIsCachedToo() {
+        // The expensive case: with nothing to match, every read used to walk the whole recipe registry.
+        TileIntegrationTable table = newTable();
+
+        for (int frame = 0; frame < 30; frame++) {
+            Assertions.assertTrue(table.getOutput().isEmpty());
+            Assertions.assertEquals(0L, table.getTarget());
+        }
+
+        Assertions.assertEquals(1, table.previewResolves(), "an empty table resolves once, not once per frame");
+    }
+
+    @Test
+    public void aChangedRingResolvesAgainAndOnlyOnce() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertFalse(table.getOutput().isEmpty());
+        Assertions.assertEquals(1, table.previewResolves());
+
+        table.invToIntegrate.setStackInSlot(0, ItemStack.EMPTY);
+        for (int frame = 0; frame < 5; frame++) {
+            Assertions.assertTrue(table.getOutput().isEmpty(), "the board is gone, so is the preview");
+        }
+        Assertions.assertEquals(2, table.previewResolves(), "one more resolve for the change, none for the frames after");
+
+        table.invToIntegrate.setStackInSlot(3, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+        for (int frame = 0; frame < 5; frame++) {
+            Assertions.assertFalse(table.getOutput().isEmpty(), "a board in another ring slot brings it back");
+        }
+        Assertions.assertEquals(3, table.previewResolves());
+    }
+
+    @Test
+    public void aChangedCentreResolvesAgain() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertFalse(table.getOutput().isEmpty());
+
+        table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
+        Assertions.assertTrue(table.getOutput().isEmpty(), "no robot, no preview");
+        Assertions.assertEquals(0L, table.getTarget());
+        Assertions.assertEquals(2, table.previewResolves());
+    }
+
+    @Test
+    public void aStackChangedInPlaceIsSeen() {
+        // The menu syncs a changed slot by replacing the stack, but nothing stops a stack being edited where it
+        // sits (a name tag applied to the robot in the centre): the cache must not hand back the old preview.
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertNull(table.getOutput().get(DataComponents.CUSTOM_NAME), "precondition: an unnamed robot");
+
+        table.invTarget.getStackInSlot(0).set(DataComponents.CUSTOM_NAME, Component.literal("Bob"));
+
+        ItemStack preview = table.getOutput();
+        Assertions.assertNotNull(preview.get(DataComponents.CUSTOM_NAME), "the preview robot keeps the new name");
+        Assertions.assertEquals("Bob", preview.get(DataComponents.CUSTOM_NAME).getString());
+        Assertions.assertEquals(2, table.previewResolves());
+    }
+
+    @Test
+    public void aWriteStraightIntoTheStackListIsSeen() {
+        // No setStackInSlot, so no change callback: the cache compares contents rather than waiting to be told.
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertFalse(table.getOutput().isEmpty());
+
+        table.invToIntegrate.stacks.set(0, ItemStack.EMPTY);
+
+        Assertions.assertTrue(table.getOutput().isEmpty(), "the preview follows the ring however it was changed");
+        Assertions.assertEquals(2, table.previewResolves());
+    }
+
+    @Test
+    public void theResultSlotDoesNotInvalidateThePreview() {
+        // The cost reads the result slot fresh on every call (a full slot pauses the craft); it is not an input.
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget());
+
+        table.invResult.setStackInSlot(0, new ItemStack(Items.PAPER));
+        Assertions.assertEquals(0L, table.getTarget(), "a full result slot pauses the craft");
+        table.invResult.setStackInSlot(0, ItemStack.EMPTY);
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(), "and emptying it resumes");
+
+        Assertions.assertEquals(1, table.previewResolves(), "the result slot is not part of the cache key");
+    }
+
+    @Test
+    public void theCachedPreviewIsNotShared() {
+        // Whoever draws the slot owns the stack it is handed; changing it must not change what the next frame sees.
+        TileIntegrationTable table = tableWithRobotAndBoard();
+
+        table.getOutput().setCount(7);
+        table.getOutput().set(DataComponents.CUSTOM_NAME, Component.literal("scribbled"));
+
+        ItemStack again = table.getOutput();
+        Assertions.assertEquals(1, again.getCount());
+        Assertions.assertNull(again.get(DataComponents.CUSTOM_NAME));
+    }
+
+    @Test
+    public void aLoadResetsThePreviewTooNotJustTheRecipe() {
+        // readData drops the matched recipe (it is re-found from the inventories). The inventories read back the
+        // same, so a cache that survived the load would hold a preview while the recipe behind the cost was gone.
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget());
+        CompoundTag saved = ValueIoTestUtil.write(table::writeData);
+
+        table.readData(ValueIoTestUtil.inputOf(saved));
+
+        Assertions.assertFalse(table.getOutput().isEmpty(), "still previews what the saved inventories craft");
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(),
+                "and still knows what it costs");
     }
 }

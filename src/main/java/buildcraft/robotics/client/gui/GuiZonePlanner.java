@@ -20,6 +20,7 @@ import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.client.render.ZoneMapGeometry;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
+import buildcraft.robotics.client.zone.ZonePaintInput;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
@@ -77,8 +78,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
      *  rectangle {@link #paintStart}..{@link #paintEnd}) is applied to the layer as it is then and sent. */
     private ZonePlan bufferLayer = null;
     private int bufferColorIndex = -1;
-    /** 0 = paint (left button), 1 = erase (right button). */
-    private int paintButton = -1;
+    /** {@link ZonePaintInput#PAINT} (left button) or {@link ZonePaintInput#ERASE} (right button); NONE between strokes. */
+    private int paintButton = ZonePaintInput.NONE;
     private BlockPos paintStart = null;
     private BlockPos paintEnd = null;
     private BlockPos hoverPos = null;
@@ -254,7 +255,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         bufferLayer = ZonePlan.withRect(menu.tile.layers[bufferColorIndex],
                 a.getX() - tile.getX(), a.getZ() - tile.getZ(),
                 b.getX() - tile.getX(), b.getZ() - tile.getZ(),
-                paintButton == 0);
+                paintButton == ZonePaintInput.PAINT);
     }
 
     // ── Map interaction (shared logic; the per-node mouse overrides below delegate here) ──────────
@@ -264,9 +265,12 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         if (menu.tile != null && inMap(mx, my)) {
             ItemStack carried = menu.getCarried();
             if (isColouredBrush(carried)) {
-                BlockPos start = pickColumn(mx, my);
+                // Left paints, right erases; any other button (middle, a side button) starts no stroke. The click
+                // is still ours either way, as it always was with a brush over the map.
+                int stroke = ZonePaintInput.strokeFor(button);
+                BlockPos start = stroke == ZonePaintInput.NONE ? null : pickColumn(mx, my);
                 if (start != null) {
-                    paintButton = button == 1 ? 1 : 0;
+                    paintButton = stroke;
                     bufferColorIndex = brushColour(carried).ordinal();
                     paintStart = start;
                     applyPaintRect(paintStart, paintStart);
@@ -313,12 +317,12 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             menu.paintRect(bufferColorIndex,
                     paintStart.getX() - tile.getX(), paintStart.getZ() - tile.getZ(),
                     paintEnd.getX() - tile.getX(), paintEnd.getZ() - tile.getZ(),
-                    paintButton == 0);
+                    paintButton == ZonePaintInput.PAINT);
             bufferLayer = null;
             bufferColorIndex = -1;
             paintStart = null;
             paintEnd = null;
-            paintButton = -1;
+            paintButton = ZonePaintInput.NONE;
             return true;
         }
         return false;

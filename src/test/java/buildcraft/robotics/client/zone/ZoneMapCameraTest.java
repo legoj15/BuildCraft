@@ -137,6 +137,55 @@ public class ZoneMapCameraTest {
     }
 
     @Test
+    void columnsReachingTheCameraHeightAreAboveIt() {
+        // The camera floats CAM_HEIGHT (96) above camY. A column's top face is surface + 1, so a surface of
+        // camY + 94 tops out one block under the camera and camY + 95 tops out exactly at it.
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        Assertions.assertFalse(cam.isAtOrAboveCamera(64 + 94), "a top one block below the camera is in view");
+        Assertions.assertTrue(cam.isAtOrAboveCamera(64 + 95), "a top exactly at the camera is above it");
+        Assertions.assertTrue(cam.isAtOrAboveCamera(64 + 300), "a top far above the camera is above it");
+        Assertions.assertFalse(cam.isAtOrAboveCamera(64), "ground level is in view");
+        Assertions.assertFalse(cam.isAtOrAboveCamera(Integer.MIN_VALUE), "a column with no data is not 'above' anything");
+
+        ZoneMapCamera low = new ZoneMapCamera(0, 10, 0);
+        Assertions.assertFalse(low.isAtOrAboveCamera(10 + 94), "the threshold follows the camera's own height");
+        Assertions.assertTrue(low.isAtOrAboveCamera(10 + 95), "the threshold follows the camera's own height");
+    }
+
+    @Test
+    void terrainPickStepsOverATowerAtTheCameraHeight() {
+        // A tall column next to the planner (a mountain, a skyscraper) tops out above the camera. The cursor ray
+        // starts at the camera, so it began inside that column and locked on to it, however far from the tower
+        // the cursor actually was. The tower is not drawn, so it cannot be a target: the ray must carry on down to
+        // the ground it can see.
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        cam.pxPerBlock = 4.0;
+        int ground = 64;
+        int towerTop = 64 + 140; // far above the camera at 64 + 96
+        ZoneMapCamera.SurfaceQuery tower = (x, z) -> (x >= -3 && x <= 3 && z >= -3 && z <= 3) ? towerTop : ground;
+
+        // 40 px right of centre is 10 blocks out at ground level: well clear of the tower, but the ray crosses
+        // the tower's columns on its way down from the camera.
+        int[] hit = cam.pickTerrain(40, 0, tower);
+        Assertions.assertNotNull(hit, "the ground beyond the tower is pickable");
+        Assertions.assertEquals(ground, hit[1], "the ray hits the ground, not the tower it passed over");
+        Assertions.assertEquals(9, hit[0], 1, "the ground column under the cursor (10 blocks out, minus the plane offset)");
+        Assertions.assertEquals(0, hit[2], 1, "straight east of the centre");
+    }
+
+    @Test
+    void terrainPickNeverReturnsAColumnAtOrAboveTheCamera() {
+        // The edge of the rule: surface 159 tops out at the camera's height (160) and is skipped; surface 158
+        // tops out one block under it and is still the thing the cursor lands on.
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        Assertions.assertNull(cam.pickTerrain(0, 0, (x, z) -> 64 + 95),
+                "a world whose every top reaches the camera has nothing in view to pick");
+        int[] hit = cam.pickTerrain(0, 0, (x, z) -> 64 + 94);
+        Assertions.assertNotNull(hit, "a top just under the camera is still in view");
+        Assertions.assertEquals(64 + 94, hit[1]);
+    }
+
+    @Test
     void surveyZoomPicksReachViewportCorners() {
         // At the 7.1.x survey floor (0.125 px/block) a viewport corner maps to ~850 blocks from the
         // camera, and the ray needs that many steps to descend to the plane — beyond the old fixed

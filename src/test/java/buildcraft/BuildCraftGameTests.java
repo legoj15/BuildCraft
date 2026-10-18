@@ -889,6 +889,7 @@ public class BuildCraftGameTests {
         // in place of its layer, and nothing out of view or off the mapped terrain.
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
+        reg.accept("buildcraftunofficial:zone_planner_cull_above_camera", () -> buildcraft.robotics.ZonePlannerOverlayTester::terrainAndOverlayLeaveOutColumnsReachingTheCamera);
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.

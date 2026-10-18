@@ -128,25 +128,81 @@ public class TileIntegrationTable extends TileLaserTableBase {
     }
 
     /** {@link #serverTick} resolves {@link #recipe} on the server, every tick, so server readers see it fresh. A
-     *  client never ticks this tile, so nothing would ever resolve it there: the readers do it themselves, from
-     *  the inventories (which the open menu keeps in step with the server's). A tile with no level behind it has
-     *  no tick either. */
-    private void refreshRecipeIfUnticked() {
-        if (level == null || level.isClientSide()) {
-            updateRecipe();
+     *  tile with no level behind it has no tick either, and a client never ticks this tile at all: nothing would
+     *  ever resolve the recipe there, so the readers do it themselves, from the inventories (which the open menu
+     *  keeps in step with the server's) -- see {@link #resolvePreview}. */
+    private boolean ticksHere() {
+        return level != null && !level.isClientSide();
+    }
+
+    // --- Client-side preview cache ---
+    // The preview slot asks getOutput() every frame (twice: getItem and hasItem) and the progress bar and power
+    // ledger ask getTarget(). Resolving is a registry-wide recipe match plus an extract simulation, and with
+    // nothing to craft it walks the whole registry to find that out, so the result is kept until an input
+    // changes. The key is the contents of the centre stack and the ring, compared by value against a private
+    // copy: that catches a menu sync, a stack edited in place and a write straight into the stack list alike,
+    // with no dependence on every route into the inventories reporting its change. The result slot is not an
+    // input (the cost reads it fresh), and recipes register once at startup, so neither is in the key.
+
+    /** The centre stack, then the ring in slot order, as they were when the preview was last resolved (copies, so
+     *  a stack changed in place differs from its snapshot). Null until the first resolve and after a load. */
+    private ItemStack[] previewInputs;
+    /** What the preview resolved to from {@link #previewInputs}; handed out as copies. */
+    private ItemStack previewOutput = ItemStack.EMPTY;
+    private int previewResolves;
+
+    /** How many times the unticked (client) preview has been resolved from scratch rather than read from the cache. */
+    int previewResolves() {
+        return previewResolves;
+    }
+
+    private boolean previewIsCurrent() {
+        if (previewInputs == null || !ItemStack.matches(previewInputs[0], invTarget.getStackInSlot(0))) {
+            return false;
         }
+        for (int i = 0; i < invToIntegrate.getSlots(); i++) {
+            if (!ItemStack.matches(previewInputs[i + 1], invToIntegrate.getStackInSlot(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Brings {@link #recipe} and {@link #previewOutput} up to date with the inventories, resolving only if an
+     *  input has changed since the last time. */
+    private void resolvePreview() {
+        if (previewIsCurrent()) {
+            return;
+        }
+        updateRecipe();
+        previewOutput = recipeOutput();
+        ItemStack[] inputs = new ItemStack[1 + invToIntegrate.getSlots()];
+        inputs[0] = invTarget.getStackInSlot(0).copy();
+        for (int i = 0; i < invToIntegrate.getSlots(); i++) {
+            inputs[i + 1] = invToIntegrate.getStackInSlot(i).copy();
+        }
+        previewInputs = inputs;
+        previewResolves++;
     }
 
     /** What the table would produce right now: the GUI's preview slot, on the client as well as the server. */
     public ItemStack getOutput() {
-        refreshRecipeIfUnticked();
-        return recipeOutput();
+        if (ticksHere()) {
+            return recipeOutput();
+        }
+        resolvePreview();
+        return previewOutput.copy();
     }
 
     @Override
     public long getTarget() {
-        refreshRecipeIfUnticked();
-        ItemStack output = recipeOutput();
+        ItemStack output;
+        if (ticksHere()) {
+            output = recipeOutput();
+        } else {
+            resolvePreview();
+            output = previewOutput;
+        }
         return recipe != null && isSpaceEnough(output) ? recipe.getRequiredMicroJoules(output) : 0;
     }
 
@@ -191,6 +247,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
     protected void readData(BCValueInput input) {
         super.readData(input);
         recipe = null; // Re-resolved on the next server tick, or on the next read when this is a client
+        previewInputs = null; // and the client's cached preview goes with it: it describes a recipe that is gone
     }
 
     @Override

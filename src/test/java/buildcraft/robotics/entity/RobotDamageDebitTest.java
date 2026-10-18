@@ -14,7 +14,8 @@ import buildcraft.api.robots.IRobotAccess;
  *  ({@link EntityRobot#damageDebitPerPoint}). The piece-by-piece 7.1.x arithmetic is pinned end to end by the
  *  {@code robot_armour_scales_damage_debit} game test; this is the part that cannot be reached by wearing
  *  vanilla armour: a stack of high-protection modded helmets, whose compounded scaling used to round the debit
- *  down to ZERO, so no hit ever cost the robot anything and it became immune. */
+ *  down to ZERO, so no hit ever cost the robot anything and it became immune. The guard against that is a floor
+ *  of 1 micro-MJ per point of damage; ordinary armour stacks never reach it and are 7.1.x's arithmetic unchanged. */
 public class RobotDamageDebitTest {
 
     private static final long BASE = IRobotAccess.DAMAGE_ENERGY_PER_POINT;
@@ -48,17 +49,35 @@ public class RobotDamageDebitTest {
     }
 
     @Test
-    public void armourReducesTheDebitByAtMostNinetyPercent() {
-        long floor = BASE / 10;
-        Assertions.assertEquals(floor, EntityRobot.damageDebitPerPoint(modded(EntityRobot.MAX_WEARABLES)),
-                "the reduction from any stack of armour is capped at 90%");
-        Assertions.assertEquals(floor, EntityRobot.damageDebitPerPoint(modded(1)),
-                "one absurdly protective helmet is capped too");
+    public void armourNeverCutsTheDebitBelowOneMicroMjPerPoint() {
+        Assertions.assertEquals(1L, EntityRobot.damageDebitPerPoint(modded(EntityRobot.MAX_WEARABLES)),
+                "eight absurdly protective helmets leave the 1 micro-MJ floor, not zero and not a percentage of the base");
+        Assertions.assertEquals(1L, EntityRobot.damageDebitPerPoint(1.0e12),
+                "one absurdly protective helmet is floored too");
+        Assertions.assertEquals(1L, EntityRobot.damageDebitPerPoint(Double.MAX_VALUE),
+                "the floor holds at the extreme of the double range");
     }
 
     @Test
-    public void theCapDoesNotTouchReductionsBelowIt() {
+    public void theFloorOnlyBitesWhereTheArithmeticWouldGoBelowIt() {
+        // 2 / (2 + p) of 260,000,000 micro-MJ: p = 259,999,998 leaves exactly 2, p = 519,999,998 exactly 1, and a
+        // protection past that rounds toward zero, which the floor lifts back to 1.
+        Assertions.assertEquals(2L, EntityRobot.damageDebitPerPoint(259_999_998.0), "two is left as two");
+        Assertions.assertEquals(1L, EntityRobot.damageDebitPerPoint(519_999_998.0), "one is left as one");
+        Assertions.assertEquals(1L, EntityRobot.damageDebitPerPoint(2_000_000_000.0), "would round to zero, floored to one");
+    }
+
+    @Test
+    public void thereIsNoPercentageCapAnyMore() {
+        // Eight iron helmets halve the debit eight times: 7.1.x's value, 1/256 of the base. The old 90% cap lifted
+        // anything below a tenth of the base back up to a tenth, which three iron helmets (1/8) were just clear of.
+        double[] eightIron = new double[EntityRobot.MAX_WEARABLES];
+        java.util.Arrays.fill(eightIron, 2.0);
+        Assertions.assertEquals(BASE / 256, EntityRobot.damageDebitPerPoint(eightIron),
+                "eight iron helmets (99.6% off) keep 7.1.x's compounded value");
+        Assertions.assertTrue(EntityRobot.damageDebitPerPoint(eightIron) < BASE / 10,
+                "and that is below the tenth the old cap would have forced");
         Assertions.assertEquals(BASE / 8, EntityRobot.damageDebitPerPoint(2.0, 2.0, 2.0),
-                "three iron helmets (87.5% off) are below the cap and keep 7.1.x's compounded value");
+                "three iron helmets (87.5% off) are 7.1.x's compounded value as ever");
     }
 }

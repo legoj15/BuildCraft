@@ -50,3 +50,13 @@ Round 3 (wf_34f60214-e96): `impl` per packet, `reviewer`, `impl-opus` on blockin
 - Third-party per round: shop26 + glm-flash on rounds 3–6 (shop26 timed out twice on 3–7k-line diffs with no findings in its partials; glm-flash found 1–2 lows each, all folded in). Whole-release post-merge: glm-5.3 (1 "high" REFUTED — it misdated the 1.21.10 horse package; 1 low FE-commit leftover; design debt) and dgx Flash-Next (2 mediums: side bytes indexed blind in StackRequest/DockingStation; 1 low half-loaded AI on load failure) → round 8.
 - Orchestrator decisions taken without asking (all recorded in docs or the changelog): RF stations only charge with MJ→RF autoconversion (config gate); Butcher spares tamed/owned/name-tagged animals; Goto Station promotes home only on docking; armour floor not cap; unreachable-block memory 5 min; Forbid-on-docked left as 7.1.x and recorded as a decision for the user.
 - Round 8 (2 packets, post-merge review fixes): `impl` ×2; load-robustness approved first pass, caches-energy needed 2 Opus fixes (FE carry design, macOS Ctrl+left). Final full suite green on all five nodes (723 game tests; 722 on 1.21.1).
+
+## 2026-10-18 — robots in-game test sweep (unattended)
+
+- Baseline: fullTestSuite green, then a 3-round game-test soak on all five nodes (15/15 green, no flakes).
+- `scout` (rig facts for command-built robot rigs): accurate; its gate NBT and `currentDir` guesses held in-game.
+- `impl` (three known small defects from todo-details: corrupt side bytes, robot-id counter, Delivery reservation): done first pass; triad review (shop26 + dgx + glm-flash) found only lows → second `impl` round fixed them (dropped the dead reservation field, made `rotateLeft` real, `@Nullable`, tests).
+- `impl-opus` (idle robots in the smoke rig): found a real bug (a station orphaned by `/fill` read its removed pipe forever); review round (shop26 + glm-flash) found a HIGH regression in its fix (robot AI froze while its home chunk was unloaded) plus ghost stations and chunk loads → same agent fixed; round-2 review found unloaded stations picked as destinations → same agent again.
+- `impl-opus` (Planter "planting once"): no bug, 7.1.x pace; the rig's count was wrong. Added a regression game test.
+- `impl-opus` (Pump never unloading): no bug, home station outside its work zone (7.1.x); added an end-to-end pump game test and a guide sentence; design question recorded in todos.
+- `impl` (robots dragged by falling water): see the changelog / below.

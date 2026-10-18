@@ -64,3 +64,11 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 A scenario that visits a second world names it in a top-level `"extraSaves": ["bc-smoke-b"]`: before boot the runner copies the `bc-smoke` save to each missing name (so the first run on a node, which only creates `bc-smoke`, needs a second run). The world list is sorted by last played, so the world just left is entry one and `click` `x:213, y:100` picks entry two (see `scenarios/marker-relog.json`, which leaves a world, joins the other and comes back).
 
 A failing step records its error, takes a `NN-FAILED.png`, closes any open screen and the run continues.
+
+## Robot scenarios and their generators
+
+`robots-live`, `robots-boards` and `robots-logistics` build working robot rigs (stations, gates with Work-in-Area
+zones, tools in chests) from commands and read the outcome back with `echo` steps. The last two are generated:
+edit `generators/gen_boards.py` / `generators/gen_logistics.py` (shared helpers in `generators/robotrig.py`) and
+re-run them with `python`, never hand-edit their JSON. Each echo step's label says the expected reply (`expect pass` /
+`expect fail` / a count); the report's Detail column carries the actual reply.

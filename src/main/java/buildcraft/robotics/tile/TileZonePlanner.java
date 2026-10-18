@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.core.item.ItemMapLocation;
@@ -141,16 +143,18 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         }
     }
 
+    /** Runs every server tick, so the cheap checks come first: a full result slot (the usual idle state) or a
+     *  missing brush never gets as far as the map's zone. */
     private boolean isInputValid() {
-        return paintbrushColour(invInputPaintbrush.getStackInSlot(0)) != null
-                && readZone(invInputMapLocation.getStackInSlot(0)) != null
-                && invInputResult.getStackInSlot(0).isEmpty();
+        return invInputResult.getStackInSlot(0).isEmpty()
+                && paintbrushColour(invInputPaintbrush.getStackInSlot(0)) != null
+                && inputZone(invInputMapLocation.getStackInSlot(0)) != null;
     }
 
     private void completeInput() {
         ItemStack map = invInputMapLocation.getStackInSlot(0);
         DyeColor colour = paintbrushColour(invInputPaintbrush.getStackInSlot(0));
-        ZonePlan worldZone = readZone(map);
+        ZonePlan worldZone = inputZone(map);
         if (colour == null || worldZone == null) {
             return;
         }
@@ -198,13 +202,41 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         return null;
     }
 
-    /** The zone stored on a map-location stack (absolute coords), or null if it is not a ZONE map. */
+    /** The zone stored on a map-location stack (absolute coords), or null if it is not a ZONE map. Parses the
+     *  stack's NBT, so it is overridable only for a test to count the parses. */
     @Nullable
-    private static ZonePlan readZone(ItemStack stack) {
+    protected ZonePlan decodeZone(ItemStack stack) {
         if (stack.getItem() instanceof ItemMapLocation map && map.getZone(stack) instanceof ZonePlan zone) {
             return zone;
         }
         return null;
+    }
+
+    /** The data component {@link #inputZone} last parsed, and what it parsed to (null for a map holding no zone). */
+    @Nullable
+    private CustomData inputZoneKey;
+    @Nullable
+    private ZonePlan inputZoneCache;
+
+    /**
+     * {@link #decodeZone} for the stack in the input slot, parsed once per distinct map instead of every tick. A
+     * map-location stack carries its type and zone only in its custom-data component, which is replaced (never edited
+     * in place) when the stack is rewritten, so that component's identity is the key: a swapped, rewritten or removed
+     * map misses, and an unchanged one hits. A map with no custom data is a blank one and holds no zone.
+     */
+    @Nullable
+    private ZonePlan inputZone(ItemStack stack) {
+        CustomData data = stack.getItem() instanceof ItemMapLocation ? stack.get(DataComponents.CUSTOM_DATA) : null;
+        if (data == null) {
+            inputZoneKey = null;
+            inputZoneCache = null;
+            return null;
+        }
+        if (data != inputZoneKey) {
+            inputZoneCache = decodeZone(stack);
+            inputZoneKey = data;
+        }
+        return inputZoneCache;
     }
 
     @Override

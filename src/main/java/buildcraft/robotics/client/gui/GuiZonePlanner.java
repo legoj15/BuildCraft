@@ -18,6 +18,7 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.container.ContainerZonePlanner;
+import buildcraft.robotics.client.render.ZoneMapGeometry;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
@@ -127,6 +128,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     protected void initGuiElements() {
         // Terrain is rebuilt from the player's current surroundings each time the screen opens.
         ZonePlannerMapDataClient.INSTANCE.clear();
+        ZoneMapGeometry.clearOverlayCache();
         addHelpRegions();
     }
 

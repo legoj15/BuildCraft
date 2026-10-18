@@ -861,6 +861,8 @@ public class BuildCraftGameTests {
         // through serverTick (input read + output write), with the world<->tile-relative offset and
         // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
+        // ...and the per-tick input check parses the map's zone once, not every tick, and not at all while blocked.
+        reg.accept("buildcraftunofficial:zone_planner_input_parses_once", () -> buildcraft.robotics.ZonePlannerTransferTester::inputParsesAMapOnceNotEveryTick);
 
         // Robotics — Zone Planner layer sync: strokes go up as rectangles applied to the server's layer, so
         // concurrent strokes from several viewers are all kept; the painter re-applies unacknowledged strokes
@@ -874,6 +876,17 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::farChunksAreUntouchedByStrokes);
         reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
         reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
+        // ...and a viewer that paints continuously cannot flood the others: layer pushes are paced per viewer
+        // (strokes landing together go down together), and stroke messages are rate-limited per viewer.
+        reg.accept("buildcraftunofficial:zone_planner_paint_pushes_coalesced", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::pushesToOtherViewersAreCoalesced);
+        reg.accept("buildcraftunofficial:zone_planner_paint_stream_capped", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::streamedStrokesReachWatchersAtACappedRate);
+        reg.accept("buildcraftunofficial:zone_planner_paint_rate_limited", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokesPastTheRateLimitAreDropped);
+
+        // Robotics — Zone Planner map overlay as the viewport emits it: one quad per painted column on mapped
+        // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
+        // in place of its layer, and nothing out of view or off the mapped terrain.
+        reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
+        reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.

@@ -115,6 +115,93 @@ public class ZonePlannerTransferTester {
         helper.succeed();
     }
 
+    /** A planner, not placed in the world, that counts how often it parses a map location's zone NBT. */
+    private static final class CountingPlanner extends TileZonePlanner {
+        int decodes;
+
+        CountingPlanner(BlockPos pos) {
+            super(pos, BCRoboticsBlocks.ZONE_PLANNER.get().defaultBlockState());
+        }
+
+        @Override
+        protected ZonePlan decodeZone(ItemStack stack) {
+            decodes++;
+            return super.decodeZone(stack);
+        }
+    }
+
+    private static ItemStack zoneMap(int worldX, int worldZ) {
+        ZonePlan zone = new ZonePlan();
+        zone.set(worldX, worldZ, true);
+        ItemStack map = new ItemStack(BCCoreItems.MAP_LOCATION.get());
+        ItemMapLocation.setZone(map, zone);
+        return map;
+    }
+
+    /**
+     * The planner's input check runs every server tick: it must not re-parse the map's zone NBT each time, must not
+     * look at the map at all while the result slot is occupied (nothing could happen), and must still notice a map
+     * that is swapped or rewritten in place.
+     */
+    public static void inputParsesAMapOnceNotEveryTick(GameTestHelper helper) {
+        BlockPos pos = helper.absolutePos(new BlockPos(1, 2, 1));
+        CountingPlanner tile = new CountingPlanner(pos);
+        tile.setLevel(helper.getLevel());
+        int red = DyeColor.RED.ordinal();
+
+        tile.invInputPaintbrush.setStackInSlot(0,
+                ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), DyeColor.RED));
+        tile.invInputMapLocation.setStackInSlot(0, zoneMap(pos.getX() + 5, pos.getZ() + 7));
+
+        // A full result slot blocks the transfer before the map is ever read.
+        tile.invInputResult.setStackInSlot(0, new ItemStack(BCCoreItems.MAP_LOCATION.get()));
+        for (int i = 0; i < 50; i++) {
+            tile.serverTick();
+        }
+        helper.assertTrue(tile.decodes == 0,
+                "a blocked transfer parses nothing (parsed " + tile.decodes + " times in 50 ticks)");
+        helper.assertTrue(tile.getProgressInput() == -1, "and does not start");
+
+        // Free the slot: the transfer runs, and the map is parsed once however many ticks it takes.
+        tile.invInputResult.setStackInSlot(0, ItemStack.EMPTY);
+        for (int i = 0; i < 50; i++) {
+            tile.serverTick();
+        }
+        helper.assertTrue(tile.getProgressInput() > 0, "baseline: the transfer is progressing");
+        helper.assertTrue(tile.decodes == 1,
+                "50 ticks of one transfer parse the map once (parsed " + tile.decodes + " times)");
+
+        // A different map in the slot is read afresh.
+        tile.invInputMapLocation.setStackInSlot(0, zoneMap(pos.getX() + 9, pos.getZ() + 11));
+        tile.serverTick();
+        helper.assertTrue(tile.decodes == 2, "a swapped map is parsed again (parsed " + tile.decodes + " times)");
+
+        // The same stack rewritten in place is read afresh too, and it is that zone the transfer stores.
+        ItemStack inSlot = tile.invInputMapLocation.getStackInSlot(0);
+        ZonePlan rewritten = new ZonePlan();
+        rewritten.set(pos.getX() + 3, pos.getZ() + 4, true);
+        ItemMapLocation.setZone(inSlot, rewritten);
+        tile.serverTick();
+        helper.assertTrue(tile.decodes == 3, "a rewritten map is parsed again (parsed " + tile.decodes + " times)");
+
+        drive(tile);
+        ZonePlan stored = tile.layers[red];
+        helper.assertTrue(stored.get(3, 4), "the transfer stores the zone the map holds now");
+        helper.assertFalse(stored.get(5, 7) || stored.get(9, 11), "and nothing from the maps it replaced");
+        helper.assertTrue(tile.decodes == 3,
+                "finishing the transfer does not parse it again (parsed " + tile.decodes + " times)");
+
+        // A blank map has no zone to parse, however long it sits there.
+        tile.invInputResult.setStackInSlot(0, ItemStack.EMPTY);
+        tile.invInputMapLocation.setStackInSlot(0, new ItemStack(BCCoreItems.MAP_LOCATION.get()));
+        for (int i = 0; i < 20; i++) {
+            tile.serverTick();
+        }
+        helper.assertTrue(tile.decodes == 3, "a blank map is never parsed (parsed " + tile.decodes + " times)");
+        helper.assertTrue(tile.getProgressInput() == -1, "and does not start a transfer");
+        helper.succeed();
+    }
+
     /** Drives serverTick past the 200-tick progress gate to force one transfer to completion. */
     private static void drive(TileZonePlanner tile) {
         for (int i = 0; i < 205; i++) {

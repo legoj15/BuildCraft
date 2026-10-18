@@ -7,6 +7,7 @@
 package buildcraft.robotics.zone;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -147,10 +148,111 @@ public class ZonePlan implements IZone {
         return result;
     }
 
+    /** Receives one occupied chunk of a plan: its chunk coordinates and the chunk itself (do not modify it). */
+    @FunctionalInterface
+    public interface ChunkVisitor {
+        void visit(int chunkX, int chunkZ, ZoneChunk chunk);
+    }
+
+    /**
+     * Visits the occupied chunks whose coordinates lie in {@code [minChunkX, maxChunkX] x [minChunkZ, maxChunkZ]}
+     * (both inclusive), in no particular order, and touches no other chunk. A small window is probed coordinate by
+     * coordinate and a window wider than the plan is filtered from the plan's own chunks, so the cost follows
+     * whichever is smaller: a view of a few chunks pays nothing for a layer painted across the whole survey.
+     */
+    public void forEachChunkIn(int minChunkX, int minChunkZ, int maxChunkX, int maxChunkZ, ChunkVisitor visitor) {
+        if (minChunkX > maxChunkX || minChunkZ > maxChunkZ || chunkMapping.isEmpty()) {
+            return;
+        }
+        long window = ((long) maxChunkX - minChunkX + 1) * ((long) maxChunkZ - minChunkZ + 1);
+        if (window <= chunkMapping.size()) {
+            for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+                for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                    ZoneChunk chunk = chunkMapping.get(packChunkKey(cx, cz));
+                    if (chunk != null) {
+                        visitor.visit(cx, cz, chunk);
+                    }
+                }
+            }
+        } else {
+            for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+                int cx = unpackChunkX(e.getKey());
+                int cz = unpackChunkZ(e.getKey());
+                if (cx >= minChunkX && cx <= maxChunkX && cz >= minChunkZ && cz <= maxChunkZ) {
+                    visitor.visit(cx, cz, e.getValue());
+                }
+            }
+        }
+    }
+
+    /**
+     * A copy of this plan with every marked column moved by {@code (offsetX, offsetZ)} blocks: the tile-relative
+     * &lt;-&gt; world translation of a planner transfer. A multiple-of-16 offset on both axes only renumbers the
+     * chunks. Any other offset shifts each chunk's rows of 16 bits sideways and down into at most four result
+     * chunks, so the cost follows the number of chunks, not the (up to millions of) marked columns.
+     */
     public ZonePlan getWithOffset(int offsetX, int offsetZ) {
-        ZonePlan zonePlan = new ZonePlan();
-        getAll().forEach(p -> zonePlan.set(p[0] + offsetX, p[1] + offsetZ, true));
-        return zonePlan;
+        ZonePlan out = new ZonePlan();
+        int chunkShiftX = Math.floorDiv(offsetX, 16);
+        int chunkShiftZ = Math.floorDiv(offsetZ, 16);
+        int rx = Math.floorMod(offsetX, 16);
+        int rz = Math.floorMod(offsetZ, 16);
+        if (rx == 0 && rz == 0) {
+            for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+                if (!e.getValue().isEmpty()) {
+                    out.chunkMapping.put(packChunkKey(unpackChunkX(e.getKey()) + chunkShiftX,
+                            unpackChunkZ(e.getKey()) + chunkShiftZ), new ZoneChunk(e.getValue()));
+                }
+            }
+        } else {
+            HashMap<Long, int[]> rowsByChunk = new HashMap<>();
+            // The result chunks one source chunk can reach: [0] same x/z, [1] next x, [2] next z, [3] next both.
+            int[][] reach = new int[4][];
+            for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+                ZoneChunk chunk = e.getValue();
+                if (chunk.isEmpty()) {
+                    continue;
+                }
+                int baseX = unpackChunkX(e.getKey()) + chunkShiftX;
+                int baseZ = unpackChunkZ(e.getKey()) + chunkShiftZ;
+                Arrays.fill(reach, null);
+                for (int z = 0; z < 16; z++) {
+                    int row = chunk.rowBits(z);
+                    if (row == 0) {
+                        continue;
+                    }
+                    int zSlot = ((z + rz) >> 4) << 1;
+                    int destRow = (z + rz) & 15;
+                    int moved = row << rx; // at most 31 bits: the low 16 stay in the column's chunk, the rest spill over
+                    int stay = moved & 0xFFFF;
+                    int spill = moved >>> 16;
+                    if (stay != 0) {
+                        reachRows(rowsByChunk, reach, zSlot, baseX, baseZ)[destRow] |= stay;
+                    }
+                    if (spill != 0) {
+                        reachRows(rowsByChunk, reach, zSlot | 1, baseX, baseZ)[destRow] |= spill;
+                    }
+                }
+            }
+            for (Map.Entry<Long, int[]> e : rowsByChunk.entrySet()) {
+                ZoneChunk chunk = ZoneChunk.fromRows(e.getValue());
+                if (!chunk.isEmpty()) {
+                    out.chunkMapping.put(e.getKey(), chunk);
+                }
+            }
+        }
+        out.modCount++; // like a plan built by set(): its watchers see it as edited
+        return out;
+    }
+
+    /** The 16 row masks of the result chunk at {@code slot} relative to {@code (baseX, baseZ)}, created on first use. */
+    private static int[] reachRows(HashMap<Long, int[]> rowsByChunk, int[][] reach, int slot, int baseX, int baseZ) {
+        int[] rows = reach[slot];
+        if (rows == null) {
+            rows = rowsByChunk.computeIfAbsent(packChunkKey(baseX + (slot & 1), baseZ + (slot >> 1)), k -> new int[16]);
+            reach[slot] = rows;
+        }
+        return rows;
     }
 
     public boolean hasChunk(int chunkX, int chunkZ) {

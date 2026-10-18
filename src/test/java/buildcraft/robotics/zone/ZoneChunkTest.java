@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics.zone;
 
+import java.util.BitSet;
 import java.util.Random;
 
 import io.netty.buffer.Unpooled;
@@ -203,6 +204,123 @@ public class ZoneChunkTest {
         chunk.set(0, 0, true);
         Assertions.assertEquals(-3, chunk.getRandomBlockPos(new Random(5L), -3, -3).getY(),
                 "both bounds are inclusive");
+    }
+
+    // ── Bits beyond the chunk ────────────────────────────────────────────────────────────
+
+    /** NBT as a hand-edited or corrupt save could hold it: real columns plus bits at and above index 256. */
+    private static CompoundTag nbtWithBits(int... bitIndexes) {
+        BitSet bits = new BitSet();
+        for (int b : bitIndexes) {
+            bits.set(b);
+        }
+        CompoundTag tag = new CompoundTag();
+        tag.putBoolean("fullSet", false);
+        tag.putByteArray("bits", bits.toByteArray());
+        return tag;
+    }
+
+    @Test
+    public void testNbtLoadKeepsOnlyTheChunksOwnBits() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(nbtWithBits(3 + 2 * 16, 256, 300, 511, 4000));
+
+        Assertions.assertTrue(chunk.get(3, 2), "the real column is kept");
+        Assertions.assertEquals(1, countSet(chunk), "and nothing else");
+        Assertions.assertTrue(chunk.property.length() <= 256,
+                "no bit at or above 256 survives (found length " + chunk.property.length() + ")");
+        Assertions.assertEquals(1, chunk.property.cardinality(), "the stray bits do not count as columns");
+    }
+
+    @Test
+    public void testNbtLoadOfOnlyStrayBitsLeavesAnEmptyChunk() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(nbtWithBits(256, 257, 1000));
+
+        Assertions.assertTrue(chunk.isEmpty(), "a chunk whose only bits lie outside it marks nothing");
+
+        CompoundTag list = new CompoundTag();
+        net.minecraft.nbt.ListTag chunks = new net.minecraft.nbt.ListTag();
+        CompoundTag entry = nbtWithBits(256, 257, 1000);
+        entry.putInt("chunkX", 4);
+        entry.putInt("chunkZ", 4);
+        chunks.add(entry);
+        list.put("chunkMapping", chunks);
+        ZonePlan plan = new ZonePlan();
+        plan.readFromNBT(list);
+        Assertions.assertTrue(plan.isEmpty(), "so the plan drops it, and a stray-bit layer reads as empty");
+    }
+
+    @Test
+    public void testStrayBitsDoNotPushPickedColumnsOutsideTheChunk() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(nbtWithBits(5 + 6 * 16, 256 + 40, 256 + 255, 700));
+
+        Random rand = new Random(7L);
+        for (int i = 0; i < 200; i++) {
+            BlockPos p = chunk.getRandomBlockPos(rand);
+            Assertions.assertTrue(p.getX() >= 0 && p.getX() < 16 && p.getZ() >= 0 && p.getZ() < 16,
+                    "a robot sample stays inside the chunk: " + p);
+            Assertions.assertTrue(chunk.get(p.getX(), p.getZ()), "and lands on a real column");
+        }
+    }
+
+    @Test
+    public void testStrayBitsDoNotPromoteAChunkToFull() {
+        // 200 real columns plus 100 stray bits: cardinality 300 >= 256 would flip a naive set() to "full".
+        BitSet bits = new BitSet();
+        bits.set(0, 200);
+        bits.set(256, 356);
+        CompoundTag tag = new CompoundTag();
+        tag.putByteArray("bits", bits.toByteArray());
+
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(tag);
+        chunk.set(15, 15, true); // bit 255, still clear
+        Assertions.assertFalse(chunk.isFull(), "56 columns are still clear");
+        Assertions.assertEquals(201, countSet(chunk));
+    }
+
+    @Test
+    public void testSanitisedChunkStillFitsTheWire() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(nbtWithBits(1, 2, 300, 5000));
+
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        chunk.writeToByteBuf(buf);
+        ZoneChunk onClient = Assertions.assertDoesNotThrow(() -> new ZoneChunk().readFromByteBuf(buf),
+                "the client's bounded read accepts what the server now sends");
+        assertSameCells(chunk, onClient);
+    }
+
+    @Test
+    public void testWireReadKeepsOnlyTheChunksOwnBitsAndRejectsAnOversizedArray() {
+        // 32 bytes is the whole chunk: nothing at or above bit 256 can ride in one.
+        FriendlyByteBuf ok = new FriendlyByteBuf(Unpooled.buffer());
+        ok.writeByte(1);
+        ok.writeByteArray(new byte[] {0x05});
+        ZoneChunk read = new ZoneChunk().readFromByteBuf(ok);
+        Assertions.assertTrue(read.get(0, 0) && read.get(2, 0) && countSet(read) == 2);
+
+        // A longer array is a malformed message and is refused outright, not stored.
+        FriendlyByteBuf oversized = new FriendlyByteBuf(Unpooled.buffer());
+        oversized.writeByte(1);
+        oversized.writeByteArray(new byte[33]);
+        Assertions.assertThrows(RuntimeException.class, () -> new ZoneChunk().readFromByteBuf(oversized));
+    }
+
+    @Test
+    public void testNbtLoadOfAnOversizedBitArrayIsClampedNotKept() {
+        CompoundTag tag = new CompoundTag();
+        byte[] big = new byte[2000];
+        big[0] = 1;
+        big[1999] = (byte) 0x80;
+        tag.putByteArray("bits", big);
+
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.readFromNBT(tag);
+        Assertions.assertEquals(1, countSet(chunk), "only column (0, 0) is real");
+        Assertions.assertTrue(chunk.property.length() <= 256);
     }
 
     private static void assertSameCells(ZoneChunk a, ZoneChunk b) {

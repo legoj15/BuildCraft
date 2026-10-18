@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
@@ -28,6 +29,8 @@ import buildcraft.api.statements.StatementSlot;
 
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreStatements;
+import buildcraft.factory.BCFactoryBlocks;
+import buildcraft.factory.tile.TileTank;
 
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
@@ -44,6 +47,7 @@ import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
+import buildcraft.robotics.boards.BoardRobotPumpNBT;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.silicon.BCSiliconPlugs;
@@ -785,5 +789,80 @@ public class RobotGateTester {
                 helper::succeed,
                 "the redirect never failed, or the robot never reached B once the back-off ran out",
                 () -> cleanUp(helper, robot[0], holder[0]));
+    }
+
+    // ---------- pump: pumps inside its Work in Area zone, unloads at an Accept Fluids home ----------
+
+    /** Poll budget for the pump test: two whole pump-and-unload cycles take a few hundred ticks; the 60 s
+     *  ({@code AIRobotSleep}, 1200 ticks) sleep a failed unload search ends in does not fit inside it. */
+    private static final int PUMP_BUDGET = 1100;
+
+    /** The pump board's whole loop, which no other test drives end to end: a Pump robot homed on an Accept
+     *  Fluids station (a stone fluid pipe over an empty BC tank) with a Work in Area zone over a 2x2 water pool
+     *  pumps a bucket, flies back, unloads it into the pipe, which feeds the tank, and comes back for more. Two
+     *  buckets in the tank prove the robot does not stop after the first (the pool regenerates, so the second
+     *  pass finds a source again).
+     *
+     *  <p>The zone covers the station's column on purpose. As in 7.1.x ({@code EntityRobot.getZoneToLoadUnload}
+     *  falls back to the work zone, and {@code AIRobotSearchStation} skips stations outside it), a robot with no
+     *  Load/Unload in Area action looks for its unload station inside its WORK zone. With the home outside the
+     *  zone (measured 2026-10-18 with the box at x 2..5, z 3..6) the first bucket finds no unload station, the
+     *  robot sleeps at home holding it and unloads only when the 60 s sleep ends (the search's "already docked
+     *  here" shortcut ignores the zone): one bucket a minute, which reads as a pump that stopped. */
+    public static void pumpUnloadsIntoTankAtHomeStation(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(1, 3, 1);
+        BlockPos tankRel = new BlockPos(1, 2, 1);
+        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+
+        // A 2x2 pool of water sources at y=1, walled in by stone at y=1 and floored at y=0 so nothing flows.
+        for (int x = 2; x <= 5; x++) {
+            for (int z = 3; z <= 6; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                boolean pool = (x == 3 || x == 4) && (z == 4 || z == 5);
+                helper.setBlock(new BlockPos(x, 1, z), pool ? Blocks.WATER : Blocks.STONE);
+            }
+        }
+
+        TilePipeHolder homeTile = installStation(helper, pipeRel, Direction.UP, BCTransportItems.PIPE_STONE_FLUID.get());
+        helper.setBlock(tankRel, BCFactoryBlocks.TANK.get());
+        //? if >=1.21.10 {
+        TileTank tank = helper.getBlockEntity(tankRel, TileTank.class);
+        //?} else {
+        /*TileTank tank = helper.getBlockEntity(tankRel);*/
+        //?}
+
+        PluggableGate acceptGate = addGate(homeTile, Direction.WEST, BASIC_GATE);
+        acceptGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        acceptGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS, null));
+        PluggableGate zoneGate = addGate(homeTile, Direction.EAST, PARAM_GATE);
+        zoneGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        zoneGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_WORK_IN_AREA, null));
+        zoneGate.logic.statements[0].action.set(0, new StatementParameterMapLocation(
+                areaMap(helper, BlockPos.ZERO, new BlockPos(5, 3, 6))));
+
+        EntityRobot[] robot = { null };
+        EntityArenaUtil.tickUntil(helper, PUMP_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        DockingStationPipe home = stationAt(helper, pipeRel, Direction.UP);
+                        if (home == null
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS)
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_ROBOT_WORK_IN_AREA)) {
+                            return false;
+                        }
+                        robot[0] = addHomedRobot(helper, home, BoardRobotPumpNBT.INSTANCE);
+                        return false;
+                    }
+                    return tank.tank.getAmountMb(0) >= 2000;
+                },
+                () -> {
+                    helper.assertTrue(tank.tank.getFluidStack(0).getFluid() == Fluids.WATER,
+                            "the tank must hold the pumped water, got " + tank.tank.getFluidStack(0));
+                    helper.succeed();
+                },
+                "the pump robot never delivered two buckets of water to the tank under its home station",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 }

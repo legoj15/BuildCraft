@@ -47,6 +47,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.BCCoreStatements;
 
+import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
@@ -203,6 +204,13 @@ public class RobotStationRigTester {
                     "a pipe's neighbour lookup in an unloaded chunk answers nothing rather than loading it");
         }
         helper.assertFalse(level.isLoaded(farA), "the pipe's neighbour lookups loaded the unloaded chunk");
+        Object plainToken = new Object();
+        for (Direction dir : Direction.values()) {
+            // Both lookup kinds: a NeoForge block capability, and a plain token resolved through the neighbour tile.
+            cached.getCapabilityFromPipe(dir, CapUtil.CAP_FLUIDS);
+            cached.getCapabilityFromPipe(dir, plainToken);
+        }
+        helper.assertFalse(level.isLoaded(farA), "the pipe's neighbour capability lookups loaded the unloaded chunk");
 
         EntityRobot[] robot = { null };
         ItemEntity[] diamond = { null };

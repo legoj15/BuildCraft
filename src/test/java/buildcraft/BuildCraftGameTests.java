@@ -1052,7 +1052,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_pump_unloads_into_home_tank", () -> buildcraft.robotics.statements.RobotGateTester::pumpUnloadsIntoTankAtHomeStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
-        reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_unloaded_target", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAnUnloadedStationLeavesTheRobotAlone);
+        reg.accept("buildcraftunofficial:robot_goto_station_action_no_param",() -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action_at_dock_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtTheDockedStationLeavesTheRobotAlone);
         reg.accept("buildcraftunofficial:robot_goto_station_action_target_held_is_noop", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAStationAnotherRobotHoldsLeavesTheRobotAlone);
         reg.accept("buildcraftunofficial:robot_goto_station_action_backs_off_after_failure", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionBacksOffAfterAFailedGoto);

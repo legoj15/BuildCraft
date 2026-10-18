@@ -596,6 +596,87 @@ public class RobotGateTester {
                 () -> EntityArenaUtil.discard(robot[0]));
     }
 
+    /** Far enough from the arena grid that its chunk is never loaded during the run. */
+    private static final int UNLOADED_OFFSET = 4096;
+
+    /** A Goto Station whose map location names a station in an unloaded chunk must leave the robot alone. The station
+     *  is registered and not gone (its chunk is merely away), but no flight can reach it: robots path only through
+     *  loaded cells. Redirecting there claimed it, failed the flight, and the gate re-fired the redirect, so the robot
+     *  never got on with its work; the station searches already skip such stations for the same reason. */
+    public static void gotoStationActionAtAnUnloadedStationLeavesTheRobotAlone(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadEntityArena(helper);
+        BlockPos pipeRel = new BlockPos(2, 3, 2);
+        BlockPos robotRel = new BlockPos(3, 4, 3);
+        BlockPos farRel = pipeRel.offset(UNLOADED_OFFSET, 0, 0);
+        BlockPos farAbs = helper.absolutePos(farRel);
+        helper.assertFalse(helper.getLevel().isLoaded(farAbs), "precondition: the far station's chunk is not loaded");
+
+        // A station read back from the save in a chunk that is not loaded.
+        DockingStationPipe unloaded = new DockingStationPipe();
+        CompoundTag record = new CompoundTag();
+        record.putIntArray("pos", new int[] { farAbs.getX(), farAbs.getY(), farAbs.getZ() });
+        record.putByte("side", (byte) Direction.UP.ordinal());
+        unloaded.readFromNbt(record);
+        unloaded.world = helper.getLevel();
+        registry(helper).registerStation(unloaded);
+
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+        PluggableGate gate = addGate(tile, Direction.WEST, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(
+                TriggerWrapper.wrap(BCRoboticsStatements.TRIGGER_ROBOT_IN_STATION, null));
+        gate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_GOTO_STATION, null));
+        gate.logic.statements[0].action.set(0,
+                new StatementParameterMapLocation(spotMap(helper, farRel, Direction.UP)));
+
+        EntityRobot[] robot = { null };
+        int[] phase = { 0 }; // 0: station, 1: id + dock + first resolve, 2: let the live gate keep firing
+        int[] settled = { 0 };
+        EntityArenaUtil.tickUntil(helper, 300,
+                () -> {
+                    if (phase[0] == 0) {
+                        if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                            return false;
+                        }
+                        phase[0] = 1;
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                        return false;
+                    }
+                    DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+                    if (phase[0] == 1) {
+                        if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
+                            return false;
+                        }
+                        phase[0] = 2; // before any assertion, so a failure cannot re-run this one-shot setup
+                        helper.assertTrue(station.takeAsMain(robot[0]), "the free station takes the robot");
+                        robot[0].dock(station);
+                        gate.logic.resolveActions();
+                        helper.assertTrue(gate.logic.triggerOn[0],
+                                "the in-station trigger must fire while the robot is docked here");
+                        helper.assertTrue(robot[0].getOverridingAI() == null,
+                                "a Goto Station naming a station in an unloaded chunk must not redirect the robot, "
+                                        + "got " + robot[0].getOverridingAI());
+                        return false;
+                    }
+                    helper.assertTrue(robot[0].getDockingStation() == station,
+                            "the robot must stay docked at its station while the gate holds");
+                    helper.assertTrue(robot[0].getOverridingAI() == null,
+                            "no redirect may be installed while the gate holds, got " + robot[0].getOverridingAI());
+                    helper.assertFalse(unloaded.isTaken(), "the unreachable station must never be claimed");
+                    return ++settled[0] >= 20;
+                },
+                () -> {
+                    helper.assertFalse(helper.getLevel().isLoaded(farAbs), "the redirect check loaded the chunk");
+                    helper.succeed();
+                },
+                "the station never registered, or the robot never received its id",
+                () -> {
+                    EntityArenaUtil.discard(robot[0]);
+                    registry(helper).removeStation(unloaded);
+                });
+    }
+
     /** A robot the registry knows about (id assigned) but that is not in the world: a stand-in holder for a
      *  station, which never ticks and so never wanders off to reserve a neighbouring test's stations. Killed
      *  through the registry when the test ends. */

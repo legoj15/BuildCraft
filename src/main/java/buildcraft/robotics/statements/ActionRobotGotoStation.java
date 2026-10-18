@@ -89,11 +89,14 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
      *  <li>another robot holds the target (its home, its dock or a visit claim): the goto's claim ({@code take}) is
      *  refused and it fails in {@code start()}. Compared by id, as the claim itself is. 7.1.x handed this one out
      *  too, every tick.</li>
+     *  <li>the target's chunk is not loaded: robots path only through loaded cells, so the flight fails at once
+     *  (the station searches skip such stations for the same reason). The station is not gone, so its claim would
+     *  succeed and the robot's board would be aborted for nothing.</li>
      *  </ul>
      *  A redirect that fails later (no path to the station) is the controller's to throttle: {@code AIRobotMain}
      *  refuses new overrides for a while after one fails. */
     static boolean shouldRedirect(EntityRobot robot, DockingStation target) {
-        if (target == null || target == robot.getDockingStation()) {
+        if (target == null || target == robot.getDockingStation() || !target.isChunkLoaded()) {
             return false;
         }
         return !target.isTaken() || target.robotIdTaking() == robot.getRobotId();

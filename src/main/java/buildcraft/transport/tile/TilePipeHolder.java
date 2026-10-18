@@ -762,6 +762,11 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
             return null;
         }
         BlockPos neighborPos = worldPosition.relative(side);
+        // Both lookups below load an unloaded chunk synchronously. A ticking pipe's face neighbours are always loaded,
+        // so this only stops callers outside the tick (a robot reading a station whose chunk is unloaded).
+        if (!level.isLoaded(neighborPos)) {
+            return null;
+        }
         if (capability instanceof net.neoforged.neoforge.capabilities.BlockCapability<?, ?> blockCap) {
             // Route block capabilities to the NeoForge capability system
             try {

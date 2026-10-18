@@ -12,9 +12,9 @@ package buildcraft.robotics.client.zone;
  *
  * <p><b>Projection: top-down perspective</b>, matching BuildCraft 8.x's Zone Planner (camera straight
  * overhead looking down, {@code gluPerspective} 70&deg; FOV — a single nadir rotation, <em>not</em>
- * isometric; 1.7.10 had no 3D view at all). Modelled as a pinhole camera floating {@link #CAM_HEIGHT}
+ * isometric; 1.7.10 had no 3D view at all). Modelled as a pinhole camera floating {@link #camHeight()}
  * blocks above the reference plane {@link #camY}: a block at height {@code wy} is magnified by
- * {@code CAM_HEIGHT / (CAM_HEIGHT - (wy - camY))}, so taller terrain swells outward from the centre and
+ * {@code camHeight / (camHeight - (wy - camY))}, so taller terrain swells outward from the centre and
  * reveals its sides — the classic overhead-with-depth look. The whole projection is done in vertex math
  * (output straight into the PiP's orthographic canvas), so no GPU projection override is needed and the
  * GUI can invert it exactly.
@@ -29,15 +29,17 @@ package buildcraft.robotics.client.zone;
  * flat map regions. The hover box is then drawn at that column's real surface height.
  */
 public class ZoneMapCamera {
-    /** Blocks the camera floats above {@link #camY}. Smaller = stronger perspective (more block sides
-     *  visible off-centre); larger = flatter / more nearly orthographic. */
+    /** Blocks the camera floats above {@link #camY} at {@link #DEFAULT_PX_PER_BLOCK} and closer zooms.
+     *  Smaller = stronger perspective (more block sides visible off-centre); larger = flatter / more
+     *  nearly orthographic. Zooming out past the default raises the camera instead (see
+     *  {@link #camHeight()}). */
     public static final double CAM_HEIGHT = 96.0;
     /** Floor on the camera-to-point distance so terrain at or above the camera can't blow up the
      *  magnification (divide-by-near-zero). */
     private static final double MIN_DIST = 8.0;
     /** How far below the reference plane terrain picking keeps searching. Also scales the raymarch
      *  budget: a ray that reaches the plane at length {@code len} can still dip into terrain up to
-     *  this far below it, so the step budget is {@code len * (CAM_HEIGHT + this) / CAM_HEIGHT}. */
+     *  this far below it, so the step budget is {@code len * (camHeight + this) / camHeight}. */
     private static final int PICK_SEARCH_DOWN = 80;
     /** Hard ceiling on the terrain-pick raymarch, so a pathological zoom can't stall a frame. */
     private static final int PICK_MAX_STEPS = 32768;
@@ -71,13 +73,24 @@ public class ZoneMapCamera {
 
     // ── Projection (world → canvas, canvas units = ground blocks) ────────────────────────
 
+    /**
+     * The camera's height above {@link #camY} at the current zoom. Fixed at {@link #CAM_HEIGHT} from the
+     * default zoom inward; zooming out raises it in proportion to the visible span, so the field of view
+     * stays constant instead of widening. A fixed-height camera reached a ~165&deg; FOV at the survey
+     * floor, flinging off-centre trees hundreds of blocks outward into radial streaks.
+     */
+    public double camHeight() {
+        return CAM_HEIGHT * Math.max(1.0, DEFAULT_PX_PER_BLOCK / pxPerBlock);
+    }
+
     /** Perspective magnification for a point at world height {@code worldY}: 1 at ground, &gt;1 above. */
     private double magnification(double worldY) {
-        double dist = CAM_HEIGHT - (worldY - camY);
+        double h = camHeight();
+        double dist = h - (worldY - camY);
         if (dist < MIN_DIST) {
             dist = MIN_DIST;
         }
-        return CAM_HEIGHT / dist;
+        return h / dist;
     }
 
     public double canvasX(double worldX, double worldY, double worldZ) {
@@ -120,11 +133,12 @@ public class ZoneMapCamera {
      * into, or {@code null} if it hits nothing.
      */
     public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query) {
-        // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
+        // The cursor ray runs from the camera (camX, camY+camHeight, camZ) through the ground-plane point
         // it would hit at magnification 1, i.e. (camX + dx/px, camY, camZ + dy/px).
+        double h = camHeight();
         double gx = dxPixels / pxPerBlock;
         double gz = dyPixels / pxPerBlock;
-        double dirX = gx, dirY = -CAM_HEIGHT, dirZ = gz;
+        double dirX = gx, dirY = -h, dirZ = gz;
         double len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
         dirX /= len;
         dirY /= len;
@@ -134,10 +148,10 @@ public class ZoneMapCamera {
         // below it, so the budget scales with the ray's ground length — at survey zoom that ground point
         // is hundreds of blocks out, far beyond a fixed step count. Single ray per frame, so the cost is
         // bounded by this one loop.
-        long budget = (long) Math.ceil(len * (CAM_HEIGHT + PICK_SEARCH_DOWN) / CAM_HEIGHT) + 8;
+        long budget = (long) Math.ceil(len * (h + PICK_SEARCH_DOWN) / h) + 8;
         budget = Math.min(budget, PICK_MAX_STEPS);
 
-        double x = camX, y = camY + CAM_HEIGHT, z = camZ;
+        double x = camX, y = camY + h, z = camZ;
         double floorY = camY - PICK_SEARCH_DOWN;
         for (int i = 0; i < budget && y > floorY; i++) {
             x += dirX;
@@ -177,7 +191,8 @@ public class ZoneMapCamera {
      * blocks.
      */
     public double[] visibleWorldBounds(int viewportWidthPx, int viewportHeightPx, int pad) {
-        double overscan = CAM_HEIGHT / Math.max(MIN_DIST, CAM_HEIGHT - 48); // worst-case de-magnification
+        double h = camHeight();
+        double overscan = h / Math.max(MIN_DIST, h - 48); // swell of terrain 48 above the plane; pad covers low terrain
         double halfW = (viewportWidthPx / 2.0) / pxPerBlock * overscan + pad;
         double halfH = (viewportHeightPx / 2.0) / pxPerBlock * overscan + pad;
         return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};

@@ -97,9 +97,6 @@ adjudicated), **DESIGN** (real difference, but a deliberate or defensible port d
 - Blank-board robot placement and blank stacking: decided 2026-09-03, both DONE (see "Decided: blank robots and boards").
 - `AIRobotGotoBlock` caps a search at 50,000 expansions (~50 s) then fails; 7.1.x's async runner searched until done.
   Bounded is the better engineering; note it under divergence 5.
-- Arrival snap: 7.1.x wrote the robot's position onto the path-cell centre / straight-move target on arrival; the port
-  zeroes motion where it stalled (IRobotAccess has no setPos). Robots rest ≤0.2 blocks off target; docking self-corrects.
-  Low; fix if a setPos seam is added.
 - Planter refuses to plant in darkness: port uses `cropState.canSurvive` (modern light ≥ 8 rule, same as a player);
   7.1.x planted anywhere. Consistent with modern vanilla — keep.
 - Farmer/Knight/Butcher refuse worn-out tools (7.1.x looped equip→unload forever on a broken sword). Port is better — keep.

@@ -202,14 +202,19 @@ public class AIRobot {
                     aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(sub, "aiName", ""));
                 }
                 if (aiRobotClass != null) {
-                    delegateAI = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
-                    delegateAI.parentAI = this;
+                    // Loaded into a local and installed only once it has loaded: a delegate whose load throws would
+                    // otherwise stay attached half-built (the throw is swallowed below) and run from its defaults.
+                    AIRobot loaded = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
+                    loaded.parentAI = this;
 
-                    if (delegateAI.canLoadFromNBT()) {
-                        delegateAI.loadFromNBT(sub);
+                    if (loaded.canLoadFromNBT()) {
+                        loaded.loadFromNBT(sub);
                     }
+                    delegateAI = loaded;
                 }
             } catch (Throwable e) {
+                // No delegate: this AI goes on without it, as it does for a delegate whose class is gone.
+                delegateAI = null;
                 BCLog.logger.warn("[robots] Failed to load robot delegate AI from NBT", e);
             }
         }
@@ -217,6 +222,8 @@ public class AIRobot {
         onLoadedFromNbt();
     }
 
+    /** Rebuilds the AI saved in {@code nbt}, or returns null when there is none to build: an unregistered name, or a
+     *  load that threw. The AI is returned only after it has loaded, so a caller never installs a half-loaded one. */
     public static AIRobot loadAI(CompoundTag nbt, IRobotAccess robot) {
         AIRobot ai = null;
 
@@ -229,8 +236,11 @@ public class AIRobot {
                 aiRobotClass = RobotManager.getAIRobotByName(NbtApiUtil.getString(nbt, "aiName", ""));
             }
             if (aiRobotClass != null) {
-                ai = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
-                ai.loadFromNBT(nbt);
+                // Loaded into a local and returned only once it has loaded: a throwing load is swallowed here, and the
+                // half-built AI was returned anyway - and installed by the caller as a board running from its defaults.
+                AIRobot loaded = (AIRobot) aiRobotClass.getConstructor(IRobotAccess.class).newInstance(robot);
+                loaded.loadFromNBT(nbt);
+                ai = loaded;
             }
         } catch (Throwable e) {
             BCLog.logger.warn("[robots] Failed to instantiate robot AI from NBT", e);

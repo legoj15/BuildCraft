@@ -20,6 +20,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobot;
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
@@ -44,9 +45,14 @@ public class AIRobotFrameworkTest {
 
     private static final String REGISTERED_AI_NAME = "buildcraftunofficial:framework_test_ai";
 
+    private static final String STATEFUL_AI_NAME = "buildcraftunofficial:framework_test_stateful_ai";
+    private static final String THROWING_LOAD_AI_NAME = "buildcraftunofficial:framework_test_throwing_load_ai";
+
     @BeforeAll
     static void registerTestAi() {
         RobotManager.registerAIRobot(RegisteredAI.class, REGISTERED_AI_NAME);
+        RobotManager.registerAIRobot(StatefulAI.class, STATEFUL_AI_NAME);
+        RobotManager.registerAIRobot(ThrowingLoadAI.class, THROWING_LOAD_AI_NAME);
     }
 
     // ── Power: only the leaf pays ───────────────────────────────────────────
@@ -289,6 +295,75 @@ public class AIRobotFrameworkTest {
                         + "not the entity");
     }
 
+    // ── NBT: an AI whose load threw is not installed ────────────────────────
+
+    /** A saved AI of {@code aiName} carrying {@code value} in its data. */
+    private static CompoundTag savedAi(String aiName, int value) {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putString("aiName", aiName);
+        CompoundTag data = new CompoundTag();
+        data.putInt("value", value);
+        nbt.put("data", data);
+        return nbt;
+    }
+
+    @Test
+    public void loadAiReturnsAnAiThatLoadedItsState() {
+        // The control for the tests below: a load that works still hands the AI back, state and all.
+        AIRobot loaded = AIRobot.loadAI(savedAi(STATEFUL_AI_NAME, 42), new MockRobot());
+
+        StatefulAI stateful = Assertions.assertInstanceOf(StatefulAI.class, loaded);
+        Assertions.assertEquals(42, stateful.value, "loadSelfFromNBT ran against the data");
+        Assertions.assertEquals(1, stateful.loadedNotifications, "and the end-of-load hook ran");
+    }
+
+    @Test
+    public void loadAiDoesNotHandBackAnAiWhoseLoadThrew() {
+        // The AI is built before its state is read. A load that throws used to be logged and swallowed while the
+        // half-built AI was returned anyway - the robot then installed a board whose fields were whatever the
+        // constructor left, over a save that said otherwise.
+        MockRobot robot = new MockRobot();
+
+        AIRobot loaded = Assertions.assertDoesNotThrow(
+                () -> AIRobot.loadAI(savedAi(THROWING_LOAD_AI_NAME, 1), robot),
+                "a throwing load is contained, as it always was");
+
+        Assertions.assertNull(loaded, "the half-loaded AI is not handed back: the caller sees 'no AI', as for an unknown name");
+    }
+
+    @Test
+    public void aDelegateWhoseLoadThrewIsNotInstalledOnItsParent() {
+        CompoundTag parentTag = savedAi(STATEFUL_AI_NAME, 7);
+        parentTag.put("delegateAI", savedAi(THROWING_LOAD_AI_NAME, 1));
+
+        AIRobot loaded = AIRobot.loadAI(parentTag, new MockRobot());
+
+        StatefulAI parent = Assertions.assertInstanceOf(StatefulAI.class, loaded,
+                "a delegate that cannot load does not take the parent down with it");
+        Assertions.assertEquals(7, parent.value, "the parent's own state loaded");
+        Assertions.assertNull(parent.getDelegateAI(),
+                "and no half-loaded delegate was left installed under it - the parent simply has none");
+        Assertions.assertEquals(1, parent.loadedNotifications, "the parent finished loading regardless");
+    }
+
+    @Test
+    public void aDelegateThatLoadedIsInstalledWithItsStateAndLinkedToItsParent() {
+        CompoundTag parentTag = savedAi(STATEFUL_AI_NAME, 7);
+        parentTag.put("delegateAI", savedAi(STATEFUL_AI_NAME, 9));
+
+        StatefulAI parent = (StatefulAI) AIRobot.loadAI(parentTag, new MockRobot());
+
+        StatefulAI delegate = Assertions.assertInstanceOf(StatefulAI.class, parent.getDelegateAI(),
+                "a delegate that loads is installed");
+        Assertions.assertEquals(9, delegate.value, "with the state it was saved with");
+        Assertions.assertEquals(1, delegate.loadedNotifications);
+
+        delegate.terminate();
+        Assertions.assertSame(delegate, parent.ended,
+                "and it knows its parent: finishing reports to it, as a delegate started the normal way does");
+        Assertions.assertNull(parent.getDelegateAI(), "which clears it");
+    }
+
     @Test
     public void registeringAnAiWithoutTheIRobotAccessConstructorIsRejectedAtRegistration() {
         // Loud at registration (mod init) rather than silently null at world load, which is where the
@@ -392,6 +467,59 @@ public class AIRobotFrameworkTest {
     public static class RegisteredAI extends AIRobot {
         public RegisteredAI(IRobotAccess robot) {
             super(robot);
+        }
+    }
+
+    /** Keeps one saved number and counts the end-of-load hook; saves like a board that owns state. */
+    public static class StatefulAI extends AIRobot {
+        int value;
+        int loadedNotifications;
+        AIRobot ended;
+
+        public StatefulAI(IRobotAccess robot) {
+            super(robot);
+        }
+
+        @Override
+        public boolean canLoadFromNBT() {
+            return true;
+        }
+
+        @Override
+        public void writeSelfToNBT(CompoundTag nbt) {
+            nbt.putInt("value", value);
+        }
+
+        @Override
+        public void loadSelfFromNBT(CompoundTag nbt) {
+            value = NbtApiUtil.getInt(nbt, "value", -1);
+        }
+
+        @Override
+        protected void onLoadedFromNbt() {
+            loadedNotifications++;
+        }
+
+        @Override
+        public void delegateAIEnded(AIRobot ai) {
+            ended = ai;
+        }
+    }
+
+    /** An AI whose state cannot be read: its load throws, as a board's does over a corrupt save. */
+    public static class ThrowingLoadAI extends AIRobot {
+        public ThrowingLoadAI(IRobotAccess robot) {
+            super(robot);
+        }
+
+        @Override
+        public boolean canLoadFromNBT() {
+            return true;
+        }
+
+        @Override
+        public void loadSelfFromNBT(CompoundTag nbt) {
+            throw new IllegalStateException("corrupt save");
         }
     }
 

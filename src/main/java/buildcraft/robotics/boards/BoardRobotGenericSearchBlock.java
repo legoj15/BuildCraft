@@ -57,10 +57,13 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  set — 7.1.x's own comment warned that this predicate may be evaluated off the tick thread. */
     private volatile Set<Block> gateBlockFilter = Set.of();
 
-    /** Blocks protection mods refused this robot, so a refused block is not chosen again (and not asked about
-     *  again) every search. Keyed on the home station's owner, whom the robot asks as: a refusal says nothing about
-     *  anyone else. Policy {@link RefusalMemory#ROBOT_SEARCH}. Transient: a reloaded board simply asks again. */
-    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
+    /** Blocks that refused this robot - protection mods said no, or the work on them failed anyway (a break or a
+     *  harvest that did not take, {@link #finishAttempt}) - so a refused block is not chosen again (and not asked
+     *  about again) every search, and the run of failed attempts that sends the board to sleep. Keyed on the home
+     *  station's owner, whom the robot asks as: a refusal says nothing about anyone else. Policy
+     *  {@link RefusalMemory#ROBOT_SEARCH}, the same memory the farmer and planter keep. Transient: a reloaded board
+     *  simply asks again. */
+    private final WorkRefusals refusals = new WorkRefusals(robot);
 
     public BoardRobotGenericSearchBlock(IRobotAccess iRobot) {
         super(iRobot);
@@ -96,7 +99,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null && isExpectedBlock(level, pos) && matchesGateFilter(level.getBlockState(pos))
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
-                && !refusals.isRefused(level, pos, RobotProtection.ownerOf(robot));
+                && !refusals.isRefused(level, pos);
     }
 
     /** Asked once about the block the search has settled on (not about every candidate scanned, which would post a
@@ -111,7 +114,7 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
         if (!(level instanceof ServerLevel serverLevel) || RobotProtection.canBreak(robot, serverLevel, pos)) {
             return true;
         }
-        refusals.remember(level, pos, RobotProtection.ownerOf(robot));
+        refusals.remember(level, pos);
         return false;
     }
 
@@ -189,6 +192,34 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
      *  unload), the release leaves the current holder's claim alone. */
     protected void releaseBlockFound() {
         blockFound.release();
+    }
+
+    /**
+     * The action AI that worked {@link #blockFound()} (a break, a harvest) has ended: feeds how it went into the
+     * board's memory, then releases the block. Call it from {@code delegateAIEnded} instead of
+     * {@link #releaseBlockFound()}.
+     *
+     * <p>An attempt failed when its AI reports failure AND the block is still there and still what this board hunts.
+     * A block that is gone or changed is not a refusal (another robot got to it, or the work took - the harvest AI
+     * reports failure even for a harvest that worked, as 7.1.x's did, and its crop is no longer ripe). A failed block
+     * is remembered like one protection mods refused, so the next search flies to a different block rather than back
+     * to the one that did not take; 7.1.x, whose harvester carried a TODO for this, picked the same nearest block on
+     * every pass. A run of {@link WorkRefusals#GIVE_UP_AFTER} failures in a row sends the board to sleep, so a wall of
+     * blocks it cannot work is not tried one by one.
+     *
+     * @return true when this was the last failure the board tolerates: it should sleep now
+     */
+    protected final boolean finishAttempt(AIRobot ai) {
+        BlockPos pos = blockFound.job();
+        Level level = robot.level();
+        boolean giveUp = false;
+        if (ai.success() || level == null || pos == null || !isExpectedBlock(level, pos)) {
+            refusals.succeeded();
+        } else {
+            giveUp = refusals.failed(level, pos);
+        }
+        releaseBlockFound();
+        return giveUp;
     }
 
     @Override

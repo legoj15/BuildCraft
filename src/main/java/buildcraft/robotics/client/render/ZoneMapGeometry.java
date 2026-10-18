@@ -14,6 +14,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 
 import buildcraft.robotics.client.zone.ZoneMapCamera;
+import buildcraft.robotics.client.zone.ZoneOverlayCache;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
@@ -82,18 +83,12 @@ public final class ZoneMapGeometry {
                                    int wPx, int hPx, Level level) {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
 
-        boolean farMode = cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK;
         int stride = strideFor(cam);
-        double[] b = farMode
-                ? cam.visibleGroundBounds(wPx, hPx, FAR_PAD)
-                : cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
-        int minCX = (int) Math.floor(b[0]) >> 4;
-        int minCZ = (int) Math.floor(b[1]) >> 4;
-        int maxCX = (int) Math.floor(b[2]) >> 4;
-        int maxCZ = (int) Math.floor(b[3]) >> 4;
-        // Clamp the scanned grid so an extreme zoom-out can't ask for thousands of chunks.
-        maxCX = Math.min(maxCX, minCX + MAX_CHUNK_SPAN);
-        maxCZ = Math.min(maxCZ, minCZ + MAX_CHUNK_SPAN);
+        int[] window = visibleChunkWindow(cam, wPx, hPx);
+        int minCX = window[0];
+        int minCZ = window[1];
+        int maxCX = window[2];
+        int maxCZ = window[3];
 
         for (int cx = minCX; cx <= maxCX; cx++) {
             for (int cz = minCZ; cz <= maxCZ; cz++) {
@@ -115,6 +110,22 @@ public final class ZoneMapGeometry {
                 }
             }
         }
+    }
+
+    /** The world chunks the terrain scan covers for a viewport of {@code wPx}x{@code hPx} pixels, as
+     *  {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} (all inclusive). The zone overlays are drawn on that same
+     *  terrain, so they use the same window. */
+    private static int[] visibleChunkWindow(ZoneMapCamera cam, int wPx, int hPx) {
+        boolean farMode = cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK;
+        double[] b = farMode
+                ? cam.visibleGroundBounds(wPx, hPx, FAR_PAD)
+                : cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
+        int minCX = (int) Math.floor(b[0]) >> 4;
+        int minCZ = (int) Math.floor(b[1]) >> 4;
+        int maxCX = (int) Math.floor(b[2]) >> 4;
+        int maxCZ = (int) Math.floor(b[3]) >> 4;
+        // Clamp the scanned grid so an extreme zoom-out can't ask for thousands of chunks.
+        return new int[] {minCX, minCZ, Math.min(maxCX, minCX + MAX_CHUNK_SPAN), Math.min(maxCZ, minCZ + MAX_CHUNK_SPAN)};
     }
 
     /** World blocks per terrain sample at the camera's zoom: 1 at 1 px/block and closer, then the power of two
@@ -203,9 +214,22 @@ public final class ZoneMapGeometry {
 
     // ── Zone overlays + hover ─────────────────────────────────────────────────────────────
 
+    /** The painted cells of each layer in view, worked out once and reused until a layer is edited or the view
+     *  moves (see {@link ZoneOverlayCache}); every Zone Planner viewport draws from this one. */
+    private static final ZoneOverlayCache OVERLAY_CELLS = new ZoneOverlayCache();
+
+    /** Forgets the cached overlay cells: the planner screen opening, so nothing from another world lingers. */
+    public static void clearOverlayCache() {
+        OVERLAY_CELLS.clear();
+    }
+
     /** Emits the painted-zone tints (one colour per dye layer, the in-progress paint preview swapped in
      *  for its layer), the survey-square border and the hover highlight, laid just above each column's
-     *  surface. {@code wPx}/{@code hPx} is the viewport size, which bounds the border to what is visible. */
+     *  surface. {@code wPx}/{@code hPx} is the viewport size, which bounds the overlays to what is visible.
+     *
+     *  <p>Only the painted cells inside the terrain's own chunk window are drawn ({@link ZoneOverlayCache}), and at
+     *  survey zoom, where the terrain is sampled on a stride grid, one tinted square per stride cell rather than per
+     *  block: a layer painted over the whole survey square costs the same to draw as a small one. */
     public static void emitOverlays(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                     int wPx, int hPx, BlockPos tile, ZonePlan[] layers,
                                     ZonePlan bufferLayer, int bufferColorIndex,
@@ -213,6 +237,8 @@ public final class ZoneMapGeometry {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
         emitSurveyBorder(vc, mat, cam, wPx, hPx, tile, data, level);
 
+        int stride = strideFor(cam);
+        int[] window = visibleChunkWindow(cam, wPx, hPx);
         for (int i = 0; i < layers.length; i++) {
             ZonePlan layer = (bufferColorIndex == i && bufferLayer != null)
                     ? bufferLayer
@@ -220,18 +246,35 @@ public final class ZoneMapGeometry {
             if (layer == null) {
                 continue;
             }
+            ZoneOverlayCache.Cells cells = OVERLAY_CELLS.cells(i, layer, tile.getX(), tile.getZ(),
+                    window[0], window[1], window[2], window[3], stride);
+            if (cells.size() == 0) {
+                continue;
+            }
             int rgb = DyeColor.byId(i).getTextureDiffuseColor();
             float r = ((rgb >> 16) & 0xFF) / 255f;
             float g = ((rgb >> 8) & 0xFF) / 255f;
             float bl = (rgb & 0xFF) / 255f;
-            for (int[] cell : layer.getAll()) {
-                int wx = tile.getX() + cell[0];
-                int wz = tile.getZ() + cell[1];
-                int surf = surfaceAt(data, level, wx, wz);
+            // Cells come out grouped by chunk, so remember the last map chunk looked up.
+            int lastCX = Integer.MIN_VALUE;
+            int lastCZ = Integer.MIN_VALUE;
+            ZonePlannerMapChunk mapChunk = null;
+            for (int c = 0; c < cells.size(); c++) {
+                int wx = cells.x(c);
+                int wz = cells.z(c);
+                if ((wx >> 4) != lastCX || (wz >> 4) != lastCZ) {
+                    lastCX = wx >> 4;
+                    lastCZ = wz >> 4;
+                    mapChunk = data.getChunk(level, lastCX, lastCZ);
+                }
+                if (mapChunk == null) {
+                    continue;
+                }
+                int surf = mapChunk.getSurfaceY(wx & 15, wz & 15);
                 if (surf == ZonePlannerMapChunk.NO_DATA) {
                     continue;
                 }
-                overlayQuad(vc, mat, cam, r, g, bl, ZONE_ALPHA, wx, wz, surf);
+                overlayQuad(vc, mat, cam, r, g, bl, ZONE_ALPHA, wx, wz, surf, stride);
             }
         }
 
@@ -332,15 +375,16 @@ public final class ZoneMapGeometry {
         vc.addVertex(mat, ex, ey, ez).setColor(r, g, b, a);
     }
 
-    /** A flat translucent tile sitting just above the surface of one column. */
+    /** A flat translucent tile sitting just above the surface of one terrain sample: a column, or at survey zoom
+     *  the {@code size}-block square the terrain samples as one. */
     private static void overlayQuad(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
-                                    float r, float g, float bl, int a, int wx, int wz, int surf) {
+                                    float r, float g, float bl, int a, int wx, int wz, int surf, int size) {
         float y = surf + 1 + OVERLAY_LIFT;
         quad(vc, mat, cam, 1f, r, g, bl, a,
                 wx, y, wz,
-                wx + 1, y, wz,
-                wx + 1, y, wz + 1,
-                wx, y, wz + 1);
+                wx + size, y, wz,
+                wx + size, y, wz + size,
+                wx, y, wz + size);
     }
 
     // ── Vertex emission ───────────────────────────────────────────────────────────────────

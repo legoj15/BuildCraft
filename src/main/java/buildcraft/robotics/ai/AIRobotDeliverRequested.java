@@ -15,6 +15,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.robotics.StackRequest;
@@ -45,7 +46,8 @@ public class AIRobotDeliverRequested extends AIRobot {
     /** A requester whose chunk is not loaded cannot be flown to (robots path only through loaded cells), and its
      *  station is not gone, so the flight's claim would succeed and the flight fail at the loaded edge. It is not
      *  attempted: the delivery ends unsuccessfully with {@link #requesterAway()} set, and the board keeps the order and
-     *  the cargo for when the requester is back. */
+     *  the cargo for when the requester is back. A requester that forbids this robot is not flown to either, and is
+     *  not "away": the order is lost. */
     @Override
     public void start() {
         if (requested == null) {
@@ -54,8 +56,9 @@ public class AIRobotDeliverRequested extends AIRobot {
             return;
         }
         DockingStation target = requested.getStation(robot.level());
-        if (target != null && !target.isChunkLoaded()) {
-            requesterAway = true;
+        if (target != null && (target.isRobotForbidden(robot) || !target.isChunkLoaded())) {
+            // A requester that forbids this robot is one a station search would have skipped: no delivery there.
+            requesterAway = isAway(target);
             setSuccess(false);
             terminate();
             return;
@@ -69,12 +72,24 @@ public class AIRobotDeliverRequested extends AIRobot {
         return requesterAway;
     }
 
+    /** {@code target}'s chunk is not loaded, but it is still a registered station that accepts this robot. The
+     *  order's station is cached (a {@code StackRequest} keeps the one it resolved), so a requester destroyed while
+     *  away - removed from the registry - still answers "not loaded" here; it is gone, not away, and must not keep the
+     *  robot waiting forever. */
+    private boolean isAway(DockingStation target) {
+        if (target.isChunkLoaded() || target.isRobotForbidden(robot)) {
+            return false;
+        }
+        IRobotRegistry registry = robot.getRegistry();
+        return registry != null && registry.getStation(target.getPos(), target.side()) == target;
+    }
+
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStation) {
             if (!ai.success()) {
                 DockingStation target = requested.getStation(robot.level());
-                requesterAway = target != null && !target.isChunkLoaded();
+                requesterAway = target != null && isAway(target);
                 setSuccess(false);
                 terminate();
                 return;

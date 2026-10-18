@@ -36,9 +36,10 @@ public final class JobClaim<J> {
 
     /** What a reload does with a remembered job. */
     public enum OnReload {
-        /** Saved; a reloaded job is re-claimed whenever it is remembered, delegate or not - for an owner whose own
-         *  {@code update()} goes back to work on it (the break boards resume the break, the delivery board the load,
-         *  the search-and-goto reports its block). */
+        /** Saved; a remembered job (reloaded, or given back with {@link #releaseClaims}) is re-claimed on the owner's
+         *  very next {@code preempt}, delegate or not - for an owner whose own {@code update()} goes back to work on
+         *  it (the break boards resume the break, the delivery board the load or the delivery, the search-and-goto
+         *  reports its block). So a release lasts at most until the owner's next cycle. */
         RECLAIM,
         /** Saved; a reloaded job is re-claimed only while a resumed action AI is working it. With none, nothing
          *  would work it - the owner's {@code update()} starts a fresh search - so it is forgotten instead of held
@@ -155,7 +156,9 @@ public final class JobClaim<J> {
     }
 
     /** Gives the claim back (owner-checked) but keeps the job, unheld, for {@link #preempt} to take back - for an
-     *  owner aborted mid-job (a recharge) whose same instance resumes afterwards. */
+     *  owner aborted mid-job (a recharge) whose same instance resumes afterwards, or one whose next AI releases every
+     *  reservation anyway (the delivery board's wait for an unloaded requester). With {@link OnReload#RECLAIM} the
+     *  owner's next cycle takes it back. */
     public void releaseClaims() {
         if (job != null) {
             IRobotRegistry registry = robot.getRegistry();

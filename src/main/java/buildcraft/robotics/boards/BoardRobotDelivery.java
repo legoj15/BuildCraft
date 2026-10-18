@@ -50,11 +50,16 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
 
     /** An order's two claims: the request's registry reservation and the requester's station. */
     private static final class OrderClaimer implements JobClaim.Claimer<StackRequest> {
-        /** Both, owner-checked, or neither: a reservation re-taken for a station another robot holds goes back. */
+        /** Both, owner-checked, or neither: a reservation re-taken for a station another robot holds goes back. Neither
+         *  for a requester that is no longer registered (the order caches the station it resolved, so one destroyed
+         *  while its chunk was away still looks present) or that now forbids this robot (a station search would skip
+         *  it). */
         @Override
         public boolean reclaim(IRobotAccess robot, IRobotRegistry registry, StackRequest order) {
             DockingStation station = order.getStation(robot.level());
-            if (station == null || !registry.reclaim(order.getResourceId(robot.level()), robot.getRobotId())) {
+            if (station == null || registry.getStation(station.getPos(), station.side()) != station
+                    || station.isRobotForbidden(robot)
+                    || !registry.reclaim(order.getResourceId(robot.level()), robot.getRobotId())) {
                 return false;
             }
             // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only ever drives a
@@ -151,9 +156,11 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             if (deliver.requesterAway() && currentRequest.job() != null) {
                 // The requester's chunk is not loaded: no flight can reach it, but the order can still be filled once
                 // it is back, so the goods are kept and the robot waits. 7.1.x had no unloaded chunks to consider;
-                // giving the order up would dispose of the goods (dropping them if no station takes them). The claims
-                // go back for the wait (the sleep releases every reservation anyway) and preempt re-takes them before
-                // the retry; if another robot has the order by then, it is given up as on any lost order.
+                // giving the order up would dispose of the goods (dropping them if no station takes them). The sleep's
+                // start releases every reservation the robot holds, so the claim is marked unheld here; the board's very
+                // next cycle (sleep delegate or not, RECLAIM) re-takes it in preempt, so the robot holds the order for
+                // the whole wait, as it holds the goods. If it cannot (another robot took the order in that cycle, the
+                // requester left the registry or forbids the robot), the order is given up as any lost order is.
                 currentRequest.releaseClaims();
                 awaitingRequester = true;
                 startDelegateAI(new AIRobotGotoSleep(robot));
@@ -192,7 +199,9 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
      *  Not 7.1.x, which went on delivering unreserved. */
     @Override
     public void preempt(AIRobot ai) {
-        currentRequest.preempt(this, ai);
+        if (currentRequest.preempt(this, ai)) {
+            awaitingRequester = false;
+        }
     }
 
     @Override

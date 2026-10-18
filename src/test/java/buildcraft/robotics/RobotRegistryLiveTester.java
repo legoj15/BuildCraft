@@ -128,6 +128,16 @@ public class RobotRegistryLiveTester {
         public Iterable<StatementSlot> getActiveActions() {
             return Collections.emptyList();
         }
+
+        /** Always reachable. The tests that use this double are about reservations, and they run synchronously on
+         *  the first tick, when an arena-relative position can still sit in a neighbouring chunk that is not loaded
+         *  (force-loading is not synchronous); the searches, Goto Station and the delivery leg treat a station in an
+         *  unloaded chunk as unreachable, which would turn such a test into a coin flip on the arena's alignment.
+         *  The unloaded-station behaviour has its own tests, on {@code DockingStationPipe}s in unloaded chunks. */
+        @Override
+        public boolean isChunkLoaded() {
+            return true;
+        }
     }
 
     private static StationIndex indexOf(DockingStation station) {

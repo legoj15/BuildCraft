@@ -1046,6 +1046,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_rig_picker_orphaned", () -> buildcraft.robotics.RobotStationRigTester::pickerOnOrphanedStation);
         reg.accept("buildcraftunofficial:robot_station_unloaded_home_keeps_robot_working", () -> buildcraft.robotics.RobotStationRigTester::unloadedHomeKeepsTheRobotWorking);
         reg.accept("buildcraftunofficial:robot_delivery_keeps_cargo_for_unloaded_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryKeepsCargoForAnUnloadedRequester);
+        reg.accept("buildcraftunofficial:robot_delivery_gives_up_destroyed_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterWasDestroyed);
+        reg.accept("buildcraftunofficial:robot_delivery_gives_up_forbidding_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterForbidsTheRobot);
         reg.accept("buildcraftunofficial:robot_station_search_skips_unloaded_station", () -> buildcraft.robotics.RobotStationRigTester::searchSkipsAStationInAnUnloadedChunk);
         reg.accept("buildcraftunofficial:robot_station_pipe_filled_away_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeFilledAwayDeregistersItsStation);
         reg.accept("buildcraftunofficial:robot_station_rig_planter_api", () -> buildcraft.robotics.RobotStationRigTester::planterApiRig);

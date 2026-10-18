@@ -112,8 +112,9 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
             BlockEntity tile = world.getBlockEntity(getPos());
             // Only a pipe that still carries a station plug on this face is this station's pipe: /fill pipe-over-pipe
             // on 1.21.10+ leaves a plugless pipe here, and adopting it kept a gateless ghost registered (still chosen
-            // by searches and docked at), where 1.21.1's /fill deregisters it. A rebuild that places the pipe and its
-            // plug on different ticks heals: the new plug's first onTick registers a fresh station.
+            // by searches and docked at), where 1.21.1's /fill deregisters it. A pipe and plug placed on different ticks
+            // (no survival or Builder flow does that today) end up as a fresh station from the plug's first onTick, but
+            // robots homed on the old record lose their home and shut down: that is a deregistration, not a heal.
             if (!(tile instanceof IPipeHolder iph) || !(iph.getPluggable(side()) instanceof IDockingStationProvider)) {
                 holder = null;
                 RobotManager.registryProvider.getRegistry(world).removeStation(this);

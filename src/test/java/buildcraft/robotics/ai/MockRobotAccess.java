@@ -40,6 +40,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceId;
+import buildcraft.robotics.entity.UnreachableBlockCache;
 
 /** A whole robot, as far as an AI test cares: a real {@link MjBattery}, a settable position and docking
  *  station, a settable held item, a real single-slot fluid tank (Ph5), and a registry stub whose station
@@ -448,6 +449,19 @@ public class MockRobotAccess implements IRobotAccess {
     @Override
     public boolean isKnownUnreachable(Entity entity) {
         return false;
+    }
+
+    /** The real block memory, on a clock that never advances: a note made in a test lasts the whole test. */
+    private final UnreachableBlockCache unreachableBlocks = new UnreachableBlockCache(() -> 0L);
+
+    @Override
+    public void unreachableBlockDetected(BlockPos pos) {
+        unreachableBlocks.unreachableDetected(pos);
+    }
+
+    @Override
+    public boolean isKnownUnreachableBlock(BlockPos pos) {
+        return unreachableBlocks.isKnownUnreachable(pos);
     }
 
     // -- board / motion --

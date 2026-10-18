@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -62,6 +63,8 @@ public class PathFindingSearch implements IIterableAlgorithm {
     private final Reservations reservations;
     @Nullable
     private final IBlockFilter approveTarget;
+    /** Told of each candidate whose path finder ended with no path; see {@link #onUnreachable}. */
+    private Consumer<BlockPos> unreachableListener = pos -> {};
 
     /** The table concurrent searches share so that no two converge on one target: who holds a cell is read across
      *  every searcher, and a cell is reserved and freed for this one. */
@@ -139,6 +142,14 @@ public class PathFindingSearch implements IIterableAlgorithm {
         this.pathFinders = new LinkedList<>();
     }
 
+    /** Asks to be told of every candidate this search gave up on because its path finder ended with no path (out of
+     *  budget, or the space the robot can reach holds no way to it) - not of one that was reserved by another search
+     *  or refused by the approver, which is reachable. Lets the caller remember them so the next search skips them. */
+    public PathFindingSearch onUnreachable(Consumer<BlockPos> listener) {
+        this.unreachableListener = listener;
+        return this;
+    }
+
     @Override
     public void iterate() {
         if (pathFinders.size() < MAX_TARGETS && blockIter.hasNext()) {
@@ -207,6 +218,10 @@ public class PathFindingSearch implements IIterableAlgorithm {
                     if (!isReserved(end) && approves(end) && reserve(end)) {
                         return;
                     }
+                } else {
+                    // No path: the candidate cannot be reached from here. Told to the caller, which may remember it
+                    // so the next search does not start the same finder (and spend the same rounds) on it again.
+                    unreachableListener.accept(pathFinding.end());
                 }
                 pathFinders.remove(pathFinding);
             }

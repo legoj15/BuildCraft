@@ -987,6 +987,15 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_random_search_without_candidate_fails", () -> buildcraft.robotics.ai.RandomSearchBudgetTester::randomSearchWithNoCandidateFails);
         reg.accept("buildcraftunofficial:robot_planter_with_nothing_to_plant_sleeps", () -> buildcraft.robotics.ai.RandomSearchBudgetTester::planterWithNothingToPlantSleeps);
         reg.accept("buildcraftunofficial:robot_board_registry_sweep", () -> buildcraft.robotics.boards.BoardRegistrySweepTester::everyPh5BoardResolvesAndRoundTrips);
+        // The farmer and planter remember what a claim mod refused them (and the planter keeps its seed), then sleep.
+        reg.accept("buildcraftunofficial:robot_farmer_does_not_retry_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerDoesNotRetryARefusedTill);
+        reg.accept("buildcraftunofficial:robot_farmer_moves_on_from_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerMovesOnFromARefusedTill);
+        reg.accept("buildcraftunofficial:robot_farmer_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSleepsAfterRepeatedRefusals);
+        reg.accept("buildcraftunofficial:robot_farmer_skips_dirt_it_may_not_break", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSkipsDirtItMayNotBreak);
+        reg.accept("buildcraftunofficial:robot_plant_failure_keeps_seed", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::refusedPlantingKeepsTheSeed);
+        reg.accept("buildcraftunofficial:robot_planter_does_not_retry_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterDoesNotRetryARefusedPlanting);
+        reg.accept("buildcraftunofficial:robot_planter_moves_on_from_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterMovesOnFromARefusedPlanting);
+        reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);
         // The combat boards' entity predicates against REAL entities (no unit test can build one).
         reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
 

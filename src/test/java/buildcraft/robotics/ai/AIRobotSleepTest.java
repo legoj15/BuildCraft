@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -95,20 +96,42 @@ public class AIRobotSleepTest {
                 "no home station means nothing to poll — the 60s timer is the only wake-up left");
     }
 
+    @Test
+    public void severalWakeUpActionsWakeTheSleepOnlyOnce() {
+        // Two gates on the home station can both hold a Wake Up action. Terminating once per action re-ran the
+        // parent's delegateAIEnded for a sleep that had already ended - for the go-to-sleep AI that terminates
+        // itself, so the second call walked the rest of the chain a second time.
+        robot.setLinkedStation(new GateStation(2));
+
+        CountingParent parent = new CountingParent(robot);
+        AIRobotSleep sleep = new AIRobotSleep(robot);
+        parent.startDelegateAI(sleep);
+        sleep.preempt(null);
+
+        Assertions.assertEquals(1, parent.endings,
+                "however many Wake Up actions are active, the sleep ends (and tells its parent) once");
+        Assertions.assertSame(sleep, parent.ended);
+    }
+
     /** A station whose active actions are a single {@code action}, or none when it is null. */
     private static class GateStation extends DockingStation {
         private final List<StatementSlot> slots;
 
         GateStation(ActionRobotWakeUp action) {
+            this(action == null ? 0 : 1);
+        }
+
+        /** A station with {@code count} active Wake Up actions - two gates on the same station, say. */
+        GateStation(int count) {
             super();
-            if (action == null) {
-                slots = Collections.emptyList();
-            } else {
+            List<StatementSlot> active = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
                 StatementSlot slot = new StatementSlot();
-                slot.statement = action;
+                slot.statement = new ActionRobotWakeUp();
                 slot.parameters = new IStatementParameter[0];
-                slots = List.of(slot);
+                active.add(slot);
             }
+            slots = Collections.unmodifiableList(active);
         }
 
         @Override
@@ -128,6 +151,21 @@ public class AIRobotSleepTest {
         @Override
         public void delegateAIEnded(AIRobot ai) {
             ended = ai;
+        }
+    }
+
+    /** Counts how many times a delegate ended, so a double termination is observable. */
+    private static class CountingParent extends RecordingParent {
+        int endings;
+
+        CountingParent(IRobotAccess robot) {
+            super(robot);
+        }
+
+        @Override
+        public void delegateAIEnded(AIRobot ai) {
+            endings++;
+            super.delegateAIEnded(ai);
         }
     }
 }

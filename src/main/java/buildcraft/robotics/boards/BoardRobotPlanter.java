@@ -36,11 +36,23 @@ import buildcraft.robotics.statements.ActionRobotFilter;
  *  so the effective block filter is {@code !replaceable && canSustainPlant && !isTaken} — D1).
  *
  *  <p>7.1.x searched with {@code maxDistanceToEnd = 1} (the path may end on any soft block within one of
- *  the target) — kept: the planter does not need to stand on the exact cell before the seed spot. */
+ *  the target) — kept: the planter does not need to stand on the exact cell before the seed spot.
+ *
+ *  <p>A spot a protection mod would not let the robot plant (a claim mod cancelling the seed's placement event) is
+ *  not tried again and again: the failed planting is remembered per spot ({@link WorkRefusals}), so the next search
+ *  picks somewhere else, the robot keeps the seed the planting did not use ({@link AIRobotPlant}), and after
+ *  {@link WorkRefusals#GIVE_UP_AFTER} failed plantings in a row the planter sleeps instead of working through a
+ *  whole claim. There is no side-effect-free probe for a placement, so unlike the farmer (and the generic search
+ *  board) the search asks nobody first; the first attempt at each spot is the question. 7.1.x, which had no claim
+ *  mods, would have picked the same spot every cycle. */
 public class BoardRobotPlanter extends RedstoneBoardRobot {
 
     /** The spot being planted. Saved; a reloaded one is re-claimed only while the resumed planting works it. */
     private final JobClaim<BlockPos> blockFound = JobClaim.block(robot, JobClaim.OnReload.RECLAIM_WHILE_WORKING);
+
+    /** Spots the seed was refused on, skipped by the search while they stay unchanged, and the run of failed
+     *  plantings that sends the planter to sleep. Transient: a reloaded board simply asks again. */
+    private final WorkRefusals refusals = new WorkRefusals(robot);
 
     public BoardRobotPlanter(IRobotAccess iRobot) {
         super(iRobot);
@@ -76,7 +88,8 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
             IBlockFilter blockFilter = pos -> level != null
                     && !BuildCraftAPI.getWorldProperty("replaceable").get(level, pos)
                     && CropManager.canSustainPlant(level, seed, pos)
-                    && !BlockClaims.isClaimed(robot.getRegistry(), pos);
+                    && !BlockClaims.isClaimed(robot.getRegistry(), pos)
+                    && !refusals.isRefused(level, pos);
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, blockFilter, 1));
         }
     }
@@ -91,7 +104,19 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotPlant) {
+            // A planting that failed (a claim mod cancelled the placement, or the soil changed under the seed) must
+            // not be tried again on the same spot while it is unchanged: the AI is one attempt and dies here, so the
+            // memory is the board's. Without it the robot flew back to the same spot on every pass.
+            boolean giveUp = false;
+            if (ai.success()) {
+                refusals.succeeded();
+            } else {
+                giveUp = refusals.failed(robot.level(), blockFound.job());
+            }
             releaseBlockFound();
+            if (giveUp) {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
         } else if (ai instanceof AIRobotFetchAndEquipItemStack) {
             if (!ai.success()) {
                 startDelegateAI(new AIRobotGotoSleep(robot));

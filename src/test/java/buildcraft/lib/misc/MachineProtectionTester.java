@@ -282,6 +282,72 @@ public class MachineProtectionTester {
         helper.succeed();
     }
 
+    /**
+     * The crack a stripes pipe draws on the block it is working on goes when the cycle is dropped, whatever dropped
+     * it. The pipe changing hands is one such reason: the new owner is a different identity, so the standing permit
+     * (the pipe's only memory of which block it was cracking) is revoked before the cycle is dropped, and the crack
+     * on the half-broken block was never cleared - it stayed on screen for as long as the client keeps a crack
+     * nobody updates, with the new owner's claim refusing the block.
+     */
+    public static void stripesPipeClearsItsCrackWhenTheOwnerChanges(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos pipeRel = new BlockPos(2, 1, 2);
+        BlockPos aRel = pipeRel.above();
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, pipeRel);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        helper.setBlock(aRel, Blocks.STONE);
+        BlockPos a = helper.absolutePos(aRel);
+
+        chargeUntilSixtyPercent(stripes, BlockUtil.computeBlockBreakPower(level, a));
+        check(a.equals(stripes.getCrackedPos()), "precondition: the pipe has a crack drawn on the block it is "
+                + "breaking, got " + stripes.getCrackedPos());
+
+        // The pipe changes hands, and the new owner's claim covers the block.
+        tile.setOwner(new GameProfile(UUID.randomUUID(), "bc_new_pipe_owner"));
+        try (ClaimProtectionMod claim = new ClaimProtectionMod(a, true)) {
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claim.asks() == 1, "the new owner is asked about the block it has inherited, asked "
+                    + claim.asks() + " times");
+            check(stripes.getBreakProgress() == 0, "the old owner's progress is dropped: progress "
+                    + stripes.getBreakProgress() / MjAPI.MJ + " MJ");
+            check(stripes.getCrackedPos() == null, "the crack on the half-broken block is cleared, still drawn on "
+                    + stripes.getCrackedPos());
+            check(level.getBlockState(a).is(Blocks.STONE), "the refused block is not broken");
+        }
+        helper.succeed();
+    }
+
+    /** Re-pointing a pipe part-way into a block drops that cycle and its crack (the permit still names the block). */
+    public static void stripesPipeClearsItsCrackWhenRepointed(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos pipeRel = new BlockPos(2, 1, 2);
+        BlockPos aRel = pipeRel.above();
+        BlockPos bRel = pipeRel.east();
+        TilePipeHolder tile = placeStripesPipeFacingUp(helper, pipeRel);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        helper.setBlock(aRel, Blocks.STONE);
+        helper.setBlock(bRel, Blocks.STONE);
+        BlockPos a = helper.absolutePos(aRel);
+        BlockPos b = helper.absolutePos(bRel);
+
+        chargeUntilSixtyPercent(stripes, BlockUtil.computeBlockBreakPower(level, a));
+        check(a.equals(stripes.getCrackedPos()), "precondition: the pipe has a crack drawn on A, got "
+                + stripes.getCrackedPos());
+
+        try (ClaimProtectionMod claimB = new ClaimProtectionMod(b, true)) {
+            stripes.direction = Direction.EAST;
+            stripes.receivePower(64 * MjAPI.MJ, false);
+            stripes.onTick();
+            check(claimB.asks() == 1, "the re-pointed pipe asks about B, asked " + claimB.asks() + " times");
+            check(stripes.getCrackedPos() == null, "A's crack is cleared and none is drawn on the refused B, got "
+                    + stripes.getCrackedPos());
+        }
+        helper.succeed();
+    }
+
     /** Ticks {@code stripes} (facing an unclaimed block that needs {@code target}) until it is 60% of the way in. */
     private static void chargeUntilSixtyPercent(PipeBehaviourStripes stripes, long target) {
         for (int i = 0; i < 40 && stripes.getBreakProgress() * 10 < target * 6; i++) {

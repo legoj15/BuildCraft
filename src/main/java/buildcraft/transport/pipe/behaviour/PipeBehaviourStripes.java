@@ -68,6 +68,11 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
      *  longer matches the permit and starts a fresh cycle that asks first; before, a stale answer and progress carried
      *  over, so the pipe charged and cracked a block nobody had asked about. */
     private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.STRIPES);
+    /** The block this pipe's break cracks are drawn on (the {@code destroyBlockProgress} overlay), or null while none
+     *  is up. Kept apart from the permit: the permit follows the owner, so it can be gone while the crack it drew is
+     *  still on screen. */
+    @Nullable
+    private BlockPos crackedPos;
 
     public PipeBehaviourStripes(IPipe pipe) {
         super(pipe);
@@ -112,6 +117,12 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     /** The power put into breaking the block in front so far this cycle (for tests). */
     public long getBreakProgress() {
         return progress;
+    }
+
+    /** The block the pipe currently has a break crack drawn on, or null (for tests). */
+    @Nullable
+    public BlockPos getCrackedPos() {
+        return crackedPos;
     }
 
     // Direction management
@@ -219,6 +230,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                     progress += battery.extractPower(0, Math.min(target - progress, MjAPI.MJ * 10));
                     if (progress > 0) {
                         world.destroyBlockProgress(offsetHash, offset, (int) (progress * 9 / target));
+                        crackedPos = offset;
                     }
                 } else if (mayBreak((ServerLevel) world, offset)) {
                     BlockUtil.breakBlockAndGetDropsWithXp(
@@ -245,11 +257,12 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         }
     }
 
-    /** Drops the current cycle: its progress (and the crack it drew on the permitted block), and the permit. */
+    /** Drops the current cycle: its progress, the crack it drew, and the permit. The crack is cleared on the block it
+     *  was drawn on, not on the permitted one: a change of owner revokes the permit before the cycle is dropped. */
     private void endCycle(Level world) {
-        BlockPos cycleTarget = refusals.permittedPos();
-        if (progress > 0 && cycleTarget != null) {
-            world.destroyBlockProgress(cycleTarget.hashCode(), cycleTarget, -1);
+        if (crackedPos != null) {
+            world.destroyBlockProgress(crackedPos.hashCode(), crackedPos, -1);
+            crackedPos = null;
         }
         progress = 0;
         refusals.revokePermit();

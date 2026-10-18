@@ -697,7 +697,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             // 7.2.x robot naming. Vanilla's NameTagItem only reaches a LivingEntity (Player.interactOn offers the
             // held item to Item#interactLivingEntity for living targets alone), and the robot is a bare Entity, so
             // the rename lives here, with NameTagItem's rules: a tag renamed on an anvil names its target and is
-            // used up; one with no name has nothing to give and passes.
+            // used up; one with no name has nothing to give and passes. The shrink is unconditional here as it is in
+            // NameTagItem: a creative player keeps the tag because Player.interactOn restores the held stack's count
+            // after any entity's interact consumed the action (pinned by RobotNameTagTester#creativeNameTagIsNotUsedUp).
             net.minecraft.network.chat.Component name = stack.get(DataComponents.CUSTOM_NAME);
             if (name == null || !isAlive()) {
                 return InteractionResult.PASS;

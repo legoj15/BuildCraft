@@ -1100,7 +1100,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_goto_station_failed_leg_frees_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::failedGotoStationFreesItsPlainClaim);
         reg.accept("buildcraftunofficial:robot_goto_station_docked_keeps_claim", () -> buildcraft.robotics.RobotAbortReleaseTester::dockedGotoStationKeepsItsClaim);
         reg.accept("buildcraftunofficial:robot_goto_station_abort_keeps_home_link", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedGotoStationKeepsTheHomeLink);
-        reg.accept("buildcraftunofficial:robot_goto_station_relink_abort_keeps_new_home", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedTakeAsMainGotoKeepsTheNewHome);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_abort_keeps_old_home", () -> buildcraft.robotics.RobotAbortReleaseTester::abortedTakeAsMainGotoKeepsTheOldHome);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_failed_keeps_old_home", () -> buildcraft.robotics.RobotAbortReleaseTester::failedTakeAsMainGotoKeepsTheOldHome);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_docked_moves_home", () -> buildcraft.robotics.RobotAbortReleaseTester::dockedTakeAsMainGotoMovesTheHome);
+        reg.accept("buildcraftunofficial:robot_goto_station_relink_reloaded_mid_flight", () -> buildcraft.robotics.RobotAbortReleaseTester::takeAsMainGotoReloadedMidFlightMovesTheHomeOnDocking);
         reg.accept("buildcraftunofficial:robot_goto_station_relink_survives_reload_mid_recharge", () -> buildcraft.robotics.RobotAbortReleaseTester::takeAsMainOverrideSurvivesAReloadMidRecharge);
         reg.accept("buildcraftunofficial:robot_shutdown_releases_claims", () -> buildcraft.robotics.RobotAbortReleaseTester::shutdownReleasesWhatTheRobotHolds);
         reg.accept("buildcraftunofficial:static_tables_forget_unloaded_level", () -> buildcraft.lib.misc.StaticTablesLevelUnloadTester::unloadingALevelClearsTheTablesThatPinIt);

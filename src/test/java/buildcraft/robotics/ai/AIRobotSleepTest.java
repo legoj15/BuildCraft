@@ -113,6 +113,48 @@ public class AIRobotSleepTest {
         Assertions.assertSame(sleep, parent.ended);
     }
 
+    @Test
+    public void aWakeUpOnTheTimersLastTickEndsTheSleepOnce() {
+        // cycle() runs preempt() and then, with no delegate, update() on the same AI. A Wake Up that lands on the very
+        // tick the 60s timer runs out terminated the sleep in preempt() and again in update().
+        WakeableStation home = new WakeableStation();
+        robot.setLinkedStation(home);
+
+        CountingParent parent = new CountingParent(robot);
+        AIRobotSleep sleep = new AIRobotSleep(robot);
+        parent.startDelegateAI(sleep);
+        for (int i = 0; i < 60 * 20; i++) {
+            sleep.cycle();
+        }
+        Assertions.assertEquals(0, parent.endings, "precondition: 60s of cycles in, the robot still sleeps");
+
+        home.wakeUp = true;
+        sleep.cycle(); // the timer's last tick, with the Wake Up now active
+
+        Assertions.assertEquals(1, parent.endings,
+                "a Wake Up on the timer's last tick ends the sleep (and tells its parent) exactly once");
+    }
+
+    /** A station whose Wake Up action can be switched on mid-test. */
+    private static class WakeableStation extends DockingStation {
+        boolean wakeUp;
+
+        WakeableStation() {
+            super();
+        }
+
+        @Override
+        public Iterable<StatementSlot> getActiveActions() {
+            if (!wakeUp) {
+                return Collections.emptyList();
+            }
+            StatementSlot slot = new StatementSlot();
+            slot.statement = new ActionRobotWakeUp();
+            slot.parameters = new IStatementParameter[0];
+            return Collections.singletonList(slot);
+        }
+    }
+
     /** A station whose active actions are a single {@code action}, or none when it is null. */
     private static class GateStation extends DockingStation {
         private final List<StatementSlot> slots;

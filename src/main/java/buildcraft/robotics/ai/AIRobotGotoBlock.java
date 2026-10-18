@@ -153,9 +153,12 @@ public class AIRobotGotoBlock extends AIRobotGoto {
             robot.setDeltaMovement(Vec3.ZERO);
 
             if (lastBlockInPath != null) {
-                // Snap to the last path cell. IRobotAccess has no setPos; the destination cell is the one the
-                // velocity was aimed at, and once motion stops the entity tick parks the robot there.
-                robot.aimItemAt(lastBlockInPath);
+                // Snap onto the last path cell's centre, as 7.1.x did (posX/Y/Z = cell + 0.5): the last step only
+                // ends once the robot has stalled or overshot, which leaves it a few tenths of a block off. Double
+                // maths, not 7.1.x's 0.5F, so the half-block survives far from the origin. A flight handed a stored
+                // path has no lastBlockInPath and ends where it stands, as in 7.1.x.
+                robot.setPos(lastBlockInPath.getX() + 0.5, lastBlockInPath.getY() + 0.5,
+                        lastBlockInPath.getZ() + 0.5);
             }
             setSuccess(true);
             terminate();

@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:robot_goto_station_relink_abort_keeps_new_home",
+    "function": "buildcraftunofficial:robot_goto_station_relink_docked_moves_home",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

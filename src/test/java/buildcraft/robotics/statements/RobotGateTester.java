@@ -380,7 +380,7 @@ public class RobotGateTester {
     /** A robot docked at station A while station A's gate carries the in-station trigger + goto-station
      *  action with a SPOT map-location parameter pointing at B: resolving the gate hands the docked robot an
      *  overriding {@code AIRobotGotoStation} redirect (takeAsMain), and the robot flies to B and takes it as
-     *  its main station. The map's SPOT keys are written directly onto the stack's CUSTOM_DATA — the same
+     *  its main station once it docks there (A stays its home for the whole flight). The map's SPOT keys are written directly onto the stack's CUSTOM_DATA — the same
      *  shape {@code ItemMapLocation.useOn} stamps. */
     public static void gotoStationActionRedirectsDockedRobot(GameTestHelper helper) {
         EntityArenaUtil.forceLoadEntityArena(helper);
@@ -437,7 +437,17 @@ public class RobotGateTester {
                                 "the goto action must hand the docked robot a redirect to station B");
                         return false;
                     }
-                    return robot[0].getDockingStation() == stationB[0];
+                    DockingStationPipe stationA = stationAt(helper, pipeARel, Direction.UP);
+                    if (robot[0].getDockingStation() != stationB[0]) {
+                        // In flight: B is only claimed, A stays the robot's home until it docks at B.
+                        helper.assertTrue(robot[0].getLinkedStation() == stationA && stationA.isMainStation(),
+                                "the redirected robot must keep its home A until it docks at B");
+                        return false;
+                    }
+                    helper.assertTrue(robot[0].getLinkedStation() == stationB[0] && stationB[0].isMainStation(),
+                            "docked at B, the redirect makes B the robot's home");
+                    helper.assertFalse(stationA.isTaken(), "...and lets the old home A go");
+                    return true;
                 },
                 () -> {
                     robot[0].discard();

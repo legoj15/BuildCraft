@@ -35,3 +35,12 @@ Round 3 (wf_34f60214-e96): `impl` per packet, `reviewer`, `impl-opus` on blockin
 - Third-party round 2: shop26 + glm-flash on rounds 2–3; post-merge dgx (Flash-Next) + glm-5.3 cross-packet review of the whole session diff.
 - Pump-own-tube fix (GLM-5.3 cross-packet finding): `impl` (Sonnet) done first pass, both tests red→green; `reviewer` approve.
 - Third-party round 2 (shop26 + glm-flash on rounds 2–3): 4 lows, all real → `impl` (Sonnet) fixed first pass (6d15f7344), `reviewer` approve and traced one more (abandoned-bucket charge) → `impl` fixed (c2a255503). dgx Flash-Next post-merge review deferred past the session's waiter (results arrive via the notify hook).
+
+## 2026-10-17 (afternoon) — robots release (workflows wf_9bdb2b6c-52d, wf_1c57ff33-9c3, wf_1d4b04bc-6db, wf_4ce2ca57-072)
+
+- NeoForge bump (four nodes): orchestrator; classified neutral from the changelogs plus a read of the new network limits; full suite green.
+- Round 1 (9 packets + hunt): `impl` ×7, `impl-opus` ×2 (robot-claims, refusal-identity). First-pass approval 7/9; builder-scan-perf needed 1 Opus fix, snapshot-hardening 2 Opus fixes and still ended with 1 blocking + 1 major (Template bound, cap size) → carried to round 2. Hunt: 9 `reviewer` (Haiku) finders, 40 unique findings, 2 Haiku refuters each → 34 confirmed, 3 contested, 3 dropped.
+- Round 2 (9 packets from the hunt): `impl` ×6, `impl-opus` ×3. 6/9 approved; forbid-robot's Opus fixer added an unrequested 7.1.x divergence (Forbid Robot on the docked station) that the reviewer flagged as a cargo-loss path — orchestrator merged only the test-side commit. tables and registry-upgrade surfaced pre-existing bugs → round 3.
+- Third-party: shop26 + glm-flash on round 1 (5 lows, 1 save-compat regression both families agreed on: tag-less DockingStation loads taken) and round 2 (2 GLM lows) → all queued into rounds 3–4.
+- Round 3 (4 packets + hunt 2): `impl` ×4, 1 Opus fix (saved-data-recovery); all approved. Hunt 2: 7 finders, 26 unique → 21 confirmed (several regressions from rounds 1–2: Builder board reach, 1.21.1 fluid load mirror) → round 4.
+- Merge conflicts (board claim latch vs refusal memory; stripes give-up vs JobClaim; flight reach vs loaded-only access) resolved by the orchestrator, keeping both sides.

@@ -101,6 +101,19 @@ public class ZoneMapCameraTest {
     }
 
     @Test
+    void surveyZoomReliefStaysNearItsFootprint() {
+        // Zooming out must keep the field of view sane: with a fixed-height camera, a 30-block tree at the
+        // edge of a ~1,700-block survey view was flung hundreds of blocks outward, smearing the map into
+        // radial streaks. Relief should shift a column by at most a couple of pixels at the survey floor.
+        ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
+        cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
+        double edge = 106 / cam.pxPerBlock; // the 213-px viewport's half-width, in ground blocks
+        double shiftPx = (cam.canvasX(edge, 94, 0) - cam.canvasX(edge, 64, 0)) * cam.pxPerBlock;
+        Assertions.assertTrue(shiftPx > 0, "relief still swells outward");
+        Assertions.assertTrue(shiftPx < 2.0, "relief shift at survey zoom was " + shiftPx + " px");
+    }
+
+    @Test
     void centreColumnStaysCentredAtAnyHeight() {
         // A column directly under the camera projects to the centre no matter how tall (top-down nadir).
         ZoneMapCamera cam = new ZoneMapCamera(50, 64, -20);
@@ -236,8 +249,9 @@ public class ZoneMapCameraTest {
             calls[0]++;
             return Integer.MIN_VALUE;
         }, MIN_BUILD_Y));
-        double toPlane = Math.hypot(Math.hypot(100 / cam.pxPerBlock, 40 / cam.pxPerBlock), ZoneMapCamera.CAM_HEIGHT);
-        double toFloor = toPlane * (ZoneMapCamera.CAM_HEIGHT + 150 - MIN_BUILD_Y) / ZoneMapCamera.CAM_HEIGHT;
+        double h = cam.camHeight();
+        double toPlane = Math.hypot(Math.hypot(100 / cam.pxPerBlock, 40 / cam.pxPerBlock), h);
+        double toFloor = toPlane * (h + 150 - MIN_BUILD_Y) / h;
         Assertions.assertEquals(toFloor, calls[0], 2.0, "the march ran from the camera to the floor, no further");
     }
 
@@ -270,9 +284,10 @@ public class ZoneMapCameraTest {
                 Assertions.assertNotNull(hit, "far pick reached at px " + px + "," + py);
                 double gx = px / cam.pxPerBlock;
                 double gz = py / cam.pxPerBlock;
-                // The flat top face sits 1 block above the plane, so the ray hits ~95/96 of the way out.
-                Assertions.assertEquals(gx * 95 / 96.0, hit[0], 3.0, "far pick X at px " + px + "," + py);
-                Assertions.assertEquals(gz * 95 / 96.0, hit[2], 3.0, "far pick Z at px " + px + "," + py);
+                // The flat top face sits 1 block above the plane, so the ray stops 1/camHeight short of it.
+                double reach = (cam.camHeight() - 1) / cam.camHeight();
+                Assertions.assertEquals(gx * reach, hit[0], 3.0, "far pick X at px " + px + "," + py);
+                Assertions.assertEquals(gz * reach, hit[2], 3.0, "far pick Z at px " + px + "," + py);
                 Assertions.assertEquals(h, hit[1], "far pick surface height");
             }
         }
@@ -298,14 +313,15 @@ public class ZoneMapCameraTest {
 
     @Test
     void worldBoundsGrowWithTheDepthOfTheBuildFloor() {
-        // The floor 96 blocks under the plane is magnified by 96/192 = 1/2: it reaches in from twice as far.
+        // A floor one camera height under the plane is magnified by h/2h = 1/2: it reaches in from twice as far.
         ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
         cam.pxPerBlock = 0.5;
-        double[] b = cam.visibleWorldBounds(200, 100, 0, 64 - 96);
+        int h = (int) cam.camHeight();
+        double[] b = cam.visibleWorldBounds(200, 100, 0, 64 - h);
         Assertions.assertEquals(400.0, b[2], EPS, "east half-span: 100 px / 0.5 px per block = 200 blocks, doubled");
         Assertions.assertEquals(200.0, b[3], EPS, "south half-span: 50 px / 0.5 = 100 blocks, doubled");
-        double[] deeper = cam.visibleWorldBounds(200, 100, 0, 64 - 192);
-        Assertions.assertEquals(b[2] * 1.5, deeper[2], EPS, "a floor 192 under reaches in from three times as far");
+        double[] deeper = cam.visibleWorldBounds(200, 100, 0, 64 - 2 * h);
+        Assertions.assertEquals(b[2] * 1.5, deeper[2], EPS, "a floor two camera heights under reaches in from three times as far");
     }
 
     @Test
@@ -352,7 +368,7 @@ public class ZoneMapCameraTest {
                 cam.pxPerBlock = zoom;
                 int[] window = cam.visibleChunkWindow(VIEW_W, VIEW_H, MIN_Y);
                 // Tops of columns from the floor up to just under the near clip.
-                for (double y = MIN_Y + 1; y < camY + ZoneMapCamera.CAM_HEIGHT - 10; y += 7) {
+                for (double y = MIN_Y + 1; y < camY + cam.camHeight() - 10; y += 7) {
                     for (int px = -VIEW_W / 2; px <= VIEW_W / 2; px += 53) {
                         for (int py = -VIEW_H / 2; py <= VIEW_H / 2; py += 25) {
                             double wx = worldXAt(cam, px / zoom, y);

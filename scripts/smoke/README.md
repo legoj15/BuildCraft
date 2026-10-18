@@ -51,6 +51,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `click` | `widgetText` \| `slotIndex` \| `x`,`y` (GUI units) \| `fx`,`fy` (screen fractions); `button` 0/1/2; `modifiers`; `allowMiss` | `/screenclick`; fails when nothing was under the cursor |
 | `hover` | same targets | `/screenhover`, then waits 600 ms so the tooltip draws — follow with `shot` |
 | `hoverEach` | `name`, `max` (default 12) | hover every visible, active widget on the open screen and screenshot each tooltip (`NN-<name>-hoverKK.png`) |
+| `scroll` | same targets as `hover`; `scrollY` (default 1, negative = wheel down / zoom out), `notches` (1..200), `scrollX` | `/screenscroll` (McDevBridge `/screenscroll`, 2026-10-18 or later); fails when the screen handled none of the notches |
 | `key` | `key` | a named key into the open screen (`escape`, `tab`, `enter`, …) |
 | `text` | `text` | type a string into the open screen's focused widget (click the search box first) |
 | `close` | — | close the open screen (releases container menus server-side) |

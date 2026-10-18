@@ -12,9 +12,9 @@ package buildcraft.robotics.client.zone;
  *
  * <p><b>Projection: top-down perspective</b>, matching BuildCraft 8.x's Zone Planner (camera straight
  * overhead looking down, {@code gluPerspective} 70&deg; FOV — a single nadir rotation, <em>not</em>
- * isometric; 1.7.10 had no 3D view at all). Modelled as a pinhole camera floating {@link #CAM_HEIGHT}
+ * isometric; 1.7.10 had no 3D view at all). Modelled as a pinhole camera floating {@link #camHeight()}
  * blocks above the reference plane {@link #camY}: a block at height {@code wy} is magnified by
- * {@code CAM_HEIGHT / (CAM_HEIGHT - (wy - camY))}, so taller terrain swells outward from the centre and
+ * {@code camHeight / (camHeight - (wy - camY))}, so taller terrain swells outward from the centre and
  * reveals its sides — the classic overhead-with-depth look. The whole projection is done in vertex math
  * (output straight into the PiP's orthographic canvas), so no GPU projection override is needed and the
  * GUI can invert it exactly.
@@ -31,8 +31,10 @@ package buildcraft.robotics.client.zone;
  * camera, and read terrain at the height it is drawn at, so the cursor and the picture agree.
  */
 public class ZoneMapCamera {
-    /** Blocks the camera floats above {@link #camY}. Smaller = stronger perspective (more block sides
-     *  visible off-centre); larger = flatter / more nearly orthographic. */
+    /** Blocks the camera floats above {@link #camY} at {@link #DEFAULT_PX_PER_BLOCK} and closer zooms.
+     *  Smaller = stronger perspective (more block sides visible off-centre); larger = flatter / more
+     *  nearly orthographic. Zooming out past the default raises the camera instead (see
+     *  {@link #camHeight()}). */
     public static final double CAM_HEIGHT = 96.0;
     /** Floor on the camera-to-point distance so terrain at or above the camera can't blow up the
      *  magnification (divide-by-near-zero). Nothing the renderer draws gets this close: see {@link #NEAR_CLIP}. */
@@ -74,13 +76,24 @@ public class ZoneMapCamera {
 
     // ── Projection (world → canvas, canvas units = ground blocks) ────────────────────────
 
+    /**
+     * The camera's height above {@link #camY} at the current zoom. Fixed at {@link #CAM_HEIGHT} from the
+     * default zoom inward; zooming out raises it in proportion to the visible span, so the field of view
+     * stays constant instead of widening. A fixed-height camera reached a ~165&deg; FOV at the survey
+     * floor, flinging off-centre trees hundreds of blocks outward into radial streaks.
+     */
+    public double camHeight() {
+        return CAM_HEIGHT * Math.max(1.0, DEFAULT_PX_PER_BLOCK / pxPerBlock);
+    }
+
     /** Perspective magnification for a point at world height {@code worldY}: 1 at ground, &gt;1 above. */
     private double magnification(double worldY) {
-        double dist = CAM_HEIGHT - (worldY - camY);
+        double h = camHeight();
+        double dist = h - (worldY - camY);
         if (dist < MIN_DIST) {
             dist = MIN_DIST;
         }
-        return CAM_HEIGHT / dist;
+        return h / dist;
     }
 
     public double canvasX(double worldX, double worldY, double worldZ) {
@@ -99,7 +112,7 @@ public class ZoneMapCamera {
 
     /**
      * True for a column whose top face (surface Y + 1) comes within {@link #NEAR_CLIP} blocks of the camera's own
-     * height ({@code camY +} {@link #CAM_HEIGHT}), or rises past it. Such a column cannot be seen faithfully from
+     * height ({@code camY +} {@link #camHeight()}), or rises past it. Such a column cannot be seen faithfully from
      * the overhead camera: the projection's magnification blows up (it is clamped at {@link #MIN_DIST}, which would
      * draw the column somewhere the true-geometry picking ray does not find it) and the ray starts inside the
      * ones that reach the camera. The renderer skips these columns ({@code ZoneMapGeometry}) and
@@ -107,7 +120,7 @@ public class ZoneMapCamera {
      * and every column that is drawn is drawn where the ray finds it.
      */
     public boolean isNearClipped(int surfaceY) {
-        return surfaceY + 1 + NEAR_CLIP >= camY + CAM_HEIGHT;
+        return surfaceY + 1 + NEAR_CLIP >= camY + camHeight();
     }
 
     // ── Picking (pixel offset from viewport centre → world ground column) ────────────────
@@ -144,11 +157,12 @@ public class ZoneMapCamera {
      * block-precise).
      */
     public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query, int minBuildY) {
-        // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
+        // The cursor ray runs from the camera (camX, camY+camHeight, camZ) through the ground-plane point
         // it would hit at magnification 1, i.e. (camX + dx/px, camY, camZ + dy/px).
         double gx = dxPixels / pxPerBlock;
         double gz = dyPixels / pxPerBlock;
-        double dirX = gx, dirY = -CAM_HEIGHT, dirZ = gz;
+        double h = camHeight();
+        double dirX = gx, dirY = -h, dirZ = gz;
         double len = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
         dirX /= len;
         dirY /= len;
@@ -156,16 +170,16 @@ public class ZoneMapCamera {
 
         // The hit lands at or before the ground plane when the terrain is level with or above the planner, but
         // the search also dips down to the build floor, so the budget scales with the ray's length to that
-        // floor: len is its length to the plane, and the floor is (CAM_HEIGHT + camY - floor) / CAM_HEIGHT times
+        // floor: len is its length to the plane, and the floor is (camHeight + camY - floor) / camHeight times
         // as far down. At survey zoom the ground point is hundreds of blocks out, far beyond a fixed step count.
         // One ray per frame, and one step per block of its length, so the cost is bounded by this one loop
         // (and, for a pathologically deep floor, by PICK_MAX_STEPS). A floor above the plane (never in a real
         // world) still searches down to the plane.
         double floorY = Math.min(minBuildY, camY);
-        long budget = (long) Math.ceil(len * (CAM_HEIGHT + camY - floorY) / CAM_HEIGHT) + 8;
+        long budget = (long) Math.ceil(len * (h + camY - floorY) / h) + 8;
         budget = Math.min(budget, PICK_MAX_STEPS);
 
-        double x = camX, y = camY + CAM_HEIGHT, z = camZ;
+        double x = camX, y = camY + h, z = camZ;
         int sampleMask = -stride(); // clears the low bits: the sample grid is world-aligned, a power of two apart
         for (int i = 0; i < budget && y > floorY; i++) {
             x += dirX;
@@ -223,28 +237,27 @@ public class ZoneMapCamera {
     /** The same for the survey zoom, where the grid is coarse and the viewport spans many chunks. */
     private static final int FAR_PAD = 16;
     /** Most chunks the terrain scan covers along one axis: a safety cap for a world whose build range is absurdly
-     *  deep (the window then clips around the camera, not off one side). 512 chunks is 8,192 blocks, the survey
-     *  span (1,704 blocks) scaled by a world floor nearly five times as far below the planner as the camera
-     *  floats above it.
+     *  deep (the window then clips around the camera, not off one side). 512 chunks is 8,192 blocks.
      *
      *  <p>This bounds the terrain scan's walk of the window each frame; it no longer bounds the zone overlay's memory,
-     *  which follows the painted chunks ({@code ZoneOverlayCache} keeps no entry for an empty chunk). It is kept at
-     *  512 because a lower cap would start clipping real views: a vanilla overworld (floor at -64) at the survey zoom
-     *  needs about 250 chunks for a planner at y=64, 290 at y=100 and 460 at y=250, and only reaches about 535 for a
-     *  planner at the very top of the world. */
+     *  which follows the painted chunks ({@code ZoneOverlayCache} keeps no entry for an empty chunk). Since the camera
+     *  rises as it zooms out ({@link #camHeight()}), the build floor barely de-magnifies at the survey zoom: a vanilla
+     *  overworld (floor at -64) needs about 115 chunks for a planner at y=64 and about 125 for one at the top of the
+     *  world, so only a modded world with a build range thousands of blocks deep reaches the cap. */
     public static final int MAX_CHUNK_SPAN = 512;
 
     /**
      * Conservative world-XZ bounding box of everything that can project into a viewport of the given pixel
      * size, for terrain no lower than {@code minBuildY}. Terrain below the reference plane is de-magnified: a
      * column {@code d} blocks from the camera axis projects only {@code d / factor} out, with
-     * {@code factor = (CAM_HEIGHT + camY - y) / CAM_HEIGHT}. So the lowest terrain a world can hold, its build
+     * {@code factor = (camHeight + camY - y) / camHeight}. So the lowest terrain a world can hold, its build
      * floor, is what reaches farthest in from beyond the ground-level span, and that factor scales the ground
      * half-span before padding. Terrain above the plane is magnified and projects out sooner, so it is always
      * inside this box too. Returns {@code [minX, minZ, maxX, maxZ]} in world blocks.
      */
     public double[] visibleWorldBounds(int viewportWidthPx, int viewportHeightPx, int pad, int minBuildY) {
-        double overscan = Math.max(1.0, (CAM_HEIGHT + camY - minBuildY) / CAM_HEIGHT); // the build floor's de-magnification
+        double h = camHeight();
+        double overscan = Math.max(1.0, (h + camY - minBuildY) / h); // the build floor's de-magnification
         double halfW = (viewportWidthPx / 2.0) / pxPerBlock * overscan + pad;
         double halfH = (viewportHeightPx / 2.0) / pxPerBlock * overscan + pad;
         return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};

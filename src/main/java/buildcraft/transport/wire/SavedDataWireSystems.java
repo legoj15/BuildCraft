@@ -43,7 +43,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 import org.jspecify.annotations.Nullable;
 
-public class SavedDataWireSystems extends SavedData {
+public class SavedDataWireSystems extends SavedData implements LegacySavedData.Recoverable {
     //? if >=26.1 {
     public static final SavedDataType<SavedDataWireSystems> TYPE = LegacySavedData.type(
         "buildcraft_wire_systems",
@@ -83,6 +83,16 @@ public class SavedDataWireSystems extends SavedData {
 
     public SavedDataWireSystems(@Nullable ServerLevel level) {
         this.world = level;
+    }
+
+    @Override
+    public boolean hasNoContent() {
+        return wireSystems.isEmpty();
+    }
+
+    @Override
+    public String describeContent() {
+        return wireSystems.size() + " wire systems";
     }
 
     //? if <1.21.10 {

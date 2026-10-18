@@ -35,9 +35,10 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
-public class LevelSavedDataVolumeBoxes extends SavedData {
+public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedData.Recoverable {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
 
     // Codec that wraps the entire state as a CompoundTag for serialization
@@ -120,6 +121,16 @@ public class LevelSavedDataVolumeBoxes extends SavedData {
 
     public LevelSavedDataVolumeBoxes(Level world) {
         this.world = world;
+    }
+
+    @Override
+    public boolean hasNoContent() {
+        return volumeBoxes.isEmpty();
+    }
+
+    @Override
+    public String describeContent() {
+        return volumeBoxes.size() + " volume boxes";
     }
 
     public VolumeBox getVolumeBoxAt(BlockPos pos) {

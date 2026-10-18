@@ -39,6 +39,11 @@ public class BCLib {
 
         BCLibItems.ITEMS.register(modEventBus);
 
+        //? if >=26.1 {
+        // Retires a carried-over pre-26.1 saved-data file once its data is seen in the 26.1+ file.
+        buildcraft.lib.misc.LegacySavedData.registerListeners();
+        //?}
+
         // Register the chunk-loading ticket controller (used by the Quarry and other
         // IChunkLoadingTile machines). Must happen on the mod event bus.
         buildcraft.lib.chunkload.ChunkLoaderManager.registerTicketController(modEventBus);

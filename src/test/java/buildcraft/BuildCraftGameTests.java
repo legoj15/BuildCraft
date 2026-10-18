@@ -1023,6 +1023,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
         // ...but once a 26.1+ file exists it wins, and the pre-26.1 file is left on disk (recoverable).
         reg.accept("buildcraftunofficial:legacy_saved_data_both_files_current_wins", () -> buildcraft.lib.misc.LegacySavedDataTester::bothFilesPresentTheCurrentWinsAndTheLegacyIsKept);
+        // Every real saved-data type against a temporary world layout: an EMPTY 26.1+ file (the one a 26.x build from
+        // before the migration wrote) gives way to the 1.21.x data, a 26.1+ file with content never does, and a
+        // 1.21.x file alone still migrates; the old file is retired once its data is written, so deleted data stays
+        // deleted.
+        reg.accept("buildcraftunofficial:legacy_saved_data_empty_current_is_recovered", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeRecoversTheLegacyDataOverAnEmptyCurrentFile);
+        reg.accept("buildcraftunofficial:legacy_saved_data_content_current_wins_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeKeepsACurrentFileWithContent);
+        reg.accept("buildcraftunofficial:legacy_saved_data_legacy_alone_migrates_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeMigratesALegacyFileAlone);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

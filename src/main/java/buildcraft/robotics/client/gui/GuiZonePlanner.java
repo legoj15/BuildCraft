@@ -16,6 +16,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
+import org.lwjgl.glfw.GLFW;
+
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.container.ContainerZonePlanner;
@@ -75,9 +77,9 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final double ZOOM_STEP_OUT = 1.35;
 
     private final ZoneMapCamera camera;
-    /** The pan drag in progress, if any: owned by the left button that began it (see {@link ZonePanDrag}). */
+    /** The pan drag in progress, if any: owned by the left button that began it and moved by cursor moves, not drag
+     *  events (see {@link ZonePanDrag} for why). */
     private final ZonePanDrag pan = new ZonePanDrag();
-    private double lastDragX, lastDragY;
     /** In-progress paint preview (null when not painting). Display only: on release the stroke itself (the
      *  rectangle {@link #stroke} holds) is applied to the layer as it is then and sent. */
     private ZonePlan bufferLayer = null;
@@ -284,9 +286,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                     }
                 }
                 return true;
-            } else if (carried.isEmpty() && pan.press(button)) {
-                lastDragX = mx;
-                lastDragY = my;
+            } else if (carried.isEmpty() && pan.press(button, mx, my)) {
                 return true;
             }
         }
@@ -296,9 +296,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     /** @return true if the drag is panning or painting the map. */
     private boolean onMapDragged(double mx, double my) {
         if (pan.isActive()) {
-            camera.panByPixels(mx - lastDragX, my - lastDragY);
-            lastDragX = mx;
-            lastDragY = my;
+            // Ours, but mouseMoved does the panning: drags stop arriving once any second button is released.
             return true;
         }
         if (stroke.isOpen()) {
@@ -337,6 +335,26 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        // Minecraft sends this on every cursor movement, a held button or not, unlike mouseDragged (see ZonePanDrag).
+        ZonePanDrag.Delta delta = pan.move(mouseX, mouseY, isPanButtonHeld());
+        if (delta != null) {
+            camera.panByPixels(delta.dx(), delta.dy());
+        }
+        super.mouseMoved(mouseX, mouseY);
+    }
+
+    /** Whether the pan button is physically down now, from GLFW: Minecraft tracks it only while no screen is open. */
+    private static boolean isPanButtonHeld() {
+        //? if >=1.21.10 {
+        long window = Minecraft.getInstance().getWindow().handle();
+        //?} else {
+        /*long window = Minecraft.getInstance().getWindow().getWindow();*/
+        //?}
+        return GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
     }
 
     @Override

@@ -24,17 +24,24 @@ package buildcraft.robotics.client.zone;
  * level (independent of GUI scale — the offscreen texture and its blit both carry the GUI-scale factor,
  * which cancels). World +X maps east/right, world +Z maps south/down (north up), like a vanilla map.
  *
- * <p><b>Picking</b> intersects the view ray with the ground plane at {@link #camY} (where the
- * magnification is exactly 1, so the inverse is a plain linear map) — the natural behaviour for painting
- * flat map regions. The hover box is then drawn at that column's real surface height.
+ * <p><b>Picking</b> comes in two forms. {@link #pickGround} intersects the view ray with the ground plane at
+ * {@link #camY} (where the magnification is exactly 1, so the inverse is a plain linear map). {@link #pickTerrain}
+ * marches the ray through the height field to the column that is actually drawn under the cursor, and is what the
+ * hover box and painting use. Both it and the renderer leave out the columns within {@link #NEAR_CLIP} of the
+ * camera, and read terrain at the height it is drawn at, so the cursor and the picture agree.
  */
 public class ZoneMapCamera {
     /** Blocks the camera floats above {@link #camY}. Smaller = stronger perspective (more block sides
      *  visible off-centre); larger = flatter / more nearly orthographic. */
     public static final double CAM_HEIGHT = 96.0;
     /** Floor on the camera-to-point distance so terrain at or above the camera can't blow up the
-     *  magnification (divide-by-near-zero). */
+     *  magnification (divide-by-near-zero). Nothing the renderer draws gets this close: see {@link #NEAR_CLIP}. */
     private static final double MIN_DIST = 8.0;
+    /** A column whose top face is this close to the camera (or closer) is neither drawn nor pickable. It is a
+     *  block more than {@link #MIN_DIST}, so the clamp on the magnification never engages for anything drawn (a
+     *  clamped magnification would draw the column where the true-geometry pick ray does not find it) and the
+     *  few-hundredths lift of the overlay quads above a surface stays clear of it too. */
+    public static final double NEAR_CLIP = MIN_DIST + 1.0;
     /** How far below the reference plane terrain picking keeps searching. Also scales the raymarch
      *  budget: a ray that reaches the plane at length {@code len} can still dip into terrain up to
      *  this far below it, so the step budget is {@code len * (CAM_HEIGHT + this) / CAM_HEIGHT}. */
@@ -95,14 +102,16 @@ public class ZoneMapCamera {
     }
 
     /**
-     * True for a column whose top face (surface Y + 1) reaches the camera's own height ({@code camY +}
-     * {@link #CAM_HEIGHT}) or higher. Such a column cannot be seen from the overhead camera: the projection's
-     * magnification blows up (it is clamped at {@link #MIN_DIST}) and the picking ray starts inside it. The
-     * renderer skips these columns ({@code ZoneMapGeometry}) and {@link #pickTerrain} steps over them, so what
-     * is drawn and what the cursor can land on stay the same set.
+     * True for a column whose top face (surface Y + 1) comes within {@link #NEAR_CLIP} blocks of the camera's own
+     * height ({@code camY +} {@link #CAM_HEIGHT}), or rises past it. Such a column cannot be seen faithfully from
+     * the overhead camera: the projection's magnification blows up (it is clamped at {@link #MIN_DIST}, which would
+     * draw the column somewhere the true-geometry picking ray does not find it) and the ray starts inside the
+     * ones that reach the camera. The renderer skips these columns ({@code ZoneMapGeometry}) and
+     * {@link #pickTerrain} steps over them, so what is drawn and what the cursor can land on stay the same set,
+     * and every column that is drawn is drawn where the ray finds it.
      */
-    public boolean isAtOrAboveCamera(int surfaceY) {
-        return surfaceY + 1 >= camY + CAM_HEIGHT;
+    public boolean isNearClipped(int surfaceY) {
+        return surfaceY + 1 + NEAR_CLIP >= camY + CAM_HEIGHT;
     }
 
     // ── Picking (pixel offset from viewport centre → world ground column) ────────────────
@@ -128,8 +137,13 @@ public class ZoneMapCamera {
      * can't give (under perspective, a column drawn at its surface height projects to a different pixel
      * than its ground-plane footprint, so a flat-plane pick drifts from the cursor off-centre). Mirrors
      * BC8's {@code rayTrace}. Returns {@code [worldX, surfaceY, worldZ]} of the first column the ray dips
-     * into, or {@code null} if it hits nothing. Columns that reach the camera's height
-     * ({@link #isAtOrAboveCamera}) are skipped, matching what the renderer leaves undrawn.
+     * into, or {@code null} if it hits nothing. Columns near the camera's height ({@link #isNearClipped}) are
+     * skipped, matching what the renderer leaves undrawn.
+     *
+     * <p>The height it tests the ray against is the one the renderer draws: below 1 px/block the terrain is drawn
+     * one cell per {@link #stride()} blocks, at the surface of the cell's lowest-corner sample, so that sample's
+     * surface is what {@code query} is asked for (the exact column hit is still returned, so painting stays
+     * block-precise).
      */
     public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query) {
         // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
@@ -151,16 +165,17 @@ public class ZoneMapCamera {
 
         double x = camX, y = camY + CAM_HEIGHT, z = camZ;
         double floorY = camY - PICK_SEARCH_DOWN;
+        int sampleMask = -stride(); // clears the low bits: the sample grid is world-aligned, a power of two apart
         for (int i = 0; i < budget && y > floorY; i++) {
             x += dirX;
             y += dirY;
             z += dirZ;
             int wx = (int) Math.floor(x);
             int wz = (int) Math.floor(z);
-            int sy = query.surfaceAt(wx, wz);
-            // A column that reaches the camera's own height is not drawn (see isAtOrAboveCamera), and the ray
-            // starts inside it: step over it, so the cursor lands on terrain that is actually in view.
-            if (sy != Integer.MIN_VALUE && isAtOrAboveCamera(sy)) {
+            int sy = query.surfaceAt(wx & sampleMask, wz & sampleMask);
+            // A column near the camera's own height is not drawn (see isNearClipped), and the ray starts inside
+            // the ones that reach it: step over it, so the cursor lands on terrain that is actually in view.
+            if (sy != Integer.MIN_VALUE && isNearClipped(sy)) {
                 continue;
             }
             // The column's top face sits at sy + 1; the ray has hit once it descends to/through it.
@@ -169,6 +184,21 @@ public class ZoneMapCamera {
             }
         }
         return null;
+    }
+
+    /** World blocks per terrain sample at this zoom: 1 at 1 px/block and closer, then the power of two
+     *  (2, 4, 8; the survey floor is 0.125 px/block) that keeps a sample at least a pixel wide. Powers of two
+     *  keep the sample grid world-aligned across chunk borders &mdash; chunk origins are multiples of 16 and
+     *  16 % stride == 0, so adjacent chunks never double-cover or gap. */
+    public int stride() {
+        int stride = 1;
+        if (pxPerBlock < FAR_MODE_PX_PER_BLOCK) {
+            int need = (int) Math.ceil(1.0 / pxPerBlock);
+            while (stride < need && stride < 8) {
+                stride <<= 1;
+            }
+        }
+        return stride;
     }
 
     // ── Zoom / pan helpers ──────────────────────────────────────────────────────────────
@@ -187,28 +217,53 @@ public class ZoneMapCamera {
         camZ -= dyPixels / pxPerBlock;
     }
 
+    /** Extra world-block padding around the visible box (per-column zoom) so a column's skirt or an edge cell isn't clipped. */
+    private static final int RELIEF_PAD = 64;
+    /** The same for the survey zoom, where the grid is coarse and the viewport spans many chunks. */
+    private static final int FAR_PAD = 16;
+    /** Most chunks the terrain scan covers along one axis: a safety cap for a world whose build range is absurdly
+     *  deep (the window then clips around the camera, not off one side). 512 chunks is 8,192 blocks, the survey
+     *  span (1,704 blocks) scaled by a world floor nearly five times as far below the planner as the camera
+     *  floats above it. */
+    public static final int MAX_CHUNK_SPAN = 512;
+
     /**
-     * Conservative world-XZ bounding box of everything that can project into a viewport of the given
-     * pixel size. Low terrain (magnification &lt;1) can enter from beyond the ground-level span, so the
-     * ground half-span is over-scanned before padding. Returns {@code [minX, minZ, maxX, maxZ]} in world
-     * blocks.
+     * Conservative world-XZ bounding box of everything that can project into a viewport of the given pixel
+     * size, for terrain no lower than {@code minBuildY}. Terrain below the reference plane is de-magnified: a
+     * column {@code d} blocks from the camera axis projects only {@code d / factor} out, with
+     * {@code factor = (CAM_HEIGHT + camY - y) / CAM_HEIGHT}. So the lowest terrain a world can hold, its build
+     * floor, is what reaches farthest in from beyond the ground-level span, and that factor scales the ground
+     * half-span before padding. Terrain above the plane is magnified and projects out sooner, so it is always
+     * inside this box too. Returns {@code [minX, minZ, maxX, maxZ]} in world blocks.
      */
-    public double[] visibleWorldBounds(int viewportWidthPx, int viewportHeightPx, int pad) {
-        double overscan = CAM_HEIGHT / Math.max(MIN_DIST, CAM_HEIGHT - 48); // worst-case de-magnification
+    public double[] visibleWorldBounds(int viewportWidthPx, int viewportHeightPx, int pad, int minBuildY) {
+        double overscan = Math.max(1.0, (CAM_HEIGHT + camY - minBuildY) / CAM_HEIGHT); // the build floor's de-magnification
         double halfW = (viewportWidthPx / 2.0) / pxPerBlock * overscan + pad;
         double halfH = (viewportHeightPx / 2.0) / pxPerBlock * overscan + pad;
         return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};
     }
 
     /**
-     * Exact ground-plane world-XZ bounds of a viewport — everything {@link #pickGround} can reach, with
-     * no perspective overscan. The far-zoom LOD path samples this (not {@link #visibleWorldBounds}) so
-     * what it renders is precisely what picking and painting address, and the sample count stays tied to
-     * the viewport pixels rather than the perspective frustum.
+     * The world chunks the terrain scan covers for a viewport of the given pixel size, as
+     * {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} (all inclusive): every chunk with terrain down to
+     * {@code minBuildY} that can project into the viewport ({@link #visibleWorldBounds}), at the survey zoom as at
+     * the per-column zoom. Clipped to {@link #MAX_CHUNK_SPAN} chunks along an axis, around the camera. The zone
+     * overlays are drawn on that same terrain, so they use the same window.
      */
-    public double[] visibleGroundBounds(int viewportWidthPx, int viewportHeightPx, int pad) {
-        double halfW = (viewportWidthPx / 2.0) / pxPerBlock + pad;
-        double halfH = (viewportHeightPx / 2.0) / pxPerBlock + pad;
-        return new double[]{camX - halfW, camZ - halfH, camX + halfW, camZ + halfH};
+    public int[] visibleChunkWindow(int viewportWidthPx, int viewportHeightPx, int minBuildY) {
+        int pad = pxPerBlock < FAR_MODE_PX_PER_BLOCK ? FAR_PAD : RELIEF_PAD;
+        double[] b = visibleWorldBounds(viewportWidthPx, viewportHeightPx, pad, minBuildY);
+        int[] x = clipAround((int) Math.floor(b[0]) >> 4, (int) Math.floor(b[2]) >> 4, (int) Math.floor(camX) >> 4);
+        int[] z = clipAround((int) Math.floor(b[1]) >> 4, (int) Math.floor(b[3]) >> 4, (int) Math.floor(camZ) >> 4);
+        return new int[] {x[0], z[0], x[1], z[1]};
+    }
+
+    /** {@code [lo, hi]}, limited to {@link #MAX_CHUNK_SPAN} values centred (as far as it allows) on {@code centre}. */
+    private static int[] clipAround(int lo, int hi, int centre) {
+        if (hi - lo + 1 <= MAX_CHUNK_SPAN) {
+            return new int[] {lo, hi};
+        }
+        int from = Math.max(lo, Math.min(centre - MAX_CHUNK_SPAN / 2, hi - MAX_CHUNK_SPAN + 1));
+        return new int[] {from, from + MAX_CHUNK_SPAN - 1};
     }
 }

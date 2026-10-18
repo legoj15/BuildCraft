@@ -69,6 +69,22 @@ public class ZonePlannerOverlayTester {
         //?}
     }
 
+    public static void surveyOutlineIsDrawnOnTerrainCells(GameTestHelper helper) {
+        //? if >=1.21.10 {
+        Impl.surveyOutlineLiesOnTerrainCells(helper);
+        //?} else {
+        /*helper.succeed();*/
+        //?}
+    }
+
+    public static void lowTerrainAtTheEdgeOfSurveyZoomIsDrawn(GameTestHelper helper) {
+        //? if >=1.21.10 {
+        Impl.lowTerrainAtSurveyEdge(helper);
+        //?} else {
+        /*helper.succeed();*/
+        //?}
+    }
+
     //? if >=1.21.10 {
     private static final class Impl {
 
@@ -157,6 +173,14 @@ public class ZonePlannerOverlayTester {
                 return cam;
             }
 
+            /** A survey-zoom camera whose plane is {@code above} blocks over the floor's level, centred over the floor
+             *  shifted by {@code (atX, atZ)}: the floor is then below the plane, and de-magnified. */
+            ZoneMapCamera cameraOver(double pxPerBlock, int atX, int atZ, int above) {
+                ZoneMapCamera cam = new ZoneMapCamera(x + atX, y + above, z + atZ);
+                cam.pxPerBlock = pxPerBlock;
+                return cam;
+            }
+
             /** A camera hovering at an absolute height over the floor, close up like {@link #camera}. */
             ZoneMapCamera cameraAtHeight(double height) {
                 ZoneMapCamera cam = new ZoneMapCamera(x + 8, height - ZoneMapCamera.CAM_HEIGHT, z + 8);
@@ -167,6 +191,20 @@ public class ZonePlannerOverlayTester {
             int emitTerrain(ZoneMapCamera cam) {
                 VertexCounter counter = new VertexCounter();
                 ZoneMapGeometry.emitTerrain(counter.consumer(), new Matrix4f(), cam, 213, 213, level);
+                return counter.vertices;
+            }
+
+            /** Whether the map has a surface for the world column {@code (wx, wz)}. */
+            boolean mapped(int wx, int wz) {
+                ZonePlannerMapChunk chunk = ZonePlannerMapDataClient.INSTANCE.getChunk(level, wx >> 4, wz >> 4);
+                return chunk != null && chunk.getSurfaceY(wx & 15, wz & 15) != ZonePlannerMapChunk.NO_DATA;
+            }
+
+            /** The overlay with no layers, for a planner at {@code at}: just the survey-square outline, if it is in view. */
+            int emitOutline(BlockPos at, ZoneMapCamera cam) {
+                VertexCounter counter = new VertexCounter();
+                ZoneMapGeometry.emitOverlays(counter.consumer(), new Matrix4f(), cam, 213, 213, at, new ZonePlan[16], null,
+                        -1, null, level);
                 return counter.vertices;
             }
 
@@ -246,8 +284,8 @@ public class ZonePlannerOverlayTester {
                 int surface = chunk.getSurfaceY(2, 2);
                 helper.assertTrue(surface != ZonePlannerMapChunk.NO_DATA, "baseline: the floor has a surface");
 
-                // A column's top face is surface + 1. A camera one block above that sees the floor...
-                ZoneMapCamera seeing = floor.cameraAtHeight(surface + 2);
+                // A column's top face is surface + 1. A camera more than NEAR_CLIP above that sees the floor...
+                ZoneMapCamera seeing = floor.cameraAtHeight(surface + 1 + ZoneMapCamera.NEAR_CLIP + 1);
                 int seenTerrain = floor.emitTerrain(seeing);
                 helper.assertTrue(seenTerrain > 0, "baseline: the floor is drawn from above");
                 helper.assertTrue(floor.emit(seeing, layers(layer), null, -1) == 9 * VERTICES_PER_QUAD,
@@ -261,6 +299,13 @@ public class ZonePlannerOverlayTester {
                 helper.assertTrue(floor.emit(atTop, layers(layer), null, -1) == 0,
                         "and so is the tint painted over them");
 
+                // Not yet at the camera is not enough: within the near clip, the projection's clamp would draw the
+                // column somewhere the pick ray does not look, so those are left out too.
+                ZoneMapCamera nearClip = floor.cameraAtHeight(surface + 1 + ZoneMapCamera.NEAR_CLIP);
+                helper.assertTrue(floor.emitTerrain(nearClip) < seenTerrain,
+                        "columns within the near clip of the camera are left out of the terrain");
+                helper.assertTrue(floor.emit(nearClip, layers(layer), null, -1) == 0, "and carry no tint");
+
                 // A camera below everything mapped sees none of it.
                 ZoneMapCamera below = floor.cameraAtHeight(surface - 500);
                 helper.assertTrue(floor.emitTerrain(below) == 0, "no terrain at all when every column reaches the camera");
@@ -269,6 +314,82 @@ public class ZonePlannerOverlayTester {
                 // The cull is per frame, not baked into the cached cells: back above, the tint is back.
                 helper.assertTrue(floor.emit(seeing, layers(layer), null, -1) == 9 * VERTICES_PER_QUAD,
                         "the tint returns with the camera");
+                helper.succeed();
+            } finally {
+                floor.lift();
+                ZoneMapGeometry.clearOverlayCache();
+                ZonePlannerMapDataClient.INSTANCE.clear();
+            }
+        }
+
+        /**
+         * Terrain far below the planner is de-magnified, so it shows at the edge of the survey view from well beyond
+         * the ground-level span of the viewport. A plane 99 blocks over a floor magnifies it by about a half: the
+         * viewport spans 852 blocks of ground at the survey zoom but about 1,700 of the floor, so a floor 1,300 blocks
+         * out is in view though it is past the ground span. It, and the tint over it, must be drawn.
+         */
+        static void lowTerrainAtSurveyEdge(GameTestHelper helper) {
+            ZonePlannerMapDataClient.INSTANCE.clear();
+            ZoneMapGeometry.clearOverlayCache();
+            Floor floor = new Floor(helper);
+            floor.lay();
+            try {
+                ZonePlan layer = new ZonePlan();
+                floor.paint(layer, 0, 0, 15, 15); // the whole floor chunk: four 8x8 samples at survey zoom
+                ZonePlannerMapChunk chunk = ZonePlannerMapDataClient.INSTANCE.getChunk(floor.level, floor.x >> 4, floor.z >> 4);
+                helper.assertTrue(chunk != null, "baseline: the floor's chunk is mapped");
+
+                // Looking at the floor itself, from straight above.
+                ZoneMapCamera overhead = floor.cameraOver(ZoneMapCamera.MIN_PX_PER_BLOCK, 8, 8, 99);
+                helper.assertTrue(floor.emitTerrain(overhead) > 0, "baseline: the floor is drawn from straight above");
+                helper.assertTrue(floor.emit(overhead, layers(layer), null, -1) == 4 * VERTICES_PER_QUAD,
+                        "baseline: its four samples carry the tint");
+
+                // The same floor 1,300 blocks from the camera: past the viewport's ground span (852 blocks), but
+                // projected to about 640 blocks out, which is in view.
+                ZoneMapCamera edge = floor.cameraOver(ZoneMapCamera.MIN_PX_PER_BLOCK, 8 + 1300, 8, 99);
+                helper.assertTrue(floor.emitTerrain(edge) > 0,
+                        "the floor at the edge of the survey view is drawn, though it lies past the ground span");
+                helper.assertTrue(floor.emit(edge, layers(layer), null, -1) == 4 * VERTICES_PER_QUAD,
+                        "and so is the tint over it, on exactly the floor's four samples");
+                helper.succeed();
+            } finally {
+                floor.lift();
+                ZoneMapGeometry.clearOverlayCache();
+                ZonePlannerMapDataClient.INSTANCE.clear();
+            }
+        }
+
+        /**
+         * The survey-square outline is drawn on the terrain's own cells: one quad per mapped terrain cell the square's
+         * edge crosses, a block wide close up and a stride-wide cell at survey zoom, wherever the planner stands. The
+         * planner here puts the square's north edge across the floor, three blocks in and off both grids.
+         */
+        static void surveyOutlineLiesOnTerrainCells(GameTestHelper helper) {
+            ZonePlannerMapDataClient.INSTANCE.clear();
+            ZoneMapGeometry.clearOverlayCache();
+            Floor floor = new Floor(helper);
+            floor.lay();
+            try {
+                BlockPos planner = new BlockPos(floor.x + 5, floor.y, floor.z + 3 - ZonePlan.SURVEY_MIN_BLOCK);
+                helper.assertTrue(floor.mapped(floor.x, floor.z), "baseline: the floor is mapped");
+
+                int columns = 0; // close up: the edge's own row of blocks
+                for (int x = floor.x - 64; x < floor.x + 80; x++) {
+                    columns += floor.mapped(x, floor.z + 3) ? 1 : 0;
+                }
+                helper.assertTrue(columns >= 16, "baseline: at least the floor's 16 columns lie on the edge");
+                helper.assertTrue(floor.emitOutline(planner, floor.camera(8.0, 8, 8)) == columns * VERTICES_PER_QUAD,
+                        "close up, the outline is one quad per mapped column along the north edge (" + columns + ")");
+
+                int cells = 0; // survey zoom: the 8-block terrain cells of the row holding that edge
+                for (int x = floor.x - 64; x < floor.x + 80; x += 8) {
+                    cells += floor.mapped(x, floor.z) ? 1 : 0;
+                }
+                helper.assertTrue(cells >= 2, "baseline: at least the floor's two cells lie on the edge");
+                helper.assertTrue(floor.emitOutline(planner, floor.camera(ZoneMapCamera.MIN_PX_PER_BLOCK, 8, 8))
+                                == cells * VERTICES_PER_QUAD,
+                        "at survey zoom, one quad per mapped 8-block terrain cell along that edge (" + cells + ")");
                 helper.succeed();
             } finally {
                 floor.lift();

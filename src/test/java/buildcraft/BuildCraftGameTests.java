@@ -883,6 +883,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_paint_pushes_coalesced", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::pushesToOtherViewersAreCoalesced);
         reg.accept("buildcraftunofficial:zone_planner_paint_stream_capped", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::streamedStrokesReachWatchersAtACappedRate);
         reg.accept("buildcraftunofficial:zone_planner_paint_rate_limited", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokesPastTheRateLimitAreDropped);
+        // ...the allowance is the viewer's at that planner, so closing and reopening the screen does not refill it.
+        reg.accept("buildcraftunofficial:zone_planner_paint_allowance_kept_on_reopen", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokeAllowanceSurvivesReopeningTheScreen);
 
         // Robotics — Zone Planner map overlay as the viewport emits it: one quad per painted column on mapped
         // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
@@ -890,6 +892,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
         reg.accept("buildcraftunofficial:zone_planner_cull_above_camera", () -> buildcraft.robotics.ZonePlannerOverlayTester::terrainAndOverlayLeaveOutColumnsReachingTheCamera);
+        // ...and terrain far below the planner, de-magnified into view from beyond the ground span, is still drawn.
+        reg.accept("buildcraftunofficial:zone_planner_survey_edge_low_terrain", () -> buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn);
+        // ...and the survey-square outline is made of the terrain's own cells.
+        reg.accept("buildcraftunofficial:zone_planner_survey_outline_on_cells", () -> buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells);
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.

@@ -517,6 +517,51 @@ public class ZonePlannerPaintSyncTester {
         helper.succeed();
     }
 
+    /**
+     * The stroke allowance belongs to the viewer at that planner, not to the screen they have open: closing the planner
+     * and opening it again makes a new menu, and a fresh allowance per menu let a client spend a burst, reopen, and
+     * spend another. The same player at the same planner keeps one allowance across menus; another player has their own.
+     */
+    public static void strokeAllowanceSurvivesReopeningTheScreen(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        long start = 80_000_000L;
+
+        RecordingMenu first = viewerAt(player, tile, start);
+        for (int i = 0; i < PaintRateLimiter.BURST + 5; i++) {
+            first.paintCell(LAYER, i, 0);
+        }
+        helper.assertTrue(tile.layers[LAYER].getAll().size() == PaintRateLimiter.BURST,
+                "baseline: the first screen spent the whole burst (stored " + tile.layers[LAYER].getAll().size() + ")");
+
+        // The player closes the planner and opens it again one tick later: a new menu for the same player and tile.
+        RecordingMenu reopened = viewerAt(player, tile, start + 1);
+        reopened.paintCell(LAYER, 100, 0);
+        helper.assertFalse(tile.layers[LAYER].get(100, 0),
+                "reopening the screen did not refill the allowance: the stroke is dropped");
+
+        // Time still refills it, for the same player through either menu.
+        reopened.now = start + 1 + PaintRateLimiter.TICKS_PER_STROKE;
+        reopened.paintCell(LAYER, 101, 0);
+        helper.assertTrue(tile.layers[LAYER].get(101, 0), "a stroke's worth of ticks buys a stroke");
+
+        // Another player at the same planner has an allowance of their own.
+        RecordingMenu other = viewerAt(helper.makeMockPlayer(GameType.SURVIVAL), tile, start + 1);
+        other.paintCell(LAYER, 102, 0);
+        helper.assertTrue(tile.layers[LAYER].get(102, 0), "another player's allowance is untouched");
+        helper.succeed();
+    }
+
+    /** A menu for {@code player} on a clock set by hand to {@code now}. */
+    private static RecordingMenu viewerAt(Player player, TileZonePlanner tile, long now) {
+        RecordingMenu menu = new RecordingMenu(player, tile);
+        menu.autoAdvance = false;
+        menu.now = now;
+        menu.broadcastChanges();
+        menu.deliverToClient();
+        return menu;
+    }
+
     // ── Cost of the per-tick diff ───────────────────────────────────────────────────────────
 
     /** A plan that counts how often it is serialised. */

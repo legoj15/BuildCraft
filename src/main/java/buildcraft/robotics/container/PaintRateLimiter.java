@@ -27,6 +27,15 @@ public final class PaintRateLimiter {
     private long last;
 
     /**
+     * True when the bucket is full, or would be by game time {@code now}: it then behaves exactly as a new one, so
+     * whoever holds it can drop it. (A clock that has stepped back since the last stroke is not refilled until it
+     * catches up.)
+     */
+    public boolean isRefilled(long now) {
+        return !started || (now >= last && credit + (now - last) >= CAPACITY);
+    }
+
+    /**
      * Takes one stroke from the bucket at game time {@code now}.
      *
      * @return false if the viewer is sending faster than the limit and this stroke should be dropped.

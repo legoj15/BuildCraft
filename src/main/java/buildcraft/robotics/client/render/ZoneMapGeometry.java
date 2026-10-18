@@ -13,8 +13,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 
+import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
 import buildcraft.robotics.client.zone.ZoneOverlayCache;
+import buildcraft.robotics.client.zone.ZoneSurveyBorder;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
@@ -60,14 +62,6 @@ public final class ZoneMapGeometry {
     private static final float HOVER_BORDER = 0.16f;
     /** How far a map-edge column's skirt drops when it has no neighbour to step down to. */
     private static final int EDGE_SKIRT = 2;
-    /** Safety cap on the chunk grid scanned per frame. 128 covers the survey zoom-out (0.125 px/block
-     *  spans ~110 chunks across the 213-px viewport); the sampled-column cost is bounded by the stride
-     *  below, so the cap only bounds the cheap null-chunk scan. */
-    private static final int MAX_CHUNK_SPAN = 128;
-    /** Extra world-block padding around the visible box so tall terrain entering from a screen edge isn't clipped. */
-    private static final int RELIEF_PAD = 64;
-    /** Padding used by the far-zoom ground-plane bounds (smaller: the LOD grid needs no relief overscan). */
-    private static final int FAR_PAD = 16;
 
     // ── Terrain ─────────────────────────────────────────────────────────────────────────
 
@@ -75,19 +69,20 @@ public final class ZoneMapGeometry {
      *
      *  <p>Below 1 px/block ({@code farMode}) the world is LOD-sampled on a stride grid — one merged
      *  cuboid per {@code ceil(1/pxPerBlock)} world blocks, so the sample count tracks the viewport's
-     *  pixel count instead of the world area, and sub-pixel blocks can't alias. Bounds use the ground
-     *  plane exactly (the area picking addresses), so render and paint always agree about what is
-     *  where; deep terrain beyond that plane can be clipped at the extreme edges, which is invisible
-     *  in practice at survey zoom.
+     *  pixel count instead of the world area, and sub-pixel blocks can't alias. At every zoom the scan
+     *  covers the chunks that can project into the viewport ({@link ZoneMapCamera#visibleChunkWindow}), which
+     *  reaches out past the ground-level span to take in terrain far below the planner: that is de-magnified,
+     *  so it shows at the viewport's edge from beyond the ground span.
      *
-     *  <p>Columns whose top reaches the camera's own height ({@link ZoneMapCamera#isAtOrAboveCamera}) are left
-     *  out, here and in the overlays, exactly as picking steps over them: the overhead camera cannot see them. */
+     *  <p>Columns whose top comes within {@link ZoneMapCamera#NEAR_CLIP} of the camera's own height
+     *  ({@link ZoneMapCamera#isNearClipped}) are left out, here and in the overlays, exactly as picking steps over
+     *  them: the overhead camera cannot see them, and none that is drawn is drawn at a clamped magnification. */
     public static void emitTerrain(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                    int wPx, int hPx, Level level) {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
 
-        int stride = strideFor(cam);
-        int[] window = visibleChunkWindow(cam, wPx, hPx);
+        int stride = cam.stride();
+        int[] window = visibleChunkWindow(cam, wPx, hPx, level);
         int minCX = window[0];
         int minCZ = window[1];
         int maxCX = window[2];
@@ -107,8 +102,8 @@ public final class ZoneMapGeometry {
                         int wx = (cx << 4) + lx;
                         int wz = (cz << 4) + lz;
                         int top = chunk.getSurfaceY(lx, lz);
-                        if (cam.isAtOrAboveCamera(top)) {
-                            continue; // reaches the camera: not drawn, and not pickable (ZoneMapCamera.pickTerrain)
+                        if (cam.isNearClipped(top)) {
+                            continue; // near the camera: not drawn, and not pickable (ZoneMapCamera.pickTerrain)
                         }
                         int colour = chunk.getColour(lx, lz);
                         emitColumn(vc, mat, cam, level, data, wx, wz, top, colour, stride);
@@ -121,32 +116,8 @@ public final class ZoneMapGeometry {
     /** The world chunks the terrain scan covers for a viewport of {@code wPx}x{@code hPx} pixels, as
      *  {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} (all inclusive). The zone overlays are drawn on that same
      *  terrain, so they use the same window. */
-    private static int[] visibleChunkWindow(ZoneMapCamera cam, int wPx, int hPx) {
-        boolean farMode = cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK;
-        double[] b = farMode
-                ? cam.visibleGroundBounds(wPx, hPx, FAR_PAD)
-                : cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
-        int minCX = (int) Math.floor(b[0]) >> 4;
-        int minCZ = (int) Math.floor(b[1]) >> 4;
-        int maxCX = (int) Math.floor(b[2]) >> 4;
-        int maxCZ = (int) Math.floor(b[3]) >> 4;
-        // Clamp the scanned grid so an extreme zoom-out can't ask for thousands of chunks.
-        return new int[] {minCX, minCZ, Math.min(maxCX, minCX + MAX_CHUNK_SPAN), Math.min(maxCZ, minCZ + MAX_CHUNK_SPAN)};
-    }
-
-    /** World blocks per terrain sample at the camera's zoom: 1 at 1 px/block and closer, then the power of two
-     *  (2, 4, 8; the survey floor is 0.125 px/block) that keeps a sample at least a pixel wide. Powers of two
-     *  keep the sample grid world-aligned across chunk borders &mdash; chunk origins are multiples of 16 and
-     *  16 % stride == 0, so adjacent chunks never double-cover or gap. */
-    private static int strideFor(ZoneMapCamera cam) {
-        int stride = 1;
-        if (cam.pxPerBlock < ZoneMapCamera.FAR_MODE_PX_PER_BLOCK) {
-            int need = (int) Math.ceil(1.0 / cam.pxPerBlock);
-            while (stride < need && stride < 8) {
-                stride <<= 1;
-            }
-        }
-        return stride;
+    private static int[] visibleChunkWindow(ZoneMapCamera cam, int wPx, int hPx, Level level) {
+        return cam.visibleChunkWindow(wPx, hPx, RobotUtils.minBuildY(level));
     }
 
     /** Emits one terrain cell: a stride&times;stride top face at the sampled surface, with skirt faces
@@ -243,8 +214,8 @@ public final class ZoneMapGeometry {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
         emitSurveyBorder(vc, mat, cam, wPx, hPx, tile, data, level);
 
-        int stride = strideFor(cam);
-        int[] window = visibleChunkWindow(cam, wPx, hPx);
+        int stride = cam.stride();
+        int[] window = visibleChunkWindow(cam, wPx, hPx, level);
         for (int i = 0; i < layers.length; i++) {
             ZonePlan layer = (bufferColorIndex == i && bufferLayer != null)
                     ? bufferLayer
@@ -261,7 +232,8 @@ public final class ZoneMapGeometry {
             float r = ((rgb >> 16) & 0xFF) / 255f;
             float g = ((rgb >> 8) & 0xFF) / 255f;
             float bl = (rgb & 0xFF) / 255f;
-            // Cells come out grouped by chunk, so remember the last map chunk looked up.
+            // The cache lists a world chunk's cells together at every stride (see ZoneOverlayCache), so remember the
+            // last map chunk looked up: one lookup per run of cells, not per cell.
             int lastCX = Integer.MIN_VALUE;
             int lastCZ = Integer.MIN_VALUE;
             ZonePlannerMapChunk mapChunk = null;
@@ -277,8 +249,8 @@ public final class ZoneMapGeometry {
                     continue;
                 }
                 int surf = mapChunk.getSurfaceY(wx & 15, wz & 15);
-                if (surf == ZonePlannerMapChunk.NO_DATA || cam.isAtOrAboveCamera(surf)) {
-                    continue; // unmapped, or a column the terrain pass leaves out for reaching the camera
+                if (surf == ZonePlannerMapChunk.NO_DATA || cam.isNearClipped(surf)) {
+                    continue; // unmapped, or a column the terrain pass leaves out for being near the camera
                 }
                 overlayQuad(vc, mat, cam, r, g, bl, ZONE_ALPHA, wx, wz, surf, stride);
             }
@@ -290,55 +262,39 @@ public final class ZoneMapGeometry {
     }
 
     /** Outlines the survey square: strokes are clipped to it ({@link ZonePlan#paintRect}), on the client and
-     *  on the server alike. Drawn as a band one terrain sample wide just inside each edge, on the terrain
-     *  surface; only the visible stretch of each edge is walked, and unmapped columns are skipped (with vanilla
-     *  render distances the edge usually lies beyond the loaded terrain, which cannot be painted either). */
+     *  on the server alike. Drawn as a band one terrain cell wide along each edge, made of the very cells the
+     *  terrain is sampled in (the world-aligned stride grid, {@link ZoneSurveyBorder}) and at each cell's own
+     *  sample height, so the band lies on the terrain it outlines and not across two cells of it. Only the visible
+     *  stretch of each edge is walked, and unmapped columns are skipped (with vanilla render distances the edge
+     *  usually lies beyond the loaded terrain, which cannot be painted either). */
     private static void emitSurveyBorder(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam, int wPx, int hPx,
                                          BlockPos tile, ZonePlannerMapDataClient data, Level level) {
-        int band = strideFor(cam);
+        int band = cam.stride();
         // The square in world blocks, max exclusive.
         int minX = tile.getX() + ZonePlan.SURVEY_MIN_BLOCK;
         int maxX = tile.getX() + ZonePlan.SURVEY_MAX_BLOCK + 1;
         int minZ = tile.getZ() + ZonePlan.SURVEY_MIN_BLOCK;
         int maxZ = tile.getZ() + ZonePlan.SURVEY_MAX_BLOCK + 1;
-        double[] view = cam.visibleWorldBounds(wPx, hPx, RELIEF_PAD);
-        int fromX = Math.max(minX, (int) Math.floor(view[0]));
-        int toX = Math.min(maxX, (int) Math.ceil(view[2]));
-        int fromZ = Math.max(minZ, (int) Math.floor(view[1]));
-        int toZ = Math.min(maxZ, (int) Math.ceil(view[3]));
-        if (fromX >= toX || fromZ >= toZ) {
-            return; // the square is wholly out of view
-        }
-        // North and south edges run along X; west and east along Z.
-        for (int edgeZ : new int[] {minZ, maxZ - band}) {
-            if (edgeZ + band > view[1] && edgeZ < view[3]) {
-                for (int x = fromX; x < toX; x += band) {
-                    borderCell(vc, mat, cam, data, level, x, edgeZ, Math.min(x + band, maxX), edgeZ + band);
-                }
-            }
-        }
-        for (int edgeX : new int[] {minX, maxX - band}) {
-            if (edgeX + band > view[0] && edgeX < view[2]) {
-                for (int z = fromZ; z < toZ; z += band) {
-                    borderCell(vc, mat, cam, data, level, edgeX, z, edgeX + band, Math.min(z + band, maxZ));
-                }
-            }
-        }
+        int[] window = visibleChunkWindow(cam, wPx, hPx, level); // the chunks the terrain itself is scanned over
+        ZoneSurveyBorder.forEachCell(minX, minZ, maxX, maxZ,
+                window[0] << 4, window[1] << 4, (window[2] + 1) << 4, (window[3] + 1) << 4, band,
+                (cellX, cellZ) -> borderCell(vc, mat, cam, data, level, cellX, cellZ, band));
     }
 
-    /** One border cell over {@code [x0, x1) x [z0, z1)}, at the surface of its first column. */
+    /** One border cell, the {@code size}-block square with its lowest corner at {@code (x, z)}, at the surface of
+     *  that corner's column: the sample the terrain cell under it is drawn at. */
     private static void borderCell(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
-                                   ZonePlannerMapDataClient data, Level level, int x0, int z0, int x1, int z1) {
-        int surf = surfaceAt(data, level, x0, z0);
-        if (surf == ZonePlannerMapChunk.NO_DATA || cam.isAtOrAboveCamera(surf)) {
+                                   ZonePlannerMapDataClient data, Level level, int x, int z, int size) {
+        int surf = surfaceAt(data, level, x, z);
+        if (surf == ZonePlannerMapChunk.NO_DATA || cam.isNearClipped(surf)) {
             return;
         }
         float y = surf + 1 + 2 * OVERLAY_LIFT; // above the zone tints, so the edge reads over a painted zone
         quad(vc, mat, cam, 1f, BORDER_R, BORDER_G, BORDER_B, BORDER_ALPHA,
-                x0, y, z0,
-                x1, y, z0,
-                x1, y, z1,
-                x0, y, z1);
+                x, y, z,
+                x + size, y, z,
+                x + size, y, z + size,
+                x, y, z + size);
     }
 
     /** Bold, opaque highlight for the hovered column — a bright centre inside a dark frame, lifted above

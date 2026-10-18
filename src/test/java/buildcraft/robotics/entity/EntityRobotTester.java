@@ -12,6 +12,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -20,7 +21,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 
@@ -863,5 +866,79 @@ public class EntityRobotTester {
                 "a robot loaded with a home the registry does not hold never shut down - it kept running its "
                         + "board with no station",
                 () -> EntityArenaUtil.discard(source, loaded));
+    }
+
+    // ---------- fluid ----------
+
+    /** Ticks the robot soaks in the waterfall before its position is judged. Long enough that a push of vanilla's
+     *  0.014 blocks/tick^2 has carried an unprotected robot several blocks (about 6 at this length), short enough
+     *  that the soak ends inside the arena cell's water. */
+    private static final int WATERFALL_SOAK_TICKS = 30;
+
+    /** A robot is a flying machine, and flowing water must not push it: 7.1.x answered {@code handleWaterMovement}
+     *  with {@code false}, so a robot hovering in a waterfall stayed where its AI put it.
+     *
+     *  <p>The port inherits vanilla's fluid current for every entity. A robot's motion is hand-integrated by
+     *  {@code serverTick} and nothing damps it, so one tick of push became a velocity that never decayed: a Farmer
+     *  hovering under a water source with no floor beneath sank 35 blocks into the void, because the push
+     *  accumulated tick after tick and carried on after the robot had left the water.
+     *
+     *  <p>The rig is a walled one-block shaft, a stone floor, a source at the top and falling water below it: vanilla
+     *  pushes straight down in falling water that touches a solid face, and the walls and floor keep the water
+     *  (which would otherwise spread across the neighbouring arenas) inside this cell. The robot has no board and no
+     *  charge, so nothing but the current can move it. */
+    public static void robotIsNotPushedByFlowingWater(GameTestHelper helper) {
+        BlockPos robotRel = new BlockPos(2, 3, 2);
+        buildWaterfallShaft(helper, new BlockPos(2, 0, 2), 5);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        ZonePinnedRobot[] robot = { null };
+        Vec3[] start = { null };
+        EntityArenaUtil.tickUntilThen(helper, 120,
+                () -> EntityArenaUtil.isEntityTicking(helper, robotRel),
+                () -> {
+                    robot[0] = ZonePinnedRobot.spawn(helper, robotRel, null);
+                    start[0] = robot[0].position();
+                },
+                WATERFALL_SOAK_TICKS,
+                () -> {
+                    ZonePinnedRobot r = robot[0];
+                    helper.assertTrue(r.tickCount >= WATERFALL_SOAK_TICKS / 2,
+                            "precondition: the robot ticked (tickCount " + r.tickCount + "), or standing still "
+                                    + "proves nothing");
+                    FluidState water = helper.getLevel().getFluidState(BlockPos.containing(start[0]));
+                    helper.assertTrue(water.is(FluidTags.WATER) && !water.isSource(),
+                            "precondition: the robot's start block holds flowing water, not " + water);
+
+                    double drift = r.position().distanceTo(start[0]);
+                    helper.assertTrue(drift < 1.0E-3,
+                            "flowing water pushed the robot " + drift + " blocks in " + WATERFALL_SOAK_TICKS
+                                    + " ticks (now at " + r.position() + ", moving " + r.getDeltaMovement()
+                                    + "): a robot flies by its own AI and the current must not move it");
+                    helper.assertTrue(r.getDeltaMovement().lengthSqr() < 1.0E-12,
+                            "the current left the robot with motion " + r.getDeltaMovement());
+                    helper.assertTrue(r.isInWater(),
+                            "the robot is in the water, so staying put is the pushing being ignored, not the "
+                                    + "robot being dry");
+                    helper.succeed();
+                },
+                "the waterfall robot never became entity-ticking",
+                () -> EntityArenaUtil.discard(robot[0]));
+    }
+
+    /** A one-block shaft whose floor block is {@code floor}: stone walls on its four sides up to {@code topY}
+     *  (relative), falling water filling it, and a source on top. The walls make vanilla push the falling water
+     *  down (it only does beside a solid face) and hold the water that would otherwise run out across the
+     *  floor. */
+    private static void buildWaterfallShaft(GameTestHelper helper, BlockPos floor, int topY) {
+        helper.setBlock(floor, Blocks.STONE);
+        BlockState falling = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);
+        for (int y = floor.getY() + 1; y <= topY; y++) {
+            for (Direction side : Direction.Plane.HORIZONTAL) {
+                helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()).relative(side), Blocks.STONE);
+            }
+            helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()),
+                    y == topY ? Blocks.WATER.defaultBlockState() : falling);
+        }
     }
 }

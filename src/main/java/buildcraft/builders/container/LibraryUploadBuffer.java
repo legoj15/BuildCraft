@@ -26,9 +26,11 @@ import buildcraft.builders.snapshot.Snapshot;
  * <p>
  * Everything about the stream is the client's to choose, so it is bounded here by {@link Limits}: at most
  * {@link Limits#maxUploadBytes} bytes in at most {@link Limits#maxChunks} chunks are kept, and an upload that goes
- * past either is dropped as a unit (buffer emptied, and the rest of that stream, up to its final chunk, ignored)
- * rather than left to grow. What the bytes unpack to is bounded too, by {@link #decode}: the transfer is compressed,
- * so its size on the wire says little about its size in memory.
+ * past either is dropped as a unit (buffer emptied, and the rest of that stream ignored) rather than left to grow.
+ * Which stream a chunk belongs to is the request id the server sent with its request and the client echoes on every
+ * chunk ({@link #beginRequest}): a chunk of any other request, however late it lands, is not part of the answer.
+ * What the bytes unpack to is bounded too, by {@link #decode}: the transfer is compressed, so its size on the wire
+ * says little about its size in memory.
  * <p>
  * One config option, {@link BCBuildersConfig#libraryMaxUploadMb}, sizes all of it ({@link Limits#current}): the bytes
  * on the wire, what they unpack to, and the cells a snapshot of any type may claim. Its default is a small multiple of
@@ -82,33 +84,63 @@ public final class LibraryUploadBuffer {
     private final Limits limits;
     private final List<byte[]> chunks = new ArrayList<>();
     private int bytes;
-    /** An upload overflowed or was skipped: ignore chunks until its final one has gone by. */
-    private boolean discarding;
+    /** The request whose answer this buffer is taking ({@link #NO_REQUEST} while none is): only chunks the client
+     *  tagged with it are kept. Ends when the answer completes, is dropped, or is {@link #release released}. */
+    private int answering = NO_REQUEST;
+    /** The tag the last {@link #beginRequest} handed out. */
+    private int lastRequest = NO_REQUEST;
     /** Uploads dropped for their size, ever; the menu compares it across a chunk to see a refusal. */
     private int dropped;
+
+    /** The tag no request carries. */
+    static final int NO_REQUEST = 0;
 
     public LibraryUploadBuffer(Limits limits) {
         this.limits = limits;
     }
 
     /**
-     * Take one chunk of the current upload.
+     * A fresh request for an upload is going out to the player this buffer belongs to: whatever an earlier one left
+     * held is dropped, and only chunks tagged with the returned id (the client echoes it on every chunk of its
+     * answer) are taken from now on. The tail of an earlier stream that is still on the wire carries the earlier
+     * id, so it is told apart from the new stream however late it lands, and a stream that never sends its final
+     * chunk cannot spill into the next answer either. Not counted as {@link #droppedUploads() dropped}.
      *
-     * @param last whether this is the final chunk
-     * @return the whole upload when {@code last} completes an intact one; null while more is expected, and for
-     *         an upload that was or just became too large (that one never completes)
+     * @return the id the request goes out with; never {@link #NO_REQUEST}, and never the previous one
+     */
+    int beginRequest() {
+        reset();
+        lastRequest = lastRequest == Integer.MAX_VALUE ? 1 : lastRequest + 1;
+        answering = lastRequest;
+        return answering;
+    }
+
+    /** The request whose answer this buffer is taking, or {@link #NO_REQUEST}. */
+    int answeringRequest() {
+        return answering;
+    }
+
+    /** Whether a chunk tagged {@code request} belongs to the answer this buffer is taking. */
+    boolean isAnswering(int request) {
+        return request != NO_REQUEST && request == answering;
+    }
+
+    /**
+     * Take one chunk of an upload.
+     *
+     * @param request the request id the client tagged the chunk with
+     * @param last    whether this is the final chunk
+     * @return the whole upload when {@code last} completes an intact answer to the current request; null while more
+     *         is expected, for a chunk of any other (or no) request, and for an answer that was or just became too
+     *         large (that one never completes)
      */
     @Nullable
-    byte[] accept(boolean last, byte[] chunk) {
-        if (discarding) {
-            if (last) discarding = false;
-            return null;
-        }
+    byte[] accept(int request, boolean last, byte[] chunk) {
+        if (!isAnswering(request)) return null;
         if (chunks.size() >= limits.maxChunks() || (long) bytes + chunk.length > limits.maxUploadBytes()) {
             BCLog.logger.warn("[library] Dropping an upload past the limit ({} chunks, {} bytes buffered, {} more "
                 + "arriving)", chunks.size(), bytes, chunk.length);
-            reset();
-            discarding = !last;
+            release();
             dropped++;
             return null;
         }
@@ -122,32 +154,18 @@ public final class LibraryUploadBuffer {
             System.arraycopy(c, 0, assembled, pos, c.length);
             pos += c.length;
         }
-        reset();
+        release(); // one request, one answer
         return assembled;
     }
 
     /**
-     * Drop the upload in progress and ignore the rest of the stream this chunk belongs to (up to its final one,
-     * unless {@code last} says this was it): for chunks that arrive when no upload was asked for. Not counted as
-     * {@link #droppedUploads() dropped}.
-     */
-    void skip(boolean last) {
-        if (discarding) {
-            if (last) discarding = false;
-            return;
-        }
-        reset();
-        discarding = !last;
-    }
-
-    /**
-     * Free what an upload in progress holds because the request it answers is over (withdrawn, timed out, answered
-     * by someone else), and ignore the rest of its stream up to its final chunk. A buffer holding nothing is left as
-     * it is: no stream is in flight, so the next chunk starts a new upload and not the tail of an old one.
+     * Free what an upload in progress holds and take no more chunks until the next {@link #beginRequest}: the
+     * request it answers is over (withdrawn, timed out, answered by someone else), or chunks arrived that no request
+     * this player may answer asked for. Not counted as {@link #droppedUploads() dropped}.
      */
     void release() {
-        if (chunks.isEmpty()) return;
-        skip(false);
+        reset();
+        answering = NO_REQUEST;
     }
 
     /** Uploads dropped for going past the limits since this buffer was made. */

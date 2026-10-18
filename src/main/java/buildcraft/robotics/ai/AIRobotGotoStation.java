@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
@@ -68,6 +69,21 @@ public class AIRobotGotoStation extends AIRobot {
      *  trade-off is 7.1.x's own: a link needs two cells of clear air in front of the station, not one. */
     static BlockPos approachCell(BlockPos stationPos, Direction side, boolean takeAsMain) {
         return stationPos.relative(side, takeAsMain ? 2 : 1);
+    }
+
+    /** The exact point the robot docks at: the station block's centre pushed half a block out along its side.
+     *  Double arithmetic end to end: 7.1.x's 0.5F literals made this float maths, which drops the half-block face
+     *  offset for any station past ~8.4M blocks out. */
+    static Vec3 dockPoint(BlockPos stationPos, Direction side) {
+        return new Vec3(stationPos.getX() + 0.5 + side.getStepX() * 0.5,
+                stationPos.getY() + 0.5 + side.getStepY() * 0.5,
+                stationPos.getZ() + 0.5 + side.getStepZ() * 0.5);
+    }
+
+    /** The block a robot is in once docked at the station at {@code stationPos} on {@code side}: where a flight
+     *  that leaves the station starts from. */
+    public static BlockPos dockBlock(BlockPos stationPos, Direction side) {
+        return BlockPos.containing(dockPoint(stationPos, side));
     }
 
     @Override
@@ -148,12 +164,8 @@ public class AIRobotGotoStation extends AIRobot {
             terminate();
         } else if (ai instanceof AIRobotGotoBlock) {
             if (ai.success()) {
-                // Double arithmetic end to end: 7.1.x's 0.5F literals made this float maths, which drops the
-                // half-block face offset for any station past ~8.4M blocks out.
-                startDelegateAI(new AIRobotStraightMoveTo(robot,
-                        stationIndex.getX() + 0.5 + stationSide.getStepX() * 0.5,
-                        stationIndex.getY() + 0.5 + stationSide.getStepY() * 0.5,
-                        stationIndex.getZ() + 0.5 + stationSide.getStepZ() * 0.5));
+                Vec3 dock = dockPoint(stationIndex, stationSide);
+                startDelegateAI(new AIRobotStraightMoveTo(robot, dock.x, dock.y, dock.z));
             } else {
                 // Explicit, not left to the constructor's starting value: a failed approach is a failed goto.
                 setSuccess(false);

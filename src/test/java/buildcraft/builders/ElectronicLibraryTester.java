@@ -227,8 +227,16 @@ public class ElectronicLibraryTester {
         });
     }
 
+    /** Send one chunk the way the client answers the request the menu is waiting on (tagged with its id; 0, which no
+     *  request carries, while it waits on none). */
     private static void sendChunk(ContainerElectronicLibrary menu, boolean last, byte[] chunk) {
+        sendChunk(menu, menu.getUploadRequestId(), last, chunk);
+    }
+
+    /** Send one chunk tagged as the answer to {@code request}: an earlier request's, for a stream still in flight. */
+    private static void sendChunk(ContainerElectronicLibrary menu, int request, boolean last, byte[] chunk) {
         send(menu, ContainerElectronicLibrary.NET_UPLOAD_DATA, buf -> {
+            buf.writeVarInt(request);
             buf.writeByte(last ? 1 : 0);
             buf.writeByteArray(chunk);
         });
@@ -326,15 +334,17 @@ public class ElectronicLibraryTester {
         return template;
     }
 
-    /** Send {@code snapshot} the way the client does: squashed, in three chunks. */
+    /** Send {@code snapshot} the way the client does: squashed, in three chunks, each tagged with the id of the
+     *  request the menu is waiting on when the answer starts. */
     private static void sendUpload(ContainerElectronicLibrary menu, Snapshot snapshot) throws IOException {
         ByteArrayOutputStream squished = new ByteArrayOutputStream();
         NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), squished);
         byte[] whole = squished.toByteArray();
         int third = whole.length / 3;
-        sendChunk(menu, false, Arrays.copyOfRange(whole, 0, third));
-        sendChunk(menu, false, Arrays.copyOfRange(whole, third, 2 * third));
-        sendChunk(menu, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
+        int request = menu.getUploadRequestId();
+        sendChunk(menu, request, false, Arrays.copyOfRange(whole, 0, third));
+        sendChunk(menu, request, false, Arrays.copyOfRange(whole, third, 2 * third));
+        sendChunk(menu, request, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
     }
 
     /** One step of {@link #runSteps}: wait until {@code ready}, then run {@code action}. */
@@ -523,11 +533,13 @@ public class ElectronicLibraryTester {
         Snapshot.Key asked = libraryKey(1);
         Snapshot.Key other = libraryKey(2);
         byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        int[] stream = {0}; // the request id the stream in flight answers
         tile.selected = asked;
         tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
 
         List<Step> steps = List.of(
             new Step("the first request", tile::isUploadRequested, () -> {
+                stream[0] = menu.getUploadRequestId();
                 sendChunk(menu, false, chunk);
                 sendChunk(menu, false, chunk);
                 assertTrue(menu.getBufferedUploadBytes() == 2 * chunk.length,
@@ -538,14 +550,15 @@ public class ElectronicLibraryTester {
                 assertTrue(menu.getBufferedUploadBytes() == 0,
                     "a withdrawn request frees what its stream held, held " + menu.getBufferedUploadBytes());
                 // The rest of the stream was already on its way.
-                sendChunk(menu, false, chunk);
-                sendChunk(menu, true, chunk);
+                sendChunk(menu, stream[0], false, chunk);
+                sendChunk(menu, stream[0], true, chunk);
                 assertTrue(menu.getBufferedUploadBytes() == 0, "and is not buffered when it arrives");
                 assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "nor turned into an item");
                 assertFalse(tile.isUploadRefused(), "nor counted against the build");
                 tile.selected = asked;
             }),
             new Step("the second request", tile::isUploadRequested, () -> {
+                stream[0] = menu.getUploadRequestId();
                 sendChunk(menu, false, chunk);
                 assertTrue(menu.getBufferedUploadBytes() == chunk.length, "the new request is buffered cleanly, held "
                     + menu.getBufferedUploadBytes());
@@ -554,11 +567,114 @@ public class ElectronicLibraryTester {
             new Step("the unanswered request timing out", () -> !tile.isUploadRequested(), () -> {
                 assertTrue(menu.getBufferedUploadBytes() == 0,
                     "a request that timed out frees what its stream held, held " + menu.getBufferedUploadBytes());
-                sendChunk(menu, true, chunk);
+                sendChunk(menu, stream[0], true, chunk);
                 assertTrue(menu.getBufferedUploadBytes() == 0, "and its late tail is ignored");
                 assertTrue(tile.invUpOut.getStackInSlot(0).isEmpty(), "making no item");
             }));
         runSteps(helper, 330, steps, () -> tile.onPlayerClose(player));
+    }
+
+    /**
+     * A withdrawn request whose stream never finishes (a modified or wedged client sends its first chunks and then
+     * nothing) does not poison the menu: the menu once ignored the tail of a withdrawn stream up to its final chunk,
+     * and a final chunk that never came left that ignoring armed for good, so the next request's honest upload was
+     * swallowed. Each request now carries its own id, echoed on every chunk of its answer: the next upload of the
+     * same menu makes its item.
+     */
+    public static void testWedgedWithdrawnStreamDoesNotEatTheNextUpload(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        TileElectronicLibrary tile = libraryAt(helper, pos);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary menu = watcher(helper, tile, player);
+
+        Template wanted = template(0, 2, 4);
+        Template other = template(1);
+        GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
+        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        tile.selected = wanted.key;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the first request", tile::isUploadRequested, () -> {
+                sendChunk(menu, false, chunk);
+                sendChunk(menu, false, chunk);
+                tile.selected = other.key; // the request is no longer wanted, and the client never finishes its stream
+            }),
+            new Step("the withdrawn request", () -> !tile.isUploadRequested(), () -> {
+                assertTrue(menu.getBufferedUploadBytes() == 0, "the withdrawn stream's chunks are freed");
+                tile.selected = wanted.key;
+            }),
+            new Step("the second request", tile::isUploadRequested, () -> {
+                try {
+                    sendUpload(menu, wanted);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertFalse(tile.isUploadRefused(), "an honest upload is not refused for what came before it");
+                assertFalse(tile.invUpOut.getStackInSlot(0).isEmpty(),
+                    "the honest upload of the next request made its item, not swallowed by the unfinished stream");
+                assertFalse(tile.isUploadRequested(), "and answered the request");
+            }));
+        runSteps(helper, 330, steps, () -> {
+            tile.onPlayerClose(player);
+            store.removeSnapshot(wanted.key);
+            store.removeSnapshot(other.key);
+        });
+    }
+
+    /**
+     * The tail of a stream whose request is over can still be on the wire when the next request goes out (a slow
+     * uplink still sending an upload the server already refused for its size): it is not the answer to the new
+     * request, so it is ignored, and the watcher's real answer to that request makes the item. Without a request id
+     * on each chunk the server cannot tell the old tail from the new stream: the old chunks landed in the new buffer,
+     * the old final chunk completed a non-snapshot, the watcher was refused for the new request and its real answer
+     * then skipped.
+     */
+    public static void testStaleTailDoesNotSpoilTheNextRequest(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        TileElectronicLibrary tile = libraryAt(helper, pos);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        ContainerElectronicLibrary menu = watcher(helper, tile, player);
+
+        Snapshot.Key huge = libraryKey(5);
+        Template wanted = template(0, 2, 4);
+        GlobalSavedDataSnapshots store = GlobalSavedDataSnapshots.get(helper.getLevel());
+        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        int[] stale = {0}; // the request id the oversized stream answers
+        tile.selected = huge;
+        tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get()));
+
+        List<Step> steps = List.of(
+            new Step("the request for the oversized build", tile::isUploadRequested, () -> {
+                stale[0] = menu.getUploadRequestId();
+                int pastTheLimit = menu.getUploadLimits().maxUploadBytes() / LibraryUploadBuffer.CHUNK_BYTES + 2;
+                for (int i = 0; i < pastTheLimit; i++) sendChunk(menu, stale[0], false, chunk);
+                assertTrue(tile.isUploadRefused(), "the oversized upload is refused");
+                assertFalse(tile.isUploadRequested(), "and its request is over");
+                tile.selected = wanted.key; // the owner picks another build while the old stream is still arriving
+            }),
+            new Step("the request for the other build", tile::isUploadRequested, () -> {
+                assertTrue(menu.getUploadRequestId() != stale[0], "the new request has its own id");
+                // The rest of the refused stream, final chunk included, lands only now.
+                sendChunk(menu, stale[0], false, chunk);
+                sendChunk(menu, stale[0], true, new byte[] {1, 2, 3});
+                assertTrue(menu.getBufferedUploadBytes() == 0, "the old stream's tail is not buffered for the new one");
+                assertTrue(tile.isUploadRequested(), "nor does its final chunk answer (or spoil) the new request");
+                assertFalse(tile.isUploadRefused(), "nor get the watcher refused for it");
+                try {
+                    sendUpload(menu, wanted);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                assertFalse(tile.invUpOut.getStackInSlot(0).isEmpty(), "the watcher's real answer made the item");
+                assertFalse(tile.isUploadRequested(), "and answered the request");
+            }));
+        runSteps(helper, 330, steps, () -> {
+            tile.onPlayerClose(player);
+            store.removeSnapshot(wanted.key);
+        });
     }
 
     /**

@@ -57,11 +57,11 @@ public class LibraryUploadBufferTester {
     }
 
     /** Feed {@code count} chunks of {@code chunk} (the same array each time, so a big stream costs no memory in
-     *  the test), none of them final. Returns the last result. */
-    private static byte[] feed(LibraryUploadBuffer buffer, byte[] chunk, int count) {
+     *  the test) for {@code request}, none of them final. Returns the last result. */
+    private static byte[] feed(LibraryUploadBuffer buffer, int request, byte[] chunk, int count) {
         byte[] result = null;
         for (int i = 0; i < count; i++) {
-            result = buffer.accept(false, chunk);
+            result = buffer.accept(request, false, chunk);
         }
         return result;
     }
@@ -69,9 +69,10 @@ public class LibraryUploadBufferTester {
     @Test
     public void chunksAssembleInOrderWhenTheLastOneArrives() {
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
-        Assertions.assertNull(buffer.accept(false, bytes(1, 2)), "more to come");
-        Assertions.assertNull(buffer.accept(false, bytes(3)), "more to come");
-        Assertions.assertArrayEquals(bytes(1, 2, 3, 4), buffer.accept(true, bytes(4)));
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(1, 2)), "more to come");
+        Assertions.assertNull(buffer.accept(request, false, bytes(3)), "more to come");
+        Assertions.assertArrayEquals(bytes(1, 2, 3, 4), buffer.accept(request, true, bytes(4)));
         Assertions.assertEquals(0, buffer.bufferedBytes(), "an assembled upload leaves nothing buffered");
         Assertions.assertEquals(0, buffer.bufferedChunks());
     }
@@ -80,16 +81,18 @@ public class LibraryUploadBufferTester {
     public void anEmptyFinalChunkStillCompletesAnUpload() {
         // The client sends one when the snapshot serialised to nothing.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
-        Assertions.assertArrayEquals(new byte[0], buffer.accept(true, new byte[0]));
+        int request = buffer.beginRequest();
+        Assertions.assertArrayEquals(new byte[0], buffer.accept(request, true, new byte[0]));
     }
 
     @Test
     public void anUploadExactlyAtTheByteLimitIsAccepted() {
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
         byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
         int chunks = LIMITS.maxUploadBytes() / LibraryUploadBuffer.CHUNK_BYTES;
-        Assertions.assertNull(feed(buffer, chunk, chunks - 1));
-        byte[] whole = buffer.accept(true, chunk);
+        Assertions.assertNull(feed(buffer, request, chunk, chunks - 1));
+        byte[] whole = buffer.accept(request, true, chunk);
         Assertions.assertNotNull(whole, "the limit itself is allowed");
         Assertions.assertEquals(LIMITS.maxUploadBytes(), whole.length);
     }
@@ -97,48 +100,56 @@ public class LibraryUploadBufferTester {
     @Test
     public void anUploadPastTheByteLimitIsDroppedAndTheBufferReset() {
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
         byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
         int atLimit = LIMITS.maxUploadBytes() / LibraryUploadBuffer.CHUNK_BYTES;
-        feed(buffer, chunk, atLimit);
+        feed(buffer, request, chunk, atLimit);
         Assertions.assertEquals(LIMITS.maxUploadBytes(), buffer.bufferedBytes());
 
-        Assertions.assertNull(buffer.accept(false, bytes(1)), "one byte past the limit");
+        Assertions.assertNull(buffer.accept(request, false, bytes(1)), "one byte past the limit");
         Assertions.assertEquals(0, buffer.bufferedBytes(), "the overflowing upload is dropped, not kept");
         Assertions.assertEquals(0, buffer.bufferedChunks());
+        Assertions.assertFalse(buffer.isAnswering(request), "and the request it answered gets nothing more from it");
 
         // The rest of the dropped stream (and its final chunk) neither grows the buffer nor completes anything.
-        Assertions.assertNull(feed(buffer, chunk, 10));
+        Assertions.assertNull(feed(buffer, request, chunk, 10));
         Assertions.assertEquals(0, buffer.bufferedBytes());
-        Assertions.assertNull(buffer.accept(true, chunk), "a dropped upload never completes");
+        Assertions.assertNull(buffer.accept(request, true, chunk), "a dropped upload never completes");
         Assertions.assertEquals(0, buffer.bufferedBytes());
 
-        // The next upload starts clean.
-        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
-        Assertions.assertArrayEquals(bytes(1, 2, 3), buffer.accept(true, bytes(3)));
+        // The next request's upload starts clean.
+        int next = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(next, false, bytes(1, 2)));
+        Assertions.assertArrayEquals(bytes(1, 2, 3), buffer.accept(next, true, bytes(3)));
     }
 
     @Test
     public void aSingleChunkPastTheByteLimitIsDropped() {
         // Whatever the transport allows per packet, one chunk cannot carry the upload past the limit by itself.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
-        Assertions.assertNull(buffer.accept(true, new byte[LIMITS.maxUploadBytes() + 1]));
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, true, new byte[LIMITS.maxUploadBytes() + 1]));
         Assertions.assertEquals(0, buffer.bufferedBytes());
-        Assertions.assertArrayEquals(bytes(9), buffer.accept(true, bytes(9)), "and the next upload is unaffected");
+        int next = buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(9), buffer.accept(next, true, bytes(9)),
+            "and the next upload is unaffected");
     }
 
     @Test
     public void anUploadPastTheChunkLimitIsDroppedEvenWhenTheBytesAreFew() {
         // One-byte chunks cost an array header each: the count is bounded as well as the total.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
         byte[] chunk = bytes(1);
-        feed(buffer, chunk, LIMITS.maxChunks());
+        feed(buffer, request, chunk, LIMITS.maxChunks());
         Assertions.assertEquals(LIMITS.maxChunks(), buffer.bufferedChunks());
 
-        Assertions.assertNull(buffer.accept(false, chunk));
+        Assertions.assertNull(buffer.accept(request, false, chunk));
         Assertions.assertEquals(0, buffer.bufferedChunks(), "dropped and reset");
         Assertions.assertEquals(0, buffer.bufferedBytes());
-        Assertions.assertNull(buffer.accept(true, chunk), "the tail of the dropped upload completes nothing");
-        Assertions.assertArrayEquals(bytes(5), buffer.accept(true, bytes(5)));
+        Assertions.assertNull(buffer.accept(request, true, chunk), "the tail of the dropped upload completes nothing");
+        int next = buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(5), buffer.accept(next, true, bytes(5)));
     }
 
     @Test
@@ -227,33 +238,40 @@ public class LibraryUploadBufferTester {
         Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(new byte[0]));
     }
 
-    // ── Drops and skips: what the menu tells the tile ───────────────────────
+    // ── Requests, drops and releases: what the menu tells the tile ──────────
 
     @Test
     public void aDroppedUploadIsCountedOnceSoTheTileCanStopAsking() {
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
         Assertions.assertEquals(0, buffer.droppedUploads());
-        Assertions.assertNull(buffer.accept(false, new byte[LIMITS.maxUploadBytes() + 1]));
+        Assertions.assertNull(buffer.accept(request, false, new byte[LIMITS.maxUploadBytes() + 1]));
         Assertions.assertEquals(1, buffer.droppedUploads(), "the overflow is one dropped upload");
-        Assertions.assertNull(buffer.accept(false, bytes(1)));
-        Assertions.assertNull(buffer.accept(true, bytes(1)));
+        Assertions.assertNull(buffer.accept(request, false, bytes(1)));
+        Assertions.assertNull(buffer.accept(request, true, bytes(1)));
         Assertions.assertEquals(1, buffer.droppedUploads(), "the ignored tail is not another one");
     }
 
     @Test
-    public void aSkippedStreamIsIgnoredToItsEndAndClearsWhatCameBefore() {
-        // An upload nobody asked for: none of it is kept, and a stale prefix cannot corrupt the next upload.
+    public void chunksNoRequestAskedForAreNotKept() {
+        // A buffer that was never asked anything, or whose request is over, takes nothing under any tag.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
-        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
-        buffer.skip(false);
-        Assertions.assertEquals(0, buffer.bufferedBytes(), "the earlier part is dropped");
-        Assertions.assertNull(buffer.accept(false, bytes(3)), "the rest of the skipped stream is ignored");
-        Assertions.assertNull(buffer.accept(true, bytes(4)), "including its final chunk");
-        Assertions.assertEquals(0, buffer.droppedUploads(), "skipping is not refusing");
-        Assertions.assertArrayEquals(bytes(5, 6), buffer.accept(true, bytes(5, 6)), "the next upload starts clean");
+        Assertions.assertFalse(buffer.isAnswering(0), "no request is out");
+        Assertions.assertNull(buffer.accept(0, false, bytes(1, 2)));
+        Assertions.assertNull(buffer.accept(1, true, bytes(1, 2)), "nor answered under a guessed tag");
+        Assertions.assertEquals(0, buffer.bufferedBytes());
+        Assertions.assertEquals(0, buffer.droppedUploads(), "ignoring is not refusing");
+    }
 
-        buffer.skip(true);
-        Assertions.assertArrayEquals(bytes(7), buffer.accept(true, bytes(7)), "skipping a final chunk skips no more");
+    @Test
+    public void eachRequestHasItsOwnTag() {
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int first = buffer.beginRequest();
+        int second = buffer.beginRequest();
+        Assertions.assertNotEquals(0, first, "0 is no request");
+        Assertions.assertNotEquals(first, second, "a new request is not mistaken for the last");
+        Assertions.assertFalse(buffer.isAnswering(first), "only the latest request is answered");
+        Assertions.assertTrue(buffer.isAnswering(second));
     }
 
     @Test
@@ -261,27 +279,97 @@ public class LibraryUploadBufferTester {
         // The request it answered ended (timed out, withdrawn) with the stream half in: nothing is kept for it, and
         // the chunks still on their way cannot become the start of the next upload.
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
-        Assertions.assertNull(buffer.accept(false, bytes(1, 2)));
-        Assertions.assertNull(buffer.accept(false, bytes(3)));
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(1, 2)));
+        Assertions.assertNull(buffer.accept(request, false, bytes(3)));
         buffer.release();
         Assertions.assertEquals(0, buffer.bufferedBytes(), "the chunks are freed");
         Assertions.assertEquals(0, buffer.bufferedChunks());
-        Assertions.assertNull(buffer.accept(false, bytes(4)), "the rest of that stream is ignored");
-        Assertions.assertNull(buffer.accept(true, bytes(5)), "up to and including its final chunk");
+        Assertions.assertFalse(buffer.isAnswering(request), "and the request is no longer answered");
+        Assertions.assertNull(buffer.accept(request, false, bytes(4)), "the rest of that stream is ignored");
+        Assertions.assertNull(buffer.accept(request, true, bytes(5)), "up to and including its final chunk");
         Assertions.assertEquals(0, buffer.droppedUploads(), "releasing is not refusing");
-        Assertions.assertArrayEquals(bytes(6, 7), buffer.accept(true, bytes(6, 7)), "the next upload starts clean");
+        int next = buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(6, 7), buffer.accept(next, true, bytes(6, 7)),
+            "the next upload starts clean");
     }
 
     @Test
-    public void releasingABufferHoldingNothingLeavesTheNextUploadAlone() {
-        // No stream was in flight, so there is no tail to ignore: the next one is a fresh upload, not its leftovers.
+    public void aStreamThatNeverFinishesDoesNotSwallowTheNextRequestsUpload() {
+        // The request was withdrawn mid-stream and the client never sent the final chunk (modified, or wedged).
         LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(1, 2)));
         buffer.release();
-        Assertions.assertArrayEquals(bytes(8), buffer.accept(true, bytes(8)));
-        Assertions.assertNull(buffer.accept(false, bytes(1)));
-        Assertions.assertArrayEquals(bytes(1, 2), buffer.accept(true, bytes(2)));
-        buffer.release(); // just completed: nothing held either
-        Assertions.assertArrayEquals(bytes(9), buffer.accept(true, bytes(9)));
+
+        int next = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(next, false, bytes(3, 4)), "more to come");
+        Assertions.assertArrayEquals(bytes(3, 4, 5), buffer.accept(next, true, bytes(5)),
+            "the next request's upload is kept whole and in order");
+        Assertions.assertEquals(0, buffer.droppedUploads(), "a fresh request is not a refusal");
+    }
+
+    @Test
+    public void anOverflowsTailStillInFlightIsNotTakenForTheNextRequestsUpload() {
+        // A slow uplink: the server refused the stream for its size, a new request went out, and only then does the
+        // rest of the refused stream (its final chunk included) arrive. It is not the answer to the new request.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
+        byte[] chunk = new byte[LibraryUploadBuffer.CHUNK_BYTES];
+        feed(buffer, request, chunk, LIMITS.maxChunks() + 1);
+        Assertions.assertEquals(1, buffer.droppedUploads(), "the oversized stream is dropped");
+
+        int next = buffer.beginRequest();
+        Assertions.assertNull(feed(buffer, request, chunk, 3), "the old stream's tail is ignored");
+        Assertions.assertNull(buffer.accept(request, true, bytes(9)), "its final chunk completes nothing");
+        Assertions.assertEquals(0, buffer.bufferedBytes(), "and nothing of it is held for the new request");
+        Assertions.assertTrue(buffer.isAnswering(next), "which is still waiting for its answer");
+
+        Assertions.assertNull(buffer.accept(next, false, bytes(1, 2)));
+        Assertions.assertArrayEquals(bytes(1, 2, 3), buffer.accept(next, true, bytes(3)), "the real answer is whole");
+        Assertions.assertEquals(1, buffer.droppedUploads(), "and nothing more was refused");
+    }
+
+    @Test
+    public void aStalledStreamThatResumesAfterTheReAskIsNotTakenForTheNewAnswer() {
+        // The sender went quiet past the answer timeout mid-stream, the tile released and asked again, and then the
+        // old stream resumed: its chunks interleave with nothing of the new answer.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(1, 2)));
+        buffer.release();
+
+        int next = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(3)), "the stalled stream resumes");
+        Assertions.assertNull(buffer.accept(request, true, bytes(4)), "and ends, answering nothing");
+        Assertions.assertNull(buffer.accept(next, false, bytes(5)));
+        Assertions.assertArrayEquals(bytes(5, 6), buffer.accept(next, true, bytes(6)),
+            "the new answer holds only its own chunks");
+    }
+
+    @Test
+    public void aFreshRequestDropsTheChunksAnEarlierOneLeftHeld() {
+        // No release came between (the previous request's chunks are still here): they are not glued onto the new one.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
+        Assertions.assertNull(buffer.accept(request, false, bytes(1, 2)));
+        Assertions.assertEquals(2, buffer.bufferedBytes());
+
+        int next = buffer.beginRequest();
+        Assertions.assertEquals(0, buffer.bufferedBytes(), "the held chunks are dropped");
+        Assertions.assertEquals(0, buffer.bufferedChunks());
+        Assertions.assertArrayEquals(bytes(3), buffer.accept(next, true, bytes(3)), "and the new upload starts clean");
+    }
+
+    @Test
+    public void aRequestIsAnsweredOnce() {
+        // A second stream under the same tag (a resend, or a modified client) is not a second answer.
+        LibraryUploadBuffer buffer = new LibraryUploadBuffer(LIMITS);
+        int request = buffer.beginRequest();
+        Assertions.assertArrayEquals(bytes(1), buffer.accept(request, true, bytes(1)));
+        Assertions.assertFalse(buffer.isAnswering(request), "the answered request takes nothing more");
+        Assertions.assertNull(buffer.accept(request, true, bytes(2)));
+        Assertions.assertEquals(0, buffer.bufferedBytes());
     }
 
     // ── Limits: one config option sizes them all ────────────────────────────

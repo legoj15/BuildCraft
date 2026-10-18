@@ -11,28 +11,38 @@ package buildcraft.robotics.ai;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.robotics.IStationFilter;
 
 /** {@link AIRobotGotoStationToLoad} then {@link AIRobotLoad}: go to a loadable station and actually take
- *  {@code quantity} items matching {@code filter} onto the robot. */
+ *  {@code quantity} items matching {@code filter} onto the robot. An optional station filter narrows which
+ *  stations are candidates (see {@link AIRobotGotoStationToLoad}). */
 public class AIRobotGotoStationAndLoad extends AIRobot {
 
     private IStackFilter filter;
     private int quantity;
+    private IStationFilter stationFilter;
 
     public AIRobotGotoStationAndLoad(IRobotAccess iRobot) {
         super(iRobot);
     }
 
     public AIRobotGotoStationAndLoad(IRobotAccess iRobot, IStackFilter iFilter, int iQuantity) {
+        this(iRobot, iFilter, iQuantity, null);
+    }
+
+    /** @param iStationFilter an extra condition a candidate station must meet, or null for none */
+    public AIRobotGotoStationAndLoad(IRobotAccess iRobot, IStackFilter iFilter, int iQuantity,
+            IStationFilter iStationFilter) {
         this(iRobot);
 
         filter = iFilter;
         quantity = iQuantity;
+        stationFilter = iStationFilter;
     }
 
     @Override
     public void start() {
-        startDelegateAI(new AIRobotGotoStationToLoad(robot, filter, quantity));
+        startDelegateAI(new AIRobotGotoStationToLoad(robot, filter, quantity, stationFilter));
     }
 
     @Override

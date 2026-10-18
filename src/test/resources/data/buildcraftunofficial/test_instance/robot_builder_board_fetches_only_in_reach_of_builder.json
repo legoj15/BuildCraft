@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_builder_board_fetches_only_in_reach_of_builder",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 40,
+    "setup_ticks": 0,
+    "required": true
+}

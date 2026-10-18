@@ -177,13 +177,12 @@ public class AIRobotGotoBlock extends AIRobotGoto {
                 // here. Not 7.1.x: the path list IS pathSearch's result, so keeping pathSearch would hand the same
                 // list (rejected cell first) back on the next tick as an unchecked first step and aim the robot
                 // straight into it. Dropping the search re-plans with a fresh budget, as a given path already did.
+                // The robot stops either way, a flight handed a stored path (no search of its own) included: it would
+                // otherwise drift on toward the rejected cell while the new search runs.
                 path = null;
-
-                if (pathSearch != null) {
-                    robot.setDeltaMovement(Vec3.ZERO);
-                    pathSearch = null;
-                    expansions = 0;
-                }
+                robot.setDeltaMovement(Vec3.ZERO);
+                pathSearch = null;
+                expansions = 0;
             }
         }
     }
@@ -208,9 +207,11 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     public void writeSelfToNBT(CompoundTag nbt) {
         super.writeSelfToNBT(nbt);
 
-        nbt.putFloat("finalX", (float) finalX);
-        nbt.putFloat("finalY", (float) finalY);
-        nbt.putFloat("finalZ", (float) finalZ);
+        // Doubles, not 7.1.x's floats: a float is exact only to 2^24, so a target farther out than that came back a
+        // cell off. A float tag from an older save still reads (getDouble widens any numeric tag).
+        nbt.putDouble("finalX", finalX);
+        nbt.putDouble("finalY", finalY);
+        nbt.putDouble("finalZ", finalZ);
         nbt.putDouble("maxDistance", maxDistance);
 
         if (path != null) {
@@ -227,9 +228,9 @@ public class AIRobotGotoBlock extends AIRobotGoto {
     public void loadSelfFromNBT(CompoundTag nbt) {
         super.loadSelfFromNBT(nbt);
 
-        finalX = NBTUtilBC.getFloat(nbt, "finalX", 0);
-        finalY = NBTUtilBC.getFloat(nbt, "finalY", 0);
-        finalZ = NBTUtilBC.getFloat(nbt, "finalZ", 0);
+        finalX = NBTUtilBC.getDouble(nbt, "finalX", 0);
+        finalY = NBTUtilBC.getDouble(nbt, "finalY", 0);
+        finalZ = NBTUtilBC.getDouble(nbt, "finalZ", 0);
         maxDistance = NBTUtilBC.getDouble(nbt, "maxDistance", 0);
 
         if (nbt.contains("path")) {

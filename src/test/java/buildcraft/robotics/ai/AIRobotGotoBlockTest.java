@@ -7,6 +7,7 @@ package buildcraft.robotics.ai;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -146,6 +147,74 @@ public class AIRobotGotoBlockTest {
                 "a rejected step must never be aimed at - the goto re-plans from where the robot is instead");
         Assertions.assertSame(gotoBlock, parent.ended, "the re-plan finds no way through the blocked corridor");
         Assertions.assertFalse(gotoBlock.success(), "and the goto fails rather than reporting arrival");
+    }
+
+    /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an
+     *  odd coordinate rounded to its even neighbour on reload, and the restored flight aimed one cell off. The
+     *  observable is {@code start()}'s "already there" check, made against the restored target. */
+    @Test
+    public void aTargetPastFloatPrecisionSurvivesASaveAndLoad() {
+        int x = 20_000_001;
+        int z = -20_000_001;
+        AIRobotGotoBlock writer = new AIRobotGotoBlock(robot, x, 64, z);
+        CompoundTag nbt = new CompoundTag();
+        writer.writeSelfToNBT(nbt);
+        AIRobotGotoBlock reader = new AIRobotGotoBlock(robot);
+        reader.loadSelfFromNBT(nbt);
+
+        robot.setPosition(new Vec3(x + 0.5, 64.5, z + 0.5));
+        RecordingParent parent = new RecordingParent(robot);
+        parent.startDelegateAI(reader);
+
+        Assertions.assertSame(reader, parent.ended,
+                "the reloaded flight's target is still the robot's own cell, not a neighbour of it");
+    }
+
+    /** A flight saved before the target went to doubles stored it as float tags; those still read back. */
+    @Test
+    public void aLegacyFloatTargetStillLoads() {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putFloat("finalX", 3f);
+        nbt.putFloat("finalY", 4f);
+        nbt.putFloat("finalZ", 5f);
+        AIRobotGotoBlock reader = new AIRobotGotoBlock(robot);
+        reader.loadSelfFromNBT(nbt);
+
+        robot.setPosition(new Vec3(3.5, 4.5, 5.5));
+        RecordingParent parent = new RecordingParent(robot);
+        parent.startDelegateAI(reader);
+
+        Assertions.assertSame(reader, parent.ended, "a float-tagged target is read, widened, as before");
+    }
+
+    /** A flight handed a stored path (no search of its own) that finds its next step turned hard drops the path
+     *  and re-plans; until the new search has a path, the robot must stop, not carry on toward the rejected cell. */
+    @Test
+    public void aRePlanFromAStoredPathStopsTheRobot() {
+        MotionRecordingRobot flyer = new MotionRecordingRobot() {
+            @Override
+            public boolean isMoving() {
+                return true;
+            }
+        };
+        flyer.moveTo(0.5, 0.5, 0.5);
+        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
+                new BlockPos(3, 0, 0)));
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, path);
+        gotoBlock.blockAccess = pos -> false; // every step after the first has turned hard
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+
+        // Arrive on the first step's centre, then drift past it: the distance grows, so the AI moves on to the
+        // next step, checks it, and finds it hard.
+        flyer.moveTo(1.5, 0.5, 0.5);
+        gotoBlock.update();
+        Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the robot is flying the path");
+        flyer.moveTo(1.51, 0.5, 0.5);
+        gotoBlock.update();
+
+        Assertions.assertNull(parent.ended, "fixture: the flight re-plans rather than ending");
+        Assertions.assertEquals(Vec3.ZERO, flyer.motion, "the re-plan stops the robot while the new search runs");
     }
 
     /** Puts the robot on the centre of the cell it was last aimed at (one tick: distance 0 becomes the previous

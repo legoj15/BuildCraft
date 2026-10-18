@@ -52,6 +52,9 @@ public class PathFinding implements IIterableAlgorithm {
 
     private boolean endReached = false;
 
+    private int expansions;
+    private int expansionBudget = Integer.MAX_VALUE;
+
     public PathFinding(SoftBlockAccess access, BlockPos start, BlockPos end) {
         this.access = access;
         this.start = start;
@@ -100,15 +103,31 @@ public class PathFinding implements IIterableAlgorithm {
                 }
 
                 return;
+            } else if (expansions >= expansionBudget) {
+                // Out of budget: give up, done with no path. (Checked only before an expansion, so a finder whose
+                // last expansion reached the end still builds its path.)
+                nextIteration = null;
+                return;
             } else {
                 nextIteration = iterate(nextIteration);
+                expansions++;
             }
         }
+    }
+
+    /** Caps the node expansions this finder may run: once spent, it ends done with no path. Unbounded by default. */
+    public void setExpansionBudget(int budget) {
+        expansionBudget = budget;
     }
 
     @Override
     public boolean isDone() {
         return nextIteration == null;
+    }
+
+    /** How many nodes this finder has expanded so far: the unit its callers budget it in. */
+    public int expansions() {
+        return expansions;
     }
 
     public LinkedList<BlockPos> getResult() {

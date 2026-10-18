@@ -34,6 +34,7 @@ Last audited: 2026-10-17
 - New Filler mode icons (fresh art — see [quick notes](docs/todo-details.md#quick-notes))
 - Real goggles art — [quick notes](docs/todo-details.md#quick-notes)
 - Decide whether Forbid Robot should also stop a robot already docked at that station (7.1.x: no) — [notes](docs/todo-details.md#forbid-robot-on-the-docked-station)
+- Decide whether a robot may always unload at its own home station, even outside its work zone (7.1.x: no) — [notes](docs/todo-details.md#home-station-outside-the-work-zone)
 - Decide how JEI's "+" and drag-and-drop treat programmed boards, robots and items with extra data — [questions](docs/todo-details.md#jei-transfer-decisions)
 - Decide what happens to the dev-only item files that ship in release jars — [question](docs/todo-details.md#dev-only-item-files-in-release-jars)
 

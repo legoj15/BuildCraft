@@ -113,7 +113,7 @@
       "do": "cmd",
       "run": [
         "setblock {X+12} {Y+1} {Z} buildcraftunofficial:pipe_holder",
-        "data merge block {X+12} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_fluid\"},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.accept_fluids\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+11},yMin:{Y-2},zMin:{Z+4},xMax:{X+14},yMax:{Y+1},zMax:{Z+7}}}}}}}}}}}",
+        "data merge block {X+12} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_fluid\"},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.accept_fluids\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+11},yMin:{Y-2},zMin:{Z-1},xMax:{X+14},yMax:{Y+1},zMax:{Z+7}}}}}}}}}}}",
         "setblock {X+12} {Y} {Z} buildcraftunofficial:tank"
       ]
     },

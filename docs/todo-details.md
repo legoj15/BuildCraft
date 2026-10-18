@@ -79,6 +79,10 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 `AIRobotSearchStation.start()` returns the station a robot is already docked at before it checks `isRobotForbidden` (7.1.x did the same), so a Forbid Robot gate on a robot's own dock does not stop it loading, unloading or recharging there. A fix was tried on 2026-10-17 (make the docked shortcut honour the forbid) and backed out: with no other accepting station in reach, a Delivery robot homed on a forbidding station then disposed of its whole cargo on the ground. Options: keep 7.1.x behaviour; or, when a forbid starts matching the docked robot, undock it so the search picks another station (cargo-safe), and decide whether a robot may still sleep at a home that forbids it.
 
+## Home station outside the work zone
+
+Found by the 2026-10-18 in-game smoke (`scripts/smoke/scenarios/robots-logistics.json`). With no Load/Unload in Area action, `EntityRobot.getZoneToLoadUnload()` falls back to the work zone, and `AIRobotSearchStation` skips stations outside it (both 7.1.x verbatim). A Pump whose home gate's Work in Area box leaves out the home station therefore finds nowhere to unload, flies home and sleeps 60 s, then unloads only because the docked-station shortcut skips the zone check: about one bucket a minute, which reads as broken. The guide's pump page now says so. Option: exempt the robot's own linked station from the zone filter in `AIRobotSearchStation` (one line, every board). Related: the pump unloads after each bucket rather than filling its 4,000 mB tank (also 7.1.x); the guide's wording suggests it fills up first.
+
 ## Small cleanups
 
 Found in passing; none is a known player-facing bug today.

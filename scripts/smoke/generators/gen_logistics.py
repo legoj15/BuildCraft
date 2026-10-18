@@ -30,7 +30,7 @@ S.append({"label": "husk pen", "do": "cmd", "run": [
 S.append({"label": "knight home (sword)", "do": "cmd", "run": station(5, 0, ["minecraft:iron_sword"], "buildcraft:station.provide_items", (3, -1, 3, 8, 3, 8))})
 S.append({"label": "water pool (2x2, regenerating)", "do": "cmd", "run": ["fill {X+12} {Y-1} {Z+5} {X+13} {Y-1} {Z+6} minecraft:water"]})
 S.append({"label": "pump home: tank under a stone fluid pipe, Accept Fluids", "do": "cmd",
-          "run": station(12, 0, [], "buildcraft:station.accept_fluids", (11, -2, 4, 14, 1, 7), pipe="stone_fluid", below="buildcraftunofficial:tank", beh="")})
+          "run": station(12, 0, [], "buildcraft:station.accept_fluids", (11, -2, -1, 14, 1, 7), pipe="stone_fluid", below="buildcraftunofficial:tank", beh="")})
 S.append({"do": "wait", "ms": 1500})
 S.append({"name": "rig3-empty", "do": "shot", "look": "left to right (screen right to left): carrier supply + destination stations, leaf block, husk pen with two husks, water pool by a tank"})
 S += deploy("deploy carrier at the supply station", -10, 0, "boardRobotCarrier")

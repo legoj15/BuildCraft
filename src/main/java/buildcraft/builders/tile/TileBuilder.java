@@ -146,8 +146,9 @@ public class TileBuilder extends TileBC_Neptune
     // Fluid tanks: 4 slots, 8 buckets each, matching 1.12.2. Each tank is a single-slot
     // BCFluidTank so WidgetFluidTank can bind to it directly in the GUI. The combined
     // tankManager below is what BlueprintBuilder uses for fluid-block placement.
-    // onChanged() calls setChanged() so the chunk is marked dirty on mutation — otherwise
-    // tank contents only persist by accident when the chunk saves for another reason.
+    // onChanged() routes through onResourcesChanged() (as 1.12.2 did): it marks the chunk dirty so
+    // tank contents persist, and invalidates the active builder's "has enough to place" cache —
+    // otherwise a fluid block judged short stays stalled after the tanks are topped up.
     private final BCFluidTank[] tanks = new BCFluidTank[] {
         makeDirtyingTank(),
         makeDirtyingTank(),
@@ -159,7 +160,7 @@ public class TileBuilder extends TileBC_Neptune
         return new BCFluidTank(1, TANK_CAPACITY) {
             @Override
             protected void onChanged() {
-                setChanged();
+                onResourcesChanged();
             }
         };
     }
@@ -545,14 +546,12 @@ public class TileBuilder extends TileBC_Neptune
         }
     }
 
-    /** Called by the container/transactor after any mutation to {@link #invResources} so the
+    /** Called after any mutation to {@link #invResources} or one of the fluid {@link #tanks} so the
      *  active builder invalidates its "has enough to place" cache.
      *  <p>Client-side is a no-op: the builder's {@code requiredCache} only exists once
      *  {@link SnapshotBuilder#updateSnapshot()} ran, which requires a loaded snapshot — and on
      *  the client the full snapshot never materialises (only {@code snapshotType} is synced
-     *  for rendering purposes). Calling {@code resourcesChanged()} there hits an
-     *  {@code Arrays.fill(null, …)} NPE that crashes the client during
-     *  {@code ClientboundContainerSetContentPacket} handling. */
+     *  for rendering purposes). */
     public void onResourcesChanged() {
         setChanged();
         if (level != null && level.isClientSide()) return;

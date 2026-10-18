@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.StackUtil;
@@ -28,6 +29,8 @@ import buildcraft.robotics.StackRequest;
 public class AIRobotDeliverRequested extends AIRobot {
 
     private StackRequest requested;
+    /** Set when the delivery failed only because the requester's chunk is not loaded (not saved). */
+    private boolean requesterAway;
 
     public AIRobotDeliverRequested(IRobotAccess iRobot) {
         super(iRobot);
@@ -39,20 +42,39 @@ public class AIRobotDeliverRequested extends AIRobot {
         requested = request;
     }
 
+    /** A requester whose chunk is not loaded cannot be flown to (robots path only through loaded cells), and its
+     *  station is not gone, so the flight's claim would succeed and the flight fail at the loaded edge. It is not
+     *  attempted: the delivery ends unsuccessfully with {@link #requesterAway()} set, and the board keeps the order and
+     *  the cargo for when the requester is back. */
     @Override
     public void start() {
-        if (requested != null) {
-            startDelegateAI(new AIRobotGotoStation(robot, requested.getStation(robot.level())));
-        } else {
+        if (requested == null) {
             setSuccess(false);
             terminate();
+            return;
         }
+        DockingStation target = requested.getStation(robot.level());
+        if (target != null && !target.isChunkLoaded()) {
+            requesterAway = true;
+            setSuccess(false);
+            terminate();
+            return;
+        }
+        startDelegateAI(new AIRobotGotoStation(robot, target));
+    }
+
+    /** Whether the delivery failed only because the requester's chunk is not loaded (before the flight, or because it
+     *  unloaded during it): the order can still be filled later, so the cargo is worth keeping. */
+    public boolean requesterAway() {
+        return requesterAway;
     }
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStation) {
             if (!ai.success()) {
+                DockingStation target = requested.getStation(robot.level());
+                requesterAway = target != null && !target.isChunkLoaded();
                 setSuccess(false);
                 terminate();
                 return;

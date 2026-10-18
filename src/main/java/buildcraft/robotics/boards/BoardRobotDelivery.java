@@ -84,9 +84,19 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         return BoardRobotDeliveryNBT.INSTANCE;
     }
 
+    /** Set while the robot holds an order's goods but the requester's chunk is not loaded
+     *  ({@link AIRobotDeliverRequested#requesterAway()}): the next cycle tries the delivery again instead of disposing
+     *  of the goods. Saved, so a reload in the middle of the wait keeps them too. */
+    private boolean awaitingRequester;
+
     @Override
     public void update() {
         if (robot.containsItems()) {
+            StackRequest waitingFor = currentRequest.job();
+            if (awaitingRequester && waitingFor != null) {
+                startDelegateAI(new AIRobotDeliverRequested(robot, waitingFor));
+                return;
+            }
             startDelegateAI(new AIRobotDisposeItems(robot));
             return;
         }
@@ -122,7 +132,9 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 // ever drives a real robot. A station that is gone is guarded as OrderClaimer.reclaim guards it:
                 // the order has no requester to deliver to, so it is given up.
                 DockingStation requester = order.getStation(robot.level());
-                if (requester == null || !requester.take((EntityRobotBase) robot)) {
+                // The search skips requesters in unloaded chunks; checked again here because no goods are held yet,
+                // so an order nobody can reach costs nothing to give up.
+                if (requester == null || !requester.isChunkLoaded() || !requester.take((EntityRobotBase) robot)) {
                     releaseCurrentRequest();
                 }
             }
@@ -135,8 +147,19 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             } else {
                 startDelegateAI(new AIRobotDeliverRequested(robot, currentRequest.job()));
             }
-        } else if (ai instanceof AIRobotDeliverRequested) {
-            releaseCurrentRequest();
+        } else if (ai instanceof AIRobotDeliverRequested deliver) {
+            if (deliver.requesterAway() && currentRequest.job() != null) {
+                // The requester's chunk is not loaded: no flight can reach it, but the order can still be filled once
+                // it is back, so the goods are kept and the robot waits. 7.1.x had no unloaded chunks to consider;
+                // giving the order up would dispose of the goods (dropping them if no station takes them). The claims
+                // go back for the wait (the sleep releases every reservation anyway) and preempt re-takes them before
+                // the retry; if another robot has the order by then, it is given up as on any lost order.
+                currentRequest.releaseClaims();
+                awaitingRequester = true;
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            } else {
+                releaseCurrentRequest();
+            }
         }
     }
 
@@ -149,7 +172,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
      *  reservation anyway), a gate's go-to-station override, or a shutdown - gives its order's claims back but keeps
      *  the order, as 7.1.x's board kept it. The same board instance resumes afterwards, and {@link #preempt} then takes
      *  the order back if it is still free, or gives it up to the robot that took it meanwhile. (The cargo it carried
-     *  is disposed of on resume either way, as in 7.1.x: see {@link #update}.) */
+     *  is disposed of on resume either way, as in 7.1.x, unless the robot is waiting for a requester whose chunk is
+     *  not loaded: see {@link #update}.) */
     @Override
     public void end() {
         currentRequest.releaseClaims();
@@ -158,6 +182,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
     /** Gives up the order: its claims and the board's memory of it. */
     private void releaseCurrentRequest() {
         currentRequest.release();
+        awaitingRequester = false;
     }
 
     /** Runs before the delegate on every cycle. A board that comes back to an order without holding it - reloaded
@@ -183,6 +208,9 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
             CompoundTag requestNBT = new CompoundTag();
             currentRequest.job().writeToNBT(requestNBT);
             nbt.put("currentRequest", requestNBT);
+            if (awaitingRequester) {
+                nbt.putBoolean("awaitingRequester", true);
+            }
         }
     }
 
@@ -192,6 +220,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         if (nbt.contains("currentRequest")) {
             currentRequest.restore(StackRequest.loadFromNBT(
                     buildcraft.api.core.NbtApiUtil.getCompound(nbt, "currentRequest")));
+            awaitingRequester = currentRequest.job() != null
+                    && buildcraft.api.core.NbtApiUtil.getBoolean(nbt, "awaitingRequester", false);
         }
     }
 }

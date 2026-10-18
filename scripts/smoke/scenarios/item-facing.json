@@ -1,0 +1,182 @@
+{
+ "name": "item-facing",
+ "base": [
+  0,
+  150,
+  0
+ ],
+ "steps": [
+  {
+   "do": "tp",
+   "at": [
+    0,
+    0,
+    0
+   ],
+   "yaw": 0,
+   "pitch": 0
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "gamemode creative @p", "fill {X-2} {Y-1} {Z-2} {X+2} {Y-1} {Z+2} minecraft:stone",
+    "item replace entity @p hotbar.0 with minecraft:furnace",
+    "item replace entity @p hotbar.1 with buildcraftunofficial:distiller",
+    "item replace entity @p hotbar.2 with buildcraftunofficial:architect",
+    "item replace entity @p hotbar.3 with buildcraftunofficial:builder",
+    "item replace entity @p hotbar.4 with buildcraftunofficial:filler",
+    "item replace entity @p hotbar.5 with buildcraftunofficial:quarry",
+    "item replace entity @p hotbar.6 with buildcraftunofficial:mining_well",
+    "item replace entity @p hotbar.7 with buildcraftunofficial:zone_planner",
+    "item replace entity @p hotbar.8 with minecraft:furnace"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 500
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:furnace"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-furnace",
+   "look": "furnace: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:distiller"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-distiller",
+   "look": "distiller: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:architect"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-architect",
+   "look": "architect: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:builder"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-builder",
+   "look": "builder: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:filler"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-filler",
+   "look": "filler: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:quarry"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-quarry",
+   "look": "quarry: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:mining_well"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-mining_well",
+   "look": "mining_well: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:zone_planner"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-zone_planner",
+   "look": "zone_planner: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:library"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-library",
+   "look": "library: front face toward the player like the furnace; hotbar row shows each front like the furnace"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:requester"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-requester",
+   "look": "front toward player"
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:replacer"
+  },
+  {
+   "do": "wait",
+   "ms": 700
+  },
+  {
+   "do": "shot",
+   "name": "hand-replacer",
+   "look": "front toward player"
+  }
+ ]
+}

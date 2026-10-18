@@ -1,5 +1,5 @@
 {
-    "parent": "block/cube",
+    "parent": "minecraft:block/orientable",
     "textures": {
         "particle": "buildcraftunofficial:block/quarry/side",
         "down": "buildcraftunofficial:block/quarry/bottom",

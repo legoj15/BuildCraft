@@ -1,5 +1,5 @@
 {
-    "parent": "block/cube",
+    "parent": "minecraft:block/orientable",
     "render_type": "minecraft:cutout",
     "textures": {
         "particle": "buildcraftunofficial:block/builder/side",

@@ -861,6 +861,8 @@ public class BuildCraftGameTests {
         // through serverTick (input read + output write), with the world<->tile-relative offset and
         // ItemMapLocation.setZone/getZone. Needs ItemStack/components, so it is a game test.
         reg.accept("buildcraftunofficial:zone_planner_transfer", () -> buildcraft.robotics.ZonePlannerTransferTester::transferRoundTrip);
+        // ...and the per-tick input check parses the map's zone once, not every tick, and not at all while blocked.
+        reg.accept("buildcraftunofficial:zone_planner_input_parses_once", () -> buildcraft.robotics.ZonePlannerTransferTester::inputParsesAMapOnceNotEveryTick);
 
         // Robotics — Zone Planner layer sync: strokes go up as rectangles applied to the server's layer, so
         // concurrent strokes from several viewers are all kept; the painter re-applies unacknowledged strokes

@@ -872,7 +872,7 @@ public class RobotGateTester {
                 () -> cleanUp(helper, robot[0], holder[0]));
     }
 
-    // ---------- pump: pumps inside its Work in Area zone, unloads at an Accept Fluids home ----------
+    // ---------- pump: pumps inside its Work in Area zone, unloads at an Accept Fluids home outside it ----------
 
     /** Poll budget for the pump test: two whole pump-and-unload cycles take a few hundred ticks; the 60 s
      *  ({@code AIRobotSleep}, 1200 ticks) sleep a failed unload search ends in does not fit inside it. */
@@ -884,12 +884,11 @@ public class RobotGateTester {
      *  buckets in the tank prove the robot does not stop after the first (the pool regenerates, so the second
      *  pass finds a source again).
      *
-     *  <p>The zone covers the station's column on purpose. As in 7.1.x ({@code EntityRobot.getZoneToLoadUnload}
-     *  falls back to the work zone, and {@code AIRobotSearchStation} skips stations outside it), a robot with no
-     *  Load/Unload in Area action looks for its unload station inside its WORK zone. With the home outside the
-     *  zone (measured 2026-10-18 with the box at x 2..5, z 3..6) the first bucket finds no unload station, the
-     *  robot sleeps at home holding it and unloads only when the 60 s sleep ends (the search's "already docked
-     *  here" shortcut ignores the zone): one bucket a minute, which reads as a pump that stopped. */
+     *  <p>The zone leaves the home station out on purpose. With no Load/Unload in Area action a robot looks for its
+     *  unload station inside its WORK zone ({@code EntityRobot.getZoneToLoadUnload}), and 7.1.x skipped a home
+     *  outside it: measured 2026-10-18 with this box, the robot slept at home holding each bucket and unloaded
+     *  only when the 60 s sleep ended, one bucket a minute. Unload searches now accept the robot's own
+     *  home, so two buckets arrive inside the budget only while that exemption is wired through. */
     public static void pumpUnloadsIntoTankAtHomeStation(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 1);
         BlockPos tankRel = new BlockPos(1, 2, 1);
@@ -921,7 +920,7 @@ public class RobotGateTester {
         zoneGate.logic.statements[0].action.set(
                 ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_WORK_IN_AREA, null));
         zoneGate.logic.statements[0].action.set(0, new StatementParameterMapLocation(
-                areaMap(helper, BlockPos.ZERO, new BlockPos(5, 3, 6))));
+                areaMap(helper, new BlockPos(2, 0, 3), new BlockPos(5, 3, 6))));
 
         EntityRobot[] robot = { null };
         EntityArenaUtil.tickUntil(helper, PUMP_BUDGET,

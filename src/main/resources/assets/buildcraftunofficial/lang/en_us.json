@@ -570,7 +570,7 @@
     "buildcraft.help.programming_table.power.desc": "Shows how much MJ has accumulated toward the selected board's cost. Point lasers at the table to fill it.",
     "buildcraft.help.zone_planner.map.title": "Zone Planner",
     "buildcraft.help.zone_planner.map.desc1": "A 3D map of the surrounding terrain. Drag an empty hand to pan, scroll to zoom.",
-    "buildcraft.help.zone_planner.map.desc2": "Hold a coloured paintbrush and drag across the map to mark that colour's zone; right-drag to erase. Use the slots to copy a zone to or from a Map Location.",
+    "buildcraft.help.zone_planner.map.desc2": "Hold a colored paintbrush and drag it across the map to mark that color's zone; right-drag to erase. Use the slots to copy a zone to or from a Map Location.",
     "buildcraft.help.zone_planner.map.desc3": "Keep scrolling out for a survey view — at full zoom-out the window spans about 1,700 blocks, a step per 8 blocks. Terrain appears only where the chunks are loaded.",
     "buildcraft.help.zone_planner.brushes.title": "Paintbrush Storage",
     "buildcraft.help.zone_planner.brushes.desc": "A dedicated spot to store paintbrushes.",

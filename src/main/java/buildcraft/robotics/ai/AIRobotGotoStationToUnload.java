@@ -23,7 +23,10 @@ public class AIRobotGotoStationToUnload extends AIRobot {
 
     @Override
     public void start() {
-        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new StationInventory(), robot.getZoneToLoadUnload()));
+        // Home counts even outside the zone; trying every station keeps an unreachable home from hiding a
+        // reachable in-zone one.
+        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new StationInventory(),
+                robot.getZoneToLoadUnload(), true).homeIgnoresZone());
     }
 
     @Override

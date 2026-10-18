@@ -26,6 +26,7 @@ public class AIRobotSearchStation extends AIRobot {
     public DockingStation targetStation;
     private IStationFilter filter;
     private IZone zone;
+    private boolean homeIgnoresZone;
 
     public AIRobotSearchStation(IRobotAccess iRobot) {
         super(iRobot);
@@ -36,6 +37,14 @@ public class AIRobotSearchStation extends AIRobot {
 
         filter = iFilter;
         zone = iZone;
+    }
+
+    /** @param homeIgnoresZone let the robot's own linked station match even outside {@code iZone} (not 7.1.x):
+     *                         unloading passes it, so a robot homed outside its work zone can still empty its
+     *                         cargo at home rather than only through the docked-station shortcut, once a minute */
+    public AIRobotSearchStation(IRobotAccess iRobot, IStationFilter iFilter, IZone iZone, boolean homeIgnoresZone) {
+        this(iRobot, iFilter, iZone);
+        this.homeIgnoresZone = homeIgnoresZone;
     }
 
     @Override
@@ -66,7 +75,8 @@ public class AIRobotSearchStation extends AIRobot {
                 continue;
             }
 
-            if (zone != null && !zone.contains(Vec3.atCenterOf(station.getPos()))) {
+            if (zone != null && !(homeIgnoresZone && station == robot.getLinkedStation())
+                    && !zone.contains(Vec3.atCenterOf(station.getPos()))) {
                 continue;
             }
 

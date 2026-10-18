@@ -31,6 +31,7 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
     private IStationFilter filter;
     private IZone zone;
     private boolean tryEveryStation;
+    private boolean homeIgnoresZone;
     private final Set<StationIndex> tried = new HashSet<>();
     private DockingStation target;
 
@@ -50,6 +51,12 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
         filter = iFilter;
         zone = iZone;
         this.tryEveryStation = tryEveryStation;
+    }
+
+    /** Lets the robot's own home match outside the zone; see {@link AIRobotSearchStation}. Call before starting. */
+    AIRobotSearchAndGotoStation homeIgnoresZone() {
+        homeIgnoresZone = true;
+        return this;
     }
 
     /** Leaves {@code station} out of the search, as if a flight to it had already failed. Call before starting. */
@@ -76,7 +83,7 @@ public class AIRobotSearchAndGotoStation extends AIRobot {
 
     private void search() {
         IStationFilter untried = station -> !tried.contains(keyOf(station)) && filter.matches(station);
-        startDelegateAI(new AIRobotSearchStation(robot, tried.isEmpty() ? filter : untried, zone));
+        startDelegateAI(new AIRobotSearchStation(robot, tried.isEmpty() ? filter : untried, zone, homeIgnoresZone));
     }
 
     /** The flight to a found station; package-private so a test can stand in for it. */

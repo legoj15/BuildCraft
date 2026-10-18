@@ -8,13 +8,18 @@ package buildcraft.robotics.ai;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+
+import buildcraft.api.core.IZone;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
@@ -79,4 +84,62 @@ public class AIRobotSearchStationTest {
         Assertions.assertSame(healthy, ai.targetStation,
                 "the sweep must still visit (and here: select) the stations after the stale one");
     }
+
+    /** A robot may unload at its own home, even when the zone (the work zone, absent a Load/Unload in Area box)
+     *  leaves the home out — 7.1.x did not, which left a Pump homed outside its zone unloading one bucket a minute.
+     *  Other searches keep the zone strict, and a station that is not home stays filtered. */
+    @Test
+    public void anUnloadSearchAcceptsTheHomeStationOutsideTheZone() {
+        // The stranger is nearer, so a search that exempted every station would pick it.
+        DockingStation home = station(new BlockPos(41, 4, 40));
+        DockingStation stranger = station(new BlockPos(40, 4, 40));
+        MockRobotAccess robot = new MockRobotAccess();
+        robot.setRegistry(new MockRobotAccess.InertRobotRegistry() {
+            @Override
+            public Collection<DockingStation> getStations() {
+                return List.of(stranger, home);
+            }
+        });
+        robot.setLinkedStation(home);
+
+        AIRobotSearchStation unload = new AIRobotSearchStation(robot, station -> true, NOWHERE, true);
+        unload.start();
+        Assertions.assertSame(home, unload.targetStation, "an unloading robot may use its home outside the zone");
+
+        AIRobotSearchStation strict = new AIRobotSearchStation(robot, station -> true, NOWHERE);
+        strict.start();
+        Assertions.assertNull(strict.targetStation, "without the home exemption the zone filters every station");
+    }
+
+    private static DockingStation station(BlockPos pos) {
+        return new DockingStation(pos, Direction.UP) {
+            @Override
+            public Iterable<StatementSlot> getActiveActions() {
+                return Collections.emptyList();
+            }
+        };
+    }
+
+    /** A zone that contains nothing. */
+    private static final IZone NOWHERE = new IZone() {
+        @Override
+        public double distanceTo(BlockPos pos) {
+            return Double.MAX_VALUE;
+        }
+
+        @Override
+        public double distanceToSquared(BlockPos pos) {
+            return Double.MAX_VALUE;
+        }
+
+        @Override
+        public boolean contains(Vec3 point) {
+            return false;
+        }
+
+        @Override
+        public BlockPos getRandomBlockPos(Random rand) {
+            return null;
+        }
+    };
 }

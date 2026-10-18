@@ -19,7 +19,8 @@ import buildcraft.api.robots.IRobotAccess;
  *  this port's until 2026-10, loaded the home's chunk). Without the wait the robot went back to work between the failed
  *  searches, ran itself flat and shut down in the field with whatever it carried, far from the home that would have
  *  charged it. It ends as soon as the home's chunk is loaded, and {@link AIRobotMain} then retries the recharge at
- *  once. Never saved: a reloaded robot simply works out again that it has to wait.
+ *  once. Never saved: a reloaded robot simply works out again that it has to wait. It waits even when no powered
+ *  station exists anywhere: holding in place was chosen (2026-10-18) over shutting down, as the kinder outcome.
  *
  *  <p>Deliberately deaf to a Wake Up gate action, unlike {@link AIRobotSleep}, although the robot reads as sleeping to
  *  gates: waking a robot that is below the safety line with no charger in reach would only send it back to work until

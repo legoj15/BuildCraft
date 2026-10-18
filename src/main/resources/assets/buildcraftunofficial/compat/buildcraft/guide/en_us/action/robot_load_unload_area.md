@@ -6,7 +6,7 @@ Load/Unload in Area is a gate action on the home station's pipe. It gives the li
 </no_lore>
 
 <chapter name="Information"/>
-Without it a robot searches for Provide Items and Accept Items stations inside its work zone. With a Map Location in this action's parameter slot the search moves to that zone instead, so a Lumberjack can cut one forest and bring tools and logs to a depot somewhere else. Needs a Quartz or Diamond gate for the parameter slot.
+Without it a robot searches for Provide Items and Accept Items stations inside its work zone. With a Map Location in this action's parameter slot the search moves to that zone instead (the robot's own home station can take its cargo either way), so a Lumberjack can cut one forest and bring tools and logs to a depot somewhere else. Needs a Quartz or Diamond gate for the parameter slot.
 
 <chapter name="See also"/>
 <link to="buildcraftunofficial:concept/robots"/>

@@ -5,6 +5,9 @@
  */
 package buildcraft.robotics;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
 import net.minecraft.core.BlockPos;
@@ -22,6 +25,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 //?}
@@ -42,6 +46,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
+import buildcraft.robotics.boards.BoardRobotPlanterNBT;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -57,7 +62,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  * The in-client robots smoke rig ({@code scripts/smoke/scenarios/robots-live.json}) rebuilt as game tests: a
  * Lumberjack homed on a wooden-item-pipe Docking Station over a chest of axes, whose gate holds Always On + Provide
  * Items, must equip an axe and cut a log; a Picker homed on a station whose gate holds Always On + Accept Items must
- * unload its cargo there. Each runs against three rigs:
+ * unload its cargo there; a Planter on a Provide Items station over a chest of seeds must plant a row of farmland, one
+ * seed per trip, on the API rig. The lumberjack and the picker each run against three rigs:
  * <ul>
  * <li>{@link Rig#API}: pipe, station and gate built through the Java API.</li>
  * <li>{@link Rig#NBT}: the pipe holder loaded from the smoke rig's exact {@code data merge} NBT, the way the command
@@ -83,6 +89,9 @@ public class RobotStationRigTester {
     private static final int LUMBERJACK_BUDGET = 600;
     /** An empty fetch scan, then the 40-cycle unload at the home station. */
     private static final int PICKER_BUDGET = 400;
+    /** Six plantings, each a seed fetch (a 40-cycle wait at the station), a search, a flight and the 40-cycle plant:
+     *  about 150 cycles apiece by 7.1.x's code, so this is room for twice that. */
+    private static final int PLANTER_BUDGET = 1800;
 
     /** The gate the smoke rig writes: {@code variant:{logic:0b,material:0b,modifier:0b}}. */
     private static final GateVariant RIG_GATE =
@@ -124,6 +133,10 @@ public class RobotStationRigTester {
 
     public static void pickerOnOrphanedStation(GameTestHelper helper) {
         picker(helper, Rig.ORPHANED);
+    }
+
+    public static void planterApiRig(GameTestHelper helper) {
+        planter(helper);
     }
 
     // ---------- scenarios ----------
@@ -194,6 +207,59 @@ public class RobotStationRigTester {
                 helper::succeed,
                 "the picker never unloaded its cargo at its Accept Items station",
                 () -> cleanUp(helper, robot[0]));
+    }
+
+    /** A Planter homed on a Provide Items station over a chest of seeds keeps planting trip after trip until every one
+     *  of six farmland cells in its zone carries wheat, taking exactly one seed per trip (7.1.x's {@code takeSingle}).
+     *  Measured on 26.2: about 170 ticks a seed, the two 40-tick waits (fetch, plant) plus two short flights. Guards
+     *  the class of bug that lets a planter plant once and then starve: a claim not released, a successful planting
+     *  remembered as a refusal, a fetch that stops after the first seed. */
+    private static void planter(GameTestHelper helper) {
+        BlockPos chestRel = new BlockPos(1, 2, 1);
+        BlockPos pipeRel = new BlockPos(1, 3, 1);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+
+        ChestBlockEntity chest = placeChest(helper, chestRel);
+        chest.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 32));
+        List<BlockPos> crops = new ArrayList<>();
+        for (int x = 0; x < 6; x++) {
+            helper.setBlock(new BlockPos(x, 1, 4), Blocks.FARMLAND.defaultBlockState().setValue(BlockStateProperties.MOISTURE, 7));
+            // Light for the wheat whatever the arena's sky access.
+            helper.setBlock(new BlockPos(x, 2, 6), Blocks.GLOWSTONE);
+            crops.add(helper.absolutePos(new BlockPos(x, 2, 4)));
+        }
+
+        Rigging rigging = new Rigging(helper, pipeRel, Rig.API, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
+        EntityRobot[] robot = { null };
+        EntityArenaUtil.tickUntil(helper, PLANTER_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        DockingStationPipe station = rigging.ready();
+                        if (station == null) {
+                            return false;
+                        }
+                        robot[0] = placeRobot(helper, station, BoardRobotPlanterNBT.INSTANCE);
+                        return false;
+                    }
+                    return planted(helper, crops) == crops.size();
+                },
+                () -> {
+                    helper.assertTrue(chest.getItem(0).getCount() == 32 - crops.size(),
+                            "one seed left the chest per planting, chest holds " + chest.getItem(0));
+                    helper.succeed();
+                },
+                "the planter did not plant all six farmland cells in its zone",
+                () -> cleanUp(helper, robot[0]));
+    }
+
+    private static int planted(GameTestHelper helper, List<BlockPos> crops) {
+        int n = 0;
+        for (BlockPos crop : crops) {
+            if (helper.getLevel().getBlockState(crop).is(Blocks.WHEAT)) {
+                n++;
+            }
+        }
+        return n;
     }
 
     // ---------- the rig ----------

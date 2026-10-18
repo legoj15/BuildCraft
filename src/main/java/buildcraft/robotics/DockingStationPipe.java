@@ -12,6 +12,7 @@ import java.util.List;
 
 import com.mojang.authlib.GameProfile;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -81,29 +82,40 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         this.world = holder.getPipeWorld();
     }
 
-    /** Re-resolves the holder from the world if the cached reference died (chunk reload, pipe rebuild) —
-     *  mirrors 7.1.x's {@code getPipe()} re-fetch. Deregisters this station if the pipe is genuinely gone.
+    /** The pipe this station sits on, re-resolved from the world when the cached reference died (chunk reload, pipe
+     *  rebuild) — 7.1.x's {@code getPipe()} re-fetch. Deregisters this station when its pipe is positively gone.
      *
-     *  <p>A cached holder whose block entity has been REMOVED is dead too, even though it still holds its pipe.
-     *  {@code /fill} and {@code /setblock} remove a block entity without its removal side effects on the modern
-     *  nodes, so the station pluggable is never told and this station stays registered; a pipe rebuilt there adopts
-     *  it ({@code RobotStationPluggable.onTick}). Trusting the cache then read the removed pipe's gates and wooden
-     *  pipe for good, so the new pipe's Provide/Accept Items gates had no effect and its robots idled at home
-     *  (7.1.x checked {@code isInvalid()} for the same reason). While the chunk is unloaded the removed holder is
-     *  kept and nothing is answered: resolving it would load the chunk, and it re-resolves once the chunk is back. */
+     *  <ul>
+     *  <li><b>Chunk not loaded:</b> the cached holder stands in, unchecked, and may be null (a station read back from
+     *      the save that has not resolved yet). An unload {@code setRemoved}s the pipe tile, so the cache is stale but
+     *      still the best answer: its gates' last actions keep a robot working away from home inside the zone they
+     *      name. Nothing here may load the chunk: {@code Level.getBlockEntity} loads it synchronously on every node,
+     *      and this is reached per robot tick ({@code isInitialized}) and per station in every search.</li>
+     *  <li><b>Chunk loaded:</b> a cached holder whose block entity was REMOVED is dead even though it still holds its
+     *      pipe. On 1.21.10+, {@code /fill} and {@code /setblock} place with
+     *      {@code UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}, so the pipe's removal hooks never run and its station is
+     *      never told; a pipe rebuilt there adopts the registration ({@code RobotStationPluggable.onTick}). Trusting
+     *      the cache read the removed pipe's gates for good, so the new pipe's Provide/Accept Items gates did nothing
+     *      and its robots idled at home (7.1.x checked {@code isInvalid()} for the same reason). The live block entity
+     *      is looked up instead; if it is no pipe at all, the pipe is gone and the station deregisters, which shuts
+     *      down a robot homed here rather than leaving a ghost station in the save with its robot frozen.</li>
+     *  </ul> */
     @Nullable
     public IPipeHolder getHolder() {
-        if (holder != null && holder.getPipeTile() instanceof BlockEntity tile && tile.isRemoved()) {
-            if (!world.isLoaded(getPos())) {
+        if (!world.isLoaded(getPos())) {
+            return holder;
+        }
+        if (holder == null || holder.getPipe() == null
+                || (holder.getPipeTile() instanceof BlockEntity cached && cached.isRemoved())) {
+            BlockEntity tile = world.getBlockEntity(getPos());
+            if (!(tile instanceof IPipeHolder iph)) {
+                holder = null;
+                RobotManager.registryProvider.getRegistry(world).removeStation(this);
                 return null;
             }
-            holder = null;
+            holder = iph;
         }
-        if (holder == null || holder.getPipe() == null) {
-            BlockEntity tile = world.getBlockEntity(getPos());
-            holder = tile instanceof IPipeHolder iph ? iph : null;
-        }
-        if (holder != null && holder.getPipe() == null) {
+        if (holder.getPipe() == null) {
             RobotManager.registryProvider.getRegistry(world).removeStation(this);
             holder = null;
         }
@@ -200,8 +212,8 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         }
         // The inventory this station's pipe draws from: the block one cell out along the WOODEN pipe's own
         // extraction face. A docked robot LOADS from here (D6).
-        BlockEntity tile = world.getBlockEntity(getPos().relative(facing));
-        return tile instanceof net.minecraft.world.Container container ? container : null;
+        return loadedBlockEntity(getPos().relative(facing)) instanceof net.minecraft.world.Container container
+                ? container : null;
     }
 
     @Override
@@ -272,22 +284,23 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     /*@Override
     public IFluidHandler getFluidInput() {
     *///?}
-        Direction facing = fluidExtractionFacing();
-        if (facing == null) {
+        IPipeHolder h = getHolder();
+        Direction facing = fluidExtractionFacing(h);
+        if (facing == null || !world.isLoaded(getPos().relative(facing))) {
             return null;
         }
         // The fluid source this station's pipe draws from: the block one cell out along the WOODEN FLUID
         // pipe's own extraction face (resolved through the neighbour's block capability, with the
         // blocking-pluggable checks the item input's BlockEntity read doesn't need). A docked robot LOADS
         // fluid from here — 7.1.x's getFluidInput, which the fluid carrier board's load leg needs.
-        return getHolder().getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS);
+        return h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS);
     }
 
     @Override
     public EnumPipePart getFluidInputSide() {
         // The face of the TANK the pipe touches — the opposite of the direction searched, exactly as the
         // item input side (7.1.x returned the same opposite).
-        Direction facing = fluidExtractionFacing();
+        Direction facing = fluidExtractionFacing(getHolder());
         return facing == null ? EnumPipePart.CENTER : EnumPipePart.fromFacing(facing.getOpposite());
     }
 
@@ -298,8 +311,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *  both the wood and diamond-wood fluid pipes here, so the filtered pipe qualifies exactly as 7.1.x's
      *  {@code PipeFluidsEmerald extends PipeFluidsWood} did — and an ITEM pipe never qualifies, keeping
      *  the item and fluid supply discoveries independent. */
-    private @Nullable Direction fluidExtractionFacing() {
-        IPipeHolder h = getHolder();
+    private static @Nullable Direction fluidExtractionFacing(@Nullable IPipeHolder h) {
         if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowFluid)) {
             return null;
         }
@@ -343,7 +355,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         IPipeHolder h = getHolder();
         if (h != null && h.getPipe() != null) {
             for (Direction dir : Direction.values()) {
-                if (world.getBlockEntity(getPos().relative(dir)) instanceof IRequestProvider provider) {
+                if (loadedBlockEntity(getPos().relative(dir)) instanceof IRequestProvider provider) {
                     return provider;
                 }
             }
@@ -418,9 +430,19 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return output.injectItem(stack, true, side(), null, 0.0);
     }
 
+    /** Whether the station is usable: its pipe is there, or its chunk is simply not loaded. An unloaded home is
+     *  ordinary (a robot working away from it on a server) and must not freeze the robot, which
+     *  {@code EntityRobot.serverTick} does while its home reads uninitialized; before {@link #getHolder} stopped
+     *  loading chunks, the lookup quietly loaded the home's chunk to answer yes. */
     @Override
     public boolean isInitialized() {
-        return getHolder() != null;
+        return getHolder() != null || !world.isLoaded(getPos());
+    }
+
+    /** The block entity at {@code pos}, or null while its chunk is not loaded: {@code Level.getBlockEntity} would
+     *  load the chunk synchronously to answer. */
+    private @Nullable BlockEntity loadedBlockEntity(BlockPos pos) {
+        return world.isLoaded(pos) ? world.getBlockEntity(pos) : null;
     }
 
     /** 7.1.x's {@code getPipe(); if (pipe == null) return false;} guard: a station whose pipe is gone
@@ -445,9 +467,10 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *  treats a refused take as a failed move and sends the board to sleep. Measured: routing take() through
      *  {@code getHolder()} made the sleep/wakeup gate test fail roughly two runs in five. Asking the world
      *  whether the block entity is still an {@link IPipeHolder} has neither the false positive nor
-     *  {@code getHolder()}'s deregistering side effect. */
+     *  {@code getHolder()}'s deregistering side effect. A station whose chunk is not loaded is not gone (and asking
+     *  would load the chunk). */
     private boolean isPipeGone() {
-        if (world == null) {
+        if (world == null || !world.isLoaded(getPos())) {
             return false;
         }
         if (world.getBlockEntity(getPos()) instanceof IPipeHolder) {
@@ -514,10 +537,5 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     @Override
     public boolean canRobotAcceptFluid(IFluidFilter filter) {
         return ActionRobotFilter.canInteractWithFluid(this, filter, ActionStationAcceptFluids.class);
-    }
-
-    @Override
-    public void onChunkUnload() {
-        holder = null;
     }
 }

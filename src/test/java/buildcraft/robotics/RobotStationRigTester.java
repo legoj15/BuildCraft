@@ -64,10 +64,11 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     loads it, which pins that the rig's NBT (gate variant, statement kinds, wood pipe {@code currentDir}) is
  *     valid.</li>
  * <li>{@link Rig#ORPHANED}: the NBT rig built where a previous pipe and station were removed WITHOUT the removal
- *     side effects. That is what {@code /fill} and {@code /setblock} do on the modern nodes (both place with
+ *     side effects. That is what {@code /fill} and replace-mode {@code /setblock} do on 1.21.10+ (both place with
  *     {@code UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}, so {@code preRemoveSideEffects} never runs and the station's
  *     pluggable is never told it is gone), and what the smoke scenario's "clear and floor" step did to the previous
- *     run's rig. The orphaned {@link DockingStationPipe} stays registered, the new station pluggable adopts it, and
+ *     run's rig. On 1.21.1 those commands do run {@code onRemove}; the test removes the block entity first so the
+ *     orphan arises on every node. The orphaned {@link DockingStationPipe} stays registered, the new station pluggable adopts it, and
  *     it used to keep reading the dead block entity it had cached: neither gate had any effect, so both robots sat
  *     idle at home.</li>
  * </ul>
@@ -124,6 +125,123 @@ public class RobotStationRigTester {
 
     public static void pickerOnOrphanedStation(GameTestHelper helper) {
         picker(helper, Rig.ORPHANED);
+    }
+
+    // ---------- stations in unloaded chunks, and stations whose pipe is gone ----------
+
+    /** Far enough from the arena grid that its chunk is never loaded during the run. */
+    private static final int UNLOADED_OFFSET = 4096;
+    private static final int UNLOADED_HOME_BUDGET = 240;
+    private static final int FILLED_AWAY_BUDGET = 200;
+
+    /** A robot working in its cell while its home station's chunk is unloaded, which is ordinary on a server: the home's
+     *  cached pipe tile was {@code setRemoved} by the unload. The robot must keep running its board (the station is not
+     *  "uninitialized" just because its chunk is away), and nothing about the station may load that chunk. A second,
+     *  never-resolved station (the state of every station read back from the save) is checked the same way. */
+    public static void unloadedHomeKeepsTheRobotWorking(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos robotRel = new BlockPos(2, 3, 2);
+        BlockPos itemRel = new BlockPos(4, 3, 4);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        BlockPos farA = helper.absolutePos(robotRel).offset(UNLOADED_OFFSET, 0, 0);
+        BlockPos farB = farA.offset(0, 0, 64);
+        helper.assertFalse(level.isLoaded(farA) || level.isLoaded(farB),
+                "precondition: the far stations' chunks are not loaded");
+
+        // A home that had resolved its pipe before the chunk went away: the pipe tile is still cached, but removed.
+        TilePipeHolder unloadedTile = new TilePipeHolder(farA, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState());
+        unloadedTile.setLevel(level);
+        unloadedTile.setRemoved();
+        DockingStationPipe home = new DockingStationPipe(unloadedTile, STATION_FACE);
+        // A station read back from the save, never resolved.
+        DockingStationPipe neverResolved = new DockingStationPipe();
+        CompoundTag record = new CompoundTag();
+        record.putIntArray("pos", new int[] { farB.getX(), farB.getY(), farB.getZ() });
+        record.putByte("side", (byte) STATION_FACE.ordinal());
+        neverResolved.readFromNbt(record);
+        neverResolved.world = level;
+        RobotManager.registryProvider.getRegistry(level).registerStation(home);
+        RobotManager.registryProvider.getRegistry(level).registerStation(neverResolved);
+
+        EntityRobot[] robot = { null };
+        ItemEntity[] diamond = { null };
+        EntityArenaUtil.tickUntil(helper, UNLOADED_HOME_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        if (!EntityArenaUtil.isEntityTicking(helper, robotRel)) {
+                            return false;
+                        }
+                        helper.assertTrue(neverResolved.isInitialized(),
+                                "a station in an unloaded chunk must not read as uninitialized");
+                        helper.assertTrue(neverResolved.getHolder() == null,
+                                "a never-resolved station in an unloaded chunk has no pipe to answer with");
+                        ZonePinnedRobot spawned = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
+                        spawned.getBattery().addPower(SEEDED_CHARGE, false);
+                        spawned.setUniqueRobotId(RobotManager.registryProvider.getRegistry(level).getNextRobotId());
+                        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+                        spawned.setPos(pos.x, pos.y, pos.z);
+                        robot[0] = spawned;
+                        helper.assertTrue(home.takeAsMain(spawned),
+                                "a station whose chunk is merely unloaded is not gone: the robot takes it as home");
+                        level.addFreshEntity(spawned);
+                        Vec3 at = Vec3.atCenterOf(helper.absolutePos(itemRel));
+                        diamond[0] = new ItemEntity(level, at.x, at.y, at.z, new ItemStack(Items.DIAMOND));
+                        diamond[0].setNoGravity(true);
+                        level.addFreshEntity(diamond[0]);
+                        return false;
+                    }
+                    return robot[0].containsItems();
+                },
+                () -> {
+                    helper.assertTrue(robot[0].getLinkedStation() == home, "the robot keeps its unloaded home");
+                    helper.assertTrue(stationAt(level, farA) == home && stationAt(level, farB) == neverResolved,
+                            "stations in unloaded chunks stay registered");
+                    helper.assertFalse(level.isLoaded(farA) || level.isLoaded(farB),
+                            "nothing about a station may load its chunk");
+                    helper.succeed();
+                },
+                "the robot froze while its home station's chunk was unloaded (it never fetched the diamond)",
+                () -> {
+                    EntityArenaUtil.discard(robot[0], diamond[0]);
+                    RobotManager.registryProvider.getRegistry(level).removeStation(home);
+                    RobotManager.registryProvider.getRegistry(level).removeStation(neverResolved);
+                });
+    }
+
+    /** A station whose pipe was cleared to air without the removal side effects (what {@code /fill} and replace-mode
+     *  {@code /setblock} do on 1.21.10+) and never rebuilt must not stay registered as a ghost: the first time it is
+     *  asked for its pipe in a loaded chunk it deregisters, and the robot homed on it shuts down for want of a station
+     *  instead of freezing silently. */
+    public static void pipeFilledAwayDeregistersItsStation(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(1, 3, 1);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        TilePipeHolder tile = placePipe(helper, pipeRel);
+        tile.replacePluggable(STATION_FACE, new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
+
+        EntityRobot[] robot = { null };
+        DockingStationPipe[] station = { null };
+        EntityArenaUtil.tickUntil(helper, FILLED_AWAY_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        station[0] = stationAt(helper, pipeRel);
+                        if (station[0] == null) {
+                            return false;
+                        }
+                        robot[0] = placeRobot(helper, station[0], BoardRobotPickerNBT.INSTANCE);
+                        ServerLevel level = helper.getLevel();
+                        BlockPos abs = helper.absolutePos(pipeRel);
+                        level.removeBlockEntity(abs);
+                        level.setBlock(abs, Blocks.AIR.defaultBlockState(), 2);
+                        helper.assertTrue(stationAt(helper, pipeRel) == station[0],
+                                "precondition: the pipe went without its side effects, so its station is still registered");
+                        return false;
+                    }
+                    return stationAt(helper, pipeRel) == null
+                            && robot[0].mainAI.getDelegateAI() instanceof buildcraft.robotics.ai.AIRobotShutdown;
+                },
+                helper::succeed,
+                "a station whose pipe is gone stayed registered, or its robot never shut down",
+                () -> cleanUp(helper, robot[0]));
     }
 
     // ---------- scenarios ----------
@@ -335,8 +453,11 @@ public class RobotStationRigTester {
     }
 
     private static DockingStationPipe stationAt(GameTestHelper helper, BlockPos relPos) {
-        DockingStation station = RobotManager.registryProvider.getRegistry(helper.getLevel())
-                .getStation(helper.absolutePos(relPos), STATION_FACE);
+        return stationAt(helper.getLevel(), helper.absolutePos(relPos));
+    }
+
+    private static DockingStationPipe stationAt(ServerLevel level, BlockPos absPos) {
+        DockingStation station = RobotManager.registryProvider.getRegistry(level).getStation(absPos, STATION_FACE);
         return station instanceof DockingStationPipe pipe ? pipe : null;
     }
 

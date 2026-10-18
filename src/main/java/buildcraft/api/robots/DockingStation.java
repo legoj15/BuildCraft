@@ -358,8 +358,4 @@ public abstract class DockingStation {
     public boolean canRobotAcceptFluid(IFluidFilter filter) {
         return true;
     }
-
-    public void onChunkUnload() {
-
-    }
 }

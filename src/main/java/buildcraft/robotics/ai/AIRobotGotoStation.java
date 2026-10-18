@@ -201,6 +201,12 @@ public class AIRobotGotoStation extends AIRobot {
         nbt.putIntArray("stationIndex",
                 new int[] { stationIndex.getX(), stationIndex.getY(), stationIndex.getZ() });
         nbt.putByte("stationSide", (byte) stationSide.ordinal());
+        // Written only when set, so a plain visit saves exactly as it always did. Without it a take-as-main goto
+        // reloaded as a plain visit (one-cell approach, a visit claim, the home left where it was): a gate redirect
+        // saved while it waited behind a recharge then docked as a visit, and the robot flew back to its old home.
+        if (takeAsMain) {
+            nbt.putBoolean("takeAsMain", true);
+        }
     }
 
     @Override
@@ -217,5 +223,7 @@ public class AIRobotGotoStation extends AIRobot {
         } else {
             stationSide = Direction.NORTH;
         }
+        // Absent in every save written before the flag was kept: those read back as the plain visit they reloaded as.
+        takeAsMain = NbtApiUtil.getBoolean(nbt, "takeAsMain", false);
     }
 }

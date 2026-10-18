@@ -7,9 +7,10 @@ package buildcraft.robotics.client.zone;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
+
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongIterator;
 
 import buildcraft.robotics.zone.ZoneChunk;
 import buildcraft.robotics.zone.ZonePlan;
@@ -33,6 +34,15 @@ import buildcraft.robotics.zone.ZonePlan;
  *   rest). A chunk is worked out from the layer's bit rows alone: the layer is stored relative to the planner, so
  *   a world chunk is a 16-bit-row shift of at most four layer chunks, and no column is visited singly.</li>
  * </ul>
+ *
+ * <p><b>What is kept follows the paint, not the window.</b> The window is every chunk that can project into the
+ * viewport, tens of thousands at the survey zoom of a deep world (up to {@link ZoneMapCamera#MAX_CHUNK_SPAN} squared),
+ * while a layer has paint on a few thousand chunks at the very most. A slot therefore keeps only the world chunks that
+ * have cells: a chunk with none is simply absent from its map (absence means "none, or not worked out yet"), and is
+ * never even visited when it lies outside the box of world chunks the layer's own chunks can reach. Each kept chunk
+ * comes from at least one layer chunk and a layer chunk feeds at most four, so a slot holds at most four entries per
+ * painted layer chunk; and once it holds more than twice the painted chunks in the current window (plus a margin), the
+ * ones out of the window are dropped.
  *
  * <p>At a zoom of less than one pixel per block the terrain is sampled on a {@code stride} grid, and the overlay
  * follows: a cell is one world-aligned {@code stride x stride} square, listed when any column in it is painted, so the
@@ -88,8 +98,12 @@ public final class ZoneOverlayCache {
         final int tileX;
         final int tileZ;
         final int stride;
-        /** The cells of each world chunk worked out so far (x,z pairs; a shared empty array for a chunk with none). */
-        final Map<Long, int[]> chunks = new HashMap<>();
+        /** The cells of each world chunk worked out so far that has any (x,z pairs). A chunk with none is not kept. */
+        final Long2ObjectOpenHashMap<int[]> chunks = new Long2ObjectOpenHashMap<>();
+
+        /** {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} of the world chunks the layer can put cells in, or null
+         *  until a window first needs it. Everything outside it is empty without looking. */
+        long[] reach;
 
         /** The window of {@link #cells}, once there is one. */
         int minChunkX;
@@ -166,53 +180,102 @@ public final class ZoneOverlayCache {
         return chunkBuilds;
     }
 
+    /** How many world chunks' cells are being retained across all layer slots, for tests. */
+    public synchronized int retainedChunks() {
+        int total = 0;
+        for (Entry entry : entries) {
+            if (entry != null) {
+                total += entry.chunks.size();
+            }
+        }
+        return total;
+    }
+
     /** Forgets every layer's cells: the planner screen opening, or the world changing under it. */
     public synchronized void clear() {
         Arrays.fill(entries, null);
     }
 
-    /** The answer for a window: each chunk's cells in turn, taken from the entry or worked out and kept in it. */
+    /** The answer for a window: each chunk's cells in turn, taken from the entry or worked out and, when it has any,
+     *  kept in it. Only the part of the window the layer can reach is visited. */
     private Cells assemble(Entry entry, ZonePlan plan, int minChunkX, int minChunkZ, int maxChunkX, int maxChunkZ) {
         if (minChunkX > maxChunkX || minChunkZ > maxChunkZ || plan.getChunkMapping().isEmpty()) {
             return new Cells(entry.stride, Cells.NO_CELLS, 0);
         }
-        long windowChunks = ((long) maxChunkX - minChunkX + 1) * ((long) maxChunkZ - minChunkZ + 1);
-        int[][] parts = new int[(int) windowChunks][];
+        if (entry.reach == null) {
+            entry.reach = reachOf(plan, entry.tileX, entry.tileZ);
+        }
+        long[] reach = entry.reach;
+        int fromX = (int) Math.max(minChunkX, reach[0]);
+        int fromZ = (int) Math.max(minChunkZ, reach[1]);
+        int toX = (int) Math.min(maxChunkX, reach[2]);
+        int toZ = (int) Math.min(maxChunkZ, reach[3]);
+        int[][] parts = new int[16][];
+        int partCount = 0;
         int total = 0;
-        int part = 0;
-        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
-            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+        for (int cx = fromX; cx <= toX; cx++) {
+            for (int cz = fromZ; cz <= toZ; cz++) {
                 long key = ZonePlan.packChunkKey(cx, cz);
                 int[] chunkCells = entry.chunks.get(key);
                 if (chunkCells == null) {
                     chunkCells = buildChunk(plan, entry.tileX, entry.tileZ, entry.stride, cx, cz);
-                    entry.chunks.put(key, chunkCells);
+                    if (chunkCells == null) {
+                        continue; // no layer chunk reaches it: nothing to work out, nothing to keep
+                    }
                     chunkBuilds++;
+                    if (chunkCells.length == 0) {
+                        continue; // reached, but the shifted bits left it bare: not worth a map entry either
+                    }
+                    entry.chunks.put(key, chunkCells);
                 }
-                parts[part++] = chunkCells;
+                if (partCount == parts.length) {
+                    parts = Arrays.copyOf(parts, partCount * 2);
+                }
+                parts[partCount++] = chunkCells;
                 total += chunkCells.length;
             }
         }
         int[] xz = total == 0 ? Cells.NO_CELLS : new int[total];
         int at = 0;
-        for (int[] chunkCells : parts) {
-            System.arraycopy(chunkCells, 0, xz, at, chunkCells.length);
-            at += chunkCells.length;
+        for (int i = 0; i < partCount; i++) {
+            System.arraycopy(parts[i], 0, xz, at, parts[i].length);
+            at += parts[i].length;
         }
-        dropChunksFarFromWindow(entry, minChunkX, minChunkZ, maxChunkX, maxChunkZ, windowChunks);
+        dropChunksFarFromWindow(entry, minChunkX, minChunkZ, maxChunkX, maxChunkZ, partCount);
         return new Cells(entry.stride, xz, total >> 1);
     }
 
-    /** Keeps an entry's chunk map from growing as the view wanders: once it holds far more than the window needs, the
-     *  chunks outside the window go (it is generous, so panning back and forth over an edge does not rebuild the
-     *  chunks on either side of it). */
+    /** The box of world chunks the layer's chunks can put cells in: each layer chunk shifts into the world chunk its
+     *  corner lands in, and spills one chunk further up and right when the planner is off the chunk grid. */
+    private static long[] reachOf(ZonePlan plan, int tileX, int tileZ) {
+        long minX = Long.MAX_VALUE;
+        long minZ = Long.MAX_VALUE;
+        long maxX = Long.MIN_VALUE;
+        long maxZ = Long.MIN_VALUE;
+        for (long key : plan.getChunkMapping().keySet()) {
+            minX = Math.min(minX, ZonePlan.unpackChunkX(key));
+            maxX = Math.max(maxX, ZonePlan.unpackChunkX(key));
+            minZ = Math.min(minZ, ZonePlan.unpackChunkZ(key));
+            maxZ = Math.max(maxZ, ZonePlan.unpackChunkZ(key));
+        }
+        long qx = Math.floorDiv(tileX, 16);
+        long qz = Math.floorDiv(tileZ, 16);
+        long spillX = Math.floorMod(tileX, 16) == 0 ? 0 : 1;
+        long spillZ = Math.floorMod(tileZ, 16) == 0 ? 0 : 1;
+        return new long[] {minX + qx, minZ + qz, maxX + qx + spillX, maxZ + qz + spillZ};
+    }
+
+    /** Keeps an entry's chunk map from growing as the view wanders: once it holds more than twice the painted chunks
+     *  in view (plus a margin), the chunks outside the window go. The factor and the margin are generous, so panning
+     *  back and forth over an edge does not rebuild the chunks on either side of it; and since only chunks with cells
+     *  are kept, this follows the paint, not the size of the window. */
     private static void dropChunksFarFromWindow(Entry entry, int minChunkX, int minChunkZ, int maxChunkX,
-                                                int maxChunkZ, long windowChunks) {
-        if (entry.chunks.size() <= windowChunks * 2 + 64) {
+                                                int maxChunkZ, int paintedInWindow) {
+        if (entry.chunks.size() <= paintedInWindow * 2L + 64) {
             return;
         }
-        for (Iterator<Long> it = entry.chunks.keySet().iterator(); it.hasNext(); ) {
-            long key = it.next();
+        for (LongIterator it = entry.chunks.keySet().iterator(); it.hasNext(); ) {
+            long key = it.nextLong();
             int cx = ZonePlan.unpackChunkX(key);
             int cz = ZonePlan.unpackChunkZ(key);
             if (cx < minChunkX || cx > maxChunkX || cz < minChunkZ || cz > maxChunkZ) {
@@ -230,6 +293,9 @@ public final class ZoneOverlayCache {
      * {@code rx} bits, and the top {@code rx} bits of the layer chunk {@code cx - qx - 1} to its left, which spill into
      * the low {@code rx} bits. Rows shift the same way against {@code tileZ}, so at most four layer chunks are read
      * (one when the planner sits on a chunk corner), and a layer chunk this window does not touch is not read at all.
+     *
+     * @return the chunk's cells, an empty array when layer chunks reach it but leave it bare, or null when no layer
+     *         chunk reaches it at all
      */
     private static int[] buildChunk(ZonePlan plan, int tileX, int tileZ, int stride, int cx, int cz) {
         int qx = Math.floorDiv(tileX, 16);
@@ -248,7 +314,7 @@ public final class ZoneOverlayCache {
             }
         }
         if (!any) {
-            return Cells.NO_CELLS;
+            return null;
         }
         int[] rows = new int[16];
         for (int j = 0; j < 16; j++) {

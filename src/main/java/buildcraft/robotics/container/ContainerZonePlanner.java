@@ -117,6 +117,11 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     // strokes on top of each NET_SYNC_LAYER it receives. A sync sent before the server applied the stroke would
     // otherwise wipe it off the painter's screen, and one sent after it already contains it. The channel is
     // ordered, so a sync that arrives after the ack always contains the stroke.
+    //
+    // A layer push is the whole layer, so one viewer painting continuously must not make the server push it to every
+    // other viewer every tick. Two limits bound that: a viewer's stroke messages go through a PaintRateLimiter (the
+    // surplus is acknowledged, dropped, and the painter resynced, as for a malformed message), and a layer is pushed
+    // to a given viewer at most once per PUSH_INTERVAL_TICKS, the strokes that land in between going down together.
     public static final int NET_PAINT_RECT = 10;
     public static final int NET_SYNC_LAYER = 11;
     public static final int NET_PAINT_ACK = 12;

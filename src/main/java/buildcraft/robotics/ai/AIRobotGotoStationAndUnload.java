@@ -17,6 +17,21 @@ import buildcraft.api.robots.IRobotAccess;
 public class AIRobotGotoStationAndUnload extends AIRobot {
 
     private DockingStation station;
+    private boolean emptiesHand;
+
+    /** The unload a board starts to get rid of the tool in the robot's hand (a worn sword, a worn pickaxe): it fails
+     *  unless the hand ends up empty, which is what sends such a board to sleep when no station will take the tool.
+     *  {@code new AIRobotGotoStationAndUnload(robot)} is the cargo unload, which reports on the cargo alone. */
+    public static AIRobotGotoStationAndUnload forHeldItem(IRobotAccess iRobot) {
+        AIRobotGotoStationAndUnload unload = new AIRobotGotoStationAndUnload(iRobot);
+        unload.emptiesHand = true;
+        return unload;
+    }
+
+    /** Whether this unload was asked to empty the robot's hand ({@link #forHeldItem}) as well as its cargo. */
+    public boolean emptiesHand() {
+        return emptiesHand;
+    }
 
     public AIRobotGotoStationAndUnload(IRobotAccess iRobot) {
         super(iRobot);
@@ -43,14 +58,14 @@ public class AIRobotGotoStationAndUnload extends AIRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationToUnload) {
             if (ai.success()) {
-                startDelegateAI(new AIRobotUnload(robot));
+                startDelegateAI(new AIRobotUnload(robot, emptiesHand));
             } else {
                 setSuccess(false);
                 terminate();
             }
         } else if (ai instanceof AIRobotGotoStation) {
             if (ai.success()) {
-                startDelegateAI(new AIRobotUnload(robot));
+                startDelegateAI(new AIRobotUnload(robot, emptiesHand));
             } else {
                 setSuccess(false);
                 terminate();

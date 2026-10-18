@@ -12,14 +12,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 //? if >=1.21.11 {
 import net.minecraft.world.entity.monster.zombie.Zombie;
 //?} else {
 /*import net.minecraft.world.entity.monster.Zombie;*/
 //?}
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.AABB;
@@ -30,6 +33,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.IEntityFilter;
 import buildcraft.robotics.ZonePinnedRobot;
+import buildcraft.robotics.boards.BoardRobotButcherNBT;
 import buildcraft.robotics.boards.BoardRobotKnightNBT;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -479,6 +483,53 @@ public class RobotActionAIsTester {
                 () -> {
                     EntityArenaUtil.discard(zombie, robot);
                     // The zombie's death loot lands in this cell; leaked item entities fail later tests.
+                    helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                            EntityArenaUtil.cellBounds(helper)).forEach(net.minecraft.world.entity.Entity::discard);
+                });
+    }
+
+    // ---------- butcher E2E: the pet beside the cow is left alone ----------
+
+    /** A butcher seeded with a sword works a zone holding a tamed wolf (nearer) and a cow (farther) through the real
+     *  {@code AIRobotMain} cadence. 7.1.x's butcher took any animal, so it went for the nearer wolf first; the port
+     *  spares an owned pet (a deliberate divergence), so the cow falls and the wolf is untouched. The wolf's owner is
+     *  offline - a mock player that is not in the level - which is the usual case and the one a
+     *  resolve-the-owner check would get wrong. */
+    public static void butcherFellsTheCowAndSparesTheTamedWolf(GameTestHelper helper) {
+        BlockPos robotRel = new BlockPos(3, 4, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        //? if >=26.2 {
+        /*TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, 3, 4, 3);
+        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 4, 4);*/
+        //?} else {
+        TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityType.WOLF, 3, 4, 3);
+        Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 4, 4);
+        //?}
+        Player owner = helper.makeMockPlayer(GameType.CREATIVE);
+        wolf.tame(owner);
+        for (Mob mob : new Mob[] { wolf, cow }) {
+            mob.setNoAi(true);
+            mob.setNoGravity(true);
+        }
+        float wolfHealth = wolf.getHealth();
+
+        // Zone-pinned: the butcher's entity search covers 250 blocks otherwise, and a sibling test's animal is a target.
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotButcherNBT.INSTANCE);
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        robot.setPos(pos.x, pos.y, pos.z);
+        robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
+        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        helper.getLevel().addFreshEntity(robot);
+
+        EntityArenaUtil.tickUntil(helper, 280, cow::isDeadOrDying, () -> {
+            helper.assertTrue(wolf.isAlive() && wolf.getHealth() == wolfHealth,
+                    "the tamed wolf was nearer than the cow and must not have been touched (health " + wolfHealth
+                            + " -> " + wolf.getHealth() + ", alive " + wolf.isAlive() + ")");
+            helper.succeed();
+        }, "the butcher must fell the cow (two 7.0 swings at the 21-tick cadence)",
+                () -> {
+                    EntityArenaUtil.discard(wolf, cow, robot);
                     helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
                             EntityArenaUtil.cellBounds(helper)).forEach(net.minecraft.world.entity.Entity::discard);
                 });

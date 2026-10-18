@@ -114,6 +114,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
     }
 
     private void updateRecipe() {
+        recipeResolves++;
         if (recipe != null) {
             ItemStack output = recipeOutput();
             if (!output.isEmpty() && extract(recipe.getCenterStack(), recipe.getRequirements(output), true))
@@ -127,19 +128,20 @@ public class TileIntegrationTable extends TileLaserTableBase {
         return recipe != null ? recipe.getOutput(invTarget.getStackInSlot(0), invToIntegrate.stacks) : ItemStack.EMPTY;
     }
 
-    /** {@link #serverTick} resolves {@link #recipe} on the server, every tick, so server readers see it fresh. A
-     *  tile with no level behind it has no tick either, and a client never ticks this tile at all: nothing would
-     *  ever resolve the recipe there, so the readers do it themselves, from the inventories (which the open menu
-     *  keeps in step with the server's) -- see {@link #resolvePreview}. */
+    /** {@link #serverTick} brings {@link #recipe} up to date on the server every tick (a tick with the inputs as they
+     *  were costs the comparison, not a resolve), so server readers see it fresh. A tile with no level behind it has
+     *  no tick either, and a client never ticks this tile at all: nothing would ever resolve the recipe there, so the
+     *  readers do it themselves, from the inventories (which the open menu keeps in step with the server's) -- see
+     *  {@link #resolveRecipe}. */
     private boolean ticksHere() {
         return level != null && !level.isClientSide();
     }
 
-    // --- Client-side preview cache ---
+    // --- Recipe cache (the server tick and the client preview) ---
     // The preview slot asks getOutput() every frame (twice: getItem and hasItem) and the progress bar and power
-    // ledger ask getTarget(). Resolving is a registry-wide recipe match plus an extract simulation, and with
-    // nothing to craft it walks the whole registry to find that out, so the result is kept until an input
-    // changes. The key is the contents of the centre stack and the ring, compared by value against a private
+    // ledger ask getTarget(); the server ticks the table every tick. Resolving is a registry-wide recipe match plus
+    // an extract simulation, and with nothing to craft it walks the whole registry to find that out, so the result
+    // is kept until an input changes. The key is the contents of the centre stack and the ring, compared by value against a private
     // copy: that catches a menu sync, a stack edited in place and a write straight into the stack list alike,
     // with no dependence on every route into the inventories reporting its change. The result slot is not an
     // input (the cost reads it fresh), and recipes register once at startup, so neither is in the key.
@@ -149,11 +151,12 @@ public class TileIntegrationTable extends TileLaserTableBase {
     private ItemStack[] previewInputs;
     /** What the preview resolved to from {@link #previewInputs}; handed out as copies. */
     private ItemStack previewOutput = ItemStack.EMPTY;
-    private int previewResolves;
+    private int recipeResolves;
 
-    /** How many times the unticked (client) preview has been resolved from scratch rather than read from the cache. */
-    int previewResolves() {
-        return previewResolves;
+    /** How many times the recipe has been resolved from scratch (a registry match plus an extract simulation) rather
+     *  than read from the cache, by a server tick and an unticked preview read alike. */
+    int recipeResolves() {
+        return recipeResolves;
     }
 
     private boolean previewIsCurrent() {
@@ -170,7 +173,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
 
     /** Brings {@link #recipe} and {@link #previewOutput} up to date with the inventories, resolving only if an
      *  input has changed since the last time. */
-    private void resolvePreview() {
+    private void resolveRecipe() {
         if (previewIsCurrent()) {
             return;
         }
@@ -182,7 +185,6 @@ public class TileIntegrationTable extends TileLaserTableBase {
             inputs[i + 1] = invToIntegrate.getStackInSlot(i).copy();
         }
         previewInputs = inputs;
-        previewResolves++;
     }
 
     /** What the table would produce right now: the GUI's preview slot, on the client as well as the server. */
@@ -190,7 +192,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
         if (ticksHere()) {
             return recipeOutput();
         }
-        resolvePreview();
+        resolveRecipe();
         return previewOutput.copy();
     }
 
@@ -200,7 +202,7 @@ public class TileIntegrationTable extends TileLaserTableBase {
         if (ticksHere()) {
             output = recipeOutput();
         } else {
-            resolvePreview();
+            resolveRecipe();
             output = previewOutput;
         }
         return recipe != null && isSpaceEnough(output) ? recipe.getRequiredMicroJoules(output) : 0;
@@ -210,7 +212,9 @@ public class TileIntegrationTable extends TileLaserTableBase {
     public void serverTick() {
         super.serverTick();
 
-        updateRecipe();
+        // Gated on the same input snapshot the client preview uses: the registry match and the extract simulation are
+        // a pure function of the centre stack and the ring, and this runs every tick of every loaded table.
+        resolveRecipe();
 
         // The cost is read BEFORE the inputs are consumed: once they are gone the recipe has no output and
         // getTarget() reads 0, which used to make the deduction below a no-op, so one charge programmed every

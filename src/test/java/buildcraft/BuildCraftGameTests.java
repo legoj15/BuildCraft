@@ -1021,6 +1021,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);
         // The combat boards' entity predicates against REAL entities (no unit test can build one).
         reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
+        reg.accept("buildcraftunofficial:robot_butcher_spares_pets_horses_and_named", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::butcherSparesPetsHorsesAndNamedAnimals);
 
         // Robotics Ph6 — the gate statements against a LIVE pipe holder + PluggableGate with a real robot:
         // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the
@@ -1198,6 +1199,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);
+        reg.accept("buildcraftunofficial:robot_butcher_spares_tamed_wolf", () -> buildcraft.robotics.ai.RobotActionAIsTester::butcherFellsTheCowAndSparesTheTamedWolf);
         reg.accept("buildcraftunofficial:robot_wears_equips_and_peels", () -> buildcraft.robotics.entity.RobotWearablesTester::wearsEquipsAndPeelsWearables);
         reg.accept("buildcraftunofficial:robot_name_tag_names_robot", () -> buildcraft.robotics.entity.RobotNameTagTester::nameTagNamesTheRobot);
         reg.accept("buildcraftunofficial:robot_name_tag_creative_keeps_tag", () -> buildcraft.robotics.entity.RobotNameTagTester::creativeNameTagIsNotUsedUp);

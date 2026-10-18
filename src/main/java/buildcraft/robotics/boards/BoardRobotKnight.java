@@ -75,7 +75,7 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
                             && isExpectedSword(stack)));
         } else if (!held.isEmpty() && held.isDamageableItem()
                 && held.getDamageValue() >= held.getMaxDamage()) {
-            startDelegateAI(new AIRobotGotoStationAndUnload(robot));
+            startDelegateAI(AIRobotGotoStationAndUnload.forHeldItem(robot));
         } else {
             startDelegateAI(new AIRobotSearchEntity(robot, this::isExpectedTarget, 250f, robot.getZoneToWork()));
         }

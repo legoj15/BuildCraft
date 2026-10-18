@@ -59,7 +59,9 @@ public class AIRobotSearchBlock extends AIRobot {
      *  round per update. The random scanners never run out, so for them this bound is what ends a search with no
      *  candidate (and sends an idle planter or stripes robot to sleep). The expanding cube does run out, but each
      *  candidate it finds and cannot reach (a crop under glass) holds a path finder for up to
-     *  {@link PathFindingSearch#FINDER_EXPANSION_BUDGET} expansions, so a cube full of them is bounded only by this. */
+     *  {@link PathFindingSearch#FINDER_EXPANSION_BUDGET} expansions, so a cube full of them is bounded only by this.
+     *  The robot remembers the candidates it gave up on ({@link IRobotAccess#unreachableBlockDetected}), so the next
+     *  search skips them and gets further instead of spending the same rounds on the same nearest ones. */
     static final int SEARCH_ROUNDS = 1000;
     /** {@link #SEARCH_ROUNDS}; package-private so tests can shrink it. */
     int maxRounds = SEARCH_ROUNDS;
@@ -126,12 +128,17 @@ public class AIRobotSearchBlock extends AIRobot {
         }
         if (blockScanner == null) {
             SoftBlockAccess access = blockAccess != null ? blockAccess : SoftBlockAccess.of(robot.level());
+            // A candidate a recent search of this robot's gave up on is not a candidate (asked last, once the filter
+            // has matched, so the memory is read for matching blocks only). Not 7.1.x, which re-flooded the same
+            // unreachable candidates from the centre outwards in every search.
+            IBlockFilter reachableCandidates = pos -> pathFound.matches(pos) && !robot.isKnownUnreachableBlock(pos);
             blockScanner = new PathFindingSearch(access, robot.blockPosition(),
-                    blockIter, pathFound, maxDistanceToEnd, 96, zone,
+                    blockIter, reachableCandidates, maxDistanceToEnd, 96, zone,
                     // Owner-tagged cells: the registry frees this robot's cells itself if it unloads or dies
                     // between the search locking onto a cell and this AI collecting it (takeResource). A cell any
                     // robot holds, as a search cell or as a job, is skipped.
-                    BlockClaims.searchCells(robot.getRegistry(), robot.getRobotId()), approveFound);
+                    BlockClaims.searchCells(robot.getRegistry(), robot.getRobotId()), approveFound)
+                    .onUnreachable(robot::unreachableBlockDetected);
         }
         if (blockScanner.isDone() || rounds >= maxRounds) {
             // Out of rounds, a path found is still taken (getResult reports the finished path finder); otherwise the

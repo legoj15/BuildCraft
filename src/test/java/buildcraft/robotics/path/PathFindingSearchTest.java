@@ -424,4 +424,48 @@ public class PathFindingSearchTest {
         Assertions.assertEquals(SealedRoom.OPEN, s.getResultTarget(), "the reachable target is found");
         Assertions.assertEquals(SealedRoom.OPEN, s.getResult().getLast(), "with a path that ends on it");
     }
+
+    // ---- candidates that cannot be reached are reported ----
+
+    /** A candidate whose finder gives up without a path is handed to the unreachable listener, so the caller can
+     *  remember it; one that is reachable is not. */
+    @Test
+    public void testASealedCandidateIsReportedUnreachableAndAReachableOneIsNot() {
+        SealedRoom room = new SealedRoom();
+        List<BlockPos> deltas = List.of(SealedRoom.SEALED.subtract(SealedRoom.ROBOT),
+                SealedRoom.OPEN.subtract(SealedRoom.ROBOT));
+        List<BlockPos> reported = new ArrayList<>();
+        PathFindingSearch s = new PathFindingSearch(room, SealedRoom.ROBOT, deltas.iterator(),
+                pos -> pos.equals(SealedRoom.SEALED) || pos.equals(SealedRoom.OPEN), NO_END_SLACK, SEARCH_REACH,
+                null, new HashSet<>()).onUnreachable(reported::add);
+
+        // Long enough for the sealed finder to spend its budget beside the reachable one (which ends the search).
+        int budgetRounds = PathFindingSearch.FINDER_EXPANSION_BUDGET / PathFinding.PATH_ITERATIONS;
+        for (int round = 0; round < budgetRounds * 2 + 10 && reported.isEmpty(); round++) {
+            s.iterate();
+        }
+
+        Assertions.assertEquals(List.of(SealedRoom.SEALED), reported,
+                "the sealed candidate is reported once its finder gives up, and the reachable one never");
+    }
+
+    /** A target another search already holds, or one the approver refuses, HAS a path: that is not unreachability. */
+    @Test
+    public void testAReservedOrRefusedTargetIsNotReportedUnreachable() {
+        MockSoftGrid grid = MockSoftGrid.parse2D(Y,
+                "S....",
+                ".....",
+                "..T..");
+        BlockPos target = new BlockPos(2, Y, 2);
+        List<BlockPos> reported = new ArrayList<>();
+        Set<BlockPos> reservations = new HashSet<>();
+        PathFindingSearch refused = new PathFindingSearch(grid, grid.start(), squareDeltas(6), grid.targetFilter(),
+                NO_END_SLACK, MAX_DIST, null, reservations, pos -> false).onUnreachable(reported::add);
+
+        run(refused);
+
+        Assertions.assertNull(refused.getResultTarget(), "fixture: the approver refused the only target");
+        Assertions.assertTrue(reported.isEmpty(), "a refused target has a path, so it is not reported unreachable: "
+                + reported + " / " + target);
+    }
 }

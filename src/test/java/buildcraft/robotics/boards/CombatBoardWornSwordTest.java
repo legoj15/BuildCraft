@@ -30,6 +30,9 @@ public class CombatBoardWornSwordTest extends VanillaSetupBaseTester {
     /** What a board did over {@link #CYCLES} cycles of holding a worn sword with nowhere to unload it. */
     private static final class Run {
         int unloadsEnded;
+        /** Whether the unload the board started was asked to empty the hand: that is what makes it fail when the
+         *  tool stays in it, and so what sends the board to sleep when a station that is there will not take it. */
+        boolean unloadAskedForTheHand;
         boolean sawGotoSleep;
     }
 
@@ -55,6 +58,9 @@ public class CombatBoardWornSwordTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(1, run.unloadsEnded,
                 "...after ONE failed unload, not a retry every tick (" + run.unloadsEnded + " ended in " + CYCLES
                         + " cycles)");
+        Assertions.assertTrue(run.unloadAskedForTheHand,
+                "the " + name + "'s unload of its broken sword asks for the hand to be empty, so a sword left in it "
+                        + "fails the unload");
     }
 
     @Test
@@ -63,13 +69,35 @@ public class CombatBoardWornSwordTest extends VanillaSetupBaseTester {
         cycle(new BoardRobotKnight(robotHoldingAWornSword()) {
             @Override
             public void delegateAIEnded(AIRobot ai) {
-                if (ai instanceof AIRobotGotoStationAndUnload) {
+                if (ai instanceof AIRobotGotoStationAndUnload unload) {
                     run.unloadsEnded++;
+                    run.unloadAskedForTheHand = unload.emptiesHand();
                 }
                 super.delegateAIEnded(ai);
             }
         }, run);
         requireSleptAfterOneFailedUnload("knight", run);
+    }
+
+    /** The break boards (lumberjack, miner, shovelman, leave cutter) share one base that unloads a worn tool. */
+    @Test
+    public void breakBoardsSleepWhenTheyCannotUnloadTheirBrokenTool() {
+        Run run = new Run();
+        MockRobotAccess robot = new MockRobotAccess();
+        ItemStack axe = new ItemStack(Items.IRON_AXE);
+        axe.setDamageValue(axe.getMaxDamage());
+        robot.setHeldItem(axe);
+        cycle(new BoardRobotLumberjack(robot) {
+            @Override
+            public void delegateAIEnded(AIRobot ai) {
+                if (ai instanceof AIRobotGotoStationAndUnload unload) {
+                    run.unloadsEnded++;
+                    run.unloadAskedForTheHand = unload.emptiesHand();
+                }
+                super.delegateAIEnded(ai);
+            }
+        }, run);
+        requireSleptAfterOneFailedUnload("lumberjack", run);
     }
 
     @Test
@@ -78,8 +106,9 @@ public class CombatBoardWornSwordTest extends VanillaSetupBaseTester {
         cycle(new BoardRobotButcher(robotHoldingAWornSword()) {
             @Override
             public void delegateAIEnded(AIRobot ai) {
-                if (ai instanceof AIRobotGotoStationAndUnload) {
+                if (ai instanceof AIRobotGotoStationAndUnload unload) {
                     run.unloadsEnded++;
+                    run.unloadAskedForTheHand = unload.emptiesHand();
                 }
                 super.delegateAIEnded(ai);
             }

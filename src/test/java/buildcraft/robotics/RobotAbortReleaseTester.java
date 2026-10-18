@@ -324,8 +324,12 @@ public class RobotAbortReleaseTester {
 
                 CompoundTag saved = new CompoundTag();
                 main.writeToNbt(saved);
-                main.abort();
-                // The unload's release: a plain claim does not outlive it, the home link does.
+                helper.assertTrue(newHome.isTaken(), "precondition: the flying relink holds its plain claim");
+                // The unload's release: a plain claim does not outlive it, the home link does. The AIs are NOT
+                // aborted first: an unloaded robot's AIs just stop (nothing calls abort on them), and aborting the
+                // relink would free its own claim through AIRobotGotoStation.end - the check below would then pass
+                // without the registry's unload path ever freeing anything. The stale `main` is aborted in the
+                // finally, long after the claim is gone and re-taken.
                 f.registry.releaseResources(robot);
                 helper.assertFalse(newHome.isTaken(), "precondition: the unload freed the relink's plain claim");
                 requireHome(helper, f, robot, home, "across the unload");

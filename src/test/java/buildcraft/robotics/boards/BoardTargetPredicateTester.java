@@ -7,7 +7,16 @@ package buildcraft.robotics.boards;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
+//? if >=1.21.11 {
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
+//?} else {
+/*import net.minecraft.world.entity.animal.horse.AbstractHorse;*/
+//?}
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
 
 import buildcraft.robotics.ai.MockRobotAccess;
 
@@ -61,6 +70,87 @@ public class BoardTargetPredicateTester {
                     "a cow is the butcher's target");
             helper.assertFalse(butcher.isExpectedTarget(zombie),
                     "a zombie is not livestock — the butcher must ignore it");
+        } finally {
+            // Discard exactly what this test made: the framework's own cleanup does not reach entities.
+            for (Mob mob : spawned) {
+                mob.discard();
+            }
+        }
+        helper.succeed();
+    }
+
+    // ---------- the butcher spares what a player kept ----------
+
+    private static Mob cow(GameTestHelper helper, BlockPos pos) {
+        //? if >=26.2 {
+        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.COW, pos);*/
+        //?} else {
+        return helper.spawn(net.minecraft.world.entity.EntityType.COW, pos);
+        //?}
+    }
+
+    private static TamableAnimal wolf(GameTestHelper helper, BlockPos pos) {
+        //? if >=26.2 {
+        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, pos);*/
+        //?} else {
+        return helper.spawn(net.minecraft.world.entity.EntityType.WOLF, pos);
+        //?}
+    }
+
+    private static AbstractHorse horse(GameTestHelper helper, BlockPos pos) {
+        //? if >=26.2 {
+        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.HORSE, pos);*/
+        //?} else {
+        return helper.spawn(net.minecraft.world.entity.EntityType.HORSE, pos);
+        //?}
+    }
+
+    /** 7.1.x's butcher killed any {@code EntityAnimal}: a player's tamed wolf, cat or parrot, a tamed horse, donkey,
+     *  mule, llama or camel, and any animal they had name-tagged to keep, all went the way of the cattle. The port
+     *  spares them (a deliberate divergence; see docs/robotics-resurrection.md): an owned or tamed animal, a tamed
+     *  horse (owner or not), and anything with a custom name. Wild and untamed animals stay targets.
+     *
+     *  <p>"Owned" is the owner REFERENCE being set, not the owner being found: the owner is usually offline, and
+     *  {@code getOwner()} resolves to null for an offline player, which would make their pet look ownerless. The
+     *  mock owner here is not in the level for that reason. */
+    public static void butcherSparesPetsHorsesAndNamedAnimals(GameTestHelper helper) {
+        BoardRobotButcher butcher = new BoardRobotButcher(new buildcraft.robotics.ai.MockRobotAccess());
+        Player owner = helper.makeMockPlayer(GameType.CREATIVE);
+
+        Mob cow = cow(helper, new BlockPos(1, 2, 1));
+        Mob namedCow = cow(helper, new BlockPos(2, 2, 1));
+        namedCow.setCustomName(Component.literal("Bessie"));
+        TamableAnimal wildWolf = wolf(helper, new BlockPos(3, 2, 1));
+        TamableAnimal ownedWolf = wolf(helper, new BlockPos(4, 2, 1));
+        ownedWolf.tame(owner);
+        TamableAnimal tamedOwnerlessWolf = wolf(helper, new BlockPos(1, 2, 3));
+        tamedOwnerlessWolf.setTame(true, false);
+        AbstractHorse wildHorse = horse(helper, new BlockPos(2, 2, 3));
+        AbstractHorse ownedHorse = horse(helper, new BlockPos(3, 2, 3));
+        ownedHorse.tameWithName(owner);
+        AbstractHorse tamedOwnerlessHorse = horse(helper, new BlockPos(4, 2, 3));
+        tamedOwnerlessHorse.setTamed(true);
+
+        Mob[] spawned = { cow, namedCow, wildWolf, ownedWolf, tamedOwnerlessWolf, wildHorse, ownedHorse,
+                tamedOwnerlessHorse };
+        for (Mob mob : spawned) {
+            // Inert: the predicate is pure, and a wandering mob could leave its own arena cell.
+            mob.setNoAi(true);
+            mob.setNoGravity(true);
+        }
+
+        try {
+            helper.assertTrue(butcher.isExpectedTarget(cow), "a plain cow is still the butcher's target");
+            helper.assertTrue(butcher.isExpectedTarget(wildWolf), "a wild wolf is livestock to the butcher");
+            helper.assertTrue(butcher.isExpectedTarget(wildHorse), "a wild horse is livestock to the butcher");
+            helper.assertFalse(butcher.isExpectedTarget(namedCow),
+                    "a name-tagged animal is one the player wants kept");
+            helper.assertFalse(butcher.isExpectedTarget(ownedWolf),
+                    "a wolf with an owner is a pet, even though its owner is not in the level");
+            helper.assertFalse(butcher.isExpectedTarget(tamedOwnerlessWolf), "a tamed wolf is a pet whoever owns it");
+            helper.assertFalse(butcher.isExpectedTarget(ownedHorse), "a horse with an owner is spared");
+            helper.assertFalse(butcher.isExpectedTarget(tamedOwnerlessHorse),
+                    "a tamed horse is spared whether or not it has an owner");
         } finally {
             // Discard exactly what this test made: the framework's own cleanup does not reach entities.
             for (Mob mob : spawned) {

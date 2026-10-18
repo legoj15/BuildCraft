@@ -255,6 +255,123 @@ public class AIRobotGotoBlockTest {
         Assertions.assertEquals(Vec3.ZERO, flyer.motion, "the re-plan stops the robot while the new search runs");
     }
 
+    /** Every step of a flight ends a little off its cell (the distance grows, the AI moves on); the last one ends the
+     *  flight. Drives {@code flight} to its end that way. */
+    private static void flyUntilItEnds(FlyingRobot flyer, AIRobotGotoBlock flight, RecordingParent parent) {
+        for (int i = 0; i < 20 && parent.ended == null; i++) {
+            BlockPos aimed = flyer.aims.getLast();
+            flyer.setPosition(new Vec3(aimed.getX() + 0.5, aimed.getY() + 0.5, aimed.getZ() + 0.5));
+            flight.update();
+            if (parent.ended == null) {
+                flyer.setPosition(new Vec3(aimed.getX() + 0.65, aimed.getY() + 0.6, aimed.getZ() + 0.4));
+                flight.update();
+            }
+        }
+    }
+
+    /** A flight reloaded from a save that carried its path ends where an uninterrupted one does: on the centre of the
+     *  path's last cell. {@code lastBlockInPath} was set only by a fresh search and never restored, so the reloaded
+     *  flight ended wherever its last step stalled. */
+    @Test
+    public void aReloadedFlightSnapsOntoTheLastPathCellLikeAnUninterruptedOne() {
+        Set<BlockPos> soft = new HashSet<>();
+        for (int x = 0; x <= 3; x++) {
+            soft.add(new BlockPos(x, 0, 0));
+        }
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+
+        AIRobotGotoBlock writer = new AIRobotGotoBlock(flyer, 3, 0, 0);
+        writer.blockAccess = soft::contains;
+        RecordingParent writerParent = new RecordingParent(flyer);
+        writerParent.startDelegateAI(writer);
+        for (int i = 0; i < 100 && flyer.aims.isEmpty(); i++) {
+            writer.update();
+        }
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the search plans a path and aims its first step");
+        CompoundTag saved = new CompoundTag();
+        writer.writeSelfToNBT(saved);
+        Assertions.assertTrue(saved.contains("path"), "fixture: the save carries the planned path");
+        flyer.aims.clear();
+
+        AIRobotGotoBlock reader = new AIRobotGotoBlock(flyer);
+        reader.loadSelfFromNBT(saved);
+        reader.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(reader);
+        reader.update(); // the reloaded flight's first cycle aims its next step
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the reloaded flight resumes its path");
+
+        flyUntilItEnds(flyer, reader, parent);
+
+        Assertions.assertSame(reader, parent.ended, "fixture: the reloaded flight arrives");
+        Assertions.assertEquals(new Vec3(3.5, 0.5, 0.5), flyer.position(),
+                "a reloaded flight snaps onto the centre of the last path cell, as an uninterrupted one does");
+    }
+
+    /** The same for a flight built from a stored path (what a search-and-goto hands its goto leg): 7.1.x never set
+     *  {@code lastBlockInPath} for it, so it ended where its last step stalled; the fresh-search flight snaps. */
+    @Test
+    public void aFlightBuiltFromAStoredPathSnapsOntoTheLastPathCell() {
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
+                new BlockPos(3, 0, 0)));
+        AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, path);
+        flight.blockAccess = pos -> pos.getY() == 0 && pos.getZ() == 0 && pos.getX() >= 0 && pos.getX() <= 3;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(flight);
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the stored path's first step is aimed at construction");
+
+        flyUntilItEnds(flyer, flight, parent);
+
+        Assertions.assertSame(flight, parent.ended, "fixture: the flight arrives");
+        Assertions.assertEquals(new Vec3(3.5, 0.5, 0.5), flyer.position(),
+                "a stored-path flight snaps onto the centre of the last path cell");
+    }
+
+    /** An aborted flight must leave the robot still. The fresh-search flight did; a flight handed a stored path (no
+     *  search of its own) kept the 0.1 blocks/tick of its last step, so whatever ran next that does not set a
+     *  velocity of its own (a search, a wait) found the robot drifting off through the walls. */
+    @Test
+    public void anAbortedStoredPathFlightLeavesTheRobotStill() {
+        MotionRecordingRobot flyer = new MotionRecordingRobot();
+        flyer.moveTo(0.5, 0.5, 0.5);
+        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0),
+                new BlockPos(3, 0, 0)));
+        AIRobotGotoBlock flight = new AIRobotGotoBlock(flyer, path);
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(flight);
+        Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the robot is flying the stored path");
+
+        flight.abort();
+
+        Assertions.assertEquals(Vec3.ZERO, flyer.motion, "an aborted flight stops the robot");
+    }
+
+    /** The reloaded twin of the above: a flight read back from a save also has a path and no search. */
+    @Test
+    public void anAbortedReloadedFlightLeavesTheRobotStill() {
+        MotionRecordingRobot flyer = new MotionRecordingRobot();
+        flyer.moveTo(0.5, 0.5, 0.5);
+        LinkedList<BlockPos> path = new LinkedList<>(List.of(new BlockPos(1, 0, 0), new BlockPos(2, 0, 0)));
+        CompoundTag saved = new CompoundTag();
+        new AIRobotGotoBlock(flyer, path).writeSelfToNBT(saved);
+        flyer.setDeltaMovement(Vec3.ZERO);
+
+        AIRobotGotoBlock reloaded = new AIRobotGotoBlock(flyer);
+        reloaded.loadSelfFromNBT(saved);
+        reloaded.blockAccess = pos -> true;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(reloaded);
+        reloaded.update(); // the first cycle aims the next step and sets the velocity
+        Assertions.assertNotEquals(Vec3.ZERO, flyer.motion, "fixture: the reloaded robot is flying");
+
+        reloaded.abort();
+
+        Assertions.assertEquals(Vec3.ZERO, flyer.motion, "an aborted reloaded flight stops the robot");
+    }
+
     /** Puts the robot on the centre of the cell it was last aimed at (one tick: distance 0 becomes the previous
      *  distance), then nudges it past (one tick: the distance grew, so the AI moves on to the next step). */
     private static void flyToAimedCellAndOvershoot(FlyingRobot flyer, AIRobotGotoBlock gotoBlock) {

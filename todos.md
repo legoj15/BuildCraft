@@ -6,7 +6,7 @@ Last audited: 2026-10-17
 
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Builders can sit busy for ever beside fluid they can't remove (outside lava in Clear mode, any water in Replace mode) — [notes](docs/todo-details.md#builder-stalls-beside-unremovable-fluid)
-- On Minecraft 1.21.1 the Distiller sometimes won't open when its input is nearly empty — [notes](docs/todo-details.md#distiller-wont-open-on-1211)
+- On Minecraft 1.21.1, /setblock over a Tank, Heat Exchanger, Flood Gate, Combustion Engine or item machine still spills its contents — [notes](docs/todo-details.md#setblock-spills-on-1211)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 
 ## 🆕 New Features (version 2026.2)

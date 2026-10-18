@@ -62,7 +62,8 @@ import buildcraft.lib.tile.OwnerData;
  * Ported from 1.12.2 TileDistiller_BC8.
  */
 @SuppressWarnings("this-escape")
-public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
+public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable,
+        net.minecraft.world.Clearable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
@@ -147,6 +148,20 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos,
                 getTankIn(), getTankGasOut(), getTankLiquidOut());
+    }
+
+    // Vanilla's command/structure replacement contract: /setblock (replace/keep) and structure placement call
+    // Clearable.tryClear before swapping the block, so the old contents vanish instead of spilling. 1.21.10+
+    // /setblock also skips preRemoveSideEffects (flag 256); 1.21.1 has no such flag and relies on this alone, so
+    // without it the <1.21.10 onRemove catch-all spilled the tanks as shards on every command replace.
+    @Override
+    public void clearContent() {
+        tankIn.setFluidStack(0, FluidStack.EMPTY);
+        tankGasOut.setFluidStack(0, FluidStack.EMPTY);
+        tankLiquidOut.setFluidStack(0, FluidStack.EMPTY);
+        for (int i = 0; i < containerSlots.getSlots(); i++) {
+            containerSlots.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY);
+        }
     }
 
     //? if >=1.21.10 {

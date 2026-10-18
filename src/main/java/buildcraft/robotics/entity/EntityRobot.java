@@ -806,15 +806,22 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     // ── Fluids ──────────────────────────────────────────────────────────────
 
-    /** A robot flies by its own AI and no current may move it. 7.1.x answered {@code handleWaterMovement} with
-     *  {@code false} for the same reason. {@code serverTick} integrates {@code deltaMovement} by hand and nothing
-     *  damps it, so a push that vanilla would shrug off became a velocity that outlived the water: a hovering
-     *  Farmer under a source sank 35 blocks into the void. The robot still counts as in the water (splash,
+    /** A robot flies by its own AI and no fluid current may move it. 7.1.x answered {@code handleWaterMovement}
+     *  with {@code false} for the same reason. {@code serverTick} integrates {@code deltaMovement} by hand and
+     *  nothing damps it, so a push that vanilla would shrug off became a velocity that outlived the water: a
+     *  hovering Farmer under a source sank 35 blocks into the void. The robot still counts as in the water (splash,
      *  extinguishing); only the current is ignored, so nothing about entering or leaving it changes.
      *
      *  <p>This is NeoForge's per-fluid-type hook, which every vanilla push path asks (1.21.1's fluid loop, the
      *  26.x {@code EntityFluidInteraction}). The no-argument {@code Entity#isPushedByFluid()} is deprecated in
-     *  favour of it, and the per-type default only defers to that one, so it is left alone. */
+     *  favour of it, and the per-type default only defers to that one, so it is left alone.
+     *
+     *  <p>Bubble columns are not a fluid push and need no hook of their own: they act through
+     *  {@code BubbleColumnBlock.entityInside}, which only runs for an entity whose block-inside effects run, and a
+     *  robot's never do because it is {@code noPhysics} ({@code Entity.move} is a bare {@code setPos} on 1.21.1,
+     *  {@code isAffectedByBlocks()} is false on 26.x). Clearing {@code noPhysics} would bring them back, and every
+     *  other block effect with them; the {@code robot_ignores_flowing_water} game test holds a robot in a rising and
+     *  a sinking column to catch that. */
     @Override
     public boolean isPushedByFluid(FluidType type) {
         return false;

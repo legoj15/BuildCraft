@@ -6,6 +6,7 @@
 package buildcraft.robotics.entity;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,9 +22,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.Vec3;
 
@@ -870,60 +871,104 @@ public class EntityRobotTester {
 
     // ---------- fluid ----------
 
-    /** Ticks the robot soaks in the waterfall before its position is judged. Long enough that a push of vanilla's
-     *  0.014 blocks/tick^2 has carried an unprotected robot several blocks (about 6 at this length), short enough
-     *  that the soak ends inside the arena cell's water. */
+    /** Ticks the robots soak in their columns before their positions are judged. Long enough that a push of
+     *  vanilla's 0.014 blocks/tick^2 has carried an unprotected robot several blocks (about 6 at this length), short
+     *  enough that the soak ends inside the arena cell's water. */
     private static final int WATERFALL_SOAK_TICKS = 30;
 
-    /** A robot is a flying machine, and flowing water must not push it: 7.1.x answered {@code handleWaterMovement}
-     *  with {@code false}, so a robot hovering in a waterfall stayed where its AI put it.
+    /** One column of the fluid test: what it is called in a failure, where its robot hovers, and what the block
+     *  there must be for the test to mean anything. */
+    private record FluidShaft(String name, BlockPos robotRel, Predicate<BlockState> robotBlock) {
+    }
+
+    /** A robot is a flying machine, and a fluid must not push it: 7.1.x answered {@code handleWaterMovement} with
+     *  {@code false}, so a robot hovering in a waterfall stayed where its AI put it.
      *
      *  <p>The port inherits vanilla's fluid current for every entity. A robot's motion is hand-integrated by
      *  {@code serverTick} and nothing damps it, so one tick of push became a velocity that never decayed: a Farmer
      *  hovering under a water source with no floor beneath sank 35 blocks into the void, because the push
      *  accumulated tick after tick and carried on after the robot had left the water.
      *
-     *  <p>The rig is a walled one-block shaft, a stone floor, a source at the top and falling water below it: vanilla
-     *  pushes straight down in falling water that touches a solid face, and the walls and floor keep the water
-     *  (which would otherwise spread across the neighbouring arenas) inside this cell. The robot has no board and no
-     *  charge, so nothing but the current can move it. */
+     *  <p>Three walled one-block shafts, side by side in this cell, each with its own board-less, uncharged robot (so
+     *  nothing but the fluid can move it):
+     *  <ul>
+     *  <li>falling water: vanilla pushes straight down in falling water that touches a solid face, which is the
+     *      bug. This one failed before {@code isPushedByFluid(FluidType)} was overridden;</li>
+     *  <li>a rising and a sinking bubble column (soul sand / magma block under water). These do not go through the
+     *      fluid hook: vanilla applies them from {@code BubbleColumnBlock.entityInside} to an entity whose
+     *      block-inside effects run, and a robot's never do because it is {@code noPhysics} ({@code Entity.move}
+     *      is a bare {@code setPos} on 1.21.1, {@code isAffectedByBlocks()} is false on 26.x) and nothing else on
+     *      its tick runs the check. They passed before the fix, so this is a guard, not a regression test: a robot
+     *      that stops being {@code noPhysics} would be flung up or down by them with the same never-fading
+     *      velocity. Checked once by forcing the 1.21.1 block-inside check on every tick: the rising column then
+     *      carried the robot 19 blocks in the 30-tick soak.</li>
+     *  </ul>
+     *  The walls and floors keep the water, which would otherwise spread across the neighbouring arenas, inside this
+     *  cell. */
     public static void robotIsNotPushedByFlowingWater(GameTestHelper helper) {
-        BlockPos robotRel = new BlockPos(2, 3, 2);
-        buildWaterfallShaft(helper, new BlockPos(2, 0, 2), 5);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        FluidShaft[] shafts = {
+            new FluidShaft("falling water", new BlockPos(2, 3, 1),
+                    state -> state.getFluidState().is(FluidTags.WATER) && !state.getFluidState().isSource()),
+            new FluidShaft("rising bubble column", new BlockPos(2, 3, 3),
+                    state -> state.is(Blocks.BUBBLE_COLUMN) && !state.getValue(BubbleColumnBlock.DRAG_DOWN)),
+            new FluidShaft("sinking bubble column", new BlockPos(2, 3, 5),
+                    state -> state.is(Blocks.BUBBLE_COLUMN) && state.getValue(BubbleColumnBlock.DRAG_DOWN)),
+        };
+        buildWaterfallShaft(helper, new BlockPos(2, 0, 1), 5);
+        buildBubbleShaft(helper, new BlockPos(2, 0, 3), Blocks.SOUL_SAND.defaultBlockState(), false, 5);
+        buildBubbleShaft(helper, new BlockPos(2, 0, 5), Blocks.MAGMA_BLOCK.defaultBlockState(), true, 5);
+        for (FluidShaft shaft : shafts) {
+            EntityArenaUtil.forceLoadEntityArena(helper, shaft.robotRel());
+        }
 
-        ZonePinnedRobot[] robot = { null };
-        Vec3[] start = { null };
+        ZonePinnedRobot[] robots = new ZonePinnedRobot[shafts.length];
+        Vec3[] starts = new Vec3[shafts.length];
         EntityArenaUtil.tickUntilThen(helper, 120,
-                () -> EntityArenaUtil.isEntityTicking(helper, robotRel),
                 () -> {
-                    robot[0] = ZonePinnedRobot.spawn(helper, robotRel, null);
-                    start[0] = robot[0].position();
+                    for (FluidShaft shaft : shafts) {
+                        if (!EntityArenaUtil.isEntityTicking(helper, shaft.robotRel())) {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                () -> {
+                    for (int i = 0; i < shafts.length; i++) {
+                        robots[i] = ZonePinnedRobot.spawn(helper, shafts[i].robotRel(), null);
+                        starts[i] = robots[i].position();
+                    }
                 },
                 WATERFALL_SOAK_TICKS,
                 () -> {
-                    ZonePinnedRobot r = robot[0];
-                    helper.assertTrue(r.tickCount >= WATERFALL_SOAK_TICKS / 2,
-                            "precondition: the robot ticked (tickCount " + r.tickCount + "), or standing still "
-                                    + "proves nothing");
-                    FluidState water = helper.getLevel().getFluidState(BlockPos.containing(start[0]));
-                    helper.assertTrue(water.is(FluidTags.WATER) && !water.isSource(),
-                            "precondition: the robot's start block holds flowing water, not " + water);
-
-                    double drift = r.position().distanceTo(start[0]);
-                    helper.assertTrue(drift < 1.0E-3,
-                            "flowing water pushed the robot " + drift + " blocks in " + WATERFALL_SOAK_TICKS
-                                    + " ticks (now at " + r.position() + ", moving " + r.getDeltaMovement()
-                                    + "): a robot flies by its own AI and the current must not move it");
-                    helper.assertTrue(r.getDeltaMovement().lengthSqr() < 1.0E-12,
-                            "the current left the robot with motion " + r.getDeltaMovement());
-                    helper.assertTrue(r.isInWater(),
-                            "the robot is in the water, so staying put is the pushing being ignored, not the "
-                                    + "robot being dry");
+                    for (int i = 0; i < shafts.length; i++) {
+                        assertRobotStayedPut(helper, shafts[i], robots[i], starts[i]);
+                    }
                     helper.succeed();
                 },
-                "the waterfall robot never became entity-ticking",
-                () -> EntityArenaUtil.discard(robot[0]));
+                "the fluid-shaft robots never became entity-ticking",
+                () -> EntityArenaUtil.discard(robots));
+    }
+
+    private static void assertRobotStayedPut(GameTestHelper helper, FluidShaft shaft, ZonePinnedRobot robot,
+                                             Vec3 start) {
+        String where = " [" + shaft.name() + "]";
+        helper.assertTrue(robot.tickCount >= WATERFALL_SOAK_TICKS / 2,
+                "precondition: the robot ticked (tickCount " + robot.tickCount + "), or standing still proves "
+                        + "nothing" + where);
+        BlockState block = helper.getLevel().getBlockState(BlockPos.containing(start));
+        helper.assertTrue(shaft.robotBlock().test(block),
+                "precondition: the robot's start block is the fluid under test, not " + block + where);
+
+        double drift = robot.position().distanceTo(start);
+        helper.assertTrue(drift < 1.0E-3,
+                "the fluid pushed the robot " + drift + " blocks in " + WATERFALL_SOAK_TICKS + " ticks (now at "
+                        + robot.position() + ", moving " + robot.getDeltaMovement() + "): a robot flies by its own "
+                        + "AI and a fluid must not move it" + where);
+        helper.assertTrue(robot.getDeltaMovement().lengthSqr() < 1.0E-12,
+                "the fluid left the robot with motion " + robot.getDeltaMovement() + where);
+        helper.assertTrue(robot.isInWater(),
+                "the robot is in the water, so staying put is the pushing being ignored, not the robot being dry"
+                        + where);
     }
 
     /** A one-block shaft whose floor block is {@code floor}: stone walls on its four sides up to {@code topY}
@@ -934,11 +979,28 @@ public class EntityRobotTester {
         helper.setBlock(floor, Blocks.STONE);
         BlockState falling = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);
         for (int y = floor.getY() + 1; y <= topY; y++) {
-            for (Direction side : Direction.Plane.HORIZONTAL) {
-                helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()).relative(side), Blocks.STONE);
-            }
+            wallAround(helper, floor, y);
             helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()),
                     y == topY ? Blocks.WATER.defaultBlockState() : falling);
+        }
+    }
+
+    /** A one-block shaft of bubble column on {@code floorBlock} (soul sand raises, a magma block drags down), walled
+     *  the same way. The column blocks are placed directly, as vanilla's own update would place them over that
+     *  floor. */
+    private static void buildBubbleShaft(GameTestHelper helper, BlockPos floor, BlockState floorBlock,
+                                         boolean dragDown, int topY) {
+        helper.setBlock(floor, floorBlock);
+        BlockState column = Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(BubbleColumnBlock.DRAG_DOWN, dragDown);
+        for (int y = floor.getY() + 1; y <= topY; y++) {
+            wallAround(helper, floor, y);
+            helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()), column);
+        }
+    }
+
+    private static void wallAround(GameTestHelper helper, BlockPos floor, int y) {
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            helper.setBlock(new BlockPos(floor.getX(), y, floor.getZ()).relative(side), Blocks.STONE);
         }
     }
 }

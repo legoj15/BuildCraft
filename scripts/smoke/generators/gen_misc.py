@@ -101,6 +101,8 @@ S.append(echo("programming table (expect a Carrier board in result)", "data get 
 S.append(echo("integration table (expect a Carrier robot in result)", "data get block {X+8} {Y} {Z-4} items"))
 S.append(echo("destination tank (expect water)", "data get block {X-6} {Y} {Z}"))
 S.append(echo("supply tank after", "data get block {X-10} {Y} {Z}"))
+S.append(echo("supply pipe fluid", "data get block {X-10} {Y+1} {Z} pipe.flow"))
+S.append(echo("destination pipe fluid", "data get block {X-6} {Y+1} {Z} pipe.flow"))
 S.append(echo("cobblestone placed by stripes (count; destructive)", "fill {X-3} {Y} {Z+4} {X-1} {Y+1} {Z+6} minecraft:air replace minecraft:cobblestone"))
 S.append(echo("dirt left in the pit (count; destructive; 75 at start)", "fill {X+20} {Y-3} {Z-2} {X+24} {Y-1} {Z+2} minecraft:stone replace minecraft:dirt"))
 S.append(echo("bomber chest TNT left", "data get block {X+10} {Y} {Z} Items"))

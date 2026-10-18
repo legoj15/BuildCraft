@@ -399,6 +399,24 @@
       "echo": true
     },
     {
+      "label": "supply pipe fluid",
+      "do": "cmd",
+      "run": [
+        "data get block {X-10} {Y+1} {Z} pipe.flow"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "destination pipe fluid",
+      "do": "cmd",
+      "run": [
+        "data get block {X-6} {Y+1} {Z} pipe.flow"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
       "label": "cobblestone placed by stripes (count; destructive)",
       "do": "cmd",
       "run": [

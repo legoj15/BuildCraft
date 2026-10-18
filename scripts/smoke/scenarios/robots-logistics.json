@@ -38,9 +38,9 @@
         "?gamerule doDaylightCycle false",
         "?gamerule advance_time false",
         "weather clear",
-        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..40]",
-        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..40]",
-        "?kill @e[type=minecraft:husk,x={X},y={Y},z={Z},distance=..40]",
+        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..200]",
+        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..200]",
+        "?kill @e[type=minecraft:husk,x={X},y={Y},z={Z},distance=..200]",
         "?fill {X-16} {Y} {Z-8} {X+16} {Y+6} {Z+10} minecraft:air",
         "fill {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+10} minecraft:smooth_stone"
       ]

@@ -38,9 +38,9 @@
         "?gamerule doDaylightCycle false",
         "?gamerule advance_time false",
         "weather clear",
-        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..40]",
-        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..40]",
-        "?kill @e[type=minecraft:cow,x={X},y={Y},z={Z},distance=..40]",
+        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..200]",
+        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..200]",
+        "?kill @e[type=minecraft:cow,x={X},y={Y},z={Z},distance=..200]",
         "?fill {X-16} {Y} {Z-8} {X+16} {Y+6} {Z+12} minecraft:air",
         "fill {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+12} minecraft:smooth_stone"
       ]
@@ -480,24 +480,6 @@
       "echo": true
     },
     {
-      "label": "crops planted in the zone, plot + replanted row (count; destructive; about 5 per 75 s is 7.1.x pace)",
-      "do": "cmd",
-      "run": [
-        "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"
-      ],
-      "allowFail": true,
-      "echo": true
-    },
-    {
-      "label": "farmland tilled on the plot (count; destructive)",
-      "do": "cmd",
-      "run": [
-        "fill {X-11} {Y-1} {Z+4} {X-5} {Y-1} {Z+8} minecraft:dirt replace minecraft:farmland"
-      ],
-      "allowFail": true,
-      "echo": true
-    },
-    {
       "label": "ripe wheat harvested (expect fail)",
       "do": "cmd",
       "run": [
@@ -511,6 +493,62 @@
       "do": "cmd",
       "run": [
         "execute if blocks {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+2} {X-16} {Y-1} {Z-8} all"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "planter seed chest",
+      "do": "cmd",
+      "run": [
+        "data get block {X-8} {Y} {Z} Items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "planter robot",
+      "do": "cmd",
+      "run": [
+        "data get entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotPlanter\"},limit=1]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "look at the farm",
+      "do": "tp",
+      "at": [
+        -8,
+        5,
+        2
+      ],
+      "yaw": 0,
+      "pitch": 60
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "name": "rig2-farm",
+      "do": "shot",
+      "look": "the farm plot from above: farmland, seedlings, the harvested row"
+    },
+    {
+      "label": "crops planted in the zone, plot + replanted row (count; destructive; expect 1-2: the Planter finds no farmland at start and sleeps 60 s, as 7.1.x)",
+      "do": "cmd",
+      "run": [
+        "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "farmland tilled on the plot (count; destructive)",
+      "do": "cmd",
+      "run": [
+        "fill {X-11} {Y-1} {Z+4} {X-5} {Y-1} {Z+8} minecraft:dirt replace minecraft:farmland"
       ],
       "allowFail": true,
       "echo": true

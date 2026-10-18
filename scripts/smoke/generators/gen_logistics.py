@@ -15,9 +15,9 @@ S.append({"do": "tp", "at": [0, 0, -7], "yaw": 0, "pitch": 25})
 S.append({"do": "wait", "ms": 3000})
 S.append({"label": "clear and floor", "do": "cmd", "run": [
     "difficulty easy", "time set 6000", "?gamerule doDaylightCycle false", "?gamerule advance_time false", "weather clear",
-    "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..40]",
-    "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..40]",
-    "?kill @e[type=minecraft:husk,x={X},y={Y},z={Z},distance=..40]",
+    "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..200]",
+    "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..200]",
+    "?kill @e[type=minecraft:husk,x={X},y={Y},z={Z},distance=..200]",
     "?fill {X-16} {Y} {Z-8} {X+16} {Y+6} {Z+10} minecraft:air",
     "fill {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+10} minecraft:smooth_stone"]})
 S.append({"label": "carrier supply (16 cobblestone, Provide Items)", "do": "cmd", "run": station(-10, 0, ["minecraft:cobblestone 16"], "buildcraft:station.provide_items", (-11, -1, -1, -5, 3, 1), zaction="buildcraft:robot.load_unload_area")})

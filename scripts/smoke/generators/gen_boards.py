@@ -15,9 +15,9 @@ S.append({"do": "tp", "at": [0, 0, -7], "yaw": 0, "pitch": 25})
 S.append({"do": "wait", "ms": 3000})
 S.append({"label": "clear and floor", "do": "cmd", "run": [
     "difficulty peaceful", "time set 6000", "?gamerule doDaylightCycle false", "?gamerule advance_time false", "weather clear",
-    "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..40]",
-    "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..40]",
-    "?kill @e[type=minecraft:cow,x={X},y={Y},z={Z},distance=..40]",
+    "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..200]",
+    "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..200]",
+    "?kill @e[type=minecraft:cow,x={X},y={Y},z={Z},distance=..200]",
     "?fill {X-16} {Y} {Z-8} {X+16} {Y+6} {Z+12} minecraft:air",
     "fill {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+12} minecraft:smooth_stone"]})
 S.append({"label": "farm plot: dirt, water, a row of ripe wheat", "do": "cmd", "run": [
@@ -71,10 +71,15 @@ S.append(echo("unnamed cows left (expect fail)", "execute if entity @e[type=mine
 S.append(echo("iron ore left (expect fail)", "execute if block {X+8} {Y} {Z+5} minecraft:iron_ore"))
 S.append(echo("plain stone in the ore patch untouched (expect pass)", "execute if block {X+8} {Y} {Z+6} minecraft:stone"))
 S.append(echo("gravel dug (expect fail)", "execute if block {X+14} {Y} {Z+5} minecraft:gravel"))
-S.append(echo("crops planted in the zone, plot + replanted row (count; destructive; about 5 per 75 s is 7.1.x pace)", "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"))
-S.append(echo("farmland tilled on the plot (count; destructive)", "fill {X-11} {Y-1} {Z+4} {X-5} {Y-1} {Z+8} minecraft:dirt replace minecraft:farmland"))
 S.append(echo("ripe wheat harvested (expect fail)", "execute if block {X-11} {Y} {Z+9} minecraft:wheat[age=7]"))
 S.append(echo("front floor outside zones intact (expect pass)", "execute if blocks {X-16} {Y-1} {Z-8} {X+16} {Y-1} {Z+2} {X-16} {Y-1} {Z-8} all"))
+S.append(echo("planter seed chest", "data get block {X-8} {Y} {Z} Items"))
+S.append(echo("planter robot", 'data get entity @e[type=buildcraftunofficial:robot,nbt={boardId:"buildcraftunofficial:boardRobotPlanter"},limit=1]'))
+S.append({"label": "look at the farm", "do": "tp", "at": [-8, 5, 2], "yaw": 0, "pitch": 60})
+S.append({"do": "wait", "ms": 1500})
+S.append({"name": "rig2-farm", "do": "shot", "look": "the farm plot from above: farmland, seedlings, the harvested row"})
+S.append(echo("crops planted in the zone, plot + replanted row (count; destructive; expect 1-2: the Planter finds no farmland at start and sleeps 60 s, as 7.1.x)", "fill {X-11} {Y} {Z+4} {X-5} {Y} {Z+9} minecraft:air replace minecraft:wheat"))
+S.append(echo("farmland tilled on the plot (count; destructive)", "fill {X-11} {Y-1} {Z+4} {X-5} {Y-1} {Z+8} minecraft:dirt replace minecraft:farmland"))
 S.append(echo("harvester home chest", "data get block {X-5} {Y} {Z} Items"))
 S.append(echo("butcher home chest", "data get block {X+2} {Y} {Z} Items"))
 S.append(echo("miner home chest", "data get block {X+8} {Y} {Z} Items"))

@@ -91,6 +91,7 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
+import buildcraft.robotics.ai.AIRobotWaitForHome;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.robotics.particle.RobotEnergyParticleOptions;
 import buildcraft.robotics.statements.ActionRobotWorkInArea;
@@ -1136,14 +1137,15 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     /** 7.1.x called this {@code isActive()} and returned true when the robot was ASLEEP — the inverse of its
      *  name. Renamed here to say what it means. True when the deepest active AI is a sleep or shutdown AI —
      *  the Ph4 implementation of the Ph3-stub javadoc, matching 7.1.x's
-     *  {@code mainAI.getActiveAI() instanceof AIRobotSleep || instanceof AIRobotShutdown}. Only ever called
-     *  server-side (the SLEEPING synced flag pushes the result to the client). */
+     *  {@code mainAI.getActiveAI() instanceof AIRobotSleep || instanceof AIRobotShutdown}, plus the port's
+     *  {@link AIRobotWaitForHome} (idle too, waiting for an unloaded home). Only ever called server-side (the SLEEPING
+     *  synced flag pushes the result to the client). */
     public boolean isSleeping() {
         if (mainAI == null) {
             return false;
         }
         AIRobot active = mainAI.getActiveAI();
-        return active instanceof AIRobotSleep || active instanceof AIRobotShutdown;
+        return active instanceof AIRobotSleep || active instanceof AIRobotShutdown || active instanceof AIRobotWaitForHome;
     }
 
     @Override

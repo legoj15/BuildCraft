@@ -33,8 +33,9 @@ import buildcraft.robotics.statements.ActionRobotFilter;
 
 /** The delivery board, ported from 7.1.x {@code BoardRobotDelivery}: find an open request on the network,
  *  load the requested goods at any station that supplies them, and hand them to the requester. A failed
- *  load blacklists the request's item until the next successful search (so the board does not spin on an
- *  order it cannot fill), and leftover cargo is disposed of before a new order is taken. */
+ *  load blacklists the request's item so the board does not spin on an order it cannot fill; the blacklist is
+ *  cleared when a search finds no order at all (everything left is blacklisted, or nothing is requested), so the
+ *  items get another chance after the robot's sleep. Leftover cargo is disposed of before a new order is taken. */
 public class BoardRobotDelivery extends RedstoneBoardRobot {
 
     private final ArrayList<ItemStack> deliveryBlacklist = new ArrayList<>();

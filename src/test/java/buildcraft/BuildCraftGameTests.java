@@ -996,6 +996,7 @@ public class BuildCraftGameTests {
         // the permissive loop; robot_station_forbid_robot below is its replacement. Remaining here: the
         // AIRobotMain ladder's recharge leg against a live kinesis rig.
         reg.accept("buildcraftunofficial:robot_low_power_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtPoweredStation);
+        reg.accept("buildcraftunofficial:robot_low_power_unloaded_home_recharges_at_powered_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotWithUnloadedHomeRechargesAtPoweredStation);
         // ...and the same leg when the only power is Forge Energy on an RF kinesis pipe.
         reg.accept("buildcraftunofficial:robot_low_power_recharges_at_rf_station", () -> buildcraft.robotics.boards.PickerCarrierTester::lowPowerRobotRechargesAtRfStation);
 
@@ -1045,11 +1046,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_rig_picker_nbt", () -> buildcraft.robotics.RobotStationRigTester::pickerNbtRig);
         reg.accept("buildcraftunofficial:robot_station_rig_picker_orphaned", () -> buildcraft.robotics.RobotStationRigTester::pickerOnOrphanedStation);
         reg.accept("buildcraftunofficial:robot_station_unloaded_home_keeps_robot_working", () -> buildcraft.robotics.RobotStationRigTester::unloadedHomeKeepsTheRobotWorking);
+        reg.accept("buildcraftunofficial:robot_low_robot_waits_for_unloaded_home", () -> buildcraft.robotics.RobotStationRigTester::lowRobotWaitsForAnUnloadedHome);
         reg.accept("buildcraftunofficial:robot_delivery_keeps_cargo_for_unloaded_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryKeepsCargoForAnUnloadedRequester);
         reg.accept("buildcraftunofficial:robot_delivery_gives_up_destroyed_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterWasDestroyed);
         reg.accept("buildcraftunofficial:robot_delivery_gives_up_forbidding_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterForbidsTheRobot);
         reg.accept("buildcraftunofficial:robot_station_search_skips_unloaded_station", () -> buildcraft.robotics.RobotStationRigTester::searchSkipsAStationInAnUnloadedChunk);
         reg.accept("buildcraftunofficial:robot_station_pipe_filled_away_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeFilledAwayDeregistersItsStation);
+        reg.accept("buildcraftunofficial:robot_station_pipe_replaced_without_station_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeReplacedWithoutAStationDeregistersIt);
         reg.accept("buildcraftunofficial:robot_station_rig_planter_api", () -> buildcraft.robotics.RobotStationRigTester::planterApiRig);
         reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);

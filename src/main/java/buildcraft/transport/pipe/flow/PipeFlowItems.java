@@ -160,6 +160,9 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         IPipeHolder holder = pipe.getHolder();
         Level level = holder.getPipeWorld();
         BlockPos neighborPos = holder.getPipePos().relative(from);
+        // Raw lookup (no isLoaded guard): reached only from a tick, the pipe's own or a powering neighbour's, so every
+        // face neighbour is in a loaded chunk; TilePipeHolder.getNeighbourTile documents why. An off-tick caller would
+        // load the chunk here.
         //? if >=1.21.10 {
         var handler = level.getCapability(
             Capabilities.Item.BLOCK, neighborPos, from.getOpposite());
@@ -497,6 +500,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                         ItemStack injectedBefore = excess.copy();
                         Level level = holder.getPipeWorld();
                         BlockPos neighborPos = holder.getPipePos().relative(item.side);
+                        // Tick-only raw lookup, safe for the reason TilePipeHolder.getNeighbourTile documents.
                         //? if >=1.21.10 {
                         var tileHandler = level.getCapability(
                             Capabilities.Item.BLOCK, neighborPos, oppositeSide);

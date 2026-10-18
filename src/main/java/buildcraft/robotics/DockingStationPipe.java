@@ -30,6 +30,7 @@ import buildcraft.api.core.IStackFilter;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
+import buildcraft.api.robots.IDockingStationProvider;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
@@ -97,8 +98,9 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *      never told; a pipe rebuilt there adopts the registration ({@code RobotStationPluggable.onTick}). Trusting
      *      the cache read the removed pipe's gates for good, so the new pipe's Provide/Accept Items gates did nothing
      *      and its robots idled at home (7.1.x checked {@code isInvalid()} for the same reason). The live block entity
-     *      is looked up instead; if it is no pipe at all, the pipe is gone and the station deregisters, which shuts
-     *      down a robot homed here rather than leaving a ghost station in the save with its robot frozen.</li>
+     *      is looked up instead; if it is no pipe, or a pipe without a station plug on this face, the station
+     *      is gone and deregisters, which shuts down a robot homed here rather than leaving a ghost station in the
+     *      save with its robot frozen.</li>
      *  </ul> */
     @Nullable
     public IPipeHolder getHolder() {
@@ -108,7 +110,11 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         if (holder == null || holder.getPipe() == null
                 || (holder.getPipeTile() instanceof BlockEntity cached && cached.isRemoved())) {
             BlockEntity tile = world.getBlockEntity(getPos());
-            if (!(tile instanceof IPipeHolder iph)) {
+            // Only a pipe that still carries a station plug on this face is this station's pipe: /fill pipe-over-pipe
+            // on 1.21.10+ leaves a plugless pipe here, and adopting it kept a gateless ghost registered (still chosen
+            // by searches and docked at), where 1.21.1's /fill deregisters it. A rebuild that places the pipe and its
+            // plug on different ticks heals: the new plug's first onTick registers a fresh station.
+            if (!(tile instanceof IPipeHolder iph) || !(iph.getPluggable(side()) instanceof IDockingStationProvider)) {
                 holder = null;
                 RobotManager.registryProvider.getRegistry(world).removeStation(this);
                 return null;
@@ -474,13 +480,15 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *  treats a refused take as a failed move and sends the board to sleep. Measured: routing take() through
      *  {@code getHolder()} made the sleep/wakeup gate test fail roughly two runs in five. Asking the world
      *  whether the block entity is still an {@link IPipeHolder} has neither the false positive nor
-     *  {@code getHolder()}'s deregistering side effect. A station whose chunk is not loaded is not gone (and asking
-     *  would load the chunk). */
+     *  {@code getHolder()}'s deregistering side effect. A pipe without a station plug on this face is not this
+     *  station's pipe ({@link #getHolder}). A station whose chunk is not loaded is not gone (and asking would load the
+     *  chunk). */
     private boolean isPipeGone() {
         if (world == null || !world.isLoaded(getPos())) {
             return false;
         }
-        if (world.getBlockEntity(getPos()) instanceof IPipeHolder) {
+        if (world.getBlockEntity(getPos()) instanceof IPipeHolder iph
+                && iph.getPluggable(side()) instanceof IDockingStationProvider) {
             return false;
         }
         RobotManager.registryProvider.getRegistry(world).removeStation(this);

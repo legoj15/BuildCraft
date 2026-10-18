@@ -257,6 +257,82 @@ public class RobotStationRigTester {
                 });
     }
 
+    /** How long the low robot below must hold out: more than twice the 120-cycle recharge retry, and several times what
+     *  its work would take to drain it. */
+    private static final int WAIT_FOR_HOME_TICKS = 300;
+    private static final int WAIT_FOR_HOME_BUDGET = 360;
+    /** Below the safety reserve and small enough that any work drains it within one recharge back-off. */
+    private static final long LOW_CHARGE = MjAPI.MJ / 2;
+
+    /** A robot low on charge whose home's chunk is unloaded, and with no other charger in reach. Before a robot could
+     *  outlive its home's chunk (a per-tick lookup used to load it), this never arose. Every recharge search skips the
+     *  unloaded home, and the robot used to work on between the failed attempts until it was flat, then shut down and
+     *  fell where it was, cargo and all. It waits instead, hovering in place at no cost, so it still holds its charge
+     *  and its cargo when the home comes back. The robot reads an isolated registry holding only its home, so no
+     *  charger elsewhere in the run can serve it. */
+    public static void lowRobotWaitsForAnUnloadedHome(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos robotRel = new BlockPos(2, 3, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        BlockPos far = helper.absolutePos(robotRel).offset(UNLOADED_OFFSET, 0, 192);
+        helper.assertFalse(level.isLoaded(far), "precondition: the home's chunk is not loaded");
+
+        DockingStationPipe home = unloadedStation(level, far, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS, null);
+        RobotManager.registryProvider.getRegistry(level).registerStation(home);
+        MockRobotAccess.InertRobotRegistry onlyHome = new MockRobotAccess.InertRobotRegistry() {
+            @Override
+            public Collection<DockingStation> getStations() {
+                return List.of(home);
+            }
+
+            @Override
+            public DockingStation getStation(BlockPos pos, Direction side) {
+                return home.getPos().equals(pos) && home.side() == side ? home : null;
+            }
+        };
+
+        EntityRobot[] robot = { null };
+        int[] ticks = { 0 };
+        EntityArenaUtil.tickUntil(helper, WAIT_FOR_HOME_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        if (!EntityArenaUtil.isEntityTicking(helper, robotRel)) {
+                            return false;
+                        }
+                        ZonePinnedRobot spawned = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE)
+                                .registry(onlyHome);
+                        spawned.getBattery().addPower(LOW_CHARGE, false);
+                        spawned.setUniqueRobotId(RobotManager.registryProvider.getRegistry(level).getNextRobotId());
+                        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+                        spawned.setPos(pos.x, pos.y, pos.z);
+                        spawned.setInventoryStack(0, new ItemStack(Items.COBBLESTONE, 8));
+                        helper.assertTrue(home.takeAsMain(spawned), "precondition: the robot is homed there");
+                        level.addFreshEntity(spawned);
+                        robot[0] = spawned;
+                        return false;
+                    }
+                    helper.assertFalse(robot[0].mainAI.getDelegateAI() instanceof buildcraft.robotics.ai.AIRobotShutdown,
+                            "a low robot whose home is merely unloaded shut down in the field after " + ticks[0]
+                                    + " ticks instead of waiting for it");
+                    return ++ticks[0] >= WAIT_FOR_HOME_TICKS;
+                },
+                () -> {
+                    helper.assertTrue(robot[0].getBattery().getStored() == LOW_CHARGE,
+                            "waiting must cost nothing, so the robot still has its charge, has "
+                                    + MjAPI.formatMj(robot[0].getBattery().getStored()) + " MJ");
+                    helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
+                            new ItemStack(Items.COBBLESTONE, 8)), "...and its cargo");
+                    helper.assertTrue(robot[0].getLinkedStation() == home, "...and its home");
+                    helper.assertFalse(level.isLoaded(far), "nothing about the wait may load the home's chunk");
+                    helper.succeed();
+                },
+                "the low robot never got through the wait",
+                () -> {
+                    EntityArenaUtil.discard(robot[0]);
+                    RobotManager.registryProvider.getRegistry(level).removeStation(home);
+                });
+    }
+
     /** A station in an unloaded chunk is usable but not reachable: a robot cannot fly through unloaded cells, so a
      *  search must never pick one as a destination. When it did, the robot claimed it, failed the flight and picked it
      *  again on its next cycle, forever (a Delivery robot disposed of its cargo every time). Here a robot with cargo
@@ -296,7 +372,7 @@ public class RobotStationRigTester {
      *  item pipe at {@code farAbs} with the station on top and a gate holding Always On + {@code action} (with
      *  {@code param}, if any) resolved, then {@code setRemoved}. Built without placing anything in the world, so the
      *  chunk stays unloaded. Not registered. */
-    private static DockingStationPipe unloadedStation(ServerLevel level, BlockPos farAbs, IStatement action,
+    public static DockingStationPipe unloadedStation(ServerLevel level, BlockPos farAbs, IStatement action,
                                                       IStatementParameter param) {
         TilePipeHolder tile = new TilePipeHolder(farAbs, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState());
         tile.setLevel(level);
@@ -381,6 +457,60 @@ public class RobotStationRigTester {
                 },
                 helper::succeed,
                 "a station whose pipe is gone stayed registered, or its robot never shut down",
+                () -> cleanUp(helper, robot[0]));
+    }
+
+    /** The {@code /fill} pipe-over-pipe case: the pipe under a station is replaced without the removal side effects by a
+     *  pipe that carries NO station plug on that face. The new pipe is a pipe, but not this station's: adopting it kept
+     *  a gateless ghost registered (searches still chose it, robots docked at it, its power answer came from whatever
+     *  flow the new pipe had), where 1.21.1's {@code /fill}, which does run the removal hooks, deregisters it. It must
+     *  deregister like a pipe that is gone, shutting its homed robot down. Placing a station plug on the new pipe
+     *  afterwards registers a fresh station (a rebuild split across ticks heals). */
+    public static void pipeReplacedWithoutAStationDeregistersIt(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(1, 3, 1);
+        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        TilePipeHolder tile = placePipe(helper, pipeRel);
+        tile.replacePluggable(STATION_FACE,
+                new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
+
+        EntityRobot[] robot = { null };
+        DockingStationPipe[] station = { null };
+        TilePipeHolder[] replacement = { null };
+        EntityArenaUtil.tickUntil(helper, FILLED_AWAY_BUDGET,
+                () -> {
+                    if (robot[0] == null) {
+                        station[0] = stationAt(helper, pipeRel);
+                        if (station[0] == null) {
+                            return false;
+                        }
+                        robot[0] = placeRobot(helper, station[0], BoardRobotPickerNBT.INSTANCE);
+                        ServerLevel level = helper.getLevel();
+                        BlockPos abs = helper.absolutePos(pipeRel);
+                        level.removeBlockEntity(abs);
+                        level.setBlock(abs, Blocks.AIR.defaultBlockState(), 2);
+                        replacement[0] = placePipe(helper, pipeRel);
+                        helper.assertTrue(stationAt(helper, pipeRel) == station[0],
+                                "precondition: the pipe was replaced without its side effects, so its station is "
+                                        + "still registered");
+                        return false;
+                    }
+                    if (replacement[0].getPluggable(STATION_FACE) == null) {
+                        if (stationAt(helper, pipeRel) != null
+                                || !(robot[0].mainAI.getDelegateAI() instanceof buildcraft.robotics.ai.AIRobotShutdown)) {
+                            return false;
+                        }
+                        helper.assertTrue(robot[0].getDockingStation() == null,
+                                "the shut-down robot must not stay docked at the deregistered station");
+                        replacement[0].replacePluggable(STATION_FACE, new RobotStationPluggable(
+                                BCRoboticsPlugs.robotStation, replacement[0], STATION_FACE));
+                        return false;
+                    }
+                    DockingStationPipe fresh = stationAt(helper, pipeRel);
+                    return fresh != null && fresh != station[0];
+                },
+                helper::succeed,
+                "a station whose pipe was replaced by a plugless pipe stayed registered (or its robot never shut "
+                        + "down), or a station plug on the new pipe never registered a fresh station",
                 () -> cleanUp(helper, robot[0]));
     }
 

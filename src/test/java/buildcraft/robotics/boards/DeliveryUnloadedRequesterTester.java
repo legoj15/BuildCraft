@@ -103,6 +103,13 @@ public class DeliveryUnloadedRequesterTester {
             }
         }
 
+        /** The board ends (a recharge or a gate override aborting it: its claims go back, the order and its cached
+         *  station stay), so the next cycle's preempt has to RECLAIM the order through {@code OrderClaimer.reclaim}.
+         *  Without this the robot still holds its claims when it wakes and reclaim is never asked. */
+        void releaseClaims() {
+            board.end();
+        }
+
         /** The wait ends (the sleep's timer), and the board cycles on. */
         void wake(int cycles) {
             board.abortDelegateAI();
@@ -128,7 +135,9 @@ public class DeliveryUnloadedRequesterTester {
 
         void assertGaveUp(String why) {
             helper.assertTrue(board.currentRequest() == null, "the robot must give up an order whose requester " + why);
-            helper.assertFalse(holdsGoods(), "...and dispose of its goods as for any lost order");
+            helper.assertFalse(holdsGoods(), "...and dispose of its goods as for any lost order, on the first cycle it "
+                    + "wakes, before any delivery to it is tried");
+            helper.assertTrue(droppedInCell() > 0, "...which, with no station in its zone to take them, drops them");
             helper.assertFalse(level.isLoaded(far), "nothing may load the requester's chunk");
         }
 
@@ -176,21 +185,25 @@ public class DeliveryUnloadedRequesterTester {
     }
 
     /** The requester was destroyed while its chunk was away (its station left the registry): the order can never be
-     *  filled, so it is not "away", and the robot gives it up rather than wait for it forever. */
+     *  filled, so it is not "away", and the robot gives it up rather than wait for it forever. The claims are given
+     *  back first, so the wake reaches {@code OrderClaimer.reclaim} holding a station that is no longer registered:
+     *  its identity guard gives the order up there, in the first cycle. */
     public static void deliveryGivesUpAnOrderWhoseRequesterWasDestroyed(GameTestHelper helper) {
         try (Rig rig = new Rig(helper, new DockingStationPipe())) {
             rig.deliver();
             rig.assertWaiting("after the delivery attempt");
 
+            rig.releaseClaims();
             rig.registry.removeStation(rig.requester);
-            rig.wake(2);
+            rig.wake(1);
             rig.assertGaveUp("was destroyed");
             helper.succeed();
         }
     }
 
     /** The requester forbids the robot (a Forbid Robot action added during the wait): the robot may not deliver there,
-     *  so it gives the order up when it wakes, as a station search would have skipped the station. */
+     *  so it gives the order up when it wakes, as a station search would have skipped the station. Its claims are
+     *  given back first, so it is {@code OrderClaimer.reclaim}'s forbid guard that gives the order up. */
     public static void deliveryGivesUpAnOrderWhoseRequesterForbidsTheRobot(GameTestHelper helper) {
         boolean[] forbidden = { false };
         DockingStationPipe requester = new DockingStationPipe() {
@@ -203,8 +216,9 @@ public class DeliveryUnloadedRequesterTester {
             rig.deliver();
             rig.assertWaiting("after the delivery attempt");
 
+            rig.releaseClaims();
             forbidden[0] = true;
-            rig.wake(2);
+            rig.wake(1);
             rig.assertGaveUp("forbids the robot");
             helper.succeed();
         }

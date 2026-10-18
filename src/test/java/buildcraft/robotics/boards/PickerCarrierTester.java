@@ -479,6 +479,17 @@ public class PickerCarrierTester {
      *  own environment: the station search is global, and the default batch contains another powered
      *  station (that very rig's) the robot could legitimately prefer. */
     public static void lowPowerRobotRechargesAtPoweredStation(GameTestHelper helper) {
+        rechargeAtPoweredStation(helper, false);
+    }
+
+    /** The same, for a robot homed on a station whose chunk is not loaded: a low robot with an unreachable home waits
+     *  for it rather than working itself flat ({@code AIRobotMain}), but only once no charger is in reach. With one in
+     *  reach it must still fly there and charge, not wait. Its own environment, as above. */
+    public static void lowPowerRobotWithUnloadedHomeRechargesAtPoweredStation(GameTestHelper helper) {
+        rechargeAtPoweredStation(helper, true);
+    }
+
+    private static void rechargeAtPoweredStation(GameTestHelper helper, boolean unloadedHome) {
         BlockPos redstoneRel = new BlockPos(1, 1, 6);
         BlockPos engineRel = new BlockPos(1, 2, 6);
         BlockPos woodPipeRel = new BlockPos(1, 3, 6);
@@ -517,6 +528,17 @@ public class PickerCarrierTester {
         woodPipe.getPipe().markForUpdate();
         stonePipe.getPipe().markForUpdate();
 
+        // A home station far outside the arena grid, in a chunk that stays unloaded, for the unloaded-home variant.
+        DockingStationPipe home = unloadedHome
+                ? buildcraft.robotics.RobotStationRigTester.unloadedStation(helper.getLevel(),
+                        helper.absolutePos(robotRel).offset(4096, 0, 256),
+                        buildcraft.robotics.BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS, null)
+                : null;
+        if (home != null) {
+            helper.assertFalse(helper.getLevel().isLoaded(home.getPos()), "precondition: the home is not loaded");
+            RobotManager.registryProvider.getRegistry(helper.getLevel()).registerStation(home);
+        }
+
         EntityRobot[] robot = { null };
         EntityArenaUtil.tickUntil(helper, 380,
                 () -> {
@@ -528,10 +550,19 @@ public class PickerCarrierTester {
                         // Pinned like every live board robot, though the recharge search itself takes no zone
                         // (AIRobotRecharge reaches every powered station, as in 7.1.x): what keeps it on this
                         // rig is the private environment and picking the NEAREST powered station, 2 blocks off.
-                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                        ZonePinnedRobot spawned = new ZonePinnedRobot(helper, BoardRobotEmptyNBT.INSTANCE);
+                        Vec3 at = Vec3.atCenterOf(helper.absolutePos(robotRel));
+                        spawned.setPos(at.x, at.y, at.z);
                         // Below SAFETY_POWER so the ladder preempts into AIRobotRecharge on the first
                         // cycle; comfortably above SHUTDOWN_POWER so the robot stays alive.
-                        robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);
+                        spawned.getBattery().addPower(1000L * MjAPI.MJ, false);
+                        if (home != null) {
+                            spawned.setUniqueRobotId(
+                                    RobotManager.registryProvider.getRegistry(helper.getLevel()).getNextRobotId());
+                            helper.assertTrue(home.takeAsMain(spawned), "precondition: the robot is homed there");
+                        }
+                        helper.getLevel().addFreshEntity(spawned);
+                        robot[0] = spawned;
                         return false;
                     }
                     return robot[0].getDockingStation() == station
@@ -544,7 +575,12 @@ public class PickerCarrierTester {
                     helper.succeed();
                 },
                 "a robot below SAFETY_POWER never docked at the powered station and recharged past it",
-                () -> EntityArenaUtil.discard(robot[0]));
+                () -> {
+                    EntityArenaUtil.discard(robot[0]);
+                    if (home != null) {
+                        RobotManager.registryProvider.getRegistry(helper.getLevel()).removeStation(home);
+                    }
+                });
     }
 
     /** The Forge-Energy twin of {@link #lowPowerRobotRechargesAtPoweredStation}: the same ladder, but the only

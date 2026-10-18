@@ -107,6 +107,35 @@ public class AIRobotMainTest {
                 "the recharge branch fired (and its failure armed the cooldown)");
     }
 
+    /** A low robot whose home's chunk is not loaded, once a recharge has failed, waits at no cost instead of going
+     *  back to its board (which ran it flat and shut it down in the field). It keeps retrying the recharge on the
+     *  back-off while it waits, retries at once when the home is back, and works as before from then on. */
+    @Test
+    public void aLowRobotWithAnUnloadedHomeWaitsForIt() {
+        robot.getBattery().setStored(MjAPI.MJ);
+        HomeStub home = new HomeStub();
+        robot.setLinkedStation(home);
+        AIRobotMain main = new AIRobotMain(robot);
+
+        main.cycle(); // the recharge finds nowhere to charge
+        Assertions.assertInstanceOf(AIRobotWaitForHome.class, main.getDelegateAI(),
+                "with its home out of reach, the robot waits rather than going back to work");
+        for (int i = 0; i < 300; i++) { // past two recharge retries
+            main.cycle();
+        }
+        Assertions.assertInstanceOf(AIRobotWaitForHome.class, main.getDelegateAI(),
+                "a recharge retry that fails again goes back to waiting");
+        Assertions.assertEquals(MjAPI.MJ, robot.getPower(), "waiting costs nothing");
+
+        home.loaded = true;
+        main.cycle(); // the wait sees the home back and ends
+        Assertions.assertEquals(0, rechargeCooldown(main), "the home is back, so the recharge is retried at once");
+        main.cycle(); // which fails here (the mock has no charger), with the home now in reach
+        Assertions.assertEquals(120, rechargeCooldown(main), "the retry ran");
+        Assertions.assertFalse(main.getDelegateAI() instanceof AIRobotWaitForHome,
+                "with the home loaded the robot does not wait");
+    }
+
     // ---- the overriding AI across a save/load ----
 
     /** Saves {@code main} and reads it back the way the robot entity does. */
@@ -339,6 +368,21 @@ public class AIRobotMainTest {
             return f.getInt(main);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("could not read AIRobotMain.rechargeCooldown", e);
+        }
+    }
+
+    /** A home station whose chunk is loaded only when the test says so. */
+    private static class HomeStub extends buildcraft.api.robots.DockingStation {
+        boolean loaded;
+
+        @Override
+        public Iterable<buildcraft.api.statements.StatementSlot> getActiveActions() {
+            return java.util.Collections.emptyList();
+        }
+
+        @Override
+        public boolean isChunkLoaded() {
+            return loaded;
         }
     }
 

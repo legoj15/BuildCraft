@@ -18,7 +18,12 @@ import buildcraft.api.robots.IRobotAccess;
 /** The robot's top-level controller, held in {@code EntityRobot.mainAI}. Every cycle it first checks the
  *  energy ladder — shutdown at flat, recharge below the safety reserve — and otherwise hands control to the
  *  board, or to a caller's overriding AI. Ported from 7.1.x; the energy references map to the modern API
- *  ({@code getPower()}, {@code IRobotAccess.SHUTDOWN_POWER}/{@code SAFETY_POWER}). */
+ *  ({@code getPower()}, {@code IRobotAccess.SHUTDOWN_POWER}/{@code SAFETY_POWER}).
+ *
+ *  <p>One rung is not 7.1.x: after a failed recharge, a robot whose home's chunk is not loaded waits
+ *  ({@link AIRobotWaitForHome}) instead of going back to its board until the next attempt. Every search skips an
+ *  unloaded station, so the home that would charge it is out of sight, and working on ran it flat and shut it down in
+ *  the field. The recharge is still retried on the usual back-off while it waits, and at once when the home is back. */
 public class AIRobotMain extends AIRobot {
 
     /** Cycles {@link #setOverridingAI} refuses new overrides for after one ended unsuccessfully (5 s). */
@@ -61,6 +66,8 @@ public class AIRobotMain extends AIRobot {
             if (!(ai instanceof AIRobotRecharge) && !(ai instanceof AIRobotShutdown)) {
                 if (rechargeCooldown-- <= 0) {
                     startDelegateAI(new AIRobotRecharge(robot));
+                } else if (!(ai instanceof AIRobotWaitForHome) && AIRobotWaitForHome.homeOutOfReach(robot)) {
+                    startDelegateAI(new AIRobotWaitForHome(robot));
                 }
             }
         } else if (!(ai instanceof AIRobotRecharge)) {
@@ -72,6 +79,14 @@ public class AIRobotMain extends AIRobot {
 
     @Override
     public void update() {
+        // The recharge just failed (or failed recently) and the home is out of reach: wait rather than start the board,
+        // which would spend the charge the robot needs to last until the home is back.
+        if (rechargeCooldown > 0 && robot.getPower() < IRobotAccess.SAFETY_POWER
+                && AIRobotWaitForHome.homeOutOfReach(robot)) {
+            startDelegateAI(new AIRobotWaitForHome(robot));
+            return;
+        }
+
         AIRobot board = robot.getBoard();
 
         if (board != null) {
@@ -85,6 +100,9 @@ public class AIRobotMain extends AIRobot {
             if (!ai.success()) {
                 rechargeCooldown = 120;
             }
+        } else if (ai instanceof AIRobotWaitForHome) {
+            // The home is back: try for a charge at once, not when the back-off runs out.
+            rechargeCooldown = 0;
         }
         if (ai == overridingAI) {
             overridingAI = null;

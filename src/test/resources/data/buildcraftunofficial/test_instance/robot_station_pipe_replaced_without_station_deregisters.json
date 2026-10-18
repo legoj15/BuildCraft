@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_pipe_replaced_without_station_deregisters",
+    "environment": "buildcraftunofficial:robot_station_rig",
+    "structure": "minecraft:empty",
+    "max_ticks": 260,
+    "setup_ticks": 0,
+    "required": true
+}

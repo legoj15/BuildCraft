@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_low_robot_waits_for_unloaded_home",
+    "environment": "buildcraftunofficial:robot_station_rig",
+    "structure": "minecraft:empty",
+    "max_ticks": 400,
+    "setup_ticks": 0,
+    "required": true
+}

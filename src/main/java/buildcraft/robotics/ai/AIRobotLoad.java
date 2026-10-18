@@ -85,24 +85,38 @@ public class AIRobotLoad extends AIRobot {
         IItemTransactor robotTransactor = robot.getTransactor();
 
         if (quantity == ANY_QUANTITY) {
-            ItemStack extracted = inputTransactor.extract(filter, 1, ONE_STACK, !doLoad);
-            if (extracted.isEmpty() || !station.canRobotExtractItem(extracted)) {
-                if (!extracted.isEmpty() && doLoad) {
-                    // Policy forbids this stack — put it back (permissive in Ph4, real gates are Ph6).
-                    inputTransactor.insert(extracted, false, false);
+            // "A single matching stack" - the first one the station's policy lets the robot have. A refused stack
+            // is put back and its kind excluded from the next look, exactly as the quantity branch below does:
+            // trying only the first match let one refused stack (a chest of [cobblestone, diamond] behind a
+            // Provide Items = Diamond gate) hide every stack behind it, so the station read as supplying nothing.
+            while (true) {
+                ItemStack extracted = inputTransactor.extract(filter, 1, ONE_STACK, !doLoad);
+                if (extracted.isEmpty()) {
+                    return false;
                 }
-                return false;
+                if (!station.canRobotExtractItem(extracted)) {
+                    // Copy BEFORE the put-back: the station transactor drains the offered stack itself when it
+                    // lands back in an emptied slot (see the quantity branch), so the exclusion would otherwise
+                    // exclude "empty", match nothing new, and re-extract this same stack forever.
+                    ItemStack refused = extracted.copy();
+                    if (doLoad) {
+                        inputTransactor.insert(extracted, false, false);
+                    }
+                    IStackFilter previous = filter;
+                    filter = stack -> !StackUtil.canMerge(stack, refused) && previous.matches(stack);
+                    continue;
+                }
+                // The transactor never mutates the offered stack, so taken = offered minus leftover is exact.
+                // The simulate flag must be !doLoad (NOT doLoad): with doLoad=false this whole exchange is the
+                // station-search dry-run, and a real insert would steal the chest's items into the robot while
+                // the (simulated) extract leaves them in place — duplication with the robot never flying.
+                int taken = extracted.getCount();
+                ItemStack overflow = robotTransactor.insert(extracted, false, !doLoad);
+                if (doLoad && !overflow.isEmpty()) {
+                    inputTransactor.insert(overflow, false, false);
+                }
+                return taken - overflow.getCount() > 0;
             }
-            // The transactor never mutates the offered stack, so taken = offered minus leftover is exact.
-            // The simulate flag must be !doLoad (NOT doLoad): with doLoad=false this whole exchange is the
-            // station-search dry-run, and a real insert would steal the chest's items into the robot while
-            // the (simulated) extract leaves them in place — duplication with the robot never flying.
-            int taken = extracted.getCount();
-            ItemStack overflow = robotTransactor.insert(extracted, false, !doLoad);
-            if (doLoad && !overflow.isEmpty()) {
-                inputTransactor.insert(overflow, false, false);
-            }
-            return taken - overflow.getCount() > 0;
         }
 
         int loaded = 0;

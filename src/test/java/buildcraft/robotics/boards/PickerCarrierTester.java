@@ -27,6 +27,8 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.IStatementParameter;
+import buildcraft.api.statements.StatementParameterItemStack;
 
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreStatements;
@@ -109,6 +111,25 @@ public class PickerCarrierTester {
         PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, side, BASIC_GATE);
         gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
         gate.logic.statements[0].action.set(ActionWrapper.wrap(action, null));
+        tile.replacePluggable(side, gate);
+        gate.logic.resolveActions();
+    }
+
+    /** The 1-slot gate WITH action parameters (iron + quartz) - what a Provide Items action needs to say WHICH
+     *  item it provides. */
+    private static final GateVariant PARAM_GATE =
+            new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.QUARTZ);
+
+    /** An always-on gate holding {@code action} with {@code params} as its parameters; resolved synchronously, as
+     *  {@link #addAlwaysOnGate}. */
+    private static void addAlwaysOnParamGate(TilePipeHolder tile, Direction side, IStatement action,
+                                        IStatementParameter... params) {
+        PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, side, PARAM_GATE);
+        gate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        gate.logic.statements[0].action.set(ActionWrapper.wrap(action, null));
+        for (int i = 0; i < params.length; i++) {
+            gate.logic.statements[0].action.set(i, params[i]);
+        }
         tile.replacePluggable(side, gate);
         gate.logic.resolveActions();
     }
@@ -391,6 +412,55 @@ public class PickerCarrierTester {
                     helper.succeed();
                 },
                 "the carrier robot never loaded the diamonds from the supply chest");
+    }
+
+    /** The same carrier against a chest whose FIRST stack the station's gate refuses: Provide Items = Diamond over
+     *  a chest of [cobblestone, diamond]. "Load a single stack" used to try only the chest's first matching
+     *  stack, so the refused cobblestone hid the diamonds behind it - the station read as having nothing to
+     *  give, and the carrier never even flew there. It must put the refused stack back, look past it, and load
+     *  the diamonds, leaving the cobblestone untouched. */
+    public static void carrierLoadsPastAStackTheGateRefuses(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 3, 4);
+        BlockPos chestRel = new BlockPos(2, 2, 4);
+        BlockPos robotRel = new BlockPos(4, 3, 4);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
+        addAlwaysOnParamGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS,
+                new StatementParameterItemStack(new ItemStack(Items.DIAMOND)));
+        helper.setBlock(chestRel, Blocks.CHEST);
+        //? if >=1.21.10 {
+        ChestBlockEntity chest = helper.getBlockEntity(chestRel, ChestBlockEntity.class);
+        //?} else {
+        /*ChestBlockEntity chest = helper.getBlockEntity(chestRel);*/
+        //?}
+        chest.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        chest.setItem(1, new ItemStack(Items.DIAMOND, 5));
+
+        EntityRobot[] robot = { null };
+        EntityArenaUtil.tickUntil(helper, 260,
+                () -> {
+                    if (stationAt(helper, pipeRel, Direction.UP) == null) {
+                        return false;
+                    }
+                    if (robot[0] == null) {
+                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
+                        robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                    }
+                    return robot[0].containsItems();
+                },
+                () -> {
+                    helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
+                            new ItemStack(Items.DIAMOND, 5)),
+                            "the carrier must load the diamonds the gate offers, past the cobblestone it refuses, got "
+                                    + robot[0].getInventoryStack(0));
+                    helper.assertTrue(ItemStack.matches(chest.getItem(0), new ItemStack(Items.COBBLESTONE, 64)),
+                            "the refused cobblestone must be back in the chest, untouched, got " + chest.getItem(0));
+                    helper.assertTrue(chest.getItem(1).isEmpty(), "the diamonds left the chest");
+                    robot[0].discard();
+                    helper.succeed();
+                },
+                "the carrier never loaded the diamonds from behind the refused cobblestone");
     }
 
     // The Ph4 permissive-loop pin (carrierUnloadsAtTheStationItLoadedFrom) is GONE: the D1 reconciliation

@@ -15,11 +15,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.core.BCCoreItems;
+import buildcraft.lib.test.ListStacks;
 import buildcraft.robotics.tile.TileRequester;
 
-/** The Requester's request/fulfilment arithmetic — 7.1.x {@code TileRequester} truth table, pinned at
- *  14 cases. The tile is constructed headless (no level): every method under test reads only its two
- *  item handlers. */
+/** The Requester's request/fulfilment arithmetic — 7.1.x {@code TileRequester} truth table, pinned case by
+ *  case (plus the List-template reading of it). The tile is constructed headless (no level): every method
+ *  under test reads only its two item handlers. */
 public class TileRequesterMathTest extends VanillaSetupBaseTester {
 
     private static TileRequester requester;
@@ -159,5 +161,54 @@ public class TileRequesterMathTest extends VanillaSetupBaseTester {
                 "a template-less slot accepts nothing");
         Assertions.assertTrue(requester.invDeliveries.canSet(13, new ItemStack(Items.DIAMOND, 1)),
                 "the templated item is insertable (pipes and players both)");
+    }
+
+    // ── List templates ────────────────────────────────────────────────────
+    // A BuildCraft List in a template slot means "any of these": the offered stack is the thing under test and
+    // the template is the filter, so the List must be the FIRST argument of the match. The offer path used to
+    // hand them over the other way round, which no List ever matches - a List-templated slot was never filled.
+
+    /** A List template for diamond or emerald, wanting {@code count} of whatever arrives. */
+    private static ItemStack diamondOrEmeraldList(int count) {
+        return ListStacks.listHolding(count, new ItemStack(Items.DIAMOND), new ItemStack(Items.EMERALD));
+    }
+
+    @Test
+    public void listTemplateAcceptsALoadedItemIntoAnEmptySlot() {
+        setTemplate(15, diamondOrEmeraldList(5));
+        ItemStack leftover = requester.offerItem(15, new ItemStack(Items.EMERALD, 5));
+        Assertions.assertTrue(leftover.isEmpty(), "an item the List names is consumed like any matching delivery");
+        Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.EMERALD, 5), requester.invDeliveries.getStackInSlot(15)),
+                "the delivery lands in the paired slot");
+        Assertions.assertTrue(requester.isFulfilled(15), "five of an item the List names fulfils a count-5 List");
+    }
+
+    @Test
+    public void listTemplateRefusesAnItemTheListDoesNotName() {
+        setTemplate(16, diamondOrEmeraldList(5));
+        ItemStack offered = new ItemStack(Items.DIRT, 5);
+        Assertions.assertSame(offered, requester.offerItem(16, offered),
+                "dirt is not on the List - the whole offer comes back");
+        Assertions.assertTrue(requester.invDeliveries.getStackInSlot(16).isEmpty(), "nothing was stored");
+    }
+
+    @Test
+    public void listTemplateMergesIntoAPartialDeliveryCappedAtTheTemplateCount() {
+        setTemplate(17, diamondOrEmeraldList(5));
+        requester.invDeliveries.setStackInSlot(17, new ItemStack(Items.DIAMOND, 2));
+        ItemStack leftover = requester.offerItem(17, new ItemStack(Items.DIAMOND, 4));
+        Assertions.assertEquals(1, leftover.getCount(), "2 + 4 against a List request of 5 leaves 1 over");
+        Assertions.assertEquals(5, requester.invDeliveries.getStackInSlot(17).getCount(),
+                "the slot tops out at the requested count");
+    }
+
+    @Test
+    public void listTemplateReportsTheRemainingShortfallAsARequest() {
+        setTemplate(18, diamondOrEmeraldList(5));
+        requester.invDeliveries.setStackInSlot(18, new ItemStack(Items.EMERALD, 2));
+        ItemStack request = requester.getRequest(18);
+        Assertions.assertEquals(3, request.getCount(), "three more are owed");
+        Assertions.assertTrue(request.is(BCCoreItems.LIST.get()),
+                "the open request still carries the List, so the delivery robot searches for what it names");
     }
 }

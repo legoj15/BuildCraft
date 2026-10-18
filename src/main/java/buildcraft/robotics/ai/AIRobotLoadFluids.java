@@ -34,7 +34,10 @@ import buildcraft.api.robots.IRobotAccess;
  *  <p>The transfer is an exact, transactional move: the robot's insert and the station's extract happen
  *  under one {@code Transaction}, and the extract asks for exactly what was inserted — so a simulation
  *  (uncommitted close) leaves both sides untouched, and a commit never loses or creates fluid. One bucket
- *  per pass is the 7.1.x rhythm (it also keeps the pump's 40-tick unload check meaningful). */
+ *  per pass is the 7.1.x rhythm (it also keeps the pump's 40-tick unload check meaningful). The 1.21.1 branch
+ *  has no transactions, so it gets the same guarantee by ordering: simulate the drain, simulate the fill,
+ *  execute only when the fill accepts everything the drain yields - a station that gives less than it reported
+ *  never leaves fluid in both tanks. */
 public class AIRobotLoadFluids extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -139,16 +142,35 @@ public class AIRobotLoadFluids extends AIRobot {
         if (amount <= 0) {
             return 0;
         }
-        IFluidHandler.FluidAction action = doLoad ? IFluidHandler.FluidAction.EXECUTE : IFluidHandler.FluidAction.SIMULATE;
-        int inserted = robotTank.fill(inTank.copyWithAmount(amount), action);
-        if (inserted <= 0) {
+        // The classic getFluidInTank may ALIAS the handler's internal stack (FluidTank does), which a drain
+        // then shrinks - so the request is copied up front.
+        FluidStack wanted = inTank.copyWithAmount(amount);
+        // Same order as the 1.21.10+ branch's rolled-back transaction: prove BOTH halves in simulation first,
+        // and only then execute. Filling the robot first and learning afterwards that the station will not
+        // give that much leaves the fluid in BOTH tanks.
+        FluidStack simulated = input.drain(wanted, IFluidHandler.FluidAction.SIMULATE);
+        int extractable = simulated.getAmount();
+        if (extractable <= 0) {
             return 0;
         }
-        FluidStack drained = input.drain(inTank.copyWithAmount(inserted), action);
-        if (drained.getAmount() < inserted) {
+        if (robotTank.fill(simulated, IFluidHandler.FluidAction.SIMULATE) < extractable) {
             return 0;
         }
-        return inserted;*/
+        if (!doLoad) {
+            return extractable;
+        }
+        FluidStack drained = input.drain(wanted.copyWithAmount(extractable), IFluidHandler.FluidAction.EXECUTE);
+        int extracted = drained.getAmount();
+        if (extracted <= 0) {
+            return 0;
+        }
+        int filled = robotTank.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+        if (filled < extracted) {
+            // The robot's tank changed between the dry run and the real fill (cannot happen inside one server
+            // tick, but a destroyed bucket is worse than a defensive line): hand the rest back.
+            input.fill(drained.copyWithAmount(extracted - filled), IFluidHandler.FluidAction.EXECUTE);
+        }
+        return filled;*/
         //?}
     }
 

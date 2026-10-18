@@ -976,6 +976,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_boards_every_registered_self_resolves", () -> buildcraft.robotics.boards.PickerCarrierTester::everyRegisteredBoardSelfResolves);
         reg.accept("buildcraftunofficial:robot_picker_picks_up_dropped_item", () -> buildcraft.robotics.boards.PickerCarrierTester::pickerRobotPicksUpDroppedItem);
         reg.accept("buildcraftunofficial:robot_carrier_loads_from_supply_chest", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierRobotLoadsFromSupplyChest);
+        reg.accept("buildcraftunofficial:robot_carrier_loads_past_refused_stack", () -> buildcraft.robotics.boards.PickerCarrierTester::carrierLoadsPastAStackTheGateRefuses);
         reg.accept("buildcraftunofficial:robot_supply_station_needs_wooden_pipe", () -> buildcraft.robotics.boards.PickerCarrierTester::supplyStationNeedsAWoodenPipePointedAtIt);
         reg.accept("buildcraftunofficial:robot_unload_dead_end_station", () -> buildcraft.robotics.boards.PickerCarrierTester::unloadStationDoesNotNeedAnOppositeFaceConnection);
         // The carrier's Ph4 unload-loop pin (robot_carrier_unloads_at_loaded_station) was REMOVED at Ph6 —
@@ -1151,6 +1152,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:requester_gate_request_items_every_slot", () -> buildcraft.robotics.DeliveryRequesterTester::gateRequestItemsInEverySlotSurfacesItsOwnParameters);
         reg.accept("buildcraftunofficial:requester_accepts_only_templated_items", () -> buildcraft.robotics.DeliveryRequesterTester::requesterAcceptsOnlyTemplatedItems);
         reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsARequesterOrder);
+        reg.accept("buildcraftunofficial:requester_delivery_robot_fulfils_list_order", () -> buildcraft.robotics.DeliveryRequesterTester::deliveryRobotFulfilsAListTemplateOrder);
         reg.accept("buildcraftunofficial:requester_stack_request_nbt_round_trip", () -> buildcraft.robotics.DeliveryRequesterTester::stackRequestNbtRoundTripsAgainstALiveRegistry);
         // Station cargo enters the pipe through the station's OWN face (7.1.x spawned it just under
         // the station) — the opposite-face translation made top-mounted stations eject from thin air.
@@ -1194,6 +1196,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_bomber_drops_exactly_one_tnt", () -> buildcraft.robotics.boards.BomberBoardTester::bomberDropsExactlyOneTnt);
         reg.accept("buildcraftunofficial:robot_armour_scales_damage_debit", () -> buildcraft.robotics.entity.RobotWearablesTester::armourScalesTheDamageDebit);
         reg.accept("buildcraftunofficial:robot_creative_equip_keeps_held_item", () -> buildcraft.robotics.entity.RobotWearablesTester::creativeEquipKeepsTheHeldItem);
+        reg.accept("buildcraftunofficial:robot_full_synced_wearables_refuse_piece", () -> buildcraft.robotics.entity.RobotWearablesTester::fullSyncedWearablesRefuseAnotherPiece);
         reg.accept("buildcraftunofficial:robot_aim_turns_server_body_and_knockback", () -> buildcraft.robotics.ai.RobotActionAIsTester::aimingTurnsTheServerBodyAndKnockbackFollowsIt);
     }
 }

@@ -27,6 +27,7 @@ import buildcraft.core.BCCoreStatements;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.ListStacks;
 
 import buildcraft.robotics.boards.BoardRobotDeliveryNBT;
 import buildcraft.robotics.entity.EntityRobot;
@@ -365,6 +366,22 @@ public class DeliveryRequesterTester {
      *  5 diamonds; the delivery robot finds the order, loads at a wooden-pipe supply chest (gate-gated,
      *  D1), flies to the ordering station and hands the goods over. The order is released afterwards. */
     public static void deliveryRobotFulfilsARequesterOrder(GameTestHelper helper) {
+        fulfilOrder(helper, new ItemStack(Items.DIAMOND, 5), new ItemStack(Items.DIAMOND, 5));
+    }
+
+    /** The same loop with a BuildCraft List in the Requester's template slot ("5 of diamond or emerald"): the
+     *  chest holds emeralds, so only the List can say they are wanted. Every hop of the chain - the
+     *  Requester's offer, the board's load filter, the deliver AI's cargo scan - had the List on the wrong side
+     *  of the match (a List only filters when it is the FIRST argument), so a List template was never delivered:
+     *  the robot loaded nothing, or carried the goods to the Requester and found nothing in the cargo to offer. */
+    public static void deliveryRobotFulfilsAListTemplateOrder(GameTestHelper helper) {
+        ItemStack list = ListStacks.listHolding(5, new ItemStack(Items.DIAMOND), new ItemStack(Items.EMERALD));
+        fulfilOrder(helper, list, new ItemStack(Items.EMERALD, 5));
+    }
+
+    /** Requester template -> supply chest -> delivery robot -> Requester delivery slot, with {@code supply}
+     *  in the chest and {@code template} on the Requester; passes when the slot holds exactly {@code supply}. */
+    private static void fulfilOrder(GameTestHelper helper, ItemStack template, ItemStack supply) {
         BlockPos supplyChestRel = new BlockPos(1, 2, 4);
         BlockPos supplyPipeRel = new BlockPos(1, 3, 4);
         BlockPos orderPipeRel = new BlockPos(4, 3, 4);
@@ -381,14 +398,14 @@ public class DeliveryRequesterTester {
         //?} else {
         /*ChestBlockEntity chest = helper.getBlockEntity(supplyChestRel);*/
         //?}
-        chest.setItem(0, new ItemStack(Items.DIAMOND, 5));
+        chest.setItem(0, supply.copy());
         addAlwaysOnGate(supplyPipe, Direction.WEST, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS, null);
 
         // The order side: ANY pipe works (the provider is found by block scan, not flow) + the Requester.
         installStation(helper, orderPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
         helper.setBlock(requesterRel, BCRoboticsBlocks.REQUESTER.get());
         TileRequester requester = getRequester(helper, requesterRel);
-        requester.setRequest(0, new ItemStack(Items.DIAMOND, 5));
+        requester.setRequest(0, template);
 
         EntityRobot[] robot = { null };
         EntityArenaUtil.tickUntil(helper, 360,
@@ -401,13 +418,12 @@ public class DeliveryRequesterTester {
                         robot[0] = addDeliveryRobot(helper, robotRel);
                         return false;
                     }
-                    return requester.invDeliveries.getStackInSlot(0).getCount() == 5;
+                    return requester.invDeliveries.getStackInSlot(0).getCount() == supply.getCount();
                 },
                 () -> {
                     helper.assertTrue(
-                            ItemStack.matches(new ItemStack(Items.DIAMOND, 5),
-                                    requester.invDeliveries.getStackInSlot(0)),
-                            "the requester must hold exactly its requested 5 diamonds");
+                            ItemStack.matches(supply, requester.invDeliveries.getStackInSlot(0)),
+                            "the requester must hold exactly its requested " + supply);
                     helper.assertTrue(requester.isFulfilled(0), "the order is fulfilled");
                     helper.assertTrue(robot[0].getInventoryStack(0).isEmpty()
                             && robot[0].getInventoryStack(1).isEmpty()

@@ -725,8 +725,16 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     @Override
     public BlockEntity getNeighbourTile(Direction side) {
         BlockPos neighbour = worldPosition.relative(side);
-        // Level.getBlockEntity loads an unloaded chunk synchronously. A ticking pipe's neighbours are always loaded,
-        // so this only matters for callers outside the tick: a robot reading a station whose chunk is unloaded.
+        // Level.getBlockEntity loads an unloaded chunk synchronously. This guard never changes what a TICKING pipe
+        // sees (so Pipe.updateConnections, which runs only from Pipe.onTick, cannot drop a cross-border connection):
+        // a block entity ticks only while LevelChunk.isTicking holds, i.e. its chunk's full status, derived from its
+        // ticket level (GenerationChunkHolder.getFullStatus -> ChunkLevel.fullStatus), is BLOCK_TICKING (level <= 32),
+        // plus Level.tickBlockEntities' shouldTickBlocksAt. ChunkTracker gives every neighbour chunk a level of at
+        // most that + 1 (<= 33, the FULL level), which is exactly what ServerChunkCache.hasChunk (behind isLoaded)
+        // tests, so isLoaded is true for every face neighbour of a ticking pipe and the lookup below runs as before.
+        // ChunkMap.prepareTickingChunk also waits for the radius-1 neighbours to be FULL. Same on 1.21.1 and 26.x;
+        // ClientLevel.hasChunk is always true. Only callers outside the tick are cut off (a robot reading a station
+        // whose chunk is unloaded).
         if (level == null || !level.isLoaded(neighbour)) return null;
         return level.getBlockEntity(neighbour);
     }
@@ -762,8 +770,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
             return null;
         }
         BlockPos neighborPos = worldPosition.relative(side);
-        // Both lookups below load an unloaded chunk synchronously. A ticking pipe's face neighbours are always loaded,
-        // so this only stops callers outside the tick (a robot reading a station whose chunk is unloaded).
+        // Both lookups below load an unloaded chunk synchronously. A ticking pipe's face neighbours always pass this
+        // check (see getNeighbourTile for the vanilla gates that guarantee it), so this only stops callers outside the
+        // tick (a robot reading a station whose chunk is unloaded).
         if (!level.isLoaded(neighborPos)) {
             return null;
         }

@@ -1099,7 +1099,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:integration_table_extra_ring_stack_keeps_the_board", () -> buildcraft.robotics.ProgrammingTableTester::integrationTableExtraRingStackKeepsTheBoard);
         reg.accept("buildcraftunofficial:integration_table_pipe_access_inputs_in_result_out", () -> buildcraft.robotics.ProgrammingTableTester::integrationTablePipeAccessInputsInResultOut);
         reg.accept("buildcraftunofficial:integration_table_pipe_ring_takes_only_what_crafts", () -> buildcraft.robotics.ProgrammingTableTester::integrationTablePipeRingTakesOnlyWhatCrafts);
-        reg.accept("buildcraftunofficial:programming_table_resets_board_to_blank", () -> buildcraft.robotics.ProgrammingTableTester::programmingTableResetsBoardToBlank);
+        reg.accept("buildcraftunofficial:programming_table_pipe_takes_only_boards", () -> buildcraft.robotics.ProgrammingTableTester::programmingTablePipeTakesOnlyBoards);
+        reg.accept("buildcraftunofficial:programming_table_resets_board_to_blank",() -> buildcraft.robotics.ProgrammingTableTester::programmingTableResetsBoardToBlank);
         reg.accept("buildcraftunofficial:programming_table_skips_same_board_option", () -> buildcraft.robotics.ProgrammingTableTester::programmingTableSkipsSameBoardOption);
         reg.accept("buildcraftunofficial:robot_survival_recipes_resolve", () -> buildcraft.robotics.ProgrammingTableTester::robotSurvivalRecipesResolve);
         reg.accept("buildcraftunofficial:robot_name_tag_data_round_trip", () -> buildcraft.robotics.ProgrammingTableTester::robotNameTagDataRoundTrip);

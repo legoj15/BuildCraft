@@ -485,6 +485,37 @@ public class ProgrammingTableTester {
         helper.succeed();
     }
 
+    /** The board slot takes only a redstone board. A pipe can never pull an input back out (the slot is insert-only),
+     *  so a stray stack pushed in used to sit there for good: nothing matched it, no recipe ran, and the table
+     *  stayed jammed until a player cleared it by hand. The result slot is output-only and takes nothing. */
+    public static void programmingTablePipeTakesOnlyBoards(GameTestHelper helper) {
+        BCRoboticsRecipes.ensureInitialized();
+        BlockPos pos = new BlockPos(2, 1, 2);
+        helper.setBlock(pos, BCSiliconBlocks.PROGRAMMING_TABLE.get());
+        TileProgrammingTable table = blockEntity(helper, pos, TileProgrammingTable.class);
+        // The side handler concatenates the two inventories: 0 = board in, 1 = programmed board out.
+        IBCItemHandler pipe = table.getItemHandler(Direction.UP);
+        if (pipe == null) {
+            helper.fail("the Programming Table exposes no item handler to pipes");
+        }
+
+        if (pipeInsert(pipe, 0, new ItemStack(Items.COBBLESTONE, 16)) != 0
+                || !table.invBoard.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push cobblestone into the board slot, which jams the table");
+        }
+        if (pipeInsert(pipe, 1, ItemRedstoneBoard.createStack(null)) != 0
+                || !table.invResult.getStackInSlot(0).isEmpty()) {
+            helper.fail("a pipe can push a board into the output slot");
+        }
+        if (pipeInsert(pipe, 0, ItemRedstoneBoard.createStack(null)) != 1) {
+            helper.fail("a pipe cannot insert a redstone board into the board slot");
+        }
+        if (!(table.invBoard.getStackInSlot(0).getItem() instanceof ItemRedstoneBoard)) {
+            helper.fail("the board did not land in the board slot, got " + table.invBoard.getStackInSlot(0));
+        }
+        helper.succeed();
+    }
+
     public static void integrationTableTopsUpDrainedRobot(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
         BlockPos pos = new BlockPos(2, 1, 2);

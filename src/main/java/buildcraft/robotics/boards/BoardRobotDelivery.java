@@ -100,7 +100,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 @Override
                 public boolean matches(ItemStack stack) {
                     StackRequest current = currentRequest.job();
-                    return current != null && StackUtil.isMatchingItemOrList(stack, current.getStack());
+                    // The order's stack is the FILTER (a List template names what it wants), the candidate second.
+                    return current != null && StackUtil.isMatchingItemOrList(current.getStack(), stack);
                 }
             }, order.getStack().getCount()));
         }

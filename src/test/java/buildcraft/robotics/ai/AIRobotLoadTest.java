@@ -107,4 +107,74 @@ public class AIRobotLoadTest extends VanillaSetupBaseTester {
                     "the robot took nothing (slot " + i + ")");
         }
     }
+
+    // ── ANY_QUANTITY: one refused stack must not hide the stacks behind it ──────────────────────────────────
+    // The carrier and bomber boards load "a single matching stack". The station's gate (Provide Items = Diamond)
+    // refuses the chest's first stack, cobblestone; the load used to give up there, so a chest of
+    // [cobblestone, diamond] supplied nothing at all. Like the quantity branch it must put the refused stack back,
+    // exclude that kind, and look at what is behind it.
+
+    @Test
+    public void anyQuantityMovesPastARefusedFirstStackAndLoadsTheNext() {
+        PolicyStation station = new PolicyStation();
+        station.input.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        station.input.setItem(1, new ItemStack(Items.DIAMOND, 5));
+        station.policy = stack -> stack.is(Items.DIAMOND);
+
+        LoadingRobot robot = new LoadingRobot();
+
+        Boolean loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoad.load(robot, station, stack -> true, AIRobotLoad.ANY_QUANTITY, true),
+                "a refused stack must be excluded from the scan - re-extracting it is an infinite loop");
+
+        Assertions.assertTrue(loaded, "the diamond behind the refused cobblestone must still load");
+        Assertions.assertEquals(64, station.input.getItem(0).getCount(),
+                "the refused cobblestone is back in the station, untouched");
+        Assertions.assertTrue(station.input.getItem(1).isEmpty(), "the diamonds left the station");
+        Assertions.assertTrue(ItemStack.matches(robot.inv.getItem(0), new ItemStack(Items.DIAMOND, 5)),
+                "the robot carries the diamonds");
+    }
+
+    /** The station search dry-runs the load with {@code doLoad} false; a refused first stack must not fail that
+     *  either, or the robot never even flies to the station. */
+    @Test
+    public void anyQuantityDryRunSeesPastARefusedFirstStackAndTouchesNothing() {
+        PolicyStation station = new PolicyStation();
+        station.input.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        station.input.setItem(1, new ItemStack(Items.DIAMOND, 5));
+        station.policy = stack -> stack.is(Items.DIAMOND);
+
+        LoadingRobot robot = new LoadingRobot();
+
+        Boolean loadable = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoad.load(robot, station, stack -> true, AIRobotLoad.ANY_QUANTITY, false));
+
+        Assertions.assertTrue(loadable, "the dry run must see the diamond behind the refused cobblestone");
+        Assertions.assertEquals(64, station.input.getItem(0).getCount(), "a dry run leaves the cobblestone alone");
+        Assertions.assertEquals(5, station.input.getItem(1).getCount(), "a dry run leaves the diamonds alone");
+        for (int i = 0; i < 4; i++) {
+            Assertions.assertTrue(robot.inv.getItem(i).isEmpty(), "a dry run loads nothing (slot " + i + ")");
+        }
+    }
+
+    @Test
+    public void anyQuantityRefusingEverythingTerminatesAndConservesTheInventory() {
+        PolicyStation station = new PolicyStation();
+        station.input.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        station.input.setItem(1, new ItemStack(Items.DIRT, 10));
+        station.policy = stack -> false;
+
+        LoadingRobot robot = new LoadingRobot();
+
+        Boolean loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoad.load(robot, station, stack -> true, AIRobotLoad.ANY_QUANTITY, true),
+                "with every stack refused the load must give up, not spin");
+
+        Assertions.assertFalse(loaded, "nothing the station will give means nothing loaded");
+        Assertions.assertEquals(64, station.input.getItem(0).getCount(), "the cobblestone is back, intact");
+        Assertions.assertEquals(10, station.input.getItem(1).getCount(), "the dirt is back, intact");
+        for (int i = 0; i < 4; i++) {
+            Assertions.assertTrue(robot.inv.getItem(i).isEmpty(), "the robot took nothing (slot " + i + ")");
+        }
+    }
 }

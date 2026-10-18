@@ -227,6 +227,48 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(0, station.getAmount(), "and the station gained nothing");
     }
 
+    /** The load-side mirror of the unload loss above: a station that REPORTS a full bucket (so the amount is
+     *  sized from it) but whose drain then yields nothing. The 1.21.1 branch used to fill the robot's tank for
+     *  real before draining the station, so the refused drain left the bucket in BOTH tanks - fluid out of thin
+     *  air; the 1.21.10+ branch runs both halves in one rolled-back transaction. Both nodes must leave both
+     *  tanks exactly as they were, on the dry run and on the real call. */
+    @Test
+    public void loadMovesNothingWhenTheStationRefusesTheDrain() {
+        FluidStation station = new FluidStation(BUCKET, false, 0);
+        station.fill(BUCKET);
+
+        int simulated = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, false));
+        Assertions.assertEquals(0, simulated, "a station that refuses the drain gives nothing, even on the dry run");
+        Assertions.assertEquals(0, robotAmount(), "a dry run never touches the robot's tank");
+
+        int loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, true));
+
+        Assertions.assertEquals(0, loaded, "nothing moved: the station refused the drain");
+        Assertions.assertEquals(0, robotAmount(),
+                "the refused drain must not leave a bucket in the robot - filling first duplicates it");
+        Assertions.assertEquals(BUCKET, station.getAmount(), "and the station still holds its own bucket");
+    }
+
+    /** A drain that yields less than the tank reported (a source that over-reports, or changed under us).
+     *  Whatever moves must be consistent on both sides - no duplication, no loss: the robot gains exactly what
+     *  the station lost, and the call reports exactly that. */
+    @Test
+    public void loadConservesFluidWhenTheStationDrainYieldsLessThanItReports() {
+        FluidStation station = new FluidStation(BUCKET, false, 300);
+        station.fill(BUCKET);
+        int before = station.getAmount() + robotAmount();
+
+        int loaded = Assertions.assertTimeoutPreemptively(Duration.ofSeconds(2),
+                () -> AIRobotLoadFluids.load(robot, station, f -> true, true));
+
+        Assertions.assertEquals(before, station.getAmount() + robotAmount(),
+                "a short drain must not create or destroy fluid: station + robot is conserved");
+        Assertions.assertEquals(loaded, robotAmount(), "the call reports exactly what the robot gained");
+        Assertions.assertEquals(BUCKET - loaded, station.getAmount(), "...and exactly what the station lost");
+    }
+
     // ── a station that PASSES the gate policy but has no fluid handler ──────
     // A Provide/Accept Fluids gate action makes canRobotExtractFluid/canRobotAcceptFluid say yes, but a
     // station whose pipe has no wooden-fluid-pipe extraction face still hands back a null handler.
@@ -301,17 +343,28 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         private final FluidStacksResourceHandler tank;
 
         FluidStation(int capacity) {
-            this(capacity, false);
+            this(capacity, false, Integer.MAX_VALUE);
+        }
+
+        FluidStation(int capacity, boolean refuseFill) {
+            this(capacity, refuseFill, Integer.MAX_VALUE);
         }
 
         /** {@code refuseFill}: the tank still reports its capacity (so a caller sizes the transfer from the
-         *  room it sees) but every insert returns 0 — a station that lies about having room. */
-        FluidStation(int capacity, boolean refuseFill) {
+         *  room it sees) but every insert returns 0 — a station that lies about having room.
+         *  {@code drainCap}: the tank still reports what it holds but never yields more than this per extract
+         *  (0 = refuses outright) — a source that lies about having fluid. */
+        FluidStation(int capacity, boolean refuseFill, int drainCap) {
             super();
             tank = new FluidStacksResourceHandler(1, capacity) {
                 @Override
                 public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
                     return refuseFill ? 0 : super.insert(index, resource, amount, transaction);
+                }
+
+                @Override
+                public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                    return super.extract(index, resource, Math.min(amount, drainCap), transaction);
                 }
             };
         }
@@ -348,17 +401,34 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         private final FluidTank tank;
 
         FluidStation(int capacity) {
-            this(capacity, false);
+            this(capacity, false, Integer.MAX_VALUE);
+        }
+
+        FluidStation(int capacity, boolean refuseFill) {
+            this(capacity, refuseFill, Integer.MAX_VALUE);
         }
 
         // refuseFill: the tank still reports its capacity (so a caller sizes the transfer from the room it
         // sees) but every fill returns 0 — a station that lies about having room.
-        FluidStation(int capacity, boolean refuseFill) {
+        // drainCap: the tank still reports what it holds but never yields more than this per drain (0 =
+        // refuses outright) — a source that lies about having fluid.
+        FluidStation(int capacity, boolean refuseFill, int drainCap) {
             super();
             tank = new FluidTank(capacity) {
                 @Override
                 public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
                     return refuseFill ? 0 : super.fill(resource, action);
+                }
+
+                @Override
+                public FluidStack drain(FluidStack resource, IFluidHandler.FluidAction action) {
+                    return drainCap <= 0 ? FluidStack.EMPTY
+                            : super.drain(resource.copyWithAmount(Math.min(resource.getAmount(), drainCap)), action);
+                }
+
+                @Override
+                public FluidStack drain(int maxDrain, IFluidHandler.FluidAction action) {
+                    return drainCap <= 0 ? FluidStack.EMPTY : super.drain(Math.min(maxDrain, drainCap), action);
                 }
             };
         }

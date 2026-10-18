@@ -153,6 +153,53 @@ public class RobotWearablesTester {
         helper.succeed();
     }
 
+    // ---------- acceptance reads the synced view, not the stale field ----------
+
+    /** A robot whose own list is empty but whose synced wearable view reports {@code worn} helmets: exactly the
+     *  client's situation, where the {@code wearables} field is never updated after spawn (its size stays 0) and
+     *  {@link EntityRobot#getWearables()} - rebuilt from the synced accessors - is the truth. */
+    private static EntityRobot robotWhoseSyncedViewHolds(ServerLevel level, int worn) {
+        java.util.List<ItemStack> view = new java.util.ArrayList<>();
+        for (int i = 0; i < worn; i++) {
+            view.add(new ItemStack(Items.IRON_HELMET));
+        }
+        return new EntityRobot(BCRoboticsEntities.ROBOT.get(), level) {
+            @Override
+            public java.util.List<ItemStack> getWearables() {
+                return view;
+            }
+        };
+    }
+
+    /** The click's client half predicts the server's answer: SUCCESS makes the client swing. The acceptance check
+     *  counted the private {@code wearables} field, which the client never updates, so a client looking at a
+     *  full robot (eight helmets in the synced slots) still predicted SUCCESS and swung at a robot the server
+     *  refuses. It must count the synced view - checked here on the server with a robot whose view is full but
+     *  whose field is empty, which only the synced view can tell apart from a bare robot. */
+    public static void fullSyncedWearablesRefuseAnotherPiece(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var player = helper.makeMockPlayer(GameType.CREATIVE);
+        EntityRobot full = robotWhoseSyncedViewHolds(level, EntityRobot.MAX_WEARABLES);
+        EntityRobot roomForOne = robotWhoseSyncedViewHolds(level, EntityRobot.MAX_WEARABLES - 1);
+        try {
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_HELMET, 2));
+            InteractionResult result = interact(full, player);
+            helper.assertTrue(result == InteractionResult.PASS,
+                    "a robot whose synced view is full must refuse a ninth piece, got " + result);
+            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 2,
+                    "a refused click takes nothing from the hand");
+
+            result = interact(roomForOne, player);
+            helper.assertTrue(result == InteractionResult.SUCCESS,
+                    "one slot short of full still takes a piece, got " + result);
+            helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
+                    "the accepted piece left the hand");
+        } finally {
+            player.discard();
+        }
+        helper.succeed();
+    }
+
     // ---------- creative players keep what they equip ----------
 
     /** The player-side half of the interact: {@code Player.interactOn} is what the server's packet handler

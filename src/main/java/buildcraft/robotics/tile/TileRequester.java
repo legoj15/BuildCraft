@@ -146,7 +146,8 @@ public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IR
         if (template.isEmpty()) {
             return stack;
         } else if (existingStack.isEmpty()) {
-            if (!StackUtil.isMatchingItemOrList(stack, template)) {
+            // The template is the FILTER (a List template matches what it lists), so it goes first.
+            if (!StackUtil.isMatchingItemOrList(template, stack)) {
                 return stack;
             }
 
@@ -166,7 +167,7 @@ public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IR
             }
         } else if (!StackUtil.isMatchingItemOrList(stack, existingStack)) {
             return stack;
-        } else if (StackUtil.isMatchingItemOrList(stack, template)) {
+        } else if (StackUtil.isMatchingItemOrList(template, stack)) {
             int maxQty = template.getCount();
 
             if (existingStack.getCount() + stack.getCount() <= maxQty) {

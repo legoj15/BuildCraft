@@ -608,15 +608,11 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         // 7.1.x's shape, worn piece by piece in the order put on: armour scales the per-point debit by
         // 2 / (2 + its protection) (an iron helmet halves it), anything else worn (a skull, an overlay item, a
         // carved pumpkin — no armour attribute) takes a flat 30% off.
-        long perPoint = DAMAGE_ENERGY_PER_POINT;
-        for (ItemStack worn : wearables) {
-            double protection = armourProtection(worn);
-            if (protection >= 0) {
-                perPoint = Math.round(perPoint * 2.0 / (2.0 + protection));
-            } else {
-                perPoint = perPoint * 7 / 10;
-            }
+        double[] protections = new double[wearables.size()];
+        for (int i = 0; i < protections.length; i++) {
+            protections[i] = armourProtection(wearables.get(i));
         }
+        long perPoint = damageDebitPerPoint(protections);
 
         long debit = Math.round((double) amount * perPoint);
         if (battery.getStored() - debit > 0) {
@@ -628,6 +624,29 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         // dropped robot item.
         onRobotHit(true);
         return true;
+    }
+
+    /** The most the worn pieces can take off the damage debit: a tenth of the base debit is always paid. */
+    private static final long MIN_DAMAGE_DEBIT_PER_POINT = DAMAGE_ENERGY_PER_POINT / 10;
+
+    /** The battery debit per point of damage for a robot wearing pieces of the given protections, in the order
+     *  put on: an armour piece (protection {@code >= 0}) scales the running debit by {@code 2 / (2 + protection)},
+     *  any other piece (a negative entry, see {@link #armourProtection}) takes a flat 30% off.
+     *
+     *  <p>Not 7.1.x: the pieces compound, so eight high-protection modded helmets (each scaling by well under a
+     *  percent, every step rounded) drove the debit to ZERO and the robot became immune. Whatever is worn,
+     *  at most 90% comes off - a hit always costs the robot something. Anything that leaves at least a tenth of
+     *  the debit (three iron helmets leave an eighth) is 7.1.x's arithmetic unchanged. */
+    static long damageDebitPerPoint(double... protections) {
+        long perPoint = DAMAGE_ENERGY_PER_POINT;
+        for (double protection : protections) {
+            if (protection >= 0) {
+                perPoint = Math.round(perPoint * 2.0 / (2.0 + protection));
+            } else {
+                perPoint = perPoint * 7 / 10;
+            }
+        }
+        return Math.max(perPoint, MIN_DAMAGE_DEBIT_PER_POINT);
     }
 
     /** The protection a worn piece adds, the modern reading of 7.1.x's {@code ItemArmor.damageReduceAmount}:
@@ -711,7 +730,10 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             return InteractionResult.SUCCESS;
         }
 
-        if (wearables.size() < MAX_WEARABLES && isWearable(stack)) {
+        // getWearables(), not the field: on the client the field is never updated after spawn (its size stays 0),
+        // so counting it would predict SUCCESS - and swing - at a robot the server refuses as full. The accessors
+        // behind getWearables() are what the client actually knows.
+        if (getWearables().size() < MAX_WEARABLES && isWearable(stack)) {
             // 7.1.x's interact: a helmet-slot piece of armour, a robot overlay item, or a skull is WORN,
             // one unit per click, up to MAX_WEARABLES. The next server tick's push block publishes it.
             if (!level().isClientSide()) {

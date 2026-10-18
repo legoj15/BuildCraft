@@ -69,7 +69,9 @@ public class AIRobotDeliverRequested extends AIRobot {
 
             for (int i = 0; i < robot.getInventorySize(); i++) {
                 ItemStack current = robot.getInventoryStack(i);
-                if (current.isEmpty() || !StackUtil.isMatchingItem(current, requested.getStack())) {
+                // The request's stack is the FILTER (a List template names what it wants), the cargo the candidate:
+                // the plain item match could never say a List's items were wanted.
+                if (current.isEmpty() || !StackUtil.isMatchingItemOrList(requested.getStack(), current)) {
                     continue;
                 }
                 int before = current.getCount();

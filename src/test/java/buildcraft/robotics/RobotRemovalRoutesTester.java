@@ -130,11 +130,8 @@ public class RobotRemovalRoutesTester {
                 helper.succeed();
             } finally {
                 h.cleanUp();
-                if (!robot.isRemoved()) {
-                    robot.discard();
-                }
             }
-        }, "the robot never registered with the RobotRegistry");
+        }, "the robot never registered with the RobotRegistry", () -> EntityArenaUtil.discard(robot));
     }
 
     /** A robot whose chunk unloads ({@code setRemoved(UNLOADED_TO_CHUNK)} -> {@code onRemovedFromLevel} ->
@@ -163,10 +160,7 @@ public class RobotRemovalRoutesTester {
                 helper.succeed();
             } finally {
                 h.cleanUp();
-                if (!robot.isRemoved()) {
-                    robot.discard();
-                }
             }
-        }, "the robot never registered with the RobotRegistry");
+        }, "the robot never registered with the RobotRegistry", () -> EntityArenaUtil.discard(robot));
     }
 }

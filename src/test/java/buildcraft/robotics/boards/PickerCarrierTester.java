@@ -45,6 +45,7 @@ import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RfStationTestSupport;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotUnload;
 import buildcraft.robotics.entity.EntityRobot;
 import buildcraft.silicon.BCSiliconPlugs;
@@ -245,13 +246,13 @@ public class PickerCarrierTester {
             helper.assertTrue(item.isRemoved(),
                     "the picked-up drop must be removed from the world — a surviving item entity means "
                             + "the pick duplicated the stack instead of consuming it");
-            // Remove the robot before the test ends: the picker's 250-block fetch range is inherent to the
-            // board, and a robot left alive would keep scanning — and flying toward — items in neighbouring
-            // tests' arenas. Discarding it here (and running this test in its own private environment)
-            // keeps the batch isolation clean.
-            robot.discard();
             helper.succeed();
-        }, "the picker robot never picked up the dropped diamond");
+        }, "the picker robot never picked up the dropped diamond",
+                // Remove the robot on every exit: the picker's 250-block fetch range is inherent to the board,
+                // and a robot left alive would keep scanning — and flying toward — items in neighbouring tests'
+                // arenas. Discarding it (and running this test in its own private environment) keeps the batch
+                // isolation clean.
+                () -> EntityArenaUtil.discard(robot, item));
     }
 
     // ---------- supply-station discovery (D6) ----------
@@ -330,11 +331,13 @@ public class PickerCarrierTester {
         TilePipeHolder tile = installStationOnPlainPipe(helper, pipeRel, Direction.UP);
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS);
 
+        EntityRobot[] spawned = { null };
         EntityArenaUtil.tickUntil(helper, 120,
                 () -> stationAt(helper, pipeRel, Direction.UP) != null,
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    spawned[0] = robot;
                     station.takeAsMain(robot);
                     robot.dock(station);
                     robot.setInventoryStack(0, new ItemStack(Items.DIAMOND, 7));
@@ -348,10 +351,10 @@ public class PickerCarrierTester {
                             "a docked robot must be able to unload into a dead-end pipe");
                     helper.assertTrue(robot.getInventoryStack(0).isEmpty(),
                             "the unload must actually take the cargo, not just report success");
-                    robot.discard();
                     helper.succeed();
                 },
-                "the station never registered");
+                "the station never registered",
+                () -> EntityArenaUtil.discard(spawned[0]));
     }
 
     // ---------- carrier E2E ----------
@@ -408,10 +411,10 @@ public class PickerCarrierTester {
                             "the carrier must FLY to and dock at the supply station, not load from its "
                                     + "spawn: robot at " + robot[0].position() + " but station face at "
                                     + faceCentre);
-                    robot[0].discard();
                     helper.succeed();
                 },
-                "the carrier robot never loaded the diamonds from the supply chest");
+                "the carrier robot never loaded the diamonds from the supply chest",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** The same carrier against a chest whose FIRST stack the station's gate refuses: Provide Items = Diamond over
@@ -444,7 +447,9 @@ public class PickerCarrierTester {
                         return false;
                     }
                     if (robot[0] == null) {
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
+                        // Zone-pinned to this cell: the load search would otherwise take any providing station
+                        // in the dimension that has diamonds, a sibling arena's included.
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotCarrierNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                     }
                     return robot[0].containsItems();
@@ -457,10 +462,10 @@ public class PickerCarrierTester {
                     helper.assertTrue(ItemStack.matches(chest.getItem(0), new ItemStack(Items.COBBLESTONE, 64)),
                             "the refused cobblestone must be back in the chest, untouched, got " + chest.getItem(0));
                     helper.assertTrue(chest.getItem(1).isEmpty(), "the diamonds left the chest");
-                    robot[0].discard();
                     helper.succeed();
                 },
-                "the carrier never loaded the diamonds from behind the refused cobblestone");
+                "the carrier never loaded the diamonds from behind the refused cobblestone",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     // The Ph4 permissive-loop pin (carrierUnloadsAtTheStationItLoadedFrom) is GONE: the D1 reconciliation
@@ -540,10 +545,10 @@ public class PickerCarrierTester {
                     helper.assertTrue(robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER,
                             "a robot docked at the powered station must charge past SAFETY_POWER — the "
                                     + "only power source in the arena is the kinesis rig");
-                    robot[0].discard();
                     helper.succeed();
                 },
-                "a robot below SAFETY_POWER never docked at the powered station and recharged past it");
+                "a robot below SAFETY_POWER never docked at the powered station and recharged past it",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** The Forge-Energy twin of {@link #lowPowerRobotRechargesAtPoweredStation}: the same ladder, but the only
@@ -586,14 +591,12 @@ public class PickerCarrierTester {
                     robot[0].getBattery().addPower(1000L * MjAPI.MJ, false);
                     return false;
                 }
-                if (robot[0].getDockingStation() == station
-                        && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER) {
-                    robot[0].discard();
-                    RfStationTestSupport.removeStation(helper, helper.absolutePos(pipeRel), Direction.WEST);
-                    return true;
-                }
-                return false;
-            }, "a robot below SAFETY_POWER never docked at the RF-kinesis station and recharged past it");
+                return robot[0].getDockingStation() == station
+                        && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER;
+            }, "a robot below SAFETY_POWER never docked at the RF-kinesis station and recharged past it", () -> {
+                EntityArenaUtil.discard(robot[0]);
+                RfStationTestSupport.removeStation(helper, helper.absolutePos(pipeRel), Direction.WEST);
+            });
         } catch (Throwable thrown) {
             scope.close();
             throw thrown;

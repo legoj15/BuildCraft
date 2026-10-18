@@ -87,8 +87,7 @@ public class RobotChargingLatchTester {
                     "a sleeping robot must not show as asleep while its charging latch is up");
             helper.assertTrue(robot.isSleepingClient(),
                     "once the latch is down the sleeping robot shows as asleep");
-            robot.discard();
             helper.succeed();
-        }, "the robot never ticked, or its charging latch never drained to zero");
+        }, "the robot never ticked, or its charging latch never drained to zero", () -> EntityArenaUtil.discard(robot));
     }
 }

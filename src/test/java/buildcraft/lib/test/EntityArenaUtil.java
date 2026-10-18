@@ -7,6 +7,7 @@ package buildcraft.lib.test;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -25,6 +26,7 @@ import net.minecraft.world.level.storage.TagValueOutput;
 //?}
 
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.lib.misc.data.Box;
 
 /**
  * Shared harness for game tests that need a <em>live, ticking entity</em> in the arena rather than just blocks.
@@ -119,21 +121,107 @@ public final class EntityArenaUtil {
      * scheduled runnable risks a ConcurrentModificationException. */
     public static void tickUntil(GameTestHelper gth, int maxTicks, BooleanSupplier condition, Runnable then,
                                  String failureMessage) {
+        tickUntil(gth, maxTicks, condition, then, failureMessage, NO_CLEANUP);
+    }
+
+    /** {@link #tickUntil(GameTestHelper, int, BooleanSupplier, Runnable, String)} with a {@code cleanup} that runs
+     *  exactly once on EVERY way out of the poll: after {@code then} (whether it passes or throws), when the
+     *  condition itself throws (an assertion inside a phased condition), and on the poll's timeout. Discard the
+     *  test's entities here, never at the end of {@code then}: a failed assertion skips the rest of {@code then},
+     *  and a robot left behind keeps its station reservations and keeps flying into later tests. The cleanup
+     *  reads its holders when it runs, so {@code () -> discard(robot[0])} is fine for a robot spawned mid-poll
+     *  (and still {@code null} if the test failed before spawning it). */
+    public static void tickUntil(GameTestHelper gth, int maxTicks, BooleanSupplier condition, Runnable then,
+                                 String failureMessage, Runnable cleanup) {
+        schedulePoll(gth::runAfterDelay, gth::fail, maxTicks, condition, then, failureMessage, cleanup);
+    }
+
+    /** The {@link GameTestHelper#runAfterDelay} seam, so the poll logic is unit-testable without a live test. */
+    @FunctionalInterface
+    interface Scheduler {
+        void runAfterDelay(int ticks, Runnable runnable);
+    }
+
+    private static final Runnable NO_CLEANUP = () -> {};
+
+    /** The GameTestHelper-free core of {@link #tickUntil}. {@code fail} must throw, as {@code GameTestHelper.fail}
+     *  does on every node. */
+    static void schedulePoll(Scheduler scheduler, Consumer<String> fail, int maxTicks, BooleanSupplier condition,
+                             Runnable then, String failureMessage, Runnable cleanup) {
         boolean[] fired = { false };
         for (int t = 1; t <= maxTicks; t++) {
             final int tick = t;
-            gth.runAfterDelay(tick, () -> {
+            scheduler.runAfterDelay(tick, () -> {
                 if (fired[0]) {
                     return;
                 }
-                if (condition.getAsBoolean()) {
-                    fired[0] = true;
-                    then.run();
-                } else if (tick == maxTicks) {
-                    fired[0] = true;
-                    gth.fail(failureMessage + " (waited " + maxTicks + " ticks)");
+                boolean keepPolling = false;
+                Throwable failure = null;
+                try {
+                    if (condition.getAsBoolean()) {
+                        fired[0] = true;
+                        then.run();
+                    } else if (tick == maxTicks) {
+                        fired[0] = true;
+                        fail.accept(failureMessage + " (waited " + maxTicks + " ticks)");
+                    } else {
+                        keepPolling = true;
+                    }
+                } catch (Throwable t2) {
+                    failure = t2;
+                    throw t2;
+                } finally {
+                    if (!keepPolling) {
+                        fired[0] = true;
+                        runCleanup(cleanup, failure);
+                    }
                 }
             });
+        }
+    }
+
+    /** Runs {@code cleanup}; a cleanup that throws while the test is already failing is attached to that failure
+     *  as suppressed instead of replacing it, so the report still names what actually went wrong. */
+    private static void runCleanup(Runnable cleanup, Throwable failure) {
+        try {
+            cleanup.run();
+        } catch (RuntimeException | Error e) {
+            if (failure == null) {
+                throw e;
+            }
+            failure.addSuppressed(e);
+        }
+    }
+
+    /** The test's own 6x7 arena cell (relative x 0..5, y 0..6, z 0..6) as a robot work / load-unload zone. A
+     *  robot running a board's {@code update()} searches the whole dimension unless its zone says otherwise, and
+     *  other arenas' stations, items and blocks are fair game to it: pin it here. */
+    public static Box cellZone(GameTestHelper gth) {
+        return new Box(gth.absolutePos(BlockPos.ZERO), gth.absolutePos(new BlockPos(5, 6, 6)));
+    }
+
+    /** The same cell as an entity-sweep box (the block cells' outer faces): sweeping any wider reaches into the
+     *  neighbouring arenas and discards THEIR drops. */
+    public static AABB cellBounds(GameTestHelper gth) {
+        return new AABB(Vec3.atLowerCornerOf(gth.absolutePos(BlockPos.ZERO)),
+                Vec3.atLowerCornerOf(gth.absolutePos(new BlockPos(6, 7, 7))));
+    }
+
+    /** Whether entities at {@code relPos} tick. Implies the entity section is accessible, i.e. an entity added
+     *  there is visible to {@code getEntitiesOfClass} at once. The framework waits only for the 1x1 structure's
+     *  own chunk, so a position two blocks in can sit in a neighbouring chunk that is not there yet (measured on
+     *  26.2 and 1.21.11: 20 of 50 samples crossed a chunk border, 6 of 50 were not yet entity-ticking at the
+     *  test's first tick). A test that adds an entity and then scans for it in the same tick must gate on this. */
+    public static boolean isEntityTicking(GameTestHelper gth, BlockPos relPos) {
+        return gth.getLevel().isPositionEntityTicking(gth.absolutePos(relPos));
+    }
+
+    /** Discards every non-null, still-present entity: the null-safe body of a {@code tickUntil} cleanup. */
+    public static void discard(Entity... entities) {
+        for (Entity entity : entities) {
+            if (entity != null && !entity.isRemoved()) {
+                entity.discard();
+            }
         }
     }
 
@@ -147,25 +235,68 @@ public final class EntityArenaUtil {
      * {@link #tickUntil}. */
     public static void tickUntilThen(GameTestHelper gth, int maxTicks, BooleanSupplier condition,
                                      Runnable first, int gapTicks, Runnable second, String failureMessage) {
+        tickUntilThen(gth, maxTicks, condition, first, gapTicks, second, failureMessage, NO_CLEANUP);
+    }
+
+    /** {@link #tickUntilThen(GameTestHelper, int, BooleanSupplier, Runnable, int, Runnable, String)} with a
+     *  {@code cleanup} that runs exactly once on every way out: after {@code second}, when the condition,
+     *  {@code first} or {@code second} throws, and on timeout — never between the two phases. See
+     *  {@link #tickUntil(GameTestHelper, int, BooleanSupplier, Runnable, String, Runnable)}. */
+    public static void tickUntilThen(GameTestHelper gth, int maxTicks, BooleanSupplier condition,
+                                     Runnable first, int gapTicks, Runnable second, String failureMessage,
+                                     Runnable cleanup) {
+        schedulePollThen(gth::runAfterDelay, gth::fail, maxTicks, condition, first, gapTicks, second,
+                failureMessage, cleanup);
+    }
+
+    /** The GameTestHelper-free core of {@link #tickUntilThen}. */
+    static void schedulePollThen(Scheduler scheduler, Consumer<String> fail, int maxTicks, BooleanSupplier condition,
+                                 Runnable first, int gapTicks, Runnable second, String failureMessage,
+                                 Runnable cleanup) {
         int[] firstFiredAt = { -1 };
         boolean[] done = { false };
         for (int t = 1; t <= maxTicks; t++) {
             final int tick = t;
-            gth.runAfterDelay(tick, () -> {
+            scheduler.runAfterDelay(tick, () -> {
                 if (done[0]) {
                     return;
                 }
-                if (firstFiredAt[0] < 0) {
-                    if (condition.getAsBoolean()) {
-                        firstFiredAt[0] = tick;
-                        first.run();
-                    } else if (tick + gapTicks >= maxTicks) {
+                boolean keepPolling = false;
+                Throwable failure = null;
+                try {
+                    if (firstFiredAt[0] < 0) {
+                        if (condition.getAsBoolean()) {
+                            firstFiredAt[0] = tick;
+                            first.run();
+                            keepPolling = true;
+                        } else if (tick + gapTicks >= maxTicks) {
+                            done[0] = true;
+                            fail.accept(failureMessage + " (waited " + (maxTicks - gapTicks) + " ticks)");
+                        } else {
+                            keepPolling = true;
+                        }
+                    } else if (tick >= firstFiredAt[0] + gapTicks) {
                         done[0] = true;
-                        gth.fail(failureMessage + " (waited " + (maxTicks - gapTicks) + " ticks)");
+                        second.run();
+                    } else if (tick == maxTicks) {
+                        // Only reachable when gapTicks >= maxTicks (the pre-first-phase check above keeps every
+                        // other late start from firing): the second phase cannot land inside the poll, so fail
+                        // here and let the finally clean up rather than leave it to the framework timeout.
+                        done[0] = true;
+                        fail.accept(failureMessage + " (second phase due at tick " + (firstFiredAt[0] + gapTicks)
+                                + ", past the poll's " + maxTicks + ")");
+                    } else {
+                        keepPolling = true;
                     }
-                } else if (tick >= firstFiredAt[0] + gapTicks) {
-                    done[0] = true;
-                    second.run();
+                } catch (Throwable t2) {
+                    failure = t2;
+                    keepPolling = false;
+                    throw t2;
+                } finally {
+                    if (!keepPolling) {
+                        done[0] = true;
+                        runCleanup(cleanup, failure);
+                    }
                 }
             });
         }

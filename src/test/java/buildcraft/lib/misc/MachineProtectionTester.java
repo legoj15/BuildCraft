@@ -42,8 +42,8 @@ import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
-import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.RobotProtection;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotHarvest;
@@ -358,8 +358,10 @@ public class MachineProtectionTester {
                 "precondition: the pipe is 60% into the block, at " + stripes.getBreakProgress() + " of " + target);
     }
 
+    /** Zone-pinned to the test's cell (no board of its own: the tests build theirs): a board cycled on it searches,
+     *  and reserves, whatever it finds in the dimension otherwise, a neighbouring arena's logs included. */
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
+        EntityRobot robot = new ZonePinnedRobot(helper, null);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(5000L * MjAPI.MJ, false);
@@ -565,7 +567,7 @@ public class MachineProtectionTester {
         BoardRobotLumberjack lumberjack = new BoardRobotLumberjack(robot);
 
         // Every break event posted while this synchronous loop runs comes from this robot (tests do not interleave),
-        // wherever the search ends up - logs in a neighbouring arena are legal targets for it too.
+        // and its zone keeps the search on this cell's logs.
         List<BlockPos> probed = new ArrayList<>();
         Object listener = BreakEventCompat.onBreak(event -> probed.add(event.getPos()));
         try {

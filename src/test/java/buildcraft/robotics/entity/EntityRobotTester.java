@@ -172,12 +172,11 @@ public class EntityRobotTester {
                     helper.assertTrue(a.getRegistry() == registry,
                             "getRegistry() must resolve this level's RobotRegistry — every AI, station claim "
                                     + "and resource reservation goes through it");
-                    a.discard();
-                    b.discard();
                     helper.succeed();
                 },
                 "a robot added to the world must register itself with the RobotRegistry on its first tick "
-                        + "and be assigned a unique id");
+                        + "and be assigned a unique id",
+                () -> EntityArenaUtil.discard(a, b));
     }
 
     /** A robot is world-persistent: it saves with its chunk and, unlike a {@code Mob}, has no despawn path at
@@ -203,9 +202,9 @@ public class EntityRobotTester {
             helper.assertTrue(robot.position().distanceToSqr(spawnedAt) < 1.0E-6,
                     "an idle robot with no AI must not drift or fall: expected " + spawnedAt
                             + " but was " + robot.position());
-            robot.discard();
             helper.succeed();
-        }, "the robot never ticked, so the 60-tick idle window never even started");
+        }, "the robot never ticked, so the 60-tick idle window never even started",
+                () -> EntityArenaUtil.discard(robot));
     }
 
     // ---------- persistence ----------
@@ -291,9 +290,9 @@ public class EntityRobotTester {
                     "the station the robot is docked at must be saved under 'currentStation'");
             helper.assertTrue(NBTUtilBC.getByte(current, "side", (byte) -1) == (byte) Direction.DOWN.ordinal(),
                     "the docked station's mounting face must be saved as a side byte");
-            robot.discard();
             helper.succeed();
-        }, "both stations must register and the robot must tick before the save can be set up");
+        }, "both stations must register and the robot must tick before the save can be set up",
+                () -> EntityArenaUtil.discard(robot));
     }
 
     /** A corrupt (or legacy {@code UNKNOWN} = 6) station side byte must read as "no station", never as an
@@ -357,9 +356,8 @@ public class EntityRobotTester {
                             + " but was " + robot.position());
             helper.assertTrue(robot.getDeltaMovement().lengthSqr() < 1.0E-9,
                     "a docked robot's motion must be zeroed, or it fights the snap every tick");
-            robot.discard();
             helper.succeed();
-        }, "the station never registered, or the robot never ticked");
+        }, "the station never registered, or the robot never ticked", () -> EntityArenaUtil.discard(robot));
     }
 
     // ---------- damage / death ----------
@@ -394,9 +392,9 @@ public class EntityRobotTester {
             helper.assertTrue(robot.getHurtTime() == 0,
                     "the hurt flash must decay back to 0 (one per tick from 10), or the robot stays red "
                             + "forever");
-            robot.discard();
             helper.succeed();
-        }, "the robot never ticked, so it could never have been hit in the first place");
+        }, "the robot never ticked, so it could never have been hit in the first place",
+                () -> EntityArenaUtil.discard(robot));
     }
 
     /** A hit the battery cannot cover converts the robot into items: the robot item drops carrying its
@@ -475,16 +473,18 @@ public class EntityRobotTester {
                             + ItemRobot.getEnergy(robotDrop));
             helper.assertTrue(cargoDropped,
                     "the four transfer slots must spill when the robot converts to items");
+            helper.succeed();
+        }, "the station never registered, or the robot never ticked", () -> {
+            EntityArenaUtil.discard(robot);
             // The drops are outside the framework's cleanup bounds — discard exactly what this test made
             // (filtered, because the query radius can reach into the neighbouring arena's cell).
-            for (ItemEntity entity : drops) {
+            for (ItemEntity entity : EntityArenaUtil.droppedItems(helper, robotRel, 2.0)) {
                 ItemStack stack = entity.getItem();
                 if (stack.getItem() == BCRoboticsItems.ROBOT.get() || stack.getItem() == Items.DIAMOND) {
                     entity.discard();
                 }
             }
-            helper.succeed();
-        }, "the station never registered, or the robot never ticked");
+        });
     }
 
     /** A docked robot is invulnerable, and mob / falling-block damage never touches a robot at all — a robot
@@ -510,6 +510,7 @@ public class EntityRobotTester {
         mob.setNoAi(true);
         mob.setNoGravity(true);
 
+        FallingBlockEntity[] falling = { null };
         EntityArenaUtil.tickUntil(helper, 40,
                 () -> stationAt(helper, pipeRel, Direction.UP) != null
                         && hasTicked(docked) && hasTicked(airborne),
@@ -537,10 +538,11 @@ public class EntityRobotTester {
             helper.assertTrue(airborne.getBattery().getStored() == charge,
                     "a mob hit must not drain a robot's battery");
 
-            FallingBlockEntity falling = FallingBlockEntity.fall(level,
+            // fall() adds the entity to the level (and removes the block it falls from): cleaned up below.
+            falling[0] = FallingBlockEntity.fall(level,
                     helper.absolutePos(new BlockPos(3, 6, 4)), Blocks.SAND.defaultBlockState());
             boolean hitByBlock = EntityArenaUtil.hurt(level, airborne,
-                    level.damageSources().fallingBlock(falling), 4.0F);
+                    level.damageSources().fallingBlock(falling[0]), 4.0F);
             helper.assertFalse(hitByBlock, "falling-block damage must never reach a robot");
             helper.assertTrue(airborne.getBattery().getStored() == charge,
                     "a falling block must not drain a robot's battery");
@@ -556,11 +558,9 @@ public class EntityRobotTester {
                             + "docked/mob/falling-block exemptions above prove nothing");
             helper.assertTrue(airborne.getBattery().getStored() == charge - 4L * DAMAGE_DEBIT_PER_POINT,
                     "control: the player hit must debit 4 x 260 MJ");
-            docked.discard();
-            airborne.discard();
-            mob.discard();
             helper.succeed();
-        }, "the station never registered, or one of the two robots never ticked");
+        }, "the station never registered, or one of the two robots never ticked",
+                () -> EntityArenaUtil.discard(docked, airborne, mob, falling[0]));
     }
 
     // ---------- synchronisation ----------
@@ -603,9 +603,8 @@ public class EntityRobotTester {
             helper.assertFalse(robot.getEntityData().isDirty(),
                     "re-pushing an UNCHANGED stack must not dirty the accessor — an unconditional copy() "
                             + "every tick re-sends every slot at 20 Hz");
-            robot.discard();
             helper.succeed();
-        }, "the robot never ticked");
+        }, "the robot never ticked", () -> EntityArenaUtil.discard(robot));
     }
 
     // ---------- charging ----------
@@ -669,9 +668,8 @@ public class EntityRobotTester {
                     "the synched energy accessor carries WHOLE MJ (0.." + (EntityRobotBase.MAX_POWER / MjAPI.MJ)
                             + ") and must track the battery, or the renderer's charge overlay never fills: "
                             + "expected " + expectedMj + " got " + robot.getEnergyMj());
-            robot.discard();
             helper.succeed();
-        }, "the station never registered, or the robot never ticked");
+        }, "the station never registered, or the robot never ticked", () -> EntityArenaUtil.discard(robot));
     }
 
     /** {@code RobotTransactor.insert} serves the load/unload AIs' dry-run-then-commit flow, so two halves
@@ -818,11 +816,9 @@ public class EntityRobotTester {
                     return robot.mainAI != null
                             && robot.mainAI.getActiveAI() instanceof AIRobotShutdown;
                 },
-                () -> {
-                    robot.discard();
-                    helper.succeed();
-                },
+                helper::succeed,
                 "a robot whose home station was destroyed never shut down — it kept running its board "
-                        + "with no station at all");
+                        + "with no station at all",
+                () -> EntityArenaUtil.discard(robot));
     }
 }

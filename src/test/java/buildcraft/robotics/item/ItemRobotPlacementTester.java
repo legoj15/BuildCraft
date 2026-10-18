@@ -154,7 +154,23 @@ public class ItemRobotPlacementTester {
     private static void whenStationRegistered(GameTestHelper helper, BlockPos pipeRel, Runnable body) {
         EntityArenaUtil.tickUntil(helper, 40, () -> stationAt(helper, pipeRel, Direction.UP) != null, body,
                 "RobotStationPluggable.onTick() never registered a DockingStation for the UP face of "
-                        + pipeRel + " -- its pipe's chunk never started block-ticking");
+                        + pipeRel + " -- its pipe's chunk never started block-ticking",
+                () -> discardRobotsOf(helper, pipeRel));
+    }
+
+    /** Every exit of a placement test: the robots a click put on this pipe's station (docked or linked to it) leave
+     *  the world, a failed assertion included. They sit outside the framework's pass-time cleanup bounds (the empty
+     *  structure only covers the arena corner) and would survive into the next batch's reuse of these coordinates. */
+    private static void discardRobotsOf(GameTestHelper helper, BlockPos pipeRel) {
+        DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
+        if (station == null) {
+            return;
+        }
+        for (EntityRobot robot : robotsNear(helper, pipeRel, 2.0)) {
+            if (robot.getDockingStation() == station || robot.getLinkedStation() == station) {
+                robot.discard();
+            }
+        }
     }
 
     /** Right-clicks {@code side} of the pipe at {@code relPos} with {@code stack} in the player's main hand. */
@@ -232,10 +248,8 @@ public class ItemRobotPlacementTester {
             helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
                     "a survival placement must consume exactly one robot, leaving "
                             + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of 2");
-            // The placed robot is outside the framework's pass-time cleanup bounds (the empty structure
-            // only covers the arena corner), so it survives into the NEXT batch's reuse of these very
-            // coordinates and inflates that test's robot count — discard it before succeeding.
-            robot.discard();
+            // The placed robot is outside the framework's pass-time cleanup bounds, so it would survive into the
+            // NEXT batch's reuse of these very coordinates: whenStationRegistered discards it on every exit.
             helper.succeed();
         });
     }
@@ -319,11 +333,12 @@ public class ItemRobotPlacementTester {
                             "the original claimant must keep the station");
                     helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
                             "a rejected placement must not consume the item");
-                    squatter.discard(); // outside the framework's cleanup bounds — see the happy path
                     helper.succeed();
                 },
                 "the station never registered, or the squatting robot never ticked and so never got an id "
-                        + "from the RobotRegistry");
+                        + "from the RobotRegistry",
+                // Outside the framework's cleanup bounds — see discardRobotsOf.
+                () -> EntityArenaUtil.discard(squatter));
     }
 
     /** {@code RobotEvent.Place} must be posted BEFORE anything is committed, and cancelling it must leave no

@@ -261,10 +261,10 @@ public class FluidCarrierTester {
                             "the fluid carrier must FLY to and dock at the supply station, not load from "
                                     + "its spawn: robot at " + robot[0].position() + " but station face at "
                                     + faceCentre);
-                    robot[0].discard();
                     helper.succeed();
                 },
-                "the fluid carrier robot never loaded the water from the supply tank");
+                "the fluid carrier robot never loaded the water from the supply tank",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     // ---------- dead-end unload (the fluid twin of the item unload pin) ----------
@@ -291,11 +291,13 @@ public class FluidCarrierTester {
                 Direction.UP);
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS);
 
+        EntityRobot[] spawned = { null };
         EntityArenaUtil.tickUntil(helper, 140,
                 () -> stationAt(helper, pipeRel, Direction.UP) != null,
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     EntityRobot robot = addBoardRobot(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
+                    spawned[0] = robot;
                     station.takeAsMain(robot);
                     robot.dock(station);
                     fillRobotTank(robot, new FluidStack(Fluids.WATER, 1000));
@@ -322,10 +324,9 @@ public class FluidCarrierTester {
                     PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
                     helper.assertTrue(flow.doesContainFluid(),
                             "the fluid must have landed in the pipe");
-
-                    robot.discard();
                     helper.succeed();
                 },
-                "the station never registered");
+                "the station never registered",
+                () -> EntityArenaUtil.discard(spawned[0]));
     }
 }

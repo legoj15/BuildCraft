@@ -19,13 +19,13 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -178,7 +178,8 @@ public class RobotBreakBlockUpdateTester {
                     "precondition: vine at " + vine + " must survive placement");
         }
 
-        EntityRobot robot = new EntityRobot(level, BoardRobotLumberjackNBT.INSTANCE);
+        // Zone-pinned: the log search covers the dimension otherwise, and a sibling arena's tree is a target.
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotLumberjackNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -201,19 +202,10 @@ public class RobotBreakBlockUpdateTester {
                     helper.assertTrue(remaining == null,
                             "the lumberjack chopped the whole trunk but left unsupported vines at: "
                                     + remaining);
-                    // Cleanup: dropped logs must not leak into neighbouring arenas, and the robot
-                    // would keep scanning (or sleeping) past the end of the test.
-                    for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(
-                            net.minecraft.world.entity.item.ItemEntity.class,
-                            new AABB(Vec3.atLowerCornerOf(helper.absolutePos(new BlockPos(0, 0, 0))),
-                                    Vec3.atLowerCornerOf(helper.absolutePos(new BlockPos(6, 7, 6))))
-                                    .inflate(1))) {
-                        drop.discard();
-                    }
-                    robot.discard();
                     helper.succeed();
                 },
-                "the lumberjack robot never finished chopping the three-log trunk");
+                "the lumberjack robot never finished chopping the three-log trunk",
+                () -> cleanUpLumberjack(helper, robot));
     }
 
     /**
@@ -291,7 +283,7 @@ public class RobotBreakBlockUpdateTester {
                     "precondition: vine at " + v + " must survive placement");
         }
 
-        EntityRobot robot = new EntityRobot(level, BoardRobotLumberjackNBT.INSTANCE);
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotLumberjackNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -334,18 +326,21 @@ public class RobotBreakBlockUpdateTester {
                     }
                     return true;
                 },
-                () -> {
-                    for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(
-                            net.minecraft.world.entity.item.ItemEntity.class,
-                            new AABB(Vec3.atLowerCornerOf(regionMin), Vec3.atLowerCornerOf(regionMax))
-                                    .inflate(1))) {
-                        drop.discard();
-                    }
-                    robot.discard();
-                    helper.succeed();
-                },
+                helper::succeed,
                 "the lumberjack robot never finished the chop-and-decay lifecycle (trunk chopped, every leaf decayed and"
-                        + " every vine fallen)");
+                        + " every vine fallen)",
+                () -> cleanUpLumberjack(helper, robot));
+    }
+
+    /** Every exit of a lumberjack test: the robot goes (it would keep scanning, or sleeping, past the test) and so
+     *  do the logs, saplings and vines it dropped. The sweep is this arena cell exactly: the old one reached a block
+     *  into the neighbouring cells and discarded THEIR drops. */
+    private static void cleanUpLumberjack(GameTestHelper helper, EntityRobot robot) {
+        EntityArenaUtil.discard(robot);
+        for (net.minecraft.world.entity.item.ItemEntity drop : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, EntityArenaUtil.cellBounds(helper))) {
+            drop.discard();
+        }
     }
 
     /**

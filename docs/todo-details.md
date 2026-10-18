@@ -75,6 +75,10 @@ Left from the 2026-10-17 Clear-mode reflood fix (`BlueprintBuilder.isFragileUnbu
 
 Open questions from the 2026-10-17 Programming/Integration Table "+" work (`RoboticsTableTransfer`, `AbstractTableTransferHandler`): the "+" takes only BLANK boards/robots (a player holding only programmed boards sees "missing materials" though the table would reprogram one); the Integration Table refuses with "Empty the table's slots first" instead of JEI's usual clear-to-inventory. Also: JEI ghost-ingredient drops onto phantom slots send only the item id (`BCGhostIngredientHandler` ~95, `BCContainerSupport` NET_GHOST_SLOT_SET, `ReiCraftingTableSupport` ~173), so a data-carrying ingredient drops as its bare item; and the Assembly Table transfer matches ingredients by exact item+components rather than `Ingredient.test`.
 
+## Forbid Robot on the docked station
+
+`AIRobotSearchStation.start()` returns the station a robot is already docked at before it checks `isRobotForbidden` (7.1.x did the same), so a Forbid Robot gate on a robot's own dock does not stop it loading, unloading or recharging there. A fix was tried on 2026-10-17 (make the docked shortcut honour the forbid) and backed out: with no other accepting station in reach, a Delivery robot homed on a forbidding station then disposed of its whole cargo on the ground. Options: keep 7.1.x behaviour; or, when a forbid starts matching the docked robot, undock it so the search picks another station (cargo-safe), and decide whether a robot may still sleep at a home that forbids it.
+
 ## Small cleanups
 
 Found in passing; none is a known player-facing bug today.

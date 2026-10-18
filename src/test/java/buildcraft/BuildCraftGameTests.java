@@ -1035,7 +1035,15 @@ public class BuildCraftGameTests {
         // the sleep trigger + wakeup action preempting a sleeping picker (observed through the fetch the
         // wake triggers), the D1 pin — the forbid-robot action refusing a carrier's unload through the live
         // station's getActiveActions() aggregation — and the goto-station action redirecting a docked robot.
-        reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
+        // The in-client robots smoke rig as game tests: a gated Lumberjack and Picker home, built through the API,
+        // from the rig's data-merge NBT, and over a station orphaned by a /fill-style removal.
+        reg.accept("buildcraftunofficial:robot_station_rig_lumberjack_api", () -> buildcraft.robotics.RobotStationRigTester::lumberjackApiRig);
+        reg.accept("buildcraftunofficial:robot_station_rig_lumberjack_nbt", () -> buildcraft.robotics.RobotStationRigTester::lumberjackNbtRig);
+        reg.accept("buildcraftunofficial:robot_station_rig_lumberjack_orphaned", () -> buildcraft.robotics.RobotStationRigTester::lumberjackOnOrphanedStation);
+        reg.accept("buildcraftunofficial:robot_station_rig_picker_api", () -> buildcraft.robotics.RobotStationRigTester::pickerApiRig);
+        reg.accept("buildcraftunofficial:robot_station_rig_picker_nbt", () -> buildcraft.robotics.RobotStationRigTester::pickerNbtRig);
+        reg.accept("buildcraftunofficial:robot_station_rig_picker_orphaned", () -> buildcraft.robotics.RobotStationRigTester::pickerOnOrphanedStation);
+        reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup",() -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_no_param", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionWithNoParameterTargetsItsOwnStation);

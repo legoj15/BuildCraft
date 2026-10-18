@@ -212,22 +212,144 @@ public class RobotAbortReleaseTester {
         }
     }
 
-    /** A take-as-main goto (a gate's "go to station" action) makes the target the robot's new home at its START, so
-     *  aborting it midway leaves the new home as the home: the link is the robot's, not a visit claim to give back. */
-    public static void abortedTakeAsMainGotoKeepsTheNewHome(GameTestHelper helper) {
+    /** A take-as-main goto (a gate's "go to station" action) holds its target as a plain claim while it flies and
+     *  only makes it the robot's home once the robot docks there. Aborted midway, it gives the target back like any
+     *  visit, and the robot keeps the home it had. 7.1.x (and the port before 2026-10-17) moved the home at the
+     *  goto's START, so an aborted redirect left the robot homed on a station it never reached. */
+    public static void abortedTakeAsMainGotoKeepsTheOldHome(GameTestHelper helper) {
         try (Fixture f = new Fixture(helper)) {
             EntityRobot robot = f.robot();
+            LiveStation home = f.station(1, 5);
             LiveStation newHome = f.station(4, 1);
+            helper.assertTrue(home.takeAsMain(robot), "precondition: the robot has a home");
             AIRobotGotoStation relink = new AIRobotGotoStation(robot, newHome, true);
             try {
                 relink.start();
-                helper.assertTrue(robot.getLinkedStation() == newHome, "precondition: the relink moved the home");
+                helper.assertTrue(relink.getDelegateAI() != null, "precondition: the relink is flying");
+                requireHome(helper, f, robot, home, "while the relink flies");
+                helper.assertTrue(newHome.robotTaking() == robot && !newHome.isMainStation(),
+                        "the relink holds its target as a plain claim until the robot docks there");
 
                 relink.abort();
 
-                requireHome(helper, f, robot, newHome, "after aborting the relink");
+                requireHome(helper, f, robot, home, "after aborting the relink");
+                helper.assertFalse(newHome.isTaken(), "...and the target it never reached is freed");
             } finally {
                 relink.abort();
+            }
+            helper.succeed();
+        }
+    }
+
+    /** A take-as-main goto whose flight fails (the target is out of range, or walled in) must leave the robot homed
+     *  where it was and free the target. 7.1.x moved the home at the goto's start, so a robot sent to a station it
+     *  could never reach was stranded: homed on that station, its old home freed for any other robot. */
+    public static void failedTakeAsMainGotoKeepsTheOldHome(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot robot = f.robot();
+            LiveStation home = f.station(1, 5);
+            LiveStation unreachable = f.station(4, 1);
+            helper.assertTrue(home.takeAsMain(robot), "precondition: the robot has a home");
+            AIRobotGotoStation relink = new AIRobotGotoStation(robot, unreachable, true);
+            try {
+                relink.start();
+                helper.assertTrue(relink.getDelegateAI() != null, "precondition: the relink is flying");
+
+                // What AIRobotGotoBlock ends with when no path reaches the target.
+                relink.delegateAIEnded(new AIRobotGotoBlock(robot, 0, 0, 0) {
+                    {
+                        setSuccess(false);
+                    }
+                });
+
+                helper.assertFalse(relink.success(), "a relink whose flight failed reports failure");
+                requireHome(helper, f, robot, home, "after a relink that never reached its target");
+                helper.assertFalse(unreachable.isTaken(), "...and the unreachable target is freed");
+                helper.assertTrue(robot.getDockingStation() == null, "...the robot never docked there");
+            } finally {
+                relink.abort();
+            }
+            helper.succeed();
+        }
+    }
+
+    /** The other half: a take-as-main goto that DOCKS makes the target the robot's home, and lets the old home go. */
+    public static void dockedTakeAsMainGotoMovesTheHome(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot robot = f.robot();
+            LiveStation home = f.station(1, 5);
+            LiveStation newHome = f.station(4, 1);
+            helper.assertTrue(home.takeAsMain(robot), "precondition: the robot has a home");
+            AIRobotGotoStation relink = new AIRobotGotoStation(robot, newHome, true);
+            try {
+                relink.start();
+                requireHome(helper, f, robot, home, "while the relink flies");
+
+                // The last leg of the flight: the straight move onto the mount ends, and the goto docks the robot.
+                relink.delegateAIEnded(new AIRobotStraightMoveTo(robot, 0, 0, 0));
+
+                helper.assertTrue(relink.success() && robot.getDockingStation() == newHome,
+                        "precondition: the relink docked the robot at its target");
+                requireHome(helper, f, robot, newHome, "once the relink docked");
+                helper.assertFalse(home.isTaken(), "...and the old home is let go");
+                helper.assertFalse(f.registry.stationsReservedBy(robot.getRobotId()).contains(indexOf(home)),
+                        "...and no longer indexed under the robot");
+            } finally {
+                relink.abort();
+            }
+            helper.succeed();
+        }
+    }
+
+    /** A relink saved mid-flight (the override is the controller's running delegate) and reloaded: the unload freed
+     *  its plain claim on the target, so the reloaded goto takes it again before flying on, the robot keeps its old
+     *  home until it docks, and the dock moves the home as it would have without the reload. */
+    public static void takeAsMainGotoReloadedMidFlightMovesTheHomeOnDocking(GameTestHelper helper) {
+        try (Fixture f = new Fixture(helper)) {
+            EntityRobot robot = f.robot();
+            LiveStation home = f.station(1, 5);
+            LiveStation newHome = f.station(4, 1);
+            helper.assertTrue(home.takeAsMain(robot), "precondition: the robot has a home");
+            robot.getBattery().setStored(robot.getBattery().getCapacity());
+
+            AIRobotMain main = new AIRobotMain(robot);
+            AIRobotMain loaded = null;
+            try {
+                main.setOverridingAI(new AIRobotGotoStation(robot, newHome, true));
+                main.preempt(null);
+                helper.assertTrue(main.getDelegateAI() == main.getOverridingAI()
+                        && main.getDelegateAI().getDelegateAI() instanceof AIRobotGotoBlock,
+                        "precondition: the relink runs and is flying");
+                requireHome(helper, f, robot, home, "while the relink flies");
+
+                CompoundTag saved = new CompoundTag();
+                main.writeToNbt(saved);
+                main.abort();
+                // The unload's release: a plain claim does not outlive it, the home link does.
+                f.registry.releaseResources(robot);
+                helper.assertFalse(newHome.isTaken(), "precondition: the unload freed the relink's plain claim");
+                requireHome(helper, f, robot, home, "across the unload");
+
+                loaded = (AIRobotMain) AIRobot.loadAI(saved, robot);
+                helper.assertTrue(loaded.getOverridingAI() instanceof AIRobotGotoStation
+                        && loaded.getDelegateAI() == loaded.getOverridingAI(),
+                        "precondition: the reloaded robot resumes the relink as its override");
+                AIRobotGotoStation relink = (AIRobotGotoStation) loaded.getDelegateAI();
+                relink.preempt(relink.getDelegateAI()); // the reloaded goto's first cycle
+                helper.assertTrue(newHome.robotTaking() == robot && !newHome.isMainStation(),
+                        "the reloaded relink takes its target again, as a plain claim");
+                requireHome(helper, f, robot, home, "while the reloaded relink flies");
+
+                relink.delegateAIEnded(new AIRobotStraightMoveTo(robot, 0, 0, 0));
+
+                helper.assertTrue(robot.getDockingStation() == newHome, "precondition: the reloaded relink docked");
+                requireHome(helper, f, robot, newHome, "once the reloaded relink docked");
+                helper.assertFalse(home.isTaken(), "...and the old home is let go");
+            } finally {
+                main.abort();
+                if (loaded != null) {
+                    loaded.abort();
+                }
             }
             helper.succeed();
         }
@@ -267,6 +389,9 @@ public class RobotAbortReleaseTester {
                 loaded.preempt(loaded.getDelegateAI());
                 helper.assertTrue(loaded.getDelegateAI() == loaded.getOverridingAI(),
                         "precondition: with power back, the redirect runs");
+                requireHome(helper, f, robot, home, "while the reloaded redirect flies");
+                // The redirect's last leg ends: the goto docks the robot, which is when the home moves.
+                loaded.getDelegateAI().delegateAIEnded(new AIRobotStraightMoveTo(robot, 0, 0, 0));
 
                 helper.assertTrue(robot.getLinkedStation() == newHome,
                         "the reloaded redirect must make its station the robot's home, as the gate asked");
@@ -290,6 +415,10 @@ public class RobotAbortReleaseTester {
                 legacy.preempt(legacy.getDelegateAI());
                 helper.assertTrue(legacyTarget.robotTaking() == robot && !legacyTarget.isMainStation(),
                         "a save without the flag reads back as a plain visit");
+                legacy.getDelegateAI().delegateAIEnded(new AIRobotStraightMoveTo(robot, 0, 0, 0));
+                helper.assertTrue(robot.getDockingStation() == legacyTarget && !legacyTarget.isMainStation(),
+                        "...which docks as a visit, never as the robot's home");
+                robot.undock();
                 requireHome(helper, f, robot, newHome, "after a plain visit from an old save");
             } finally {
                 main.abort();

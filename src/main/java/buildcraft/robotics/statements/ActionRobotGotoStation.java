@@ -43,7 +43,9 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
     }
 
     /** Redirects every docked, non-preempted robot on the gate's pipe to the station the map-location
-     *  parameter names, taking it as MAIN (7.1.x verbatim — no break: every docked robot is redirected).
+     *  parameter names, taking it as MAIN (7.1.x verbatim — no break: every docked robot is redirected). Unlike
+     *  7.1.x the new home is linked only once the robot docks there ({@code AIRobotGotoStation}'s takeAsMain), so a
+     *  redirect whose flight fails leaves the robot homed where it was.
      *
      *  <p>With NO map location set, 7.1.x defaulted the destination to the gate's OWN station
      *  ({@code DockingStation newStation = station;} before the parameter check), so the action still
@@ -84,7 +86,7 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
      *  be handed out at all, or the robot is frozen for as long as the gate stays on:
      *  <ul>
      *  <li>the robot is already docked at the target: the goto ends in its own {@code start()};</li>
-     *  <li>another robot holds the target (its home, its dock or a visit claim): the goto's {@code takeAsMain} is
+     *  <li>another robot holds the target (its home, its dock or a visit claim): the goto's claim ({@code take}) is
      *  refused and it fails in {@code start()}. Compared by id, as the claim itself is. 7.1.x handed this one out
      *  too, every tick.</li>
      *  </ul>

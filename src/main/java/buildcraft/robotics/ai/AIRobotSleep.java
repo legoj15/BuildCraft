@@ -25,6 +25,9 @@ public class AIRobotSleep extends AIRobot {
 
     private static final int SLEEPING_TIME = 60 * 20;
     private int sleptTime = 0;
+    /** Set when {@link #preempt} ends the sleep. {@code cycle()} runs {@link #update} right after {@code preempt} on
+     *  a delegate-less AI, so without it a Wake Up on the timer's last tick terminated the sleep twice. */
+    private boolean woke;
 
     public AIRobotSleep(IRobotAccess iRobot) {
         super(iRobot);
@@ -46,6 +49,7 @@ public class AIRobotSleep extends AIRobot {
             if (s.statement instanceof ActionRobotWakeUp) {
                 // Once, however many Wake Up actions are active: a second terminate() would tell the parent about
                 // a sleep that has already ended and walk the rest of the parent chain a second time.
+                woke = true;
                 terminate();
                 return;
             }
@@ -54,6 +58,9 @@ public class AIRobotSleep extends AIRobot {
 
     @Override
     public void update() {
+        if (woke) {
+            return;
+        }
         sleptTime++;
 
         if (sleptTime > SLEEPING_TIME) {

@@ -149,6 +149,44 @@ public class AIRobotGotoBlockTest {
         Assertions.assertFalse(gotoBlock.success(), "and the goto fails rather than reporting arrival");
     }
 
+    /** 7.1.x ended a flight by writing the robot's position onto the centre of the path's last cell; the port only
+     *  zeroed the motion, so the robot rested wherever its last step stalled, up to a few tenths of a block off. */
+    @Test
+    public void anArrivalSnapsTheRobotOntoTheCentreOfTheLastPathCell() {
+        Set<BlockPos> soft = new HashSet<>();
+        for (int x = 0; x <= 3; x++) {
+            soft.add(new BlockPos(x, 0, 0));
+        }
+        FlyingRobot flyer = new FlyingRobot();
+        flyer.setPosition(new Vec3(0.5, 0.5, 0.5));
+
+        AIRobotGotoBlock gotoBlock = new AIRobotGotoBlock(flyer, 3, 0, 0);
+        gotoBlock.blockAccess = soft::contains;
+        RecordingParent parent = new RecordingParent(flyer);
+        parent.startDelegateAI(gotoBlock);
+
+        for (int i = 0; i < 100 && flyer.aims.isEmpty(); i++) {
+            gotoBlock.update();
+        }
+        Assertions.assertFalse(flyer.aims.isEmpty(), "fixture: the search plans a path and aims its first step");
+
+        // Each step: reach the aimed cell's centre, then stall a little off it (the distance grows, the AI moves on).
+        for (int i = 0; i < 20 && parent.ended == null; i++) {
+            BlockPos aimed = flyer.aims.getLast();
+            flyer.setPosition(new Vec3(aimed.getX() + 0.5, aimed.getY() + 0.5, aimed.getZ() + 0.5));
+            gotoBlock.update();
+            if (parent.ended == null) {
+                flyer.setPosition(new Vec3(aimed.getX() + 0.65, aimed.getY() + 0.6, aimed.getZ() + 0.4));
+                gotoBlock.update();
+            }
+        }
+
+        Assertions.assertSame(gotoBlock, parent.ended, "fixture: the flight arrives");
+        Assertions.assertTrue(gotoBlock.success(), "fixture: as a success");
+        Assertions.assertEquals(new Vec3(3.5, 0.5, 0.5), flyer.position(),
+                "the arrival puts the robot exactly on the centre of the last path cell");
+    }
+
     /** A flight saved mid-way must come back aimed at the same cell. Floats are exact only up to 2^24: past that an
      *  odd coordinate rounded to its even neighbour on reload, and the restored flight aimed one cell off. The
      *  observable is {@code start()}'s "already there" check, made against the restored target. */

@@ -1,0 +1,21 @@
+{
+  "name": "zone-planner-zoom",
+  "description": "Zone Planner map at the default zoom and fully zoomed out (survey floor). The planner sits on the ground under the player so the map's reference plane matches real terrain. Zoomed out, hills and trees must stay put (no radial streaks flung outward from the centre); terrain only shows inside the client's loaded chunks.",
+  "base": [0, 150, 0],
+  "steps": [
+    { "label": "setup", "do": "cmd", "run": ["gamemode creative @p", "time set 6000", "weather clear", "?clear @p"] },
+    { "label": "drop onto the surface", "do": "cmd", "run": ["spreadplayers 0 0 0 1 false @p"] },
+    { "do": "wait", "ms": 3000 },
+    { "label": "zone planner underfoot", "do": "cmd", "run": ["execute at @p run setblock ~ ~-1 ~ buildcraftunofficial:zone_planner"] },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "look", "yaw": 0, "pitch": 90 },
+    { "label": "open the planner", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiZonePlanner" },
+    { "do": "wait", "ms": 2000 },
+    { "name": "default-zoom", "do": "shot", "look": "the map at the default zoom: overhead terrain around the planner, blocks with visible sides near the edges" },
+    { "label": "zoom fully out", "do": "scroll", "fx": 0.466, "fy": 0.271, "scrollY": -1, "notches": 30 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "survey-zoom", "do": "shot", "look": "fully zoomed out: a small patch of loaded terrain around the centre, flat-looking like a map; NO long streaks or spikes radiating outward from trees and hills" },
+    { "do": "close" }
+  ]
+}

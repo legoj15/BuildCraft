@@ -344,6 +344,17 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             }
             if ($Step.do -eq 'hover') { Start-Sleep -Milliseconds 600 }   # tooltips draw on the next frames
         }
+        'scroll' {
+            Wait-NoOverlay
+            $body = @{}
+            foreach ($k in 'widgetText', 'slotIndex', 'x', 'y', 'fx', 'fy', 'scrollX', 'scrollY', 'notches') {
+                if ($Step.PSObject.Properties[$k]) { $body[$k] = $Step.$k }
+            }
+            $r = Invoke-Bridge POST '/screenscroll' $body
+            $detail = "handled $($r.handled)/$($r.notches) at ($($r.x), $($r.y))"
+            if ($r.handled -lt 1) { throw "scroll was not handled by the screen: $detail" }
+            Start-Sleep -Milliseconds 300   # let the next frames redraw
+        }
         'key' { Invoke-Bridge POST '/screenkeys' @{ type = 'key'; key = $Step.key } | Out-Null; $detail = $Step.key }
         # Typed text goes to whichever widget of the open screen has focus (click a search box first).
         'text' { Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Step.text } | Out-Null; $detail = $Step.text }

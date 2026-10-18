@@ -108,7 +108,7 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
                     "frame " + frame + ": and so is the cost");
         }
 
-        Assertions.assertEquals(1, table.previewResolves(), "thirty frames of reads resolve the recipe once");
+        Assertions.assertEquals(1, table.recipeResolves(), "thirty frames of reads resolve the recipe once");
     }
 
     @Test
@@ -121,26 +121,26 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
             Assertions.assertEquals(0L, table.getTarget());
         }
 
-        Assertions.assertEquals(1, table.previewResolves(), "an empty table resolves once, not once per frame");
+        Assertions.assertEquals(1, table.recipeResolves(), "an empty table resolves once, not once per frame");
     }
 
     @Test
     public void aChangedRingResolvesAgainAndOnlyOnce() {
         TileIntegrationTable table = tableWithRobotAndBoard();
         Assertions.assertFalse(table.getOutput().isEmpty());
-        Assertions.assertEquals(1, table.previewResolves());
+        Assertions.assertEquals(1, table.recipeResolves());
 
         table.invToIntegrate.setStackInSlot(0, ItemStack.EMPTY);
         for (int frame = 0; frame < 5; frame++) {
             Assertions.assertTrue(table.getOutput().isEmpty(), "the board is gone, so is the preview");
         }
-        Assertions.assertEquals(2, table.previewResolves(), "one more resolve for the change, none for the frames after");
+        Assertions.assertEquals(2, table.recipeResolves(), "one more resolve for the change, none for the frames after");
 
         table.invToIntegrate.setStackInSlot(3, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
         for (int frame = 0; frame < 5; frame++) {
             Assertions.assertFalse(table.getOutput().isEmpty(), "a board in another ring slot brings it back");
         }
-        Assertions.assertEquals(3, table.previewResolves());
+        Assertions.assertEquals(3, table.recipeResolves());
     }
 
     @Test
@@ -151,7 +151,7 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
         Assertions.assertTrue(table.getOutput().isEmpty(), "no robot, no preview");
         Assertions.assertEquals(0L, table.getTarget());
-        Assertions.assertEquals(2, table.previewResolves());
+        Assertions.assertEquals(2, table.recipeResolves());
     }
 
     @Test
@@ -166,7 +166,7 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         ItemStack preview = table.getOutput();
         Assertions.assertNotNull(preview.get(DataComponents.CUSTOM_NAME), "the preview robot keeps the new name");
         Assertions.assertEquals("Bob", preview.get(DataComponents.CUSTOM_NAME).getString());
-        Assertions.assertEquals(2, table.previewResolves());
+        Assertions.assertEquals(2, table.recipeResolves());
     }
 
     @Test
@@ -178,7 +178,7 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         table.invToIntegrate.stacks.set(0, ItemStack.EMPTY);
 
         Assertions.assertTrue(table.getOutput().isEmpty(), "the preview follows the ring however it was changed");
-        Assertions.assertEquals(2, table.previewResolves());
+        Assertions.assertEquals(2, table.recipeResolves());
     }
 
     @Test
@@ -192,7 +192,7 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         table.invResult.setStackInSlot(0, ItemStack.EMPTY);
         Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(), "and emptying it resumes");
 
-        Assertions.assertEquals(1, table.previewResolves(), "the result slot is not part of the cache key");
+        Assertions.assertEquals(1, table.recipeResolves(), "the result slot is not part of the cache key");
     }
 
     @Test
@@ -221,5 +221,69 @@ public class TileIntegrationTablePreviewTest extends VanillaSetupBaseTester {
         Assertions.assertFalse(table.getOutput().isEmpty(), "still previews what the saved inventories craft");
         Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(),
                 "and still knows what it costs");
+    }
+
+    // ---- The server tick resolves the recipe once per change too, not once per tick ----
+    //
+    // serverTick used to call updateRecipe() unconditionally: a registry-wide recipe match plus an extract simulation,
+    // every tick of every loaded Integration Table, whether or not anything had changed. A tile with no level runs
+    // serverTick just the same (nothing in it needs the world), which is what these drive.
+
+    @Test
+    public void aServerTickWithUnchangedInputsDoesNotResolveTheRecipeAgain() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+
+        for (int tick = 0; tick < 40; tick++) {
+            table.serverTick();
+        }
+
+        Assertions.assertEquals(1, table.recipeResolves(), "forty ticks over the same inputs resolve the recipe once");
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(),
+                "and the table still knows what its craft costs");
+    }
+
+    @Test
+    public void anEmptyTableDoesNotResolveEveryTick() {
+        // The expensive case: with nothing to match, each resolve walks the whole recipe registry.
+        TileIntegrationTable table = newTable();
+
+        for (int tick = 0; tick < 40; tick++) {
+            table.serverTick();
+        }
+
+        Assertions.assertEquals(1, table.recipeResolves(), "an idle table resolves once, not once per tick");
+    }
+
+    @Test
+    public void aServerTickSeesAChangedInputAndResolvesOnlyOnce() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        table.serverTick();
+        Assertions.assertEquals(1, table.recipeResolves());
+
+        table.invToIntegrate.setStackInSlot(0, ItemStack.EMPTY);
+        for (int tick = 0; tick < 10; tick++) {
+            table.serverTick();
+        }
+        Assertions.assertEquals(2, table.recipeResolves(), "one resolve for the change, none for the ticks after");
+        Assertions.assertEquals(0L, table.getTarget(), "the board is gone: nothing to pay for");
+
+        table.invToIntegrate.stacks.set(2, ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE));
+        table.serverTick();
+        Assertions.assertEquals(3, table.recipeResolves(), "a write straight into the ring is seen by the tick");
+        Assertions.assertEquals(RobotIntegrationRecipe.REQUIRED_MICROJOULES, table.getTarget(),
+                "and the craft is back on the cards");
+    }
+
+    @Test
+    public void aStackChangedInPlaceIsSeenByTheServerTick() {
+        TileIntegrationTable table = tableWithRobotAndBoard();
+        table.serverTick();
+
+        table.invTarget.getStackInSlot(0).set(DataComponents.CUSTOM_NAME, Component.literal("Bob"));
+        table.serverTick();
+
+        Assertions.assertEquals(2, table.recipeResolves(), "an edit in place is a change");
+        Assertions.assertEquals("Bob", table.getOutput().get(DataComponents.CUSTOM_NAME).getString(),
+                "and the recipe's output carries it");
     }
 }

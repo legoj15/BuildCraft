@@ -42,11 +42,7 @@ public class ZoneMapCamera {
      *  clamped magnification would draw the column where the true-geometry pick ray does not find it) and the
      *  few-hundredths lift of the overlay quads above a surface stays clear of it too. */
     public static final double NEAR_CLIP = MIN_DIST + 1.0;
-    /** How far below the reference plane terrain picking keeps searching. Also scales the raymarch
-     *  budget: a ray that reaches the plane at length {@code len} can still dip into terrain up to
-     *  this far below it, so the step budget is {@code len * (CAM_HEIGHT + this) / CAM_HEIGHT}. */
-    private static final int PICK_SEARCH_DOWN = 80;
-    /** Hard ceiling on the terrain-pick raymarch, so a pathological zoom can't stall a frame. */
+    /** Hard ceiling on the terrain-pick raymarch, so a pathological zoom or build floor can't stall a frame. */
     private static final int PICK_MAX_STEPS = 32768;
     /** Depth-ordering weight for height: negative so taller terrain (nearer the overhead camera) sorts
      *  in front. Kept small so {@code depth * poseScale} stays within the PiP ortho clip. Sign verified
@@ -138,14 +134,16 @@ public class ZoneMapCamera {
      * than its ground-plane footprint, so a flat-plane pick drifts from the cursor off-centre). Mirrors
      * BC8's {@code rayTrace}. Returns {@code [worldX, surfaceY, worldZ]} of the first column the ray dips
      * into, or {@code null} if it hits nothing. Columns near the camera's height ({@link #isNearClipped}) are
-     * skipped, matching what the renderer leaves undrawn.
+     * skipped, matching what the renderer leaves undrawn. The search runs down to {@code minBuildY}, the build
+     * floor, because that is as deep as the renderer draws ({@link #visibleChunkWindow}): terrain far below the
+     * planner is drawn, so it must be pickable.
      *
      * <p>The height it tests the ray against is the one the renderer draws: below 1 px/block the terrain is drawn
      * one cell per {@link #stride()} blocks, at the surface of the cell's lowest-corner sample, so that sample's
      * surface is what {@code query} is asked for (the exact column hit is still returned, so painting stays
      * block-precise).
      */
-    public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query) {
+    public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query, int minBuildY) {
         // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
         // it would hit at magnification 1, i.e. (camX + dx/px, camY, camZ + dy/px).
         double gx = dxPixels / pxPerBlock;
@@ -156,15 +154,18 @@ public class ZoneMapCamera {
         dirY /= len;
         dirZ /= len;
 
-        // The hit lands at or before the ground plane, but the search also dips up to PICK_SEARCH_DOWN
-        // below it, so the budget scales with the ray's ground length — at survey zoom that ground point
-        // is hundreds of blocks out, far beyond a fixed step count. Single ray per frame, so the cost is
-        // bounded by this one loop.
-        long budget = (long) Math.ceil(len * (CAM_HEIGHT + PICK_SEARCH_DOWN) / CAM_HEIGHT) + 8;
+        // The hit lands at or before the ground plane when the terrain is level with or above the planner, but
+        // the search also dips down to the build floor, so the budget scales with the ray's length to that
+        // floor: len is its length to the plane, and the floor is (CAM_HEIGHT + camY - floor) / CAM_HEIGHT times
+        // as far down. At survey zoom the ground point is hundreds of blocks out, far beyond a fixed step count.
+        // One ray per frame, and one step per block of its length, so the cost is bounded by this one loop
+        // (and, for a pathologically deep floor, by PICK_MAX_STEPS). A floor above the plane (never in a real
+        // world) still searches down to the plane.
+        double floorY = Math.min(minBuildY, camY);
+        long budget = (long) Math.ceil(len * (CAM_HEIGHT + camY - floorY) / CAM_HEIGHT) + 8;
         budget = Math.min(budget, PICK_MAX_STEPS);
 
         double x = camX, y = camY + CAM_HEIGHT, z = camZ;
-        double floorY = camY - PICK_SEARCH_DOWN;
         int sampleMask = -stride(); // clears the low bits: the sample grid is world-aligned, a power of two apart
         for (int i = 0; i < budget && y > floorY; i++) {
             x += dirX;

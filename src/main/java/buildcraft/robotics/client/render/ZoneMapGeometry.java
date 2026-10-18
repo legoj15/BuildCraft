@@ -78,7 +78,10 @@ public final class ZoneMapGeometry {
      *  pixel count instead of the world area, and sub-pixel blocks can't alias. Bounds use the ground
      *  plane exactly (the area picking addresses), so render and paint always agree about what is
      *  where; deep terrain beyond that plane can be clipped at the extreme edges, which is invisible
-     *  in practice at survey zoom. */
+     *  in practice at survey zoom.
+     *
+     *  <p>Columns whose top reaches the camera's own height ({@link ZoneMapCamera#isAtOrAboveCamera}) are left
+     *  out, here and in the overlays, exactly as picking steps over them: the overhead camera cannot see them. */
     public static void emitTerrain(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                    int wPx, int hPx, Level level) {
         ZonePlannerMapDataClient data = ZonePlannerMapDataClient.INSTANCE;
@@ -104,6 +107,9 @@ public final class ZoneMapGeometry {
                         int wx = (cx << 4) + lx;
                         int wz = (cz << 4) + lz;
                         int top = chunk.getSurfaceY(lx, lz);
+                        if (cam.isAtOrAboveCamera(top)) {
+                            continue; // reaches the camera: not drawn, and not pickable (ZoneMapCamera.pickTerrain)
+                        }
                         int colour = chunk.getColour(lx, lz);
                         emitColumn(vc, mat, cam, level, data, wx, wz, top, colour, stride);
                     }
@@ -271,8 +277,8 @@ public final class ZoneMapGeometry {
                     continue;
                 }
                 int surf = mapChunk.getSurfaceY(wx & 15, wz & 15);
-                if (surf == ZonePlannerMapChunk.NO_DATA) {
-                    continue;
+                if (surf == ZonePlannerMapChunk.NO_DATA || cam.isAtOrAboveCamera(surf)) {
+                    continue; // unmapped, or a column the terrain pass leaves out for reaching the camera
                 }
                 overlayQuad(vc, mat, cam, r, g, bl, ZONE_ALPHA, wx, wz, surf, stride);
             }
@@ -324,7 +330,7 @@ public final class ZoneMapGeometry {
     private static void borderCell(VertexConsumer vc, Matrix4f mat, ZoneMapCamera cam,
                                    ZonePlannerMapDataClient data, Level level, int x0, int z0, int x1, int z1) {
         int surf = surfaceAt(data, level, x0, z0);
-        if (surf == ZonePlannerMapChunk.NO_DATA) {
+        if (surf == ZonePlannerMapChunk.NO_DATA || cam.isAtOrAboveCamera(surf)) {
             return;
         }
         float y = surf + 1 + 2 * OVERLAY_LIFT; // above the zone tints, so the edge reads over a painted zone

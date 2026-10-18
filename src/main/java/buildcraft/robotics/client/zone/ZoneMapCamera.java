@@ -94,6 +94,17 @@ public class ZoneMapCamera {
         return (worldY - camY) * DEPTH_PER_HEIGHT;
     }
 
+    /**
+     * True for a column whose top face (surface Y + 1) reaches the camera's own height ({@code camY +}
+     * {@link #CAM_HEIGHT}) or higher. Such a column cannot be seen from the overhead camera: the projection's
+     * magnification blows up (it is clamped at {@link #MIN_DIST}) and the picking ray starts inside it. The
+     * renderer skips these columns ({@code ZoneMapGeometry}) and {@link #pickTerrain} steps over them, so what
+     * is drawn and what the cursor can land on stay the same set.
+     */
+    public boolean isAtOrAboveCamera(int surfaceY) {
+        return surfaceY + 1 >= camY + CAM_HEIGHT;
+    }
+
     // ── Picking (pixel offset from viewport centre → world ground column) ────────────────
 
     /** Fills {@code out[0]=worldX, out[1]=worldZ} for the ground-plane hit under a viewport-centre-relative
@@ -117,7 +128,8 @@ public class ZoneMapCamera {
      * can't give (under perspective, a column drawn at its surface height projects to a different pixel
      * than its ground-plane footprint, so a flat-plane pick drifts from the cursor off-centre). Mirrors
      * BC8's {@code rayTrace}. Returns {@code [worldX, surfaceY, worldZ]} of the first column the ray dips
-     * into, or {@code null} if it hits nothing.
+     * into, or {@code null} if it hits nothing. Columns that reach the camera's height
+     * ({@link #isAtOrAboveCamera}) are skipped, matching what the renderer leaves undrawn.
      */
     public int[] pickTerrain(double dxPixels, double dyPixels, SurfaceQuery query) {
         // The cursor ray runs from the camera (camX, camY+CAM_HEIGHT, camZ) through the ground-plane point
@@ -146,6 +158,11 @@ public class ZoneMapCamera {
             int wx = (int) Math.floor(x);
             int wz = (int) Math.floor(z);
             int sy = query.surfaceAt(wx, wz);
+            // A column that reaches the camera's own height is not drawn (see isAtOrAboveCamera), and the ray
+            // starts inside it: step over it, so the cursor lands on terrain that is actually in view.
+            if (sy != Integer.MIN_VALUE && isAtOrAboveCamera(sy)) {
+                continue;
+            }
             // The column's top face sits at sy + 1; the ray has hit once it descends to/through it.
             if (sy != Integer.MIN_VALUE && y <= sy + 1) {
                 return new int[]{wx, sy, wz};

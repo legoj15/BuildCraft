@@ -626,17 +626,19 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         return true;
     }
 
-    /** The most the worn pieces can take off the damage debit: a tenth of the base debit is always paid. */
-    private static final long MIN_DAMAGE_DEBIT_PER_POINT = DAMAGE_ENERGY_PER_POINT / 10;
+    /** The least a point of damage can cost, in micro-MJ, whatever is worn. Not a share of the base debit: normal
+     *  armour stacks (even eight iron helmets, 1/256 of it) are left exactly as 7.1.x computed them, and only a
+     *  pile of absurdly protective modded pieces, whose compounded scaling rounds to nothing, lands on the floor. */
+    private static final long MIN_DAMAGE_DEBIT_PER_POINT = 1;
 
     /** The battery debit per point of damage for a robot wearing pieces of the given protections, in the order
      *  put on: an armour piece (protection {@code >= 0}) scales the running debit by {@code 2 / (2 + protection)},
      *  any other piece (a negative entry, see {@link #armourProtection}) takes a flat 30% off.
      *
      *  <p>Not 7.1.x: the pieces compound, so eight high-protection modded helmets (each scaling by well under a
-     *  percent, every step rounded) drove the debit to ZERO and the robot became immune. Whatever is worn,
-     *  at most 90% comes off - a hit always costs the robot something. Anything that leaves at least a tenth of
-     *  the debit (three iron helmets leave an eighth) is 7.1.x's arithmetic unchanged. */
+     *  percent, every step rounded) drove the debit to ZERO and the robot became immune. The debit is floored at
+     *  {@link #MIN_DAMAGE_DEBIT_PER_POINT} (1 micro-MJ) per point, so a hit always costs the robot something; there
+     *  is no percentage cap, and any stack of ordinary armour is 7.1.x's arithmetic unchanged. */
     static long damageDebitPerPoint(double... protections) {
         long perPoint = DAMAGE_ENERGY_PER_POINT;
         for (double protection : protections) {

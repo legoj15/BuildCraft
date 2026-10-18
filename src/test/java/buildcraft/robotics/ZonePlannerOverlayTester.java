@@ -61,6 +61,14 @@ public class ZonePlannerOverlayTester {
         //?}
     }
 
+    public static void terrainAndOverlayLeaveOutColumnsReachingTheCamera(GameTestHelper helper) {
+        //? if >=1.21.10 {
+        Impl.reachingTheCamera(helper);
+        //?} else {
+        /*helper.succeed();*/
+        //?}
+    }
+
     //? if >=1.21.10 {
     private static final class Impl {
 
@@ -149,6 +157,19 @@ public class ZonePlannerOverlayTester {
                 return cam;
             }
 
+            /** A camera hovering at an absolute height over the floor, close up like {@link #camera}. */
+            ZoneMapCamera cameraAtHeight(double height) {
+                ZoneMapCamera cam = new ZoneMapCamera(x + 8, height - ZoneMapCamera.CAM_HEIGHT, z + 8);
+                cam.pxPerBlock = 8.0;
+                return cam;
+            }
+
+            int emitTerrain(ZoneMapCamera cam) {
+                VertexCounter counter = new VertexCounter();
+                ZoneMapGeometry.emitTerrain(counter.consumer(), new Matrix4f(), cam, 213, 213, level);
+                return counter.vertices;
+            }
+
             int emit(ZoneMapCamera cam, ZonePlan[] layers, ZonePlan buffer, int bufferIndex) {
                 VertexCounter counter = new VertexCounter();
                 ZoneMapGeometry.emitOverlays(counter.consumer(), new Matrix4f(), cam, 213, 213, planner, layers, buffer,
@@ -204,6 +225,50 @@ public class ZonePlannerOverlayTester {
                 floor.paint(overVoid, 500, 500, 509, 509);
                 helper.assertTrue(floor.emit(floor.camera(8.0, 505, 505), layers(overVoid), null, -1) == 0,
                         "terrain that is not mapped (not loaded) carries no tint");
+                helper.succeed();
+            } finally {
+                floor.lift();
+                ZoneMapGeometry.clearOverlayCache();
+                ZonePlannerMapDataClient.INSTANCE.clear();
+            }
+        }
+
+        static void reachingTheCamera(GameTestHelper helper) {
+            ZonePlannerMapDataClient.INSTANCE.clear();
+            ZoneMapGeometry.clearOverlayCache();
+            Floor floor = new Floor(helper);
+            floor.lay();
+            try {
+                ZonePlan layer = new ZonePlan();
+                floor.paint(layer, 1, 1, 3, 3); // nine columns on the floor
+                ZonePlannerMapChunk chunk = ZonePlannerMapDataClient.INSTANCE.getChunk(floor.level, floor.x >> 4, floor.z >> 4);
+                helper.assertTrue(chunk != null, "baseline: the floor's chunk is mapped");
+                int surface = chunk.getSurfaceY(2, 2);
+                helper.assertTrue(surface != ZonePlannerMapChunk.NO_DATA, "baseline: the floor has a surface");
+
+                // A column's top face is surface + 1. A camera one block above that sees the floor...
+                ZoneMapCamera seeing = floor.cameraAtHeight(surface + 2);
+                int seenTerrain = floor.emitTerrain(seeing);
+                helper.assertTrue(seenTerrain > 0, "baseline: the floor is drawn from above");
+                helper.assertTrue(floor.emit(seeing, layers(layer), null, -1) == 9 * VERTICES_PER_QUAD,
+                        "baseline: its nine painted columns are nine quads");
+
+                // ...and one level with the top face does not: those columns reach the camera, so neither the
+                // terrain nor the zone tint over it is drawn (and picking steps over them, in ZoneMapCameraTest).
+                ZoneMapCamera atTop = floor.cameraAtHeight(surface + 1);
+                helper.assertTrue(floor.emitTerrain(atTop) < seenTerrain,
+                        "the floor's columns are left out of the terrain once they reach the camera");
+                helper.assertTrue(floor.emit(atTop, layers(layer), null, -1) == 0,
+                        "and so is the tint painted over them");
+
+                // A camera below everything mapped sees none of it.
+                ZoneMapCamera below = floor.cameraAtHeight(surface - 500);
+                helper.assertTrue(floor.emitTerrain(below) == 0, "no terrain at all when every column reaches the camera");
+                helper.assertTrue(floor.emit(below, layers(layer), null, -1) == 0, "and no tint");
+
+                // The cull is per frame, not baked into the cached cells: back above, the tint is back.
+                helper.assertTrue(floor.emit(seeing, layers(layer), null, -1) == 9 * VERTICES_PER_QUAD,
+                        "the tint returns with the camera");
                 helper.succeed();
             } finally {
                 floor.lift();

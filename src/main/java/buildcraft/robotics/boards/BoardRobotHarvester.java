@@ -17,6 +17,7 @@ import buildcraft.api.core.BuildCraftAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.core.properties.WorldPropertyIsHarvestable;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotHarvest;
 
 /** The harvester: finds fully-grown crops (the {@code "harvestable"} world property) and harvests them
@@ -26,7 +27,10 @@ import buildcraft.robotics.ai.AIRobotHarvest;
  *  <p>The reservation is released UNCONDITIONALLY after the harvest AI, success or not — 7.1.x's
  *  {@code releaseBlockFound(boolean)} took the flag but ignored it (its TODO to blacklist failed blocks
  *  was never implemented), and the 7.1.x harvest AI's odd success semantics (it never terminates on
- *  success, so it reports false even when it harvested) made the flag meaningless anyway. */
+ *  success, so it reports false even when it harvested) made the flag meaningless anyway. The port
+ *  implements that TODO by the block rather than the flag: a harvest whose crop is STILL ripe afterwards failed
+ *  (a protection mod, a handler that declined it), is remembered like a refused block, and a run of them sends the
+ *  harvester to sleep ({@link #finishAttempt}). */
 public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
 
     public BoardRobotHarvester(IRobotAccess iRobot) {
@@ -63,8 +67,8 @@ public class BoardRobotHarvester extends BoardRobotGenericSearchBlock {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        if (ai instanceof AIRobotHarvest) {
-            releaseBlockFound();
+        if (ai instanceof AIRobotHarvest && finishAttempt(ai)) {
+            startDelegateAI(new AIRobotGotoSleep(robot));
         }
         super.delegateAIEnded(ai);
     }

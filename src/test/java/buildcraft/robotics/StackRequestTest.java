@@ -7,6 +7,8 @@ package buildcraft.robotics;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.robots.ResourceIdRequest;
@@ -119,6 +122,43 @@ public class StackRequestTest extends VanillaSetupBaseTester {
         original.writeToNBT(nbt);
         Assertions.assertNull(StackRequest.loadFromNBT(nbt),
                 "a request that never took a station cannot be resumed — 7.1.x returned null too");
+    }
+
+    /** A request tag as a robot's board saves it, with the side byte replaced by {@code side}. */
+    private static CompoundTag requestTagWithSideByte(byte side) {
+        StackRequest original = new StackRequest(null, 5, new ItemStack(Items.DIAMOND, 2));
+        original.setStation(stationDouble(new BlockPos(3, 70, -8), Direction.EAST));
+        CompoundTag nbt = new CompoundTag();
+        original.writeToNBT(nbt);
+        nbt.putByte("stationSide", side);
+        return nbt;
+    }
+
+    /** The side byte is the one thing in a saved order that can point outside {@code Direction.values()}: 7.1.x's
+     *  {@code ForgeDirection.UNKNOWN} was 6, and a corrupt or hand-edited save can hold anything. Indexing blind threw
+     *  out of the board's load, and the robot's whole AI tree with it. The order is unresumable without a station
+     *  (like one saved without any station link), so it loads as no order at all - the board then looks for a new
+     *  one - and, above all, loading it does not throw. */
+    @ParameterizedTest
+    @ValueSource(bytes = { 6, 7, 100, 127, -1, -128 })
+    public void outOfRangeStationSideLoadsAsNoOrderInsteadOfThrowing(byte side) {
+        CompoundTag nbt = requestTagWithSideByte(side);
+
+        StackRequest loaded = Assertions.assertDoesNotThrow(() -> StackRequest.loadFromNBT(nbt),
+                "a side byte of " + side + " must not throw out of the board's load");
+        Assertions.assertNull(loaded, "an order whose station side is unreadable has no station: no order to resume");
+    }
+
+    @Test
+    public void everyRealStationSideStillRoundTrips() {
+        for (Direction side : Direction.values()) {
+            StackRequest loaded = StackRequest.loadFromNBT(requestTagWithSideByte((byte) side.ordinal()));
+            Assertions.assertNotNull(loaded, "side " + side + " is a real side and the order must reload");
+            CompoundTag again = new CompoundTag();
+            loaded.writeToNBT(again);
+            Assertions.assertEquals((byte) side.ordinal(), NbtApiUtil.getByte(again, "stationSide", (byte) -1),
+                    "side " + side + " survives a load and a second save");
+        }
     }
 
     @Test

@@ -822,4 +822,46 @@ public class EntityRobotTester {
                         + "with no station at all",
                 () -> EntityArenaUtil.discard(robot));
     }
+
+    /** A robot that LOADS with a home the registry does not hold shuts down instead of throwing or running on.
+     *  That is the case a skipped, unreadable station record leaves behind ({@code RobotRegistry.readFromNbt}
+     *  drops it and the pluggable registers a fresh station for its face later): the robot's own save still names
+     *  the home by position and side, and nothing resolves it. It must take the same path as a station destroyed
+     *  under a running robot - parked by {@code AIRobotShutdown} until someone wrenches it up - and must not run
+     *  its board unhomed (a picker with no station would search the whole dimension). */
+    public static void robotLoadedWithAMissingHomeStationShutsDown(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos robotRel = new BlockPos(2, 3, 5);
+        BlockPos missingRel = new BlockPos(2, 2, 5);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+
+        // Saved as a boarded, well-charged robot, then patched to name a home that no station answers for.
+        ZonePinnedRobot source = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
+        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+        source.setPos(pos.x, pos.y, pos.z);
+        source.getBattery().addPower(5000L * MjAPI.MJ, false);
+        CompoundTag tag = EntityArenaUtil.saveEntity(level, source);
+        BlockPos missing = helper.absolutePos(missingRel);
+        CompoundTag home = new CompoundTag();
+        home.putIntArray("pos", new int[] { missing.getX(), missing.getY(), missing.getZ() });
+        home.putByte("side", (byte) Direction.UP.ordinal());
+        tag.put("linkedStation", home);
+        helper.assertTrue(stationAt(helper, missingRel, Direction.UP) == null,
+                "precondition: nothing is registered at the home the save names");
+
+        ZonePinnedRobot loaded = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
+        EntityArenaUtil.loadEntity(level, loaded, tag);
+        level.addFreshEntity(loaded);
+
+        EntityArenaUtil.tickUntil(helper, 200,
+                () -> loaded.mainAI != null && loaded.mainAI.getActiveAI() instanceof AIRobotShutdown,
+                () -> {
+                    helper.assertTrue(loaded.getLinkedStation() == null,
+                            "there is no home to be linked to: the save's position resolved to nothing");
+                    helper.succeed();
+                },
+                "a robot loaded with a home the registry does not hold never shut down - it kept running its "
+                        + "board with no station",
+                () -> EntityArenaUtil.discard(source, loaded));
+    }
 }

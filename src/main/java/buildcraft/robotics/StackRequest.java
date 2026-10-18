@@ -17,6 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
@@ -125,9 +126,19 @@ public class StackRequest {
                 NbtApiUtil.getInt(indexNBT, "i", 0),
                 NbtApiUtil.getInt(indexNBT, "j", 0),
                 NbtApiUtil.getInt(indexNBT, "k", 0));
-        Direction stationSide = Direction.values()[NbtApiUtil.getByte(nbt, "stationSide", (byte) 0)];
+        // Unsigned and range-checked, as AIRobotGotoStation and EntityRobot.readStation read theirs: 7.1.x's
+        // ForgeDirection.UNKNOWN was 6 and a corrupt byte can be anything, and indexing Direction.values() blind threw
+        // out of the board's load. An order whose station side cannot be read has no station - the same case as an
+        // order saved without a station link - so it is no order to resume.
+        int sideOrdinal = NbtApiUtil.getByte(nbt, "stationSide", (byte) 0) & 0xFF;
+        Direction[] sides = Direction.values();
+        if (sideOrdinal >= sides.length) {
+            BCLog.logger.warn("[robots] Dropping a saved order whose station side byte " + sideOrdinal
+                    + " is out of range");
+            return null;
+        }
 
-        return new StackRequest(slot, stack, stationIndex, stationSide);
+        return new StackRequest(slot, stack, stationIndex, sides[sideOrdinal]);
     }
 
     public ResourceId getResourceId(Level world) {

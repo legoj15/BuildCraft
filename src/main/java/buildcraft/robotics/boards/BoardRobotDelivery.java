@@ -119,8 +119,10 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 currentRequest.adopt(order, true);
 
                 // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only
-                // ever drives a real robot.
-                if (!order.getStation(robot.level()).take((EntityRobotBase) robot)) {
+                // ever drives a real robot. A station that is gone is guarded as OrderClaimer.reclaim guards it:
+                // the order has no requester to deliver to, so it is given up.
+                DockingStation requester = order.getStation(robot.level());
+                if (requester == null || !requester.take((EntityRobotBase) robot)) {
                     releaseCurrentRequest();
                 }
             }

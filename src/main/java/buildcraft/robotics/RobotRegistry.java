@@ -701,7 +701,11 @@ public class RobotRegistry extends SavedData implements IRobotRegistry, LegacySa
                     take(station, station.linkedId());
                 }
             } catch (Exception e) {
-                BCLog.logger.error("[robots] Could not load docking station", e);
+                // The record is skipped and the rest of the registry loads. Robots homed there find no station and shut
+                // down like any robot whose station is gone (EntityRobot.resolveStations). The robot the record named
+                // is still out in the world, so the id counter is kept ahead of it as for every record that does load.
+                raiseNextRobotIdPast(NBTUtilBC.getLong(cpt, "robotId", EntityRobotBase.NULL_ROBOT_ID));
+                BCLog.logger.error("[robots] Skipping a docking station record that could not be loaded: " + cpt, e);
             }
         }
 

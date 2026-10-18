@@ -548,6 +548,88 @@ public class RobotRegistryTest {
                 "the id counter is not dragged up to a robot id that was never issued");
     }
 
+    // ---- a station record whose side byte points outside Direction.values() ----
+
+    /** A registry tag holding the given station records, each typed as the test station. */
+    private static CompoundTag registryTagOf(CompoundTag... stations) {
+        ListTag stationList = new ListTag();
+        for (CompoundTag station : stations) {
+            station.putString("stationType", "test_station");
+            stationList.add(station);
+        }
+        CompoundTag registryTag = new CompoundTag();
+        registryTag.put("stationList", stationList);
+        return registryTag;
+    }
+
+    /** The side is the station's identity (a registry key and the face of the pipe it sits on): a byte outside
+     *  {@code Direction.values()} - 7.1.x's {@code ForgeDirection.UNKNOWN} was 6, and a corrupt save holds anything -
+     *  used to index blind, and the throw only reached the registry's per-record catch. The record cannot be a station
+     *  at any real face, so it is skipped (not guessed at a default side, which would plant a phantom station on
+     *  whichever pipe face happened to be NORTH); the decision is deliberate and pinned here. */
+    @Test
+    public void testDockingStationReadRejectsAnOutOfRangeSideWithAClearError() {
+        for (byte bad : new byte[] { 6, 7, 127, -1, -128 }) {
+            TestDockingStation station = new TestDockingStation();
+            CompoundTag tag = upstreamShapedStationTag(new BlockPos(1, 2, 3), bad, false, EntityRobotBase.NULL_ROBOT_ID);
+
+            IllegalArgumentException thrown = Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> station.readFromNbt(tag), "side byte " + bad + " is not a Direction");
+            Assertions.assertTrue(thrown.getMessage().contains(Integer.toString(bad & 0xFF)),
+                    "the message names the byte it could not read (unsigned), got: " + thrown.getMessage());
+        }
+    }
+
+    @Test
+    public void testDockingStationReadStillTakesEveryRealSide() {
+        for (Direction side : Direction.values()) {
+            TestDockingStation station = new TestDockingStation();
+            station.readFromNbt(upstreamShapedStationTag(new BlockPos(1, 2, 3), side.ordinal(), false,
+                    EntityRobotBase.NULL_ROBOT_ID));
+            Assertions.assertEquals(side, station.side(), "side " + side + " reads back as itself");
+        }
+    }
+
+    @Test
+    public void testRegistryLoadSkipsAStationWithAnOutOfRangeSideAndKeepsTheRest() {
+        BlockPos before = new BlockPos(8, 64, 9);
+        BlockPos broken = new BlockPos(20, 70, -4);
+        BlockPos after = new BlockPos(-3, 12, 30);
+        long robot = Long.MIN_VALUE + 7;
+        CompoundTag tag = registryTagOf(
+                upstreamShapedStationTag(before, Direction.SOUTH.ordinal(), false, EntityRobotBase.NULL_ROBOT_ID),
+                upstreamShapedStationTag(broken, 6, true, robot),
+                upstreamShapedStationTag(after, Direction.UP.ordinal(), true, robot + 1));
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        Assertions.assertDoesNotThrow(() -> loaded.readFromNbt(tag), "a bad record must not fail the whole load");
+
+        Assertions.assertNotNull(loaded.getStation(before, Direction.SOUTH), "the record before it loads");
+        Assertions.assertNotNull(loaded.getStation(after, Direction.UP), "...and the record after it");
+        Assertions.assertEquals(2, loaded.getStations().size(), "exactly the readable records are registered");
+        for (Direction side : Direction.values()) {
+            Assertions.assertNull(loaded.getStation(broken, side),
+                    "the unreadable record is a station at no face (" + side + ")");
+        }
+        Assertions.assertTrue(loaded.stationsReservedBy(robot).isEmpty(),
+                "a robot linked to the skipped station holds nothing in the index - its home simply does not resolve");
+    }
+
+    /** The robot the skipped record named is still out in the world: the counter must stay ahead of its id, or the
+     *  next robot placed is handed it (the same reason the load raises the counter past every id it does read). */
+    @Test
+    public void testSkippedStationStillRaisesTheIdCounterPastItsRobot() {
+        long linkedRobot = Long.MIN_VALUE + 40;
+        CompoundTag tag = registryTagOf(
+                upstreamShapedStationTag(new BlockPos(20, 70, -4), 6, true, linkedRobot));
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        loaded.readFromNbt(tag);
+
+        Assertions.assertEquals(linkedRobot + 1, loaded.nextRobotIdPeek(),
+                "the id of the robot a skipped station was linked to is not handed out again");
+    }
+
     /** Minimal concrete {@link DockingStation} for registry tests: a public no-arg ctor for NBT reload plus a
      * positioned ctor, and an empty action list. No {@code Level} is required for any path exercised here. */
     public static class TestDockingStation extends DockingStation {

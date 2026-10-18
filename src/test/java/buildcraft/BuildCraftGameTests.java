@@ -946,6 +946,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_transactor_insert_conserves_items", () -> buildcraft.robotics.entity.EntityRobotTester::transactorInsertConservesItemsAcrossSimulateAndCommit);
         reg.accept("buildcraftunofficial:robot_shutdown_keeps_current_motion", () -> buildcraft.robotics.entity.EntityRobotTester::shutdownFallKeepsCurrentHorizontalMotion);
         reg.accept("buildcraftunofficial:robot_home_station_loss_shuts_down", () -> buildcraft.robotics.entity.EntityRobotTester::losingTheHomeStationShutsTheRobotDown);
+        reg.accept("buildcraftunofficial:robot_loaded_with_missing_home_station_shuts_down", () -> buildcraft.robotics.entity.EntityRobotTester::robotLoadedWithAMissingHomeStationShutsDown);
         reg.accept("buildcraftunofficial:robot_fetch_item_removed_target_guard", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemRemovedTargetIsNotPicked);
         reg.accept("buildcraftunofficial:robot_fetch_item_partial_fit_targets", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemPartialFitStillTargets);
         reg.accept("buildcraftunofficial:robot_fetch_item_target_locks", () -> buildcraft.robotics.ai.AIRobotFetchItemTester::fetchItemTargetLocksDedupeAndRelease);
@@ -1020,6 +1021,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_planter_does_not_retry_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterDoesNotRetryARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_moves_on_from_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterMovesOnFromARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);
+        // The break boards and the harvester remember a break that simply failed (a block that refuses), then sleep.
+        reg.accept("buildcraftunofficial:robot_break_board_does_not_retry_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardDoesNotRetryABlockItCannotBreak);
+        reg.accept("buildcraftunofficial:robot_break_board_moves_on_from_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardMovesOnFromABlockItCannotBreak);
+        reg.accept("buildcraftunofficial:robot_break_board_sleeps_after_repeated_failed_breaks", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardSleepsAfterRepeatedFailedBreaks);
+        reg.accept("buildcraftunofficial:robot_harvester_does_not_retry_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterDoesNotRetryAFailedHarvest);
+        reg.accept("buildcraftunofficial:robot_harvester_moves_on_from_failed_harvest", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::harvesterMovesOnFromAFailedHarvest);
         // The combat boards' entity predicates against REAL entities (no unit test can build one).
         reg.accept("buildcraftunofficial:robot_knight_targets_hostiles", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::knightTargetsEveryHostile);
         reg.accept("buildcraftunofficial:robot_butcher_spares_pets_horses_and_named", () -> buildcraft.robotics.boards.BoardTargetPredicateTester::butcherSparesPetsHorsesAndNamedAnimals);

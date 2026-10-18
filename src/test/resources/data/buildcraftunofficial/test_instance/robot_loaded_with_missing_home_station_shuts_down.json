@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_loaded_with_missing_home_station_shuts_down",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 260,
+    "setup_ticks": 0,
+    "required": true
+}

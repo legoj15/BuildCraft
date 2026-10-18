@@ -472,8 +472,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *
      * <p>The side byte is bounds-checked against {@code Direction.values()} deliberately: legacy saves wrote
      * {@code ForgeDirection.UNKNOWN} (6) for "no station", and any corrupt byte lands here too. Indexing
-     * blind — which is what {@code DockingStation.readFromNbt} still does — turns that into an
-     * ArrayIndexOutOfBoundsException during chunk load, i.e. a world that cannot be opened at all. */
+     * blind turns that into an ArrayIndexOutOfBoundsException during chunk load, i.e. a world that cannot be
+     * opened at all. ({@code DockingStation.readFromNbt}, {@code StackRequest.loadFromNBT} and
+     * {@code AIRobotGotoStation.loadSelfFromNBT} range-check their side bytes the same way.) */
     private static void readStation(BCValueInput in, String key, java.util.function.BiConsumer<BlockPos,
             Direction> target) {
         in.child(key).ifPresent(sub -> {

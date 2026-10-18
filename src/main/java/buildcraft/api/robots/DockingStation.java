@@ -168,6 +168,17 @@ public abstract class DockingStation {
         nbt.putLong("robotId", robotTakingId);
     }
 
+    /** Reads this station back from its saved record.
+     *
+     *  <p>The side is the station's identity (a registry key, and the face of the pipe it sits on), so a record whose
+     *  side byte is not a real {@link Direction} - 7.1.x's {@code ForgeDirection.UNKNOWN} was 6, and a corrupt save
+     *  holds anything - is unusable, and is refused with an {@link IllegalArgumentException}: it is not given a default
+     *  side, which would plant a phantom station on whichever face happened to be NORTH. The registry skips such a
+     *  record and loads the rest (a pipe's pluggable registers a fresh station for its own face when it loads; the
+     *  robots that were homed on the skipped one find no station there and shut down, as for any station that is
+     *  gone).
+     *
+     *  @throws IllegalArgumentException when the side byte is not a {@link Direction} ordinal */
     public void readFromNbt(CompoundTag nbt) {
         if (nbt.contains("index")) {
             // For compatibility with older versions of minecraft and buildcraft
@@ -187,7 +198,14 @@ public abstract class DockingStation {
                 BCLog.logger.warn("Did not find any integer positions! This is a bug!");
             }
         }
-        side = Direction.values()[NbtApiUtil.getByte(nbt, "side", (byte) 0)];
+        // Unsigned and range-checked, as AIRobotGotoStation and EntityRobot.readStation read theirs.
+        int sideOrdinal = NbtApiUtil.getByte(nbt, "side", (byte) 0) & 0xFF;
+        Direction[] sides = Direction.values();
+        if (sideOrdinal >= sides.length) {
+            throw new IllegalArgumentException("Docking station record has an out-of-range side byte " + sideOrdinal
+                    + " (a real side is 0.." + (sides.length - 1) + ")");
+        }
+        side = sides[sideOrdinal];
         linkIsMain = NbtApiUtil.getBoolean(nbt, "isMain", false);
         // "No robot" is the null id and nothing else: every build that ever wrote this key (7.1.x onwards) wrote
         // NULL_ROBOT_ID for a free station, never 0 or -1, so there is no second sentinel to map. A record without

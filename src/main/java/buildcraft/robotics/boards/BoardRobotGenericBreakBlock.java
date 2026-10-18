@@ -26,7 +26,11 @@ import buildcraft.robotics.ai.AIRobotGotoStationAndUnload;
  *  7.1.x compared {@code itemDamage >= maxDamage} on whatever was held, and for an undamageable item both
  *  sides are 0, so a robot holding one (say after a fetch filter let it through) would unload it every
  *  cycle. The fetch filter keeps 7.1.x's shape — {@code damage < maxDamage && isExpectedTool} — so
- *  undamageable items are not fetched (0 &lt; 0 is false), exactly as upstream. */
+ *  undamageable items are not fetched (0 &lt; 0 is false), exactly as upstream.
+ *
+ *  <p>A second: a break that fails on a block that stays (one the tool cannot break, a negative-hardness block a
+ *  modded tool was pointed at) is remembered, and a run of them sends the board to sleep
+ *  ({@link #finishAttempt}). 7.1.x released the block and searched again, and the nearest block won every time. */
 public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearchBlock {
 
     public BoardRobotGenericBreakBlock(IRobotAccess iRobot) {
@@ -60,7 +64,11 @@ public abstract class BoardRobotGenericBreakBlock extends BoardRobotGenericSearc
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotBreak) {
-            releaseBlockFound();
+            // A break that failed on a block that is still there is remembered (the search skips it from now on), and
+            // a run of them sends the board to sleep - see finishAttempt.
+            if (finishAttempt(ai)) {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
         }
         super.delegateAIEnded(ai);
     }

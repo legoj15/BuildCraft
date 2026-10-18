@@ -55,8 +55,9 @@ public class FarmPlantRefusalTester {
 
     // ---------- fixture ----------
 
-    /** A parked, charged, zone-pinned robot with its board; closing it takes everything back out of the registry. */
-    private static final class Fixture implements AutoCloseable {
+    /** A parked, charged, zone-pinned robot with its board; closing it takes everything back out of the registry.
+     *  Shared with {@link BreakFailureMemoryTester}, which drives the break boards the same way. */
+    static final class Fixture implements AutoCloseable {
         final GameTestHelper helper;
         final ServerLevel level;
         final LiveStation home;

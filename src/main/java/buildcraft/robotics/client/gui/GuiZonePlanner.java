@@ -281,7 +281,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                 if (!stroke.isOpen() && ZonePaintInput.strokeFor(button) != ZonePaintInput.NONE) {
                     BlockPos start = pickColumn(mx, my);
                     if (start != null
-                            && stroke.press(button, brushColour(carried).ordinal(), start.getX(), start.getZ())) {
+                            && stroke.press(button, brushColour(carried).ordinal(), start.getX(), start.getZ(),
+                                    GuiZonePlanner::isMouseButtonHeld)) {
                         applyPaintRect();
                     }
                 }
@@ -334,10 +335,11 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
             camera.panByPixels(delta.dx(), delta.dy());
         }
         if (stroke.isOpen()) {
-            // The stroke is the starting button's: it follows the cursor while THAT button is down, whichever other
-            // button was tapped meanwhile (see ZonePaintStroke#move).
+            // The stroke is the starting button's: it follows the cursor while THAT button is physically down,
+            // whichever other button was tapped meanwhile (see ZonePaintStroke#move), and the left one for a macOS
+            // Ctrl+left erase, which arrives as a simulated right click (see ZonePaintStroke#press).
             BlockPos cur = pickColumn(mouseX, mouseY);
-            if (cur != null && stroke.move(cur.getX(), cur.getZ(), isMouseButtonHeld(stroke.button()))) {
+            if (cur != null && stroke.move(cur.getX(), cur.getZ(), GuiZonePlanner::isMouseButtonHeld)) {
                 applyPaintRect();
             }
         }

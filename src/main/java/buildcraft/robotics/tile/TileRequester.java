@@ -9,6 +9,7 @@
 package buildcraft.robotics.tile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -18,6 +19,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.lib.gui.IBCMenuProvider;
+import buildcraft.lib.misc.BCValueInput;
+import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.IComparatorOutputTile;
@@ -86,6 +89,23 @@ public class TileRequester extends TileBC_Neptune implements IBCMenuProvider, IR
     private boolean isItemValidForSlot(int slot, ItemStack stack) {
         ItemStack template = invRequests.getStackInSlot(slot);
         return !template.isEmpty() && StackUtil.isMatchingItemOrList(template, stack);
+    }
+
+    // --- Save / Load ---
+
+    /** Both handlers go in one {@code items} child ({@code inv} = deliveries, {@code req} = templates — the same
+     *  keys 7.1.x used, one level down); the phantom templates are configuration, not items, but they must survive
+     *  a reload just the same, and {@code ItemHandlerManager} serializes every registered handler. */
+    @Override
+    protected void writeData(BCValueOutput output) {
+        super.writeData(output);
+        output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
+    }
+
+    @Override
+    protected void readData(BCValueInput input) {
+        super.readData(input);
+        input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
     }
 
     @Override

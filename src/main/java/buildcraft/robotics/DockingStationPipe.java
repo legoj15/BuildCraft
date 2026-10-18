@@ -82,9 +82,23 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     }
 
     /** Re-resolves the holder from the world if the cached reference died (chunk reload, pipe rebuild) —
-     *  mirrors 7.1.x's {@code getPipe()} re-fetch. Deregisters this station if the pipe is genuinely gone. */
+     *  mirrors 7.1.x's {@code getPipe()} re-fetch. Deregisters this station if the pipe is genuinely gone.
+     *
+     *  <p>A cached holder whose block entity has been REMOVED is dead too, even though it still holds its pipe.
+     *  {@code /fill} and {@code /setblock} remove a block entity without its removal side effects on the modern
+     *  nodes, so the station pluggable is never told and this station stays registered; a pipe rebuilt there adopts
+     *  it ({@code RobotStationPluggable.onTick}). Trusting the cache then read the removed pipe's gates and wooden
+     *  pipe for good, so the new pipe's Provide/Accept Items gates had no effect and its robots idled at home
+     *  (7.1.x checked {@code isInvalid()} for the same reason). While the chunk is unloaded the removed holder is
+     *  kept and nothing is answered: resolving it would load the chunk, and it re-resolves once the chunk is back. */
     @Nullable
     public IPipeHolder getHolder() {
+        if (holder != null && holder.getPipeTile() instanceof BlockEntity tile && tile.isRemoved()) {
+            if (!world.isLoaded(getPos())) {
+                return null;
+            }
+            holder = null;
+        }
         if (holder == null || holder.getPipe() == null) {
             BlockEntity tile = world.getBlockEntity(getPos());
             holder = tile instanceof IPipeHolder iph ? iph : null;

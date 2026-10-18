@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_rig_lumberjack_nbt",
+    "environment": "buildcraftunofficial:robot_station_rig",
+    "structure": "minecraft:empty",
+    "max_ticks": 700,
+    "setup_ticks": 0,
+    "required": true
+}

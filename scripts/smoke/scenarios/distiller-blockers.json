@@ -1,0 +1,436 @@
+{
+  "name": "distiller-blockers",
+  "description": "Distiller GUI lights only the arrow of each tank blocking production.",
+  "base": [
+    0,
+    150,
+    40
+  ],
+  "steps": [
+    {
+      "label": "setup",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "difficulty peaceful",
+        "time set 6000",
+        "weather clear",
+        "fill {X-3} {Y-1} {Z-3} {X+3} {Y-1} {Z+3} minecraft:smooth_stone",
+        "?fill {X-3} {Y} {Z-3} {X+3} {Y+3} {Z+3} minecraft:air"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "hold",
+      "item": "minecraft:air"
+    },
+    {
+      "label": "empty distiller",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "idle-empty",
+      "do": "shot",
+      "look": "no arrows lit, centre plain"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "4000 mB oil, empty outputs, no power",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidIn:{id:\"buildcraftunofficial:oil\",amount:4000}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "unpowered",
+      "do": "shot",
+      "look": "no arrows lit (can work, just unpowered)"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "oil in, gas output full",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidIn:{id:\"buildcraftunofficial:oil\",amount:4000},fluidGasOut:{id:\"buildcraftunofficial:fuel_gaseous\",amount:4000}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "gas-full",
+      "do": "shot",
+      "look": "ONLY the top-right (yellow) arrow lit"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "oil in, liquid output holds a different product (fuel_dense)",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidIn:{id:\"buildcraftunofficial:oil\",amount:4000},fluidLiquidOut:{id:\"buildcraftunofficial:fuel_dense\",amount:100}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "liquid-wrong",
+      "do": "shot",
+      "look": "ONLY the bottom-right (purple) arrow lit"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "input empty, gas output has contents",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidGasOut:{id:\"buildcraftunofficial:fuel_gaseous\",amount:100}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "input-dry",
+      "do": "shot",
+      "look": "ONLY the left (red) input arrow lit"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "4 mB oil (batch is 8), liquid output has contents",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidIn:{id:\"buildcraftunofficial:oil\",amount:4},fluidLiquidOut:{id:\"buildcraftunofficial:oil_heavy\",amount:100}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "input-short",
+      "do": "shot",
+      "look": "ONLY the left (red) input arrow lit"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "oil in, both outputs full",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidIn:{id:\"buildcraftunofficial:oil\",amount:4000},fluidGasOut:{id:\"buildcraftunofficial:fuel_gaseous\",amount:4000},fluidLiquidOut:{id:\"buildcraftunofficial:oil_heavy\",amount:4000}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "both-full",
+      "do": "shot",
+      "look": "BOTH right arrows lit, input arrow not lit"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "label": "input empty, gas output full",
+      "do": "cmd",
+      "run": [
+        "?setblock {X} {Y} {Z} minecraft:air",
+        "setblock {X} {Y} {Z} buildcraftunofficial:distiller",
+        "data merge block {X} {Y} {Z} {fluidGasOut:{id:\"buildcraftunofficial:fuel_gaseous\",amount:4000}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        2
+      ],
+      "yaw": 180,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiDistiller"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "dry-gas-full",
+      "do": "shot",
+      "look": "input (red) AND top-right (yellow) arrows lit, bottom-right not lit"
+    },
+    {
+      "do": "close"
+    }
+  ]
+}

@@ -66,6 +66,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
+    /** Input holds less than one batch while an output still has contents (it ran dry), or holds a fluid with no recipe. */
+    public static final int BLOCKER_INPUT = 1;
+    /** Gas output can't take this batch: full, or holding a different recipe's product. */
+    public static final int BLOCKER_GAS = 2;
+    /** Liquid output can't take this batch: full, or holding a different recipe's product. */
+    public static final int BLOCKER_LIQUID = 4;
+
     private static final Identifier ADVANCEMENT_HEATING_AND_DISTILLING =
         Identifier.parse("buildcraftunofficial:heating_and_distilling");
     private static final Identifier ADVANCEMENT_REFINE_AND_REDEFINE =
@@ -93,8 +100,8 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     private IDistillationRecipe currentRecipe;
     private long distillPower = 0;
     private boolean isActive = false;
-    /** True when a recipe exists for the input fluid but at least one output tank can't accept the recipe's output. */
-    private boolean isStuck = false;
+    /** Which tanks are stopping production, as {@code BLOCKER_*} bits; zero while running or merely unpowered. */
+    private int blockers = 0;
 
 
     /** Edge-detect latch for the Heating and Distilling advancement: true while the distiller was
@@ -116,7 +123,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
     private int lastSyncedGas = -1;
     private int lastSyncedLiquid = -1;
     private boolean lastSyncedActive = false;
-    private boolean lastSyncedStuck = false;
+    private int lastSyncedBlockers = 0;
     private long lastSyncedPower = -1;
 
     public TileDistiller_BC8(BlockPos pos, BlockState state) {
@@ -217,9 +224,9 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         return isActive;
     }
 
-    /** Returns true when a recipe is matched but at least one output tank is full. */
-    public boolean isStuck() {
-        return isStuck;
+    /** Returns the client-synced {@code BLOCKER_*} bits naming the tanks that stop production. */
+    public int getBlockers() {
+        return blockers;
     }
 
     /** Returns the client-synced power average in micro-MJ. */
@@ -354,11 +361,16 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
             }
         }
 
+        boolean outputsHaveContents = !tankGasOut.isTankEmpty(0) || !tankLiquidOut.isTankEmpty(0);
         if (currentRecipe == null) {
             mjBattery.addPowerChecking(distillPower, false);
             distillPower = 0;
             isActive = false;
-            isStuck = false;
+            // Non-empty input without a recipe: a save loaded before its recipe exists (NBT load skips the
+            // input filter). With no recipe to simulate, an output counts as blocking only when it is full.
+            blockers = (!tankIn.isTankEmpty(0) || outputsHaveContents ? BLOCKER_INPUT : 0)
+                    | (isFull(tankGasOut) ? BLOCKER_GAS : 0)
+                    | (isFull(tankLiquidOut) ? BLOCKER_LIQUID : 0);
         } else {
             FluidStack reqIn = currentRecipe.in();
             FluidStack outLiquid = currentRecipe.outLiquid();
@@ -373,7 +385,9 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
             boolean canFillLiquid = tankLiquidOut.insertInternal(outLiquid, true) >= outLiquid.getAmount();
             boolean canFillGas = tankGasOut.insertInternal(outGas, true) >= outGas.getAmount();
 
-            isStuck = !canFillLiquid || !canFillGas;
+            blockers = (canExtract || !outputsHaveContents ? 0 : BLOCKER_INPUT)
+                    | (canFillGas ? 0 : BLOCKER_GAS)
+                    | (canFillLiquid ? 0 : BLOCKER_LIQUID);
 
             if (canExtract && canFillLiquid && canFillGas) {
                 long max = mjBattery.rampedExtractLimit(MAX_MJ_PER_TICK);
@@ -430,13 +444,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         int curGas = tankGasOut.getAmountMb(0);
         int curLiq = tankLiquidOut.getAmountMb(0);
         boolean needsSync = curIn != lastSyncedIn || curGas != lastSyncedGas || curLiq != lastSyncedLiquid
-                || isActive != lastSyncedActive || isStuck != lastSyncedStuck || powerAvgClient != lastSyncedPower;
+                || isActive != lastSyncedActive || blockers != lastSyncedBlockers || powerAvgClient != lastSyncedPower;
         if (needsSync) {
             lastSyncedIn = curIn;
             lastSyncedGas = curGas;
             lastSyncedLiquid = curLiq;
             lastSyncedActive = isActive;
-            lastSyncedStuck = isStuck;
+            lastSyncedBlockers = blockers;
             lastSyncedPower = powerAvgClient;
             setChanged();
             MessageUtil.sendUpdateToTrackingPlayers(this);
@@ -513,7 +527,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         output.putLong("mjStored", mjBattery.getStored());
         output.putLong("distillPower", distillPower);
         output.putBoolean("isActive", isActive);
-        output.putBoolean("isStuck", isStuck);
+        output.putInt("blockers", blockers);
         output.putLong("powerAvgClient", powerAvgClient);
         output.store("containerSlots", net.minecraft.nbt.CompoundTag.CODEC, containerSlots.serializeNBT());
     }
@@ -526,9 +540,13 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         mjBattery.addPowerChecking(input.getLongOr("mjStored", 0L), false);
         distillPower = input.getLongOr("distillPower", 0L);
         isActive = input.getBooleanOr("isActive", false);
-        isStuck = input.getBooleanOr("isStuck", false);
+        blockers = input.getIntOr("blockers", 0);
         powerAvgClient = input.getLongOr("powerAvgClient", 0L);
         containerSlots.deserializeNBT(input.read("containerSlots", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
+    }
+
+    private static boolean isFull(BCFluidTank tank) {
+        return tank.getAmountMb(0) >= tank.getCapacityMb(0);
     }
 
     /**

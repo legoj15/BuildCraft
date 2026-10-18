@@ -79,6 +79,10 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 `AIRobotSearchStation.start()` returns the station a robot is already docked at before it checks `isRobotForbidden` (7.1.x did the same), so a Forbid Robot gate on a robot's own dock does not stop it loading, unloading or recharging there. A fix was tried on 2026-10-17 (make the docked shortcut honour the forbid) and backed out: with no other accepting station in reach, a Delivery robot homed on a forbidding station then disposed of its whole cargo on the ground. Options: keep 7.1.x behaviour; or, when a forbid starts matching the docked robot, undock it so the search picks another station (cargo-safe), and decide whether a robot may still sleep at a home that forbids it.
 
+## Distiller won't open on 1.21.1
+
+Found 2026-10-18 by `scripts/smoke/scenarios/distiller-blockers.json`, and present before that day's blocker-arrow change (reproduced with it stashed). On the 1.21.1 node only, an empty-hand right-click on a freshly `setblock`ed distiller hits the block, but `GuiDistiller` never opens in the cases where the input tank holds less than one batch (0 or 4 mB): the `idle-empty`, `input-dry` and `input-short` steps failed on three runs in a row, even with a 2 s settle after the setblock. The cases with 4000 mB input open every time. The other four nodes open in every case. No exception in the client log. Start with `BlockDistiller.useItemOn`'s 1.21.1 branch (`ItemInteractionResult`) against the server-side menu open, and the menu's initial fluid-widget sync.
+
 ## Small cleanups
 
 Found in passing; none is a known player-facing bug today.

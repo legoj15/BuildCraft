@@ -8,11 +8,9 @@ package buildcraft.factory.client.gui;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import net.minecraft.ChatFormatting;
 import buildcraft.lib.gui.BCGraphics;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -20,6 +18,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.factory.container.ContainerDistiller;
+import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
@@ -39,13 +38,23 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     private static final GuiIcon OVERLAY_VERTICAL = new GuiIcon(TEXTURE, 0, 161, 16, 38);
     private static final GuiIcon OVERLAY_HORIZONTAL = new GuiIcon(TEXTURE, 17, 161, 34, 17);
 
-    // Center pipe-schematic overlays drawn at GUI (61,12), 36x57. The "stuck" variant
-    // is shown when a recipe is matched but at least one output tank is full; the
-    // "running" variant is shown while distillation is actively consuming power.
+    // Center pipe-schematic overlays drawn at GUI (61,12), 36x57. The "running" variant
+    // is shown while distillation is actively consuming power. When production is blocked,
+    // only the lit arrow of each blocking tank is cut from the "stuck" sheet at (176,0)
+    // (the sheet differs from the background only in those three arrows).
     private static final int CENTER_DST_X = 61, CENTER_DST_Y = 12;
     private static final int CENTER_W = 36, CENTER_H = 57;
-    private static final GuiIcon OVERLAY_STUCK = new GuiIcon(TEXTURE, 176, 0, CENTER_W, CENTER_H);
+    private static final int STUCK_U = 176, STUCK_V = 0;
     private static final GuiIcon OVERLAY_RUNNING = new GuiIcon(TEXTURE, 212, 0, CENTER_W, CENTER_H);
+    private static final int ARROW_IN_X = 0, ARROW_IN_Y = 23, ARROW_IN_W = 10, ARROW_IN_H = 11;
+    private static final int ARROW_OUT_X = 28, ARROW_OUT_W = 8, ARROW_OUT_H = 11;
+    private static final int ARROW_GAS_Y = 1, ARROW_LIQ_Y = 45;
+    private static final GuiIcon ARROW_IN = new GuiIcon(TEXTURE,
+            STUCK_U + ARROW_IN_X, STUCK_V + ARROW_IN_Y, ARROW_IN_W, ARROW_IN_H);
+    private static final GuiIcon ARROW_GAS = new GuiIcon(TEXTURE,
+            STUCK_U + ARROW_OUT_X, STUCK_V + ARROW_GAS_Y, ARROW_OUT_W, ARROW_OUT_H);
+    private static final GuiIcon ARROW_LIQ = new GuiIcon(TEXTURE,
+            STUCK_U + ARROW_OUT_X, STUCK_V + ARROW_LIQ_Y, ARROW_OUT_W, ARROW_OUT_H);
 
     // Tank positions (matching the 1.12.2 GUI layout)
     // Input tank: x=44, y=23, 16x38
@@ -94,7 +103,7 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
                 OVERLAY_HORIZONTAL
             ));
             // Help entries — tank rectangles match the fluid-tank widgets above; the centre
-            // overlay matches the running/stuck pipe schematic drawn in drawCenterStateOverlay().
+            // overlay matches the running pipe schematic / blocker arrows drawn in drawCenterStateOverlay().
             mainGui.shownElements.add(new DummyHelpElement(
                 new GuiRectangle(TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.distiller.input.title", 0xFF_FF_CC_88,
@@ -141,21 +150,21 @@ public class GuiDistiller extends GuiBC8<ContainerDistiller> {
     }
 
     /**
-     * Draws the center pipe-schematic overlay reflecting tile state. The bright/animated
-     * variant is drawn while the distiller is actively consuming power; the dim variant
-     * is drawn when a recipe is matched but at least one output tank is full.
+     * Draws the center pipe-schematic overlay reflecting tile state: the full running sheet
+     * while the distiller is consuming power, otherwise the lit arrow of each tank that is
+     * blocking production. Unpowered-but-unblocked leaves the plain background.
      */
     private void drawCenterStateOverlay() {
         if (menu.tile == null) return;
-        GuiIcon overlay = null;
+        int x = leftPos + CENTER_DST_X, y = topPos + CENTER_DST_Y;
         if (menu.tile.isActive()) {
-            overlay = OVERLAY_RUNNING;
-        } else if (menu.tile.isStuck()) {
-            overlay = OVERLAY_STUCK;
+            OVERLAY_RUNNING.drawAt(x, y);
+            return;
         }
-        if (overlay != null) {
-            overlay.drawAt(leftPos + CENTER_DST_X, topPos + CENTER_DST_Y);
-        }
+        int blockers = menu.tile.getBlockers();
+        if ((blockers & TileDistiller_BC8.BLOCKER_INPUT) != 0) ARROW_IN.drawAt(x + ARROW_IN_X, y + ARROW_IN_Y);
+        if ((blockers & TileDistiller_BC8.BLOCKER_GAS) != 0) ARROW_GAS.drawAt(x + ARROW_OUT_X, y + ARROW_GAS_Y);
+        if ((blockers & TileDistiller_BC8.BLOCKER_LIQUID) != 0) ARROW_LIQ.drawAt(x + ARROW_OUT_X, y + ARROW_LIQ_Y);
     }
 
     private void renderTankTooltip(BCGraphics graphics, int mouseX, int mouseY,

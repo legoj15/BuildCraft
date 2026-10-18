@@ -452,7 +452,8 @@ public class MockRobotAccess implements IRobotAccess {
     }
 
     /** The real block memory, on a clock that never advances: a note made in a test lasts the whole test. */
-    private final UnreachableBlockCache unreachableBlocks = new UnreachableBlockCache(() -> 0L);
+    private final UnreachableBlockCache unreachableBlocks =
+            new UnreachableBlockCache(() -> 0L, this::blockPosition);
 
     @Override
     public void unreachableBlockDetected(BlockPos pos) {

@@ -152,6 +152,69 @@ public class AIRobotSearchBlockTest {
         }
     }
 
+    /** A closet the robot starts in, sealed from a room 20 blocks along: the room's wall block is a candidate the
+     *  robot cannot reach from the closet and can from inside the room. */
+    private final class ClosetAndRoomWorld {
+        final BlockPos wall = new BlockPos(25, 64, 0);
+        final SoftBlockAccess access = pos -> (Math.abs(pos.getX()) <= 1 && Math.abs(pos.getZ()) <= 1
+                && pos.getY() >= 63 && pos.getY() <= 65)
+                || (pos.getX() >= 20 && pos.getX() <= 24 && Math.abs(pos.getZ()) <= 3
+                && pos.getY() >= 63 && pos.getY() <= 65);
+
+        AIRobotSearchBlock search(IRobotAccess who) {
+            AIRobotSearchBlock search = new AIRobotSearchBlock(who, false, wall::equals, 0);
+            search.blockAccess = access;
+            RecordingParent parent = new RecordingParent(who);
+            parent.startDelegateAI(search);
+            for (int i = 0; i < AIRobotSearchBlock.SEARCH_ROUNDS + 2 && parent.ended == null; i++) {
+                search.update();
+            }
+            Assertions.assertSame(search, parent.ended, "fixture: the search ends");
+            return search;
+        }
+    }
+
+    /** MockRobotAccess that counts the candidates it was told it could not reach. */
+    private static final class CountingRobot extends MockRobotAccess {
+        int noted;
+
+        @Override
+        public void unreachableBlockDetected(BlockPos pos) {
+            noted++;
+            super.unreachableBlockDetected(pos);
+        }
+    }
+
+    @Test
+    public void aRobotThatMovedWhereACandidateIsReachableTriesItAgain() {
+        CountingRobot mover = new CountingRobot();
+        ClosetAndRoomWorld world = new ClosetAndRoomWorld();
+        mover.setPosition(new Vec3(0.5, 64.5, 0.5));
+
+        AIRobotSearchBlock fromTheCloset = world.search(mover);
+        Assertions.assertNull(fromTheCloset.blockFound, "fixture: the wall block cannot be reached from the closet");
+        Assertions.assertEquals(1, mover.noted, "fixture: and the failure is remembered");
+
+        mover.setPosition(new Vec3(22.5, 64.5, 0.5)); // inside the room, a flight away from where it failed
+        AIRobotSearchBlock fromTheRoom = world.search(mover);
+        Assertions.assertEquals(world.wall, fromTheRoom.blockFound,
+                "the note is about the closet: from the room the same block is reachable, and is no longer skipped");
+    }
+
+    @Test
+    public void aRobotThatStayedPutKeepsSkippingTheCandidateItFailedOn() {
+        CountingRobot stayer = new CountingRobot();
+        ClosetAndRoomWorld world = new ClosetAndRoomWorld();
+        stayer.setPosition(new Vec3(0.5, 64.5, 0.5));
+        world.search(stayer);
+        Assertions.assertEquals(1, stayer.noted, "fixture: the failure is remembered");
+
+        stayer.setPosition(new Vec3(1.5, 64.5, -0.5)); // a block or two of hovering is the same spot
+        AIRobotSearchBlock second = world.search(stayer);
+        Assertions.assertNull(second.blockFound, "still unreachable from the closet");
+        Assertions.assertEquals(1, stayer.noted, "and not even tried: no second finder was started on it");
+    }
+
     /** Records the delegate that terminated. */
     private static class RecordingParent extends AIRobot {
         AIRobot ended;

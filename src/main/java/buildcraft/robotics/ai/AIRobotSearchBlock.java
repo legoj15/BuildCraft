@@ -128,9 +128,9 @@ public class AIRobotSearchBlock extends AIRobot {
         }
         if (blockScanner == null) {
             SoftBlockAccess access = blockAccess != null ? blockAccess : SoftBlockAccess.of(robot.level());
-            // A candidate a recent search of this robot's gave up on is not a candidate (asked last, once the filter
-            // has matched, so the memory is read for matching blocks only). Not 7.1.x, which re-flooded the same
-            // unreachable candidates from the centre outwards in every search.
+            // A candidate a recent search of this robot's gave up on, from about where it stands now, is not a
+            // candidate (asked last, once the filter has matched, so the memory is read for matching blocks only).
+            // Not 7.1.x, which re-flooded the same unreachable candidates from the centre outwards in every search.
             IBlockFilter reachableCandidates = pos -> pathFound.matches(pos) && !robot.isKnownUnreachableBlock(pos);
             blockScanner = new PathFindingSearch(access, robot.blockPosition(),
                     blockIter, reachableCandidates, maxDistanceToEnd, 96, zone,

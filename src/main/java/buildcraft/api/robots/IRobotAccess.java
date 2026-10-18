@@ -195,13 +195,14 @@ public interface IRobotAccess {
 
     boolean isKnownUnreachable(Entity entity);
 
-    /** Notes that a search could not path to the candidate block {@code pos}, so the robot's next search can leave it
-     *  alone for a while ({@link #isKnownUnreachableBlock}). The block twin of {@link #unreachableEntityDetected}. A
-     *  robot with no such memory ignores it, which is the default. */
+    /** Notes that a search could not path to the candidate block {@code pos} from where the robot is now, so its next
+     *  search from about there can leave it alone for a while ({@link #isKnownUnreachableBlock}). The block twin of
+     *  {@link #unreachableEntityDetected}. A robot with no such memory ignores it, which is the default. */
     default void unreachableBlockDetected(BlockPos pos) {
     }
 
-    /** Whether a search noted {@code pos} as unreachable recently enough to skip it. */
+    /** Whether a search noted {@code pos} as unreachable recently enough, and from close enough to where the robot
+     *  is now, to skip it: a robot that has since moved elsewhere is asking a new question. */
     default boolean isKnownUnreachableBlock(BlockPos pos) {
         return false;
     }

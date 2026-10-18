@@ -223,7 +223,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     private final MjBattery battery = new MjBattery(MAX_POWER);
     private final UnreachableEntityCache<Entity> unreachable =
             new UnreachableEntityCache<>(() -> level().getGameTime());
-    private final UnreachableBlockCache unreachableBlocks = new UnreachableBlockCache(() -> level().getGameTime());
+    private final UnreachableBlockCache unreachableBlocks =
+            new UnreachableBlockCache(() -> level().getGameTime(), this::blockPosition);
 
     /** One receiver instance for the robot's lifetime. {@code RobotStationPluggable} re-fetches it on every
      *  capability query (so identity is never cached outside), but the {@link #ticksCharging} latch it drives

@@ -112,8 +112,10 @@ public class DeliveryRequesterTester {
         //?}
     }
 
+    /** Zone-pinned to the test's cell: the order search and the supply search both cover the whole dimension
+     *  otherwise, and a leftover Requester order or providing station in another arena is a valid target. */
     private static EntityRobot addDeliveryRobot(GameTestHelper helper, BlockPos relPos) {
-        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotDeliveryNBT.INSTANCE);
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotDeliveryNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
@@ -441,10 +443,10 @@ public class DeliveryRequesterTester {
                     helper.assertTrue(
                             robot[0].getBoard() instanceof buildcraft.robotics.boards.BoardRobotDelivery,
                             "the delivery board still drives the robot after the loop");
-                    robot[0].discard();
                     helper.succeed();
                 },
-                "the delivery robot never fulfilled the requester's order");
+                "the delivery robot never fulfilled the requester's order",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** The saved request survives the robot's save/load path — the by-value station link resolving through

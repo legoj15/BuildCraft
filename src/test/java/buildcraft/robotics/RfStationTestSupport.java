@@ -14,6 +14,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.transport.BCTransportConfig;
 import buildcraft.transport.tile.TilePipeHolder;
 
@@ -74,30 +75,21 @@ public final class RfStationTestSupport {
          *  see {@code EntityArenaUtil#tickUntil}), succeeds the test the first time it returns true and fails it
          *  if it never does. This scope is closed on every exit, including a throw out of {@code ready}. */
         public void succeedWhen(GameTestHelper gth, int maxTicks, BooleanSupplier ready, String failureMessage) {
-            boolean[] finished = { false };
-            for (int t = 1; t <= maxTicks; t++) {
-                final int tick = t;
-                gth.runAfterDelay(tick, () -> {
-                    if (finished[0]) {
-                        return;
-                    }
-                    try {
-                        if (ready.getAsBoolean()) {
-                            finished[0] = true;
-                            close();
-                            gth.succeed();
-                        } else if (tick == maxTicks) {
-                            finished[0] = true;
-                            close();
-                            gth.fail(failureMessage + " (waited " + maxTicks + " ticks)");
-                        }
-                    } catch (Throwable thrown) {
-                        finished[0] = true;
-                        close();
-                        throw thrown;
-                    }
-                });
-            }
+            succeedWhen(gth, maxTicks, ready, failureMessage, () -> {});
+        }
+
+        /** {@link #succeedWhen(GameTestHelper, int, BooleanSupplier, String)} that also runs {@code cleanup} on
+         *  every exit (before the scope closes): discard the test's robots there, so a timeout does not leave one
+         *  docked at a station in the shared level. */
+        public void succeedWhen(GameTestHelper gth, int maxTicks, BooleanSupplier ready, String failureMessage,
+                                Runnable cleanup) {
+            EntityArenaUtil.tickUntil(gth, maxTicks, ready, gth::succeed, failureMessage, () -> {
+                try {
+                    cleanup.run();
+                } finally {
+                    close();
+                }
+            });
         }
     }
 

@@ -54,6 +54,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -1009,12 +1010,16 @@ public class BuilderBoardTester {
         TileBuilder builder = placeBuilder(helper, builderRel,
                 makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
 
-        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotBuilderNBT.INSTANCE);
+        // Zone-pinned to this cell: the board searches every Builder loaded in the level, and other tests leave
+        // needy ones behind.
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotBuilderNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.getBattery().addPower(SEEDED_CHARGE, false);
         level.addFreshEntity(robot);
 
+        // The assertions live in the success block. They used to follow the tickUntil call, which only SCHEDULES
+        // the poll, so they ran on the test's first tick against an empty grid and the test passed at once.
         EntityArenaUtil.tickUntil(helper, 400, () -> {
             for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
                 if (!builder.getResource(slot).isEmpty()) {
@@ -1023,15 +1028,13 @@ public class BuilderBoardTester {
             }
             return false;
         }, () -> {
-                },
-                "the builder-board robot must fetch the stone and deliver it to the machine's grid");
-
-        for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
-            ItemStack stack = builder.getResource(slot);
-            helper.assertTrue(stack.isEmpty() || stack.is(Items.STONE),
-                    "the machine received the blueprint's stone, got " + stack);
-        }
-        robot.discard();
-        helper.succeed();
+            for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
+                ItemStack stack = builder.getResource(slot);
+                helper.assertTrue(stack.isEmpty() || stack.is(Items.STONE),
+                        "the machine received the blueprint's stone, got " + stack);
+            }
+            helper.succeed();
+        }, "the builder-board robot must fetch the stone and deliver it to the machine's grid",
+                () -> EntityArenaUtil.discard(robot));
     }
 }

@@ -86,7 +86,8 @@ public class AIRobotFetchItemTester {
         EntityArenaUtil.tickUntil(helper, 60, () -> drops.stream().allMatch(drop -> helper.getLevel()
                         .getEntitiesOfClass(ItemEntity.class, AABB.ofSize(drop.position(), 1, 1, 1))
                         .contains(drop)),
-                body, "the test's drops never became visible to entity scans");
+                body, "the test's drops never became visible to entity scans",
+                () -> EntityArenaUtil.discard(drops.toArray(new ItemEntity[0])));
     }
 
     /** The robot's target vanishes mid-fetch (a player grabs it, a hopper eats it) and the SAME cycle's

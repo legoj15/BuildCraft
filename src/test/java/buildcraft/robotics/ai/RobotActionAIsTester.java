@@ -29,6 +29,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.IEntityFilter;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.boards.BoardRobotKnightNBT;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -141,13 +142,9 @@ public class RobotActionAIsTester {
         EntityArenaUtil.tickUntil(helper, 60,
                 () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).stream()
                         .anyMatch(item -> item.getItem().is(Items.WHEAT)),
-                () -> {
-                    for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
-                        item.discard();
-                    }
-                    helper.succeed();
-                },
-                "the harvest drops its loot at the robot (wheat among it)");
+                helper::succeed,
+                "the harvest drops its loot at the robot (wheat among it)",
+                () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).forEach(item -> item.discard()));
     }
 
     /** A robot holding exactly one wheat seed plants it through the fake-player crop handler: farmland
@@ -432,28 +429,22 @@ public class RobotActionAIsTester {
         EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 2, 3));
         EntityArenaUtil.tickUntil(helper, 60, () -> java.util.Arrays.stream(spawned).allMatch(mob -> helper.getLevel()
                         .getEntitiesOfClass(Mob.class, AABB.ofSize(mob.position(), 1, 1, 1)).contains(mob)), () -> {
-            try {
-                EntityRobot robot = unaddedRobot(helper, new BlockPos(1, 2, 2));
-                IEntityFilter hostiles = entity -> entity instanceof Enemy;
-                AIRobotSearchEntity search = new AIRobotSearchEntity(robot, hostiles, 8F, null);
-                search.start();
-                helper.assertTrue(search.success(), "the search finds a hostile in range");
-                helper.assertTrue(search.target == near,
-                        "the nearest hostile wins, got " + search.target);
+            EntityRobot robot = unaddedRobot(helper, new BlockPos(1, 2, 2));
+            IEntityFilter hostiles = entity -> entity instanceof Enemy;
+            AIRobotSearchEntity search = new AIRobotSearchEntity(robot, hostiles, 8F, null);
+            search.start();
+            helper.assertTrue(search.success(), "the search finds a hostile in range");
+            helper.assertTrue(search.target == near,
+                    "the nearest hostile wins, got " + search.target);
 
-                near.discard();
-                far.discard();
-                AIRobotSearchEntity empty = new AIRobotSearchEntity(robot, hostiles, 8F, null);
-                empty.start();
-                helper.assertTrue(!empty.success(),
-                        "no hostiles left in range — the search reports nothing (the cow never matched)");
-            } finally {
-                for (Mob mob : spawned) {
-                    mob.discard();
-                }
-            }
+            near.discard();
+            far.discard();
+            AIRobotSearchEntity empty = new AIRobotSearchEntity(robot, hostiles, 8F, null);
+            empty.start();
+            helper.assertTrue(!empty.success(),
+                    "no hostiles left in range — the search reports nothing (the cow never matched)");
             helper.succeed();
-        }, "the spawned mobs never became visible to entity scans");
+        }, "the spawned mobs never became visible to entity scans", () -> EntityArenaUtil.discard(spawned));
     }
 
     // ---------- knight E2E: SearchEntity → Attack through the live tick loop ----------
@@ -473,19 +464,23 @@ public class RobotActionAIsTester {
         zombie.setNoAi(true);
         zombie.setNoGravity(true);
 
-        EntityRobot robot = new EntityRobot(helper.getLevel(), BoardRobotKnightNBT.INSTANCE);
+        // Zone-pinned: the knight's entity search covers 250 blocks otherwise, and a sibling test's mob is a target.
+        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotKnightNBT.INSTANCE);
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
         robot.setPos(pos.x, pos.y, pos.z);
         robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
         robot.getBattery().addPower(SEEDED_CHARGE, false);
         helper.getLevel().addFreshEntity(robot);
 
-        EntityArenaUtil.tickUntil(helper, 200, zombie::isDeadOrDying, () -> {
-                },
-                "the knight must fell the zombie (three 8.0 swings at the 21-tick cadence)");
-
-        zombie.discard();
-        robot.discard();
-        helper.succeed();
+        // succeed() belongs in the success block: it used to follow the tickUntil call, which only SCHEDULES the
+        // poll, so the test passed on its first tick without the knight ever swinging.
+        EntityArenaUtil.tickUntil(helper, 200, zombie::isDeadOrDying, helper::succeed,
+                "the knight must fell the zombie (three 8.0 swings at the 21-tick cadence)",
+                () -> {
+                    EntityArenaUtil.discard(zombie, robot);
+                    // The zombie's death loot lands in this cell; leaked item entities fail later tests.
+                    helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                            EntityArenaUtil.cellBounds(helper)).forEach(net.minecraft.world.entity.Entity::discard);
+                });
     }
 }

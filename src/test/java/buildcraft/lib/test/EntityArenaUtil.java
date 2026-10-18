@@ -26,6 +26,7 @@ import net.minecraft.world.level.storage.TagValueOutput;
 //?}
 
 import buildcraft.api.core.IFluidHandlerAdv;
+import buildcraft.lib.misc.data.Box;
 
 /**
  * Shared harness for game tests that need a <em>live, ticking entity</em> in the arena rather than just blocks.
@@ -190,6 +191,29 @@ public final class EntityArenaUtil {
             }
             failure.addSuppressed(e);
         }
+    }
+
+    /** The test's own 6x7 arena cell (relative x 0..5, y 0..6, z 0..6) as a robot work / load-unload zone. A
+     *  robot running a board's {@code update()} searches the whole dimension unless its zone says otherwise, and
+     *  other arenas' stations, items and blocks are fair game to it: pin it here. */
+    public static Box cellZone(GameTestHelper gth) {
+        return new Box(gth.absolutePos(BlockPos.ZERO), gth.absolutePos(new BlockPos(5, 6, 6)));
+    }
+
+    /** The same cell as an entity-sweep box (the block cells' outer faces): sweeping any wider reaches into the
+     *  neighbouring arenas and discards THEIR drops. */
+    public static AABB cellBounds(GameTestHelper gth) {
+        return new AABB(Vec3.atLowerCornerOf(gth.absolutePos(BlockPos.ZERO)),
+                Vec3.atLowerCornerOf(gth.absolutePos(new BlockPos(6, 7, 7))));
+    }
+
+    /** Whether entities at {@code relPos} tick. Implies the entity section is accessible, i.e. an entity added
+     *  there is visible to {@code getEntitiesOfClass} at once. The framework waits only for the 1x1 structure's
+     *  own chunk, so a position two blocks in can sit in a neighbouring chunk that is not there yet (measured on
+     *  26.2 and 1.21.11: 20 of 50 samples crossed a chunk border, 6 of 50 were not yet entity-ticking at the
+     *  test's first tick). A test that adds an entity and then scans for it in the same tick must gate on this. */
+    public static boolean isEntityTicking(GameTestHelper gth, BlockPos relPos) {
+        return gth.getLevel().isPositionEntityTicking(gth.absolutePos(relPos));
     }
 
     /** Discards every non-null, still-present entity: the null-safe body of a {@code tickUntil} cleanup. */

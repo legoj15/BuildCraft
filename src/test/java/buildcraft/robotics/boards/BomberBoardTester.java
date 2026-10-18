@@ -18,6 +18,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.entity.EntityRobot;
@@ -31,43 +32,53 @@ public class BomberBoardTester {
 
     /** A robot holding five TNT arrives over the target: one primed TNT appears in the world and four
      *  stay aboard. The arrival is hand-fed ({@code delegateAIEnded} with the goto that just succeeded),
-     *  exactly what {@code AIRobot.terminate()} does when the real flight lands, so no flight, ticking or
-     *  station is needed — and the primed TNT is discarded before its fuse can matter. */
+     *  exactly what {@code AIRobot.terminate()} does when the real flight lands, so no flight or station is
+     *  needed, and the primed TNT is discarded before its fuse can matter.
+     *
+     *  <p>The drop and the scan for it share one tick, so that tick must come after the robot's chunk is
+     *  entity-ticking: the framework waits only for the 1x1 structure's own chunk, (2, 4, 2) lands in a
+     *  neighbouring chunk whenever the arena origin sits near a chunk edge, and a TNT added to a chunk whose
+     *  entities are not loaded yet is invisible to the scan (and then leaks, fuse lit, into the level). Failed
+     *  once on 26.2 that way: zero primed TNT found. */
     public static void bomberDropsExactlyOneTnt(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos robotRel = new BlockPos(2, 4, 2);
+        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
-        robot.setInventoryStack(0, new ItemStack(Items.TNT, 5));
+        List<PrimedTnt> primed = new ArrayList<>();
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isEntityTicking(helper, robotRel), () -> {
+            EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+            Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+            robot.setPos(pos.x, pos.y, pos.z);
+            robot.getBattery().addPower(SEEDED_CHARGE, false);
+            robot.setInventoryStack(0, new ItemStack(Items.TNT, 5));
 
-        AABB arena = new AABB(pos, pos).inflate(4.0, 4.0, 4.0);
-        List<PrimedTnt> preexisting = new ArrayList<>(level.getEntitiesOfClass(PrimedTnt.class, arena));
-        BoardRobotBomber board = new BoardRobotBomber(robot);
+            AABB cell = EntityArenaUtil.cellBounds(helper);
+            List<PrimedTnt> preexisting = new ArrayList<>(level.getEntitiesOfClass(PrimedTnt.class, cell));
+            BoardRobotBomber board = new BoardRobotBomber(robot);
 
-        AIRobotGotoBlock arrived = new AIRobotGotoBlock(robot, robot.blockPosition().getX(),
-                robot.blockPosition().getY(), robot.blockPosition().getZ());
-        board.delegateAIEnded(arrived);
+            AIRobotGotoBlock arrived = new AIRobotGotoBlock(robot, robot.blockPosition().getX(),
+                    robot.blockPosition().getY(), robot.blockPosition().getZ());
+            board.delegateAIEnded(arrived);
 
-        List<PrimedTnt> primed = new ArrayList<>(level.getEntitiesOfClass(PrimedTnt.class, arena));
-        primed.removeAll(preexisting);
-        // Discarded before any assertion can throw: a leaked primed TNT would blow up inside a sibling test.
-        primed.forEach(PrimedTnt::discard);
+            primed.addAll(level.getEntitiesOfClass(PrimedTnt.class, cell));
+            primed.removeAll(preexisting);
 
-        helper.assertTrue(primed.size() == 1,
-                "arriving over the target primes exactly one TNT, got " + primed.size());
+            helper.assertTrue(primed.size() == 1,
+                    "arriving over the target primes exactly one TNT, got " + primed.size());
 
-        int remaining = 0;
-        for (int slot = 0; slot < robot.getInventorySize(); slot++) {
-            ItemStack stack = robot.getInventoryStack(slot);
-            if (stack.is(Items.TNT)) {
-                remaining += stack.getCount();
+            int remaining = 0;
+            for (int slot = 0; slot < robot.getInventorySize(); slot++) {
+                ItemStack stack = robot.getInventoryStack(slot);
+                if (stack.is(Items.TNT)) {
+                    remaining += stack.getCount();
+                }
             }
-        }
-        helper.assertTrue(remaining == 4,
-                "one TNT left the cargo — the other four must stay aboard, got " + remaining);
-        helper.succeed();
+            helper.assertTrue(remaining == 4,
+                    "one TNT left the cargo — the other four must stay aboard, got " + remaining);
+            helper.succeed();
+        }, "the robot's chunk never became entity-ticking",
+                // Discarded on every exit: a leaked primed TNT would blow up inside a sibling test.
+                () -> primed.forEach(PrimedTnt::discard));
     }
 }

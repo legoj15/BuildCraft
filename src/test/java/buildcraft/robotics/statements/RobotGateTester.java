@@ -39,6 +39,7 @@ import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotRegistry;
 import buildcraft.robotics.RobotStationPluggable;
+import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
@@ -189,18 +190,19 @@ public class RobotGateTester {
         return map;
     }
 
-    private static void dropItem(GameTestHelper helper, BlockPos relPos, ItemStack stack) {
+    private static ItemEntity dropItem(GameTestHelper helper, BlockPos relPos, ItemStack stack) {
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
         ItemEntity item = new ItemEntity(helper.getLevel(), pos.x, pos.y, pos.z, stack);
         item.setNoGravity(true);
         helper.getLevel().addFreshEntity(item);
+        return item;
     }
 
     // ---------- sleep trigger + wakeup action ----------
 
     /** A picker docked at a station with the sleep trigger + wakeup action gate: the trigger fires while it
-     *  sleeps, and the wakeup preempts the sleep so the picker re-scans and fetches an item (the diamond dropped
-     *  after it was asleep, or a nearer neighbour-cell item — either proves the wake). The wake is observable ONLY through the fetch: a preempted sleep is re-entered within
+     *  sleeps, and the wakeup preempts the sleep so the picker re-scans and fetches the diamond dropped after it
+     *  was asleep (its zone is this cell). The wake is observable ONLY through the fetch: a preempted sleep is re-entered within
      *  the same tick (the board's GotoSleep fallback), so {@code isSleeping()} polls would never see it. */
     public static void sleepTriggerAndWakeupPreemptsPicker(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 2);
@@ -211,6 +213,7 @@ public class RobotGateTester {
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
 
         EntityRobot[] robot = { null };
+        ItemEntity[] diamond = { null };
         boolean[] docked = { false };
         int[] phase = { 0 }; // 0: station registered, 1: dock + sleep, 2: gate + drop, then fetch
         // ONE flat tickUntil scheduled from the test body. Nested tickUntils are forbidden: runAfterDelay
@@ -226,7 +229,9 @@ public class RobotGateTester {
                             return false;
                         }
                         phase[0] = 1;
-                        robot[0] = addBoardRobot(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
+                        // Zone-pinned: an unzoned picker's fetch searches the whole dimension and takes
+                        // whatever neighbouring arenas drop, which is both this test's noise and their loss.
+                        robot[0] = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotPickerNBT.INSTANCE);
                         robot[0].getBattery().addPower(SEEDED_CHARGE, false);
                         return false;
                     }
@@ -259,21 +264,23 @@ public class RobotGateTester {
                         gate.logic.resolveActions();
                         helper.assertTrue(gate.logic.triggerOn[0],
                                 "the sleep trigger must fire while a robot sleeps at the station");
-                        dropItem(helper, itemRel, new ItemStack(Items.DIAMOND));
+                        diamond[0] = dropItem(helper, itemRel, new ItemStack(Items.DIAMOND));
                         return false;
                     }
                     return robot[0].containsItems();
                 },
                 () -> {
-                    // Holding ANYTHING is the proof: the robot was asleep (override) before the gate and the
-                    // drop, and a sleeper never fetches. Do NOT pin the diamond itself — game tests run side
-                    // by side and the picker's search roams past this cell, so a neighbour's dropped item can
-                    // be nearer and legitimately fetched first (seen 2026-09-26 on 26.1.2). The diamond only
-                    // guarantees there is something to fetch; a missed wakeup still times out above.
-                    robot[0].discard();
+                    // The robot was asleep (override) before the gate and the drop, and a sleeper never
+                    // fetches, so a fetch is the proof. Its zone is this cell, so the diamond is the only thing
+                    // it can have fetched (before the pin, a neighbour's nearer drop could be taken first:
+                    // seen 2026-09-26 on 26.1.2).
+                    helper.assertTrue(robot[0].getInventoryStack(0).is(Items.DIAMOND),
+                            "the woken picker fetches the diamond dropped in its cell, holding "
+                                    + robot[0].getInventoryStack(0));
                     helper.succeed();
                 },
-                "the picker never fell asleep at the station (or the wakeup never made it fetch)");
+                "the picker never fell asleep at the station (or the wakeup never made it fetch)",
+                () -> EntityArenaUtil.discard(robot[0], diamond[0]));
     }
 
     // ---------- forbid robot (the D1 pin) ----------
@@ -362,7 +369,6 @@ public class RobotGateTester {
                 () -> {
                     boolean sleeping = robot[0].isSleeping();
                     ItemStack cargo = robot[0].getInventoryStack(0).copy();
-                    robot[0].discard();
                     helper.assertFalse(dockedAtForbidden[0],
                             "the carrier must never dock at the gate-forbidden station — 7.1.x "
                                     + "search skips stations the forbid action names");
@@ -372,7 +378,8 @@ public class RobotGateTester {
                     helper.assertTrue(sleeping, "the carrier must settle into sleep at its home station");
                     helper.succeed();
                 },
-                "the carrier neither docked at the forbidden station nor settled into sleep");
+                "the carrier neither docked at the forbidden station nor settled into sleep",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     // ---------- goto station action ----------
@@ -439,11 +446,9 @@ public class RobotGateTester {
                     }
                     return robot[0].getDockingStation() == stationB[0];
                 },
-                () -> {
-                    robot[0].discard();
-                    helper.succeed();
-                },
-                "the redirected robot never docked at station B");
+                helper::succeed,
+                "the redirected robot never docked at station B",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** The same action with its map-location parameter LEFT EMPTY. 7.1.x defaulted {@code newStation} to
@@ -504,11 +509,9 @@ public class RobotGateTester {
                             "the redirect must be a goto-station move, got " + override);
                     return true;
                 },
-                () -> {
-                    robot[0].discard();
-                    helper.succeed();
-                },
-                "the station never registered, or the robot never received its id");
+                helper::succeed,
+                "the station never registered, or the robot never received its id",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** A robot already docked at the station the action names - an empty parameter defaults to the gate's own
@@ -580,11 +583,9 @@ public class RobotGateTester {
                                     + robot[0].getOverridingAI());
                     return ++settled[0] >= 20;
                 },
-                () -> {
-                    robot[0].discard();
-                    helper.succeed();
-                },
-                "the station never registered, or the robot never received its id");
+                helper::succeed,
+                "the station never registered, or the robot never received its id",
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 
     /** A robot the registry knows about (id assigned) but that is not in the world: a stand-in holder for a
@@ -600,6 +601,15 @@ public class RobotGateTester {
 
     private static RobotRegistry registry(GameTestHelper helper) {
         return (RobotRegistry) RobotManager.registryProvider.getRegistry(helper.getLevel());
+    }
+
+    /** The cleanup of the two-robot tests: the live robot leaves the world (its removal path frees what it held)
+     *  and the off-world holder is killed through the registry, whichever of the two the test got as far as. */
+    private static void cleanUp(GameTestHelper helper, EntityRobot robot, EntityRobot holder) {
+        EntityArenaUtil.discard(robot);
+        if (holder != null) {
+            registry(helper).killRobot(holder);
+        }
     }
 
     /** A robot docked at its home A, whose gate sends it to station B while another robot holds B. The goto could
@@ -646,7 +656,6 @@ public class RobotGateTester {
                         if (robot[0].getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
                             return false;
                         }
-                        holder[0] = registeredOffWorldRobot(helper);
                         // Advanced before any assertion: a failed assertion must fail the test, not re-run this
                         // one-shot setup on the next poll.
                         phase[0] = 2;
@@ -682,12 +691,9 @@ public class RobotGateTester {
                                     + "replaced by " + active);
                     return ++settled[0] >= 20;
                 },
-                () -> {
-                    robot[0].discard();
-                    registry(helper).killRobot(holder[0]);
-                    helper.succeed();
-                },
-                "the robot never settled into its sleep at A under the gate");
+                helper::succeed,
+                "the robot never settled into its sleep at A under the gate",
+                () -> cleanUp(helper, robot[0], holder[0]));
     }
 
     /** A redirect that fails (here: another robot takes B between the gate handing it out and the robot starting
@@ -772,11 +778,8 @@ public class RobotGateTester {
                     // The back-off is temporary: the gate sends the robot to B once it runs out.
                     return robot[0].getDockingStation() == stationB;
                 },
-                () -> {
-                    robot[0].discard();
-                    registry(helper).killRobot(holder[0]);
-                    helper.succeed();
-                },
-                "the redirect never failed, or the robot never reached B once the back-off ran out");
+                helper::succeed,
+                "the redirect never failed, or the robot never reached B once the back-off ran out",
+                () -> cleanUp(helper, robot[0], holder[0]));
     }
 }

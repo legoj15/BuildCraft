@@ -278,6 +278,13 @@ public final class EntityArenaUtil {
                     } else if (tick >= firstFiredAt[0] + gapTicks) {
                         done[0] = true;
                         second.run();
+                    } else if (tick == maxTicks) {
+                        // Only reachable when gapTicks >= maxTicks (the pre-first-phase check above keeps every
+                        // other late start from firing): the second phase cannot land inside the poll, so fail
+                        // here and let the finally clean up rather than leave it to the framework timeout.
+                        done[0] = true;
+                        fail.accept(failureMessage + " (second phase due at tick " + (firstFiredAt[0] + gapTicks)
+                                + ", past the poll's " + maxTicks + ")");
                     } else {
                         keepPolling = true;
                     }

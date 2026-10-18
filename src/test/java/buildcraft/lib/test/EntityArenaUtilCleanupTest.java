@@ -166,4 +166,38 @@ public class EntityArenaUtilCleanupTest {
         Assertions.assertTrue(ticks.thrown.getMessage().startsWith("never came true"), ticks.thrown.getMessage());
         Assertions.assertEquals(List.of("cleanup"), log);
     }
+
+    /** A condition that comes true too late for the second phase to fit never runs the first phase: the poll
+     *  gives up on the last tick a {@code gapTicks} gap still fits after (60 of 120), fails, and cleans up. */
+    @Test
+    void twoPhaseLateConditionFailsBeforeTheFirstPhaseAndCleansUp() {
+        FakeTicks ticks = new FakeTicks();
+        List<String> log = new ArrayList<>();
+        int[] polls = { 0 };
+        EntityArenaUtil.schedulePollThen(ticks, EntityArenaUtilCleanupTest::fail, 120,
+                () -> ++polls[0] >= 61, () -> log.add("first"), 60, () -> log.add("second"), "too late",
+                () -> log.add("cleanup"));
+        ticks.runAll();
+        Assertions.assertNotNull(ticks.thrown, "the poll must fail, not fall through to the framework timeout");
+        Assertions.assertTrue(ticks.thrown.getMessage().startsWith("too late"), ticks.thrown.getMessage());
+        Assertions.assertEquals(60, polls[0], "gave up on tick 60, the last tick a 60-tick gap fits after");
+        Assertions.assertEquals(List.of("cleanup"), log);
+    }
+
+    /** A gap at least as long as the poll: the first phase fires on tick 1, but the second would land past
+     *  {@code maxTicks}. The poll must still fail with its own message on its last tick and clean up, instead of
+     *  leaving the test to the framework's generic timeout with its entities still in the level. */
+    @Test
+    void twoPhaseSecondPhasePastMaxTicksFailsAndCleansUp() {
+        FakeTicks ticks = new FakeTicks();
+        List<String> log = new ArrayList<>();
+        EntityArenaUtil.schedulePollThen(ticks, EntityArenaUtilCleanupTest::fail, 5,
+                () -> true, () -> log.add("first"), 10, () -> log.add("second"), "second phase never ran",
+                () -> log.add("cleanup"));
+        ticks.runAll();
+        Assertions.assertNotNull(ticks.thrown, "the poll must fail on its last tick");
+        Assertions.assertTrue(ticks.thrown.getMessage().startsWith("second phase never ran"),
+                ticks.thrown.getMessage());
+        Assertions.assertEquals(List.of("first", "cleanup"), log);
+    }
 }

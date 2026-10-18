@@ -1,0 +1,570 @@
+{
+  "name": "robots-misc",
+  "description": "Fluid Carrier, Bomber and Stripes confined by zones, and the laser-powered Programming / Integration Tables making a Carrier board and robot.",
+  "base": [
+    0,
+    150,
+    120
+  ],
+  "steps": [
+    {
+      "label": "load chunks",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "?forceload add {X-16} {Z-12} {X+28} {Z+12}"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        -10
+      ],
+      "yaw": 0,
+      "pitch": 25
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "label": "clear and floor",
+      "do": "cmd",
+      "run": [
+        "difficulty peaceful",
+        "time set 6000",
+        "?gamerule doDaylightCycle false",
+        "?gamerule advance_time false",
+        "weather clear",
+        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..200]",
+        "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..60]",
+        "?kill @e[type=minecraft:tnt,x={X},y={Y},z={Z},distance=..60]",
+        "?fill {X-16} {Y} {Z-12} {X+28} {Y+8} {Z+12} minecraft:air",
+        "fill {X-16} {Y-1} {Z-12} {X+28} {Y-1} {Z+12} minecraft:smooth_stone"
+      ]
+    },
+    {
+      "label": "fluid supply: wooden fluid pipe over a tank, Provide Fluids",
+      "do": "cmd",
+      "run": [
+        "setblock {X-10} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-10} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_fluid\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_fluids\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.load_unload_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X-11},yMin:{Y-1},zMin:{Z-1},xMax:{X-5},yMax:{Y+3},zMax:{Z+1}}}}}}}}}}}",
+        "setblock {X-10} {Y} {Z} buildcraftunofficial:tank"
+      ]
+    },
+    {
+      "label": "fluid destination: cobblestone fluid pipe over a tank, Accept Fluids",
+      "do": "cmd",
+      "run": [
+        "setblock {X-6} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-6} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:0b,modifier:0b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.accept_fluids\",side:6b}}}}}}}",
+        "setblock {X-6} {Y} {Z} buildcraftunofficial:tank"
+      ]
+    },
+    {
+      "label": "fill tank at -10,0 (1.21.1)",
+      "do": "cmd",
+      "nodes": [
+        "1.21.1"
+      ],
+      "run": [
+        "data merge block {X-10} {Y} {Z} {fluid0:\"minecraft:water\",amount0:8000}"
+      ]
+    },
+    {
+      "label": "fill tank at -10,0 (1.21.10/1.21.11/26.1.2/26.2)",
+      "do": "cmd",
+      "nodes": [
+        "1.21.10",
+        "1.21.11",
+        "26.1.2",
+        "26.2"
+      ],
+      "run": [
+        "data merge block {X-10} {Y} {Z} {stacks:[{id:\"minecraft:water\",amount:8000}]}"
+      ]
+    },
+    {
+      "label": "supply tank holds water",
+      "do": "cmd",
+      "run": [
+        "data get block {X-10} {Y} {Z}"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "stripes home (16 cobblestone)",
+      "do": "cmd",
+      "run": [
+        "setblock {X-1} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-1} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X-3},yMin:{Y},zMin:{Z+4},xMax:{X-1},yMax:{Y+1},zMax:{Z+6}}}}}}}}}}}",
+        "setblock {X-1} {Y} {Z} minecraft:chest",
+        "item replace block {X-1} {Y} {Z} container.0 with minecraft:cobblestone 16"
+      ]
+    },
+    {
+      "label": "bomb pit (dirt, 10+ blocks from any station)",
+      "do": "cmd",
+      "run": [
+        "fill {X+20} {Y-3} {Z-2} {X+24} {Y-1} {Z+2} minecraft:dirt"
+      ]
+    },
+    {
+      "label": "bomber home (4 TNT)",
+      "do": "cmd",
+      "run": [
+        "setblock {X+10} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+10} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:2b,modifier:2b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}},\"trigger[1]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[1]\":{s:{kind:\"buildcraft:robot.work_in_area\",side:6b},\"0\":{kind:\"buildcraft:maplocation\",stack:{id:\"buildcraftunofficial:map_location\",count:1,components:{\"minecraft:custom_data\":{mapType:\"AREA\",xMin:{X+20},yMin:{Y-3},zMin:{Z-2},xMax:{X+24},yMax:{Y-1},zMax:{Z+2}}}}}}}}}}}",
+        "setblock {X+10} {Y} {Z} minecraft:chest",
+        "item replace block {X+10} {Y} {Z} container.0 with minecraft:tnt 4"
+      ]
+    },
+    {
+      "label": "delivery supply (16 diamonds, Provide Items)",
+      "do": "cmd",
+      "run": [
+        "setblock {X-12} {Y+1} {Z+8} buildcraftunofficial:pipe_holder",
+        "data merge block {X-12} {Y+1} {Z+8} {pipe:{def:\"buildcraftunofficial:wood_item\",beh:{currentDir:\"DOWN\"}},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:0b,modifier:0b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.provide_items\",side:6b}}}}}}}",
+        "setblock {X-12} {Y} {Z+8} minecraft:chest",
+        "item replace block {X-12} {Y} {Z+8} container.0 with minecraft:diamond 16"
+      ]
+    },
+    {
+      "label": "requester dock + Requester asking for 4 diamonds",
+      "do": "cmd",
+      "run": [
+        "setblock {X-6} {Y+1} {Z+8} buildcraftunofficial:pipe_holder",
+        "data merge block {X-6} {Y+1} {Z+8} {pipe:{def:\"buildcraftunofficial:cobblestone_item\"},plugs:{up:{id:\"buildcraftunofficial:robot_station\",data:{}},north:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:0b,modifier:0b},\"trigger[0]\":{s:{kind:\"buildcraftunofficial:trigger.true\",side:6b}},\"action[0]\":{s:{kind:\"buildcraft:station.accept_items\",side:6b}}}}}}}",
+        "setblock {X-6} {Y} {Z+8} minecraft:smooth_stone",
+        "setblock {X-5} {Y+1} {Z+8} buildcraftunofficial:requester",
+        "data merge block {X-5} {Y+1} {Z+8} {items:{req:{items:[{stack:{id:\"minecraft:diamond\",count:4}}]}}}"
+      ]
+    },
+    {
+      "label": "requester request saved",
+      "do": "cmd",
+      "run": [
+        "data get block {X-5} {Y+1} {Z+8} items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "programming table + laser",
+      "do": "cmd",
+      "run": [
+        "setblock {X+4} {Y} {Z-6} buildcraftunofficial:laser[facing=south]",
+        "setblock {X+4} {Y} {Z-7} buildcraftunofficial:engine_creative[facing=south]",
+        "data merge block {X+4} {Y} {Z-7} {currentOutputIndex:2}",
+        "setblock {X+3} {Y} {Z-7} minecraft:redstone_block",
+        "setblock {X+4} {Y} {Z-4} buildcraftunofficial:programming_table"
+      ]
+    },
+    {
+      "label": "integration table + laser",
+      "do": "cmd",
+      "run": [
+        "setblock {X+8} {Y} {Z-6} buildcraftunofficial:laser[facing=south]",
+        "setblock {X+8} {Y} {Z-7} buildcraftunofficial:engine_creative[facing=south]",
+        "data merge block {X+8} {Y} {Z-7} {currentOutputIndex:2}",
+        "setblock {X+7} {Y} {Z-7} minecraft:redstone_block",
+        "setblock {X+8} {Y} {Z-4} buildcraftunofficial:integration_table"
+      ]
+    },
+    {
+      "label": "programming table: blank board, Carrier program (option 1)",
+      "do": "cmd",
+      "run": [
+        "data merge block {X+4} {Y} {Z-4} {items:{board:{items:[{stack:{id:\"buildcraftunofficial:redstone_board\",count:1}}]}},recipeId:\"buildcraftunofficial:redstone_board\",optionId:1}"
+      ]
+    },
+    {
+      "label": "integration table: blank robot + a Carrier board",
+      "do": "cmd",
+      "run": [
+        "data merge block {X+8} {Y} {Z-4} {items:{target:{items:[{stack:{id:\"buildcraftunofficial:robot\",count:1}}]},toIntegrate:{items:[{stack:{id:\"buildcraftunofficial:redstone_board\",count:1,components:{\"minecraft:custom_data\":{board:{id:\"buildcraftunofficial:boardRobotCarrier\"}}}}}]}}}"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "name": "rig4-empty",
+      "do": "shot",
+      "look": "fluid stations with tanks (left), stripes station, bomber station, dirt pit far right; two lasers firing at the Programming and Integration Tables in front"
+    },
+    {
+      "label": "deploy fluid carrier at the supply",
+      "do": "tp",
+      "at": [
+        -10,
+        2,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotFluidCarrier\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "deploy stripes",
+      "do": "tp",
+      "at": [
+        -1,
+        2,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotStripes\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "deploy bomber",
+      "do": "tp",
+      "at": [
+        10,
+        2,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotBomber\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "deploy delivery robot at the supply",
+      "do": "tp",
+      "at": [
+        -12,
+        2,
+        8
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "hold",
+      "item": "buildcraftunofficial:robot[minecraft:custom_data={board:{id:\"buildcraftunofficial:boardRobotDelivery\"},energy:5000000000L}]"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "do": "hold",
+      "item": "minecraft:air"
+    },
+    {
+      "label": "robots deployed (expect 4)",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..40]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "viewing pillar",
+      "do": "cmd",
+      "run": [
+        "setblock {X+4} {Y+5} {Z-11} minecraft:glass"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        4,
+        6,
+        -11
+      ],
+      "yaw": 0,
+      "pitch": 30
+    },
+    {
+      "do": "wait",
+      "ms": 15000
+    },
+    {
+      "name": "rig4-15s",
+      "do": "shot",
+      "look": "lasers beaming into both tables; fluid carrier moving between tanks; stripes placing cobblestone; bomber flying to the pit"
+    },
+    {
+      "do": "wait",
+      "ms": 30000
+    },
+    {
+      "name": "rig4-45s",
+      "do": "shot",
+      "look": "craters in the dirt pit; cobblestone placed in the stripes box; nothing outside the zones damaged"
+    },
+    {
+      "do": "wait",
+      "ms": 40000
+    },
+    {
+      "name": "rig4-85s",
+      "do": "shot",
+      "look": "steady state; tables finished (result slots filled)"
+    },
+    {
+      "label": "programming table (expect a Carrier board in result)",
+      "do": "cmd",
+      "run": [
+        "data get block {X+4} {Y} {Z-4} items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "integration table (expect a Carrier robot in result)",
+      "do": "cmd",
+      "run": [
+        "data get block {X+8} {Y} {Z-4} items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "destination tank (expect water)",
+      "do": "cmd",
+      "run": [
+        "data get block {X-6} {Y} {Z}"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "supply tank after",
+      "do": "cmd",
+      "run": [
+        "data get block {X-10} {Y} {Z}"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "cobblestone placed by stripes (count; destructive)",
+      "do": "cmd",
+      "run": [
+        "fill {X-3} {Y} {Z+4} {X-1} {Y+1} {Z+6} minecraft:air replace minecraft:cobblestone"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "dirt left in the pit (count; destructive; 75 at start)",
+      "do": "cmd",
+      "run": [
+        "fill {X+20} {Y-3} {Z-2} {X+24} {Y-1} {Z+2} minecraft:stone replace minecraft:dirt"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "bomber chest TNT left",
+      "do": "cmd",
+      "run": [
+        "data get block {X+10} {Y} {Z} Items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "floor outside the pit intact (expect pass)",
+      "do": "cmd",
+      "run": [
+        "execute if blocks {X-16} {Y-1} {Z-12} {X+18} {Y-1} {Z+12} {X-16} {Y-1} {Z-12} all"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "requester holds the delivered diamonds (expect 4 in inv)",
+      "do": "cmd",
+      "run": [
+        "data get block {X-5} {Y+1} {Z+8} items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "delivery supply chest left (expect 12)",
+      "do": "cmd",
+      "run": [
+        "data get block {X-12} {Y} {Z+8} Items"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "FluidCarrier alive",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotFluidCarrier\"}]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "Stripes alive",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotStripes\"}]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "Bomber alive",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotBomber\"}]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "Delivery alive",
+      "do": "cmd",
+      "run": [
+        "execute if entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotDelivery\"}]"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "fluid carrier robot tank",
+      "do": "cmd",
+      "run": [
+        "data get entity @e[type=buildcraftunofficial:robot,nbt={boardId:\"buildcraftunofficial:boardRobotFluidCarrier\"},limit=1] tank"
+      ],
+      "allowFail": true,
+      "echo": true
+    },
+    {
+      "label": "tables GUI",
+      "do": "tp",
+      "at": [
+        6,
+        0,
+        -2
+      ],
+      "yaw": 180,
+      "pitch": 20
+    },
+    {
+      "do": "aim",
+      "at": [
+        4,
+        0,
+        -4
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "Programming"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "programming-table-done",
+      "do": "shot",
+      "look": "Programming Table GUI: the Carrier option selected, a programmed board in the output, energy bar"
+    },
+    {
+      "do": "widgets",
+      "name": "programming-table"
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "aim",
+      "at": [
+        8,
+        0,
+        -4
+      ]
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "Integration"
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "name": "integration-table-done",
+      "do": "shot",
+      "look": "Integration Table GUI: robot preview, the programmed robot in the output, progress complete"
+    },
+    {
+      "do": "close"
+    }
+  ]
+}

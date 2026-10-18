@@ -148,43 +148,6 @@ public class ZonePlan implements IZone {
         return result;
     }
 
-    /** Receives one occupied chunk of a plan: its chunk coordinates and the chunk itself (do not modify it). */
-    @FunctionalInterface
-    public interface ChunkVisitor {
-        void visit(int chunkX, int chunkZ, ZoneChunk chunk);
-    }
-
-    /**
-     * Visits the occupied chunks whose coordinates lie in {@code [minChunkX, maxChunkX] x [minChunkZ, maxChunkZ]}
-     * (both inclusive), in no particular order, and touches no other chunk. A small window is probed coordinate by
-     * coordinate and a window wider than the plan is filtered from the plan's own chunks, so the cost follows
-     * whichever is smaller: a view of a few chunks pays nothing for a layer painted across the whole survey.
-     */
-    public void forEachChunkIn(int minChunkX, int minChunkZ, int maxChunkX, int maxChunkZ, ChunkVisitor visitor) {
-        if (minChunkX > maxChunkX || minChunkZ > maxChunkZ || chunkMapping.isEmpty()) {
-            return;
-        }
-        long window = ((long) maxChunkX - minChunkX + 1) * ((long) maxChunkZ - minChunkZ + 1);
-        if (window <= chunkMapping.size()) {
-            for (int cx = minChunkX; cx <= maxChunkX; cx++) {
-                for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                    ZoneChunk chunk = chunkMapping.get(packChunkKey(cx, cz));
-                    if (chunk != null) {
-                        visitor.visit(cx, cz, chunk);
-                    }
-                }
-            }
-        } else {
-            for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
-                int cx = unpackChunkX(e.getKey());
-                int cz = unpackChunkZ(e.getKey());
-                if (cx >= minChunkX && cx <= maxChunkX && cz >= minChunkZ && cz <= maxChunkZ) {
-                    visitor.visit(cx, cz, e.getValue());
-                }
-            }
-        }
-    }
-
     /**
      * A copy of this plan with every marked column moved by {@code (offsetX, offsetZ)} blocks: the tile-relative
      * &lt;-&gt; world translation of a planner transfer. A multiple-of-16 offset on both axes only renumbers the

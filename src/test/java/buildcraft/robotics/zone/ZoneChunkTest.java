@@ -5,7 +5,10 @@
  */
 package buildcraft.robotics.zone;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Random;
 
 import io.netty.buffer.Unpooled;
@@ -204,6 +207,62 @@ public class ZoneChunkTest {
         chunk.set(0, 0, true);
         Assertions.assertEquals(-3, chunk.getRandomBlockPos(new Random(5L), -3, -3).getY(),
                 "both bounds are inclusive");
+    }
+
+    // ── Allocation-free readers (the overlay cache and ZonePlan.getWithOffset read chunks this way) ──────────
+
+    private static ZoneChunk sample() {
+        ZoneChunk chunk = new ZoneChunk();
+        chunk.set(0, 0, true);
+        chunk.set(15, 0, true);
+        chunk.set(3, 7, true);
+        chunk.set(4, 7, true);
+        chunk.set(15, 15, true);
+        return chunk;
+    }
+
+    @Test
+    public void testForEachSetVisitsExactlyGetAllInTheSameOrder() {
+        for (ZoneChunk chunk : new ZoneChunk[] {sample(), ZoneChunk.full(), new ZoneChunk()}) {
+            List<String> viaVisitor = new ArrayList<>();
+            chunk.forEachSet((x, z) -> viaVisitor.add(x + "," + z));
+            List<String> viaList = new ArrayList<>();
+            for (int[] p : chunk.getAll()) {
+                viaList.add(p[0] + "," + p[1]);
+            }
+            Assertions.assertEquals(viaList, viaVisitor);
+        }
+    }
+
+    @Test
+    public void testRowBitsReadsOneRowAsAMask() {
+        ZoneChunk chunk = sample();
+        Assertions.assertEquals(0b1000_0000_0000_0001, chunk.rowBits(0));
+        Assertions.assertEquals(0, chunk.rowBits(1));
+        Assertions.assertEquals((1 << 3) | (1 << 4), chunk.rowBits(7));
+        Assertions.assertEquals(1 << 15, chunk.rowBits(15));
+        Assertions.assertEquals(0xFFFF, ZoneChunk.full().rowBits(9));
+        Assertions.assertEquals(0, new ZoneChunk().rowBits(3));
+    }
+
+    @Test
+    public void testFromRowsRebuildsTheChunkAndRecognisesFullAndEmpty() {
+        ZoneChunk source = sample();
+        int[] rows = new int[16];
+        for (int z = 0; z < 16; z++) {
+            rows[z] = source.rowBits(z);
+        }
+        Assertions.assertTrue(source.sameContent(ZoneChunk.fromRows(rows)));
+
+        int[] full = new int[16];
+        Arrays.fill(full, 0xFFFF);
+        Assertions.assertTrue(ZoneChunk.fromRows(full).isFull(), "16 full rows are the full flag, as set() would promote");
+        Assertions.assertTrue(ZoneChunk.fromRows(new int[16]).isEmpty());
+        full[5] = 0xFFFE;
+        ZoneChunk almost = ZoneChunk.fromRows(full);
+        Assertions.assertFalse(almost.isFull());
+        Assertions.assertFalse(almost.get(0, 5));
+        Assertions.assertEquals(255, almost.getAll().size());
     }
 
     // ── Bits beyond the chunk ────────────────────────────────────────────────────────────

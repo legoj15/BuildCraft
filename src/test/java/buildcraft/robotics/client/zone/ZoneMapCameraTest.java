@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 public class ZoneMapCameraTest {
 
     private static final double EPS = 1e-6;
+    /** The build floor of a 26.x overworld, which the renderer's window and the picker both reach down to. */
+    private static final int MIN_BUILD_Y = -64;
 
     /** Forward-project a ground point to a viewport-centre-relative pixel offset, the inverse of pickGround. */
     private static double[] projectGround(ZoneMapCamera cam, double wx, double wz) {
@@ -121,7 +123,7 @@ public class ZoneMapCameraTest {
             for (int wz = -24; wz <= 24; wz += 8) {
                 double sx = cam.canvasX(wx, h, wz) * cam.pxPerBlock;
                 double sy = cam.canvasY(wx, h, wz) * cam.pxPerBlock;
-                int[] hit = cam.pickTerrain(sx, sy, flat);
+                int[] hit = cam.pickTerrain(sx, sy, flat, MIN_BUILD_Y);
                 Assertions.assertNotNull(hit, "ray hit at " + wx + "," + wz);
                 Assertions.assertEquals(wx, hit[0], 1, "picked X near " + wx + "," + wz);
                 Assertions.assertEquals(wz, hit[2], 1, "picked Z near " + wx + "," + wz);
@@ -133,7 +135,7 @@ public class ZoneMapCameraTest {
     @Test
     void terrainPickMissesOverEmptyColumns() {
         ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
-        Assertions.assertNull(cam.pickTerrain(20, 15, (x, z) -> Integer.MIN_VALUE), "no data → no hit");
+        Assertions.assertNull(cam.pickTerrain(20, 15, (x, z) -> Integer.MIN_VALUE, MIN_BUILD_Y), "no data → no hit");
     }
 
     @Test
@@ -169,7 +171,7 @@ public class ZoneMapCameraTest {
 
         // 40 px right of centre is 10 blocks out at ground level: well clear of the tower, but the ray crosses
         // the tower's columns on its way down from the camera.
-        int[] hit = cam.pickTerrain(40, 0, tower);
+        int[] hit = cam.pickTerrain(40, 0, tower, MIN_BUILD_Y);
         Assertions.assertNotNull(hit, "the ground beyond the tower is pickable");
         Assertions.assertEquals(ground, hit[1], "the ray hits the ground, not the tower it passed over");
         Assertions.assertEquals(9, hit[0], 1, "the ground column under the cursor (10 blocks out, minus the plane offset)");
@@ -181,13 +183,75 @@ public class ZoneMapCameraTest {
         // The edge of the rule: surface 150 tops out 9 blocks under the camera (160) and is skipped; surface 149
         // tops out 10 under it and is still the thing the cursor lands on.
         ZoneMapCamera cam = new ZoneMapCamera(0, 64, 0);
-        Assertions.assertNull(cam.pickTerrain(0, 0, (x, z) -> 64 + 95),
+        Assertions.assertNull(cam.pickTerrain(0, 0, (x, z) -> 64 + 95, MIN_BUILD_Y),
                 "a world whose every top reaches the camera has nothing in view to pick");
-        Assertions.assertNull(cam.pickTerrain(0, 0, (x, z) -> 64 + 86),
+        Assertions.assertNull(cam.pickTerrain(0, 0, (x, z) -> 64 + 86, MIN_BUILD_Y),
                 "nor one whose every top is within the near clip of it");
-        int[] hit = cam.pickTerrain(0, 0, (x, z) -> 64 + 85);
+        int[] hit = cam.pickTerrain(0, 0, (x, z) -> 64 + 85, MIN_BUILD_Y);
         Assertions.assertNotNull(hit, "a top just outside the near clip is still in view");
         Assertions.assertEquals(64 + 85, hit[1]);
+    }
+
+    // ── Picking reaches as deep as the renderer draws ────────────────────────────────────────
+
+    @Test
+    void terrainFarBelowThePlannerIsPickableWhereItIsDrawn() {
+        // A planner on a mountain (Y 150) over lowland (Y 40): the renderer draws that lowland (its window reaches
+        // the build floor), 110 blocks under the planner. The pick used to stop 80 blocks under the planner, so the
+        // terrain was on screen but could not be hovered or painted.
+        ZoneMapCamera cam = new ZoneMapCamera(0.5, 150, 0.5);
+        cam.pxPerBlock = 3.0;
+        int lowland = 40;
+        int[][] columns = {{0, 0}, {12, -9}, {-20, 15}, {30, 22}, {-31, -27}};
+        for (int[] column : columns) {
+            double sx = cam.canvasX(column[0] + 0.5, lowland + 1, column[1] + 0.5) * cam.pxPerBlock;
+            double sy = cam.canvasY(column[0] + 0.5, lowland + 1, column[1] + 0.5) * cam.pxPerBlock;
+            int[] hit = cam.pickTerrain(sx, sy, (x, z) -> lowland, MIN_BUILD_Y);
+            Assertions.assertNotNull(hit, "the lowland column drawn at " + column[0] + "," + column[1] + " is pickable");
+            Assertions.assertEquals(column[0], hit[0], 1, "picked X");
+            Assertions.assertEquals(column[1], hit[2], 1, "picked Z");
+            Assertions.assertEquals(lowland, hit[1], "picked surface height");
+        }
+    }
+
+    @Test
+    void terrainAtTheBuildFloorIsPickable() {
+        // The deepest thing the renderer can draw is the floor itself; a world flattened to it is still pickable.
+        ZoneMapCamera cam = new ZoneMapCamera(0.5, 150, 0.5);
+        cam.pxPerBlock = 3.0;
+        int[] hit = cam.pickTerrain(30, -20, (x, z) -> MIN_BUILD_Y, MIN_BUILD_Y);
+        Assertions.assertNotNull(hit, "bedrock level terrain 214 blocks under the planner is in view");
+        Assertions.assertEquals(MIN_BUILD_Y, hit[1]);
+    }
+
+    @Test
+    void theSearchEndsAtTheBuildFloor() {
+        // No data under the cursor is a miss, and the miss costs one march that ends at the floor: one step per
+        // block of ray, so as many steps as the ray is long to the floor (its length to the plane, scaled by the
+        // extra depth).
+        ZoneMapCamera cam = new ZoneMapCamera(0.5, 150, 0.5);
+        cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
+        int[] calls = {0};
+        Assertions.assertNull(cam.pickTerrain(100, 40, (x, z) -> {
+            calls[0]++;
+            return Integer.MIN_VALUE;
+        }, MIN_BUILD_Y));
+        double toPlane = Math.hypot(Math.hypot(100 / cam.pxPerBlock, 40 / cam.pxPerBlock), ZoneMapCamera.CAM_HEIGHT);
+        double toFloor = toPlane * (ZoneMapCamera.CAM_HEIGHT + 150 - MIN_BUILD_Y) / ZoneMapCamera.CAM_HEIGHT;
+        Assertions.assertEquals(toFloor, calls[0], 2.0, "the march ran from the camera to the floor, no further");
+    }
+
+    @Test
+    void anAbsurdlyDeepFloorStillCostsABoundedMarch() {
+        // A datapack world with a build floor a million blocks down must not turn one hover into a million steps.
+        ZoneMapCamera cam = new ZoneMapCamera(0.5, 150, 0.5);
+        cam.pxPerBlock = ZoneMapCamera.MIN_PX_PER_BLOCK;
+        int[] calls = {0};
+        Assertions.assertNull(cam.pickTerrain(106, 50, (x, z) -> {
+            calls[0]++;
+            return Integer.MIN_VALUE;
+        }, -1_000_000));
+        Assertions.assertTrue(calls[0] <= 32768, "the march is capped (" + calls[0] + " steps)");
     }
 
     @Test
@@ -202,7 +266,7 @@ public class ZoneMapCameraTest {
         // Half-extents of the real 213x100 viewport, swept coarsely.
         for (int px = -106; px <= 106; px += 53) {
             for (int py = -50; py <= 50; py += 25) {
-                int[] hit = cam.pickTerrain(px, py, flat);
+                int[] hit = cam.pickTerrain(px, py, flat, MIN_BUILD_Y);
                 Assertions.assertNotNull(hit, "far pick reached at px " + px + "," + py);
                 double gx = px / cam.pxPerBlock;
                 double gz = py / cam.pxPerBlock;
@@ -343,14 +407,14 @@ public class ZoneMapCameraTest {
         for (int surface = 64 - 30; surface <= 64 + 100; surface++) {
             final int s = surface;
             if (cam.isNearClipped(s)) {
-                Assertions.assertNull(cam.pickTerrain(10, 10, (x, z) -> s),
+                Assertions.assertNull(cam.pickTerrain(10, 10, (x, z) -> s, MIN_BUILD_Y),
                         "a world of undrawn columns has nothing to pick (surface " + s + ")");
                 continue;
             }
             for (int[] column : columns) {
                 double sx = cam.canvasX(column[0] + 0.5, s + 1, column[1] + 0.5) * cam.pxPerBlock;
                 double sy = cam.canvasY(column[0] + 0.5, s + 1, column[1] + 0.5) * cam.pxPerBlock;
-                int[] hit = cam.pickTerrain(sx, sy, (x, z) -> s);
+                int[] hit = cam.pickTerrain(sx, sy, (x, z) -> s, MIN_BUILD_Y);
                 Assertions.assertNotNull(hit, "a drawn column at surface " + s + " is pickable");
                 Assertions.assertEquals(column[0], hit[0], 1, "picked X for the column drawn there, surface " + s);
                 Assertions.assertEquals(column[1], hit[2], 1, "picked Z for the column drawn there, surface " + s);
@@ -390,7 +454,7 @@ public class ZoneMapCameraTest {
                 double cz = cellZ + stride / 2.0;
                 double sx = cam.canvasX(cx, 71, cz) * cam.pxPerBlock;
                 double sy = cam.canvasY(cx, 71, cz) * cam.pxPerBlock;
-                int[] hit = cam.pickTerrain(sx, sy, exact);
+                int[] hit = cam.pickTerrain(sx, sy, exact, MIN_BUILD_Y);
                 Assertions.assertNotNull(hit, "cell " + cellX + "," + cellZ + " is pickable");
                 Assertions.assertEquals(70, hit[1], "the height drawn for the cell, not a taller column in it");
                 Assertions.assertEquals(cellX, Math.floorDiv(hit[0], stride) * stride, "the cell it was drawn in (X)");

@@ -17,11 +17,13 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.core.item.ItemPaintbrush_BC8;
+import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.client.render.ZoneMapGeometry;
 import buildcraft.robotics.client.zone.ZoneMapCamera;
 import buildcraft.robotics.client.zone.ZonePaintInput;
 import buildcraft.robotics.client.zone.ZonePaintStroke;
+import buildcraft.robotics.client.zone.ZonePanDrag;
 import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
@@ -73,7 +75,8 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final double ZOOM_STEP_OUT = 1.35;
 
     private final ZoneMapCamera camera;
-    private boolean panning = false;
+    /** The pan drag in progress, if any: owned by the left button that began it (see {@link ZonePanDrag}). */
+    private final ZonePanDrag pan = new ZonePanDrag();
     private double lastDragX, lastDragY;
     /** In-progress paint preview (null when not painting). Display only: on release the stroke itself (the
      *  rectangle {@link #stroke} holds) is applied to the layer as it is then and sent. */
@@ -219,9 +222,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
      *  worldZ)}, or null on a miss. Used for both the hover box and painting so the cursor, the highlight,
      *  and the painted cell all agree even at the zoomed-out edges where a flat-plane pick drifts. */
     private BlockPos pickColumn(double mx, double my) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
+            return null;
+        }
         double cx = leftPos + MAP_X + MAP_W / 2.0;
         double cy = topPos + MAP_Y + MAP_H / 2.0;
-        int[] hit = camera.pickTerrain(mx - cx, my - cy, this::surfaceAt);
+        // As deep as the renderer draws (the build floor), so terrain far below the planner is hoverable too.
+        int[] hit = camera.pickTerrain(mx - cx, my - cy, this::surfaceAt, RobotUtils.minBuildY(mc.level));
         return hit == null ? null : new BlockPos(hit[0], hit[1], hit[2]);
     }
 
@@ -276,8 +284,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
                     }
                 }
                 return true;
-            } else if (carried.isEmpty() && button == 0) {
-                panning = true;
+            } else if (carried.isEmpty() && pan.press(button)) {
                 lastDragX = mx;
                 lastDragY = my;
                 return true;
@@ -288,7 +295,7 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     /** @return true if the drag is panning or painting the map. */
     private boolean onMapDragged(double mx, double my) {
-        if (panning) {
+        if (pan.isActive()) {
             camera.panByPixels(mx - lastDragX, my - lastDragY);
             lastDragX = mx;
             lastDragY = my;
@@ -308,8 +315,9 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     /** @return true if a pan ended, a paint was committed to its layer, or a stroke is still open. */
     private boolean onMapReleased(int button) {
-        if (panning) {
-            panning = false;
+        if (pan.isActive()) {
+            // Only the button that began the pan ends it; letting go of another leaves it running.
+            pan.release(button);
             return true;
         }
         if (stroke.isOpen()) {

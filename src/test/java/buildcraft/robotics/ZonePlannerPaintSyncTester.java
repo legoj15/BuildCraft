@@ -20,6 +20,7 @@ import net.minecraft.world.level.GameType;
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.robotics.container.ContainerZonePlanner;
+import buildcraft.robotics.container.PaintRateLimiter;
 import buildcraft.robotics.tile.TileZonePlanner;
 import buildcraft.robotics.zone.ZonePlan;
 
@@ -49,10 +50,28 @@ public class ZonePlannerPaintSyncTester {
         final List<Sent> sent = new ArrayList<>();
         /** This viewer's client copy of each layer, as its own strokes and the syncs delivered so far left it. */
         final ZonePlan[] clientLayers;
+        /** This menu's game clock. By default every {@code broadcastChanges} is a fresh moment, long after the
+         *  last, so the push pacing never gets in the way of tests that are not about it; a pacing test turns
+         *  {@link #autoAdvance} off and sets the clock itself. */
+        long now = 1_000_000L;
+        boolean autoAdvance = true;
 
         RecordingMenu(Player player, TileZonePlanner tile) {
             super(0, player.getInventory(), tile);
             clientLayers = new ZonePlan[tile.layers.length];
+        }
+
+        @Override
+        protected long gameTime() {
+            return now;
+        }
+
+        @Override
+        public void broadcastChanges() {
+            if (autoAdvance) {
+                now += 1000;
+            }
+            super.broadcastChanges();
         }
 
         @Override
@@ -337,6 +356,164 @@ public class ZonePlannerPaintSyncTester {
 
         menu.deliverToServer(RecordingMenu.raw(buf -> {})); // empty: not even a layer index
         helper.assertTrue(tile.layers[LAYER].sameContent(cells(1, 1)), "an empty message is ignored too");
+        helper.succeed();
+    }
+
+    // ── A viewer that paints continuously ───────────────────────────────────────────────────
+
+    /** Block coordinates of the whole survey square: a stroke across it rewrites the entire layer. */
+    private static final int SQ_MIN = ZonePlan.SURVEY_MIN_BLOCK;
+    private static final int SQ_MAX = ZonePlan.SURVEY_MAX_BLOCK;
+
+    /** A viewer's own clock, set by hand for the pacing tests (the whole fixture shares one game tick). */
+    private static RecordingMenu steadyViewer(GameTestHelper helper, TileZonePlanner tile, long start) {
+        RecordingMenu menu = openViewer(helper, tile);
+        menu.autoAdvance = false;
+        menu.now = start;
+        return menu;
+    }
+
+    private static void setClock(long now, RecordingMenu... menus) {
+        for (RecordingMenu menu : menus) {
+            menu.now = now;
+        }
+    }
+
+    /**
+     * Strokes that land together are pushed to the other viewers together: six strokes in one tick are one layer
+     * push, not six. A change that follows within the push interval waits for it to end rather than costing the
+     * watcher another push at once, and is then sent; the first change after a quiet spell is not delayed.
+     */
+    public static void pushesToOtherViewersAreCoalesced(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        RecordingMenu painter = openViewer(helper, tile);
+        RecordingMenu watcher = openViewer(helper, tile);
+        long start = 50_000_000L;
+        painter.autoAdvance = false;
+        watcher.autoAdvance = false;
+        setClock(start, painter, watcher);
+
+        for (int i = 0; i < 6; i++) {
+            painter.paintCell(LAYER, i, 0);
+        }
+        painter.broadcastChanges();
+        watcher.broadcastChanges();
+        helper.assertTrue(watcher.syncsFor(LAYER) == 1,
+                "six strokes in one tick, one push (found " + watcher.syncsFor(LAYER) + "); and after a quiet spell, at once");
+        helper.assertTrue(painter.syncsFor(LAYER) == 0, "the painter is not echoed");
+        watcher.deliverToClient();
+        helper.assertTrue(watcher.clientLayers[LAYER].sameContent(tile.layers[LAYER]), "and it holds all six strokes");
+
+        // Another stroke the very next tick: held back, not lost.
+        setClock(start + 1, painter, watcher);
+        painter.paintCell(LAYER, 20, 0);
+        painter.broadcastChanges();
+        watcher.broadcastChanges();
+        helper.assertTrue(watcher.syncsFor(LAYER) == 0, "a change inside the push interval is held back");
+        setClock(start + ContainerZonePlanner.PUSH_INTERVAL_TICKS - 1, painter, watcher);
+        watcher.broadcastChanges();
+        helper.assertTrue(watcher.syncsFor(LAYER) == 0, "until the interval has run its course");
+        setClock(start + ContainerZonePlanner.PUSH_INTERVAL_TICKS, painter, watcher);
+        watcher.broadcastChanges();
+        helper.assertTrue(watcher.syncsFor(LAYER) == 1, "then it is sent");
+        watcher.deliverToClient();
+        helper.assertTrue(watcher.clientLayers[LAYER].sameContent(tile.layers[LAYER]), "complete");
+
+        // A viewer who joins mid-stream is not made to wait: the pacing is per viewer and per layer.
+        RecordingMenu late = new RecordingMenu(helper.makeMockPlayer(GameType.SURVIVAL), tile);
+        late.autoAdvance = false;
+        late.now = start + ContainerZonePlanner.PUSH_INTERVAL_TICKS;
+        late.broadcastChanges();
+        helper.assertTrue(late.syncsFor(LAYER) == 1, "a viewer's first sync is immediate");
+        helper.succeed();
+    }
+
+    /**
+     * One viewer streaming strokes that each rewrite the whole survey square, a stroke every other tick for 100
+     * ticks, used to send every other viewer the whole layer on each of them. They are now sent it at most once
+     * per push interval, and still end up holding exactly what the server holds.
+     */
+    public static void streamedStrokesReachWatchersAtACappedRate(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        RecordingMenu painter = openViewer(helper, tile);
+        RecordingMenu watcher = openViewer(helper, tile);
+        long start = 60_000_000L;
+        painter.autoAdvance = false;
+        watcher.autoAdvance = false;
+
+        boolean mark = true;
+        int strokes = 0;
+        for (int tick = 0; tick < 100; tick++) {
+            setClock(start + tick, painter, watcher);
+            if (tick % 2 == 0) {
+                painter.paint(LAYER, SQ_MIN, SQ_MIN, SQ_MAX, SQ_MAX, mark);
+                mark = !mark;
+                strokes++;
+            }
+            painter.broadcastChanges();
+            watcher.broadcastChanges();
+        }
+        long pushes = watcher.syncsFor(LAYER);
+        long ceiling = 100 / ContainerZonePlanner.PUSH_INTERVAL_TICKS + 1;
+        helper.assertTrue(strokes == 50, "baseline: fifty whole-layer strokes were made");
+        helper.assertTrue(pushes <= ceiling,
+                "the watcher is sent the layer at most " + ceiling + " times, found " + pushes);
+        helper.assertTrue(pushes >= 5, "but it does keep up with the painter (found " + pushes + " pushes)");
+        helper.assertTrue(painter.syncsFor(LAYER) == 0, "and the painter is never sent their own strokes back");
+
+        // The stream stops: the watcher's last held change arrives, and it matches the server.
+        for (int tick = 100; tick < 100 + ContainerZonePlanner.PUSH_INTERVAL_TICKS; tick++) {
+            setClock(start + tick, painter, watcher);
+            watcher.broadcastChanges();
+        }
+        watcher.deliverToClient();
+        helper.assertTrue(watcher.clientLayers[LAYER].sameContent(tile.layers[LAYER]),
+                "once the stream stops the watcher holds exactly what the server holds");
+        painter.deliverToClient();
+        helper.assertTrue(painter.pendingStrokes() == 0, "every stroke was acknowledged");
+        helper.assertTrue(painter.clientLayers[LAYER].sameContent(tile.layers[LAYER]), "and the painter matches too");
+        helper.succeed();
+    }
+
+    /**
+     * A viewer sending strokes faster than any person can is cut off at a burst: the rest are acknowledged (the
+     * painter's list drains) but not applied, the painter is resynced to the layer the server kept, and strokes are
+     * taken again once the clock has refilled the allowance.
+     */
+    public static void strokesPastTheRateLimitAreDropped(GameTestHelper helper) {
+        TileZonePlanner tile = placePlanner(helper);
+        RecordingMenu menu = openViewer(helper, tile);
+        menu.autoAdvance = false;
+        long start = 70_000_000L;
+        menu.now = start;
+
+        int sent = PaintRateLimiter.BURST + 10;
+        for (int i = 0; i < sent; i++) {
+            menu.paintCell(LAYER, i, 0);
+        }
+        int stored = tile.layers[LAYER].getAll().size();
+        helper.assertTrue(stored == PaintRateLimiter.BURST,
+                "a burst of " + PaintRateLimiter.BURST + " strokes is taken, the rest dropped (stored " + stored + ")");
+        helper.assertTrue(menu.pendingStrokes() == sent, "baseline: the painter showed all " + sent);
+
+        menu.broadcastChanges();
+        menu.deliverToClient();
+        helper.assertTrue(menu.pendingStrokes() == 0, "every stroke, dropped or not, was acknowledged");
+        helper.assertTrue(menu.clientLayers[LAYER].sameContent(tile.layers[LAYER]),
+                "and the painter was resynced to what the server kept");
+
+        // Time passes: the allowance refills at the sustained rate.
+        menu.now = start + PaintRateLimiter.TICKS_PER_STROKE * 3;
+        for (int i = 0; i < 6; i++) {
+            menu.paintCell(LAYER, 100 + i, 0);
+        }
+        int accepted = 0;
+        for (int i = 0; i < 6; i++) {
+            if (tile.layers[LAYER].get(100 + i, 0)) {
+                accepted++;
+            }
+        }
+        helper.assertTrue(accepted == 3, "three strokes' worth of ticks buy three strokes (accepted " + accepted + ")");
         helper.succeed();
     }
 

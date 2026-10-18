@@ -876,6 +876,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:zone_planner_paint_far_chunks_intact", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::farChunksAreUntouchedByStrokes);
         reg.accept("buildcraftunofficial:zone_planner_paint_truncated_rejected", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::truncatedPaintIsRejected);
         reg.accept("buildcraftunofficial:zone_planner_layers_not_reserialised", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::unchangedLayersAreNotReserialisedEveryTick);
+        // ...and a viewer that paints continuously cannot flood the others: layer pushes are paced per viewer
+        // (strokes landing together go down together), and stroke messages are rate-limited per viewer.
+        reg.accept("buildcraftunofficial:zone_planner_paint_pushes_coalesced", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::pushesToOtherViewersAreCoalesced);
+        reg.accept("buildcraftunofficial:zone_planner_paint_stream_capped", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::streamedStrokesReachWatchersAtACappedRate);
+        reg.accept("buildcraftunofficial:zone_planner_paint_rate_limited", () -> buildcraft.robotics.ZonePlannerPaintSyncTester::strokesPastTheRateLimitAreDropped);
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.

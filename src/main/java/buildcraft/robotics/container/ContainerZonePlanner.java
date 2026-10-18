@@ -121,17 +121,34 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     public static final int NET_SYNC_LAYER = 11;
     public static final int NET_PAINT_ACK = 12;
 
+    /** Server side: the fewest ticks between two pushes of the same layer to one viewer (twice a second). A change
+     *  that lands sooner than that after the last push waits for the interval to end, and everything that changed
+     *  meanwhile goes down in that one push; so a viewer painting continuously costs every other viewer one layer
+     *  push per interval, not one per tick. The first change after a quiet spell is pushed at once. */
+    public static final int PUSH_INTERVAL_TICKS = 10;
+
     /** Server side: what this viewer's menu knows about one layer: the instance and modification count it last
      *  examined (so an untouched layer costs two compares per tick, not a serialisation), and the bytes last
      *  pushed to this viewer's client ({@code null} when unknown, which makes the next change push). */
     private static final class LayerView {
+        /** {@link #lastPush} before anything has been pushed: far enough back never to count as recent. */
+        static final long NEVER = Long.MIN_VALUE / 2;
+
         ZonePlan seen;
         int seenMod;
         byte[] sent;
+        /** The game time of the last push of this layer to this viewer. */
+        long lastPush = NEVER;
 
         /** True when this viewer has been pushed (or already holds) the layer exactly as the server has it. */
         boolean isUpToDate(ZonePlan layer) {
             return seen == layer && seenMod == layer.modCount();
+        }
+
+        /** True when the layer was pushed to this viewer less than {@link #PUSH_INTERVAL_TICKS} ticks before {@code now}. */
+        boolean pushedRecently(long now) {
+            long since = now - lastPush;
+            return since >= 0 && since < PUSH_INTERVAL_TICKS;
         }
 
         /** Forces the next diff to push the layer, whatever it holds. */
@@ -150,6 +167,8 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
 
     /** Per-viewer, per-layer sync state (server side); created on first use. */
     private LayerView[] views;
+    /** Server side: this viewer's allowance of stroke messages (see {@link PaintRateLimiter}). */
+    private final PaintRateLimiter paintBudget = new PaintRateLimiter();
     /** Client side: strokes sent but not yet acknowledged, oldest first. */
     private final List<PendingStroke> pending = new ArrayList<>();
     /** Client side: the sequence number of the last stroke sent. */
@@ -203,11 +222,19 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             if (view.isUpToDate(layer)) {
                 continue;
             }
+            // A push is a whole layer, so a layer that keeps changing (one viewer painting continuously) is pushed at
+            // most once per interval. The change is left unexamined, not dropped: a later tick finds the layer still
+            // out of date and sends it as it then stands, with every stroke that landed in between.
+            long now = gameTime();
+            if (view.pushedRecently(now)) {
+                continue;
+            }
             view.seen = layer;
             view.seenMod = layer.modCount();
             byte[] current = serialize(layer);
             if (!Arrays.equals(current, view.sent)) {
                 view.sent = current;
+                view.lastPush = now;
                 final int idx = i;
                 sendMessage(NET_SYNC_LAYER, buf -> {
                     buf.writeByte(idx);
@@ -254,6 +281,11 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         super.readMessage(id, buffer, isClient, ctx);
     }
 
+    /** The server's game clock, in ticks. Overridable so a test can play a viewer's clock without ticking a level. */
+    protected long gameTime() {
+        return tile == null || tile.getLevel() == null ? 0L : tile.getLevel().getGameTime();
+    }
+
     /** Client side: this viewer's copy of a layer. Overridable (with {@link #applySyncedLayer}) so a test can
      *  play a viewer's client without touching the server's tile. */
     protected ZonePlan clientLayer(int index) {
@@ -296,6 +328,13 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             return;
         }
         LayerView view = view(idx);
+        if (!paintBudget.tryAcquire(gameTime())) {
+            // Faster than a person can stroke: acknowledged (above) so the painter's pending list drains, but not
+            // applied, and the painter, who is showing it, is resynced to the layer the server kept.
+            BCLog.logger.debug("[robotics.zone] Dropped a paint message from a Zone Planner viewer over the rate limit");
+            view.forget();
+            return;
+        }
         int x0;
         int z0;
         int x1;

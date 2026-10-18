@@ -555,8 +555,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     /**
      * Spills ONLY the in-transit cargo — traversing items (via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops})
      * and fluid contents as fragile fluid-shard items (via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops})
-     * — when the pipe is removed by something other than a player's hand: explosions, pistons, {@code /setblock},
-     * another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
+     * — when the pipe is removed by something other than a player's hand: explosions, pistons, {@code /setblock}
+     * (on 1.21.1, or in destroy mode), another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
      * these cases (the block is treated as destroyed, like a chest spilling its contents on explosion). A survival
      * hand/pickaxe break instead returns everything via
      * {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy} → {@link #dropPipeItems}, which calls
@@ -579,10 +579,14 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         }
     }
 
-    // Non-player removal catch-all (explosion / piston / /setblock / mod tools) on the >=1.21.10 API.
+    // Non-player removal catch-all (explosion / piston / /setblock … destroy / mod tools) on the >=1.21.10 API.
     // The BlockEntity is still alive here — it is removed immediately after this returns, before
     // affectNeighborsAfterRemoval — so this is the last point where the in-transit cargo can spill.
     // Player breaks set dropsHandled in playerWillDestroy, making dropPipeCargo a no-op (no double drop).
+    // NOT reached by /fill or replace-mode /setblock on these nodes: both place with
+    // UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS (256), so the cargo vanishes like a vanilla chest's contents and the
+    // pluggables are never detached (DockingStationPipe.getHolder copes with the station that leaves behind).
+    // On 1.21.1 those commands run Block.onRemove, i.e. BlockPipeHolder's catch-all below.
     //? if >=1.21.10 {
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {
@@ -600,6 +604,10 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
      * explosion or another mod's tool, so a pluggable holding registered state outside the block entity kept
      * it forever. That was observable in-game: {@code /setblock <pipe> air} under a docked robot left the
      * {@link buildcraft.robotics.DockingStationPipe} in the robot registry as a ghost at an air block.
+     * <p>
+     * On 1.21.10+ {@code /fill} and replace-mode {@code /setblock} skip the removal side effects entirely
+     * ({@code UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}), so this never runs for them there; the station itself
+     * deregisters the next time it finds no pipe at its position ({@code DockingStationPipe.getHolder}).
      * <p>
      * Idempotent (the slots are nulled as they are notified), so running after {@code dropPipeItems} on the
      * same removal is a no-op. Deliberately NOT called from {@code setRemoved}: that also fires on chunk

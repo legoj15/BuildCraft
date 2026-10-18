@@ -688,6 +688,9 @@ public class RobotRegistry extends SavedData implements IRobotRegistry, LegacySa
             String type = NBTUtilBC.getString(cpt, "stationType", "");
             Class<? extends DockingStation> cls = RobotManager.getDockingStationByName(type);
             if (cls == null) {
+                // Skipped unread, but the robot it named is still out in the world: keep the id counter ahead of it, as
+                // for a record that fails inside its read below.
+                raiseNextRobotIdPast(NBTUtilBC.getLong(cpt, "robotId", EntityRobotBase.NULL_ROBOT_ID));
                 BCLog.logger.error("[robots] Could not load docking station of unknown type '" + type + "'");
                 continue;
             }

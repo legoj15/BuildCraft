@@ -108,8 +108,9 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
             net.minecraft.core.BlockPos point = map.getPoint(item);
 
             if (point != null) {
+                // No side (a map location whose side byte is not a face) names no station; the registry key needs one.
                 net.minecraft.core.Direction side = map.getPointSide(item);
-                DockingStation paramStation = registry.getStation(point, side);
+                DockingStation paramStation = side == null ? null : registry.getStation(point, side);
 
                 if (paramStation != null) {
                     return paramStation;

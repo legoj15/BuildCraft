@@ -64,7 +64,7 @@ public interface IMapLocation extends INamedItem {
     /** This function can be used for SPOT types only.
      * 
      * @param stack
-     * @return The side of the spot. */
+     * @return The side of the spot, or null if the stack is not a SPOT or its stored side is not a real face. */
     Direction getPointSide(@Nonnull ItemStack stack);
 }
 

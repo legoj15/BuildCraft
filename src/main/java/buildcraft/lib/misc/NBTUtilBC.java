@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 import com.mojang.serialization.DynamicOps;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -245,6 +246,17 @@ public class NBTUtilBC {
         //?} else {
         /*return nbt.contains(key) ? nbt.getByte(key) : def;*/
         //?}
+    }
+
+    /** Reads a {@link Direction} saved as its ordinal in a byte ({@code def} when the key is missing), or {@code null}
+     *  when the byte is not one. The byte is read unsigned: 7.1.x's {@code ForgeDirection.UNKNOWN} was 6, and a corrupt
+     *  or hand-edited save holds anything, so indexing {@code Direction.values()} with it blind threw out of the load.
+     *  Callers treat {@code null} as "no direction", as the robot readers do for a station side. */
+    @Nullable
+    public static Direction getDirectionOrNull(CompoundTag nbt, String key, byte def) {
+        int ordinal = getByte(nbt, key, def) & 0xFF;
+        Direction[] sides = Direction.values();
+        return ordinal < sides.length ? sides[ordinal] : null;
     }
 
     public static short getShort(CompoundTag nbt, String key, short def) {

@@ -630,6 +630,27 @@ public class RobotRegistryTest {
                 "the id of the robot a skipped station was linked to is not handed out again");
     }
 
+    /** The other skip path: a record whose station type nothing has registered (a removed addon, a renamed class)
+     *  is dropped before it is ever read, but the robot it named is just as much still out in the world. */
+    @Test
+    public void testUnknownStationTypeStillRaisesTheIdCounterPastItsRobot() {
+        long linkedRobot = Long.MIN_VALUE + 60;
+        CompoundTag record = upstreamShapedStationTag(new BlockPos(20, 70, -4), Direction.NORTH.ordinal(), true,
+                linkedRobot);
+        record.putString("stationType", "no_such_station_type");
+        ListTag stationList = new ListTag();
+        stationList.add(record);
+        CompoundTag tag = new CompoundTag();
+        tag.put("stationList", stationList);
+
+        RobotRegistry loaded = new RobotRegistry(null);
+        Assertions.assertDoesNotThrow(() -> loaded.readFromNbt(tag), "an unknown type must not fail the load");
+
+        Assertions.assertTrue(loaded.getStations().isEmpty(), "precondition: the unknown-type record was skipped");
+        Assertions.assertEquals(linkedRobot + 1, loaded.getNextRobotId(),
+                "the id of the robot an unknown-type station was linked to is not handed out again");
+    }
+
     /** Minimal concrete {@link DockingStation} for registry tests: a public no-arg ctor for NBT reload plus a
      * positioned ctor, and an empty action list. No {@code Level} is required for any path exercised here. */
     public static class TestDockingStation extends DockingStation {

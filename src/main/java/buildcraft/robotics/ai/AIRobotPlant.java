@@ -28,8 +28,10 @@ import buildcraft.robotics.RobotProtection;
  *  {@link buildcraft.api.crops.CropManager} (sustainability check + crop placement via a fake player).
  *  Ported from 7.1.x {@code AIRobotPlant}.
  *
- *  <p>7.1.x dropped whatever was still in the hand after the attempt (the seed stack's remainder) at the
- *  robot's feet and cleared the hand, so the next cycle re-fetches a seed; that is kept. */
+ *  <p>After a planting that took, 7.1.x dropped whatever was still in the hand (the seed stack's remainder) at the
+ *  robot's feet and cleared the hand, so the next cycle re-fetches a seed; that is kept. After one that did not take
+ *  7.1.x did the same, and the planter then fetched a seed to try the same spot again; here the robot keeps the seeds
+ *  and the planting reports failure. */
 public class AIRobotPlant extends AIRobot {
 
     private BlockPos blockFound;
@@ -68,18 +70,24 @@ public class AIRobotPlant extends AIRobot {
                 // station's owner (the generic player when there is none), so a claim mod judges the owner
                 // and a planting advancement reaches them.
                 ItemStack held = robot.getHeldItem();
+                boolean planted;
                 try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                     FakePlayer player = lease.player();
                     player.setPos(robot.position());
-                    if (!CropManager.plantCrop(serverLevel, player, held, blockFound)) {
-                        setSuccess(false);
+                    planted = CropManager.plantCrop(serverLevel, player, held, blockFound);
+                }
+                if (planted) {
+                    if (!held.isEmpty()) {
+                        serverLevel.addFreshEntity(new ItemEntity(serverLevel,
+                                robot.position().x, robot.position().y, robot.position().z, held));
                     }
+                    robot.setItemInUse(ItemStack.EMPTY);
+                } else {
+                    // Nothing was planted (a claim mod cancelled the placement, or the soil changed since the search),
+                    // so the seed was not used: the robot keeps it, and the board remembers the spot instead of
+                    // fetching a fresh seed to be refused again.
+                    setSuccess(false);
                 }
-                if (!held.isEmpty()) {
-                    serverLevel.addFreshEntity(new ItemEntity(serverLevel,
-                            robot.position().x, robot.position().y, robot.position().z, held));
-                }
-                robot.setItemInUse(ItemStack.EMPTY);
             } else {
                 setSuccess(false);
             }

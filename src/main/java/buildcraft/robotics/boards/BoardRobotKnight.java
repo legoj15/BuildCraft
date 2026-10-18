@@ -83,7 +83,9 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        if (ai instanceof AIRobotFetchAndEquipItemStack) {
+        // A failed fetch AND a failed unload of the broken sword both send the robot to sleep: without the second,
+        // the board started the same unload again on the next tick, forever (the break-board base handles both).
+        if (ai instanceof AIRobotFetchAndEquipItemStack || ai instanceof AIRobotGotoStationAndUnload) {
             if (!ai.success()) {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }

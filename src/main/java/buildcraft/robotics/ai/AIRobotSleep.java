@@ -44,7 +44,10 @@ public class AIRobotSleep extends AIRobot {
         }
         for (StatementSlot s : station.getActiveActions()) {
             if (s.statement instanceof ActionRobotWakeUp) {
+                // Once, however many Wake Up actions are active: a second terminate() would tell the parent about
+                // a sleep that has already ended and walk the rest of the parent chain a second time.
                 terminate();
+                return;
             }
         }
     }

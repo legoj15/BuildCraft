@@ -651,6 +651,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:library_withdrawn_request_releases_buffers", () -> buildcraft.builders.ElectronicLibraryTester::testWithdrawnRequestReleasesBuffers);
         reg.accept("buildcraftunofficial:library_bad_stream_aborts_only_its_watcher", () -> buildcraft.builders.ElectronicLibraryTester::testBadStreamAbortsOnlyItsWatcher);
         reg.accept("buildcraftunofficial:library_wedged_stream_does_not_eat_next_upload", () -> buildcraft.builders.ElectronicLibraryTester::testWedgedWithdrawnStreamDoesNotEatTheNextUpload);
+        reg.accept("buildcraftunofficial:library_stale_tail_does_not_spoil_next_request", () -> buildcraft.builders.ElectronicLibraryTester::testStaleTailDoesNotSpoilTheNextRequest);
 
         // Block drops — every BuildCraft block should drop itself + its real inventory
         // when broken with the correct tool, drop only its inventory when broken by

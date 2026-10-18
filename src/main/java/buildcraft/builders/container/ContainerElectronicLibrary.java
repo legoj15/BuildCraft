@@ -41,9 +41,9 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
     public static final int NET_SELECTED = 1;
     /** Server→Client: snapshot data from completed download. */
     public static final int NET_DOWNLOAD = 2;
-    /** Server→Client: request the client to upload a snapshot. */
+    /** Server→Client: request the client to upload a snapshot (its key, then the request id to tag the answer with). */
     public static final int NET_UPLOAD_REQUEST = 3;
-    /** Client→Server: one chunk of snapshot upload data. */
+    /** Client→Server: one chunk of snapshot upload data (the request id it answers, whether it is last, the bytes). */
     public static final int NET_UPLOAD_DATA = 4;
 
     // ContainerData indices
@@ -155,10 +155,20 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         if (upload != null) upload.release();
     }
 
-    /** The tile is asking this menu's player for an upload: nothing an earlier request left behind (half a stream, or
-     *  ignoring the tail of one that never ended) carries over into the answer. Server side. */
-    public void beginUploadRequest() {
-        if (upload != null) upload.beginRequest();
+    /** Ask this menu's player to upload {@code key}. The request goes out with a fresh id that the answer's chunks
+     *  carry back, so nothing of an earlier request's stream (half sent, or its tail still on the wire) is taken as
+     *  part of the answer. Server side. */
+    public void sendUploadRequest(Snapshot.Key key) {
+        int request = upload().beginRequest();
+        sendMessage(NET_UPLOAD_REQUEST, buf -> {
+            key.writeToByteBuf(buf);
+            buf.writeVarInt(request);
+        });
+    }
+
+    /** The id of the request this menu is taking an answer to, or 0 while it takes none. Server side. */
+    public int getUploadRequestId() {
+        return upload == null ? LibraryUploadBuffer.NO_REQUEST : upload.answeringRequest();
     }
 
     /** What one upload to this menu may hold. */
@@ -209,23 +219,28 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         if (id == NET_UPLOAD_REQUEST && isClient) {
             // Server asking client to upload a snapshot
             Snapshot.Key key = new Snapshot.Key(buffer);
-            sendSnapshotToServer(key);
+            int request = buffer.readVarInt();
+            sendSnapshotToServer(key, request);
             return;
         }
 
         if (id == NET_UPLOAD_DATA && !isClient) {
+            int request = buffer.readVarInt();
             boolean last = (buffer.readByte() != 0);
             byte[] chunk = buffer.readByteArray();
             LibraryUploadBuffer upload = upload();
             if (!tile.isUploadRequested() || tile.hasRefusedUpload(player)) {
                 // Nothing was asked for (or the request was withdrawn mid-stream), or this player's answer to it was
-                // already refused: keep none of it, and do not let a stale prefix run into the next upload.
-                upload.skip(last);
+                // already refused: keep none of it.
+                upload.release();
                 return;
             }
+            // A chunk of an earlier request (the tail of a withdrawn, refused or timed-out stream) is not the answer,
+            // and does not keep the current request from timing out either.
+            if (!upload.isAnswering(request)) return;
             tile.onUploadChunk();
             int droppedBefore = upload.droppedUploads();
-            byte[] assembled = upload.accept(last, chunk);
+            byte[] assembled = upload.accept(request, last, chunk);
             if (assembled != null) {
                 receiveUpload(assembled);
             } else if (upload.droppedUploads() != droppedBefore) {
@@ -234,8 +249,9 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         }
     }
 
-    /** Client: look up the snapshot in the local library and send it to the server in one or more chunks. */
-    private void sendSnapshotToServer(Snapshot.Key key) {
+    /** Client: look up the snapshot in the local library and send it to the server in one or more chunks, each
+     *  tagged with the {@code request} id the server asked with. */
+    private void sendSnapshotToServer(Snapshot.Key key, int request) {
         Snapshot snapshot = GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).getSnapshot(key);
         if (snapshot == null) {
             BCLog.logger.warn("[library] Upload requested for unknown snapshot key: " + key);
@@ -259,6 +275,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             final byte[] chunk = java.util.Arrays.copyOfRange(data, offset, end);
             final boolean last = (end >= data.length);
             sendMessage(NET_UPLOAD_DATA, buf -> {
+                buf.writeVarInt(request);
                 buf.writeByte(last ? 1 : 0);
                 buf.writeByteArray(chunk);
             });
@@ -267,6 +284,7 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
         // If data was empty, send a final empty chunk
         if (data.length == 0) {
             sendMessage(NET_UPLOAD_DATA, buf -> {
+                buf.writeVarInt(request);
                 buf.writeByte(1);
                 buf.writeByteArray(new byte[0]);
             });

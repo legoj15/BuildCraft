@@ -1175,6 +1175,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_builder_board_inserts_only_required", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardInsertsOnlyWhatTheBuilderRequires);
         reg.accept("buildcraftunofficial:robot_builder_board_fetches_only_in_reach_of_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardFetchesOnlyFromStationsInReachOfTheBuilder);
         reg.accept("buildcraftunofficial:robot_builder_board_gives_up_on_unreachable_builder", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardGivesUpOnABuilderItCanNeverReach);
+        reg.accept("buildcraftunofficial:robot_builder_board_failed_fetch_lets_another_builder_be_served", () -> buildcraft.robotics.boards.BuilderBoardTester::builderBoardFailedFetchLetsAnotherBuilderBeServed);
         reg.accept("buildcraftunofficial:robot_bomber_drops_exactly_one_tnt", () -> buildcraft.robotics.boards.BomberBoardTester::bomberDropsExactlyOneTnt);
         reg.accept("buildcraftunofficial:robot_armour_scales_damage_debit", () -> buildcraft.robotics.entity.RobotWearablesTester::armourScalesTheDamageDebit);
         reg.accept("buildcraftunofficial:robot_creative_equip_keeps_held_item", () -> buildcraft.robotics.entity.RobotWearablesTester::creativeEquipKeepsTheHeldItem);

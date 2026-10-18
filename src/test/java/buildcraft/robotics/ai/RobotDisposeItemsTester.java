@@ -17,6 +17,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -34,7 +35,16 @@ public class RobotDisposeItemsTester {
 
     public static void disposeItemsDropsCargoWhenNoStationWillTakeIt(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+        // "No station anywhere" must hold in a level other tests share: concurrent robot tests register real
+        // docking stations, and one that accepts items turns the spill into a long flight. An empty registry
+        // keeps the premise true whatever else is running.
+        IRobotRegistry noStations = new MockRobotAccess.InertRobotRegistry();
+        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level) {
+            @Override
+            public IRobotRegistry getRegistry() {
+                return noStations;
+            }
+        };
         Vec3 at = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));
         robot.setPos(at.x, at.y, at.z);
         robot.getBattery().addPower(5000L * MjAPI.MJ, false);

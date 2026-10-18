@@ -74,7 +74,9 @@ import buildcraft.robotics.ai.AIRobotRecharge;
  * machine is benched the robot sleeps with the cargo rather than disposing of it), until
  * {@link #MAX_FAILED_DELIVERIES} failures to the same machine with the same cargo: then the cargo is returned
  * and the machine benched for {@link #GIVE_UP_RETRY_TICKS}; cargo that no machine requires any more is returned
- * too (never emptied into a machine that wants something else); a recharge that fails (no free power
+ * too (never emptied into a machine that wants something else); a fetch that fails (no station in reach of the
+ * machine stocks the item) benches that machine for {@link #UNREACHABLE_RETRY_TICKS} too, so another needy machine
+ * gets the next pass instead of the same doomed fetch; a recharge that fails (no free power
  * station) sends the robot home to sleep instead of re-running the search every cycle.
  */
 public class BoardRobotBuilder extends RedstoneBoardRobot {
@@ -195,6 +197,15 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
+                // No station could stock this machine's delivery (none holds the item, or none the delivery
+                // flight could leave for it). Keeping the machine chosen would repeat the same fetch on every
+                // pass, since it still needs the item, and starve every other needy machine (one whose supply
+                // station IS in reach). Bench it like a failed delivery and forget it, so the next pass re-picks.
+                if (builderToSupply != null) {
+                    unreachableUntil.put(builderToSupply.getBuilderPos(), gameTime() + UNREACHABLE_RETRY_TICKS);
+                }
+                builderToSupply = null;
+                requiredStack = ItemStack.EMPTY;
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotRecharge) {

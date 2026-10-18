@@ -801,6 +801,69 @@ public class BuilderBoardTester {
         helper.succeed();
     }
 
+    /** A fetch that fails for the chosen Builder must not pin the board to it. Builder X and Builder Y both miss
+     *  stone; the robot is nearer X, and the only stocked station is past the flight's reach of X but inside Y's.
+     *  The board picks X, the station filter rejects the only station, the fetch fails and the robot sleeps. The
+     *  board used to keep X chosen (it still needs stone), so every later pass repeated the doomed fetch for X and
+     *  Y was never served. A failed fetch now benches X like a failed delivery and forgets it, so the next pass
+     *  re-picks: Y, whose supply is that station. */
+    public static void builderBoardFailedFetchLetsAnotherBuilderBeServed(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos nearRel = new BlockPos(1, 2, 2);
+        BlockPos farRel = new BlockPos(4, 2, 2);
+        TileBuilder near = placeBuilder(helper, nearRel,
+                makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(0, 1, 2))));
+        TileBuilder far = placeBuilder(helper, farRel,
+                makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
+        BlockPos nearAbs = helper.absolutePos(nearRel);
+        BlockPos farAbs = helper.absolutePos(farRel);
+        try {
+            helper.assertTrue(BoardRobotBuilder.needsItems(near) && BoardRobotBuilder.needsItems(far),
+                    "sanity: both machines report demand");
+
+            // The station is 97 blocks past the near machine (out of the flight's reach of it) and so 94 past the
+            // far one (inside it). The robot stands 10 blocks on the other side of the near machine.
+            StockedStation station = new StockedStation(nearAbs.offset(AIRobotGotoBlock.FLIGHT_REACH + 1, 0, 0));
+            station.input.setItem(0, new ItemStack(Items.STONE, 8));
+            helper.assertFalse(BoardRobotBuilder.flightLeavesStationInReach(station, nearAbs),
+                    "sanity: the station is out of the flight's reach of the near machine");
+            helper.assertTrue(BoardRobotBuilder.flightLeavesStationInReach(station, farAbs),
+                    "sanity: the station is inside the flight's reach of the far machine");
+
+            StationRegistry registry = new StationRegistry();
+            registry.stations.add(station);
+            ZonedRobot robot = new ZonedRobot(level, justTheseBlocks(nearAbs, farAbs));
+            Vec3 robotPos = Vec3.atCenterOf(nearAbs.offset(-10, 0, 0));
+            robot.setPos(robotPos.x, robotPos.y, robotPos.z);
+            robot.getBattery().addPower(SEEDED_CHARGE, false);
+            robot.setRegistry(registry);
+            BoardRobotBuilder board = new BoardRobotBuilder(robot);
+            helper.assertTrue(board.findClosestBuilder(false) == near, "sanity: the near machine is picked first");
+
+            // First pass: the fetch for the near machine has no usable station.
+            board.cycle();
+            board.cycle();
+            helper.assertFalse(station.claimed, "the station is useless for the near machine's delivery");
+            helper.assertTrue(board.getDelegateAI() instanceof AIRobotGotoSleep,
+                    "with no usable station the board sleeps, got " + board.getDelegateAI());
+            helper.assertTrue(board.isSkipped(near, board.gameTime()),
+                    "the machine the fetch failed for is benched like one a delivery failed to");
+
+            // The robot wakes: the next pass must look at the far machine, whose supply that station is.
+            board.abortDelegateAI();
+            board.cycle();
+            board.cycle();
+            helper.assertTrue(station.claimed,
+                    "after the failed fetch the robot heads for the other machine's supply, got "
+                            + board.getDelegateAI());
+            helper.assertTrue(carried(robot, Items.STONE) == 0, "and nothing was loaded yet (still on the way)");
+        } finally {
+            retire(helper, near, nearRel);
+            retire(helper, far, farRel);
+        }
+        helper.succeed();
+    }
+
     // ---------- a Builder the flight can never reach ----------
 
     /** A board whose bench windows run on a clock the test moves. */

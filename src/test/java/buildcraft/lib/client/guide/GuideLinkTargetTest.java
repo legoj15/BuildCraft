@@ -34,6 +34,7 @@ import net.minecraft.resources.Identifier;
 import org.junit.jupiter.api.Test;
 
 import buildcraft.api.registry.IReloadableRegistry.PackType;
+import buildcraft.lib.client.guide.loader.XmlPageLoader;
 import buildcraft.lib.script.ScriptableRegistry;
 import buildcraft.lib.script.SimpleScript;
 import buildcraft.lib.script.SimpleScript.ScriptAction;
@@ -65,7 +66,7 @@ class GuideLinkTargetTest {
     private static final Pattern ATTR = Pattern.compile("([A-Za-z_]+)\\s*=\\s*\"([^\"]*)\"");
 
     /** One parsed {@code <link>} and where it came from. */
-    private record Link(String file, String to, String type, String raw) {}
+    private record Link(String file, String to, String type, String url, String raw) {}
 
     // ---------------------------------------------------------------------------------------------------------
     // Resolvable-target universe
@@ -142,13 +143,17 @@ class GuideLinkTargetTest {
             if (to == null && inline != null && !inline.isEmpty() && !"true".equals(inline)) {
                 to = inline;
             }
-            out.add(new Link(file, to, attrs.get("type"), m.group().replaceAll("\\s+", " ")));
+            out.add(new Link(file, to, attrs.get("type"), attrs.get("url"), m.group().replaceAll("\\s+", " ")));
         }
         return out;
     }
 
     /** @return null when the link resolves, otherwise why it does not. */
     private static String problem(Link link, Set<String> pages, Set<String> categories) {
+        if (link.url() != null) {
+            // resolveLinkTarget: a url wins over every other attribute, and only http(s) is accepted.
+            return XmlPageLoader.validWebUrl(link.url()) != null ? null : "'" + link.url() + "' is not an http(s) address";
+        }
         if (link.to() == null) {
             return "link has no target";
         }
@@ -213,6 +218,24 @@ class GuideLinkTargetTest {
         assertTrue(bad.isEmpty(), bad.size() + " unresolvable guide link(s):\n" + String.join("\n", bad));
     }
 
+    /** MarkdownPageLoader only translates {@code #} headings; 1.12.2's deprecated {@code $[special.*]} lines and
+     *  markdown {@code [text](target)} links are not parsed and print verbatim on the page (the guide item's own
+     *  page shipped both). Use {@code <new_page/>}, {@code <recipes_usages stack=…/>} and {@code <link to=…/>} or
+     *  {@code <link url=… text=…/>} instead. */
+    @Test
+    void noGuidePageUsesUnparsedMarkdownSyntax() {
+        Pattern raw = Pattern.compile("\\$\\[special\\.|\\[[^\\]\\n]+\\]\\([^)\\n]*\\)");
+        List<String> bad = new ArrayList<>();
+        for (Map.Entry<String, String> file : shippedMarkdown().entrySet()) {
+            Matcher m = raw.matcher(file.getValue());
+            while (m.find()) {
+                bad.add(file.getKey() + ": " + m.group());
+            }
+        }
+        assertTrue(bad.isEmpty(), bad.size() + " piece(s) of markup the guide prints as raw text:\n"
+            + String.join("\n", bad));
+    }
+
     /** The exact tags that shipped in robots.md before the statement pages existed: they printed as raw text. */
     @Test
     void theRetiredStatementTypeLinksAreRejected() {
@@ -239,6 +262,7 @@ class GuideLinkTargetTest {
                 <link to="buildcraft:pipe_signals"/>
                 <link to="minecraft:iron_ingot" type="item_stack"/>
                 <link inline="minecraft:iron_ingot" type="item_stack"/>
+                <link url="https://github.com/legoj15/BuildCraft/issues" text="issues"/>
                 """,
             "bad.md", """
                 <link to="buildcraftunofficial:concept/no_such_page"/>
@@ -249,9 +273,11 @@ class GuideLinkTargetTest {
                 <link to="whatever" type="external"/>
                 <link to="whatever" type="no_such_type"/>
                 <link type="item_stack"/>
+                <link url="file:///etc/passwd" text="local file"/>
+                <link url="github.com/legoj15/BuildCraft" text="no scheme"/>
                 """);
         List<String> bad = problems(files);
-        assertEquals(8, bad.size(), String.join("\n", bad));
+        assertEquals(10, bad.size(), String.join("\n", bad));
         for (String line : bad) {
             assertTrue(line.startsWith("bad.md"), line);
         }

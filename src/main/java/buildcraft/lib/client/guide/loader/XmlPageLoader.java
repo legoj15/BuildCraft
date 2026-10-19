@@ -390,7 +390,7 @@ public enum XmlPageLoader implements IPageLoaderText {
                         // attribute parser at parseTag breaks on the first key without
                         // an `=`, also dropping `to=`. Authors must give `inline` a
                         // value.
-                        if ("link".equals(currentTag.name) && currentTag.get("inline") != null) {
+                        if ("link".equals(currentTag.name) && isInlineLink(currentTag)) {
                             ResolvedLink resolved = resolveLinkTarget(currentTag, prof);
                             if (resolved != null) {
                                 int visibleStart = GuideInlineLinkText.visibleLengthOf(completeLine);
@@ -409,7 +409,7 @@ public enum XmlPageLoader implements IPageLoaderText {
                                     completeLine += format;
                                 }
                                 inlineLinks.add(new InlineLinkSpan(
-                                    visibleStart, resolved.title.length(), resolved.factoryFn, resolved.title
+                                    visibleStart, resolved.title.length(), resolved.factoryFn, resolved.title, resolved.url
                                 ));
                             } else {
                                 // Resolver already logged; fall back to literal tag text
@@ -591,7 +591,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         // <link inline="true" to="..."/> at the start of a line: produce the same
         // icon-less hyperlink visual as the mid-line case, so authors get consistent
         // styling regardless of where the directive sits.
-        if (tag.get("inline") != null) {
+        if (isInlineLink(tag)) {
             ResolvedLink resolved = resolveLinkTarget(tag, prof);
             if (resolved == null) {
                 return null;
@@ -599,7 +599,7 @@ public enum XmlPageLoader implements IPageLoaderText {
             String formatted = "" + ChatFormatting.RESET + ChatFormatting.UNDERLINE + ChatFormatting.BLUE
                 + resolved.title + ChatFormatting.RESET;
             List<InlineLinkSpan> spans = ImmutableList.of(
-                new InlineLinkSpan(0, resolved.title.length(), resolved.factoryFn, resolved.title)
+                new InlineLinkSpan(0, resolved.title.length(), resolved.factoryFn, resolved.title, resolved.url)
             );
             return gui -> new GuideInlineLinkText(gui, formatted, spans);
         }
@@ -672,11 +672,43 @@ public enum XmlPageLoader implements IPageLoaderText {
     private static final class ResolvedLink {
         final String title;
         final Function<GuiGuide, GuidePageFactory> factoryFn;
+        /** Web address for a {@code <link url=…/>}; null for in-guide links. */
+        @Nullable
+        final String url;
 
         ResolvedLink(String title, Function<GuiGuide, GuidePageFactory> factoryFn) {
+            this(title, factoryFn, null);
+        }
+
+        ResolvedLink(String title, Function<GuiGuide, GuidePageFactory> factoryFn, @Nullable String url) {
             this.title = title;
             this.factoryFn = factoryFn;
+            this.url = url;
         }
+    }
+
+    /** {@code <link url=…/>} is always inline (web links have no page icon to show). */
+    private static boolean isInlineLink(XmlTag tag) {
+        return tag.get("inline") != null || tag.get("url") != null;
+    }
+
+    /** @return the address if {@code url} is an absolute http(s) URL with a host, else null. Anything else
+     *  (file:, javascript:, relative paths) is refused rather than handed to the OS browser. */
+    @Nullable
+    public static String validWebUrl(@Nullable String url) {
+        if (url == null) {
+            return null;
+        }
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            String scheme = uri.getScheme();
+            if (("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme)) && uri.getHost() != null) {
+                return url;
+            }
+        } catch (java.net.URISyntaxException ignored) {
+            // fall through: not a URL
+        }
+        return null;
     }
 
     /** Resolves a {@code <link>} tag to its title and a factory-function for inline
@@ -692,6 +724,18 @@ public enum XmlPageLoader implements IPageLoaderText {
      */
     @Nullable
     private static ResolvedLink resolveLinkTarget(XmlTag tag, ProfilerFiller prof) {
+        // <link url="https://…" text="…"/>: a web link. Clicking asks through vanilla's
+        // "open this link?" screen (GuideInlineLinkText); the guide never opens one silently.
+        String rawUrl = tag.get("url");
+        if (rawUrl != null) {
+            String url = validWebUrl(rawUrl);
+            if (url == null) {
+                BCLog.logger.warn("[lib.guide.loader.xml] Found a link tag whose url isn't an http(s) address! " + tag);
+                return null;
+            }
+            String text = tag.get("text");
+            return new ResolvedLink(text == null || text.isEmpty() ? url : text, gui -> null, url);
+        }
         String to = tag.get("to");
         String type = tag.get("type");
         // Shorthand: <link inline="ns:path"/> with no `to` attribute. Promote the

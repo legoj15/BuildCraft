@@ -10,6 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
+
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.lib.client.guide.GuiGuide;
@@ -39,13 +43,22 @@ public class GuideInlineLinkText extends GuidePart {
         public final int visibleLen;
         public final Function<GuiGuide, GuidePageFactory> factoryFn;
         public final String title;
+        /** Web address to offer on click (through vanilla's confirm screen) instead of a guide page. */
+        @Nullable
+        public final String url;
 
         public InlineLinkSpan(int visibleStart, int visibleLen,
             Function<GuiGuide, GuidePageFactory> factoryFn, String title) {
+            this(visibleStart, visibleLen, factoryFn, title, null);
+        }
+
+        public InlineLinkSpan(int visibleStart, int visibleLen,
+            Function<GuiGuide, GuidePageFactory> factoryFn, String title, @Nullable String url) {
             this.visibleStart = visibleStart;
             this.visibleLen = visibleLen;
             this.factoryFn = factoryFn;
             this.title = title;
+            this.url = url;
         }
     }
 
@@ -83,6 +96,11 @@ public class GuideInlineLinkText extends GuidePart {
                 InlineLinkSpan span = spans.get(i);
                 for (GuiRectangle rect : spanRects.get(i)) {
                     if (rect.contains(gui.mouse)) {
+                        if (span.url != null) {
+                            // untrusted: resource packs can add guide pages, so keep vanilla's warning line
+                            ConfirmLinkScreen.confirmLinkNow(gui, span.url, false);
+                            return end;
+                        }
                         GuidePageFactory factory = span.factoryFn.apply(gui);
                         if (factory != null) {
                             gui.openPage(factory.createNew(gui));

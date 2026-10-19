@@ -213,6 +213,23 @@ class GuideLinkTargetTest {
         assertTrue(bad.isEmpty(), bad.size() + " unresolvable guide link(s):\n" + String.join("\n", bad));
     }
 
+    /** MarkdownPageLoader only translates {@code #} headings; 1.12.2's deprecated {@code $[special.*]} lines and
+     *  markdown {@code [text](target)} links are not parsed and print verbatim on the page (the guide item's own
+     *  page shipped both). Use {@code <new_page/>}, {@code <recipes_usages stack=…/>} and {@code <link>} instead. */
+    @Test
+    void noGuidePageUsesUnparsedMarkdownSyntax() {
+        Pattern raw = Pattern.compile("\\$\\[special\\.|\\[[^\\]\\n]+\\]\\([^)\\n]*\\)");
+        List<String> bad = new ArrayList<>();
+        for (Map.Entry<String, String> file : shippedMarkdown().entrySet()) {
+            Matcher m = raw.matcher(file.getValue());
+            while (m.find()) {
+                bad.add(file.getKey() + ": " + m.group());
+            }
+        }
+        assertTrue(bad.isEmpty(), bad.size() + " piece(s) of markup the guide prints as raw text:\n"
+            + String.join("\n", bad));
+    }
+
     /** The exact tags that shipped in robots.md before the statement pages existed: they printed as raw text. */
     @Test
     void theRetiredStatementTypeLinksAreRejected() {

@@ -10,6 +10,7 @@
             "from": [4, 0, 4],
             "to": [12, 4, 12],
             "shade": false,
+            "shade_direction_override": "up",
             "faces": {
                 "down":  {"texture": "#bottom"},
                 "north": {"texture": "#bottom", "uv": [4, 12, 12, 16]},
@@ -23,6 +24,7 @@
             "from": [4, 4, 4],
             "to": [12, 12, 12],
             "shade": false,
+            "shade_direction_override": "up",
             "faces": {
                 "north": {"texture": "#center", "uv": [4, 4, 12, 12]},
                 "south": {"texture": "#center", "uv": [4, 4, 12, 12]},
@@ -35,6 +37,7 @@
             "from": [4, 12, 4],
             "to": [12, 16, 12],
             "shade": false,
+            "shade_direction_override": "up",
             "faces": {
                 "up":    {"texture": "#top"},
                 "north": {"texture": "#top", "uv": [4, 0, 12, 4]},

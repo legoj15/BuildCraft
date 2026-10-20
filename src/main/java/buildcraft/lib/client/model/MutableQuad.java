@@ -125,8 +125,8 @@ public class MutableQuad {
     //
     // BakedQuad conversion
     //
-    // MC 26.1: BakedQuad is a record with MaterialInfo.
-    // Constructor: (Vector3fc×4, long×4, Direction, MaterialInfo)
+    // MC 26.1+: BakedQuad is a record with MaterialInfo (built once in materialInfo(boolean)).
+    // Constructor: (Vector3fc×4, long×4, Direction, MaterialInfo, BakedNormals, BakedColors)
     //
     // ############################
 
@@ -146,17 +146,44 @@ public class MutableQuad {
     }
     //?}
 
+    //? if >=26.1 {
+    /** Bundles sprite/layer/item sheet/tint/shade/emission into the 26.x BakedQuad.MaterialInfo record: the CUTOUT
+     * layer + cutout block-item sheet, or (translucent) the TRANSLUCENT layer + translucent block-item sheet.
+     * ambientOcclusion=true on every node: it is what the deprecated shorter constructors pass in NeoForge's patch. */
+    private BakedQuad.MaterialInfo materialInfo(boolean translucent) {
+        net.minecraft.client.renderer.chunk.ChunkSectionLayer layer = translucent
+            ? net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT
+            : net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT;
+        //? if >=26.3 {
+        /*// 26.3 adds the two glint sheets and replaces the boolean shade with a nullable shade-direction override.
+        // shade=true -> null (light by the quad's own face); shade=false -> UP, which is exactly the old unshaded
+        // brightness (26.2's BlockModelLighter used cardinalLighting.up() for unshaded quads).
+        return new BakedQuad.MaterialInfo(
+            sprite, layer,
+            translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
+                        : net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
+            translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemGlintSheet()
+                        : net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSheet(),
+            translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemGlintSpecialSheet()
+                        : net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSpecialSheet(),
+            tintIndex, shade ? null : Direction.UP, lightEmission, true
+        );*/
+        //?} else {
+        // The 7-arg form has been in NeoForge's patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
+        return new BakedQuad.MaterialInfo(
+            sprite, layer,
+            translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
+                        : net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
+            tintIndex, shade, lightEmission, true
+        );
+        //?}
+    }
+    //?}
+
     /** Converts this MutableQuad into a MC 26.1 BakedQuad, preserving per-vertex colours. */
     public BakedQuad toBakedBlock() {
         //? if >=26.1 {
-        // 26.1 bundles sprite/layer/sheet/tint/shade/emission into a BakedQuad.MaterialInfo record.
-        BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
-            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT,
-            net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
-            // ambientOcclusion=true: the deprecated 6-arg constructor is this(..., true) in NeoForge's patch; the
-            // 7-arg form has been in that patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
-            tintIndex, shade, lightEmission, true
-        );
+        BakedQuad.MaterialInfo matInfo = materialInfo(false);
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
@@ -210,11 +237,7 @@ public class MutableQuad {
      *  enabling alpha-blended rendering for colour overlays in the chunk mesh. */
     public BakedQuad toBakedTranslucent() {
         //? if >=26.1 {
-        BakedQuad.MaterialInfo matInfo = new BakedQuad.MaterialInfo(
-            sprite, net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT,
-            net.minecraft.client.renderer.Sheets.translucentBlockItemSheet(),
-            tintIndex, shade, lightEmission, true // ambientOcclusion: see toBakedBlock()
-        );
+        BakedQuad.MaterialInfo matInfo = materialInfo(true);
         return new BakedQuad(
             vertex_0.positionvf(), vertex_1.positionvf(),
             vertex_2.positionvf(), vertex_3.positionvf(),
@@ -309,7 +332,12 @@ public class MutableQuad {
         BakedQuad.MaterialInfo mat = quad.materialInfo();
         tintIndex = mat.tintIndex();
         sprite = mat.sprite();
+        //? if >=26.3 {
+        /*// 26.3: any shade-direction override reads back as unshaded (BC only ever writes UP for shade=false).
+        shade = mat.shadeDirectionOverride() == null;*/
+        //?} else {
         shade = mat.shade();
+        //?}
         lightEmission = mat.lightEmission();
         //?} elif >=1.21.10 {
         /*// 1.21.11/1.21.10 BakedQuad carries these directly (no MaterialInfo record).

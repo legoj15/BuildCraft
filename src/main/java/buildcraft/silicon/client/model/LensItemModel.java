@@ -206,7 +206,12 @@ public class LensItemModel implements ItemModel {
         renderState.appendModelIdentityElement(displayContext);
 
         var layer = renderState.newLayer();
+        //? if >=26.3 {
+        /*// 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits.
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));*/
+        //?} else {
         layer.prepareQuadList().addAll(quads);
+        //?}
         //? if <26.1 {
         /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
         // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet

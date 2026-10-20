@@ -26,7 +26,6 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -51,6 +50,7 @@ import buildcraft.api.facades.IFacadeState;
 
 import buildcraft.core.BCUnifiedConfig;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.ItemStackKey;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
@@ -351,8 +351,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
                     // defaultState (air) and throw for every valid facade.
                     FacadePhasedState phasedState = info.createPhased(null);
                     CompoundTag nbt = phasedState.writeToNbt();
-                    BlockState nbtReadState = NbtUtils.readBlockState(
-                        buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
+                    BlockState nbtReadState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "state"));
                     if (nbtReadState != info.state) {
                         throw new IllegalStateException("Read (from NBT) state was different! (\n\t"
                             + nbtReadState + "\n !=\n\t" + info.state + "\n\tNBT = " + nbt + "\n)");

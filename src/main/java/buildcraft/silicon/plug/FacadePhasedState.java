@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.facades.IFacadePhasedState;
 import buildcraft.api.facades.IFacadeState;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -38,8 +39,7 @@ public class FacadePhasedState implements IFacadePhasedState {
         FacadeBlockStateInfo stateInfo = FacadeStateManager.defaultState;
         if (nbt.contains("state")) {
             try {
-                BlockState blockState = NbtUtils.readBlockState(
-                    buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
+                BlockState blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "state"));
                 stateInfo = FacadeStateManager.validFacadeStates.get(blockState);
                 if (stateInfo == null) {
                     stateInfo = FacadeStateManager.createFallbackInfo(blockState);

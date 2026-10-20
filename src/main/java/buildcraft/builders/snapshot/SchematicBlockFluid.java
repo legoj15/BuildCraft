@@ -31,6 +31,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class SchematicBlockFluid implements ISchematicBlock {
@@ -59,7 +60,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
                 Stream.of(Direction.DOWN)
             )
             .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
-            .map(BlockPos::new)
+            .map(BlockPos.ZERO::offset)
             .collect(Collectors.toSet());
     }
 
@@ -104,7 +105,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
             Stream.concat(
                 Stream.of(Direction.values())
                     .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
-                    .map(BlockPos::new),
+                    .map(BlockPos.ZERO::offset),
                 Stream.of(BlockPos.ZERO)
             )
                 .map(blockPos::offset)
@@ -140,10 +141,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
 
     @Override
     public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
-        blockState = NbtUtils.readBlockState(
-            buildcraft.lib.misc.RegistryUtilBC.blockLookup(),
-            NBTUtilBC.getCompound(nbt, "blockState")
-        );
+        blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "blockState"));
         isFlowing = NBTUtilBC.getBoolean(nbt, "isFlowing", false);
     }
 

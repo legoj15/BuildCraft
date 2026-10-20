@@ -36,8 +36,8 @@ import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.entity.EntityRobot;
 
 /**
- * The farmer and the planter do not go back to a block a protection mod refused them. A claim mod that cancels a hoe's
- * tool-modification event turns the till into a PASS, and one that cancels a seed's placement event makes the plant
+ * The farmer and the planter do not go back to a block a protection mod refused them. A claim mod that cancels the
+ * right-click a hoe's till starts with refuses the till, and one that cancels a seed's placement event makes the plant
  * fail; both used to leave the robot's board with nothing to remember, so the next search picked the same nearest
  * block again, every cycle, forever (and a failed planting dropped the seed on the ground besides).
  *

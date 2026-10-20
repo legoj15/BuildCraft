@@ -30,6 +30,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
 import buildcraft.api.mj.MjAPI;
@@ -45,8 +46,8 @@ import buildcraft.robotics.entity.EntityRobot;
  * A robot acts for the owner of its home station, so protection mods judge that player, not the generic
  * "[BuildCraft]" identity: the robot's planting, tool use and block breaking must run as the station owner's fake
  * player, the way the break AI's permission probe and the Stripes board already do. The observers are the events a
- * claim mod would cancel: the block-placement event for a planted seed, the tool-modification event for a hoe
- * tilling dirt, the break-speed event for a pickaxe swing at stone (the only player-attributed event the break
+ * claim mod would cancel: the block-placement event for a planted seed, the right-click-block event a hoe's till
+ * starts with (the one ask every node shares; 26.3 posts no tool-modification event for a till), the break-speed event for a pickaxe swing at stone (the only player-attributed event the break
  * itself posts - the destroy that follows posts none).
  *
  * <p>A used tool is also in the fake player's hand while it is used: a claim or tool listener reads the player's
@@ -123,7 +124,7 @@ public class RobotOwnerIdentityTester {
         helper.succeed();
     }
 
-    /** A hoe tills dirt as the owner: the tool-modification event names the owner's fake player. */
+    /** A hoe tills dirt as the owner: the right-click-block event names the owner's fake player. */
     public static void useToolActsAsTheStationOwner(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         GameProfile owner = ownerProfile("bc_robot_tool_owner");
@@ -135,13 +136,13 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
 
         List<Entity> users = new ArrayList<>();
-        Consumer<BlockEvent.BlockToolModificationEvent> observer = event -> {
+        Consumer<PlayerInteractEvent.RightClickBlock> observer = event -> {
             if (event.getPos().equals(dirt)) {
-                Player player = event.getPlayer();
+                Player player = event.getEntity();
                 users.add(player);
             }
         };
-        NeoForge.EVENT_BUS.addListener(BlockEvent.BlockToolModificationEvent.class, observer);
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, observer);
         try {
             AIRobotUseToolOnBlock user = new AIRobotUseToolOnBlock(robot, dirt);
             for (int cycles = 0; cycles < 80 && !level.getBlockState(dirt).is(Blocks.FARMLAND); cycles++) {
@@ -220,7 +221,7 @@ public class RobotOwnerIdentityTester {
         helper.succeed();
     }
 
-    /** A hoe tills dirt with the hoe in the fake player's main hand: the tool-modification event's player holds the
+    /** A hoe tills dirt with the hoe in the fake player's main hand: the right-click-block event's player holds the
      *  tool, and the robot gets the hoe back with the wear the use put on it. */
     public static void useToolHoldsTheToolInTheFakePlayersHand(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -233,12 +234,12 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
 
         List<ItemStack> hands = new ArrayList<>();
-        Consumer<BlockEvent.BlockToolModificationEvent> observer = event -> {
+        Consumer<PlayerInteractEvent.RightClickBlock> observer = event -> {
             if (event.getPos().equals(dirt)) {
-                hands.add(event.getPlayer().getMainHandItem().copy());
+                hands.add(event.getEntity().getMainHandItem().copy());
             }
         };
-        NeoForge.EVENT_BUS.addListener(BlockEvent.BlockToolModificationEvent.class, observer);
+        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, observer);
         try {
             AIRobotUseToolOnBlock user = new AIRobotUseToolOnBlock(robot, dirt);
             for (int cycles = 0; cycles < 80 && !level.getBlockState(dirt).is(Blocks.FARMLAND); cycles++) {
@@ -248,7 +249,7 @@ public class RobotOwnerIdentityTester {
         } finally {
             NeoForge.EVENT_BUS.unregister(observer);
         }
-        helper.assertTrue(!hands.isEmpty(), "the tool-modification event must have been posted");
+        helper.assertTrue(!hands.isEmpty(), "the right-click-block event must have been posted");
         for (ItemStack inHand : hands) {
             helper.assertTrue(inHand.is(Items.DIAMOND_HOE),
                     "a listener reading the player's hand must see the hoe in use, got " + inHand);

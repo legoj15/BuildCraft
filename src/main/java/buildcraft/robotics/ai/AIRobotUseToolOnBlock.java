@@ -18,7 +18,9 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
@@ -81,8 +83,18 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     RobotProtection.holdInMainHand(player, held);
                     // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
                     BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
-                    UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
-                    used = held.useOn(useOnContext).consumesAction();
+                    // Ask first, as a player's right-click does (ServerPlayerGameMode.useItemOn posts this before
+                    // the item's useOn): a claim mod refuses right-clicks through it on every node. On 26.3 it is
+                    // the ONLY ask a till gets - hoes became a BLOCK_TRANSFORMER component and NeoForge no longer
+                    // posts the tool-modification event for tilling.
+                    PlayerInteractEvent.RightClickBlock ask =
+                            CommonHooks.onRightClickBlock(player, InteractionHand.MAIN_HAND, useToBlock, hit);
+                    if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+                        used = false;
+                    } else {
+                        UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
+                        used = held.useOn(useOnContext).consumesAction();
+                    }
                     // Read before the lease closes and takes the hand's contents away.
                     inHand = player.getMainHandItem();
                 }

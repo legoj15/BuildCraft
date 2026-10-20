@@ -5,6 +5,8 @@
  */
 package buildcraft.lib.gui.elem;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import buildcraft.lib.gui.BuildCraftGui;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.IInteractionElement;
@@ -83,7 +85,7 @@ public class GuiElementScrollbar implements IInteractionElement {
 
     @Override
     public void onMouseClicked(int button) {
-        if (button != 0 || !window.isScrollable()) return;
+        if (button != InputConstants.MOUSE_BUTTON_LEFT || !window.isScrollable()) return;
         if (!contains(gui.mouse.getX(), gui.mouse.getY())) return;
         grabOffset = window.thumbGrabOffset(gui.mouse.getY() - track.getY(), trackLength(), thumbIcon.height);
         dragging = true;
@@ -93,14 +95,14 @@ public class GuiElementScrollbar implements IInteractionElement {
     @Override
     public void onMouseDragged(int button, long ticksSinceClick) {
         // Left button only: a right-drag while the thumb is held must not scroll the list.
-        if (dragging && button == 0) {
+        if (dragging && button == InputConstants.MOUSE_BUTTON_LEFT) {
             followMouse();
         }
     }
 
     @Override
     public void onMouseReleased(int button) {
-        if (dragging && button == 0) {
+        if (dragging && button == InputConstants.MOUSE_BUTTON_LEFT) {
             followMouse();
             dragging = false;
         }

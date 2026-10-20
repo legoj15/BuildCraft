@@ -1,5 +1,6 @@
 package buildcraft.lib.gui.statement;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 
 import javax.annotation.Nullable;
@@ -117,7 +118,7 @@ public class GuiElementStatementDrag implements IMenuElement {
 
     @Override
     public void onMouseClicked(int button) {
-        if (button != 1) {
+        if (button != InputConstants.MOUSE_BUTTON_RIGHT) {
             return;
         }
         for (IGuiElement element : gui.getElementsAt(gui.mouse.getX(), gui.mouse.getY())) {

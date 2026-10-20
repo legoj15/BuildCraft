@@ -6,6 +6,7 @@ package buildcraft.builders.gui;
 
 import java.util.List;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 //? if >=1.21.10 {
@@ -337,12 +338,14 @@ public class GuiElectronicLibrary extends GuiBC8<ContainerElectronicLibrary> {
     //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        return (event.button() == 0 && clickList(event.x(), event.y())) || super.mouseClicked(event, doubleClick);
+        return (event.button() == InputConstants.MOUSE_BUTTON_LEFT && clickList(event.x(), event.y()))
+                || super.mouseClicked(event, doubleClick);
     }
     //?} else {
     /*@Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return (button == 0 && clickList(mouseX, mouseY)) || super.mouseClicked(mouseX, mouseY, button);
+        return (button == InputConstants.MOUSE_BUTTON_LEFT && clickList(mouseX, mouseY))
+                || super.mouseClicked(mouseX, mouseY, button);
     }*/
     //?}
 }

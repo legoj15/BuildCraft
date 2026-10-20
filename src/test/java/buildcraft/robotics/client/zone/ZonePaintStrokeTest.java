@@ -7,6 +7,7 @@ package buildcraft.robotics.client.zone;
 
 import java.util.function.IntPredicate;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,11 +18,14 @@ import org.junit.jupiter.api.Test;
  */
 public class ZonePaintStrokeTest {
 
-    private static final int LEFT = 0;
-    private static final int RIGHT = 1;
-    private static final int MIDDLE = 2;
+    private static final int LEFT = InputConstants.MOUSE_BUTTON_LEFT;
+    private static final int RIGHT = InputConstants.MOUSE_BUTTON_RIGHT;
+    private static final int MIDDLE = InputConstants.MOUSE_BUTTON_MIDDLE;
+    /** The first number past left, right and middle, on any line's numbering (0 to 2 up to 26.2, 1 to 3 on 26.3). */
+    private static final int SIDE = 1 + Math.max(InputConstants.MOUSE_BUTTON_LEFT,
+            Math.max(InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.MOUSE_BUTTON_MIDDLE));
 
-    /** What GLFW would answer for "is this button physically down": the screen's seam into {@link ZonePaintStroke}. */
+    /** What the window system would answer for "is this button physically down": the screen's seam into the stroke. */
     private static final IntPredicate LEFT_HELD = b -> b == LEFT;
     private static final IntPredicate RIGHT_HELD = b -> b == RIGHT;
     private static final IntPredicate NOTHING_HELD = b -> false;
@@ -98,7 +102,7 @@ public class ZonePaintStrokeTest {
     void buttonsThatStartNoStrokeStartNone() {
         ZonePaintStroke stroke = new ZonePaintStroke();
         Assertions.assertFalse(stroke.press(MIDDLE, 5, 1, 1));
-        Assertions.assertFalse(stroke.press(3, 5, 1, 1));
+        Assertions.assertFalse(stroke.press(SIDE, 5, 1, 1));
         Assertions.assertFalse(stroke.isOpen());
         Assertions.assertNull(stroke.release(MIDDLE), "and their release ends nothing");
     }
@@ -201,9 +205,9 @@ public class ZonePaintStrokeTest {
 
     @Test
     void aSimulatedRightClickEraseFollowsThePhysicalLeftButton() {
-        // On macOS vanilla rewrites a Ctrl+left press into button 1, and the release and drags with it, while GLFW
-        // reports the LEFT button down and the right one up. Polling the right button alone froze the erase at the
-        // pressed column for the whole drag.
+        // On macOS vanilla rewrites a Ctrl+left press into a right click, and the release and drags with it, while the
+        // window system reports the LEFT button down and the right one up. Polling the right button alone froze the
+        // erase at the pressed column for the whole drag.
         ZonePaintStroke stroke = new ZonePaintStroke();
         Assertions.assertTrue(stroke.press(RIGHT, 2, 0, 0, LEFT_HELD));
         Assertions.assertEquals(RIGHT, stroke.button(), "it is still the right button's stroke: an erase");
@@ -229,7 +233,7 @@ public class ZonePaintStrokeTest {
     }
 
     @Test
-    void aLeftStrokeFollowsTheLeftButtonWhateverGlfwSaysAtPress() {
+    void aLeftStrokeFollowsTheLeftButtonWhateverTheWindowSystemSaysAtPress() {
         // Only the simulated-right case borrows the left button: a left press keeps following the left button even if
         // GLFW somehow reports it up at the press (no other button is ever substituted for it).
         ZonePaintStroke stroke = new ZonePaintStroke();

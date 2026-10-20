@@ -14,6 +14,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Queues;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -748,7 +750,7 @@ public class GuiGuide extends Screen {
             // contents page's sort-order buttons sit, so offering the click to the page first let a button under a
             // tab steal it; likewise page widgets under the open overlay took clicks through it.
             boolean overlayOpen = isSmallScreen() && showingContentsMenu;
-            if (mouseButton == 0) {
+            if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
                 GuideChapter chapter = chapterUnderMouse();
                 int clickResult = chapter == null ? 0 : chapter.handleClick();
                 if (clickResult > 0) {
@@ -776,7 +778,7 @@ public class GuiGuide extends Screen {
             }
         }
 
-        if (mouseButton == 0) {
+        if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
             if (isOpen) {
                 int page0xMin = this.minX + (int) PAGE_LEFT_TEXT.getX();
                 int page0xMax = page0xMin + (int) PAGE_LEFT_TEXT.getWidth();

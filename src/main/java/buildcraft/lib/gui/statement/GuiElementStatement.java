@@ -1,5 +1,6 @@
 package buildcraft.lib.gui.statement;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -120,7 +121,7 @@ public class GuiElementStatement<S extends IStatement> extends GuiElementSimple
         if (!contains(gui.mouse)) {
             return;
         }
-        if (ref.canInteract && button == 0) {
+        if (ref.canInteract && button == InputConstants.MOUSE_BUTTON_LEFT) {
             if (false /* Screen.hasShiftDown() */) {
                 set(null);
                 return;

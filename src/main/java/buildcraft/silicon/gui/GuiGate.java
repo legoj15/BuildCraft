@@ -1,5 +1,6 @@
 package buildcraft.silicon.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -127,7 +128,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Check connector button clicks BEFORE super.mouseClicked(), because
         // AbstractContainerScreen.mouseClicked() returns true for any click in the
         // container area (slot interactions), which would swallow the connector click.
-        if (event.button() == 0 && toggleConnectorAt(event.x(), event.y())) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && toggleConnectorAt(event.x(), event.y())) {
             return true;
         }
         return super.mouseClicked(event, doubleClick);
@@ -138,7 +139,7 @@ public class GuiGate extends GuiBC8<ContainerGate> {
         // Check connector button clicks BEFORE super.mouseClicked(), because
         // AbstractContainerScreen.mouseClicked() returns true for any click in the
         // container area (slot interactions), which would swallow the connector click.
-        if (button == 0 && toggleConnectorAt(mouseXd, mouseYd)) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT && toggleConnectorAt(mouseXd, mouseYd)) {
             return true;
         }
         return super.mouseClicked(mouseXd, mouseYd, button);

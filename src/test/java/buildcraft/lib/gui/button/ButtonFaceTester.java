@@ -5,6 +5,7 @@
  */
 package buildcraft.lib.gui.button;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,10 @@ import org.junit.jupiter.api.Test;
  * Kept free of client classes so it runs on every node's unit-test JVM.
  */
 public class ButtonFaceTester {
+
+    /** The first number past left, right and middle, on any line's numbering (0 to 2 up to 26.2, 1 to 3 on 26.3). */
+    private static final int SIDE = 1 + Math.max(InputConstants.MOUSE_BUTTON_LEFT,
+            Math.max(InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.MOUSE_BUTTON_MIDDLE));
 
     @Test
     public void anIdleButtonShowsTheNormalFace() {
@@ -69,18 +74,18 @@ public class ButtonFaceTester {
 
     @Test
     public void aDefaultButtonAnswersOnlyTheLeftMouseButton() {
-        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.LEFT, 0));
-        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.LEFT, 1));
-        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.LEFT, 2));
+        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.LEFT, InputConstants.MOUSE_BUTTON_LEFT));
+        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.LEFT, InputConstants.MOUSE_BUTTON_RIGHT));
+        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.LEFT, InputConstants.MOUSE_BUTTON_MIDDLE));
     }
 
     @Test
     public void aMultiButtonButtonAnswersLeftRightAndMiddle() {
-        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, 0));
-        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, 1));
-        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, 2));
+        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, InputConstants.MOUSE_BUTTON_LEFT));
+        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, InputConstants.MOUSE_BUTTON_RIGHT));
+        Assertions.assertTrue(MouseButtons.accepts(MouseButtons.ALL, InputConstants.MOUSE_BUTTON_MIDDLE));
         // Side buttons (back/forward) and garbage never press a BuildCraft button.
-        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.ALL, 3));
+        Assertions.assertFalse(MouseButtons.accepts(MouseButtons.ALL, SIDE));
         Assertions.assertFalse(MouseButtons.accepts(MouseButtons.ALL, -1));
         Assertions.assertFalse(MouseButtons.accepts(MouseButtons.ALL, 40));
     }
@@ -88,8 +93,8 @@ public class ButtonFaceTester {
     @Test
     public void masksCombine() {
         int leftAndRight = MouseButtons.LEFT | MouseButtons.RIGHT;
-        Assertions.assertTrue(MouseButtons.accepts(leftAndRight, 0));
-        Assertions.assertTrue(MouseButtons.accepts(leftAndRight, 1));
-        Assertions.assertFalse(MouseButtons.accepts(leftAndRight, 2));
+        Assertions.assertTrue(MouseButtons.accepts(leftAndRight, InputConstants.MOUSE_BUTTON_LEFT));
+        Assertions.assertTrue(MouseButtons.accepts(leftAndRight, InputConstants.MOUSE_BUTTON_RIGHT));
+        Assertions.assertFalse(MouseButtons.accepts(leftAndRight, InputConstants.MOUSE_BUTTON_MIDDLE));
     }
 }

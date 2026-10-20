@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
 //? if >=1.21.10 {
@@ -306,7 +308,7 @@ public class GuidePageContents extends GuidePageBase {
     public void handleMouseClick(int x, int y, int width, int height, int mouseX, int mouseY, int mouseButton,
         int index, boolean isEditing) {
         super.handleMouseClick(x, y, width, height, mouseX, mouseY, mouseButton, index, isEditing);
-        if (mouseButton == 0) {
+        if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
             if (index == 0) {
                 IFontRenderer f = getFontRenderer();
                 String text = showLoreText();
@@ -377,7 +379,7 @@ public class GuidePageContents extends GuidePageBase {
              return true;
         }
 
-        if (mouseButton == 1 && mouseX >= searchText.getX() && mouseX < searchText.getX() + searchText.getWidth()
+        if (mouseButton == InputConstants.MOUSE_BUTTON_RIGHT && mouseX >= searchText.getX() && mouseX < searchText.getX() + searchText.getWidth()
             && mouseY >= searchText.getY() && mouseY < searchText.getY() + searchText.getHeight()) {
             searchText.setValue("");
             return true;

@@ -5,15 +5,27 @@
  */
 package buildcraft.core.gen;
 
+//? if >=26.3 {
+/*import com.mojang.serialization.MapCodec;*/
+//?} else {
 import com.mojang.serialization.Codec;
+//?}
 
 import net.minecraft.core.BlockPos;
+//? if >=26.3 {
+/*import net.minecraft.util.RandomSource;*/
+//?}
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=26.3 {
+/*import net.minecraft.world.level.chunk.ChunkGenerator;*/
+//?}
 import net.minecraft.world.level.levelgen.feature.Feature;
+//? if <26.3 {
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+//?}
 
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.core.BCCoreBlocks;
@@ -27,6 +39,24 @@ import buildcraft.core.BCCoreBlocks;
  * - Replaces one bedrock with a water spring block
  * - Fills blocks upward with water until air is reached
  */
+//? if >=26.3 {
+/*// 26.3 merged Feature and ConfiguredFeature: Feature is a plain interface that carries its own
+// MapCodec and receives the four place() values directly; the type is registered under
+// Registries.FEATURE_TYPE and instantiated from data/<ns>/worldgen/feature/*.json.
+public record SpringFeature() implements Feature {
+
+    public static final MapCodec<SpringFeature> CODEC = MapCodec.unit(SpringFeature::new);
+
+    @Override
+    public MapCodec<SpringFeature> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public boolean place(WorldGenLevel level, ChunkGenerator chunkGenerator, RandomSource random, BlockPos origin) {
+        return generate(level, origin);
+    }*/
+//?} else {
 public class SpringFeature extends Feature<NoneFeatureConfiguration> {
 
     public SpringFeature(Codec<NoneFeatureConfiguration> codec) {
@@ -35,9 +65,11 @@ public class SpringFeature extends Feature<NoneFeatureConfiguration> {
 
     @Override
     public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
-        WorldGenLevel level = context.level();
-        BlockPos origin = context.origin();
+        return generate(context.level(), context.origin());
+    }
+//?}
 
+    private static boolean generate(WorldGenLevel level, BlockPos origin) {
         if (!EnumSpring.WATER.canGen) {
             return false;
         }

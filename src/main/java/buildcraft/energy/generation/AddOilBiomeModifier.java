@@ -10,6 +10,9 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.Holder;
+//? if >=26.3 {
+/*import net.minecraft.core.RegistryAccess;*/
+//?}
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
@@ -41,8 +44,15 @@ public record AddOilBiomeModifier(Holder<PlacedFeature> feature) implements Biom
             PlacedFeature.CODEC.fieldOf("feature").forGetter(AddOilBiomeModifier::feature)
     ).apply(instance, AddOilBiomeModifier::new));
 
+    //? if >=26.3 {
+    /*// 26.3 added a leading RegistryAccess to BiomeModifier#modify; the oil modifier doesn't need it.
+    @Override
+    public void modify(RegistryAccess registries, Holder<Biome> biome, Phase phase,
+            ModifiableBiomeInfo.BiomeInfo.Builder builder) {*/
+    //?} else {
     @Override
     public void modify(Holder<Biome> biome, Phase phase, ModifiableBiomeInfo.BiomeInfo.Builder builder) {
+    //?}
         if (phase == Phase.ADD) {
             builder.getGenerationSettings().addFeature(GenerationStep.Decoration.TOP_LAYER_MODIFICATION, feature);
         }

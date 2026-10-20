@@ -29,6 +29,8 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeFlow;
 
+import buildcraft.lib.net.NetEnumUtil;
+
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 
 /**
@@ -156,7 +158,7 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buf, stack);
             buf.writeVarInt(stackCount);
             buf.writeBoolean(toCenter);
-            buf.writeEnum(side);
+            NetEnumUtil.write(buf, side);
             buf.writeByte(colour == null ? -1 : colour.getId());
             buf.writeVarInt(timeToDest);
         }
@@ -165,7 +167,7 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
             ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(buf);
             int stackCount = buf.readVarInt();
             boolean toCenter = buf.readBoolean();
-            Direction side = buf.readEnum(Direction.class);
+            Direction side = NetEnumUtil.read(buf, Direction.class);
             int colourByte = buf.readByte();
             DyeColor colour = colourByte < 0 ? null : DyeColor.byId(colourByte);
             int timeToDest = buf.readVarInt();

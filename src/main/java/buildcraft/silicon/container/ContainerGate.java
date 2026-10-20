@@ -30,6 +30,7 @@ import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.misc.data.IdAllocator;
+import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.StatementWrapper;
@@ -65,7 +66,7 @@ public class ContainerGate extends ContainerBC_Neptune {
 
     private static PluggableGate getPluggableGate(Inventory inv, FriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
-        Direction side = buf.readEnum(Direction.class);
+        Direction side = NetEnumUtil.read(buf, Direction.class);
         if (inv.player.level() != null) {
             var be = inv.player.level().getBlockEntity(pos);
             if (be instanceof buildcraft.transport.tile.TilePipeHolder holder) {
@@ -187,7 +188,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 int numActions = buffer.readInt();
                 for (int i = 0; i < numTriggers; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
+                    EnumPipePart part = NetEnumUtil.read(buffer, EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid trigger tag from server: " + tag);
@@ -200,7 +201,7 @@ public class ContainerGate extends ContainerBC_Neptune {
                 }
                 for (int i = 0; i < numActions; i++) {
                     String tag = buffer.readUtf();
-                    EnumPipePart part = buffer.readEnum(EnumPipePart.class);
+                    EnumPipePart part = NetEnumUtil.read(buffer, EnumPipePart.class);
                     var state = StatementManager.statements.get(tag);
                     if (state == null) {
                         BCLog.logger.warn("Gate received invalid action tag: " + tag);
@@ -227,12 +228,12 @@ public class ContainerGate extends ContainerBC_Neptune {
             buffer.writeInt(possibleActions.size());
             for (TriggerWrapper wrapper : possibleTriggers) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                buffer.writeEnum(wrapper.sourcePart);
+                NetEnumUtil.write(buffer, wrapper.sourcePart);
             }
 
             for (ActionWrapper wrapper : possibleActions) {
                 buffer.writeUtf(wrapper.getUniqueTag());
-                buffer.writeEnum(wrapper.sourcePart);
+                NetEnumUtil.write(buffer, wrapper.sourcePart);
             }
 
             // Sync connections

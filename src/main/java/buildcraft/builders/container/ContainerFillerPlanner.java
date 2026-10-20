@@ -15,6 +15,7 @@ import buildcraft.api.core.BCLog;
 import buildcraft.api.filler.IFillerPattern;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.statement.FullStatement;
 
 import buildcraft.builders.BCBuildersMenuTypes;
@@ -114,7 +115,7 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
     public ContainerFillerPlanner(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
         super(BCBuildersMenuTypes.FILLER_PLANNER.get(), containerId, playerInv.player);
         UUID boxId = buf.readUUID();
-        EnumAddonSlot slot = buf.readEnum(EnumAddonSlot.class);
+        EnumAddonSlot slot = NetEnumUtil.read(buf, EnumAddonSlot.class);
         AddonFillerPlanner found = null;
         for (VolumeBox vb : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
             if (vb.id.equals(boxId)) {

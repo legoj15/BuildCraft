@@ -98,7 +98,7 @@ public final class CraftingUtil {
 
         //? if >=1.21.10 {
         // Context for resolving ingredient SlotDisplays. fromLevel() supplies
-        // SlotDisplayContext.REGISTRIES (+ FUEL_VALUES); without REGISTRIES a TagSlotDisplay —
+        // SlotDisplayContext.REGISTRIES; without REGISTRIES a TagSlotDisplay —
         // i.e. every tag-based ingredient like #c:ingots/iron or #c:gears/stone — resolves to an
         // empty stream and the phantom slot stays blank. Runs server-side, so the registry source
         // is the Level, not Minecraft.getInstance().

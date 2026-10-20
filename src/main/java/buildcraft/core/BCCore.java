@@ -105,7 +105,15 @@ public class BCCore {
         buildcraft.lib.registry.LegacyAliases.init(modEventBus);
 
         // ─── Single unified config ──────────────────────────────────────────
+        //? if >=26.3 {
+        /*// FML 12 split COMMON into LOCAL (both sides, global file, never synced: the exact old behaviour)
+        // and SYNCED, and names the file after the type ("-local"). Keep the legacy file name so a tuned
+        // buildcraftunofficial-common.toml is still the file that gets read.
+        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.LOCAL, BCUnifiedConfig.SPEC,
+                MODID + "-common.toml");*/
+        //?} else {
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCUnifiedConfig.SPEC);
+        //?}
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             BCCoreClient.init(modContainer, modEventBus);
         }

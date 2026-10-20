@@ -5,8 +5,8 @@
  */
 package buildcraft.transport.stripes;
 
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.InteractionHand;
@@ -30,7 +30,9 @@ public enum StripesHandlerHoe implements IStripesHandlerItem {
                           ItemStack stack,
                           Player player,
                           IStripesActivator activator) {
-        if (!(stack.getItem() instanceof HoeItem)) {
+        // The tag, not HoeItem: 26.3 deleted the class (hoes carry a BLOCK_TRANSFORMER component instead),
+        // and every node tags its hoes, so one test serves all of them.
+        if (!stack.is(ItemTags.HOES)) {
             return false;
         }
 

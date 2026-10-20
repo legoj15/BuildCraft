@@ -119,8 +119,7 @@ public final class GateRecipeVariantTester {
                 new GateVariant(EnumGateLogic.AND, EnumGateMaterial.GOLD, EnumGateModifier.LAPIS)))
                 .iterator().next();
         //? if >=1.21.10 {
-        net.minecraft.util.context.ContextMap ctx = new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        net.minecraft.util.context.ContextMap ctx = net.minecraft.util.context.ContextMap.EMPTY;
 
         java.util.List<ItemStack> displayed = gateInput.ingredient.display().resolveForStacks(ctx);
         if (displayed.isEmpty()) {

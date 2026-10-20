@@ -8,13 +8,20 @@ package buildcraft.lib.client;
 
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.core.BlockPos;
+//? if >=26.3 {
+/*import net.minecraft.core.Direction;*/
+//?}
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+//? if <26.3 {
 import net.minecraft.world.phys.HitResult;
+//?}
 
 import net.neoforged.neoforge.client.extensions.common.IClientBlockExtensions;
 
+//? if <26.3 {
 import org.jspecify.annotations.Nullable;
+//?}
 
 /**
  * IClientBlockExtensions implementation that fully suppresses break and hit
@@ -31,8 +38,13 @@ public class NoParticleClientExtensions implements IClientBlockExtensions {
 
     private NoParticleClientExtensions() {}
 
+    // 26.3 drops the HitResult argument: vanilla passes the position and face being hit instead.
     @Override
+    //? if <26.3 {
     public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
+    //?} else {
+    /*public boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face, ParticleEngine manager) {*/
+    //?}
         return true;
     }
 

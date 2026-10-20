@@ -214,30 +214,48 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
     }
 
     @Override
+    //? if <26.3 {
     public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
-        if (target instanceof BlockHitResult blockHit) {
-            HitSpriteInfo info = getHitSpriteInfo(level, blockHit.getBlockPos(), target);
-            if (info != null) {
-                BlockPos pos = blockHit.getBlockPos();
-                Direction face = blockHit.getDirection();
-                double x = pos.getX() + Math.random() * (info.aabb.maxX - info.aabb.minX) + info.aabb.minX;
-                double y = pos.getY() + Math.random() * (info.aabb.maxY - info.aabb.minY) + info.aabb.minY;
-                double z = pos.getZ() + Math.random() * (info.aabb.maxZ - info.aabb.minZ) + info.aabb.minZ;
-                switch (face) {
-                    case DOWN: y = pos.getY() + info.aabb.minY - 0.1; break;
-                    case UP: y = pos.getY() + info.aabb.maxY + 0.1; break;
-                    case NORTH: z = pos.getZ() + info.aabb.minZ - 0.1; break;
-                    case SOUTH: z = pos.getZ() + info.aabb.maxZ + 0.1; break;
-                    case WEST: x = pos.getX() + info.aabb.minX - 0.1; break;
-                    case EAST: x = pos.getX() + info.aabb.maxX + 0.1; break;
-                }
-                
-                PipeBreakParticle particle = new PipeBreakParticle((ClientLevel) level, x, y, z, 0, 0, 0, info.sprite);
-                manager.add(particle);
-                return true; // suppress default particles
-            }
+        if (!(target instanceof BlockHitResult blockHit)) {
+            return false;
         }
-        return false;
+        BlockPos pos = blockHit.getBlockPos();
+        return spawnHitParticle(level, pos, blockHit.getDirection(), getHitSpriteInfo(level, pos, target), manager);
+    }
+    //?} else {
+    /*public boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face, ParticleEngine manager) {
+        // 26.3 passes only the position and face, and also routes other players' break events (level events 2019 and
+        // 2020) through here, so the local crosshair may not be on this block. Same lookup as addDestroyEffects: the
+        // part under the crosshair if it is on this block, else the pipe's own sprite.
+        HitSpriteInfo info = getHitSpriteInfo(level, pos, Minecraft.getInstance().hitResult);
+        if (info == null && level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            info = getPipeSpriteInfo(level, pos, tile);
+        }
+        return spawnHitParticle(level, pos, face, info, manager);
+    }*/
+    //?}
+
+    /** Spawns the single crack particle on {@code face}; false (vanilla particles) when there is no sprite to use. */
+    private static boolean spawnHitParticle(Level level, BlockPos pos, Direction face, @Nullable HitSpriteInfo info,
+                                            ParticleEngine manager) {
+        if (info == null) {
+            return false;
+        }
+        double x = pos.getX() + Math.random() * (info.aabb.maxX - info.aabb.minX) + info.aabb.minX;
+        double y = pos.getY() + Math.random() * (info.aabb.maxY - info.aabb.minY) + info.aabb.minY;
+        double z = pos.getZ() + Math.random() * (info.aabb.maxZ - info.aabb.minZ) + info.aabb.minZ;
+        switch (face) {
+            case DOWN: y = pos.getY() + info.aabb.minY - 0.1; break;
+            case UP: y = pos.getY() + info.aabb.maxY + 0.1; break;
+            case NORTH: z = pos.getZ() + info.aabb.minZ - 0.1; break;
+            case SOUTH: z = pos.getZ() + info.aabb.maxZ + 0.1; break;
+            case WEST: x = pos.getX() + info.aabb.minX - 0.1; break;
+            case EAST: x = pos.getX() + info.aabb.maxX + 0.1; break;
+        }
+
+        PipeBreakParticle particle = new PipeBreakParticle((ClientLevel) level, x, y, z, 0, 0, 0, info.sprite);
+        manager.add(particle);
+        return true; // suppress default particles
     }
 
     @Override

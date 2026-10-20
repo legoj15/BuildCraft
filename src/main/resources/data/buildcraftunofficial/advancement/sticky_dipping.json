@@ -10,14 +10,12 @@
     "in_oil": {
       "trigger": "minecraft:location",
       "conditions": {
-        "player": [
-          {
-            "condition": "minecraft:location_check",
-            "predicate": {
-              "block": { "blocks": "#buildcraftunofficial:oil_fluids" }
-            }
+        "player": {
+          "type": "minecraft:location_check",
+          "predicate": {
+            "block": { "blocks": "#buildcraftunofficial:oil_fluids" }
           }
-        ]
+        }
       }
     }
   }

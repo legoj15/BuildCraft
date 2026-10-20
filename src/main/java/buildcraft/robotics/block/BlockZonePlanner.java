@@ -37,7 +37,9 @@ import buildcraft.robotics.tile.TileZonePlanner;
  */
 @SuppressWarnings("this-escape")
 public class BlockZonePlanner extends BlockBCTile_Neptune<TileZonePlanner> {
+    //? if <26.3 {
     public static final MapCodec<BlockZonePlanner> CODEC = simpleCodec(BlockZonePlanner::new);
+    //?}
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public BlockZonePlanner(Properties properties) {
@@ -45,10 +47,12 @@ public class BlockZonePlanner extends BlockBCTile_Neptune<TileZonePlanner> {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

@@ -48,7 +48,9 @@ import buildcraft.lib.block.BCWaterlogging;
 public class BlockTube extends Block implements SimpleWaterloggedBlock {
     private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 16, 12);
 
+    //? if <26.3 {
     public static final MapCodec<BlockTube> CODEC = simpleCodec(BlockTube::new);
+    //?}
 
     public BlockTube(Properties properties) {
         super(properties);
@@ -94,10 +96,12 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock {
     }*/
     //?}
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends Block> codec() {
         return CODEC;
     }
+    //?}
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {

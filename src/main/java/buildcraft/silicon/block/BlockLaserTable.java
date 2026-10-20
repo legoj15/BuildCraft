@@ -45,12 +45,14 @@ public class BlockLaserTable extends BlockBCTile_Neptune<TileLaserTableBase> imp
     /** The 1.12 bounding box: full width, 9/16 height. */
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 9, 16);
 
-    /** Only needed to satisfy {@code BaseEntityBlock#codec}. It is unreachable at runtime — the sole
-     *  consumer is {@code BlockTypes.CODEC} via the datagen block-list report, and BuildCraft neither
-     *  registers into {@code Registries.BLOCK_TYPE} nor runs datagen — so the variant it reconstructs
-     *  is irrelevant, as it is for every other BC block codec. */
+    //? if <26.3 {
+    // Only needed to satisfy {@code BaseEntityBlock#codec}. It is unreachable at runtime — the sole
+    // consumer is {@code BlockTypes.CODEC} via the datagen block-list report, and BuildCraft neither
+    // registers into {@code Registries.BLOCK_TYPE} nor runs datagen — so the variant it reconstructs
+    // is irrelevant, as it is for every other BC block codec.
     public static final MapCodec<BlockLaserTable> CODEC =
         simpleCodec(props -> new BlockLaserTable(props, BCSiliconBlockEntities.ASSEMBLY_TABLE));
+    //?}
 
     private final Supplier<? extends BlockEntityType<? extends TileLaserTableBase>> beTypeSupplier;
 
@@ -60,10 +62,12 @@ public class BlockLaserTable extends BlockBCTile_Neptune<TileLaserTableBase> imp
         this.beTypeSupplier = beTypeSupplier;
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     // Load-bearing: this block was a plain Block (MODEL default) before the migration. Rooting it on
     // BaseEntityBlock makes it INVISIBLE on the 1.21.1 node (that override was dropped at 1.21.10),

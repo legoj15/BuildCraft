@@ -30,17 +30,21 @@ import buildcraft.lib.block.BlockBCTile_Neptune;
  * Ported from 1.12.2 BlockPump.
  */
 public class BlockPump extends BlockBCTile_Neptune<TilePump> {
+    //? if <26.3 {
     public static final MapCodec<BlockPump> CODEC =
             simpleCodec(BlockPump::new);
+    //?}
 
     public BlockPump(Properties properties) {
         super(properties);
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Nullable
     @Override

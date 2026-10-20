@@ -25,17 +25,21 @@ import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.block.BlockBCTile_Neptune;
 
 public class BlockAutoWorkbenchItems extends BlockBCTile_Neptune<TileAutoWorkbenchItems> {
+    //? if <26.3 {
     public static final MapCodec<BlockAutoWorkbenchItems> CODEC =
             simpleCodec(BlockAutoWorkbenchItems::new);
+    //?}
 
     public BlockAutoWorkbenchItems(Properties properties) {
         super(properties);
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Nullable
     @Override

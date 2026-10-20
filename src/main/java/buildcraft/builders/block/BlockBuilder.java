@@ -30,7 +30,9 @@ import buildcraft.builders.tile.TileBuilder;
 import buildcraft.lib.block.BlockBCTile_Directional;
 
 public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> {
+    //? if <26.3 {
     public static final MapCodec<BlockBuilder> CODEC = simpleCodec(BlockBuilder::new);
+    //?}
     /** Drives the front-face "door" submodel: NONE = closed empty door, TEMPLATE / BLUEPRINT =
      *  matching door variant. TileBuilder pushes this whenever its loaded snapshot changes. */
     public static final EnumProperty<EnumOptionalSnapshotType> SNAPSHOT_TYPE =
@@ -43,10 +45,12 @@ public class BlockBuilder extends BlockBCTile_Directional<TileBuilder> {
             .setValue(SNAPSHOT_TYPE, EnumOptionalSnapshotType.NONE));
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

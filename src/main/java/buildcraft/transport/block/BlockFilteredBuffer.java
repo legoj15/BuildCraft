@@ -31,16 +31,20 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * Ported from 1.12.2 BlockFilteredBuffer.
  */
 public class BlockFilteredBuffer extends BlockBCTile_Neptune<TileFilteredBuffer> {
+    //? if <26.3 {
     public static final MapCodec<BlockFilteredBuffer> CODEC = simpleCodec(BlockFilteredBuffer::new);
+    //?}
 
     public BlockFilteredBuffer(Properties properties) {
         super(properties);
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Nullable
     @Override

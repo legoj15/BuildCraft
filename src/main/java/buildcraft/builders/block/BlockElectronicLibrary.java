@@ -22,16 +22,20 @@ import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.lib.block.BlockBCTile_Directional;
 
 public class BlockElectronicLibrary extends BlockBCTile_Directional<TileElectronicLibrary> {
+    //? if <26.3 {
     public static final MapCodec<BlockElectronicLibrary> CODEC = simpleCodec(BlockElectronicLibrary::new);
+    //?}
 
     public BlockElectronicLibrary(Properties properties) {
         super(properties);
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Nullable
     @Override

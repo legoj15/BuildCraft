@@ -47,8 +47,10 @@ import buildcraft.lib.misc.BlockUtil;
  */
 @SuppressWarnings("this-escape")
 public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
+    //? if <26.3 {
     public static final MapCodec<BlockFloodGate> CODEC =
             simpleCodec(BlockFloodGate::new);
+    //?}
 
     /** Map of direction → boolean property, excluding UP. */
     public static final Map<Direction, Property<Boolean>> CONNECTED_MAP;
@@ -68,10 +70,12 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
         this.registerDefaultState(defaultState);
     }
 
+    //? if <26.3 {
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    //?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

@@ -16,12 +16,17 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+//? if >=26.3 {
+/*import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.recipe.vanilla.IJeiFuelingRecipe;
+import mezz.jei.api.runtime.IJeiRuntime;*/
+//?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-//? if >=1.21.10 {
+//? if >=1.21.10 && <26.3 {
 import net.minecraft.world.level.block.entity.FuelValues;
 //?}
 
@@ -46,7 +51,10 @@ import buildcraft.energy.client.gui.ScreenEngineStone;
  * <p>Fuel/coolant entries come from {@code BuildcraftFuelRegistry} — populated in
  * {@code BCEnergyRecipes.ensureInitialized()}, the same place the distillation recipes the Distiller category
  * reads are registered, so availability matches that shipped category. Stirling fuels come from
- * the level's {@link FuelValues}, available once in-world (which is when JEI builds its runtime).
+ * the level's {@code FuelValues}, available once in-world (which is when JEI builds its runtime).
+ * On 26.3 burn times are datapack providers the client cannot resolve, so the Stirling list is
+ * copied from JEI's own furnace-fuel category once the runtime is up (see
+ * {@code onRuntimeAvailable}); like JEI's, those values are vanilla defaults, not server datapacks.
  */
 @JeiPlugin
 public class BCEnergyJeiPlugin implements IModPlugin {
@@ -105,9 +113,10 @@ public class BCEnergyJeiPlugin implements IModPlugin {
 
     /**
      * Every vanilla furnace fuel the Stirling engine can burn, enumerated from the level's
-     * {@link FuelValues} the same way the engine itself queries burn time
+     * {@code FuelValues} the same way the engine itself queries burn time
      * ({@code stack.getBurnTime(null, fuelValues)}). Empty when no level is loaded — JEI builds
-     * its runtime in-world, so in practice this is populated.
+     * its runtime in-world, so in practice this is populated. Always empty on 26.3, where the
+     * list is filled in {@code onRuntimeAvailable} instead.
      */
     // getFuel() is 1.21.1-only and Neo-deprecated (its javadoc points at the per-item getBurnTime),
     // but it is the ONLY fuel-map enumeration on that line — FuelValues/fuelItems() arrive at 1.21.10
@@ -115,7 +124,9 @@ public class BCEnergyJeiPlugin implements IModPlugin {
     @SuppressWarnings("deprecation")
     private static List<StirlingFuelJei> collectStirlingFuels() {
         List<StirlingFuelJei> out = new ArrayList<>();
-        //? if >=1.21.10 {
+        //? if >=26.3 {
+        /*// Nothing to enumerate here: see onRuntimeAvailable.*/
+        //?} elif >=1.21.10 {
         Level level = Minecraft.getInstance().level;
         if (level == null) return out;
         FuelValues fuelValues = level.fuelValues();
@@ -137,6 +148,28 @@ public class BCEnergyJeiPlugin implements IModPlugin {
         //?}
         return out;
     }
+
+    //? if >=26.3 {
+    /*// 26.3 removed FuelValues: a fuel's burn time is the COOKING_FUEL component's datapack provider,
+    // resolvable only with a ServerLevel loot context, and those providers are not synced to clients.
+    // JEI already solves this for its furnace-fuel category by evaluating the vanilla definitions
+    // client-side, so reuse its result rather than duplicate that evaluation (which needs access to
+    // LootContext's private constructor). The engine is no smoker or blast furnace, so the plain
+    // furnace values are the ones it gets on a vanilla-data server.
+    @Override
+    public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
+        List<StirlingFuelJei> out = new ArrayList<>();
+        jeiRuntime.getRecipeManager().createRecipeLookup(RecipeTypes.SMELTING_FUEL).get()
+                .forEach((IJeiFuelingRecipe fuel) -> {
+                    for (ItemStack stack : fuel.getInputs()) {
+                        out.add(new StirlingFuelJei(stack, fuel.getBurnTime()));
+                    }
+                });
+        if (!out.isEmpty()) {
+            jeiRuntime.getRecipeManager().addRecipes(EngineFuelJeiTypes.STIRLING_FUEL, out);
+        }
+    }*/
+    //?}
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {

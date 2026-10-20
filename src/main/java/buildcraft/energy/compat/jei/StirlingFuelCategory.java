@@ -25,7 +25,7 @@ import buildcraft.lib.misc.LocaleUtil;
 
 /**
  * JEI category for the Stirling engine's solid fuels — one entry per vanilla furnace fuel
- * (see {@link BCEnergyJeiPlugin} for the {@code FuelValues} enumeration). The engine's output is
+ * (see {@link BCEnergyJeiPlugin} for how the list is built on each node). The engine's output is
  * PID-regulated up to a {@code MjAPI.MJ} (1 MJ/t) ceiling regardless of fuel, so the rate line is
  * the constant ceiling ("≤ 1 MJ/t"); only the burn time varies per fuel.
  */

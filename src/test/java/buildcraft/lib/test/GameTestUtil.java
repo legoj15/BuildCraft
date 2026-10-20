@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -58,8 +59,9 @@ public final class GameTestUtil {
      *
      * <p>The player is a leased {@link FakePlayerUtil} player, not {@code makeMockPlayer}'s bare {@code Player}:
      * 26.3 narrowed {@code Block#playerDestroy} to {@code ServerPlayer}, and the only vanilla {@code ServerPlayer}
-     * mock ({@code makeMockServerPlayerInLevel}) is {@code forRemoval}. The player is parked 64 blocks above the
-     * block, looking level, so {@code player.pick} cannot hit it: the pipe holder's partial-break check
+     * mock ({@code makeMockServerPlayerInLevel}) is {@code forRemoval}. The player is leased 64 blocks above the
+     * block (current and previous-tick position both, since the pick reads the latter), looking level, so
+     * {@code player.pick} cannot hit it: the pipe holder's partial-break check
      * ({@code playerWillDestroy}) must fall through to the full break (the click-break tests that need a pick hit
      * use a positioned mock player instead).
      */
@@ -68,9 +70,9 @@ public final class GameTestUtil {
         BlockPos absPos = helper.absolutePos(relativePos);
         BlockState state = level.getBlockState(absPos);
         BlockEntity be = level.getBlockEntity(absPos);
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level)) {
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, absPos.above(64))) {
             FakePlayer player = lease.player();
-            player.setPos(absPos.getX() + 0.5, absPos.getY() + 64, absPos.getZ() + 0.5);
+            player.setGameMode(GameType.SURVIVAL);
             player.setItemInHand(InteractionHand.MAIN_HAND, heldItem);
             boolean canHarvest = state.canHarvestBlock(level, absPos, player);
             state.getBlock().playerWillDestroy(level, absPos, state, player);

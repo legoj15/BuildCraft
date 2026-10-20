@@ -250,7 +250,7 @@ public class PipeDropsTester {
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
         flow.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.NORTH, null, 0.04);
 
-        // The break player is NOT positioned at the pipe, so player.pick returns
+        // The break player is leased 64 blocks above the pipe, so player.pick returns
         // no hit and the partial-break check in playerWillDestroy short-circuits — the full
         // dropPipeItems path runs.
         GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));

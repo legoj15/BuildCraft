@@ -38,6 +38,7 @@ updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_bra
     #                               BreakEventCompat) + GUI getters use line-wide aliases, so nothing
     #                               binds above the line's first build (369 game tests pass on 26.1.0.1)
     #   26.2    -> [26.2.0,26.3)    whole line — all 26.2 API landed atomically at 26.2.0.0-beta
+    #   26.3    -> [26.3.0,26.4)    whole line - port scaffold; the real floor is not bisected yet
     #   1.21.11 -> [21.11.42,...)   the only published build on the line
     #   1.21.10 -> [21.10.63,...)   earliest published build (one below the pin; same MC 1.21.10)
     #   1.21.1  -> [21.1.151,...)   IBCMenuProvider needs MenuProvider#writeClientSideData(menu, buf),

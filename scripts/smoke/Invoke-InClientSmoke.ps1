@@ -26,7 +26,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string[]]$Nodes = @('26.2', '26.1.2', '1.21.11', '1.21.10', '1.21.1'),
+    [string[]]$Nodes = @('26.3', '26.2', '26.1.2', '1.21.11', '1.21.10', '1.21.1'),
     [string]$Scenario,
     [string]$OutDir,
     [string]$McDevBridgeRoot = 'E:/GitHub/McDevBridge',

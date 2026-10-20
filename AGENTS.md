@@ -6,7 +6,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 
 ```bash
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
-# Five nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2 (26.2 is the primary).
+# Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.2 is the primary; 26.3 is a port in progress).
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY node.
 

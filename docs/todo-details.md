@@ -62,6 +62,10 @@ Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-
 - The Sort By System button reuses the old Sort By Mod glyph (`textures/gui/sprites/guide/sort_system*.png`, four states). Needs a 14x14 icon that says "system".
 - Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
 
+## Guide text over page number
+
+Seen 2026-10-19 on 26.2 at 2560x1440, GUI scale 4, while taking store screenshots: the Laser entry's first page (Information) draws its last wrapped line ("throughput round-robin every") on top of the "1 / 5" footer that `GuidePageBase` prints (the `(index + 1) + " / " + numPages` text). The page splitter lets one line too many onto the page at this size; other pages looked fine. Screenshot kept locally at `build/screenshots/2026-10-19/bug-guide-laser-text-over-page-number.png`. Check the other nodes and GUI scales once fixed.
+
 ## Builder stalls beside unremovable fluid
 
 Left from the 2026-10-17 Clear-mode reflood fix (`BlueprintBuilder.isFragileUnbuildableAt` / `isRefloodedByUnmoppableWater`, `BuilderRefloodTester`). The Builder can still sit "busy" for ever, with nothing visible happening, next to fluid it can never remove:

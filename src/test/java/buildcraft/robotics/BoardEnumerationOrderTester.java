@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.CreativeModeTab;
@@ -69,7 +68,7 @@ public class BoardEnumerationOrderTester extends VanillaSetupBaseTester {
                 Identifier.fromNamespaceAndPath(BCRobotics.MODID, "robots"));
         Assertions.assertNotNull(tab, "precondition: the robots tab is registered");
         tab.buildContents(new CreativeModeTab.ItemDisplayParameters(
-                FeatureFlags.DEFAULT_FLAGS, false, VanillaRegistries.createLookup()));
+                FeatureFlags.DEFAULT_FLAGS, false, vanillaLookup()));
 
         // The tab shows the empty chassis once, then a drained+full pair per board; collapse each pair and
         // keep first-seen order. Only ROBOT stacks count — the tab leads with machines and trails with the

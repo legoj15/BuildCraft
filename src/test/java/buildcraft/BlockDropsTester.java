@@ -7,15 +7,9 @@ package buildcraft;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
@@ -35,6 +29,7 @@ import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.test.GameTestUtil;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.tile.TileFilteredBuffer;
@@ -65,40 +60,13 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  */
 public class BlockDropsTester {
 
-    // ---------- Shared helpers ----------
-
-    /** Plays the full destroy chain the way ServerPlayerGameMode does:
-     *  playerWillDestroy → removeBlock → playerDestroy (only if canHarvestBlock).
-     *  {@code helper.destroyBlock} short-circuits this path and skips loot, so the tests
-     *  would silently pass even if the tool gate were misconfigured. The {@code canHarvest}
-     *  gate is what makes the loot-table-side block-self drop conditional on the tool —
-     *  without it the loot table fires unconditionally and the empty-hand test fails. */
-    private static void breakAs(GameTestHelper helper, BlockPos relativePos, Player player) {
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(relativePos);
-        BlockState state = level.getBlockState(absPos);
-        BlockEntity be = level.getBlockEntity(absPos);
-        boolean canHarvest = state.canHarvestBlock(level, absPos, player);
-        state.getBlock().playerWillDestroy(level, absPos, state, player);
-        level.removeBlock(absPos, false);
-        if (canHarvest) {
-            state.getBlock().playerDestroy(level, player, absPos, state, be, player.getMainHandItem());
-        }
-    }
-
-    private static Player survivalPlayerWith(GameTestHelper helper, ItemStack heldItem) {
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, heldItem);
-        return player;
-    }
-
     // ---------- Decorated block (no inventory) ----------
 
     public static void testDecoratedPickaxeDropsSelf(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -111,7 +79,7 @@ public class BlockDropsTester {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
 
-        breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -134,7 +102,7 @@ public class BlockDropsTester {
         chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
         chute.inv.setStackInSlot(3, new ItemStack(Items.GOLD_INGOT, 11));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -156,7 +124,7 @@ public class BlockDropsTester {
         //?}
         chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -192,7 +160,7 @@ public class BlockDropsTester {
         workbench.invMaterials.setStackInSlot(0, new ItemStack(Items.OAK_LOG, 6));
         workbench.invResult.setStackInSlot(0, new ItemStack(Items.CRAFTING_TABLE, 1));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -220,7 +188,7 @@ public class BlockDropsTester {
         //?}
         fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -241,7 +209,7 @@ public class BlockDropsTester {
         //?}
         fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -353,7 +321,7 @@ public class BlockDropsTester {
         //?}
         engine.setFuelStack(new ItemStack(Items.COAL, 17));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -374,7 +342,7 @@ public class BlockDropsTester {
         //?}
         engine.setFuelStack(new ItemStack(Items.COAL, 17));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -405,7 +373,7 @@ public class BlockDropsTester {
         buffer.invMain.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
         buffer.invMain.setStackInSlot(4, new ItemStack(Items.IRON_INGOT, 12));
 
-        breakAs(helper, pos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
         helper.assertBlockPresent(Blocks.AIR, pos);
 
         helper.runAfterDelay(10, () -> {
@@ -427,7 +395,7 @@ public class BlockDropsTester {
         helper.setBlock(floor, Blocks.STONE);
         helper.setBlock(markerPos, BCCoreBlocks.MARKER_PATH.get());
 
-        breakAs(helper, markerPos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, markerPos, ItemStack.EMPTY);
         helper.assertBlockPresent(Blocks.AIR, markerPos);
 
         helper.runAfterDelay(10, () -> {

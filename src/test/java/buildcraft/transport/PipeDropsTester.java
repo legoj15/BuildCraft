@@ -17,7 +17,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
@@ -28,6 +27,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.core.BCCoreItems;
+
+import buildcraft.lib.test.GameTestUtil;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -105,22 +106,6 @@ public class PipeDropsTester {
         p.setYRot(0f);
         p.setOldPosAndRot();
         return p;
-    }
-
-    /** Replays {@code ServerPlayerGameMode.destroyBlock} faithfully — drives the same
-     *  playerWillDestroy → removeBlock → playerDestroy chain (with the canHarvestBlock gate on
-     *  playerDestroy) that gameplay uses. */
-    private static void breakAs(GameTestHelper helper, BlockPos relPos, Player player) {
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(relPos);
-        BlockState state = level.getBlockState(absPos);
-        BlockEntity be = level.getBlockEntity(absPos);
-        boolean canHarvest = state.canHarvestBlock(level, absPos, player);
-        state.getBlock().playerWillDestroy(level, absPos, state, player);
-        level.removeBlock(absPos, false);
-        if (canHarvest) {
-            state.getBlock().playerDestroy(level, player, absPos, state, be, player.getMainHandItem());
-        }
     }
 
     /** Place a wood-item pipe at the given relative position and return the tile.
@@ -265,10 +250,10 @@ public class PipeDropsTester {
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
         flow.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.NORTH, null, 0.04);
 
-        // The mock player from breakAs is NOT positioned at the pipe, so player.pick returns
+        // The break player is NOT positioned at the pipe, so player.pick returns
         // no hit and the partial-break check in playerWillDestroy short-circuits — the full
         // dropPipeItems path runs.
-        breakAs(helper, pipePos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
@@ -294,7 +279,7 @@ public class PipeDropsTester {
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
         flow.insertItemsForce(new ItemStack(Items.LAPIS_LAZULI, 8), Direction.NORTH, null, 0.04);
 
-        breakAs(helper, pipePos, survivalPlayerWith(helper, ItemStack.EMPTY));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, ItemStack.EMPTY);
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
@@ -323,7 +308,7 @@ public class PipeDropsTester {
         int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
         helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
-        breakAs(helper, pipePos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 
@@ -444,7 +429,7 @@ public class PipeDropsTester {
         placeItemPipe(helper, pipePos);
 
         clearDroppedItemsAround(helper, pipePos);
-        breakAs(helper, pipePos, survivalPlayerWith(helper, new ItemStack(Items.WOODEN_PICKAXE)));
+        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
 
         helper.assertBlockPresent(Blocks.AIR, pipePos);
 

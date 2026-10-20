@@ -8,16 +8,11 @@ package buildcraft.transport;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.lib.test.GameTestUtil;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.tile.TileFilteredBuffer;
 
@@ -47,16 +42,7 @@ public class FilteredBufferTester {
         // Filtered Buffer has `requiresCorrectToolForDrops()` so we need a real tool in hand for
         // drops to fire. Running the full playerWillDestroy → removeBlock → playerDestroy flow
         // is the only setup that actually exercises what real gameplay does.
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WOODEN_PICKAXE));
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(bufferPos);
-        BlockState state = level.getBlockState(absPos);
-        BlockEntity be = level.getBlockEntity(absPos);
-        state.getBlock().playerWillDestroy(level, absPos, state, player);
-        level.removeBlock(absPos, false);
-        state.getBlock().playerDestroy(level, player, absPos, state, be, player.getMainHandItem());
+        GameTestUtil.breakAsSurvivalPlayer(helper, bufferPos, new ItemStack(Items.WOODEN_PICKAXE));
 
         // Assert the block is fully destroyed
         helper.assertBlockPresent(Blocks.AIR, bufferPos);

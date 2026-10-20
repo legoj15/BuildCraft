@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlags;
@@ -185,7 +184,7 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
 
     private static CreativeModeTab.ItemDisplayParameters displayParameters() {
         return new CreativeModeTab.ItemDisplayParameters(
-                FeatureFlags.DEFAULT_FLAGS, false, VanillaRegistries.createLookup());
+                FeatureFlags.DEFAULT_FLAGS, false, vanillaLookup());
     }
 
     private static RedstoneBoardRobotNBT liveEmptyBoard() {

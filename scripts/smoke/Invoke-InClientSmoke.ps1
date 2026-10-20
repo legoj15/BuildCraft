@@ -157,6 +157,11 @@ function Initialize-RunDir([string]$Node) {
             'soundCategory_master:0.0'
         ) | Set-Content -LiteralPath $options -Encoding utf8
     }
+    # GUI scale is re-applied every run: the scenario's "guiScale" (Minecraft clamps it to what the window fits, so a
+    # big scale only takes effect after a `window` step grows the client area), else 2.
+    $scale = if ($ScenarioData.PSObject.Properties['guiScale']) { [int]$ScenarioData.guiScale } else { 2 }
+    $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch '^guiScale:' }) + "guiScale:$scale"
+    $lines | Set-Content -LiteralPath $options -Encoding utf8
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
 
@@ -239,6 +244,38 @@ public static class SmokeWin32 {
     [SmokeWin32]::PostMessage($handle, 0x100, [IntPtr]0x1B, [IntPtr]0x00010001) | Out-Null
     Start-Sleep -Milliseconds 80
     [SmokeWin32]::PostMessage($handle, 0x101, [IntPtr]0x1B, [IntPtr]([int64]0xC0010001)) | Out-Null
+}
+
+function Set-GameClientSize([int]$Width, [int]$Height) {
+    # options.txt overrideWidth/Height lose to NeoForge's early window, so resize the real window: SetWindowPos with
+    # the frame added back (AdjustWindowRectEx) gives a client area, and so a framebuffer, of exactly Width x Height.
+    if (-not ('SmokeWin32Size' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class SmokeWin32Size {
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h, int i);
+    [DllImport("user32.dll")] public static extern bool AdjustWindowRectEx(ref RECT r, int style, bool menu, int exStyle);
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+    [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
+}
+'@
+    }
+    $handle = (Get-Process -Id ([int]$script:Bridge.pid)).MainWindowHandle
+    if ($handle -eq [IntPtr]::Zero) { throw 'the game window has no handle to resize' }
+    $rect = New-Object SmokeWin32Size+RECT
+    $rect.Right = $Width; $rect.Bottom = $Height
+    [SmokeWin32Size]::AdjustWindowRectEx([ref]$rect, [SmokeWin32Size]::GetWindowLong($handle, -16), $false,
+        [SmokeWin32Size]::GetWindowLong($handle, -20)) | Out-Null
+    # SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE: size only, window stays where it is, no focus change.
+    [SmokeWin32Size]::SetWindowPos($handle, [IntPtr]::Zero, 0, 0, $rect.Right - $rect.Left, $rect.Bottom - $rect.Top, 0x16) | Out-Null
+    $client = New-Object SmokeWin32Size+RECT
+    [SmokeWin32Size]::GetClientRect($handle, [ref]$client) | Out-Null
+    if ($client.Right -ne $Width -or $client.Bottom -ne $Height) {
+        throw "client area is $($client.Right)x$($client.Bottom), wanted ${Width}x${Height}"
+    }
+    "client area $($client.Right)x$($client.Bottom)"
 }
 
 function Invoke-MenuClick([string]$Text) {
@@ -388,6 +425,11 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
         # the old menu open is sent under that menu's id, which the client (already back on its inventory) drops.
         'close' { Invoke-Bridge POST '/screenclose' | Out-Null; Start-Sleep -Milliseconds 400 }
         'wait' { Start-Sleep -Milliseconds $Step.ms; $detail = "$($Step.ms) ms" }
+        'window' {
+            $detail = Set-GameClientSize ([int]$Step.width) ([int]$Step.height)
+            # The game re-lays out the open screen on the next frame.
+            Start-Sleep -Milliseconds 1500
+        }
         'widgets' {
             $r = Invoke-Bridge POST '/screenclick' @{ list = $true }
             $file = Join-Path $NodeOut ('{0:D2}-{1}.widgets.json' -f $Index, $Step.name)

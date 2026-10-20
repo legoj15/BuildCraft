@@ -146,6 +146,10 @@ public abstract class GuidePart {
                 : new FormatString[] { next };
 
             String text = strings[0].getFormatted();
+            int fontHeight = fontRenderer != null ? fontRenderer.getFontHeight(text) : 9;
+            // Every wrapped segment must fit whole, not just start, above the page bottom;
+            // otherwise a continuation line lands over the "X / Y" footer.
+            cursor = cursor.guaranteeSpace(fontHeight, height);
             int _y = y + cursor.pixel;
             int _w = fontRenderer != null ? fontRenderer.getStringWidth(text) : text.length() * 6;
             // Hover "row" geometry: LINE_HEIGHT (16 px) tall, vertically aligned with the
@@ -160,7 +164,6 @@ public abstract class GuidePart {
             segments.add(new WrapSegment(text, rect, _y, rowTop, _w, rendered));
 
             next = strings.length == 1 ? null : strings[1];
-            int fontHeight = fontRenderer != null ? fontRenderer.getFontHeight(text) : 9;
             cursor = cursor.nextLine(fontHeight + 3, height);
         }
         current = cursor;

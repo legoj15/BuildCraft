@@ -21,7 +21,7 @@ error, or BuildCraft logged an ERROR.
    with its extra mods and saves is never read or written. The node's newest McDevBridge jar is copied into
    `run-smoke/mods` (searched in McDevBridge's `versions/<node>/build/libs` and its worktrees; `-BuildBridge` builds
    one if none exists). `options.txt` is written once: no pause on focus loss, no accessibility onboarding, sound
-   off, GUI scale 2 (so screenshots line up across runs).
+   off. The GUI scale is re-applied every run: the scenario's `guiScale`, else 2 (so screenshots line up across runs).
 2. **World.** The first run on a node creates one through the menus (Singleplayer → Create New World) and renames the
    save to `bc-smoke` after the client closes; every later run quick-plays it (`-PbcQuickPlay=bc-smoke`). The rig is
    rebuilt by the scenario each run, so the save's state never matters. Delete `run-smoke/saves/` to start over. (A lone save of any name is adopted as `bc-smoke`, so an interrupted first run heals itself.)
@@ -56,6 +56,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `text` | `text` | type a string into the open screen's focused widget (click the search box first) |
 | `close` | — | close the open screen (releases container menus server-side) |
 | `wait` | `ms` | sleep |
+| `window` | `width`, `height` | resize the game window so its client area (the framebuffer) is exactly that size — options.txt `overrideWidth` is ignored. Pair with a top-level `"guiScale"` (written to options.txt each run, default 2; the game clamps it to what the window fits, so a big scale only shows after the resize) |
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |

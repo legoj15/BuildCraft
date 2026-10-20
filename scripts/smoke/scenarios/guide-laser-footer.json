@@ -1,0 +1,25 @@
+{
+  "name": "guide-laser-footer",
+  "description": "Guide book page footer: the Laser entry's Information page must not draw its last wrapped line over the 'X / Y' page number. Checked at the runner's default window, then at a 2560x1440 client area with GUI scale 4 (the size the overlap was first seen at).",
+  "base": [0, 150, 0],
+  "guiScale": 4,
+  "steps": [
+    {"label": "setup", "do": "cmd", "run": ["gamemode creative @p", "time set 6000", "weather clear", "?clear @p"]},
+    {"do": "hold", "item": "buildcraftunofficial:guide"},
+    {"do": "look", "yaw": 0, "pitch": -90},
+    {"label": "open guide", "do": "use"},
+    {"do": "expectScreen", "contains": "GuiGuide"},
+    {"label": "open the cover", "do": "click", "fx": 0.5, "fy": 0.5},
+    {"do": "wait", "ms": 2500},
+    {"label": "focus the search tab", "do": "click", "x": 58, "y": 8},
+    {"do": "text", "text": "Laser"},
+    {"do": "wait", "ms": 1000},
+    {"name": "search-laser", "do": "shot", "look": "search results for 'Laser'"},
+    {"label": "open the Laser entry", "do": "click", "x": 89, "y": 56},
+    {"do": "wait", "ms": 1000},
+    {"name": "laser-default", "do": "shot", "look": "Laser entry pages 1-2 at the default window: no text line touches the '1 / N' footer"},
+    {"label": "resize to 2560x1440", "do": "window", "width": 2560, "height": 1440},
+    {"do": "wait", "ms": 1000},
+    {"name": "laser-2560-scale4", "do": "shot", "look": "Laser entry pages 1-2 at 2560x1440, GUI scale 4: the line 'throughput round-robin every' is not drawn over the '1 / N' footer"}
+  ]
+}

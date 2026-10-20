@@ -165,6 +165,9 @@ public class GuideInlineLinkText extends GuidePart {
                 : new FormatString[] { next };
             String segText = strings[0].getFormatted();
             int segVisibleLen = visibleLengthOf(segText);
+            int fontHeight = font != null ? font.getFontHeight(segText) : 9;
+            // Same rule as GuidePart.renderLine: the whole segment must fit above the footer.
+            current = current.guaranteeSpace(fontHeight, height);
             int rowY = y + current.pixel;
             int rowTop = rowY - 5;
             boolean rendered = current.page == pageRenderIndex;
@@ -200,7 +203,6 @@ public class GuideInlineLinkText extends GuidePart {
 
             visibleConsumed += segVisibleLen;
             next = strings.length == 1 ? null : strings[1];
-            int fontHeight = font != null ? font.getFontHeight(segText) : 9;
             current = current.nextLine(fontHeight + 3, height);
         }
 

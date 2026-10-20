@@ -62,9 +62,9 @@ Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-
 - The Sort By System button reuses the old Sort By Mod glyph (`textures/gui/sprites/guide/sort_system*.png`, four states). Needs a 14x14 icon that says "system".
 - Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
 
-## Guide text over page number
+## Guide page-spanning link clicks
 
-Seen 2026-10-19 on 26.2 at 2560x1440, GUI scale 4, while taking store screenshots: the Laser entry's first page (Information) draws its last wrapped line ("throughput round-robin every") on top of the "1 / 5" footer that `GuidePageBase` prints (the `(index + 1) + " / " + numPages` text). The page splitter lets one line too many onto the page at this size; other pages looked fine. Screenshot kept locally at `build/screenshots/2026-10-19/bug-guide-laser-text-over-page-number.png`. Check the other nodes and GUI scales once fixed.
+Found by the Qwen review of the 2026-10-20 footer fix (pre-existing, not caused by it). Click handling compares a part's END position to the clicked page, so a link line whose wrapped segments straddle a page break is only clickable on its last page: `GuidePartLink.handleMouseClick`, `ContentsNodeGui.onClicked`, `GuidePartGroup.handleMouseClick`. The reverse in `GuideInlineLinkText.handleMouseClick`: span rects are built for every segment with no page tag, so a segment drawn on the far page can be clicked at its would-be position on the near one. Fix: tag segment rects with their page and accept only rects of the clicked page.
 
 ## Builder stalls beside unremovable fluid
 

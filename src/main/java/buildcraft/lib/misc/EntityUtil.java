@@ -8,6 +8,9 @@ package buildcraft.lib.misc;
 
 import javax.annotation.Nullable;
 
+//? if >=26.3 {
+/*import net.minecraft.util.Prediction;*/
+//?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -61,7 +64,7 @@ public class EntityUtil {
         if (stack.getItem() instanceof IToolWrench wrench) {
             wrench.wrenchUsed(player, hand, stack, trace);
         } else {
-            player.swing(hand);
+            swing(player, hand);
         }
     }
 
@@ -71,5 +74,34 @@ public class EntityUtil {
         if (hand != null) {
             wrenchUsed(player, hand, player.getItemInHand(hand), trace);
         }
+    }
+
+    /**
+     * Swings {@code entity}'s arm for {@code hand}: the "I used something" feedback. Seen by the players
+     * tracking the entity, not echoed back to the entity itself (the client plays its own swing). This is
+     * the one-argument {@code LivingEntity#swing(hand)}; 26.3 removed it and wants the animation, which is
+     * the held item's interact animation, as vanilla's own interaction swing picks it.
+     */
+    public static void swing(LivingEntity entity, InteractionHand hand) {
+        //? if >=26.3 {
+        /*entity.swing(hand, entity.getItemInHand(hand).getInteractAnimation(), false);*/
+        //?} else {
+        entity.swing(hand);
+        //?}
+    }
+
+    /**
+     * Drops {@code stack} at {@code player} because it did not fit in their inventory (not thrown from the
+     * hand). For server-side paths the client never runs, as every caller returns early on the logical
+     * client. 26.3's {@code Player#drop} swings the arm and takes a {@code Prediction} saying whether the
+     * client already did that itself; it did not here, so the swing goes to the dropping player too
+     * ({@code SERVER_ONLY}, vanilla's choice for such paths).
+     */
+    public static void dropOverflow(Player player, ItemStack stack) {
+        //? if >=26.3 {
+        /*player.drop(stack, false, Prediction.SERVER_ONLY);*/
+        //?} else {
+        player.drop(stack, false);
+        //?}
     }
 }

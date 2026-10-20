@@ -71,7 +71,7 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
                 engine.clearOverheat(player);
                 SoundUtil.playSlideSound(level, pos, state, InteractionResult.SUCCESS);
             }
-            player.swing(hand);
+            EntityUtil.swing(player, hand);
             return BlockUtil.itemUseConsume();
         }
 
@@ -98,7 +98,7 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
-            player.swing(hand);
+            EntityUtil.swing(player, hand);
             return BlockUtil.itemUseConsume();
         }
 

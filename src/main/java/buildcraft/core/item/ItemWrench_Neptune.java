@@ -21,6 +21,7 @@ import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.tools.IToolWrench;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
 
 public class ItemWrench_Neptune extends Item implements IToolWrench {
@@ -40,7 +41,7 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
     public void wrenchUsed(Player player, net.minecraft.world.InteractionHand hand, ItemStack wrench,
             HitResult rayTrace) {
         AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
-        player.swing(hand);
+        EntityUtil.swing(player, hand);
     }
 
     @Override

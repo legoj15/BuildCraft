@@ -712,7 +712,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             if (level().isClientSide()) {
                 // Just the swing: EntityUtil.wrenchUsed wants a HitResult that an entity interaction has no
                 // honest one of, and a BuildCraft wrench's own callback is about blocks.
-                player.swing(hand);
+                EntityUtil.swing(player, hand);
             } else {
                 onRobotHit(false);
             }
@@ -746,7 +746,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             if (!level().isClientSide()) {
                 wearables.add(stack.split(1));
             } else {
-                player.swing(hand);
+                EntityUtil.swing(player, hand);
             }
             return InteractionResult.SUCCESS;
         }

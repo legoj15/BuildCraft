@@ -73,7 +73,7 @@ public class BlockEngineRedstone_BC8 extends BlockEngineBase_BC8 {
         // swing on both sides: client side animates the swinger immediately, server side
         // broadcasts to observers. Server-only swing doesn't reliably animate the swinger's
         // own first-person hand — same reason ItemWrench_Neptune.wrenchUsed swings unconditionally.
-        player.swing(hand);
+        EntityUtil.swing(player, hand);
         return BlockUtil.itemUseConsume();
     }
 }

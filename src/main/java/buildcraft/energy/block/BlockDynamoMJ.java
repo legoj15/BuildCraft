@@ -85,7 +85,7 @@ public class BlockDynamoMJ extends BlockEngineBase_BC8 {
             if (!level.isClientSide()) {
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
-            player.swing(hand);
+            EntityUtil.swing(player, hand);
             return BlockUtil.itemUseConsume();
         }
 

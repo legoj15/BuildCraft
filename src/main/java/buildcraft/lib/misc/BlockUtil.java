@@ -133,7 +133,7 @@ public class BlockUtil {
         net.minecraft.world.InteractionResult result =
                 buildcraft.api.blocks.CustomRotationHelper.INSTANCE.attemptRotateBlock(level, pos, state, side);
         SoundUtil.playSlideSound(level, pos, state, result);
-        player.swing(hand);
+        EntityUtil.swing(player, hand);
         return net.minecraft.world.InteractionResult.CONSUME;
     }
 

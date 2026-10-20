@@ -396,11 +396,11 @@ public class RenderPipeHolder implements BlockEntityRenderer<TilePipeHolder, Pip
     /** Applies rotation so the item faces the given direction of travel. */
     private static void applyDirectionRotation(PoseStack ps, Direction dir) {
         switch (dir) {
-            case NORTH -> ps.mulPose(Axis.YP.rotationDegrees(180));
-            case EAST -> ps.mulPose(Axis.YP.rotationDegrees(90));
-            case WEST -> ps.mulPose(Axis.YP.rotationDegrees(-90));
-            case UP -> ps.mulPose(Axis.XP.rotationDegrees(-90));
-            case DOWN -> ps.mulPose(Axis.XP.rotationDegrees(90));
+            case NORTH -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(180));
+            case EAST -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(90));
+            case WEST -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(-90));
+            case UP -> ItemRenderUtil.rotate(ps, Axis.XP.rotationDegrees(-90));
+            case DOWN -> ItemRenderUtil.rotate(ps, Axis.XP.rotationDegrees(90));
             case SOUTH -> {} // default orientation
         }
     }

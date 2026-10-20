@@ -30,6 +30,7 @@ import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.misc.SpriteUtil;
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.ItemRenderUtil;
 
 import buildcraft.silicon.gate.EnumGateMaterial;
 import buildcraft.silicon.gate.EnumGateModifier;
@@ -232,11 +233,11 @@ public enum PlugGateRenderer implements IPlugDynamicRenderer<PluggableGate> {
         // PlugGateBaker rotation (q.rotate(Direction.WEST, key.side, 0.5, 0.5, 0.5)).
         ps.translate(0.5f, 0.5f, 0.5f);
         switch (plug.side) {
-            case EAST -> ps.mulPose(Axis.YP.rotationDegrees(180));
-            case NORTH -> ps.mulPose(Axis.YP.rotationDegrees(-90));
-            case SOUTH -> ps.mulPose(Axis.YP.rotationDegrees(90));
-            case DOWN -> ps.mulPose(Axis.ZP.rotationDegrees(90));
-            case UP -> ps.mulPose(Axis.ZP.rotationDegrees(-90));
+            case EAST -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(180));
+            case NORTH -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(-90));
+            case SOUTH -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(90));
+            case DOWN -> ItemRenderUtil.rotate(ps, Axis.ZP.rotationDegrees(90));
+            case UP -> ItemRenderUtil.rotate(ps, Axis.ZP.rotationDegrees(-90));
             case WEST -> {} // already WEST-facing
         }
         ps.translate(-0.5f, -0.5f, -0.5f);

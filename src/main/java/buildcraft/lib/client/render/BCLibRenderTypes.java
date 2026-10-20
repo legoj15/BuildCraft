@@ -7,10 +7,15 @@ package buildcraft.lib.client.render;
 
 import java.util.function.Function;
 
-//? if >=26.1 {
+// 26.3 moved the GPU abstraction from com.mojang.blaze3d.* to com.mojang.renderpearl.api.*.
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.pipeline.DepthStencilState;*/
+//?} elif >=26.1 {
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 //?}
-//? if >=1.21.10 {
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.pipeline.RenderPipeline;*/
+//?} elif >=1.21.10 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 //?}
 
@@ -60,7 +65,8 @@ public final class BCLibRenderTypes {
      * Inherits {@code core/position_color} shaders + {@link com.mojang.blaze3d.vertex.DefaultVertexFormat#POSITION_COLOR}
      * vertex format from vanilla's {@link RenderPipelines#DEBUG_FILLED_SNIPPET}, but
      * <strong>overrides depth state to {@link DepthStencilState#DEFAULT}</strong>
-     * (depth test {@code LESS_THAN_OR_EQUAL} <em>with depth write enabled</em>).
+     * (depth test {@code LESS_THAN_OR_EQUAL} on 26.1, {@code GREATER_THAN_OR_EQUAL} from 26.2's reversed-Z
+     * depth onward, <em>with depth write enabled</em> either way).
      * <p>
      * Vanilla's {@code DEBUG_FILLED_BOX} disables depth write because it's intended
      * for debug-overlay rendering where the overlay shouldn't occlude itself; in our

@@ -8,7 +8,9 @@ package buildcraft.lib.gui;
 
 import java.util.List;
 
-//? if >=1.21.10 {
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.pipeline.RenderPipeline;*/
+//?} elif >=1.21.10 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 //?}
 

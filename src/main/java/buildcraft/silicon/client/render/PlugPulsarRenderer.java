@@ -21,6 +21,7 @@ import net.minecraft.core.Direction;
 import buildcraft.api.transport.pluggable.IPlugDynamicRenderer;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
+import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.lib.misc.SpriteUtil;
 import buildcraft.silicon.plug.PluggablePulsar;
 import buildcraft.transport.client.model.PipeModelCacheAll;
@@ -127,11 +128,11 @@ public enum PlugPulsarRenderer implements IPlugDynamicRenderer<PluggablePulsar> 
         ps.translate(0.5f, 0.5f, 0.5f);
         Direction side = plug.side;
         switch (side) {
-            case EAST -> ps.mulPose(Axis.YP.rotationDegrees(180));
-            case NORTH -> ps.mulPose(Axis.YP.rotationDegrees(-90));
-            case SOUTH -> ps.mulPose(Axis.YP.rotationDegrees(90));
-            case DOWN -> ps.mulPose(Axis.ZP.rotationDegrees(90));
-            case UP -> ps.mulPose(Axis.ZP.rotationDegrees(-90));
+            case EAST -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(180));
+            case NORTH -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(-90));
+            case SOUTH -> ItemRenderUtil.rotate(ps, Axis.YP.rotationDegrees(90));
+            case DOWN -> ItemRenderUtil.rotate(ps, Axis.ZP.rotationDegrees(90));
+            case UP -> ItemRenderUtil.rotate(ps, Axis.ZP.rotationDegrees(-90));
             case WEST -> {} // Default facing
         }
         ps.translate(-0.5f, -0.5f, -0.5f);

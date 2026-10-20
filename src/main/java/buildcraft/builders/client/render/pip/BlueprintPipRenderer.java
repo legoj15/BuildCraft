@@ -25,13 +25,23 @@ import org.apache.logging.log4j.Logger;
 import org.joml.Vector3f;
 import org.lwjgl.system.MemoryStack;
 
+// 26.3 moved GpuBuffer and GpuDevice to com.mojang.renderpearl.api.*; Std140Builder, Lighting and
+// RenderSystem stay in blaze3d.
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.buffers.GpuBuffer;*/
+//?} else {
 import com.mojang.blaze3d.buffers.GpuBuffer;
+//?}
 //? if <26.2 {
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 //?}
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.platform.Lighting;
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.device.GpuDevice;*/
+//?} else {
 import com.mojang.blaze3d.systems.GpuDevice;
+//?}
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -68,6 +78,7 @@ import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.lib.client.render.fluid.FluidSprites;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.transport.client.model.ModelPipe;
@@ -307,8 +318,8 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // around its bounding-box center. Rotations operate in the pre-scale world frame, so
         // their signs are the natural right-hand-rule signs — see PITCH_DEG javadoc.
         float yaw = (System.currentTimeMillis() % YAW_PERIOD_MS) / (float) YAW_PERIOD_MS * 360.0f;
-        poseStack.mulPose(Axis.XP.rotationDegrees(PITCH_DEG));
-        poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
+        ItemRenderUtil.rotate(poseStack, Axis.XP.rotationDegrees(PITCH_DEG));
+        ItemRenderUtil.rotate(poseStack, Axis.YP.rotationDegrees(yaw));
         poseStack.translate(-sizeX / 2.0f, -sizeY / 2.0f, -sizeZ / 2.0f);
 
         // Bind a custom lighting UBO in place of the usual ITEMS_3D preset. ITEMS_3D bakes a
@@ -559,11 +570,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     // Engines reach the item path with an empty block model; rotate the upright item
                     // model to the captured facing. X tilts the trunk to horizontal, then Y yaws it to
                     // the compass facing; Y is negated (vanilla blockstate y is the opposite sense to
-                    // JOML YP) and is the OUTER mulPose so X applies to the model first (else every
+                    // JOML YP) and is the OUTER rotation so X applies to the model first (else every
                     // horizontal facing collapses to south). Non-engine cells have engineRot == null.
                     if (engineRot != null) {
-                        poseStack.mulPose(Axis.YP.rotationDegrees(-engineRot[1]));
-                        poseStack.mulPose(Axis.XP.rotationDegrees(engineRot[0]));
+                        ItemRenderUtil.rotate(poseStack, Axis.YP.rotationDegrees(-engineRot[1]));
+                        ItemRenderUtil.rotate(poseStack, Axis.XP.rotationDegrees(engineRot[0]));
                     }
                     //? if >=26.2 {
                     /*itemRenderState.submit(poseStack, collector, FULL_BRIGHT,

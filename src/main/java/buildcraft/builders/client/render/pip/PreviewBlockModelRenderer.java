@@ -143,7 +143,8 @@ public final class PreviewBlockModelRenderer {
      * facing, or {@code null} if {@code state} is not an engine (the caller renders it normally). The
      * values mirror the engine blockstate JSON variants so the preview matches the in-world engine.
      * The caller applies them, after translating to the cell centre, as
-     * {@code mulPose(Axis.YP.rotationDegrees(-y))} then {@code mulPose(Axis.XP.rotationDegrees(x))} —
+     * {@code ItemRenderUtil.rotate(pose, Axis.YP.rotationDegrees(-y))} then
+     * {@code ItemRenderUtil.rotate(pose, Axis.XP.rotationDegrees(x))} —
      * Y outer and negated (vanilla blockstate y is the opposite sense to JOML {@code YP}), so X tilts
      * the trunk to horizontal first and Y then yaws it to the facing. (Applying Y first collapses every
      * horizontal facing to south.)

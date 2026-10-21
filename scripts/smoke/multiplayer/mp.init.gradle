@@ -1,0 +1,21 @@
+// Two-client multiplayer smoke (scripts/smoke/multiplayer/mp.py): per-invocation username + quick-play-multiplayer for the client run and a
+// separate game directory for the server run, without touching build.gradle.kts.
+allprojects { proj ->
+    proj.afterEvaluate {
+        def nf = proj.extensions.findByName('neoForge')
+        if (nf == null) return
+        if (proj.hasProperty('mpUser')) {
+            nf.runs.named('client').configure { r ->
+                r.programArguments.addAll('--username', proj.property('mpUser').toString())
+                if (proj.hasProperty('mpServer')) {
+                    r.programArguments.addAll('--quickPlayMultiplayer', proj.property('mpServer').toString())
+                }
+            }
+        }
+        if (proj.hasProperty('mpServerDir')) {
+            nf.runs.named('server').configure { r ->
+                r.gameDirectory.set(proj.file(proj.property('mpServerDir').toString()))
+            }
+        }
+    }
+}

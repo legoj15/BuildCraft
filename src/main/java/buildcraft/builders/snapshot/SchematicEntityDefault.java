@@ -31,7 +31,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 //?}
 //? if >=26.2 {
-/*import net.minecraft.world.entity.EntitySpawnRequest;*/
+import net.minecraft.world.entity.EntitySpawnRequest;
 //?}
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.HangingEntity;
@@ -165,7 +165,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
         }
         // Load entity from NBT via EntityType.create
         //? if >=26.2 {
-        /*Optional<Entity> optEntity = EntityType.create(
+        Optional<Entity> optEntity = EntityType.create(
             TagValueInput.create(
                 ProblemReporter.DISCARDING,
                 level.registryAccess(),
@@ -173,9 +173,9 @@ public class SchematicEntityDefault implements ISchematicEntity {
             ),
             level,
             new EntitySpawnRequest(EntitySpawnReason.COMMAND, false)
-        );*/
+        );
         //?} elif >=1.21.10 {
-        Optional<Entity> optEntity = EntityType.create(
+        /*Optional<Entity> optEntity = EntityType.create(
             TagValueInput.create(
                 ProblemReporter.DISCARDING,
                 level.registryAccess(),
@@ -184,7 +184,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
             level,
             EntitySpawnReason.COMMAND
         );
-        //?} else {
+        *///?} else {
         /*Optional<Entity> optEntity = EntityType.create(newEntityNbt, level);*/
         //?}
         if (optEntity.isPresent()) {

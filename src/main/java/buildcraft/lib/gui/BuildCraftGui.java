@@ -92,7 +92,7 @@ public class BuildCraftGui {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         //?} else {
         /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
-        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
+        partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);*/
         //?}
         this.lastPartialTicks = partialTicks;
         mouse.setMousePosition(mouseX, mouseY);

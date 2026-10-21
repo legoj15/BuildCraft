@@ -257,10 +257,10 @@ public enum GuideManager {
 
     private static boolean isGuideScreenOpen() {
         //? if >=26.2 {
-        /*return Minecraft.getInstance().gui.screen() instanceof GuiGuide;*/
+        return Minecraft.getInstance().gui.screen() instanceof GuiGuide;
         //?} else {
-        return Minecraft.getInstance().screen instanceof GuiGuide;
-        //?}
+        /*return Minecraft.getInstance().screen instanceof GuiGuide;
+        *///?}
     }
 
     private void reload(ResourceManager resourceManager) {

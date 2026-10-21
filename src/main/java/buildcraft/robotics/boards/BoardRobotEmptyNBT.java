@@ -26,7 +26,7 @@ import buildcraft.api.robots.IRobotAccess;
  * <p>The texture is a DIRECT FILE PATH, not an atlas sprite: entity textures are bound whole, so
  * {@code SpriteHolderRegistry} does not apply here and using it would silently produce the missing-texture
  * chequerboard. Written in the canonical {@code Identifier} form — the build rewrites it for the nodes that
- * still call the class {@code ResourceLocation}.
+ * still call the class {@code Identifier}.
  */
 public class BoardRobotEmptyNBT extends RedstoneBoardRobotNBT {
 

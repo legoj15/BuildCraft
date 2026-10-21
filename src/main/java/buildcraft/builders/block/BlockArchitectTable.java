@@ -25,19 +25,19 @@ import buildcraft.lib.block.BlockBCTile_Directional;
 
 public class BlockArchitectTable extends BlockBCTile_Directional<TileArchitectTable> {
     //? if <26.3 {
-    public static final MapCodec<BlockArchitectTable> CODEC = simpleCodec(BlockArchitectTable::new);
-    //?}
+    /*public static final MapCodec<BlockArchitectTable> CODEC = simpleCodec(BlockArchitectTable::new);
+    *///?}
 
     public BlockArchitectTable(Properties properties) {
         super(properties);
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Nullable
     @Override

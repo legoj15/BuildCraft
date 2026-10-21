@@ -62,7 +62,7 @@ public enum GuideCraftingRecipes implements IStackRecipes {
         return list;
     }
 
-    /** Gather every crafting recipe whose id (ResourceLocation, stringified) contains {@code substring},
+    /** Gather every crafting recipe whose id (Identifier, stringified) contains {@code substring},
      *  in id order. Public so the {@code <recipe_cycle>} tag and a game test can both rely on which
      *  recipes a given match selects. Returns an empty list when no recipe data is available
      *  (outside a world, before the server's recipe sync has arrived). */

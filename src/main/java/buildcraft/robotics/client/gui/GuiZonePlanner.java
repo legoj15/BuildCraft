@@ -17,11 +17,11 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
 //? if >=26.3 {
-/*import org.lwjgl.sdl.SDLMouse;
-import org.lwjgl.system.MemoryStack;*/
+import org.lwjgl.sdl.SDLMouse;
+import org.lwjgl.system.MemoryStack;
 //?} else {
-import org.lwjgl.glfw.GLFW;
-//?}
+/*import org.lwjgl.glfw.GLFW;
+*///?}
 
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.RobotUtils;
@@ -356,15 +356,15 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
      *  released. */
     private static boolean isMouseButtonHeld(int button) {
         //? if >=26.3 {
-        /*// 26.3 swapped GLFW for SDL: no window handle is needed, and SDL numbers the buttons from 1 exactly as
+        // 26.3 swapped GLFW for SDL: no window handle is needed, and SDL numbers the buttons from 1 exactly as
         // Minecraft does there, so the state mask has bit (button - 1) set while that button is down.
         try (MemoryStack stack = MemoryStack.stackPush()) {
             return (SDLMouse.SDL_GetMouseState(stack.mallocFloat(1), stack.mallocFloat(1)) & (1 << (button - 1))) != 0;
-        }*/
+        }
         //?} elif >=1.21.10 {
-        long window = Minecraft.getInstance().getWindow().handle();
+        /*long window = Minecraft.getInstance().getWindow().handle();
         return GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS;
-        //?} else {
+        *///?} else {
         /*long window = Minecraft.getInstance().getWindow().getWindow();
         return GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS;*/
         //?}

@@ -149,10 +149,10 @@ public class BCCoreClient {
                             if (state.getBlock() instanceof buildcraft.transport.block.BlockPipeHolder) {
                                 buildcraft.transport.client.PipeHolderClientExtensions.INSTANCE.addHitEffects(
                                     //? if <26.3 {
-                                    state, event.getEntity().level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
-                                    //?} else {
-                                    /*state, event.getEntity().level(), pos, blockHit.getDirection(),
-                                    net.minecraft.client.Minecraft.getInstance().particleEngine*/
+                                    /*state, event.getEntity().level(), blockHit, net.minecraft.client.Minecraft.getInstance().particleEngine
+                                    *///?} else {
+                                    state, event.getEntity().level(), pos, blockHit.getDirection(),
+                                    net.minecraft.client.Minecraft.getInstance().particleEngine
                                     //?}
                                 );
                             }

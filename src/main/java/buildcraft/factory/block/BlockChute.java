@@ -54,8 +54,8 @@ import buildcraft.lib.block.BlockBCTile_Neptune;
 @SuppressWarnings("this-escape")
 public class BlockChute extends BlockBCTile_Neptune<TileChute> {
     //? if <26.3 {
-    public static final MapCodec<BlockChute> CODEC = simpleCodec(BlockChute::new);
-    //?}
+    /*public static final MapCodec<BlockChute> CODEC = simpleCodec(BlockChute::new);
+    *///?}
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
     public static final Map<Direction, Property<Boolean>> CONNECTED_MAP = BuildCraftProperties.CONNECTED_MAP;
 
@@ -69,11 +69,11 @@ public class BlockChute extends BlockBCTile_Neptune<TileChute> {
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

@@ -31,19 +31,19 @@ import buildcraft.robotics.tile.TileRequester;
  *  stats, opens the GUI on use (inherited from the base). */
 public class BlockRequester extends BlockBCTile_Directional<TileRequester> {
     //? if <26.3 {
-    public static final MapCodec<BlockRequester> CODEC = simpleCodec(BlockRequester::new);
-    //?}
+    /*public static final MapCodec<BlockRequester> CODEC = simpleCodec(BlockRequester::new);
+    *///?}
 
     public BlockRequester(Properties properties) {
         super(properties);
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Nullable
     @Override

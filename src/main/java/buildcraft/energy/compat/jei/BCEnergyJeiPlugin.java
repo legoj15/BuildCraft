@@ -17,9 +17,9 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 //? if >=26.3 {
-/*import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.recipe.vanilla.IJeiFuelingRecipe;
-import mezz.jei.api.runtime.IJeiRuntime;*/
+import mezz.jei.api.runtime.IJeiRuntime;
 //?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
@@ -27,8 +27,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 //? if >=1.21.10 && <26.3 {
-import net.minecraft.world.level.block.entity.FuelValues;
-//?}
+/*import net.minecraft.world.level.block.entity.FuelValues;
+*///?}
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -125,9 +125,9 @@ public class BCEnergyJeiPlugin implements IModPlugin {
     private static List<StirlingFuelJei> collectStirlingFuels() {
         List<StirlingFuelJei> out = new ArrayList<>();
         //? if >=26.3 {
-        /*// Nothing to enumerate here: see onRuntimeAvailable.*/
+        // Nothing to enumerate here: see onRuntimeAvailable.
         //?} elif >=1.21.10 {
-        Level level = Minecraft.getInstance().level;
+        /*Level level = Minecraft.getInstance().level;
         if (level == null) return out;
         FuelValues fuelValues = level.fuelValues();
         for (Item item : fuelValues.fuelItems()) {
@@ -137,7 +137,7 @@ public class BCEnergyJeiPlugin implements IModPlugin {
                 out.add(new StirlingFuelJei(stack, burnTime));
             }
         }
-        //?} else {
+        *///?} else {
         /*for (Item item : net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity.getFuel().keySet()) {
             ItemStack stack = new ItemStack(item);
             int burnTime = stack.getBurnTime(null);
@@ -150,7 +150,7 @@ public class BCEnergyJeiPlugin implements IModPlugin {
     }
 
     //? if >=26.3 {
-    /*// 26.3 removed FuelValues: a fuel's burn time is the COOKING_FUEL component's datapack provider,
+    // 26.3 removed FuelValues: a fuel's burn time is the COOKING_FUEL component's datapack provider,
     // resolvable only with a ServerLevel loot context, and those providers are not synced to clients.
     // JEI already solves this for its furnace-fuel category by evaluating the vanilla definitions
     // client-side, so reuse its result rather than duplicate that evaluation (which needs access to
@@ -168,7 +168,7 @@ public class BCEnergyJeiPlugin implements IModPlugin {
         if (!out.isEmpty()) {
             jeiRuntime.getRecipeManager().addRecipes(EngineFuelJeiTypes.STIRLING_FUEL, out);
         }
-    }*/
+    }
     //?}
 
     @Override

@@ -215,15 +215,15 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
 
     @Override
     //? if <26.3 {
-    public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
+    /*public boolean addHitEffects(BlockState state, Level level, @Nullable HitResult target, ParticleEngine manager) {
         if (!(target instanceof BlockHitResult blockHit)) {
             return false;
         }
         BlockPos pos = blockHit.getBlockPos();
         return spawnHitParticle(level, pos, blockHit.getDirection(), getHitSpriteInfo(level, pos, target), manager);
     }
-    //?} else {
-    /*public boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face, ParticleEngine manager) {
+    *///?} else {
+    public boolean addHitEffects(BlockState state, Level level, BlockPos pos, Direction face, ParticleEngine manager) {
         // 26.3 passes only the position and face, and also routes other players' break events (level events 2019 and
         // 2020) through here, so the local crosshair may not be on this block. Same lookup as addDestroyEffects: the
         // part under the crosshair if it is on this block, else the pipe's own sprite.
@@ -232,7 +232,7 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
             info = getPipeSpriteInfo(level, pos, tile);
         }
         return spawnHitParticle(level, pos, face, info, manager);
-    }*/
+    }
     //?}
 
     /** Spawns the single crack particle on {@code face}; false (vanilla particles) when there is no sprite to use. */

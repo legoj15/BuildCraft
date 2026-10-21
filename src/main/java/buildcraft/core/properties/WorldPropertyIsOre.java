@@ -44,7 +44,7 @@ public class WorldPropertyIsOre implements IWorldProperty {
 
     // The eight vanilla ore tags — the modern `ore*` umbrella. Five of them lost their BlockTags constant
     // on the 26.1 line (they exist only as BlockItemTags there), so that line builds the missing keys
-    // directly — the ID type is Identifier (the ResourceLocation rename happened earlier, at 1.21.11).
+    // directly — the ID type is Identifier (the Identifier rename happened earlier, at 1.21.11).
     private static final TagKey<Block> GOLD_ORES = BlockTags.GOLD_ORES;
     private static final TagKey<Block> IRON_ORES = BlockTags.IRON_ORES;
     private static final TagKey<Block> COPPER_ORES = BlockTags.COPPER_ORES;

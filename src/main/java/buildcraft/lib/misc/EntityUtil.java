@@ -9,7 +9,7 @@ package buildcraft.lib.misc;
 import javax.annotation.Nullable;
 
 //? if >=26.3 {
-/*import net.minecraft.util.Prediction;*/
+import net.minecraft.util.Prediction;
 //?}
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -84,10 +84,10 @@ public class EntityUtil {
      */
     public static void swing(LivingEntity entity, InteractionHand hand) {
         //? if >=26.3 {
-        /*entity.swing(hand, entity.getItemInHand(hand).getInteractAnimation(), false);*/
+        entity.swing(hand, entity.getItemInHand(hand).getInteractAnimation(), false);
         //?} else {
-        entity.swing(hand);
-        //?}
+        /*entity.swing(hand);
+        *///?}
     }
 
     /**
@@ -99,9 +99,9 @@ public class EntityUtil {
      */
     public static void dropOverflow(Player player, ItemStack stack) {
         //? if >=26.3 {
-        /*player.drop(stack, false, Prediction.SERVER_ONLY);*/
+        player.drop(stack, false, Prediction.SERVER_ONLY);
         //?} else {
-        player.drop(stack, false);
-        //?}
+        /*player.drop(stack, false);
+        *///?}
     }
 }

@@ -208,9 +208,9 @@ public class BCLibClient {
         // gameplay and configuration guide-book items. Subsequent opens are no-ops.
         GuideManager.INSTANCE.ensureLoaded();
         //? if >=26.2 {
-        /*net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new buildcraft.lib.client.guide.GuiGuide(bookName));*/
+        net.minecraft.client.Minecraft.getInstance().setScreenAndShow(new buildcraft.lib.client.guide.GuiGuide(bookName));
         //?} else {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new buildcraft.lib.client.guide.GuiGuide(bookName));
-        //?}
+        /*net.minecraft.client.Minecraft.getInstance().setScreen(new buildcraft.lib.client.guide.GuiGuide(bookName));
+        *///?}
     }
 }

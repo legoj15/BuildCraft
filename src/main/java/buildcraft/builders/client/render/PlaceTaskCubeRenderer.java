@@ -99,14 +99,14 @@ public final class PlaceTaskCubeRenderer {
             poseStack.translate(-0.5F, -0.5F, -0.5F);
             mc.getBlockRenderer().renderSingleBlock(blockItem.getBlock().defaultBlockState(), poseStack,
                 bufferSource, light, net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
+                net.neoforged.neoforge.model.data.ModelData.EMPTY, null);
         } else {
             // Non-block items: small cube textured with the item's particle sprite.
             net.minecraft.client.resources.model.BakedModel bakedModel =
                 mc.getItemRenderer().getModel(item, mc.level, null, 0);
             net.minecraft.client.renderer.texture.TextureAtlasSprite sprite =
                 bakedModel == null ? null : bakedModel.getParticleIcon(
-                    net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+                    net.neoforged.neoforge.model.data.ModelData.EMPTY);
             if (sprite != null) {
                 com.mojang.blaze3d.vertex.VertexConsumer buffer = bufferSource.getBuffer(
                     net.minecraft.client.renderer.rendertype.RenderTypes.entityTranslucent(sprite.atlasLocation()));

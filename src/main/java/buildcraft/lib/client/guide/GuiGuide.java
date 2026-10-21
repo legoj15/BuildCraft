@@ -231,10 +231,10 @@ public class GuiGuide extends Screen {
     public void closePage() {
         if (pages.isEmpty()) {
             //? if >=26.2 {
-            /*minecraft.setScreenAndShow(null);*/
+            minecraft.setScreenAndShow(null);
             //?} else {
-            minecraft.setScreen(null);
-            //?}
+            /*minecraft.setScreen(null);
+            *///?}
         } else {
             setPageInternal(pages.pop());
         }
@@ -441,7 +441,7 @@ public class GuiGuide extends Screen {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         //?} else {
         /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
-        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
+        partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);*/
         //?}
 
         lastPartialTicks = partialTicks;
@@ -860,10 +860,10 @@ public class GuiGuide extends Screen {
         // Match the bound key (not a hard-coded E) so a rebound inventory shortcut still works.
         if (!isOpen && this.minecraft.options.keyInventory.matches(keyEvent)) {
             //? if >=26.2 {
-            /*this.minecraft.setScreenAndShow(null);*/
+            this.minecraft.setScreenAndShow(null);
             //?} else {
-            this.minecraft.setScreen(null);
-            //?}
+            /*this.minecraft.setScreen(null);
+            *///?}
             return true;
         }
 

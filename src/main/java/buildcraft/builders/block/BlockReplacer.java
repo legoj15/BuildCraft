@@ -23,19 +23,19 @@ import buildcraft.lib.block.BlockBCTile_Directional;
 
 public class BlockReplacer extends BlockBCTile_Directional<TileReplacer> {
     //? if <26.3 {
-    public static final MapCodec<BlockReplacer> CODEC = simpleCodec(BlockReplacer::new);
-    //?}
+    /*public static final MapCodec<BlockReplacer> CODEC = simpleCodec(BlockReplacer::new);
+    *///?}
 
     public BlockReplacer(Properties properties) {
         super(properties);
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Nullable
     @Override

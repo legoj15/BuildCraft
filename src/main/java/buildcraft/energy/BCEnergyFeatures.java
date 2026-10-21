@@ -13,8 +13,8 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.levelgen.feature.Feature;
 //? if <26.3 {
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
-//?}
+/*import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+*///?}
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -35,25 +35,25 @@ import buildcraft.energy.generation.OilFeature;
  */
 public class BCEnergyFeatures {
     //? if >=26.3 {
-    /*// 26.3 split the old Feature registry: the code-side registry holds feature TYPES (MapCodecs); the
+    // 26.3 split the old Feature registry: the code-side registry holds feature TYPES (MapCodecs); the
     // Feature registry (Registries.FEATURE) is now datapack-driven (data/<ns>/worldgen/feature/*.json).
     public static final DeferredRegister<MapCodec<? extends Feature>> FEATURES =
-            DeferredRegister.create(Registries.FEATURE_TYPE, BCCore.MODID);*/
+            DeferredRegister.create(Registries.FEATURE_TYPE, BCCore.MODID);
     //?} else {
-    public static final DeferredRegister<Feature<?>> FEATURES =
+    /*public static final DeferredRegister<Feature<?>> FEATURES =
             DeferredRegister.create(Registries.FEATURE, BCCore.MODID);
-    //?}
+    *///?}
 
     public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
             DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, BCCore.MODID);
 
     //? if >=26.3 {
-    /*public static final Supplier<MapCodec<OilFeature>> OIL = FEATURES.register(
-            "oil", () -> OilFeature.CODEC);*/
+    public static final Supplier<MapCodec<OilFeature>> OIL = FEATURES.register(
+            "oil", () -> OilFeature.CODEC);
     //?} else {
-    public static final Supplier<OilFeature> OIL = FEATURES.register(
+    /*public static final Supplier<OilFeature> OIL = FEATURES.register(
             "oil", () -> new OilFeature(NoneFeatureConfiguration.CODEC));
-    //?}
+    *///?}
 
     public static final Supplier<MapCodec<AddOilBiomeModifier>> ADD_OIL_MODIFIER =
             BIOME_MODIFIER_SERIALIZERS.register("add_oil", () -> AddOilBiomeModifier.CODEC);

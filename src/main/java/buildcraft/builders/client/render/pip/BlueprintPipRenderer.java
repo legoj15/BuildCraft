@@ -28,20 +28,20 @@ import org.lwjgl.system.MemoryStack;
 // 26.3 moved GpuBuffer and GpuDevice to com.mojang.renderpearl.api.*; Std140Builder, Lighting and
 // RenderSystem stay in blaze3d.
 //? if >=26.3 {
-/*import com.mojang.renderpearl.api.buffers.GpuBuffer;*/
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
 //?} else {
-import com.mojang.blaze3d.buffers.GpuBuffer;
-//?}
+/*import com.mojang.blaze3d.buffers.GpuBuffer;
+*///?}
 //? if <26.2 {
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-//?}
+/*import com.mojang.blaze3d.buffers.GpuBufferSlice;
+*///?}
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.platform.Lighting;
 //? if >=26.3 {
-/*import com.mojang.renderpearl.api.device.GpuDevice;*/
+import com.mojang.renderpearl.api.device.GpuDevice;
 //?} else {
-import com.mojang.blaze3d.systems.GpuDevice;
-//?}
+/*import com.mojang.blaze3d.systems.GpuDevice;
+*///?}
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -50,12 +50,12 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 //? if >=26.2 {
-/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+import net.minecraft.client.renderer.SubmitNodeCollector;
 //?} else {
-import net.minecraft.client.renderer.MultiBufferSource;
+/*import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeStorage;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
-//?}
+*///?}
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -213,18 +213,18 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     private int lightingBufferPaddedSize;
 
     //? if >=26.2 {
-    /*// 26.2 dropped the BufferSource-taking PiP base constructor (immediate-mode rendering is gone);
+    // 26.2 dropped the BufferSource-taking PiP base constructor (immediate-mode rendering is gone);
     // the base now defaults to a no-arg constructor and owns its SubmitNodeStorage internally. The
     // matching RegisterPictureInPictureRenderersEvent.register takes a Supplier (not a Function), so
     // BlueprintPipRenderer::new resolves to this no-arg constructor on 26.2.
     public BlueprintPipRenderer() {
         super();
-    }*/
+    }
     //?} else {
-    public BlueprintPipRenderer(MultiBufferSource.BufferSource bufferSource) {
+    /*public BlueprintPipRenderer(MultiBufferSource.BufferSource bufferSource) {
         super(bufferSource);
     }
-    //?}
+    *///?}
 
     /**
      * Allocate the lighting UBO the first time we need it. Layout matches vanilla's
@@ -235,11 +235,11 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         if (lightingBuffer != null) return;
         GpuDevice device = RenderSystem.getDevice();
         //? if >=26.2 {
-        /*// 26.2 moved GpuDevice.getUniformOffsetAlignment() onto the DeviceInfo/DeviceLimits record.
-        int uniformOffsetAlignment = device.getDeviceInfo().limits().minUniformOffsetAlignment();*/
+        // 26.2 moved GpuDevice.getUniformOffsetAlignment() onto the DeviceInfo/DeviceLimits record.
+        int uniformOffsetAlignment = device.getDeviceInfo().limits().minUniformOffsetAlignment();
         //?} else {
-        int uniformOffsetAlignment = device.getUniformOffsetAlignment();
-        //?}
+        /*int uniformOffsetAlignment = device.getUniformOffsetAlignment();
+        *///?}
         lightingBufferPaddedSize = Mth.roundToward(Lighting.UBO_SIZE, uniformOffsetAlignment);
         lightingBuffer = device.createBuffer(
                 () -> "BCBlueprintPipLighting", 136, lightingBufferPaddedSize);
@@ -281,13 +281,13 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     }
 
     //? if >=26.2 {
-    /*@Override
-    protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack,
-                                   SubmitNodeCollector collector) {*/
-    //?} else {
     @Override
+    protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack,
+                                   SubmitNodeCollector collector) {
+    //?} else {
+    /*@Override
     protected void renderToTexture(BlueprintPipRenderState renderState, PoseStack poseStack) {
-    //?}
+    *///?}
         Snapshot snapshot = renderState.snapshot();
         BlockPos size = snapshot.size;
         int sizeX = Math.max(1, size.getX());
@@ -357,19 +357,19 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         writeLightDirections(light0Camera, light1Camera);
 
         //? if >=26.2 {
-        /*// 26.2: bind our UBO and leave it — the base class owns the SubmitNodeStorage and runs
+        // 26.2: bind our UBO and leave it — the base class owns the SubmitNodeStorage and runs
         // renderAllFeatures(storage) (which executes the deferred draws) immediately after we return,
         // so the binding must survive past this method. Item submits and custom geometry go through the
         // passed-in collector.
-        RenderSystem.setShaderLights(lightingBuffer.slice(0, Lighting.UBO_SIZE));*/
+        RenderSystem.setShaderLights(lightingBuffer.slice(0, Lighting.UBO_SIZE));
         //?} else {
-        // <26.2: snapshot the existing binding BEFORE swapping in ours; we restore it after the
+        /*// <26.2: snapshot the existing binding BEFORE swapping in ours; we restore it after the
         // in-method endBatch flush below.
         GpuBufferSlice savedShaderLights = RenderSystem.getShaderLights();
         RenderSystem.setShaderLights(lightingBuffer.slice(0, Lighting.UBO_SIZE));
         FeatureRenderDispatcher featureRenderDispatcher = mc.gameRenderer.getFeatureRenderDispatcher();
         SubmitNodeStorage submitNodeStorage = featureRenderDispatcher.getSubmitNodeStorage();
-        //?}
+        *///?}
 
         // Cache the TrackingItemStackRenderState per distinct BlockState so we don't re-resolve
         // the item model for every single cell. Updating for the top item is non-trivial
@@ -405,10 +405,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         // clean outer shell rather than a haze of stacked translucent quads.
                         if (template.data != null && template.data.get(dataIndex)) {
                             //? if >=26.2 {
-                            /*submitTemplateGhostCube(collector, poseStack, template, size, x, y, z);*/
+                            submitTemplateGhostCube(collector, poseStack, template, size, x, y, z);
                             //?} else {
-                            submitTemplateGhostCube(poseStack, template, size, x, y, z);
-                            //?}
+                            /*submitTemplateGhostCube(poseStack, template, size, x, y, z);
+                            *///?}
                             submittedTemplate++;
                         } else {
                             skippedAirOrEmpty++;
@@ -462,7 +462,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             // rendering through the culling block sheet.
                             CompoundTag pipeTileNbt = schBlock.getTileNbtForRender();
                             //? if >=26.2 {
-                            /*collector.submitCustomGeometry(poseStack,
+                            collector.submitCustomGeometry(poseStack,
                                     BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                                     (pose, vc) -> ModelPipe.renderDirect(pipeKey, pose, vc, FULL_BRIGHT));
                             collector.submitCustomGeometry(poseStack,
@@ -471,9 +471,9 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                                             FULL_BRIGHT, PIPE_PAINT_ALPHA));
                             // Pluggables (plugs/gates/lenses/filters/wires/facades) captured on this
                             // pipe — reconstructed offline and rendered like the body, via the collector.
-                            PipePreviewPluggables.render(pipeTileNbt, poseStack, collector, FULL_BRIGHT);*/
+                            PipePreviewPluggables.render(pipeTileNbt, poseStack, collector, FULL_BRIGHT);
                             //?} else {
-                            PoseStack.Pose pipePose = poseStack.last();
+                            /*PoseStack.Pose pipePose = poseStack.last();
                             ModelPipe.renderDirect(pipeKey, pipePose,
                                     this.bufferSource.getBuffer(
                                             BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)),
@@ -486,7 +486,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                             // pipe — reconstructed offline and rendered like the body.
                             PipePreviewPluggables.render(pipeTileNbt, poseStack,
                                     this.bufferSource, FULL_BRIGHT);
-                            //?}
+                            *///?}
                             poseStack.popPose();
                             submittedPipe++;
                             continue;
@@ -500,10 +500,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                     FluidState fluidState = state.getFluidState();
                     if (!fluidState.isEmpty()) {
                         //? if >=26.2 {
-                        /*submitFluidCube(collector, poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);*/
+                        submitFluidCube(collector, poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);
                         //?} else {
-                        submitFluidCube(poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);
-                        //?}
+                        /*submitFluidCube(poseStack, blueprint, size, x, y, z, fluidState, FULL_BRIGHT);
+                        *///?}
                         submittedFluid++;
                         continue;
                     }
@@ -520,10 +520,10 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         poseStack.translate(x, y, z);
                         boolean drewBlockModel;
                         //? if >=26.2 {
-                        /*drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, collector, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);*/
+                        drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, collector, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
                         //?} else {
-                        drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, this.bufferSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
-                        //?}
+                        /*drewBlockModel = PreviewBlockModelRenderer.renderBlock(state, poseStack, this.bufferSource, FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+                        *///?}
                         poseStack.popPose();
                         if (drewBlockModel) {
                             submitted++;
@@ -577,12 +577,12 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
                         ItemRenderUtil.rotate(poseStack, Axis.XP.rotationDegrees(engineRot[0]));
                     }
                     //? if >=26.2 {
-                    /*itemRenderState.submit(poseStack, collector, FULL_BRIGHT,
-                            OverlayTexture.NO_OVERLAY, 0);*/
-                    //?} else {
-                    itemRenderState.submit(poseStack, submitNodeStorage, FULL_BRIGHT,
+                    itemRenderState.submit(poseStack, collector, FULL_BRIGHT,
                             OverlayTexture.NO_OVERLAY, 0);
-                    //?}
+                    //?} else {
+                    /*itemRenderState.submit(poseStack, submitNodeStorage, FULL_BRIGHT,
+                            OverlayTexture.NO_OVERLAY, 0);
+                    *///?}
                     poseStack.popPose();
                     submitted++;
                 }
@@ -590,13 +590,13 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         }
 
         //? if >=26.2 {
-        /*// 26.2: nothing to flush or restore here. Every draw above was queued into the collector
+        // 26.2: nothing to flush or restore here. Every draw above was queued into the collector
         // (which is the base class's own SubmitNodeStorage); the base class executes them via
         // renderAllFeatures(storage) right after this method returns, while our custom shader-lights
         // binding is still active. The next render pass re-establishes the normal lighting, exactly
-        // as OversizedItemRenderer relies on — so there is no save/restore to undo.*/
+        // as OversizedItemRenderer relies on — so there is no save/restore to undo.
         //?} else {
-        // Process all feature submissions — this queues the actual GPU draw calls into the PiP
+        /*// Process all feature submissions — this queues the actual GPU draw calls into the PiP
         // buffer source, but does NOT flush them to the GPU yet.
         featureRenderDispatcher.renderAllFeatures();
 
@@ -612,7 +612,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         // Restore whatever lights binding was active before we took over, now that all draws
         // using our custom UBO have been submitted to the GPU.
         RenderSystem.setShaderLights(savedShaderLights);
-        //?}
+        *///?}
 
         if (LOGGED_SNAPSHOTS.add(System.identityHashCode(snapshot))) {
             LOGGER.info("renderToTexture: type={} size={}x{}x{} submitted={} submittedFluid={} submittedTemplate={} submittedPipe={} skippedNoItem={} skippedAirOrEmpty={} sampleSchBlock={} distinctStates={}",
@@ -639,17 +639,17 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      * position-based mapping used by {@link buildcraft.factory.client.render.RenderTank}.
      */
     //? if >=26.2 {
-    /*private void submitFluidCube(
+    private void submitFluidCube(
             SubmitNodeCollector collector,
             PoseStack poseStack, Blueprint blueprint, BlockPos size,
             int xCell, int yCell, int zCell,
-            FluidState fluidState, int lightmap) {*/
+            FluidState fluidState, int lightmap) {
     //?} else {
-    private void submitFluidCube(
+    /*private void submitFluidCube(
             PoseStack poseStack, Blueprint blueprint, BlockPos size,
             int xCell, int yCell, int zCell,
             FluidState fluidState, int lightmap) {
-    //?}
+    *///?}
         Fluid fluid = fluidState.getType();
         // FluidUtilBC expects a FluidStack; the amount doesn't matter here — only the fluid
         // identity is used to look up texture + colour.
@@ -701,14 +701,14 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);
         //? if >=26.2 {
-        /*collector.submitCustomGeometry(poseStack, fluidRenderType,
+        collector.submitCustomGeometry(poseStack, fluidRenderType,
                 (pose, vc) -> emitFluidCubeFaces(pose, vc, spr, rr, gg, bb, aa, hh,
-                        ct, cb, cn, cs, cw, ce, lightmap));*/
+                        ct, cb, cn, cs, cw, ce, lightmap));
         //?} else {
-        VertexConsumer vc = this.bufferSource.getBuffer(fluidRenderType);
+        /*VertexConsumer vc = this.bufferSource.getBuffer(fluidRenderType);
         emitFluidCubeFaces(poseStack.last(), vc, spr, rr, gg, bb, aa, hh,
                 ct, cb, cn, cs, cw, ce, lightmap);
-        //?}
+        *///?}
         poseStack.popPose();
     }
 
@@ -823,13 +823,13 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
      * of the preview. Cube vertices live in cell-local {@code [0, 1]^3} after the per-cell translate.
      */
     //? if >=26.2 {
-    /*private void submitTemplateGhostCube(SubmitNodeCollector collector, PoseStack poseStack,
+    private void submitTemplateGhostCube(SubmitNodeCollector collector, PoseStack poseStack,
                                          Template template, BlockPos size,
-                                         int xCell, int yCell, int zCell) {*/
-    //?} else {
-    private void submitTemplateGhostCube(PoseStack poseStack, Template template, BlockPos size,
                                          int xCell, int yCell, int zCell) {
-    //?}
+    //?} else {
+    /*private void submitTemplateGhostCube(PoseStack poseStack, Template template, BlockPos size,
+                                         int xCell, int yCell, int zCell) {
+    *///?}
         // Cull faces shared with an adjacent filled cell up front — see TemplateGhostGeometry.
         EnumSet<Direction> faces = TemplateGhostGeometry.visibleFaces(template, size, xCell, yCell, zCell);
         if (faces.isEmpty()) {
@@ -840,12 +840,12 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
         poseStack.pushPose();
         poseStack.translate(xCell, yCell, zCell);
         //? if >=26.2 {
-        /*collector.submitCustomGeometry(poseStack, BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE),
-                (pose, vc) -> emitTemplateGhostFaces(pose, vc, faces));*/
+        collector.submitCustomGeometry(poseStack, BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE),
+                (pose, vc) -> emitTemplateGhostFaces(pose, vc, faces));
         //?} else {
-        VertexConsumer vc = this.bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE));
+        /*VertexConsumer vc = this.bufferSource.getBuffer(BCLibRenderTypes.entityTranslucent(SCAN_TEXTURE));
         emitTemplateGhostFaces(poseStack.last(), vc, faces);
-        //?}
+        *///?}
         poseStack.popPose();
     }
 

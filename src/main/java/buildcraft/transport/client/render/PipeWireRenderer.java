@@ -15,9 +15,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 //? if <26.2 {
-import net.minecraft.client.Minecraft;
+/*import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+*///?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -214,14 +214,14 @@ public class PipeWireRenderer {
         }
 
         //? if <26.2 {
-        // 1.21.1..26.1 classic immediate-mode path (this Pose-taking overload is only reached on those
+        /*// 1.21.1..26.1 classic immediate-mode path (this Pose-taking overload is only reached on those
         // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above).
         MultiBufferSource.BufferSource bufferSource =
             Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer bb = bufferSource.getBuffer(BCLibRenderTypes.cutoutBlockSheet());
         drawWires(wm, pose, packedLight, bb);
         bufferSource.endBatch(BCLibRenderTypes.cutoutBlockSheet());
-        //?}
+        *///?}
     }
 
     /** Draws every powered wire part + between segment into {@code bb}. Node-agnostic: {@code pose} /

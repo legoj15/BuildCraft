@@ -9,15 +9,15 @@ import java.util.function.Function;
 
 // 26.3 moved the GPU abstraction from com.mojang.blaze3d.* to com.mojang.renderpearl.api.*.
 //? if >=26.3 {
-/*import com.mojang.renderpearl.api.pipeline.DepthStencilState;*/
+import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 //?} elif >=26.1 {
-import com.mojang.blaze3d.pipeline.DepthStencilState;
-//?}
+/*import com.mojang.blaze3d.pipeline.DepthStencilState;
+*///?}
 //? if >=26.3 {
-/*import com.mojang.renderpearl.api.pipeline.RenderPipeline;*/
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 //?} elif >=1.21.10 {
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-//?}
+/*import com.mojang.blaze3d.pipeline.RenderPipeline;
+*///?}
 
 //? if >=1.21.11 {
 import net.minecraft.util.Util;
@@ -30,7 +30,7 @@ import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 //?}
 // RenderType: `rendertype.` subpackage on 1.21.11+, moved by the build-script regex
-// replacement to `net.minecraft.client.renderer.RenderType` on the 1.21.10 node.
+// replacement to `net.minecraft.client.renderer.rendertype.RenderType` on the 1.21.10 node.
 import net.minecraft.client.renderer.rendertype.RenderType;
 //? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -341,10 +341,10 @@ public final class BCLibRenderTypes {
      */
     public static RenderType cutoutBlockSheet() {
         //? if >=26.2 {
-        /*return RenderTypes.entityCutoutCull(BLOCKS_ATLAS_ID);*/
+        return RenderTypes.entityCutoutCull(BLOCKS_ATLAS_ID);
         //?} else {
-        return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
-        //?}
+        /*return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
+        *///?}
     }
 
     /** Translucent sheet for item-layer overlays: 1.21.11+ has a block-item variant; 1.21.10 the plain item sheet. */

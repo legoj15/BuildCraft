@@ -37,9 +37,9 @@ public class BlockMiningWell extends BlockBCTile_Neptune<TileMiningWell> {
     public static final Property<Direction> FACING = BuildCraftProperties.BLOCK_FACING;
 
     //? if <26.3 {
-    public static final MapCodec<BlockMiningWell> CODEC =
+    /*public static final MapCodec<BlockMiningWell> CODEC =
             simpleCodec(BlockMiningWell::new);
-    //?}
+    *///?}
 
     public BlockMiningWell(Properties properties) {
         super(properties);
@@ -47,11 +47,11 @@ public class BlockMiningWell extends BlockBCTile_Neptune<TileMiningWell> {
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

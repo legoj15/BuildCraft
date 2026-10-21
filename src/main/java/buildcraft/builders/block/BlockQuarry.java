@@ -30,8 +30,8 @@ import buildcraft.lib.misc.AdvancementUtil;
 
 public class BlockQuarry extends BlockBCTile_Directional<TileQuarry> {
     //? if <26.3 {
-    public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
-    //?}
+    /*public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
+    *///?}
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:shaping_the_world");
 
     public BlockQuarry(Properties properties) {
@@ -39,11 +39,11 @@ public class BlockQuarry extends BlockBCTile_Directional<TileQuarry> {
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Nullable
     @Override

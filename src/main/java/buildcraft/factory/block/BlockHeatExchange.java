@@ -61,8 +61,8 @@ import buildcraft.lib.misc.FluidUtilBC;
 @SuppressWarnings("this-escape")
 public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> implements ICustomRotationHandler {
     //? if <26.3 {
-    public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
-    //?}
+    /*public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
+    *///?}
 
     public enum EnumExchangePart implements StringRepresentable {
         START,
@@ -92,11 +92,11 @@ public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> imp
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

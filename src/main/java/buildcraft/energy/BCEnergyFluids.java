@@ -276,11 +276,11 @@ public class BCEnergyFluids {
                         .replaceable()
                         .strength(100.0F)
                         //? if >=26.3 {
-                        /*// 26.3 renamed PushReaction.DESTROY to POPPED; the piston resolver treats it identically.
-                        .pushReaction(net.minecraft.world.level.material.PushReaction.POPPED)*/
+                        // 26.3 renamed PushReaction.DESTROY to POPPED; the piston resolver treats it identically.
+                        .pushReaction(net.minecraft.world.level.material.PushReaction.POPPED)
                         //?} else {
-                        .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
-                        //?}
+                        /*.pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                        *///?}
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)

@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceKey;
  * Cross-version accessor for a {@link ResourceKey}'s id.
  * <p>
  * MC 1.21.11 renamed {@code ResourceKey.location()} to {@code identifier()} as part of the
- * {@code ResourceLocation -> Identifier} sweep. Centralising the accessor here keeps that single
+ * {@code Identifier -> Identifier} sweep. Centralising the accessor here keeps that single
  * divergence in one place instead of at every call site (the helper pattern used by
  * {@link PositionUtil} / {@link MessageUtil} for other cross-line API renames).
  */
@@ -28,7 +28,7 @@ public final class RegistryKeyUtil {
 
     /**
      * Pass-through overload for nodes where {@code RecipeHolder.id()} already yields an
-     * {@link Identifier} (1.21.1, whose RecipeManager is keyed by {@code ResourceLocation}) rather
+     * {@link Identifier} (1.21.1, whose RecipeManager is keyed by {@code Identifier}) rather
      * than a {@link ResourceKey}. Lets {@code RegistryKeyUtil.id(holder.id())} stay version-neutral
      * at the call site — Java overload resolution picks this by the argument's actual type. Unused
      * (and unreachable) on nodes whose {@code id()} returns a {@code ResourceKey}.

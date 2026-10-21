@@ -50,8 +50,8 @@ import buildcraft.lib.misc.FluidUtilBC;
 @SuppressWarnings("this-escape")
 public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> implements ICustomRotationHandler {
     //? if <26.3 {
-    public static final MapCodec<BlockDistiller> CODEC = simpleCodec(BlockDistiller::new);
-    //?}
+    /*public static final MapCodec<BlockDistiller> CODEC = simpleCodec(BlockDistiller::new);
+    *///?}
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public BlockDistiller(Properties properties) {
@@ -60,11 +60,11 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
     }
 
     //? if <26.3 {
-    @Override
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
-    //?}
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

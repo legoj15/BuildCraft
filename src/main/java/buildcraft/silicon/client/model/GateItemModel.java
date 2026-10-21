@@ -153,11 +153,11 @@ public class GateItemModel implements ItemModel {
 
         var layer = renderState.newLayer();
         //? if >=26.3 {
-        /*// 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits.
-        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));*/
+        // 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits.
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));
         //?} else {
-        layer.prepareQuadList().addAll(quads);
-        //?}
+        /*layer.prepareQuadList().addAll(quads);
+        *///?}
         //? if <26.1 {
         /*// 1.21.11: the item layer needs an explicit render type (26.1 infers it from the quad's
         // MaterialInfo). Block-textured cutout → cutoutBlockSheet, matching vanilla BlockModelWrapper.
@@ -201,8 +201,8 @@ public class GateItemModel implements ItemModel {
     @Override
     public List<BakedQuad> getQuads(net.minecraft.world.level.block.state.BlockState s,
             net.minecraft.core.Direction side, net.minecraft.util.RandomSource rand,
-            net.neoforged.neoforge.client.model.data.ModelData extraData,
-            net.minecraft.client.renderer.RenderType renderType) {
+            net.neoforged.neoforge.model.data.ModelData extraData,
+            net.minecraft.client.renderer.rendertype.RenderType renderType) {
         return List.of();
     }
 
@@ -231,7 +231,7 @@ public class GateItemModel implements ItemModel {
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
         return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
-                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
     }*/
     //?}
 }

@@ -35,16 +35,16 @@ public class BoardTargetPredicateTester {
         BoardRobotButcher butcher = new BoardRobotButcher(new MockRobotAccess());
 
         //? if >=26.2 {
-        /*Mob zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
+        Mob zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, new BlockPos(1, 2, 1));
         Mob slime = helper.spawn(net.minecraft.world.entity.EntityTypes.SLIME, new BlockPos(2, 2, 3));
         Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, new BlockPos(4, 2, 1));
-        Mob villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new BlockPos(4, 2, 4));*/
+        Mob villager = helper.spawn(net.minecraft.world.entity.EntityTypes.VILLAGER, new BlockPos(4, 2, 4));
         //?} else {
-        Mob zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, new BlockPos(1, 2, 1));
+        /*Mob zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, new BlockPos(1, 2, 1));
         Mob slime = helper.spawn(net.minecraft.world.entity.EntityType.SLIME, new BlockPos(2, 2, 3));
         Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(4, 2, 1));
         Mob villager = helper.spawn(net.minecraft.world.entity.EntityType.VILLAGER, new BlockPos(4, 2, 4));
-        //?}
+        *///?}
 
         Mob[] spawned = { zombie, slime, cow, villager };
         for (Mob mob : spawned) {
@@ -83,26 +83,26 @@ public class BoardTargetPredicateTester {
 
     private static Mob cow(GameTestHelper helper, BlockPos pos) {
         //? if >=26.2 {
-        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.COW, pos);*/
+        return helper.spawn(net.minecraft.world.entity.EntityTypes.COW, pos);
         //?} else {
-        return helper.spawn(net.minecraft.world.entity.EntityType.COW, pos);
-        //?}
+        /*return helper.spawn(net.minecraft.world.entity.EntityType.COW, pos);
+        *///?}
     }
 
     private static TamableAnimal wolf(GameTestHelper helper, BlockPos pos) {
         //? if >=26.2 {
-        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, pos);*/
+        return helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, pos);
         //?} else {
-        return helper.spawn(net.minecraft.world.entity.EntityType.WOLF, pos);
-        //?}
+        /*return helper.spawn(net.minecraft.world.entity.EntityType.WOLF, pos);
+        *///?}
     }
 
     private static AbstractHorse horse(GameTestHelper helper, BlockPos pos) {
         //? if >=26.2 {
-        /*return helper.spawn(net.minecraft.world.entity.EntityTypes.HORSE, pos);*/
+        return helper.spawn(net.minecraft.world.entity.EntityTypes.HORSE, pos);
         //?} else {
-        return helper.spawn(net.minecraft.world.entity.EntityType.HORSE, pos);
-        //?}
+        /*return helper.spawn(net.minecraft.world.entity.EntityType.HORSE, pos);
+        *///?}
     }
 
     /** 7.1.x's butcher killed any {@code EntityAnimal}: a player's tamed wolf, cat or parrot, a tamed horse, donkey,

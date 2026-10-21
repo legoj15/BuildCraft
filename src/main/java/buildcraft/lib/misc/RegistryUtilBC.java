@@ -11,9 +11,9 @@ import net.minecraft.resources.Identifier;
 
 /** Version-neutral registry-value lookup by id.
  *
- * <p>On 1.21.10+ {@code Registry.getValue(ResourceLocation)} returns the value directly (and
- * {@code Registry.get(ResourceLocation)} returns an {@code Optional<Holder.Reference<T>>}). On 1.21.1
- * the {@code getValue} method does not exist and {@code Registry.get(ResourceLocation)} returns the value
+ * <p>On 1.21.10+ {@code Registry.getValue(Identifier)} returns the value directly (and
+ * {@code Registry.get(Identifier)} returns an {@code Optional<Holder.Reference<T>>}). On 1.21.1
+ * the {@code getValue} method does not exist and {@code Registry.get(Identifier)} returns the value
  * directly. This helper hides that split so call sites stay version-neutral. */
 public class RegistryUtilBC {
     /** @return the registered value for {@code id}, or {@code null} if nothing is registered under it. */

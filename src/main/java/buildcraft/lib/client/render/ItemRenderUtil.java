@@ -166,10 +166,10 @@ public class ItemRenderUtil {
      */
     public static void rotate(PoseStack ps, Quaternionf rotation) {
         //? if >=26.3 {
-        /*ps.rotate(rotation);*/
+        ps.rotate(rotation);
         //?} else {
-        ps.mulPose(rotation);
-        //?}
+        /*ps.mulPose(rotation);
+        *///?}
     }
 
     private static void setupModelOffsetRandom(ItemStack stack) {

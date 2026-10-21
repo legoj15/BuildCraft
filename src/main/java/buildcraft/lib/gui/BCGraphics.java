@@ -9,10 +9,10 @@ package buildcraft.lib.gui;
 import java.util.List;
 
 //? if >=26.3 {
-/*import com.mojang.renderpearl.api.pipeline.RenderPipeline;*/
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 //?} elif >=1.21.10 {
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-//?}
+/*import com.mojang.blaze3d.pipeline.RenderPipeline;
+*///?}
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -227,7 +227,7 @@ public final class BCGraphics {
         raw.blit(pipeline, texture, x, y, u, v, width, height, regionWidth, regionHeight, textureWidth, textureHeight, color);
     }
     //?} else {
-    /*// 1.21.1 GuiGraphics has no RenderPipeline parameter. blitSprite(ResourceLocation,…) exists; a
+    /*// 1.21.1 GuiGraphics has no RenderPipeline parameter. blitSprite(Identifier,…) exists; a
     // TextureAtlasSprite is drawn via blit(x, y, blitOffset, w, h, sprite[, r, g, b, a]). The region
     // blit overloads order args (x, y, width, height, u, v, regionW, regionH, texW, texH) — width/height
     // come BEFORE u/v on 1.21.1 (reverse of modern); the plain (no-region) overload keeps u/v first.

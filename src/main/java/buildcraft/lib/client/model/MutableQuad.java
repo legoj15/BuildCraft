@@ -155,7 +155,7 @@ public class MutableQuad {
             ? net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT
             : net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT;
         //? if >=26.3 {
-        /*// 26.3 adds the two glint sheets and replaces the boolean shade with a nullable shade-direction override.
+        // 26.3 adds the two glint sheets and replaces the boolean shade with a nullable shade-direction override.
         // shade=true -> null (light by the quad's own face); shade=false -> UP, which is exactly the old unshaded
         // brightness (26.2's BlockModelLighter used cardinalLighting.up() for unshaded quads).
         return new BakedQuad.MaterialInfo(
@@ -167,16 +167,16 @@ public class MutableQuad {
             translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemGlintSpecialSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSpecialSheet(),
             tintIndex, shade ? null : Direction.UP, lightEmission, true
-        );*/
+        );
         //?} else {
-        // The 7-arg form has been in NeoForge's patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
+        /*// The 7-arg form has been in NeoForge's patch since 26.1-pre3, so it links on the whole 26.1.x jar range.
         return new BakedQuad.MaterialInfo(
             sprite, layer,
             translucent ? net.minecraft.client.renderer.Sheets.translucentBlockItemSheet()
                         : net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet(),
             tintIndex, shade, lightEmission, true
         );
-        //?}
+        *///?}
     }
     //?}
 
@@ -333,11 +333,11 @@ public class MutableQuad {
         tintIndex = mat.tintIndex();
         sprite = mat.sprite();
         //? if >=26.3 {
-        /*// 26.3: any shade-direction override reads back as unshaded (BC only ever writes UP for shade=false).
-        shade = mat.shadeDirectionOverride() == null;*/
+        // 26.3: any shade-direction override reads back as unshaded (BC only ever writes UP for shade=false).
+        shade = mat.shadeDirectionOverride() == null;
         //?} else {
-        shade = mat.shade();
-        //?}
+        /*shade = mat.shade();
+        *///?}
         lightEmission = mat.lightEmission();
         //?} elif >=1.21.10 {
         /*// 1.21.11/1.21.10 BakedQuad carries these directly (no MaterialInfo record).

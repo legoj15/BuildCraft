@@ -75,7 +75,7 @@ public final class CraftingUtil {
     }
 
     /** The {@code namespace:path} id of a recipe holder. {@link RegistryKeyUtil#id} bridges the
-     *  1.21.1 (ResourceLocation id) / 1.21.10+ (ResourceKey id) cliff. Used as the stable key for
+     *  1.21.1 (Identifier id) / 1.21.10+ (ResourceKey id) cliff. Used as the stable key for
      *  cycle ordering and for remembering the player's selected output across changes and reloads. */
     public static String recipeId(RecipeHolder<?> holder) {
         return RegistryKeyUtil.id(holder.id()).toString();

@@ -830,9 +830,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // arguments (the pipe's plug-aware answer is unchanged).
     @Override
     //? if <26.3 {
-    public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
-    //?} else {
-    /*protected boolean shouldRedstoneWireConnectTo(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {*/
+    /*public boolean canConnectRedstone(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
+    *///?} else {
+    protected boolean shouldRedstoneWireConnectTo(BlockState state, BlockGetter level, BlockPos pos, @Nullable Direction direction) {
     //?}
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof TilePipeHolder tile) {

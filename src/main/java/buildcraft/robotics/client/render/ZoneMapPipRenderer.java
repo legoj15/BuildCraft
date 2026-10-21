@@ -18,10 +18,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 //? if >=26.2 {
-/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+import net.minecraft.client.renderer.SubmitNodeCollector;
 //?} else {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.world.level.Level;
 
@@ -38,14 +38,14 @@ import buildcraft.lib.client.render.BCLibRenderTypes;
 public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRenderState> {
 
     //? if >=26.2 {
-    /*public ZoneMapPipRenderer() {
+    public ZoneMapPipRenderer() {
         super();
-    }*/
+    }
     //?} else {
-    public ZoneMapPipRenderer(MultiBufferSource.BufferSource bufferSource) {
+    /*public ZoneMapPipRenderer(MultiBufferSource.BufferSource bufferSource) {
         super(bufferSource);
     }
-    //?}
+    *///?}
 
     @Override
     public Class<ZoneMapPipRenderState> getRenderStateClass() {
@@ -64,13 +64,13 @@ public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRende
     }
 
     //? if >=26.2 {
-    /*@Override
-    protected void renderToTexture(ZoneMapPipRenderState state, PoseStack poseStack,
-                                   SubmitNodeCollector collector) {*/
-    //?} else {
     @Override
+    protected void renderToTexture(ZoneMapPipRenderState state, PoseStack poseStack,
+                                   SubmitNodeCollector collector) {
+    //?} else {
+    /*@Override
     protected void renderToTexture(ZoneMapPipRenderState state, PoseStack poseStack) {
-    //?}
+    *///?}
         Level level = Minecraft.getInstance().level;
         if (level == null) {
             return;
@@ -80,18 +80,18 @@ public class ZoneMapPipRenderer extends PictureInPictureRenderer<ZoneMapPipRende
         int wPx = state.x1() - state.x0();
         int hPx = state.y1() - state.y0();
         //? if >=26.2 {
-        /*collector.submitCustomGeometry(poseStack, terrainType,
+        collector.submitCustomGeometry(poseStack, terrainType,
                 (pose, vc) -> ZoneMapGeometry.emitTerrain(vc, pose.pose(), state.camera(), wPx, hPx, level));
         collector.submitCustomGeometry(poseStack, overlayType,
                 (pose, vc) -> ZoneMapGeometry.emitOverlays(vc, pose.pose(), state.camera(), wPx, hPx, state.tilePos(),
-                        state.layers(), state.bufferLayer(), state.bufferColorIndex(), state.hoverPos(), level));*/
+                        state.layers(), state.bufferLayer(), state.bufferColorIndex(), state.hoverPos(), level));
         //?} else {
-        Matrix4f mat = poseStack.last().pose();
+        /*Matrix4f mat = poseStack.last().pose();
         ZoneMapGeometry.emitTerrain(this.bufferSource.getBuffer(terrainType), mat, state.camera(), wPx, hPx, level);
         ZoneMapGeometry.emitOverlays(this.bufferSource.getBuffer(overlayType), mat, state.camera(), wPx, hPx,
                 state.tilePos(), state.layers(), state.bufferLayer(), state.bufferColorIndex(),
                 state.hoverPos(), level);
-        //?}
+        *///?}
     }
 }
 //?}

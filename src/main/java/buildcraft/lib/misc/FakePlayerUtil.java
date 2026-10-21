@@ -181,11 +181,11 @@ public final class FakePlayerUtil {
             hurtTime = 0;
             hurtDuration = 0;
             //? if >=26.3 {
-            /*// the field went private in 26.3
-            setInvulnerableTime(0);*/
+            // the field went private in 26.3
+            setInvulnerableTime(0);
             //?} else {
-            invulnerableTime = 0;
-            //?}
+            /*invulnerableTime = 0;
+            *///?}
             setTicksFrozen(0);
             setPortalCooldown(0);
             portalProcess = null;

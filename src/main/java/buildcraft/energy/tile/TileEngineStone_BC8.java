@@ -20,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=26.3 {
-/*import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.component.CookingFuel;
 import net.minecraft.world.level.storage.loot.LootContext;
@@ -29,7 +29,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.loot.NeoForgeLootContextParams;*/
+import net.neoforged.neoforge.common.loot.NeoForgeLootContextParams;
 //?}
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -187,32 +187,32 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
 
     public boolean isValidFuel(@Nonnull ItemStack stack) {
         //? if >=26.3 {
-        /*// 26.3: burn time only resolves on the server (see getBurnTime), but the client-side slot
+        // 26.3: burn time only resolves on the server (see getBurnTime), but the client-side slot
         // check needs the same answer, so accept what vanilla's furnace accepts: any COOKING_FUEL item.
-        return stack.has(DataComponents.COOKING_FUEL);*/
+        return stack.has(DataComponents.COOKING_FUEL);
         //?} else {
-        return getBurnTime(stack) > 0;
-        //?}
+        /*return getBurnTime(stack) > 0;
+        *///?}
     }
 
     private int getBurnTime(@Nonnull ItemStack stack) {
         if (stack.isEmpty() || level == null) return 0;
         //? if >=26.3 {
-        /*// 26.3: fuel is the COOKING_FUEL component; its burn time is a datapack provider resolved
+        // 26.3: fuel is the COOKING_FUEL component; its burn time is a datapack provider resolved
         // through a ServerLevel loot context, so there is no answer off the server.
         if (!(level instanceof ServerLevel serverLevel)) return 0;
         return ResolvableInt.getFromItem(stack, DataComponents.COOKING_FUEL, CookingFuel::burnTime,
-                createFuelContext(serverLevel, stack), 0);*/
+                createFuelContext(serverLevel, stack), 0);
         //?} elif >=1.21.10 {
-        return stack.getBurnTime(null, level.fuelValues());
-        //?} else {
+        /*return stack.getBurnTime(null, level.fuelValues());
+        *///?} else {
         /*// 1.21.1 predates the FuelValues lookup (MC 1.21.2); getBurnTime is single-arg.
         return stack.getBurnTime(null);*/
         //?}
     }
 
     //? if >=26.3 {
-    /*// The same context vanilla's furnace builds (BaseContainerBlockEntity#getLootContext), so
+    // The same context vanilla's furnace builds (BaseContainerBlockEntity#getLootContext), so
     // datapack fuel providers see a familiar container_process shape. The engine is not a vanilla
     // container, so the CONTAINER parameter exposes no slots; the queried stack is the fuel itself.
     private LootContext createFuelContext(ServerLevel serverLevel, ItemStack stack) {
@@ -225,7 +225,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
                         .withOptionalParameter(NeoForgeLootContextParams.QUERIED_STACK, stack)
                         .create(LootContextParamSets.CONTAINER_PROCESS))
                 .create(Optional.empty());
-    }*/
+    }
     //?}
 
     // --- Engine overrides ---

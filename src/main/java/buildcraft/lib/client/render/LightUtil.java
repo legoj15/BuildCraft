@@ -6,8 +6,8 @@
 package buildcraft.lib.client.render;
 
 //? if <26.2 {
-import net.minecraft.client.renderer.LevelRenderer;
-//?}
+/*import net.minecraft.client.renderer.LevelRenderer;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -50,10 +50,10 @@ public final class LightUtil {
     /** Packed light coords for a world position (a {@link Level} satisfies every line's getter type). */
     public static int getLightCoords(Level level, BlockPos pos) {
         //? if >=26.2 {
-        /*return LightCoordsUtil.getLightCoords(level, pos);*/
+        return LightCoordsUtil.getLightCoords(level, pos);
         //?} elif >=26.1 {
-        return LevelRenderer.getLightCoords(level, pos);
-        //?} else {
+        /*return LevelRenderer.getLightCoords(level, pos);
+        *///?} else {
         /*return LevelRenderer.getLightColor(level, pos);*/
         //?}
     }

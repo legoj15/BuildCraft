@@ -37,10 +37,10 @@ public class ClientDebuggables {
             mc.player.isReducedDebugInfo() ||
             !(
             //? if >=26.2 {
-            /*mc.getDebugOverlay()*/
+            mc.getDebugOverlay()
             //?} else {
-            mc.gui.getDebugOverlay()
-            //?}
+            /*mc.gui.getDebugOverlay()
+            *///?}
             ).showDebugScreen() ||
             !ItemDebugger.isShowDebugInfo(mc.player)) {
             return null;

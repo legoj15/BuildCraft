@@ -15,7 +15,7 @@ package buildcraft.lib.client.model;
 //? if <1.21.10 {
 /*import java.util.List;
 
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.block.model.ItemOverrides;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
@@ -25,7 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.client.model.IDynamicBakedModel;
-import net.neoforged.neoforge.client.model.data.ModelData;
+import net.neoforged.neoforge.model.data.ModelData;
 
 // Leaf BakedModel wrapping a fixed list of pre-baked item quads for 1.21.1's classic
 // item-render path (ItemRenderer -> getRenderPasses -> getRenderTypes -> getQuads).

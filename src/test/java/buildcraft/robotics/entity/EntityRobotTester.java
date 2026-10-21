@@ -506,12 +506,12 @@ public class EntityRobotTester {
         // The mob only ever supplies a DamageSource; keep it inert so it cannot wander, burn or path.
         BlockPos mobRel = new BlockPos(3, 3, 6);
         //? if >=26.2 {
-        /*net.minecraft.world.entity.Mob mob =
-                helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, mobRel);*/
-        //?} else {
         net.minecraft.world.entity.Mob mob =
+                helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, mobRel);
+        //?} else {
+        /*net.minecraft.world.entity.Mob mob =
                 helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, mobRel);
-        //?}
+        *///?}
         mob.setNoAi(true);
         mob.setNoGravity(true);
 

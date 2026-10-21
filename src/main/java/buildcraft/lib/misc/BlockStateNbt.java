@@ -21,16 +21,16 @@ import net.minecraft.world.level.block.state.BlockState;
  * older node. Writing needs no helper: {@link NbtUtils#writeBlockState} is always the running node's own spelling. */
 public class BlockStateNbt {
     //? if >=26.3 {
-    /*private static final String ID = "id";
+    private static final String ID = "id";
     private static final String PROPERTIES = "properties";
     private static final String FOREIGN_ID = "Name";
-    private static final String FOREIGN_PROPERTIES = "Properties";*/
+    private static final String FOREIGN_PROPERTIES = "Properties";
     //?} else {
-    private static final String ID = "Name";
+    /*private static final String ID = "Name";
     private static final String PROPERTIES = "Properties";
     private static final String FOREIGN_ID = "id";
     private static final String FOREIGN_PROPERTIES = "properties";
-    //?}
+    *///?}
 
     public static BlockState read(CompoundTag nbt) {
         return NbtUtils.readBlockState(RegistryUtilBC.blockLookup(), withNativeKeys(nbt));

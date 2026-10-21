@@ -57,7 +57,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
             //? if >=1.21.10 {
             int ceiling = robot.level().getMaxY();
             //?} else {
-            /*int ceiling = robot.level().getMaxBuildHeight();*/
+            /*int ceiling = robot.level().getMaxY();*/
             //?}
             startDelegateAI(new AIRobotSearchRandomGroundBlock(robot, 100,
                     pos -> pos.getY() < ceiling - flyingHeight

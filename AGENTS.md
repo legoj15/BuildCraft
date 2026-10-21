@@ -9,20 +9,21 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.2 is the primary; 26.3 is a port in progress).
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY node.
+# The ACTIVE node (the raw text of src/, what the IDE sees) is 26.3; see stonecutter.gradle.kts.
 
 # Compile the node (fast feedback)
-./gradlew :26.1.2:compileJava
+./gradlew :26.3:compileJava
 
-# Build the jar(s) and collect into build/libs/<mod_version>/ (one jar per node, e.g. +mc26.1.2)
+# Build the jar(s) and collect into build/libs/<mod_version>/ (one jar per node, e.g. +mc26.3)
 ./gradlew buildAndCollect
 
 # Run the client / server
-./gradlew :26.1.2:runClient
-./gradlew :26.1.2:runServer
+./gradlew :26.3:runClient
+./gradlew :26.3:runServer
 
 # Unit tests / headless game tests
-./gradlew :26.1.2:test
-./gradlew :26.1.2:runGameTestServer
+./gradlew :26.3:test
+./gradlew :26.3:runGameTestServer
 ```
 
 ## Multi-version builds (Stonecutter)
@@ -113,7 +114,7 @@ Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are regis
 Unit tests run under moddev's FML-JUnit environment (`neoForge { unitTest }` in [build.gradle.kts](build.gradle.kts)): each node's `test` task boots a real FML loader plus full mod loading before the JUnit engine, so tests can freely use `Entity`, `ItemStack`, registries, and BC's own content. `FmlJunitEnvironmentTest` pins this wiring on every node.
 
 - **A unit test constructing ItemStacks must extend `VanillaSetupBaseTester`** — default item components bind only during server resource load; a bare test dies with "Components not bound yet" on the 26.x nodes while passing on 1.21.x.
-- **Shared TEST sources with Stonecutter directives: only ONE branch may be live, and it must be the active-node's.** The active node (`stonecutter active "…"` in [stonecutter.gradle.kts](stonecutter.gradle.kts) — 26.1.2 as of 2026-08) compiles the shared test set **raw**; in each shared-test `//? if` block the non-applicable branch is `/* */`-commented in-tree (`//? if >=X` with X ≤ active → IF live, else commented; `//? if >=26.2` → else live, IF commented). Violation symptom in `:<active>:compileTestJava`: duplicate-class errors plus a misleading javac NPE (`Cannot invoke "TypeElement.getNestingKind()"`). Re-check every shared-test directive when the active node changes.
+- **Shared TEST sources with Stonecutter directives: only ONE branch may be live, and it must be the active-node's.** The active node (`stonecutter active "…"` in [stonecutter.gradle.kts](stonecutter.gradle.kts) — 26.3 as of 2026-10) compiles the shared test set **raw**; in each shared-test `//? if` block the non-applicable branch is `/* */`-commented in-tree (`//? if >=X` with X ≤ active → IF live, else commented; `//? if <X` with X ≤ active → IF commented, else live; a future `//? if >=26.4` → else live, IF commented). Violation symptom in `:<active>:compileTestJava`: duplicate-class errors plus a misleading javac NPE (`Cannot invoke "TypeElement.getNestingKind()"`). Re-check every shared-test directive when the active node changes.
 - **A test that inspects code (not runs it) reads this node's view through `buildcraft.lib.test.MainSourceSet`** — never `src/` directly, which is the active node's text on every node. **[ForRemovalApiGuardTester](src/test/java/buildcraft/ForRemovalApiGuardTester.java) fails on any use of an `@Deprecated(forRemoval = true)` API** (constant-pool refs, overrides, imports; javac's `[removal]` warnings otherwise scroll past): migrate, or add the declaration to its `PENDING` map with a reason. Plain `@Deprecated`: fix it, or suppress on the narrowest element (a local variable or method; the class only when the use sits in its header) with a one-line why.
 - **Adding a game test → invoke the `add-game-test` skill first.** Game tests take **three** parts (method + registration + manifest JSON) and silently skip with only two — [GameTestManifestTester](src/test/java/buildcraft/GameTestManifestTester.java) guards that wiring in the unit-test run. The skill carries the arena rules (never assert on a fixed tick after placing blocks — gate on observed state; keep positions inside the arena cell) and the `makeMockPlayer`-is-not-a-`ServerPlayer` limitation.
 

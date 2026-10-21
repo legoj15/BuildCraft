@@ -70,9 +70,9 @@ public class VanillaSetupBaseTester {
      */
     public static HolderLookup.Provider vanillaLookup() {
         //? if >=26.3 {
-        /*return VanillaRegistries.createWorldLookup();*/
+        return VanillaRegistries.createWorldLookup();
         //?} else {
-        return VanillaRegistries.createLookup();
-        //?}
+        /*return VanillaRegistries.createLookup();
+        *///?}
     }
 }

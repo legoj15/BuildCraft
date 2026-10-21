@@ -86,7 +86,7 @@ object DataDownportPre263 {
     }
 
     // One loot entry. The composite entries (alternatives / group / sequence) nest further entries under
-    // "children"; each child is a plain entry and carries the same condition/functions as its parent, so
+    // "children"; each child is a plain entry with its own "condition" in the same shape as its parent's, so
     // the same conversion recurses.
     @Suppress("UNCHECKED_CAST")
     private fun convertEntry(ctx: Ctx, e: Any?) {

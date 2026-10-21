@@ -91,7 +91,7 @@ public class BuildCraftGui {
         //? if >=1.21.10 {
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         //?} else {
-        /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
+        /*// 1.21.1 names the DeltaTracker accessor getTimer(); the build's text replacement renames the call below.
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);*/
         //?}
         this.lastPartialTicks = partialTicks;

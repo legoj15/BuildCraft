@@ -823,7 +823,7 @@ public enum XmlPageLoader implements IPageLoaderText {
     private static GuidePartFactory loadRecipe(XmlTag tag, ProfilerFiller prof) {
         // `id` attribute: display one specific recipe looked up by its registry id. With
         // type="assembling" the id is an Assembly Table recipe's registry name (e.g.
-        // "gate-and-IRON-NO_MODIFIER"); otherwise it's a crafting recipe's Identifier
+        // "gate-and-IRON-NO_MODIFIER"); otherwise it's a crafting recipe's registry id
         // (e.g. "buildcraftunofficial:gate_basic"). Needed for outputs whose data components
         // the stack-based lookup can't address — every gate crafting recipe outputs a
         // component-bearing PLUG_GATE, so the bare <recipes stack="…:plug_gate"/> query never
@@ -871,7 +871,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         // A registered non-crafting type resolves the id in its own id space (IStackRecipes.getFactoryById):
         // type="assembling" → an Assembly Table recipe's registry name; type="programming" /
         // type="integration" → a robot board id (e.g. "buildcraftunofficial:boardRobotMiner"). No type,
-        // "crafting", or an unknown type treats the id as a crafting recipe's Identifier.
+        // "crafting", or an unknown type treats the id as a crafting recipe's registry id.
         IStackRecipes handler = type == null || "crafting".equals(type) ? null : RecipeLookupHelper.handlerTypes.get(type);
         if (handler != null) {
             GuidePartFactory factory = handler.getFactoryById(id.trim());

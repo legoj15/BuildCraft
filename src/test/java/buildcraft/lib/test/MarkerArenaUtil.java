@@ -61,7 +61,7 @@ import buildcraft.lib.marker.MarkerSubCache;
  * insertion during that iteration can rehash it and skip or double-run entries.
  *
  * <p>NB: the {@link GameTestHelper} parameter is named {@code gth}, never {@code helper} (see
- * {@link EntityArenaUtil}: the 1.21.10 node's assertion rewrite is a textual {@code helper.assertTrue(} regex).
+ * {@link EntityArenaUtil}: the pre-1.21.11 assertion rewrite is a textual regex on {@code helper} receivers).
  */
 public final class MarkerArenaUtil {
 

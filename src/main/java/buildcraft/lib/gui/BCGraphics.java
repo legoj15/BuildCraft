@@ -227,7 +227,7 @@ public final class BCGraphics {
         raw.blit(pipeline, texture, x, y, u, v, width, height, regionWidth, regionHeight, textureWidth, textureHeight, color);
     }
     //?} else {
-    /*// 1.21.1 GuiGraphics has no RenderPipeline parameter. blitSprite(Identifier,…) exists; a
+    /*// 1.21.1 GuiGraphics has no RenderPipeline parameter. blitSprite(id,…) exists; a
     // TextureAtlasSprite is drawn via blit(x, y, blitOffset, w, h, sprite[, r, g, b, a]). The region
     // blit overloads order args (x, y, width, height, u, v, regionW, regionH, texW, texH) — width/height
     // come BEFORE u/v on 1.21.1 (reverse of modern); the plain (no-region) overload keeps u/v first.

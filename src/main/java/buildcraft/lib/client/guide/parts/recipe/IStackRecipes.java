@@ -24,7 +24,7 @@ public interface IStackRecipes {
 
     /** Backs {@code <recipe id="..." type="<this handler's type>"/>}: one specific recipe, named in whatever id
      *  space the handler owns (an assembly recipe's registry name, a robot board's id, ...), for pages that need to
-     *  pin a recipe the item-based lookups can't single out. Crafting resolves ids itself (recipe ResourceLocations),
+     *  pin a recipe the item-based lookups can't single out. Crafting resolves ids itself (recipe registry ids),
      *  so the default — no id support — is right for it.
      *
      *  @return The recipe's display factory, or null if this handler has no recipe with that id. */

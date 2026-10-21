@@ -29,8 +29,8 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 //?}
-// RenderType: `rendertype.` subpackage on 1.21.11+, moved by the build-script regex
-// replacement to `net.minecraft.client.renderer.rendertype.RenderType` on the 1.21.10 node.
+// RenderType: `rendertype.` subpackage on 1.21.11+; on the <1.21.11 nodes the build-script regex
+// replacement moves this import back up to the parent package.
 import net.minecraft.client.renderer.rendertype.RenderType;
 //? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderTypes;

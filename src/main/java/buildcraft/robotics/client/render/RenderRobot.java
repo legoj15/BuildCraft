@@ -99,8 +99,8 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     // ── Textures ────────────────────────────────────────────────────────────
     // Entity textures are direct file paths — full "textures/..." prefix and ".png" suffix — bound as
     // whole textures by the render type. They are NOT atlas sprites, so SpriteHolderRegistry does not
-    // apply (misusing it here fails silently to the missing-texture checkerboard). Written in the
-    // canonical Identifier form; the build rewrites it to Identifier on <1.21.11.
+    // apply (misusing it here fails silently to the missing-texture checkerboard). Written with the
+    // 1.21.11+ id-class name; the build swaps in the old name on the <1.21.11 nodes.
 
     /** Fallback skin, used whenever the robot's board id resolves to no texture (all of Ph3). */
     private static final Identifier TEX_BASE =

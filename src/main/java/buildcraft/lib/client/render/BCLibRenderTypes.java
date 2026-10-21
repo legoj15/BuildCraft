@@ -89,10 +89,27 @@ public final class BCLibRenderTypes {
             .build();
     //?}
 
+    /**
+     * A {@code RenderSetup} over {@link #LED_PIPELINE}, for every render type built on it. The pipeline blends, so
+     * with 26.3's improved transparency (OIT) on, geometry drawn with it goes through the type's OIT pipelines, and a
+     * type that has none throws "does not have OIT pipelines set up" and crashes the client on the first frame it is
+     * in view. The OIT stages are vanilla's debug filled box ones: the same {@code position_color} shaders and vertex
+     * format. They do not write depth (OIT resolves the order itself), so the LED's depth write applies only with OIT off.
+     */
+    //? if >=1.21.11 {
+    private static RenderSetup.RenderSetupBuilder ledPipelineSetup() {
+        RenderSetup.RenderSetupBuilder builder = RenderSetup.builder(LED_PIPELINE);
+        //? if >=26.3 {
+        builder.setOitPipelines(RenderPipelines.OIT_DEBUG_FILLED_BOX);
+        //?}
+        return builder;
+    }
+    //?}
+
     //? if >=1.21.11 {
     private static final RenderType LED = RenderType.create(
             "buildcraft:led",
-            RenderSetup.builder(LED_PIPELINE)
+            ledPipelineSetup()
                     .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                     .createRenderSetup()
     );
@@ -128,7 +145,7 @@ public final class BCLibRenderTypes {
     //? if >=1.21.11 {
     private static final RenderType DEBUG_SOLID = RenderType.create(
             "buildcraft:debug_solid",
-            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+            ledPipelineSetup().createRenderSetup()
     );
     //?} elif >=1.21.10 {
     /*private static final RenderType DEBUG_SOLID = RenderType.create(
@@ -187,7 +204,7 @@ public final class BCLibRenderTypes {
     //? if >=1.21.11 {
     private static final RenderType ZONE_OVERLAY = RenderType.create(
             "buildcraft:zone_overlay",
-            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+            ledPipelineSetup().createRenderSetup()
     );
     //?} elif >=1.21.10 {
     /*private static final RenderType ZONE_OVERLAY = RenderType.create(
@@ -256,6 +273,10 @@ public final class BCLibRenderTypes {
             texture -> RenderType.create(
                     "buildcraft:entity_translucent_cull",
                     RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                            //? if >=26.3 {
+                            // Blending, so it needs vanilla's matching OIT set under 26.3's improved transparency.
+                            .setOitPipelines(RenderPipelines.OIT_ENTITY_CULL)
+                            //?}
                             .withTexture("Sampler0", texture)
                             .useLightmap()
                             .useOverlay()

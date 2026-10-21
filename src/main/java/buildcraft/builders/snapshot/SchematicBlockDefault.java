@@ -23,7 +23,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
@@ -869,7 +868,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     .map(NBTUtilBC::writeBlockPos)
             )
         );
-        nbt.put("blockState", NbtUtils.writeBlockState(blockState));
+        nbt.put("blockState", BlockStateNbt.write(blockState));
         nbt.put(
             "ignoredProperties",
             NBTUtilBC.writeStringList(

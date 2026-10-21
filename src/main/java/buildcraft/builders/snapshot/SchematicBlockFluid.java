@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -134,7 +133,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
     @Override
     public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
-        nbt.put("blockState", NbtUtils.writeBlockState(blockState));
+        nbt.put("blockState", BlockStateNbt.write(blockState));
         nbt.putBoolean("isFlowing", isFlowing);
         return nbt;
     }

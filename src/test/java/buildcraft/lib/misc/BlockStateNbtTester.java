@@ -61,6 +61,22 @@ public class BlockStateNbtTester {
         Assertions.assertEquals(stone, BlockStateNbt.read(NbtUtils.writeBlockState(stone)));
     }
 
+    /**
+     * Snapshot hashes are taken over the snapshot's own NBT (the Electronic Library re-keys every upload and refuses
+     * one whose hash differs from the key it asked for), so a schematic must spell its block state the same way on
+     * every node, or a blueprint saved on 26.2 is refused on 26.3. The canonical spelling is the pre-26.3 one.
+     */
+    @Test
+    public void schematicsWriteTheSameSpellingOnEveryNode() throws InvalidInputDataException {
+        CompoundTag saved = new CompoundTag();
+        saved.put("blockState", stairsTag("id", "properties"));
+        saved.putBoolean("isFlowing", false);
+        SchematicBlockFluid schematic = new SchematicBlockFluid();
+        schematic.deserializeNbt(saved);
+        Assertions.assertEquals(stairsTag("Name", "Properties"),
+            NBTUtilBC.getCompound(schematic.serializeNbt(), "blockState"));
+    }
+
     /** One real read site, fed the spelling that is not the running node's. */
     @Test
     public void schematicBlockFluidReadsEitherSpelling() throws InvalidInputDataException {

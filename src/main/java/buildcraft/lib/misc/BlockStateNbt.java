@@ -18,7 +18,11 @@ import net.minecraft.world.level.block.state.BlockState;
  * to {@code id}/{@code properties}, and its {@code readBlockState} accepts only the new spelling. Vanilla upgrades
  * its own saves through the DataFixer, which never sees these tags, so a plain read turns every block state saved
  * on 26.2 or earlier into air. Reading through here accepts both spellings, so saved data also moves back to an
- * older node. Writing needs no helper: {@link NbtUtils#writeBlockState} is always the running node's own spelling. */
+ * older node.
+ *
+ * <p>NBT that is hashed (snapshots: the Electronic Library re-keys every upload and compares the hash with the key it
+ * asked for) is written through {@link #write}, which uses the pre-26.3 spelling on every node, so a blueprint keeps
+ * one hash across Minecraft lines. Other NBT may use {@link NbtUtils#writeBlockState} directly. */
 public class BlockStateNbt {
     //? if >=26.3 {
     private static final String ID = "id";
@@ -31,6 +35,23 @@ public class BlockStateNbt {
     private static final String FOREIGN_ID = "id";
     private static final String FOREIGN_PROPERTIES = "properties";
     *///?}
+
+    /** The pre-26.3 key spelling for a block state on every node: {@code Name}/{@code Properties}. */
+    private static final String LEGACY_ID = "Name";
+    private static final String LEGACY_PROPERTIES = "Properties";
+
+    /** {@code state} as NBT spelled the same on every node (the pre-26.3 {@code Name}/{@code Properties}), for NBT
+     *  whose hash must not depend on the Minecraft line. {@link #read} accepts it everywhere. */
+    public static CompoundTag write(BlockState state) {
+        CompoundTag nbt = NbtUtils.writeBlockState(state);
+        if (!ID.equals(LEGACY_ID) && nbt.contains(ID)) {
+            move(nbt, ID, LEGACY_ID);
+        }
+        if (!PROPERTIES.equals(LEGACY_PROPERTIES) && nbt.contains(PROPERTIES)) {
+            move(nbt, PROPERTIES, LEGACY_PROPERTIES);
+        }
+        return nbt;
+    }
 
     public static BlockState read(CompoundTag nbt) {
         return NbtUtils.readBlockState(RegistryUtilBC.blockLookup(), withNativeKeys(nbt));

@@ -9,8 +9,8 @@ while no client runs). Everything that renders BuildCraft's own LED / debug rend
 section, so an OIT run that dies there has already taken every other shot; the closing cleanup removes those blocks,
 because a world saved with them in view would die again on the next load.
 
-On 26.3 the runner's `pause` step (a Win32 Esc posted to the window) opened the pause menu in 1 of 8 tries; 26.2
-opened it every time. Its two steps are expected to fail on 26.3 until the runner opens the menu another way.
+On 26.3 (SDL3) a Win32 Esc posted to an unfocused window is dropped, so the runner's `pause` step falls back to
+focusing the game window and pressing a real Esc; the step's Detail says when it needed that.
 
 The oil section only finds a deposit when the run dir's config raises
 `worldgen.oil.spawnProbability.mediumOilGenProb` (buildcraftunofficial-common.toml); with the default the

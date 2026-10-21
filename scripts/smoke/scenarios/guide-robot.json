@@ -14,7 +14,7 @@
     { "do": "text", "text": "Robot" },
     { "do": "wait", "ms": 1000 },
     { "name": "search-robot", "do": "shot", "look": "search results for 'Robot', with a Robot item entry" },
-    { "label": "open the Robot entry", "do": "click", "x": 88, "y": 88 },
+    { "label": "open the Robot entry", "do": "click", "x": 88, "y": 72 },
     { "do": "wait", "ms": 1000 },
     { "name": "robot-page", "do": "shot", "look": "the Robot stand-in page: crafting recipe under 'recipes', and under 'usages' an Integration Table panel (blank robot + board on the left, the table over an arrow, a programmed robot on the right, cycling through programs)" },
     { "label": "hover the Integration Table arrow", "do": "hover", "x": 122, "y": 140 },
@@ -27,7 +27,7 @@
     { "do": "text", "text": "Redstone Board" },
     { "do": "wait", "ms": 1000 },
     { "name": "search-board", "do": "shot", "look": "search results for 'Redstone Board'" },
-    { "label": "open the Redstone Board entry", "do": "click", "x": 114, "y": 40 },
+    { "label": "open the Redstone Board entry", "do": "click", "x": 114, "y": 56 },
     { "do": "wait", "ms": 1000 },
     { "name": "board-page", "do": "shot", "look": "the Redstone Board stand-in page: crafting recipe, then under 'usages' a Programming Table panel (blank board -> cycling programmed boards) and an Integration Table panel (blank robot + cycling boards -> robots)" }
   ]

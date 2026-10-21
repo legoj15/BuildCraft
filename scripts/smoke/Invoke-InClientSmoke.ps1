@@ -219,22 +219,65 @@ function Stop-Client($Client) {
     $script:Bridge = $null
 }
 
-function Send-GameEscape {
+function Send-GameEscape([switch]$Focus) {
     # The bridge can only press a key into an OPEN screen (/screenkeys answers "no screen open" in the world), and the
     # pause menu has no keybind, so this posts a real Esc key message to the game window. PostMessage needs no focus
-    # (GLFW turns it into a key event on the window it was posted to), so it works from this hidden background
-    # process, takes no focus from the user, and can never land in another application the way keybd_event would.
+    # with GLFW (it turns the message into a key event on the window it was posted to), so it works from this hidden
+    # background process, takes no focus from the user, and can never land in another application.
+    # 26.3 runs SDL3, which drops key messages for a window without keyboard focus: -Focus brings the game window to
+    # the front first and then presses a real Esc, but only while that window really is in front.
     if (-not ('SmokeWin32' -as [type])) {
         Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public static class SmokeWin32 {
     [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+    [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint from, uint to, bool attach);
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+    [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
 }
 '@
     }
     $handle = (Get-Process -Id ([int]$script:Bridge.pid)).MainWindowHandle
     if ($handle -eq [IntPtr]::Zero) { throw 'the game window has no handle to send Esc to' }
+    if ($Focus) {
+        # Windows only lets the foreground owner hand focus on, so ask three ways, weakest first: borrow the foreground
+        # thread's input queue; a bare Alt tap (lifts the foreground lock); a minimise/restore of the game window.
+        $note = ''
+        foreach ($attempt in 1..3) {
+            $front = [SmokeWin32]::GetForegroundWindow()
+            $pid2 = [uint32]0
+            $frontThread = [SmokeWin32]::GetWindowThreadProcessId($front, [ref]$pid2)
+            $me = [SmokeWin32]::GetCurrentThreadId()
+            $attached = $false
+            if ($attempt -eq 1 -and $frontThread -ne 0 -and $frontThread -ne $me) { $attached = [SmokeWin32]::AttachThreadInput($me, $frontThread, $true) }
+            if ($attempt -eq 2) {
+                [SmokeWin32]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+                [SmokeWin32]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+            }
+            if ($attempt -eq 3) {
+                [SmokeWin32]::ShowWindow($handle, 6) | Out-Null
+                Start-Sleep -Milliseconds 200
+                [SmokeWin32]::ShowWindow($handle, 9) | Out-Null
+            }
+            $focused = [SmokeWin32]::SetForegroundWindow($handle)
+            if ($attached) { [SmokeWin32]::AttachThreadInput($me, $frontThread, $false) | Out-Null }
+            Start-Sleep -Milliseconds 400
+            $nowFront = [SmokeWin32]::GetForegroundWindow()
+            $note += "[try $attempt SetForegroundWindow=$focused front=$front thread=$frontThread attached=$attached now=$nowFront] "
+            if ($nowFront -eq $handle) {
+                [SmokeWin32]::keybd_event(0x1B, 0x01, 0, [UIntPtr]::Zero)
+                Start-Sleep -Milliseconds 80
+                [SmokeWin32]::keybd_event(0x1B, 0x01, 2, [UIntPtr]::Zero)
+                return "real Esc sent to the focused game window $note"
+            }
+        }
+        return "could not focus the game window $note"
+    }
     # WM_KEYDOWN / WM_KEYUP, VK_ESCAPE, scancode 1 (lParam bits 16-23), repeat 1; the key-up also sets bits 30 and 31.
     [SmokeWin32]::PostMessage($handle, 0x100, [IntPtr]0x1B, [IntPtr]0x00010001) | Out-Null
     Start-Sleep -Milliseconds 80
@@ -294,7 +337,8 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
                 if ($optional) { $c = $c.Substring(1) }
                 $r = Invoke-Bridge POST '/command' @{ command = (Expand-Coords $c) }
                 # The world persists between runs, so "already so" replies are success for a rig builder.
-                $benign = (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled'
+                # 26.3 also fails `time set N` when the frozen clock already reads N ("Clock ... is already set to ...").
+                $benign = (@($r.output) -join ' ') -match '(?i)did not change|could not set the block|no blocks were filled|is already set to'
                 if (-not $r.success -and -not $benign -and -not $optional -and -not $Step.PSObject.Properties['allowFail']) {
                     throw "command failed: $(Expand-Coords $c) -> $(@($r.output) -join ' | ')"
                 }
@@ -325,7 +369,12 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $hit = (Get-State).hit
             $detail = "yaw $([math]::Round($yaw,1)) pitch $([math]::Round($pitch,1)); hit $($hit | ConvertTo-Json -Compress -Depth 3)"
         }
-        'look' { Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $Step.yaw; pitch = $Step.pitch } | Out-Null }
+        'look' {
+            Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $Step.yaw; pitch = $Step.pitch } | Out-Null
+            # The crosshair target is re-picked on a later frame (26.3 lags enough for a `use` right after to hit the old
+            # aim), so settle before any click, as `aim` does.
+            Start-Sleep -Milliseconds 150
+        }
         'hold' {
             $r = Invoke-Bridge POST '/command' @{ command = "item replace entity @p weapon.mainhand with $($Step.item)" }
             if (-not $r.success) { throw "hold failed: $(@($r.output) -join ' | ')" }
@@ -431,7 +480,14 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
         # `click` "Save and Quit to Title" to leave the world.
         'pause' {
             Send-GameEscape
-            $detail = Wait-Until { $c = Get-ScreenClass; if ($c -match 'PauseScreen') { $c } } 10 'the pause menu to open'
+            # GLFW nodes open the menu from the posted message; SDL3 (26.3) needs the window in front, so retry focused.
+            $detail = try { Wait-Until { $c = Get-ScreenClass; if ($c -match 'PauseScreen') { $c } } 4 'the pause menu to open' }
+            catch {
+                $note = Send-GameEscape -Focus
+                $screen = try { Wait-Until { $c = Get-ScreenClass; if ($c -match 'PauseScreen') { $c } } 10 'the pause menu to open' }
+                catch { throw "$($_.Exception.Message) [$note]" }
+                "$screen (needed the focused retry: $note)"
+            }
         }
         # Waits until the player is in a world with no screen open: after `click` "Play Selected World".
         'inWorld' {

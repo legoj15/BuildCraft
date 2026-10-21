@@ -42,7 +42,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 
 | `do` | Fields | Effect |
 |---|---|---|
-| `cmd` | `run`: string or list; `allowFail`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). `echo: true` copies the last command's reply into the report (state dumps). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`) count as success, since the world persists between runs |
+| `cmd` | `run`: string or list; `allowFail`; `echo` | server commands (`/command`, OWNER, no entity — target `@p`). `echo: true` copies the last command's reply into the report (state dumps). A leading `?` makes one command optional; "already so" replies (`did not change`, `could not set the block`, `no blocks were filled`, `is already set to`) count as success, since the world persists between runs |
 | `tp` | `at`, `yaw`, `pitch` | move the player to the block's centre (run as the player; a bare server `tp` doesn't move it) and set the view |
 | `aim` | `at` | look at a block's centre from the current eye position; the report records what the crosshair hit |
 | `look` | `yaw`, `pitch` | absolute view (yaw 0 = south/+Z, 90 = west; pitch + is down) |
@@ -59,7 +59,7 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 | `shot` | `name`, `look` | screenshot; `look` is what the reviewer should check in it |
 | `widgets` | `name` | dump the open screen's widget list (text, GUI rect, hovered) — use it to author `click`/`hover` targets |
 | `expectScreen` | `contains` (regex on the screen class; `""` = no screen), `timeoutSec` (default 5) | polls for the screen |
-| `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed). Follow with `click` "Save and Quit to Title" to leave the world |
+| `pause` | — | opens the pause menu from the world. The bridge cannot press a key with no screen open, so this posts a real Esc key message to the game window (no focus needed on GLFW nodes). 26.3 runs SDL3, which drops key messages for an unfocused window: when the post does not open the menu within 4 s, the runner brings the game window to the front (an Alt tap lifts Windows' foreground lock) and presses a real Esc, and the step's Detail says so. Follow with `click` "Save and Quit to Title" to leave the world |
 | `inWorld` | `timeoutSec` (default 300) | waits until the player is in a world with no screen open: after `click` "Play Selected World" |
 
 A scenario that visits a second world names it in a top-level `"extraSaves": ["bc-smoke-b"]`: before boot the runner copies the `bc-smoke` save to each missing name (so the first run on a node, which only creates `bc-smoke`, needs a second run). The world list is sorted by last played, so the world just left is entry one and `click` `x:213, y:100` picks entry two (see `scenarios/marker-relog.json`, which leaves a world, joins the other and comes back).

@@ -93,7 +93,9 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no
                     // 7.1.x-style explicit damageItem here — a tool wears exactly as it would in a
                     // player's hand, and a broken one leaves the hand empty. The robot takes back what is in
-                    // the hand afterwards: the same (now worn) stack, unless the item swapped it for another.
+                    // the hand afterwards: the same (now worn) stack, unless the item swapped it for another (an
+                    // item that sets the hand itself, or on 26.3 one whose use returns a transformed stack, which
+                    // the helper puts in the hand as the player's game mode does).
                     if (inHand != held) {
                         robot.setItemInUse(inHand);
                     } else if (held.isEmpty()) {

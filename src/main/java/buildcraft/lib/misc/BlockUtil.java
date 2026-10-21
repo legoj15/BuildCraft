@@ -20,9 +20,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -163,9 +163,17 @@ public class BlockUtil {
             return true;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
-            BlockState state = level.getBlockState(pos);
-            return BreakEventCompat.canBreak(level, pos, state, lease.player());
+            return canMachineBreakAs(level, pos, lease.player());
         }
+    }
+
+    /**
+     * {@link #canMachineBreak} for a machine that already holds its fake player (a stripes handler's, leased by the
+     * pipe for the whole drop): the break event is posted for {@code machine} as it stands, with no second lease.
+     */
+    public static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
+        return BCCoreConfig.minePlayerProtected.get()
+                || BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), machine);
     }
 
     /**
@@ -174,28 +182,106 @@ public class BlockUtil {
      * can refuse the use; then vanilla's gate (an empty stack, or an item on the player's cooldown, is not used
      * unless the event forced the item use); then the item's {@code useOn} runs. That is the item path of
      * {@code ServerPlayerGameMode.useItemOn} and no more: the block's own use, {@code Item#onItemUseFirst}, the
-     * block's feature-flag check, the infinite-materials count restore, 26.3's hand swap for a transformed result and
-     * the item-used-on-block advancement trigger are not run. On 26.3 the event is the ONLY ask a hoe's till gets:
-     * hoes became a block-transformer component, and tilling no longer posts the tool-modification event.
+     * block's feature-flag check, the infinite-materials count restore and the item-used-on-block advancement
+     * trigger are not run. On 26.3, where the player's game mode puts the stack a use transformed the held one into
+     * in the hand, so does this; earlier lines do nothing of the kind. On 26.3 the event is the ONLY ask a hoe's
+     * till gets: hoes became a block-transformer component, and tilling no longer posts the tool-modification
+     * event.
+     *
+     * @return {@code true} when the item's use took the action; {@code false} when the event refused it, the gate
+     *         stopped it, or the item passed
+     * @see #tryUseItemOnBlock for a caller that must tell a refusal from an item that simply passed
+     */
+    public static boolean useItemOnBlock(
+            Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
+        return tryUseItemOnBlock(level, player, hand, stack, hit) == ItemUse.USED;
+    }
+
+    /** What a machine's stand-in click on a block came to. */
+    public enum ItemUse {
+        /** The item's use took the action. */
+        USED,
+        /** The click was allowed and the item did nothing with it, or answered with its own FAIL (a block item with no
+         *  room, flint and steel aimed at a cell it cannot light): another click may do better. A player's click ends
+         *  at a FAIL, but a machine's first click names the block in front and its second names the pipe's own side,
+         *  and items such as flint and steel only work from the second. A claim that cancels only the placement
+         *  event lands here too, as the same FAIL, and is asked again by the next click. */
+        PASSED,
+        /** A claim mod cancelled the right-click event or denied the item's use, or vanilla's item gate stopped the
+         *  item: the machine stops trying clicks. Stricter than a player, whose click after a cancelled event whose
+         *  result was left at the default PASS goes on to use the item in the air; failing closed costs a pipe an
+         *  air use the claim never refused, and never lets one through. */
+        REFUSED
+    }
+
+    /** {@link #useItemOnBlock} with the outcome kept apart: a refusal is not an item that passed. */
+    public static ItemUse tryUseItemOnBlock(
+            Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
+        PlayerInteractEvent.RightClickBlock ask = CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit);
+        if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+            return refused(player);
+        }
+        if (!ask.getUseItem().isTrue() && itemGateStops(player, stack)) {
+            return refused(player);
+        }
+        InteractionResult result = stack.useOn(new UseOnContext(level, player, hand, stack, hit));
+        //? if >=26.3 {
+        if (result instanceof InteractionResult.Success success) {
+            ItemStack transformed = success.heldItemTransformedTo();
+            if (transformed != null && transformed != player.getItemInHand(hand)) {
+                player.setItemInHand(hand, transformed);
+            }
+        }
+        //?}
+        return result.consumesAction() ? ItemUse.USED : ItemUse.PASSED;
+    }
+
+    private static ItemUse refused(Player player) {
+        MachineRefusals.record(player);
+        return ItemUse.REFUSED;
+    }
+
+    /**
+     * Uses {@code stack} (the item {@code player} holds in {@code hand}) in the air, for a machine standing in for a
+     * player: the item right-click event is posted first, so a claim or protection mod can refuse the use; then
+     * vanilla's gate (an empty stack or an item on the player's cooldown is not used); then the item's use runs
+     * through {@code ItemStack#use}, so the after-use side effects (a use remainder, a cooldown) apply. That is the
+     * front of {@code ServerPlayerGameMode.useItem}, and what that method does with the answer is done too: the
+     * stack the use transformed the held one into goes into {@code hand}, the way a bucket that took a water source
+     * leaves the water bucket in a player's hand. (The caller finds it where it finds everything else the player
+     * holds. The refresh of a real player's screen is not run.)
      *
      * @return {@code true} when the item's use took the action; {@code false} when the event refused it, the gate
      *         stopped it, or the item passed
      */
-    public static boolean useItemOnBlock(
-            Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
-        PlayerInteractEvent.RightClickBlock ask = CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit);
-        if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+    public static boolean useItemInAir(Level level, Player player, InteractionHand hand, ItemStack stack) {
+        if (itemGateStops(player, stack) || CommonHooks.onItemRightClick(player, hand) != null) {
+            refused(player);
             return false;
         }
+        //? if >=1.21.10 {
+        InteractionResult result = stack.use(level, player, hand);
+        ItemStack transformed =
+                result instanceof InteractionResult.Success success ? success.heldItemTransformedTo() : null;
+        //?} else {
+        /*net.minecraft.world.InteractionResultHolder<ItemStack> used = stack.use(level, player, hand);
+        InteractionResult result = used.getResult();
+        ItemStack transformed = used.getObject();*/
+        //?}
+        if (transformed != null && transformed != player.getItemInHand(hand)) {
+            player.setItemInHand(hand, transformed);
+        }
+        return result.consumesAction();
+    }
+
+    /** Vanilla's check ahead of any item use: nothing to use, or the item is cooling down for the player. */
+    private static boolean itemGateStops(Player player, ItemStack stack) {
         //? if >=1.21.10 {
         boolean cooling = player.getCooldowns().isOnCooldown(stack);
         //?} else {
         /*boolean cooling = player.getCooldowns().isOnCooldown(stack.getItem());*/
         //?}
-        if (!ask.getUseItem().isTrue() && (stack.isEmpty() || cooling)) {
-            return false;
-        }
-        return stack.useOn(new UseOnContext(level, player, hand, stack, hit)).consumesAction();
+        return stack.isEmpty() || cooling;
     }
 
     /** Returns the fluid associated with a block if it is a fluid block, or null otherwise. */

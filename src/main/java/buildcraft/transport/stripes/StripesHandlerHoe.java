@@ -38,20 +38,22 @@ public enum StripesHandlerHoe implements IStripesHandlerItem {
 
         BlockPos target = pos.relative(direction);
 
-        // Try using on the target block from above
-        if (till(world, player, stack, target)) {
-            return true;
+        // Try using on the target block from above. A refused click ends the handler, as it ends a player's: the
+        // second try below is a click on another block.
+        BlockUtil.ItemUse first = till(world, player, stack, target);
+        if (first != BlockUtil.ItemUse.PASSED) {
+            return first == BlockUtil.ItemUse.USED;
         }
 
         // If not facing up and that didn't work, try using on the block below from above
-        return direction != Direction.UP && till(world, player, stack, target.below());
+        return direction != Direction.UP && till(world, player, stack, target.below()) == BlockUtil.ItemUse.USED;
     }
 
     /** Right-clicks the hoe on the top of {@code target} as the pipe's fake player: the right-click-block event
      *  first, so a claim mod can refuse the till on every node (on 26.3 it is the only ask a till gets), then the
      *  hoe's use. */
-    private static boolean till(Level world, Player player, ItemStack stack, BlockPos target) {
+    private static BlockUtil.ItemUse till(Level world, Player player, ItemStack stack, BlockPos target) {
         BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(target), Direction.UP, target, false);
-        return BlockUtil.useItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hit);
+        return BlockUtil.tryUseItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hit);
     }
 }

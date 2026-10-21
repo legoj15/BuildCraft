@@ -21,6 +21,8 @@ import net.minecraft.world.phys.AABB;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 
+import buildcraft.lib.misc.MachineRefusals;
+
 public enum StripesHandlerEntityInteract implements IStripesHandlerItem {
     INSTANCE;
 
@@ -38,11 +40,19 @@ public enum StripesHandlerEntityInteract implements IStripesHandlerItem {
         );
         Collections.shuffle(entities);
         for (LivingEntity entity : entities) {
+            long refusals = MachineRefusals.count(player);
             //? if >=26.1 {
-            if (player.interactOn(entity, InteractionHand.MAIN_HAND, entity.position()).consumesAction()) {
+            InteractionResult interaction = player.interactOn(entity, InteractionHand.MAIN_HAND, entity.position());
             //?} else {
-            /*if (player.interactOn(entity, InteractionHand.MAIN_HAND).consumesAction()) {*/
+            /*InteractionResult interaction = player.interactOn(entity, InteractionHand.MAIN_HAND);*/
             //?}
+            // A claim cancelling the interaction hands back whatever result it left on the event, the default PASS or
+            // a consuming one alike (MachineRefusals sees the event itself): a refused click was no use of the item,
+            // and ends the handler, as it ends a player's, instead of trying the next mob.
+            if (MachineRefusals.count(player) != refusals) {
+                return false;
+            }
+            if (interaction.consumesAction()) {
                 return true;
             }
         }

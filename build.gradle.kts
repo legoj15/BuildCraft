@@ -77,9 +77,10 @@ stonecutter {
             )
         }
         // Game-test assertions: 1.21.10's GameTestHelper.assertTrue/assertFalse take a Component message
-        // (1.21.11+/26.1 take a String). Route helper.assert*(...) through GameTestUtil (which wraps the
-        // String) on the pre-1.21.11 nodes (1.21.10 and 1.21.1). `\bhelper\.` matches the GameTestHelper param (never JUnit
-        // Assertions.*). Only test sources contain `helper.assertTrue(`, so this is inert for main code.
+        // (1.21.11+/26.1 and 1.21.1 take a String). Route helper.assert*(...) through GameTestUtil on the
+        // pre-1.21.11 nodes: it wraps the String in a Component on 1.21.10 and passes it straight through on
+        // 1.21.1. `\bhelper\.` matches the GameTestHelper param (never JUnit Assertions.*). Only test sources
+        // contain `helper.assertTrue(`, so this is inert for main code.
         regex {
             direction.set(isPre1_21_11)
             replace(

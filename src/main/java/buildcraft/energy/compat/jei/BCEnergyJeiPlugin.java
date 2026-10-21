@@ -124,8 +124,8 @@ public class BCEnergyJeiPlugin implements IModPlugin {
     @SuppressWarnings("deprecation")
     private static List<StirlingFuelJei> collectStirlingFuels() {
         List<StirlingFuelJei> out = new ArrayList<>();
+        // On 26.3 there is nothing to enumerate here: see onRuntimeAvailable.
         //? if >=26.3 {
-        // Nothing to enumerate here: see onRuntimeAvailable.
         //?} elif >=1.21.10 {
         /*Level level = Minecraft.getInstance().level;
         if (level == null) return out;

@@ -50,6 +50,10 @@ $OutDir = [System.IO.Path]::GetFullPath($OutDir, (Get-Location).Path)
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $BridgeFile = Join-Path $HOME '.mcdevbridge/bridge.json'
 $SaveName = 'bc-smoke'
+# A scenario may play a world of its own ("save"); "saveSeed" names the save to copy it from when it is missing (a
+# scenario without a seed needs its save copied in by hand first, e.g. a world carried over from another node).
+$PlaySave = if ($ScenarioData.PSObject.Properties['save']) { [string]$ScenarioData.save } else { $SaveName }
+$PlaySeed = if ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$ScenarioData.saveSeed } else { $null }
 
 # ── Bridge plumbing ──────────────────────────────────────────────────────────
 
@@ -181,7 +185,7 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     Assert-NoOtherClient
     $before = if (Test-Path $BridgeFile) { (Get-Item $BridgeFile).LastWriteTimeUtc } else { [datetime]::MinValue }
     $gradleArgs = @(":${Node}:runClient", '-PbcRunDir=run-smoke', '--console=plain')
-    if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$SaveName" }
+    if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$PlaySave" }
     $proc = Start-Process -FilePath (Join-Path $Repo 'gradlew.bat') -ArgumentList $gradleArgs -WorkingDirectory $Repo `
         -RedirectStandardOutput (Join-Path $LogDir 'gradle.out.log') -RedirectStandardError (Join-Path $LogDir 'gradle.err.log') `
         -WindowStyle Hidden -PassThru
@@ -346,6 +350,23 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $detail = "$(@($Step.run).Count) command(s)"
             # A step that asks for it ("echo": true) puts the last command's reply in the report (state dumps).
             if ($Step.PSObject.Properties['echo'] -and $Step.echo) { $detail += ": $(@($r.output) -join ' | ')" }
+        }
+        # Re-runs one command until its reply matches `match` (a regex): gates on observed state instead of a fixed
+        # wait (a machine finishing its work). The reply is in the report either way.
+        'waitCmd' {
+            $c = Expand-Coords ([string]$Step.run)
+            $timeout = if ($Step.PSObject.Properties['timeoutSec']) { $Step.timeoutSec } else { 60 }
+            $poll = if ($Step.PSObject.Properties['pollMs']) { $Step.pollMs } else { 1000 }
+            $deadline = (Get-Date).AddSeconds($timeout)
+            $last = ''
+            do {
+                $r = Invoke-Bridge POST '/command' @{ command = $c }
+                $last = @($r.output) -join ' | '
+                if ($last -match $Step.match) { break }
+                Start-Sleep -Milliseconds $poll
+            } while ((Get-Date) -lt $deadline)
+            if ($last -notmatch $Step.match) { throw "no reply matched '$($Step.match)' within ${timeout}s: $c -> $last" }
+            $detail = $last
         }
         'tp' {
             $x = $Base[0] + $Step.at[0] + 0.5; $y = $Base[1] + $Step.at[1]; $z = $Base[2] + $Step.at[2] + 0.5
@@ -541,8 +562,19 @@ foreach ($node in $Nodes) {
         # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
         # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
         $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
-        if (-not (Test-Path $savePath) -and $saves.Count -eq 1) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
+        if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
         $haveSave = Test-Path $savePath
+        if ($PlaySave -ne $SaveName) {
+            $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
+            if (-not (Test-Path $playPath)) {
+                $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }
+                if (-not $seedPath -or -not (Test-Path $seedPath)) {
+                    throw "the scenario plays save '$PlaySave', which $node's run-smoke/saves does not have$(if ($PlaySeed) { " (nor its seed '$PlaySeed': run any scenario once first)" } else { ': copy it in first' })"
+                }
+                Copy-Item -Recurse -LiteralPath $seedPath -Destination $playPath
+            }
+        }
+        $quickPlay = $haveSave -or ($PlaySave -ne $SaveName)
         # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
         # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
         if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
@@ -551,10 +583,10 @@ foreach ($node in $Nodes) {
                 if (-not (Test-Path $extraPath)) { Copy-Item -Recurse -LiteralPath $savePath -Destination $extraPath }
             }
         }
-        Write-Host "[$node] booting client ($(if ($haveSave) { 'quick-play' } else { 'first run: creating the world' }))"
-        $client = Start-Client $node $prep.RunDir $haveSave $nodeOut
+        Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
+        $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
         $report.bridgeVersion = $client.BridgeVersion
-        if ($haveSave) { Wait-InWorld 600 } else { New-SmokeWorld }
+        if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
         $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
 
         Write-Host "[$node] running $(@($ScenarioData.steps).Count) steps"

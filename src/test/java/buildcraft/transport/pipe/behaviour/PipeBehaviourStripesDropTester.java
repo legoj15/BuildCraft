@@ -13,11 +13,18 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+
+import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.PipeEventItem;
 
+import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -85,7 +92,8 @@ public class PipeBehaviourStripesDropTester {
      * right-click does: a claim mod that cancels that event keeps the dirt dirt and the hoe unconsumed, and the same
      * pipe tills when nothing refuses. On 26.3 that event is the only ask a till gets (hoes became a block
      * transformer, which posts no tool-modification event), so a pipe that called {@code useOn} directly would till
-     * a claimed block.
+     * a claimed block. The helper the pipe uses also keeps vanilla's gate: a hoe on the player's cooldown tills
+     * nothing even when nothing refuses.
      */
     public static void testHoeAsksTheRightClickEventBeforeTilling(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 2, 2);
@@ -134,6 +142,30 @@ public class PipeBehaviourStripesDropTester {
         // neighbouring tests.
         for (TravellingItem item : flow.getAllItemsForRender()) {
             item.getStack().setCount(0);
+        }
+
+        // Vanilla's item gate, on the shared helper: a hoe on cooldown is not used. The fresh lease at the end is the
+        // control, so the refusal above is the gate and not a hit that misses.
+        helper.setBlock(soilRel, Blocks.DIRT);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(soil), Direction.UP, soil, false);
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
+            FakePlayer player = lease.player();
+            ItemStack hoe = new ItemStack(Items.DIAMOND_HOE);
+            //? if >=1.21.10 {
+            player.getCooldowns().addCooldown(hoe, 200);
+            //?} else {
+            /*player.getCooldowns().addCooldown(hoe.getItem(), 200);*/
+            //?}
+            helper.assertTrue(!BlockUtil.useItemOnBlock(helper.getLevel(), player, InteractionHand.MAIN_HAND, hoe, hit),
+                    "a hoe on cooldown is not used");
+            helper.assertTrue(helper.getBlockState(soilRel).is(Blocks.DIRT), "...so the dirt stays dirt");
+        }
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
+            ItemStack hoe = new ItemStack(Items.DIAMOND_HOE);
+            helper.assertTrue(
+                    BlockUtil.useItemOnBlock(helper.getLevel(), lease.player(), InteractionHand.MAIN_HAND, hoe, hit),
+                    "control: the same hoe off cooldown tills");
+            helper.assertTrue(helper.getBlockState(soilRel).is(Blocks.FARMLAND), "...the dirt");
         }
         helper.succeed();
     }

@@ -171,18 +171,28 @@ public class BlockUtil {
     /**
      * Right-clicks {@code stack} (the item {@code player} holds in {@code hand}) on the block {@code hit} names, for
      * a machine standing in for a player: the right-click-block event is posted first, so a claim or protection mod
-     * can refuse the use, then the item's {@code useOn} runs. That is the item half of
-     * {@code ServerPlayerGameMode.useItemOn}; the block's own use and {@code Item#onItemUseFirst} are not run. On 26.3
-     * the event is the ONLY ask a hoe's till gets: hoes became a block-transformer component, and tilling no longer
-     * posts the tool-modification event.
+     * can refuse the use; then vanilla's gate (an empty stack, or an item on the player's cooldown, is not used
+     * unless the event forced the item use); then the item's {@code useOn} runs. That is the item path of
+     * {@code ServerPlayerGameMode.useItemOn} and no more: the block's own use, {@code Item#onItemUseFirst}, the
+     * block's feature-flag check, the infinite-materials count restore, 26.3's hand swap for a transformed result and
+     * the item-used-on-block advancement trigger are not run. On 26.3 the event is the ONLY ask a hoe's till gets:
+     * hoes became a block-transformer component, and tilling no longer posts the tool-modification event.
      *
-     * @return {@code true} when the item's use took the action; {@code false} when the event refused it or the item
-     *         passed
+     * @return {@code true} when the item's use took the action; {@code false} when the event refused it, the gate
+     *         stopped it, or the item passed
      */
     public static boolean useItemOnBlock(
             Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
         PlayerInteractEvent.RightClickBlock ask = CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit);
         if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+            return false;
+        }
+        //? if >=1.21.10 {
+        boolean cooling = player.getCooldowns().isOnCooldown(stack);
+        //?} else {
+        /*boolean cooling = player.getCooldowns().isOnCooldown(stack.getItem());*/
+        //?}
+        if (!ask.getUseItem().isTrue() && (stack.isEmpty() || cooling)) {
             return false;
         }
         return stack.useOn(new UseOnContext(level, player, hand, stack, hit)).consumesAction();

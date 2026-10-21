@@ -83,9 +83,9 @@ public class AIRobotPlant extends AIRobot {
                     }
                     robot.setItemInUse(ItemStack.EMPTY);
                 } else {
-                    // Nothing was planted (a claim mod cancelled the placement, or the soil changed since the search),
-                    // so the seed was not used: the robot keeps it, and the board remembers the spot instead of
-                    // fetching a fresh seed to be refused again.
+                    // Nothing was planted (a claim mod refused the right-click or the placement, or the soil changed
+                    // since the search), so the seed was not used: the robot keeps it, and the board remembers the
+                    // spot instead of fetching a fresh seed to be refused again.
                     setSuccess(false);
                 }
             } else {

@@ -1021,6 +1021,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_farmer_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSleepsAfterRepeatedRefusals);
         reg.accept("buildcraftunofficial:robot_farmer_skips_dirt_it_may_not_break", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSkipsDirtItMayNotBreak);
         reg.accept("buildcraftunofficial:robot_plant_failure_keeps_seed", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::refusedPlantingKeepsTheSeed);
+        reg.accept("buildcraftunofficial:robot_plant_asks_right_click_first", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::plantingAsksTheRightClickEventFirst);
         reg.accept("buildcraftunofficial:robot_planter_does_not_retry_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterDoesNotRetryARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_moves_on_from_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterMovesOnFromARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);

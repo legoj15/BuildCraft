@@ -16,7 +16,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -34,6 +33,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.crops.ICropHandler;
+
+import buildcraft.lib.misc.BlockUtil;
 
 /** Default crop handler that knows about vanilla and common modded crops.
  *  IPlantable is gone from modern MC, so {@link #isSeed} checks whether the item is a BlockItem
@@ -83,13 +84,14 @@ public enum CropHandlerPlantable implements ICropHandler {
 
     @Override
     public boolean plantCrop(Level world, Player player, ItemStack seed, BlockPos pos) {
-        // Simulate a right-click on the soil block to plant the seed
+        // Simulate a right-click on the soil block to plant the seed. The right-click-block event comes first, as a
+        // player's seed would post it, so a claim mod that only guards right-clicks can refuse the planting too; the
+        // placement event still gets its say inside the seed's use.
         BlockHitResult hit = new BlockHitResult(
             Vec3.atCenterOf(pos), Direction.UP, pos, false
         );
         player.setItemInHand(InteractionHand.MAIN_HAND, seed);
-        UseOnContext ctx = new UseOnContext(world, player, InteractionHand.MAIN_HAND, seed, hit);
-        return seed.useOn(ctx).consumesAction();
+        return BlockUtil.useItemOnBlock(world, player, InteractionHand.MAIN_HAND, seed, hit);
     }
 
     /** 7.1.x's rule set, verbatim. Note what is NOT here: there is no flower rule. In 1.7.10 a flower was

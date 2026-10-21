@@ -308,6 +308,58 @@ public class FarmPlantRefusalTester {
     }
 
     /**
+     * A planting asks the right-click-block event first, as a player's seed does: a claim mod that guards only
+     * right-clicks (and never cancels the placement) stops the robot, and one that allows it sees exactly one ask
+     * before the seed goes in. Before, the planting went straight to the item's use and only the placement event
+     * (a different claim hook) could refuse it.
+     */
+    public static void plantingAsksTheRightClickEventFirst(GameTestHelper helper) {
+        int[] xs = { 2 };
+        try (Fixture f = new Fixture(helper, new BlockPos(2, 2, 3))) {
+            Set<BlockPos> crops = farmlandRow(helper, xs);
+            BlockPos crop = crops.iterator().next();
+            BlockPos soil = crop.below();
+            f.robot.setItemInUse(new ItemStack(Items.WHEAT_SEEDS, 5));
+            try {
+                // Refuses the right-click on the soil; the crop cell's placement is watched but never cancelled.
+                try (WorkClaimMod claim = new WorkClaimMod(pos -> pos.equals(soil) || pos.equals(crop), soil::equals)) {
+                    AIRobotPlant planter = new AIRobotPlant(f.robot, soil);
+                    for (int cycles = 0; cycles < 80 && planter.success(); cycles++) {
+                        planter.cycle();
+                    }
+
+                    helper.assertTrue(claim.toolAsks(soil) == 1,
+                            "the planting asks the right-click event once for the soil, got " + claim.toolAsks(soil));
+                    helper.assertTrue(claim.placeAsks(crop) == 0,
+                            "a refused right-click never reaches the placement, got " + claim.placeAsks(crop));
+                    helper.assertTrue(!planter.success(), "a planting the right-click refused reports failure");
+                    helper.assertTrue(f.level.getBlockState(crop).isAir(), "nothing was planted");
+                    helper.assertTrue(
+                            f.robot.getHeldItem().is(Items.WHEAT_SEEDS) && f.robot.getHeldItem().getCount() == 5,
+                            "the seeds stay in the hand, got " + f.robot.getHeldItem());
+                }
+                try (WorkClaimMod claim = new WorkClaimMod(pos -> pos.equals(soil) || pos.equals(crop), pos -> false)) {
+                    AIRobotPlant planter = new AIRobotPlant(f.robot, soil);
+                    for (int cycles = 0; cycles < 80 && !f.level.getBlockState(crop).is(Blocks.WHEAT); cycles++) {
+                        planter.cycle();
+                    }
+
+                    helper.assertTrue(f.level.getBlockState(crop).is(Blocks.WHEAT),
+                            "with nothing refusing, the seed is planted");
+                    helper.assertTrue(claim.toolAsks(soil) == 1,
+                            "...after one right-click ask for the soil, got " + claim.toolAsks(soil));
+                    helper.assertTrue(claim.placeAsks(crop) == 1,
+                            "...and one placement ask for the crop cell, got " + claim.placeAsks(crop));
+                }
+            } finally {
+                discardDrops(f);
+                clearRow(helper, xs);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
      * The only farmland in the zone refuses the seed. The planter tries it ONCE, remembers, finds nowhere else to plant
      * and goes to sleep with its seeds still in hand - it does not fly back and ask again.
      */

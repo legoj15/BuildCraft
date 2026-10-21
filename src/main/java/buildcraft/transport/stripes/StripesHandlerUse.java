@@ -11,7 +11,6 @@ import java.util.List;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
@@ -21,6 +20,8 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
+
+import buildcraft.lib.misc.BlockUtil;
 
 public enum StripesHandlerUse implements IStripesHandlerItem {
     INSTANCE;
@@ -41,7 +42,6 @@ public enum StripesHandlerUse implements IStripesHandlerItem {
         BlockHitResult hit = new BlockHitResult(
             Vec3.atCenterOf(target), direction.getOpposite(), target, false
         );
-        UseOnContext ctx = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hit);
-        return stack.getItem().useOn(ctx).consumesAction();
+        return BlockUtil.useItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hit);
     }
 }

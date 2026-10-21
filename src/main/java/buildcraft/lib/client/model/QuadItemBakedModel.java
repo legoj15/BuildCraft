@@ -10,7 +10,7 @@ package buildcraft.lib.client.model;
 // On >=1.21.10 nodes the modern ItemModel / ItemStackRenderState paradigm replaces it
 // (dynamic item models implement ItemModel.update there), so this compilation unit is
 // intentionally empty on those nodes. The block is commented out in the source tree
-// because the active Stonecutter node (26.1.2) does not match <1.21.10; only line
+// because the active Stonecutter node (26.3) does not match <1.21.10; only line
 // comments appear inside so no "*/" prematurely closes the deactivated block.
 //? if <1.21.10 {
 /*import java.util.List;

@@ -1,7 +1,7 @@
 # Starts both the Client and Server in a new side-by-side Windows Terminal window.
 # This prevents their logs from mixing together while giving you a visually clean single space.
 #
-# Targets the :26.1.2 Stonecutter node (the active/primary MC version). An unqualified
+# Targets the :26.1.2 Stonecutter node (neither the active node nor the primary any more). An unqualified
 # `gradlew runClient` would run across EVERY node — change the :26.1.2: prefix to pick another.
 
 Write-Output "Launching Client and Server (node :26.1.2) in a new split-pane Windows Terminal window..."

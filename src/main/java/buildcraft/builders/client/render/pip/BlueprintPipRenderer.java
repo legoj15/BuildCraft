@@ -589,13 +589,14 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
             }
         }
 
-        //? if >=26.2 {
-        // 26.2: nothing to flush or restore here. Every draw above was queued into the collector
+        // 26.2+: nothing to flush or restore here. Every draw above was queued into the collector
         // (which is the base class's own SubmitNodeStorage); the base class executes them via
         // renderAllFeatures(storage) right after this method returns, while our custom shader-lights
         // binding is still active. The next render pass re-establishes the normal lighting, exactly
         // as OversizedItemRenderer relies on — so there is no save/restore to undo.
-        //?} else {
+        // (Kept outside the directive: an arm holding only // lines reads as disabled to Stonecutter,
+        // which strips the // when it regenerates the arm for another node that also matches it.)
+        //? if <26.2 {
         /*// Process all feature submissions — this queues the actual GPU draw calls into the PiP
         // buffer source, but does NOT flush them to the GPU yet.
         featureRenderDispatcher.renderAllFeatures();

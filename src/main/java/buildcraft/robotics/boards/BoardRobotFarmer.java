@@ -96,10 +96,9 @@ public class BoardRobotFarmer extends RedstoneBoardRobot {
     /** Asked once about the block the search has settled on (not about every candidate scanned, which would post a
      *  break event per block to every listener on every search): whether protection mods let this robot work it.
      *  There is no probe for the till's own asks (the right-click, the tool modification) without tilling, so the
-     *  question asked is the one
-     *  every robot is asked - may it break the block - which a claim answers alike for both; a till refused anyway
-     *  is caught when it fails ({@link #delegateAIEnded}). A refusal is remembered so the next search skips the
-     *  block instead of flying back to it. */
+     *  question asked is the one every robot is asked - may it break the block - which a claim answers alike for
+     *  both; a till refused anyway is caught when it fails ({@link #delegateAIEnded}). A refusal is remembered so
+     *  the next search skips the block instead of flying back to it. */
     public boolean approveSearchTarget(@Nullable Level level, BlockPos pos) {
         if (level == null) {
             return false;

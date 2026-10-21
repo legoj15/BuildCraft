@@ -47,8 +47,9 @@ import buildcraft.robotics.entity.EntityRobot;
  * "[BuildCraft]" identity: the robot's planting, tool use and block breaking must run as the station owner's fake
  * player, the way the break AI's permission probe and the Stripes board already do. The observers are the events a
  * claim mod would cancel: the block-placement event for a planted seed, the right-click-block event a hoe's till
- * starts with (the one ask every node shares; 26.3 posts no tool-modification event for a till), the break-speed event for a pickaxe swing at stone (the only player-attributed event the break
- * itself posts - the destroy that follows posts none).
+ * starts with (the one ask every node shares; 26.3 posts no tool-modification event for a till), the break-speed
+ * event for a pickaxe swing at stone (the only player-attributed event the break itself posts - the destroy that
+ * follows posts none).
  *
  * <p>A used tool is also in the fake player's hand while it is used: a claim or tool listener reads the player's
  * hand, not the item stack the event carries.

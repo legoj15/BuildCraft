@@ -28,10 +28,12 @@ import net.minecraft.world.level.block.Blocks;
  * <h3>What's covered here and why</h3>
  * <ul>
  *   <li><b>Advancement JSON parses and loads under the expected ID</b> — catches
- *       JSON syntax mistakes, wrong predicate-wrapping shapes (the
- *       {@code minecraft:location} criterion has a notoriously fiddly
- *       {@code player → location_check → predicate} structure), and ID
- *       drift between code constants and the JSON file path.</li>
+ *       JSON syntax mistakes, wrong condition shapes (the
+ *       {@code minecraft:location} criterion's {@code player} is ONE inline
+ *       {@code location_check} loot condition keyed {@code type}, the 26.3
+ *       form the sources are authored in; every older node gets a build-time
+ *       rewrite to a one-element condition list keyed {@code condition}),
+ *       and ID drift between code constants and the JSON file path.</li>
  *   <li><b>{@code #buildcraftunofficial:oil_fluids} block tag completeness</b> —
  *       exactly the 12 oil source blocks the {@code sticky_dipping} predicate
  *       relies on. Catches typos in the tag JSON and silent regressions when

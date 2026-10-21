@@ -336,21 +336,36 @@ tasks.test {
     // the mod actually runs in.
     systemProperty("buildcraft.dev", "true")
 
-    // CopyrightHeaderTester reads the .java files themselves off disk, so its real inputs are the
-    // source TEXT — not the compiled classes Gradle normally tracks. A header edit is comment-only,
-    // produces byte-identical bytecode, and would otherwise leave `test` UP-TO-DATE: the guard would
-    // silently stop guarding exactly when someone re-introduces a bad header. Declaring the trees as
-    // an input closes that hole. Path-insensitive because only the file CONTENTS matter.
+    // CopyrightHeaderTester and StonecutterDirectiveGuardTester read source files themselves off
+    // disk, so their real inputs are the source TEXT — not the compiled classes Gradle normally tracks.
+    // A header or directive-arm edit is comment-only, produces byte-identical bytecode, and would
+    // otherwise leave `test` UP-TO-DATE: the guard would silently stop guarding exactly when someone
+    // re-introduces a bad header or a mangled directive arm. Declaring the trees as an input closes
+    // that hole. Path-insensitive because only the file CONTENTS matter.
     inputs.files(
         rootProject.fileTree("src/main/java") { include("**/*.java") },
         rootProject.fileTree("src/test/java") { include("**/*.java") }
     ).withPropertyName("sourceHeaders").withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // The directive guard walks all of src/, not just the Java trees: the other extensions Stonecutter
+    // processes (resources such as accesstransformer.cfg) can carry a directive too. Keep this list in
+    // step with the guard's JAVA_LIKE and NOT_JUDGED sets, minus java, which the input above covers.
+    inputs.files(
+        rootProject.fileTree("src") {
+            include(listOf("scala", "sc", "groovy", "gradle", "json5", "kt", "kts", "fsh", "vsh", "cfg", "aw",
+                "accesswidener", "ct", "classtweaker", "yml", "yaml").map { "**/*.$it" })
+        }
+    ).withPropertyName("stonecutterOtherSources").withPathSensitivity(PathSensitivity.RELATIVE)
 
     // Same hole, second door: noticeFileListsEveryMmplFile cross-checks NOTICE.md against those headers,
     // so NOTICE.md is an input too. Verified empirically — deleting a path from NOTICE.md left `test`
     // UP-TO-DATE and the guard silent until this line existed.
     inputs.file(rootProject.file("NOTICE.md"))
         .withPropertyName("licenceNotice").withPathSensitivity(PathSensitivity.NONE)
+
+    // StonecutterDirectiveGuardTester decides which directive arms are live from the `stonecutter active` line.
+    inputs.file(rootProject.file("stonecutter.gradle.kts"))
+        .withPropertyName("activeNode").withPathSensitivity(PathSensitivity.NONE)
 
     // Code-inspecting tests (ForRemovalApiGuardTester, BlocksAtlasIdTester, via buildcraft.lib.test.MainSourceSet)
     // must read THIS node's view of the main code: the active node compiles src/main/java raw, every other node a

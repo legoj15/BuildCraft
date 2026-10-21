@@ -14,18 +14,16 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.CommonHooks;
 import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 
@@ -82,19 +80,12 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     // or tool listener reads the hand, not the stack the context carries.
                     RobotProtection.holdInMainHand(player, held);
                     // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
-                    BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
-                    // Ask first, as a player's right-click does (ServerPlayerGameMode.useItemOn posts this before
-                    // the item's useOn): a claim mod refuses right-clicks through it on every node. On 26.3 it is
-                    // the ONLY ask a till gets - hoes became a BLOCK_TRANSFORMER component and NeoForge no longer
-                    // posts the tool-modification event for tilling.
-                    PlayerInteractEvent.RightClickBlock ask =
-                            CommonHooks.onRightClickBlock(player, InteractionHand.MAIN_HAND, useToBlock, hit);
-                    if (ask.isCanceled() || ask.getUseItem().isFalse()) {
-                        used = false;
-                    } else {
-                        UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
-                        used = held.useOn(useOnContext).consumesAction();
-                    }
+                    BlockHitResult hit =
+                            new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
+                    // The item half of a player's right-click: the right-click-block event first (a claim mod
+                    // refuses through it on every node), then the item's useOn - the block's own use and
+                    // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock).
+                    used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
                     // Read before the lease closes and takes the hand's contents away.
                     inHand = player.getMainHandItem();
                 }

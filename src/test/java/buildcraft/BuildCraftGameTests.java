@@ -242,6 +242,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_dispose_items_drops_cargo_when_no_station", () -> buildcraft.robotics.ai.RobotDisposeItemsTester::disposeItemsDropsCargoWhenNoStationWillTakeIt);
         reg.accept("buildcraftunofficial:robot_straight_move_snaps_onto_target", () -> buildcraft.robotics.ai.RobotStraightMoveSnapTester::straightMoveSnapsARealRobotOntoItsTarget);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
+        reg.accept("buildcraftunofficial:stripes_hoe_asks_right_click_before_tilling", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHoeAsksTheRightClickEventBeforeTilling);
         
         // Shape Patterns
         reg.accept("buildcraftunofficial:shape_pattern_tiny_template", () -> buildcraft.core.builders.patterns.ShapePatternsTester::testTinyTemplate);

@@ -19,9 +19,11 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -34,9 +36,12 @@ import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.BlockHitResult;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
+import net.neoforged.neoforge.common.CommonHooks;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
@@ -161,6 +166,26 @@ public class BlockUtil {
             BlockState state = level.getBlockState(pos);
             return BreakEventCompat.canBreak(level, pos, state, lease.player());
         }
+    }
+
+    /**
+     * Right-clicks {@code stack} (the item {@code player} holds in {@code hand}) on the block {@code hit} names, for
+     * a machine standing in for a player: the right-click-block event is posted first, so a claim or protection mod
+     * can refuse the use, then the item's {@code useOn} runs. That is the item half of
+     * {@code ServerPlayerGameMode.useItemOn}; the block's own use and {@code Item#onItemUseFirst} are not run. On 26.3
+     * the event is the ONLY ask a hoe's till gets: hoes became a block-transformer component, and tilling no longer
+     * posts the tool-modification event.
+     *
+     * @return {@code true} when the item's use took the action; {@code false} when the event refused it or the item
+     *         passed
+     */
+    public static boolean useItemOnBlock(
+            Level level, Player player, InteractionHand hand, ItemStack stack, BlockHitResult hit) {
+        PlayerInteractEvent.RightClickBlock ask = CommonHooks.onRightClickBlock(player, hand, hit.getBlockPos(), hit);
+        if (ask.isCanceled() || ask.getUseItem().isFalse()) {
+            return false;
+        }
+        return stack.useOn(new UseOnContext(level, player, hand, stack, hit)).consumesAction();
     }
 
     /** Returns the fluid associated with a block if it is a fluid block, or null otherwise. */

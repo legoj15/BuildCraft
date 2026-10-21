@@ -20,9 +20,10 @@ import java.io.File
 // authored in the 26.3 form and every node below 26.3 rewrites its COPIED output here (src stays
 // canonical; the 26.3 node only validates).
 //
-// Deliberately narrow: only the shapes BC ships are converted. Anything else (functions/"modifier",
-// entity_properties predicates, predicate references, untested triggers) fails the build with a
-// message naming the file, so a new data file cannot silently mis-load on one side.
+// Deliberately narrow: only the shapes BC ships are converted (composite loot entries recurse through
+// "children"). Anything else (functions/"modifier", entity_properties predicates, predicate references,
+// untested triggers, a non-object root/criteria/conditions) fails the build with a message naming the
+// file, so a new data file cannot silently mis-load on one side.
 //
 // validate=true on every node: the 26.3-form check also catches an old-form key added to src,
 // which 26.3 would otherwise ignore without a word.
@@ -84,26 +85,39 @@ object DataDownportPre263 {
         }
     }
 
+    // One loot entry. The composite entries (alternatives / group / sequence) nest further entries under
+    // "children"; each child is a plain entry and carries the same condition/functions as its parent, so
+    // the same conversion recurses.
+    @Suppress("UNCHECKED_CAST")
+    private fun convertEntry(ctx: Ctx, e: Any?) {
+        val entry = e as? MutableMap<String, Any?> ?: ctx.fail("entry is not an object")
+        convertConditionHolder(ctx, entry)
+        if (entry.containsKey("children")) {
+            val children = entry["children"] as? List<Any?> ?: ctx.fail("entry \"children\" must be a list: ${entry["children"]}")
+            children.forEach { convertEntry(ctx, it) }
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun convertLootTable(ctx: Ctx, root: MutableMap<String, Any?>) {
         if (root.containsKey("functions") || root.containsKey("modifier")) ctx.fail("loot functions/modifiers have no down-port yet")
         (root["pools"] as? List<Any?>)?.forEach { p ->
             val pool = p as? MutableMap<String, Any?> ?: ctx.fail("pool is not an object")
             convertConditionHolder(ctx, pool)
-            (pool["entries"] as? List<Any?>)?.forEach { e ->
-                convertConditionHolder(ctx, e as? MutableMap<String, Any?> ?: ctx.fail("entry is not an object"))
-            }
+            (pool["entries"] as? List<Any?>)?.forEach { convertEntry(ctx, it) }
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     private fun convertAdvancement(ctx: Ctx, root: MutableMap<String, Any?>) {
-        val criteria = root["criteria"] as? Map<String, Any?> ?: return
+        val rawCriteria = root["criteria"] ?: return
+        val criteria = rawCriteria as? Map<String, Any?> ?: ctx.fail("\"criteria\" must be an object: $rawCriteria")
         for ((name, c) in criteria) {
             val crit = c as? Map<String, Any?> ?: ctx.fail("criterion $name is not an object")
             val trigger = crit["trigger"] as? String ?: ctx.fail("criterion $name has no trigger")
             if (trigger !in STABLE_TRIGGERS) ctx.fail("trigger $trigger (criterion $name) has no verified down-port; check its codec on every node and add it to STABLE_TRIGGERS")
-            val cond = crit["conditions"] as? MutableMap<String, Any?> ?: continue
+            val rawCond = crit["conditions"] ?: continue
+            val cond = rawCond as? MutableMap<String, Any?> ?: ctx.fail("criterion $name: \"conditions\" must be an object: $rawCond")
             if (cond.containsKey("player")) {
                 val p = cond["player"]
                 if (p is List<*>) ctx.fail("criterion $name: \"player\" is a pre-26.3 condition list; author one condition object")
@@ -114,8 +128,8 @@ object DataDownportPre263 {
                 val r = cond.remove("recipes") ?: ctx.fail("criterion $name: recipe_crafted needs \"recipes\"")
                 val id = when {
                     r is String && !r.startsWith("#") -> r
-                    r is List<*> && r.size == 1 && r[0] is String -> r[0] as String
-                    else -> ctx.fail("criterion $name: pre-26.3 recipe_crafted takes exactly one recipe id; split $r into one criterion per recipe")
+                    r is List<*> && r.size == 1 && r[0] is String && !(r[0] as String).startsWith("#") -> r[0] as String
+                    else -> ctx.fail("criterion $name: pre-26.3 recipe_crafted takes exactly one literal recipe id (no #tag, no several); split $r into one criterion per recipe")
                 }
                 cond["recipe_id"] = id
             }
@@ -126,9 +140,11 @@ object DataDownportPre263 {
         if (!dir.isDirectory) return
         val slurper = groovy.json.JsonSlurper()
         dir.walkTopDown().filter { it.isFile && it.extension == "json" }.forEach { f ->
+            val ctx = Ctx(f)
+            val parsed = slurper.parse(f)
             @Suppress("UNCHECKED_CAST")
-            val root = slurper.parse(f) as? MutableMap<String, Any?> ?: return@forEach
-            convert(Ctx(f), root) // validates on every node (throws on pre-26.3 keys)
+            val root = parsed as? MutableMap<String, Any?> ?: ctx.fail("JSON root must be an object, got: $parsed")
+            convert(ctx, root) // validates on every node (throws on pre-26.3 keys)
             if (downport) f.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(root)))
         }
     }

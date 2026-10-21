@@ -178,8 +178,9 @@ sourceSets {
 
 tasks.named<Copy>("processResources") {
     // Loot tables + advancements are authored in the 26.3 loot-condition form; every older node
-    // rewrites its copy, and 26.3+ only validates (see DataDownportPre263). Registered before the
-    // 1.21.1 doLast so that one sees the pre-26.3 shape it was written against.
+    // rewrites its copy, and 26.3+ only validates (see DataDownportPre263). The 1.21.1 doLast below
+    // touches disjoint data (recipes, advancement display.background, item models), so the order of
+    // the two hooks does not matter.
     if (isPre26_3) {
         doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), true) }
     } else {

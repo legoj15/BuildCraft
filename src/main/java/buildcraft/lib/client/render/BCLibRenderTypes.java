@@ -241,7 +241,7 @@ public final class BCLibRenderTypes {
     }
 
     /**
-     * Back-face-culling sibling of vanilla's {@link RenderTypes#entityTranslucent} (which is
+     * Back-face-culling sibling of vanilla's {@code RenderTypes.entityTranslucent} (which is
      * {@code NO_CULL}). Same {@code ENTITY_TRANSLUCENT_CULL} pipeline vanilla reserves for its
      * item-target translucent type, but built with the standard setup so it renders to the active
      * output target — usable in the picture-in-picture pass.

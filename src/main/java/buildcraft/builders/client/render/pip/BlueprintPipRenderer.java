@@ -813,7 +813,7 @@ public class BlueprintPipRenderer extends PictureInPictureRenderer<BlueprintPipR
     /**
      * Emits a translucent green ghost cube for one filled {@link Template} cell into the shared
      * buffer source, styled like the Architect Table's scan cubes ({@code scan.png}, drawn through
-     * {@link RenderTypes#entityTranslucent}). A face is drawn only when the neighbouring cell in
+     * {@code RenderTypes.entityTranslucent}). A face is drawn only when the neighbouring cell in
      * that direction is <i>not</i> also filled, so a solid template collapses to its outer shell —
      * no interior overdraw, no muddy stacks of blended quads.
      * <p>

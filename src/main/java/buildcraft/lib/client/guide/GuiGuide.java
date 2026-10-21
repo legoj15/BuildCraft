@@ -437,12 +437,8 @@ public class GuiGuide extends Screen {
         // ~0.33 of the way from "last" to "next", visibly snapping rather than smoothly
         // interpolating. Substitute the proper 0-1 fraction here so all downstream
         // partialTicks consumers (cover flip, chapter hover lerp) interpolate correctly.
-        //? if >=1.21.10 {
+        // 1.21.1 names this accessor getTimer(); the build's text replacement renames the call there.
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        //?} else {
-        /*// 1.21.1 names the DeltaTracker accessor getTimer(); the build's text replacement renames the call below.
-        partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);*/
-        //?}
 
         lastPartialTicks = partialTicks;
         minX = (this.width - PAGE_LEFT.width * 2) / 2;

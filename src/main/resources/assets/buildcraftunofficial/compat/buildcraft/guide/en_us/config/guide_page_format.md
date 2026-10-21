@@ -101,7 +101,7 @@ You can also pin one specific recipe by its registry id with the `id` attribute.
 </guide_md>
 <recipe id="buildcraftunofficial:gate_basic"/>
 
-Add `type="assembling"` to pin an Assembly Table recipe instead, looked up by its registry name (rather than a crafting recipe's ResourceLocation). This lets a page interleave a gate's crafting and assembly recipes in a deliberate order:
+Add `type="assembling"` to pin an Assembly Table recipe instead, looked up by its registry name (rather than a crafting recipe's id). This lets a page interleave a gate's crafting and assembly recipes in a deliberate order:
 <guide_md>
 &lt;recipe id="gate-and-IRON-NO_MODIFIER" type="assembling"/&gt;
 </guide_md>

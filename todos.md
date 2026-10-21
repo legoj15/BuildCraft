@@ -5,8 +5,6 @@ Last audited: 2026-10-17
 ## 🔧 Outstanding work
 
 - Finish the Minecraft 26.3 port (automated tests pass; in-game checks and release work remain) — [plan](docs/port-26.3.md)
-- Tidy comments the 26.3 active-node switch reworded wrongly — [details](docs/port-26.3.md#follow-ups-after-p15)
-- Robot planting should ask protection mods like a player's right-click — [details](docs/port-26.3.md#follow-ups-after-p15)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Builders can sit busy for ever beside fluid they can't remove (outside lava in Clear mode, any water in Replace mode) — [notes](docs/todo-details.md#builder-stalls-beside-unremovable-fluid)
 - On Minecraft 1.21.1, /setblock over a Tank, Heat Exchanger, Flood Gate, Combustion Engine or item machine still spills its contents — [notes](docs/todo-details.md#setblock-spills-on-1211)

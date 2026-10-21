@@ -257,3 +257,10 @@ Wave 0: P0 plus the decisions in section 7 (defaults apply if unanswered). Wave 
 - Fabric 26.3 note: https://fabricmc.net/2026/09/15/263.html
 - Secondary, unverified: https://minecrafthub.io/articles/minecraft-26-3-mods-shaders-packs and https://mc-node.net/blog/en/minecraft-26-3-server-breaking-changes/
 - Listed by the research pass, topic not recorded: https://github.com/neoforged/NeoForge/issues/3495
+
+## Follow-ups after P15
+
+- **Comment drift from the switch.** The build's Identifier/ResourceLocation (and render-package) text replacement also rewrites prose, so after the switch to 26.3 about fifteen comments name the wrong class for the line they describe: `RegistryKeyUtil:15,31`, `RenderRobot:103`, `CraftingUtil:78`, `RegistryUtilBC:14-16`, `BoardRobotEmptyNBT:29`, `BCGraphics:230`, `WorldPropertyIsOre:47`, `BCLibRenderTypes:33`, `XmlPageLoader:826,874`, `GuideCraftingRecipes:65`, `GuiGuide:443-444`, `BuildCraftGui:94-95`. Reword so the comments do not contain the bare replaced word. Also stale: `docs/unification-audit.md:3` (says 26.1.x active), `runClientAndServer.ps1:4` default node, `DataDownportPre263.kt:89` (children carry their own conditions), and the `build.gradle.kts:182` "disjoint data" comment (both hooks touch advancements; order is irrelevant only because the 1.21.1 hook rewrites just `display.background`).
+- **Live comment-only arms.** Stonecutter treats an arm made only of `//` lines as disabled and strips them on nodes that match it. Two were found and fixed (`BlueprintPipRenderer`, `BCEnergyJeiPlugin`); add a guard (unit test or script) that scans `src/` for them.
+- **Right-click ask gaps.** `BlockUtil.useItemOnBlock` skips vanilla's cooldown/empty-stack gate; robot planting (`AIRobotPlant`, `CropHandlerPlantable`) never asks; `StripesHandlerUse` calls `Item.useOn` directly (dead today: its `ITEMS` is never populated).
+- **`settings.gradle.kts` `vcsVersion`** moved to 26.3 with P15 so "Reset active project" keeps 26.3.

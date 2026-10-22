@@ -224,7 +224,7 @@ public class MockRobotAccess implements IRobotAccess {
 
     /** Swap the registry stub — a search-AI test lights up exactly the methods it drives by subclassing
      *  {@link InertRobotRegistry}. */
-    void setRegistry(IRobotRegistry registry) {
+    public void setRegistry(IRobotRegistry registry) {
         this.registry = registry;
     }
 

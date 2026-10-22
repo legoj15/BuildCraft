@@ -1,9 +1,9 @@
 # Starts both the Client and Server in a new side-by-side Windows Terminal window.
 # This prevents their logs from mixing together while giving you a visually clean single space.
 #
-# -Node picks the Stonecutter node (default: the primary, 26.2). An unqualified `gradlew runClient` would run
+# -Node picks the Stonecutter node (default: the primary, 26.3). An unqualified `gradlew runClient` would run
 # across EVERY node, so the task is always qualified.
-param([string]$Node = '26.2')
+param([string]$Node = '26.3')
 
 Write-Output "Launching Client and Server (node :$Node) in a new split-pane Windows Terminal window..."
 

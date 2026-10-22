@@ -17,6 +17,7 @@ Last audited: 2026-10-17
 
 ## 🆕 New Features (version 2026.2)
 
+- Interpolation for robots, so they move smoothly on clients (planned for 2026.2.1)
 - Guide book follow-ups from the Robots chapter: board icons, sort-button art, robot name tags — [list](docs/todo-details.md#guide-book-follow-ups)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)

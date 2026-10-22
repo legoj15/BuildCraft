@@ -6,7 +6,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 
 ```bash
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
-# Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.2 is the primary; 26.3 is a port in progress).
+# Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.3 is the primary from its first release; nothing ships until the user says so).
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY node.
 # The ACTIVE node (the raw text of src/, what the IDE sees) is 26.3; see stonecutter.gradle.kts.

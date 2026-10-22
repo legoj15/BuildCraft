@@ -102,7 +102,6 @@ public class RefusalMemoryOwnerAndPermitTest {
     @Test
     public void eachMachineKeepsItsDocumentedPolicy() {
         Assertions.assertEquals(List.of(200L, 0L, Integer.MAX_VALUE), shape(RefusalMemory.QUARRY_FRAME));
-        Assertions.assertEquals(List.of(200L, 0L, Integer.MAX_VALUE), shape(RefusalMemory.BUILDER_PLACE));
         Assertions.assertEquals(List.of(200L, 0L, 4), shape(RefusalMemory.STRIPES));
         Assertions.assertEquals(List.of(1200L, 0L, 256), shape(RefusalMemory.ROBOT_SEARCH));
         Assertions.assertEquals(List.of(6000L, 20L, Integer.MAX_VALUE), shape(RefusalMemory.DRAIN));

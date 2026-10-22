@@ -19,9 +19,9 @@ Using Pipe Plugs or painting pipes a different colour can stop pipes connecting.
 <chapter name="Filtering"/>
 Opening up the Wooden Diamond Transport Pipe GUI will allow you to setup a filter.
 Placing items you want in the slots will allow you to filter what it extracts.
-You can use the Whitelist, Blacklist or Round Robin options to change what your filter does:
-Whitelist: Only the items selected will be extracted.
-Blacklist: Any items other than the items selected will be extracted.
+You can use the Allowlist, Blocklist or Round Robin options to change what your filter does:
+Allowlist: Only the items selected will be extracted.
+Blocklist: Any items other than the items selected will be extracted.
 Round robin: Extracts the items in the exact order selected in the above filter slots (from left to right)
 
 A List can be used in a filtering slots to give you expanded filtering options.

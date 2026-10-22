@@ -25,8 +25,5 @@ public class BCRoboticsRecipes {
         initialized = true;
         ProgrammingRecipeRegistry.INSTANCE.addRecipe(new BoardProgrammingRecipe());
         IntegrationRecipeRegistry.INSTANCE.addRecipe(new RobotIntegrationRecipe());
-        // Everything that registers before the world loads has done so by now: say which programming recipes
-        // offer more programs than the table's grid can show (addon boards on top of BuildCraft's own).
-        ProgrammingRecipeRegistry.INSTANCE.warnAboutUnreachableOptions();
     }
 }

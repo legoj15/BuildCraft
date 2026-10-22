@@ -13,6 +13,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 //?}
 import net.minecraft.world.entity.player.Player;
 
+import buildcraft.lib.compat.jei.AbstractTransferHandler;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 import buildcraft.robotics.container.RoboticsTableTransfer;
@@ -27,7 +29,7 @@ import buildcraft.silicon.tile.TileIntegrationTable;
  * state, so the request is just the board's program.
  */
 public class IntegrationTableTransferHandler
-        extends AbstractTableTransferHandler<ContainerIntegrationTable, IntegrationRecipeJei> {
+        extends AbstractTransferHandler<ContainerIntegrationTable, IntegrationRecipeJei> {
 
     public IntegrationTableTransferHandler(IRecipeTransferHandlerHelper helper) {
         super(helper, ContainerIntegrationTable.class, BCSiliconMenuTypes.INTEGRATION_TABLE::get);
@@ -43,18 +45,20 @@ public class IntegrationTableTransferHandler
     }
 
     @Override
-    protected RoboticsTableTransfer.Result execute(ContainerIntegrationTable container, IntegrationRecipeJei recipe,
-            Player player, boolean doTransfer) {
+    protected TransferResult check(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
+            boolean maxTransfer) {
         TileIntegrationTable table = container.tile;
         String boardId = recipe.boardId();
         if (table == null || boardId == null) {
-            return RoboticsTableTransfer.Result.INVALID;
+            return TransferResult.INVALID;
         }
-        RoboticsTableTransfer.Result result =
-                RoboticsTableTransfer.integrate(player.getInventory(), table, boardId, false);
-        if (result == RoboticsTableTransfer.Result.OK && doTransfer) {
-            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
-        }
-        return result;
+        return RoboticsTableTransfer.integrate(player.getInventory(), table, boardId, false);
+    }
+
+    @Override
+    protected void send(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
+            boolean maxTransfer) {
+        String boardId = recipe.boardId();
+        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
     }
 }

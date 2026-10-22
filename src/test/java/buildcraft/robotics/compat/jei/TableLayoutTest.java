@@ -37,6 +37,54 @@ public class TableLayoutTest {
     }
 
     @Test
+    public void optionsSplitIntoPagesOfOneGridWithNoneEverLost() {
+        int size = ProgrammingTableLayout.PAGE_SIZE;
+
+        Assertions.assertEquals(1, ProgrammingTableLayout.pageCount(0), "nothing to show is still one (blank) page");
+        Assertions.assertEquals(1, ProgrammingTableLayout.pageCount(size), "exactly a full grid is one page");
+        Assertions.assertEquals(2, ProgrammingTableLayout.pageCount(size + 1), "the 25th option needs a second page");
+        Assertions.assertEquals(2, ProgrammingTableLayout.pageCount(2 * size));
+        Assertions.assertEquals(3, ProgrammingTableLayout.pageCount(2 * size + 1));
+        for (int option = 0; option < 3 * size; option++) {
+            int page = ProgrammingTableLayout.pageOf(option);
+            int cell = ProgrammingTableLayout.cellOf(option);
+            Assertions.assertTrue(cell >= 0 && cell < size, "option " + option + " lands in a real cell, got " + cell);
+            Assertions.assertEquals(option, ProgrammingTableLayout.firstOptionOn(page) + cell,
+                    "option " + option + " maps to page " + page + ", cell " + cell + " and back");
+            Assertions.assertTrue(page < ProgrammingTableLayout.pageCount(option + 1),
+                    "option " + option + " is on a page that exists when it is the last option");
+        }
+        Assertions.assertEquals(1, ProgrammingTableLayout.pageOf(size), "the 25th option opens the second page");
+        Assertions.assertEquals(0, ProgrammingTableLayout.cellOf(size), "in its first cell");
+        Assertions.assertEquals(0, ProgrammingTableLayout.pageOf(-1), "no selection shows the first page");
+    }
+
+    @Test
+    public void aRequestedPageIsHeldInsideThePagesThatExist() {
+        Assertions.assertEquals(0, ProgrammingTableLayout.clampPage(-3, 100));
+        Assertions.assertEquals(2, ProgrammingTableLayout.clampPage(2, 49));
+        Assertions.assertEquals(2, ProgrammingTableLayout.clampPage(7, 49), "49 options end on the third page");
+        Assertions.assertEquals(0, ProgrammingTableLayout.clampPage(1, 24), "a full grid has no second page");
+        Assertions.assertEquals(0, ProgrammingTableLayout.clampPage(1, 0), "no options, only page 0");
+    }
+
+    @Test
+    public void thePageButtonsSitBetweenTheGridAndThePlayerInventory() {
+        int gridBottom = ProgrammingTableLayout.GRID_Y + ProgrammingTableLayout.gridHeight();
+        Assertions.assertTrue(ProgrammingTableLayout.PAGER_Y >= gridBottom,
+                "the pager row starts below the grid (" + gridBottom + ")");
+        Assertions.assertTrue(ProgrammingTableLayout.PAGER_Y + ProgrammingTableLayout.PAGER_H
+                <= ProgrammingTableLayout.PLAYER_INV_Y, "and ends above the player inventory");
+        Assertions.assertEquals(ProgrammingTableLayout.GRID_X, ProgrammingTableLayout.PAGER_PREV_X,
+                "previous sits under the grid's left edge");
+        Assertions.assertEquals(ProgrammingTableLayout.GRID_X + ProgrammingTableLayout.gridWidth(),
+                ProgrammingTableLayout.PAGER_NEXT_X + ProgrammingTableLayout.PAGER_W,
+                "next sits under the grid's right edge");
+        Assertions.assertTrue(ProgrammingTableLayout.PAGER_PREV_X + ProgrammingTableLayout.PAGER_W
+                < ProgrammingTableLayout.PAGER_NEXT_X, "with room between them for the page text");
+    }
+
+    @Test
     public void integrationRingIsReadingOrderSkippingTheCentre() {
         int[][] expected = {{0, 0}, {1, 0}, {2, 0}, {0, 1}, {2, 1}, {0, 2}, {1, 2}, {2, 2}};
         Assertions.assertEquals(expected.length, IntegrationTableLayout.RING_SLOTS);

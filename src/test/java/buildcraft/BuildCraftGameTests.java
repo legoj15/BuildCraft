@@ -1196,6 +1196,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:jei_transfer_programming_selects_in_same_tick", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferSelectsOptionInTheSameTick);
         reg.accept("buildcraftunofficial:jei_transfer_programming_blank_forms_and_slot_reuse", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferAcceptsEveryBlankFormAndReusesTheSlot);
         reg.accept("buildcraftunofficial:jei_transfer_programming_rejects_bad_requests", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferRejectsWhatItCannotHonour);
+        reg.accept("buildcraftunofficial:jei_transfer_programming_reaches_later_pages", () -> buildcraft.robotics.RoboticsTableTransferTester::programmingTransferReachesBoardsOnLaterPages);
         reg.accept("buildcraftunofficial:jei_transfer_integration_fills_centre_and_ring", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferFillsCentreAndRing);
         reg.accept("buildcraftunofficial:jei_transfer_integration_charged_robot_and_centre_reuse", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferTakesChargedBlankRobotAndKeepsTheCentre);
         reg.accept("buildcraftunofficial:jei_transfer_integration_atomic_and_selective", () -> buildcraft.robotics.RoboticsTableTransferTester::integrationTransferIsAtomicAndSelective);

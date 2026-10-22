@@ -142,15 +142,23 @@ public class ProgrammingRecipeCollectorTester extends VanillaSetupBaseTester {
     }
 
     @Test
-    public void optionsBeyondTheVisibleGridAreNotAdvertised() {
-        // A hypothetical addon recipe offering more options than the 6x4 grid can show: the table's GUI can only
-        // click the first 24, so JEI must not promise the rest.
+    public void optionsBeyondOneGridGetEntriesOnTheirOwnPage() {
+        // A hypothetical addon recipe offering more options than the 6x4 grid holds: the table's GUI pages through
+        // them, so JEI lists every one, each drawn with the page of the grid it is on.
         IProgrammingRecipe wide = new FakeRecipe("test:wide", GRID_SIZE + 6);
         List<ProgrammingRecipeJei> entries = ProgrammingRecipeCollector.collect(List.of(wide),
                 List.of(new ItemStack(Items.PAPER)));
-        Assertions.assertEquals(GRID_SIZE, entries.size(), "only the clickable cells get entries");
-        for (ProgrammingRecipeJei entry : entries) {
-            Assertions.assertEquals(GRID_SIZE, entry.grid().size(), "the grid is cropped to what the table shows");
+        Assertions.assertEquals(GRID_SIZE + 6, entries.size(), "every option gets an entry, not just the first grid");
+        List<ItemStack> options = wide.getOptions(TileProgrammingTable.OPTION_COLS, TileProgrammingTable.OPTION_ROWS);
+        for (int i = 0; i < entries.size(); i++) {
+            ProgrammingRecipeJei entry = entries.get(i);
+            Assertions.assertEquals(i, entry.optionIndex(), "entries run in option order");
+            Assertions.assertEquals("test:wide", entry.recipeId());
+            Assertions.assertEquals(i < GRID_SIZE ? GRID_SIZE : 6, entry.grid().size(),
+                    entry.id() + " shows the page it is on: a full grid, then the remaining six");
+            Assertions.assertEquals(i % GRID_SIZE, entry.gridIndex(), entry.id() + " highlights its cell on that page");
+            Assertions.assertTrue(ItemStack.matches(options.get(i), entry.grid().get(entry.gridIndex())),
+                    entry.id() + " highlights its own option, not the same cell of the first page");
         }
     }
 

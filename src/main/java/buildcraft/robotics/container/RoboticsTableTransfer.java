@@ -18,6 +18,7 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.recipes.IProgrammingRecipe;
 import buildcraft.api.recipes.IntegrationRecipe;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.recipe.IntegrationRecipeRegistry;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -42,21 +43,9 @@ import buildcraft.silicon.tile.TileProgrammingTable;
  *  <p>Every request is checked against the live state — the player's real inventory and the table's real slots —
  *  and is all-or-nothing: nothing is debited from the player unless every item the request needs can be
  *  inserted. Nothing is cleared out of a table to make room; a slot holding something unexpected answers
- *  {@link Result#BUSY} instead. */
+ *  {@link TransferResult#BUSY} instead. */
 public final class RoboticsTableTransfer {
     private RoboticsTableTransfer() {}
-
-    /** The outcome of a request. {@code OK} is the only one that moved (or, when advisory, could move) anything. */
-    public enum Result {
-        /** Done (or, for an advisory call, doable). */
-        OK,
-        /** The player does not hold what the request needs. */
-        MISSING,
-        /** The table's slots hold something that would conflict; the player must empty them first. */
-        BUSY,
-        /** The request names a recipe, option or board the server does not know — stale or tampered. */
-        INVALID
-    }
 
     // ── Programming Table ───────────────────────────────────────────────────
 
@@ -68,15 +57,15 @@ public final class RoboticsTableTransfer {
      *
      *  @param boardId The id of the board to be programmed, i.e. the option to select.
      *  @param doTransfer false to only validate. */
-    public static Result program(Inventory inv, TileProgrammingTable table, String recipeId, String boardId,
+    public static TransferResult program(Inventory inv, TileProgrammingTable table, String recipeId, String boardId,
             boolean doTransfer) {
         IProgrammingRecipe recipe = ProgrammingRecipeRegistry.INSTANCE.getRecipe(recipeId);
         if (recipe == null) {
-            return Result.INVALID;
+            return TransferResult.INVALID;
         }
         int option = optionIndex(recipe, boardId);
         if (option < 0) {
-            return Result.INVALID;
+            return TransferResult.INVALID;
         }
 
         ItemStack slotted = table.invBoard.getStackInSlot(0);
@@ -84,33 +73,33 @@ public final class RoboticsTableTransfer {
         if (slotted.isEmpty()) {
             source = findBlankBoard(inv, recipe);
             if (source < 0) {
-                return Result.MISSING;
+                return TransferResult.MISSING;
             }
         } else if (!isMatchedBy(recipe, slotted)) {
-            return Result.BUSY;
+            return TransferResult.BUSY;
         }
 
         if (!doTransfer) {
-            return Result.OK;
+            return TransferResult.OK;
         }
         if (source >= 0) {
             ItemStack one = inv.getItem(source).copyWithCount(1);
             if (!table.invBoard.insertItem(0, one, false).isEmpty()) {
-                return Result.BUSY; // the slot refused the board: nothing was debited
+                return TransferResult.BUSY; // the slot refused the board: nothing was debited
             }
             debit(inv, source);
         }
         table.findRecipe();
         table.selectOption(option);
-        return Result.OK;
+        return TransferResult.OK;
     }
 
-    /** The grid index of the option that is the board {@code boardId}, within the cells the GUI can show (so the
-     *  selection is always visible), or -1. Only board options are matched: the table's one recipe programs boards. */
+    /** The index of the option that is the board {@code boardId}, over all the recipe's options (the GUI shows them
+     *  a page at a time and turns to the selection's page), or -1. Only board options are matched: the table's one
+     *  recipe programs boards. */
     private static int optionIndex(IProgrammingRecipe recipe, String boardId) {
         List<ItemStack> options = recipe.getOptions(TileProgrammingTable.OPTION_COLS, TileProgrammingTable.OPTION_ROWS);
-        int shown = Math.min(options.size(), TileProgrammingTable.OPTION_COLS * TileProgrammingTable.OPTION_ROWS);
-        for (int i = 0; i < shown; i++) {
+        for (int i = 0; i < options.size(); i++) {
             ItemStack option = options.get(i);
             if (option != null && option.getItem() instanceof ItemRedstoneBoard && boardId.equals(boardIdOf(option))) {
                 return i;
@@ -141,20 +130,21 @@ public final class RoboticsTableTransfer {
     /** Fills {@code table} for programming a robot with {@code boardId}: one blank robot into the centre slot and
      *  one board of that program into a ring slot. The centre may already hold a robot (any, kept as is) and the
      *  ring may already hold exactly that board; anything else in either — a stranger in the centre, or any other
-     *  stack in the ring, which would also stop the table crafting — answers {@link Result#BUSY}. The table
+     *  stack in the ring, which would also stop the table crafting — answers {@link TransferResult#BUSY}. The table
      *  recognises the recipe on its next tick, as it does for hand-placed items.
      *
      *  @param boardId The program id, as on the JEI entry's board.
      *  @param doTransfer false to only validate. */
-    public static Result integrate(Inventory inv, TileIntegrationTable table, String boardId, boolean doTransfer) {
+    public static TransferResult integrate(Inventory inv, TileIntegrationTable table, String boardId,
+            boolean doTransfer) {
         if (!isIntegrableProgram(boardId)) {
-            return Result.INVALID;
+            return TransferResult.INVALID;
         }
 
         ItemStack centre = table.invTarget.getStackInSlot(0);
         boolean needRobot = centre.isEmpty();
         if (!needRobot && !(centre.getItem() instanceof ItemRobot)) {
-            return Result.BUSY;
+            return TransferResult.BUSY;
         }
         boolean needBoard = true;
         for (ItemStack ring : table.invToIntegrate.stacks) {
@@ -163,7 +153,7 @@ public final class RoboticsTableTransfer {
             }
             // The table only crafts from a ring holding exactly the one board it consumes.
             if (!needBoard || ring.getCount() != 1 || !isBoardOfProgram(ring, boardId)) {
-                return Result.BUSY;
+                return TransferResult.BUSY;
             }
             needBoard = false;
         }
@@ -171,22 +161,22 @@ public final class RoboticsTableTransfer {
         int robotSource = needRobot ? findBlankRobot(inv) : -1;
         int boardSource = needBoard ? findBoard(inv, boardId) : -1;
         if ((needRobot && robotSource < 0) || (needBoard && boardSource < 0)) {
-            return Result.MISSING;
+            return TransferResult.MISSING;
         }
         if (!doTransfer) {
-            return Result.OK;
+            return TransferResult.OK;
         }
 
         ItemStack robot = needRobot ? inv.getItem(robotSource).copyWithCount(1) : ItemStack.EMPTY;
         ItemStack board = needBoard ? inv.getItem(boardSource).copyWithCount(1) : ItemStack.EMPTY;
         // Both must fit before either is debited, so a refusal cannot leave the table half-filled.
         if (needRobot && !table.invTarget.insertItem(0, robot, true).isEmpty()) {
-            return Result.BUSY;
+            return TransferResult.BUSY;
         }
         // The ring only takes a board with a robot in the centre, which a robot still in the player's inventory is
         // not yet, so ask about the robot the transfer is about to put there.
         if (needBoard && !table.canRingTake(needRobot ? robot : centre, 0, board)) {
-            return Result.BUSY;
+            return TransferResult.BUSY;
         }
         if (needRobot) {
             table.invTarget.insertItem(0, robot, false);
@@ -196,7 +186,7 @@ public final class RoboticsTableTransfer {
             insertIntoFirstFree(table.invToIntegrate, board);
             debit(inv, boardSource);
         }
-        return Result.OK;
+        return TransferResult.OK;
     }
 
     /** True if {@code boardId} names a registered robot program that the Integration Table turns a blank robot

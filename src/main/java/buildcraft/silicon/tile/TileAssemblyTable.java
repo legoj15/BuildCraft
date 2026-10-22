@@ -46,9 +46,13 @@ import buildcraft.silicon.EnumAssemblyRecipeState;
 public class TileAssemblyTable extends TileLaserTableBase {
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:precision_crafting");
 
+    /** The input inventory's shape, which the GUI lays out as a grid ({@code AssemblyTableLayout}). */
+    public static final int INPUT_COLS = 3, INPUT_ROWS = 4;
+    public static final int INPUT_SLOTS = INPUT_COLS * INPUT_ROWS;
+
     public final ItemHandlerSimple inv = itemManager.addInvHandler(
         "inv",
-        3 * 4,
+        INPUT_SLOTS,
         // INSERT-only by design (commit a2bb0ee67), NOT 1.12.2's BOTH: the table has no pipe-facing
         // output slot (it auto-ejects finished output, like a quarry), so the input inventory is a
         // pure sink — making it extractable would let a wooden pipe pull crafting materials back out.

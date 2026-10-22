@@ -7,6 +7,8 @@ package buildcraft.silicon.container;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.ToIntFunction;
 
 import io.netty.buffer.Unpooled;
 
@@ -18,11 +20,13 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -35,7 +39,8 @@ import buildcraft.silicon.gate.GateVariant;
  * stack as {@code {id, count}} only, so a server that compares the player's stacks on item AND components
  * (as it must) never found a component-carrying ingredient — an Iron AND Gate, a named or enchanted tool —
  * and the "+" button silently did nothing for any such recipe. These tests pin that every stack survives
- * the round trip with its components intact.
+ * the round trip with its components intact. Also pins the advisory half the JEI handler runs before it sends:
+ * which alternative each input slot asks for, how identical asks are summed, and whether the player covers them.
  */
 public class AssemblyTableTransferTest extends VanillaSetupBaseTester {
 
@@ -146,5 +151,69 @@ public class AssemblyTableTransferTest extends VanillaSetupBaseTester {
         List<ItemStack> exactlyFull = tooMany.subList(0, AssemblyTableTransfer.MAX_STACKS);
         Assertions.assertEquals(AssemblyTableTransfer.MAX_STACKS, roundTrip(false, exactlyFull).stacks().size(),
                 "a request naming exactly one stack per table slot is still honoured");
+    }
+
+    // ── The advisory half: what the JEI handler asks for, and whether the player can cover it ──
+
+    /** A player holding exactly {@code held}, by item (these tests use component-less stacks). */
+    private static ToIntFunction<ItemStack> holding(Map<Item, Integer> held) {
+        return stack -> held.getOrDefault(stack.getItem(), 0);
+    }
+
+    @Test
+    public void slotsAskingForTheSameStackAreSummedIntoOneRequest() {
+        List<List<ItemStack>> slots = List.of(
+                List.of(new ItemStack(Items.REDSTONE, 2)),
+                List.of(new ItemStack(Items.IRON_INGOT, 1)),
+                List.of(new ItemStack(Items.REDSTONE, 3)));
+
+        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots, holding(Map.of()));
+
+        Assertions.assertEquals(2, need.size(), "two redstone slots collapse into one stack");
+        Assertions.assertTrue(need.get(0).is(Items.REDSTONE) && need.get(0).getCount() == 5,
+                "the redstone demand is 2 + 3, got " + need.get(0));
+        Assertions.assertTrue(need.get(1).is(Items.IRON_INGOT) && need.get(1).getCount() == 1);
+        Assertions.assertEquals(2, slots.get(0).get(0).getCount(), "the JEI entry's own stacks are never grown");
+    }
+
+    @Test
+    public void eachSlotPicksTheFirstAlternativeThePlayerHasEnoughOf() {
+        List<List<ItemStack>> slots = List.of(
+                List.of(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.BIRCH_PLANKS, 4)),
+                List.of(new ItemStack(Items.IRON_INGOT, 1), new ItemStack(Items.GOLD_INGOT, 1)));
+
+        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots,
+                holding(Map.of(Items.BIRCH_PLANKS, 9, Items.OAK_PLANKS, 3)));
+        Assertions.assertTrue(need.get(0).is(Items.BIRCH_PLANKS),
+                "three oak planks do not cover four, so the birch alternative is the one asked for");
+        Assertions.assertTrue(need.get(1).is(Items.IRON_INGOT),
+                "with neither ingot held, the first alternative is the one reported short");
+    }
+
+    @Test
+    public void emptySlotsAndEmptyAlternativesAskForNothing() {
+        List<List<ItemStack>> slots = List.of(List.of(), List.of(ItemStack.EMPTY, new ItemStack(Items.STICK, 2)));
+
+        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots, holding(Map.of(Items.STICK, 2)));
+
+        Assertions.assertEquals(1, need.size());
+        Assertions.assertTrue(need.get(0).is(Items.STICK) && need.get(0).getCount() == 2,
+                "an empty alternative is skipped, and a slot with none is dropped");
+        Assertions.assertTrue(AssemblyTableTransfer.chooseNeed(List.of(List.of()), holding(Map.of())).isEmpty());
+    }
+
+    @Test
+    public void theCheckAnswersOkMissingOrInvalid() {
+        List<ItemStack> need = List.of(new ItemStack(Items.REDSTONE, 5), new ItemStack(Items.IRON_INGOT, 1));
+
+        Assertions.assertEquals(TransferResult.OK,
+                AssemblyTableTransfer.check(need, holding(Map.of(Items.REDSTONE, 5, Items.IRON_INGOT, 1))),
+                "exactly covering the demand is enough");
+        Assertions.assertEquals(TransferResult.MISSING,
+                AssemblyTableTransfer.check(need, holding(Map.of(Items.REDSTONE, 4, Items.IRON_INGOT, 1))),
+                "one redstone short is missing");
+        Assertions.assertEquals(TransferResult.MISSING, AssemblyTableTransfer.check(need, holding(Map.of())));
+        Assertions.assertEquals(TransferResult.INVALID, AssemblyTableTransfer.check(List.of(), holding(Map.of())),
+                "an entry that asks for nothing is not a transferable recipe");
     }
 }

@@ -8,6 +8,7 @@ package buildcraft.silicon.container;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.FriendlyByteBuf;
@@ -18,7 +19,9 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 
 import buildcraft.lib.compat.jei.JeiTransferUtil;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.silicon.tile.TileAssemblyTable;
 
 /**
  * The wire format and server-side move of the JEI "+" transfer into the Assembly Table, kept free of JEI
@@ -35,8 +38,9 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 public final class AssemblyTableTransfer {
     private AssemblyTableTransfer() {}
 
-    /** The table has 12 input slots, so a request naming more distinct stacks than that cannot be a real recipe. */
-    public static final int MAX_STACKS = 12;
+    /** The table has this many input slots, so a request naming more distinct stacks than that cannot be a real
+     *  recipe. */
+    public static final int MAX_STACKS = TileAssemblyTable.INPUT_SLOTS;
 
     /** A decoded transfer request. {@code stacks} is empty when the payload was oversized (or really empty). */
     public record Request(boolean maxTransfer, List<ItemStack> stacks) {}
@@ -73,6 +77,58 @@ public final class AssemblyTableTransfer {
             }
         }
         return new Request(maxTransfer, stacks);
+    }
+
+    /** What one recipe's worth of a JEI entry asks the player for: per input slot the first alternative of which
+     *  {@code available} holds enough (the first alternative when none is, so the shortfall then shows in
+     *  {@link #check}), with slots that need the same stack (item and components) summed into one.
+     *
+     *  @param inputSlots the entry's input slots, each the alternatives that satisfy it
+     *  @param available how many of a stack the player holds, matched on item and components */
+    public static List<ItemStack> chooseNeed(List<List<ItemStack>> inputSlots, ToIntFunction<ItemStack> available) {
+        List<ItemStack> need = new ArrayList<>();
+        for (List<ItemStack> alternatives : inputSlots) {
+            if (alternatives.isEmpty()) continue;
+            ItemStack pick = null;
+            for (ItemStack alt : alternatives) {
+                if (alt.isEmpty()) continue;
+                if (available.applyAsInt(alt) >= alt.getCount()) {
+                    pick = alt;
+                    break;
+                }
+            }
+            if (pick == null) {
+                pick = alternatives.get(0); // none available: the check below reports the shortfall
+            }
+            mergeInto(need, pick);
+        }
+        return need;
+    }
+
+    /** The advisory answer for {@code need}: {@code INVALID} when the entry asks for nothing, {@code MISSING} when
+     *  the player lacks any of it, else {@code OK}. The server runs no such check: {@link #apply} moves whatever of
+     *  the request the player holds, so a stale client at most moves less than it showed. */
+    public static TransferResult check(List<ItemStack> need, ToIntFunction<ItemStack> available) {
+        if (need.isEmpty()) {
+            return TransferResult.INVALID;
+        }
+        for (ItemStack stack : need) {
+            if (available.applyAsInt(stack) < stack.getCount()) {
+                return TransferResult.MISSING;
+            }
+        }
+        return TransferResult.OK;
+    }
+
+    /** Add {@code stack} to {@code list}, merging counts with an existing same-item-and-components entry. */
+    private static void mergeInto(List<ItemStack> list, ItemStack stack) {
+        for (ItemStack existing : list) {
+            if (ItemStack.isSameItemSameComponents(existing, stack)) {
+                existing.grow(stack.getCount());
+                return;
+            }
+        }
+        list.add(stack.copy());
     }
 
     /** Moves each requested stack from {@code playerInv} into {@code dest}; returns the total item count moved. */

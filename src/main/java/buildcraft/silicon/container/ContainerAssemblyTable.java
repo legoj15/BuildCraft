@@ -36,19 +36,17 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
     public ContainerAssemblyTable(int containerId, Player player, TileAssemblyTable tile) {
         super(BCSiliconMenuTypes.ASSEMBLY_TABLE.get(), containerId, player, tile);
 
-        for (int y = 0; y < 4; y++) {
-            for (int x = 0; x < 3; x++) {
-                addSlot(new SlotBase(tile.inv, x + y * 3, 8 + x * 18, 36 + y * 18));
-            }
+        for (int index = 0; index < AssemblyTableLayout.GRID_CELLS; index++) {
+            addSlot(new SlotBase(tile.inv, index,
+                    AssemblyTableLayout.inputX(index), AssemblyTableLayout.inputY(index)));
         }
 
-        for (int y = 0; y < 4; y++) {
-            for (int x = 0; x < 3; x++) {
-                addSlot(new SlotDisplay(this::getDisplay, x + y * 3, 116 + x * 18, 36 + y * 18));
-            }
+        for (int index = 0; index < AssemblyTableLayout.GRID_CELLS; index++) {
+            addSlot(new SlotDisplay(this::getDisplay, index,
+                    AssemblyTableLayout.displayX(index), AssemblyTableLayout.displayY(index)));
         }
 
-        addFullPlayerInventory(8, 123);
+        addFullPlayerInventory(AssemblyTableLayout.PLAYER_INV_X, AssemblyTableLayout.PLAYER_INV_Y);
     }
 
     @Override

@@ -7,21 +7,13 @@
 package buildcraft.lib.compat.jei;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.transfer.IRecipeTransferError;
-//? if >=26.2 {
-import mezz.jei.api.recipe.transfer.IRecipeTransferContext;
-//?}
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
@@ -41,34 +33,19 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
  * required buckets (fluid already in a tank or pipe has no item to move).
  *
  * <p>Subclasses supply the JEI {@code getRecipeType()} and the recipe → (slot, bucket) mapping via
- * {@link #getRequiredBuckets}; this base performs the availability check and the
- * {@link ContainerBC_Neptune#NET_JEI_TRANSFER_BUCKETS} network send.
+ * {@link #getRequiredBuckets}; this class performs the availability check ({@link #check}) and the
+ * {@link ContainerBC_Neptune#NET_JEI_TRANSFER_BUCKETS} network send ({@link #send}) inside the shared
+ * {@link AbstractTransferHandler} skeleton. A transfer that cannot be done is always {@link TransferResult#MISSING}.
  *
  * @param <C> the machine's container menu type (a {@link BCContainer})
  * @param <R> the JEI recipe type
  */
 public abstract class AbstractBucketTransferHandler<C extends AbstractContainerMenu & BCContainer, R>
-        implements IRecipeTransferHandler<C, R> {
-
-    protected final IRecipeTransferHandlerHelper helper;
-    private final Class<C> containerClass;
-    private final Supplier<MenuType<C>> menuType;
+        extends AbstractTransferHandler<C, R> {
 
     protected AbstractBucketTransferHandler(IRecipeTransferHandlerHelper helper, Class<C> containerClass,
             Supplier<MenuType<C>> menuType) {
-        this.helper = helper;
-        this.containerClass = containerClass;
-        this.menuType = menuType;
-    }
-
-    @Override
-    public Class<? extends C> getContainerClass() {
-        return containerClass;
-    }
-
-    @Override
-    public Optional<MenuType<C>> getMenuType() {
-        return Optional.of(menuType.get());
+        super(helper, containerClass, menuType);
     }
 
     /**
@@ -78,35 +55,17 @@ public abstract class AbstractBucketTransferHandler<C extends AbstractContainerM
      */
     protected abstract List<BucketSlot> getRequiredBuckets(R recipe);
 
-    //? if >=26.2 {
     @Override
-    @Nullable
-    public IRecipeTransferError transferRecipe(IRecipeTransferContext<R, C> context, boolean doTransfer) {
-        return transfer(context.getContainer(), context.getRecipe(), context.getPlayer(), doTransfer);
-    }
-    //?}
-
-    // JEI 30.30+ (26.2) deprecates this for removal in favour of the context overload above but keeps it
-    // abstract, so it must stay; it is also the only entry point on older JEI builds.
-    @Override
-    @Nullable
-    @SuppressWarnings("removal")
-    public IRecipeTransferError transferRecipe(C container, R recipe, IRecipeSlotsView recipeSlots,
-            Player player, boolean maxTransfer, boolean doTransfer) {
-        return transfer(container, recipe, player, doTransfer);
-    }
-
-    @Nullable
-    private IRecipeTransferError transfer(C container, R recipe, Player player, boolean doTransfer) {
+    protected TransferResult check(C container, R recipe, Player player, boolean maxTransfer) {
         List<BucketSlot> required = getRequiredBuckets(recipe);
         if (required.isEmpty()) {
-            return missing();
+            return TransferResult.MISSING;
         }
         // Every slot must map to a real bucket, and the player must hold enough of each bucket item
         // (two of the same fluid needs two buckets — hence the per-item count).
         for (BucketSlot req : required) {
             if (req.bucket() == Items.AIR) {
-                return missing();
+                return TransferResult.MISSING;
             }
             int needed = 0;
             for (BucketSlot other : required) {
@@ -115,25 +74,22 @@ public abstract class AbstractBucketTransferHandler<C extends AbstractContainerM
                 }
             }
             if (JeiTransferUtil.countMatching(player.getInventory(), new ItemStack(req.bucket())) < needed) {
-                return missing();
+                return TransferResult.MISSING;
             }
         }
-
-        if (doTransfer) {
-            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_BUCKETS, buf -> {
-                buf.writeVarInt(required.size());
-                for (BucketSlot req : required) {
-                    buf.writeVarInt(req.slot());
-                    buf.writeUtf(BuiltInRegistries.ITEM.getKey(req.bucket()).toString());
-                }
-            });
-        }
-        return null;
+        return TransferResult.OK;
     }
 
-    protected IRecipeTransferError missing() {
-        return helper.createUserErrorWithTooltip(
-                Component.translatable("gui.jei.transfer.buildcraftunofficial.missing"));
+    @Override
+    protected void send(C container, R recipe, Player player, boolean maxTransfer) {
+        List<BucketSlot> required = getRequiredBuckets(recipe);
+        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_BUCKETS, buf -> {
+            buf.writeVarInt(required.size());
+            for (BucketSlot req : required) {
+                buf.writeVarInt(req.slot());
+                buf.writeUtf(BuiltInRegistries.ITEM.getKey(req.bucket()).toString());
+            }
+        });
     }
 
     /** The bucket item destined for a given container slot index. */

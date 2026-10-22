@@ -23,6 +23,7 @@ import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 import buildcraft.lib.compat.jei.JeiSubtypes;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.BCSiliconMenuTypes;
+import buildcraft.silicon.container.AssemblyTableLayout;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAssemblyTable;
@@ -113,11 +114,12 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         registration.addGhostIngredientHandler(GuiAdvancedCraftingTable.class, new BCGhostIngredientHandler<>());
 
         // Clicking the power/charge bar in the Assembly Table opens its JEI recipe view.
-        // Region matches RECT_PROGRESS (86, 36, 4, 70) — the vertical gauge that fills as
-        // power accumulates — clear of the recipe grid (x >= 116) the GUI handles on click.
+        // The region is the layout's energy bar — the vertical gauge that fills as power accumulates, the same
+        // rectangle the GUI draws — clear of the recipe grid the GUI handles on click.
         registration.addRecipeClickArea(
                 GuiAssemblyTable.class,
-                86, 36, 4, 70,
+                AssemblyTableLayout.BAR_X, AssemblyTableLayout.BAR_Y, AssemblyTableLayout.BAR_W,
+                AssemblyTableLayout.BAR_H,
                 AssemblyRecipeJeiTypes.ASSEMBLY
         );
 

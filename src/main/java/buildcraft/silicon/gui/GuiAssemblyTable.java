@@ -24,21 +24,26 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.gui.pos.IGuiArea;
 
 import buildcraft.silicon.EnumAssemblyRecipeState;
+import buildcraft.silicon.container.AssemblyTableLayout;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 
 public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/assembly_table.png");
-    private static final int SIZE_X = 176, SIZE_Y = 220;
+    // All geometry (slots, recipe cells, state markers, energy bar) is AssemblyTableLayout's, shared with the menu
+    // and the JEI category.
+    private static final int SIZE_X = AssemblyTableLayout.SIZE_X, SIZE_Y = AssemblyTableLayout.SIZE_Y;
+    private static final int CELL = AssemblyTableLayout.CELL_SIZE;
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
-    private static final GuiIcon ICON_SAVED = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 16, 16);
-    private static final GuiIcon ICON_SAVED_ENOUGH = new GuiIcon(TEXTURE_BASE, SIZE_X, 16, 16, 16);
-    private static final GuiIcon ICON_SAVED_ENOUGH_ACTIVE = new GuiIcon(TEXTURE_BASE, SIZE_X, 32, 16, 16);
-    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 48, 4, 70);
-    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(86, 36, 4, 70);
-
-    // Help regions — mirror ContainerAssemblyTable slot layout (3×4 grid at (8,36) and (116,36), 18px pitch).
-    private static final int INPUT_X = 8, INPUT_Y = 36, INPUT_W = 3 * 18 - 2, INPUT_H = 4 * 18 - 2;
-    private static final int RECIPES_X = 116, RECIPES_Y = 36, RECIPES_W = 3 * 18 - 2, RECIPES_H = 4 * 18 - 2;
+    private static final GuiIcon ICON_SAVED = new GuiIcon(TEXTURE_BASE, AssemblyTableLayout.STATE_U,
+            AssemblyTableLayout.SAVED_V, CELL, CELL);
+    private static final GuiIcon ICON_SAVED_ENOUGH = new GuiIcon(TEXTURE_BASE, AssemblyTableLayout.STATE_U,
+            AssemblyTableLayout.SAVED_ENOUGH_V, CELL, CELL);
+    private static final GuiIcon ICON_SAVED_ENOUGH_ACTIVE = new GuiIcon(TEXTURE_BASE, AssemblyTableLayout.STATE_U,
+            AssemblyTableLayout.SAVED_ENOUGH_ACTIVE_V, CELL, CELL);
+    private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, AssemblyTableLayout.BAR_FILL_U,
+            AssemblyTableLayout.BAR_FILL_V, AssemblyTableLayout.BAR_W, AssemblyTableLayout.BAR_H);
+    private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(AssemblyTableLayout.BAR_X,
+            AssemblyTableLayout.BAR_Y, AssemblyTableLayout.BAR_W, AssemblyTableLayout.BAR_H);
 
     public GuiAssemblyTable(ContainerAssemblyTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);
@@ -54,11 +59,13 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
         mainGui.shownElements.add(new LedgerTablePower(mainGui, menu.tile, true));
 
         mainGui.shownElements.add(new DummyHelpElement(
-                new GuiRectangle(INPUT_X, INPUT_Y, INPUT_W, INPUT_H).offset(mainGui.rootElement),
+                new GuiRectangle(AssemblyTableLayout.INPUT_X, AssemblyTableLayout.INPUT_Y,
+                        AssemblyTableLayout.gridWidth(), AssemblyTableLayout.gridHeight()).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.assembly_table.input.title", 0xFF_FF_CC_88,
                         "buildcraft.help.assembly_table.input.desc")));
         mainGui.shownElements.add(new DummyHelpElement(
-                new GuiRectangle(RECIPES_X, RECIPES_Y, RECIPES_W, RECIPES_H).offset(mainGui.rootElement),
+                new GuiRectangle(AssemblyTableLayout.DISPLAY_X, AssemblyTableLayout.DISPLAY_Y,
+                        AssemblyTableLayout.gridWidth(), AssemblyTableLayout.gridHeight()).offset(mainGui.rootElement),
                 new ElementHelpInfo("buildcraft.help.assembly_table.recipes.title", 0xFF_88_CC_88,
                         "buildcraft.help.assembly_table.recipes.desc1",
                         "buildcraft.help.assembly_table.recipes.desc2")));
@@ -103,10 +110,8 @@ public class GuiAssemblyTable extends GuiBC8<ContainerAssemblyTable> {
     }
 
     private IGuiArea getRecipeArea(int index) {
-        int posX = index % 3;
-        int posY = index / 3;
-        return new GuiRectangle(16, 16).offset(mainGui.rootElement)
-            .offset(116 + posX * 18, 36 + posY * 18);
+        return new GuiRectangle(CELL, CELL).offset(mainGui.rootElement)
+            .offset(AssemblyTableLayout.displayX(index), AssemblyTableLayout.displayY(index));
     }
 
     @Override

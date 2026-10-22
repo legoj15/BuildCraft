@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Inventory;
 
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
+import buildcraft.lib.gui.button.BCButton;
 import buildcraft.lib.gui.help.DummyHelpElement;
 import buildcraft.lib.gui.help.ElementHelpInfo;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
@@ -23,12 +24,15 @@ import buildcraft.lib.gui.pos.IGuiArea;
 import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.gui.LedgerTablePower;
-import buildcraft.silicon.tile.TileProgrammingTable;
 
 /** Ported from 7.1.x {@code GuiProgrammingTable} against the 8.0.x-era GUI texture (256×256 atlas, 176×207 base).
  *  The 6×4 option grid is drawn by the display slots; this class hit-tests clicks and routes them as
  *  {@code handleInventoryButtonClick} (toggle: clicking the selected option sends -1, deselecting it, like 7.1.x),
- *  and highlights the current selection plus the vertical energy bar. */
+ *  and highlights the current selection plus the vertical energy bar.
+ *
+ *  <p>A recipe offering more options than the grid has cells is shown a page at a time, flipped with the two
+ *  buttons under the grid (shown only when there is more than one page). The page is client-side view state on the
+ *  menu; the selection the server keeps counts over all the options, so a click sends the option's overall index. */
 public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     private static final Identifier TEXTURE_BASE = Identifier.parse("buildcraftunofficial:textures/gui/programming_table.png");
     // All geometry (slots, option grid, selection frame, energy bar) is ProgrammingTableLayout's, shared with the
@@ -43,8 +47,62 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(ProgrammingTableLayout.BAR_X,
             ProgrammingTableLayout.BAR_Y, ProgrammingTableLayout.BAR_W, ProgrammingTableLayout.BAR_H);
 
+    private BCButton prevPageButton;
+    private BCButton nextPageButton;
+    /** The selection the page last followed; -2 until the first tick, so a table opened on a selection past the
+     *  first page shows that page. */
+    private int followedSelection = -2;
+
     public GuiProgrammingTable(ContainerProgrammingTable container, Inventory playerInventory, Component title) {
         super(container, playerInventory, title, SIZE_X, SIZE_Y);
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        prevPageButton = addRenderableWidget(BCButton.builder(leftPos + ProgrammingTableLayout.PAGER_PREV_X,
+                topPos + ProgrammingTableLayout.PAGER_Y, ProgrammingTableLayout.PAGER_W, ProgrammingTableLayout.PAGER_H)
+            .label(Component.literal("<"))
+            .tooltip(Component.translatable("gui.buildcraftunofficial.programming_table.page_previous"))
+            .activeWhen(() -> menu.getOptionPage() > 0)
+            .onPress(() -> menu.setOptionPage(menu.getOptionPage() - 1))
+            .build());
+        nextPageButton = addRenderableWidget(BCButton.builder(leftPos + ProgrammingTableLayout.PAGER_NEXT_X,
+                topPos + ProgrammingTableLayout.PAGER_Y, ProgrammingTableLayout.PAGER_W, ProgrammingTableLayout.PAGER_H)
+            .label(Component.literal(">"))
+            .tooltip(Component.translatable("gui.buildcraftunofficial.programming_table.page_next"))
+            .activeWhen(() -> menu.getOptionPage() < menu.getOptionPageCount() - 1)
+            .onPress(() -> menu.setOptionPage(menu.getOptionPage() + 1))
+            .build());
+        updatePager();
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        followSelection();
+        updatePager();
+    }
+
+    /** Turns to the page of the selected option whenever the selection changes by any route (the GUI opening on a
+     *  saved selection, the JEI "+" transfer selecting a board, the server clearing it), and not otherwise, so the
+     *  player can page away from an unchanged selection. */
+    private void followSelection() {
+        int selected = menu.tile == null ? -1 : menu.tile.optionId;
+        if (selected == followedSelection) {
+            return;
+        }
+        followedSelection = selected;
+        if (selected >= 0) {
+            menu.setOptionPage(ProgrammingTableLayout.pageOf(selected));
+        }
+    }
+
+    /** The page buttons only exist for a table with more than one page of options. */
+    private void updatePager() {
+        boolean paged = menu.getOptionPageCount() > 1;
+        prevPageButton.visible = paged;
+        nextPageButton.visible = paged;
     }
 
     @Override
@@ -90,15 +148,17 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
                 ).offset(mainGui.rootElement)
             );
         }
-        if (menu.tile.optionId >= 0) {
-            ICON_SELECTED.drawAt(getOptionArea(menu.tile.optionId));
+        int selected = menu.tile.optionId;
+        if (selected >= 0 && ProgrammingTableLayout.pageOf(selected) == menu.getOptionPage()) {
+            ICON_SELECTED.drawAt(getOptionArea(ProgrammingTableLayout.cellOf(selected)));
         }
     }
 
-    private IGuiArea getOptionArea(int index) {
+    /** The screen area of grid cell {@code cell} (0-based on the page being shown). */
+    private IGuiArea getOptionArea(int cell) {
         return new GuiRectangle(ProgrammingTableLayout.CELL_SIZE, ProgrammingTableLayout.CELL_SIZE)
                 .offset(mainGui.rootElement)
-                .offset(ProgrammingTableLayout.cellX(index), ProgrammingTableLayout.cellY(index));
+                .offset(ProgrammingTableLayout.cellX(cell), ProgrammingTableLayout.cellY(cell));
     }
 
     @Override
@@ -106,6 +166,14 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
         BCGraphics graphics = GuiIcon.getGuiGraphics();
         String title = I18n.get("block.buildcraftunofficial.programming_table");
         graphics.text(font, title, (imageWidth - font.width(title)) / 2, 15, 0xFF404040, false);
+
+        int pages = menu.getOptionPageCount();
+        if (pages > 1) {
+            String label = I18n.get("gui.buildcraftunofficial.programming_table.page", menu.getOptionPage() + 1, pages);
+            int centre = ProgrammingTableLayout.GRID_X + ProgrammingTableLayout.gridWidth() / 2;
+            graphics.text(font, label, centre - font.width(label) / 2, ProgrammingTableLayout.PAGER_Y + 2,
+                    0xFF404040, false);
+        }
     }
 
     //? if >=1.21.10 {
@@ -141,12 +209,14 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     }*/
     //?}
 
+    /** The option under the mouse as an index over ALL the options (what the server selects by), or -1. */
     private int hitTestOption(int mouseX, int mouseY) {
-        int count = menu.tile.options == null ? 0 : Math.min(menu.tile.options.size(),
-                TileProgrammingTable.OPTION_COLS * TileProgrammingTable.OPTION_ROWS);
-        for (int i = 0; i < count; i++) {
-            if (getOptionArea(i).contains(mouseX, mouseY)) {
-                return i;
+        int first = ProgrammingTableLayout.firstOptionOn(menu.getOptionPage());
+        int shown = menu.tile.options == null ? 0
+                : Math.min(menu.tile.options.size() - first, ProgrammingTableLayout.PAGE_SIZE);
+        for (int cell = 0; cell < shown; cell++) {
+            if (getOptionArea(cell).contains(mouseX, mouseY)) {
+                return first + cell;
             }
         }
         return -1;

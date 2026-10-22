@@ -13,6 +13,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 //?}
 import net.minecraft.world.entity.player.Player;
 
+import buildcraft.lib.compat.jei.AbstractTransferHandler;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 import buildcraft.robotics.BCRoboticsMenuTypes;
@@ -27,7 +29,7 @@ import buildcraft.silicon.tile.TileProgrammingTable;
  * this only asks it for the entry's recipe and board, after the same checks as an advisory answer.
  */
 public class ProgrammingTableTransferHandler
-        extends AbstractTableTransferHandler<ContainerProgrammingTable, ProgrammingRecipeJei> {
+        extends AbstractTransferHandler<ContainerProgrammingTable, ProgrammingRecipeJei> {
 
     public ProgrammingTableTransferHandler(IRecipeTransferHandlerHelper helper) {
         super(helper, ContainerProgrammingTable.class, BCRoboticsMenuTypes.PROGRAMMING_TABLE::get);
@@ -43,22 +45,24 @@ public class ProgrammingTableTransferHandler
     }
 
     @Override
-    protected RoboticsTableTransfer.Result execute(ContainerProgrammingTable container, ProgrammingRecipeJei recipe,
-            Player player, boolean doTransfer) {
+    protected TransferResult check(ContainerProgrammingTable container, ProgrammingRecipeJei recipe, Player player,
+            boolean maxTransfer) {
         TileProgrammingTable table = container.tile;
-        String recipeId = recipe.recipeId();
         String boardId = recipe.boardId();
         if (table == null || boardId == null) {
-            return RoboticsTableTransfer.Result.INVALID;
+            return TransferResult.INVALID;
         }
-        RoboticsTableTransfer.Result result =
-                RoboticsTableTransfer.program(player.getInventory(), table, recipeId, boardId, false);
-        if (result == RoboticsTableTransfer.Result.OK && doTransfer) {
-            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_PROGRAMMING, buf -> {
-                buf.writeUtf(recipeId);
-                buf.writeUtf(boardId);
-            });
-        }
-        return result;
+        return RoboticsTableTransfer.program(player.getInventory(), table, recipe.recipeId(), boardId, false);
+    }
+
+    @Override
+    protected void send(ContainerProgrammingTable container, ProgrammingRecipeJei recipe, Player player,
+            boolean maxTransfer) {
+        String recipeId = recipe.recipeId();
+        String boardId = recipe.boardId();
+        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_PROGRAMMING, buf -> {
+            buf.writeUtf(recipeId);
+            buf.writeUtf(boardId);
+        });
     }
 }

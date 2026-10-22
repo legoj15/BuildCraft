@@ -23,8 +23,7 @@ import buildcraft.silicon.tile.TileProgrammingTable;
 
 /** Which Programming Table recipe a board lands in must not depend on a {@code HashMap}'s bucket order. The
  *  registry keeps its recipes in id order, so when two recipes accept one input the table, the JEI transfer and
- *  the JEI collector all resolve it the same way on every run, every JVM, client and server alike - and the
- *  registry says out loud when a recipe offers more programs than the table's 6x4 grid can ever show. */
+ *  the JEI collector all resolve it the same way on every run, every JVM, client and server alike. */
 public class ProgrammingRecipeOrderTest extends VanillaSetupBaseTester {
 
     /** A recipe that accepts whatever the predicate says and offers {@code optionCount} options. */
@@ -130,42 +129,5 @@ public class ProgrammingRecipeOrderTest extends VanillaSetupBaseTester {
         } finally {
             stubs.forEach(stub -> ProgrammingRecipeRegistry.INSTANCE.removeRecipe(stub.getId()));
         }
-    }
-
-    @Test
-    public void aProgramListThatFitsTheGridDrawsNoWarning() {
-        int cells = ProgrammingRecipeRegistry.GRID_CELLS;
-        Assertions.assertEquals(TileProgrammingTable.OPTION_COLS * TileProgrammingTable.OPTION_ROWS, cells,
-                "the registry's idea of the grid is the table's grid");
-
-        Assertions.assertNull(ProgrammingRecipeRegistry.unreachableOptionsWarning(
-                new StubRecipe("mod:full", stack -> true, cells)),
-                "exactly a full grid is fine");
-        Assertions.assertNull(ProgrammingRecipeRegistry.unreachableOptionsWarning(
-                new StubRecipe("mod:small", stack -> true, 3)));
-    }
-
-    @Test
-    public void aProgramListPastTheGridIsReportedWithTheCountThatCannotBeReached() {
-        int cells = ProgrammingRecipeRegistry.GRID_CELLS;
-
-        String warning = ProgrammingRecipeRegistry.unreachableOptionsWarning(
-                new StubRecipe("mod:too_many", stack -> true, cells + 3));
-
-        Assertions.assertNotNull(warning, "the 25th program is unreachable in the GUI, JEI and the transfer");
-        Assertions.assertTrue(warning.contains("mod:too_many"), "names the recipe: " + warning);
-        Assertions.assertTrue(warning.contains(String.valueOf(cells + 3)), "gives its option count: " + warning);
-        Assertions.assertTrue(warning.contains(String.valueOf(cells)), "gives the grid size: " + warning);
-    }
-
-    @Test
-    public void registeringAnOversizedRecipeStillRegistersIt() {
-        ProgrammingRecipeRegistry registry = new ProgrammingRecipeRegistry();
-        StubRecipe oversized = new StubRecipe("mod:oversized", stack -> true, ProgrammingRecipeRegistry.GRID_CELLS + 1);
-
-        registry.addRecipe(oversized);
-
-        Assertions.assertSame(oversized, registry.getRecipe("mod:oversized"),
-                "the warning is advice, not a veto: the first 24 programs still work");
     }
 }

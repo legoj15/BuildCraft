@@ -23,9 +23,17 @@ import buildcraft.silicon.tile.TileProgrammingTable;
 /** Lives in robotics (mirroring 8.0.x's file placement) even though the tile is silicon's — the table's whole
  *  purpose is boards. 7.1.x layout: board in top-left, result below it, a 6×4 option grid of display-only stacks
  *  in the middle (positions: {@link ProgrammingTableLayout}). The grid is not slotted interaction: the GUI hit-tests it and routes clicks through
- *  {@link #clickMenuButton}, exactly like the assembly table's recipe list. */
+ *  {@link #clickMenuButton}, exactly like the assembly table's recipe list.
+ *
+ *  <p>A recipe offering more options than the grid has cells (an addon's boards on top of BuildCraft's own) is
+ *  shown a page at a time. The page is purely a client-side view: the display slots read it, but the selection the
+ *  server keeps ({@link TileProgrammingTable#optionId}) counts over all the options and needs no page. */
 @SuppressWarnings("this-escape")
 public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTable> {
+
+    /** The page of the option grid being shown, as last asked for; read through {@link #getOptionPage}, which keeps
+     *  it inside the pages that exist. Kept raw so a page asked for before the options have synced is not lost. */
+    private int optionPage;
 
     // Client-side constructor (from network)
     public ContainerProgrammingTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -39,7 +47,7 @@ public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTa
         addSlot(new SlotBase(tile.invBoard, 0, ProgrammingTableLayout.BOARD_X, ProgrammingTableLayout.BOARD_Y));
         addSlot(new SlotOutput(tile.invResult, 0, ProgrammingTableLayout.RESULT_X, ProgrammingTableLayout.RESULT_Y));
 
-        for (int index = 0; index < TileProgrammingTable.OPTION_ROWS * TileProgrammingTable.OPTION_COLS; index++) {
+        for (int index = 0; index < ProgrammingTableLayout.PAGE_SIZE; index++) {
             addSlot(new SlotDisplay(this::getDisplay, index,
                     ProgrammingTableLayout.cellX(index), ProgrammingTableLayout.cellY(index)));
         }
@@ -67,9 +75,27 @@ public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTa
         super.readMessage(id, buffer, isClient, ctx);
     }
 
+    /** The page of the option grid being shown (0-based), within the pages the current options need. */
+    public int getOptionPage() {
+        return ProgrammingTableLayout.clampPage(optionPage, optionCount());
+    }
+
+    /** How many pages the current options need (1 when they fit the grid or there are none). */
+    public int getOptionPageCount() {
+        return ProgrammingTableLayout.pageCount(optionCount());
+    }
+
+    /** Shows page {@code page} of the option grid. Client-side view state only; nothing is sent. */
+    public void setOptionPage(int page) {
+        optionPage = Math.max(0, page);
+    }
+
+    private int optionCount() {
+        return tile != null && tile.options != null ? tile.options.size() : 0;
+    }
+
     private ItemStack getDisplay(int index) {
-        return tile != null && tile.options != null && index < tile.options.size()
-                ? tile.options.get(index)
-                : ItemStack.EMPTY;
+        int option = ProgrammingTableLayout.firstOptionOn(getOptionPage()) + index;
+        return option < optionCount() ? tile.options.get(option) : ItemStack.EMPTY;
     }
 }

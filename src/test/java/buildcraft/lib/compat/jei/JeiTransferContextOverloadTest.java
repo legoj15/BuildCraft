@@ -15,7 +15,8 @@ import org.junit.jupiter.api.Test;
 
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 
-import buildcraft.robotics.compat.jei.AbstractTableTransferHandler;
+import buildcraft.robotics.compat.jei.IntegrationTableTransferHandler;
+import buildcraft.robotics.compat.jei.ProgrammingTableTransferHandler;
 import buildcraft.silicon.compat.jei.AssemblyTableTransferHandler;
 
 /**
@@ -24,19 +25,27 @@ import buildcraft.silicon.compat.jei.AssemblyTableTransferHandler;
  * directive, so a mangled directive or a dropped override would compile clean (JEI's default bridges to the old
  * one) and only break when JEI deletes it. Pins that on whichever node's JEI has the new overload; on older JEI
  * lines it checks the handlers still load and implement the interface.
+ *
+ * <p>Only two classes implement the interface directly: {@link AbstractTransferHandler}, the skeleton every
+ * item/bucket machine handler extends, and the crafting-table {@link BlueprintTransferHandler}. A machine handler
+ * that stopped extending the skeleton would need its own override, so that is pinned too.
  */
 public class JeiTransferContextOverloadTest {
 
-    private static final List<Class<?>> HANDLERS = List.of(
+    private static final List<Class<?>> DECLARING_HANDLERS = List.of(
+        AbstractTransferHandler.class,
+        BlueprintTransferHandler.class);
+
+    private static final List<Class<?>> SKELETON_HANDLERS = List.of(
         AbstractBucketTransferHandler.class,
-        BlueprintTransferHandler.class,
         AssemblyTableTransferHandler.class,
-        AbstractTableTransferHandler.class);
+        ProgrammingTableTransferHandler.class,
+        IntegrationTableTransferHandler.class);
 
     @Test
     public void handlersOverrideTheContextOverloadWhenJeiHasIt() {
         Class<?> context = contextType();
-        for (Class<?> handler : HANDLERS) {
+        for (Class<?> handler : DECLARING_HANDLERS) {
             Assertions.assertTrue(IRecipeTransferHandler.class.isAssignableFrom(handler),
                 handler.getName() + " must implement IRecipeTransferHandler");
             if (context == null) {
@@ -50,6 +59,14 @@ public class JeiTransferContextOverloadTest {
                     + context.getSimpleName() + ", boolean) on this node's JEI", e);
             }
             Assertions.assertTrue(Modifier.isPublic(override.getModifiers()), override + " must be public");
+        }
+    }
+
+    @Test
+    public void everyMachineHandlerRidesTheSharedSkeleton() {
+        for (Class<?> handler : SKELETON_HANDLERS) {
+            Assertions.assertTrue(AbstractTransferHandler.class.isAssignableFrom(handler),
+                handler.getName() + " must extend AbstractTransferHandler, which carries the context override");
         }
     }
 

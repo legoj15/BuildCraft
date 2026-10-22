@@ -6,31 +6,22 @@
 
 package buildcraft.silicon.compat.jei;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.ToIntFunction;
 
-import javax.annotation.Nullable;
-
-import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
-import mezz.jei.api.recipe.transfer.IRecipeTransferError;
-//? if >=26.2 {
-import mezz.jei.api.recipe.transfer.IRecipeTransferContext;
-//?}
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 //? if >=1.21.10 {
 import mezz.jei.api.recipe.types.IRecipeType;
 //?} else {
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 
+import buildcraft.lib.compat.jei.AbstractTransferHandler;
 import buildcraft.lib.compat.jei.JeiTransferUtil;
+import buildcraft.lib.compat.jei.TransferResult;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 import buildcraft.silicon.BCSiliconMenuTypes;
@@ -44,24 +35,15 @@ import buildcraft.silicon.container.ContainerAssemblyTable;
  * inventory and into the table (server-side, via {@link JeiTransferUtil}).
  *
  * <p>Per input slot it picks an alternative the player can satisfy, aggregates identical picks, and
- * only enables the button when the player has the full demand. Shift-click ({@code maxTransfer})
- * fills with everything available; otherwise it moves one recipe's worth.
+ * only enables the button when the player has the full demand ({@link AssemblyTableTransfer#chooseNeed}
+ * and {@link AssemblyTableTransfer#check}). Shift-click ({@code maxTransfer}) fills with everything
+ * available; otherwise it moves one recipe's worth.
  */
-public class AssemblyTableTransferHandler implements IRecipeTransferHandler<ContainerAssemblyTable, AssemblyRecipeJei> {
-    private final IRecipeTransferHandlerHelper helper;
+public class AssemblyTableTransferHandler
+        extends AbstractTransferHandler<ContainerAssemblyTable, AssemblyRecipeJei> {
 
     public AssemblyTableTransferHandler(IRecipeTransferHandlerHelper helper) {
-        this.helper = helper;
-    }
-
-    @Override
-    public Class<? extends ContainerAssemblyTable> getContainerClass() {
-        return ContainerAssemblyTable.class;
-    }
-
-    @Override
-    public Optional<MenuType<ContainerAssemblyTable>> getMenuType() {
-        return Optional.of(BCSiliconMenuTypes.ASSEMBLY_TABLE.get());
+        super(helper, ContainerAssemblyTable.class, BCSiliconMenuTypes.ASSEMBLY_TABLE::get);
     }
 
     @Override
@@ -73,82 +55,28 @@ public class AssemblyTableTransferHandler implements IRecipeTransferHandler<Cont
         return AssemblyRecipeJeiTypes.ASSEMBLY;
     }
 
-    //? if >=26.2 {
     @Override
-    @Nullable
-    public IRecipeTransferError transferRecipe(
-            IRecipeTransferContext<AssemblyRecipeJei, ContainerAssemblyTable> context, boolean doTransfer) {
-        return transfer(context.getContainer(), context.getRecipe(), context.getPlayer(), context.isMaxTransfer(),
-                doTransfer);
-    }
-    //?}
-
-    // JEI 30.30+ (26.2) deprecates this for removal in favour of the context overload above but keeps it
-    // abstract, so it must stay; it is also the only entry point on older JEI builds.
-    @Override
-    @Nullable
-    @SuppressWarnings("removal")
-    public IRecipeTransferError transferRecipe(
-            ContainerAssemblyTable container,
-            AssemblyRecipeJei recipe,
-            IRecipeSlotsView recipeSlots,
-            Player player,
-            boolean maxTransfer,
-            boolean doTransfer) {
-        return transfer(container, recipe, player, maxTransfer, doTransfer);
-    }
-
-    @Nullable
-    private IRecipeTransferError transfer(ContainerAssemblyTable container, AssemblyRecipeJei recipe, Player player,
-            boolean maxTransfer, boolean doTransfer) {
+    protected TransferResult check(ContainerAssemblyTable container, AssemblyRecipeJei recipe, Player player,
+            boolean maxTransfer) {
         Inventory inv = player.getInventory();
-
-        // Choose one alternative per input slot — preferring one the player has enough of — and
-        // aggregate identical choices so two slots needing the same item sum their counts.
-        List<ItemStack> need = new ArrayList<>();
-        for (List<ItemStack> alternatives : recipe.inputSlots()) {
-            if (alternatives.isEmpty()) continue;
-            ItemStack pick = null;
-            for (ItemStack alt : alternatives) {
-                if (alt.isEmpty()) continue;
-                if (JeiTransferUtil.countMatching(inv, alt) >= alt.getCount()) {
-                    pick = alt;
-                    break;
-                }
-            }
-            if (pick == null) {
-                pick = alternatives.get(0); // none available — feasibility check below fails
-            }
-            mergeInto(need, pick);
-        }
-
-        if (need.isEmpty()) {
-            return helper.createInternalError();
-        }
-
-        for (ItemStack n : need) {
-            if (JeiTransferUtil.countMatching(inv, n) < n.getCount()) {
-                return helper.createUserErrorWithTooltip(
-                        Component.translatable("gui.jei.transfer.buildcraftunofficial.missing"));
-            }
-        }
-
-        if (doTransfer) {
-            var registries = player.level().registryAccess();
-            container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS,
-                    buf -> AssemblyTableTransfer.write(buf, registries, maxTransfer, need));
-        }
-        return null;
+        return AssemblyTableTransfer.check(need(inv, recipe), held(inv));
     }
 
-    /** Add {@code stack} to {@code list}, merging counts with an existing same-item-and-components entry. */
-    private static void mergeInto(List<ItemStack> list, ItemStack stack) {
-        for (ItemStack existing : list) {
-            if (ItemStack.isSameItemSameComponents(existing, stack)) {
-                existing.grow(stack.getCount());
-                return;
-            }
-        }
-        list.add(stack.copy());
+    @Override
+    protected void send(ContainerAssemblyTable container, AssemblyRecipeJei recipe, Player player,
+            boolean maxTransfer) {
+        List<ItemStack> need = need(player.getInventory(), recipe);
+        var registries = player.level().registryAccess();
+        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS,
+                buf -> AssemblyTableTransfer.write(buf, registries, maxTransfer, need));
+    }
+
+    private static List<ItemStack> need(Inventory inv, AssemblyRecipeJei recipe) {
+        return AssemblyTableTransfer.chooseNeed(recipe.inputSlots(), held(inv));
+    }
+
+    /** How many of a stack the player holds, matched on item and components like the server's move does. */
+    private static ToIntFunction<ItemStack> held(Inventory inv) {
+        return stack -> JeiTransferUtil.countMatching(inv, stack);
     }
 }

@@ -18,9 +18,9 @@ Using Pipe Plugs or painting pipes a different colour can stop pipes connecting.
 <chapter name="Filtering"/>
 Opening up the Wooden Diamond Fluid Pipe GUI will allow you to setup a filter.
 Placing a bucket (or other fluid container) of the fluid you want in the slots will allow you to filter what it extracts.
-You can use the Whitelist and Blacklist items to change what your filter does:
-Whitelist: Only the fluids selected will be extracted.
-Blacklist: Any fluid other than the fluid selected will be extracted.
+You can use the Allowlist and Blocklist options to change what your filter does:
+Allowlist: Only the fluids selected will be extracted.
+Blocklist: Any fluid other than the fluid selected will be extracted.
 
 <chapter name="Powering"/>
 It can receive power from any MJ power source such as: an engine, a power adaptor, or a pipe pulsar.

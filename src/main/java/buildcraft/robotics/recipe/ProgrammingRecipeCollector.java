@@ -18,6 +18,7 @@ import net.minecraft.world.item.Items;
 import buildcraft.api.recipes.IProgrammingRecipe;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 
+import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
 /** Turns every {@link IProgrammingRecipe} into JEI entries — one per option the table can actually program — at JEI
@@ -31,14 +32,12 @@ import buildcraft.silicon.tile.TileProgrammingTable;
  *  look like it needed some other program first, so the blank board alone stands for "a board".) A recipe whose
  *  inputs all carry data no default stack has gets no entries rather than a misleading one.
  *
- *  <p>Only the first {@code 6 x 4} options are emitted: the table's GUI can click nothing past its grid, so JEI must
- *  not promise more. An option whose output is the same JEI entry as every input is a no-op here — the empty board
- *  offered to a blank board — and is skipped. Entries run recipe id, then grid position, i.e. the table's own
- *  cheapest-first order. */
+ *  <p>Every option is emitted, and each entry carries the page of the table's {@code 6 x 4} grid its option is on
+ *  (the GUI pages through a recipe's options when there are more than a grid holds), so the JEI screen draws the
+ *  grid the player will actually see. An option whose output is the same JEI entry as every input is a no-op here —
+ *  the empty board offered to a blank board — and is skipped. Entries run recipe id, then option position, i.e. the
+ *  table's own cheapest-first order. */
 public final class ProgrammingRecipeCollector {
-    /** Cells in the table's option grid — the most options any recipe can offer through its GUI. */
-    public static final int GRID_SIZE = TileProgrammingTable.OPTION_COLS * TileProgrammingTable.OPTION_ROWS;
-
     private ProgrammingRecipeCollector() {}
 
     public static List<ProgrammingRecipeJei> collect() {
@@ -62,26 +61,30 @@ public final class ProgrammingRecipeCollector {
                 continue;
             }
             List<ItemStack> options = recipe.getOptions(TileProgrammingTable.OPTION_COLS, TileProgrammingTable.OPTION_ROWS);
-            List<ItemStack> grid = new ArrayList<>();
-            for (int i = 0; i < Math.min(options.size(), GRID_SIZE); i++) {
-                ItemStack option = options.get(i);
-                grid.add(option == null ? ItemStack.EMPTY : option.copy());
-            }
             // Entries only ever read these; one immutable copy each is shared by every entry of the recipe.
             List<ItemStack> sharedInputs = List.copyOf(inputs);
-            List<ItemStack> sharedGrid = List.copyOf(grid);
 
-            for (int i = 0; i < sharedGrid.size(); i++) {
-                ItemStack option = sharedGrid.get(i);
-                if (option.isEmpty()) {
-                    continue;
+            for (int page = 0; page < ProgrammingTableLayout.pageCount(options.size()); page++) {
+                int first = ProgrammingTableLayout.firstOptionOn(page);
+                List<ItemStack> grid = new ArrayList<>();
+                for (int i = first; i < Math.min(options.size(), first + ProgrammingTableLayout.PAGE_SIZE); i++) {
+                    ItemStack option = options.get(i);
+                    grid.add(option == null ? ItemStack.EMPTY : option.copy());
                 }
-                ItemStack output = recipe.craft(sharedInputs.get(0).copy(), option.copy());
-                if (output.isEmpty() || isNoOp(sharedInputs, output)) {
-                    continue;
+                List<ItemStack> sharedGrid = List.copyOf(grid);
+
+                for (int cell = 0; cell < sharedGrid.size(); cell++) {
+                    ItemStack option = sharedGrid.get(cell);
+                    if (option.isEmpty()) {
+                        continue;
+                    }
+                    ItemStack output = recipe.craft(sharedInputs.get(0).copy(), option.copy());
+                    if (output.isEmpty() || isNoOp(sharedInputs, output)) {
+                        continue;
+                    }
+                    out.add(new ProgrammingRecipeJei(recipe.getId() + "/" + (first + cell), sharedInputs, output,
+                            sharedGrid, cell, recipe.getEnergyCost(option)));
                 }
-                out.add(new ProgrammingRecipeJei(recipe.getId() + "/" + i, sharedInputs, output, sharedGrid, i,
-                        recipe.getEnergyCost(option)));
             }
         }
         return out;

@@ -23,6 +23,7 @@ import buildcraft.lib.compat.jei.JeiMjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.container.AssemblyTableLayout;
 
 /**
  * Single JEI category for the Assembly Table. Each {@link AssemblyRecipeJei}
@@ -39,24 +40,21 @@ import buildcraft.silicon.BCSiliconItems;
  * player needs to see.
  */
 public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipeJei> {
-    // Crop the GUI to just the input grid + power bar. The 3×4 column of output
+    // Crop the GUI (see AssemblyTableLayout) to just the input grid + power bar. The 3×4 column of output
     // display slots in the real GUI is omitted because it shows recipe-state
     // overlays at runtime, not crafting outputs — JEI's output slot is its own
-    // thing on the right, drawn with a vanilla output-slot background.
-    private static final int TEX_U = 3, TEX_V = 27;
-    private static final int TEX_W = 89, TEX_H = 86;
+    // thing on the right, drawn with a vanilla output-slot background. The one geometry this category owns;
+    // package-visible so AssemblyTableLayoutTest can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = 3, TEX_V = 27;
+    static final int TEX_W = 89, TEX_H = 86;
 
-    // Slot positions inside the cropped texture. Original GUI inputs start at
-    // (8, 36) and the power bar at (86, 36); shift both by (-TEX_U, -TEX_V).
-    private static final int SLOT_X = 8 - TEX_U;   // 5
-    private static final int SLOT_Y = 36 - TEX_V;  // 9
-    private static final int SLOT_PITCH = 18;
-    private static final int MAX_INPUT_SLOTS = 12;
+    // Input slot positions inside the cropped texture are the layout's input grid, shifted by (-TEX_U, -TEX_V).
+    private static final int MAX_INPUT_SLOTS = AssemblyTableLayout.GRID_CELLS;
 
     // Output sits to the right of the cropped texture, aligned with the first
     // input row. Uses JEI's standard 26×26 output-slot background drawable.
     private static final int OUTPUT_X = TEX_W + 16;  // 105
-    private static final int OUTPUT_Y = SLOT_Y;      // 9
+    private static final int OUTPUT_Y = AssemblyTableLayout.INPUT_Y - TEX_V;      // 9
 
     // Power label sits two pixels below the cropped texture, in the extra
     // strip JEI fills with the recipe-pane background.
@@ -100,10 +98,8 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
         for (int i = 0; i < inputCount; i++) {
             List<ItemStack> slot = inputs.get(i);
             if (slot.isEmpty()) continue;
-            int col = i % 3;
-            int row = i / 3;
-            int x = SLOT_X + col * SLOT_PITCH;
-            int y = SLOT_Y + row * SLOT_PITCH;
+            int x = AssemblyTableLayout.inputX(i) - TEX_U;
+            int y = AssemblyTableLayout.inputY(i) - TEX_V;
             inputSlotBuilders[i] = builder.addInputSlot(x, y).addItemStacks(slot);
         }
 

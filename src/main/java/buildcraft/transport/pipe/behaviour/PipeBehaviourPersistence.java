@@ -20,6 +20,10 @@ import buildcraft.api.transport.pipe.IPipeHolder;
  * callback, GUI message handler, wrench click, gate action) instead of relying on the pipe's per-tick
  * {@code blockEntityChanged}.
  *
+ * <p>Audited 2026-10: Daizuli, Lapis, Limiter, Stripes and the shared Wood/Iron/Daizuli facing
+ * ({@link PipeBehaviourDirectional}) call this from their edit paths. Gold keeps no saved state (a fixed speed
+ * modifier only), so it has nothing to mark.
+ *
  * <p>That per-tick call is a perf hot spot, but it cannot simply go: it is what saves the evolving flow state (items
  * and fluid in transit, power buffers, the stripes pipe's battery), none of which has a dirty mark of its own. It
  * would only be safe to narrow once each flow reports its own changes; until then it also hides a missing edit mark,

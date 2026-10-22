@@ -48,22 +48,62 @@ public class ServerUnitBakingGuardTester {
      *  payload handler) and shows (in {@code handle}) in the same file, by design. */
     private static final String CLIENT_RESOLVER = "buildcraft/lib/net/MessageEnergyOverlay.java";
 
-    /** Code that only ever runs in a client JVM, where reading the client config is exactly right. */
-    private static boolean isClientOnly(String relativePath) {
+    /** A file that imports Minecraft's client classes, or extends a screen: it cannot even load on a dedicated
+     *  server, so it only ever runs where the client config exists. */
+    private static final Pattern TOUCHES_MINECRAFT_CLIENT = Pattern.compile(
+            "(?m)^\\s*import\\s+(?:static\\s+)?net\\.minecraft\\.client\\.|\\bextends\\s+\\w*Screen\\b");
+
+    /** Code that only ever runs in a client JVM, where reading the client config is exactly right: the client
+     *  packages and the JEI plugins by their path. A {@code gui} package is not enough on its own: the server-side
+     *  menus, widgets and slots live in {@code buildcraft/lib/gui} too, so a file there is client-only only when its
+     *  own code says so ({@link #TOUCHES_MINECRAFT_CLIENT}), and anything else in it is scanned like any other.
+     *
+     * @param code the file's live code ({@link MainSourceSet#codeOnly}) */
+    static boolean isClientOnly(String relativePath, String code) {
         String path = "/" + relativePath;
-        return path.contains("/client/") || path.contains("/gui/") || path.contains("/compat/jei/")
-                || relativePath.equals(CLIENT_RESOLVER);
+        if (path.contains("/client/") || path.contains("/compat/jei/") || relativePath.equals(CLIENT_RESOLVER)) {
+            return true;
+        }
+        return path.contains("/gui/") && TOUCHES_MINECRAFT_CLIENT.matcher(code).find();
+    }
+
+    @Test
+    public void aGuiFileIsClientOnlyOnlyWhenItTouchesMinecraftClientCode() {
+        String screen = source("package buildcraft.lib.gui;", "import net.minecraft.client.gui.GuiGraphics;",
+                "class Ledger {}");
+        String menu = source("package buildcraft.lib.gui;", "import net.minecraft.world.inventory.AbstractContainerMenu;",
+                "class ContainerFoo extends AbstractContainerMenu {}");
+        String bareScreen = source("package buildcraft.lib.gui;", "class GuiFoo extends AbstractContainerScreen<Menu> {}");
+        Assertions.assertTrue(isClientOnly("buildcraft/lib/gui/ledger/Ledger.java", screen),
+                "a gui class that imports Minecraft client code is a client screen");
+        Assertions.assertTrue(isClientOnly("buildcraft/lib/gui/GuiFoo.java", bareScreen),
+                "a gui class that extends a Screen is a client screen");
+        Assertions.assertFalse(isClientOnly("buildcraft/lib/gui/ContainerFoo.java", menu),
+                "a server-side menu under a gui package must be scanned, not exempted by its directory");
+        Assertions.assertTrue(isClientOnly("buildcraft/energy/client/gui/ScreenFoo.java", menu),
+                "everything under a client package is exempt whatever it imports");
+        Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/jei/Label.java", menu), "jei is client only");
+        Assertions.assertFalse(isClientOnly("buildcraft/core/item/ItemFoo.java", screen),
+                "outside gui, client packages and jei the path alone decides, whatever the file imports");
+    }
+
+    private static String source(String... lines) {
+        return String.join("\n", lines);
     }
 
     @Test
     public void aFileThatMessagesAPlayerNeverFormatsUnitsItself() {
         List<String> offenders = new ArrayList<>();
         int senders = 0;
+        int guiFilesScanned = 0;
         for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
-            if (isClientOnly(file.relativePath())) {
+            String code = MainSourceSet.codeOnly(file.text());
+            if (isClientOnly(file.relativePath(), code)) {
                 continue;
             }
-            String code = MainSourceSet.codeOnly(file.text());
+            if (file.relativePath().contains("/gui/")) {
+                guiFilesScanned++;
+            }
             if (!PLAYER_MESSAGE_SENDER.matcher(code).find()) {
                 continue;
             }
@@ -74,6 +114,10 @@ public class ServerUnitBakingGuardTester {
         }
         // Liveness: the scan must actually see the message senders, or "no offenders" is vacuous.
         Assertions.assertTrue(senders >= 5, "the scan lost the server-side message senders (saw " + senders + ")");
+        // ... and must still reach the server-side menu, widget and slot classes under lib/gui (about sixty files),
+        // or the narrowed gui exemption has quietly grown back to the whole directory.
+        Assertions.assertTrue(guiFilesScanned >= 20,
+                "the scan skips the server-side gui classes again (scanned " + guiFilesScanned + ")");
         Assertions.assertTrue(offenders.isEmpty(),
                 "These files send a message to a player AND call a LocaleUtil unit formatter " + offenders
                         + " — the formatter reads client-only display settings, so on a dedicated server the unit"
@@ -120,10 +164,12 @@ public class ServerUnitBakingGuardTester {
     public void everyServerReachableUnitFormatterCallerIsAudited() {
         Map<String, Integer> found = new TreeMap<>();
         for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
-            if (isClientOnly(file.relativePath()) || file.relativePath().equals("buildcraft/lib/misc/LocaleUtil.java")) {
+            String code = MainSourceSet.codeOnly(file.text());
+            if (isClientOnly(file.relativePath(), code)
+                    || file.relativePath().equals("buildcraft/lib/misc/LocaleUtil.java")) {
                 continue;
             }
-            Matcher m = UNIT_FORMATTER.matcher(MainSourceSet.codeOnly(file.text()));
+            Matcher m = UNIT_FORMATTER.matcher(code);
             int calls = 0;
             while (m.find()) {
                 calls++;

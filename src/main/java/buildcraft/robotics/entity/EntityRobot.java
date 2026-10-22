@@ -805,7 +805,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     // ── Client movement smoothing ───────────────────────────────────────────
     // The server moves a robot every tick and sends it every tick (updateInterval 1). A plain Entity has no
-    // client-side smoothing on any line: 1.21.1's Entity.lerpTo is a bare setPos, and 1.21.10+ hand each packet
+    // client-side smoothing on any line: 1.21.1's Entity.lerpTo is setPos + setRot with no steps (the stepped
+    // lerp is LivingEntity's), and 1.21.10+ hand each packet
     // to the entity's interpolation handler, which a plain Entity does not have (null up to 26.2, NO_OP on
     // 26.3), so the packet ends in setPos again. Rendering lerps between the previous and current tick
     // position, so a snapped robot moves in visible 20 Hz steps. Each line below gives the robot vanilla's

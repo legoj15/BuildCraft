@@ -167,12 +167,15 @@ public class EntityQuarryRig extends Entity {
         return true;
     }
 
-    // Client sync: deliberately NO interpolation, on every node. The rig is a collision proxy whose visual is
-    // the BER-rendered drill arm, which follows the block entity's per-tick clientDrillPos; a client lerp would
-    // leave the collision trailing behind what the player sees. A plain Entity already snaps to each packet on
-    // every line (1.21.1's Entity.lerpTo is a bare setPos; 1.21.10+ have no interpolation handler unless the
-    // entity supplies one), and updateInterval(1) sends a position every tick, so the rig tracks the arm within
-    // a tick. Do not give it the handler EntityRobot has.
+    // Client sync: deliberately NO interpolation, on every node (decided in the robot-interpolation work, where
+    // EntityRobot got a handler). The rig draws nothing itself (NoopRenderer); it is a collision proxy whose
+    // visual is the BER-drawn drill arm, which lerps prevClientDrillPos -> clientDrillPos over the partial tick.
+    // Snapped, the collision sits at the newest position, at most one tick ahead of the arm; a three-tick lerp
+    // would instead trail it by up to two ticks, and would slide the box while setRiggingBox snaps its size.
+    // A plain Entity already snaps on every line: 1.21.1's Entity.lerpTo is setPos + setRot with no steps (the
+    // stepped lerp is LivingEntity's), and 1.21.10+ have no interpolation handler unless the entity supplies
+    // one. With updateInterval(1) the rig gets a position every tick. Do not give it the handler EntityRobot
+    // has. (The packet's rotation is applied too; nothing sets the rig's rotation, so it is always zero.)
 
     // ── Tick ──────────────────────────────────────────────────────────────
 

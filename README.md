@@ -1,11 +1,12 @@
 ## BuildCraft **UNOFFICIAL**
-#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, and 26.2 on NeoForge
+#### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge
 
 ### Reporting an issue
 
 | MC Version | Support | Notes |
 |---|---|---|
-| 26.2 | ✔️ | Latest version (primary support) |
+| 26.3 | ✔️ | Latest version (primary support) |
+| 26.2 | ✔️ | Currently supported |
 | 26.1.2 | ✔️ | Currently supported |
 | 26.1.1 | ⚠️ | Not directly supported (may not run) |
 | 26.1 | ⚠️ | Not directly supported (may not run) |
@@ -38,16 +39,16 @@ Please mention if you are using any other mods, especially mods which optimize o
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the jar `BCunofficial-<version>+mc26.1.2.jar` is in `build/libs/<version>/`.
+5. Once the build finishes, the jar `BCunofficial-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`.
 
 ### Running in a Development Environment
-To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.1.2:`):
-* Run the Client: `./gradlew :26.1.2:runClient` (or `.\gradlew.bat :26.1.2:runClient` on Windows)
-* Run the Server: `./gradlew :26.1.2:runServer` (or `.\gradlew.bat :26.1.2:runServer` on Windows)
+To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.3:`):
+* Run the Client: `./gradlew :26.3:runClient` (or `.\gradlew.bat :26.3:runClient` on Windows)
+* Run the Server: `./gradlew :26.3:runServer` (or `.\gradlew.bat :26.3:runServer` on Windows)
 
-Valid versions are `:1.21.1:`, `:1.21.10:`, `:1.21.11:` and `:26.1.2:`.
+Valid versions are `:1.21.1:`, `:1.21.10:`, `:1.21.11:`, `:26.1.2:`, `:26.2:` and `:26.3:`.
 
-On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.1.2` node) to reduce the amount of steps.
+On Windows 11, `runClientAndServer.ps1` will launch both at the same time (against the `:26.3` node by default) to reduce the amount of steps.
 
 Your directory structure will look like a standard monolithic Java project:
 ***
@@ -56,7 +57,7 @@ Your directory structure will look like a standard monolithic Java project:
      |- build            (Generated after compiling)
      |- run              (Generated when running the client/server)
      |- versions         (Stonecutter nodes, one per MC line)
-     |   \- 26.1.2
+     |   \- 1.21.1 ... 26.3
      \- src              (Shared source between all versions)
       |- main            (Mod source code and resources)
       \- test            (Test source code)
@@ -117,8 +118,7 @@ Some really good to know information:
    and pipe registries) are populated by the live mod at init. If you write tests that *exercise* them, put
    the full jar on the test runtime classpath (`testRuntimeOnly`) — against a bare API they are empty by
    design. (The MJ ⇄ RF conversion config falls back to BuildCraft's own defaults.)
-6. **Mind the toolchain floor.** The 26.1.2 / 1.21.11 jars are Java 25 bytecode; the 1.21.10 / 1.21.1 jars are
-   Java 21. Compile with a JDK at least matching the jar you target.
+6. **Mind the toolchain floor.** The 26.x jars are Java 25 bytecode; the 1.21.x jars are Java 21. Compile with a JDK at least matching the jar you target.
 
 ## License
 

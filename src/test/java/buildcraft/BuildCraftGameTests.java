@@ -227,6 +227,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_protection_place_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::placeProbeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:builder_claim_filler_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::fillerAsksLikeAPlayerAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
+        reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_backs_off", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeBacksOffFromARefusedBlock);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks_again_for_new_target", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksAgainForANewTarget);

@@ -7,6 +7,7 @@
 package buildcraft.builders.snapshot;
 
 import java.util.BitSet;
+import java.util.List;
 import java.util.Set;
 
 import com.mojang.authlib.GameProfile;
@@ -15,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -24,6 +26,8 @@ import net.minecraft.world.level.block.Rotation;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
+import buildcraft.api.schematics.ISchematicEntity;
+import buildcraft.api.schematics.SchematicEntityContext;
 import buildcraft.builders.BuilderRefloodTester;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreConfig;
@@ -245,5 +249,73 @@ public class BuilderClaimTester {
             }
             return level.getBlockState(claimed).is(Blocks.STONE);
         }, helper::succeed, "the claimed cell is held, then built once the claim is lifted", lift);
+    }
+
+    /**
+     * A Builder building stone, a gap and stone, with an armor stand standing in the gap whose cell is claimed
+     * against placements: the stone goes in, the stand is asked about once and parked, and the base position stays
+     * unfinished while it is owed (so a path-fed Builder does not move on and drop it); once the claim is lifted the
+     * stand is spawned and the position finishes. Before the fix a refused entity counted as done, so a Builder on a
+     * path moved on to its next position and never came back for it.
+     */
+    public static void blueprintBuilderParksRefusedEntityAndStaysBusy(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        int[] column = { BuilderRefloodTester.STONE, BuilderRefloodTester.AIR, BuilderRefloodTester.STONE };
+        BlockPos first = helper.absolutePos(BuilderRefloodTester.cell(0));
+        BlockPos standCell = helper.absolutePos(BuilderRefloodTester.cell(1));
+        BlockPos third = helper.absolutePos(BuilderRefloodTester.cell(2));
+        // The stand's schematic, taken from one that is never added to the level.
+        ArmorStand sample = new ArmorStand(level, standCell.getX() + 0.5, standCell.getY(), standCell.getZ() + 0.5);
+        ISchematicEntity standSchematic = SchematicEntityManager.getSchematicEntity(
+                new SchematicEntityContext(level, first, sample));
+        check(standSchematic != null, "precondition: the armor stand has a schematic");
+        Set<BlockPos> cells = Set.of(first, standCell, third);
+        WorkClaimMod[] claim = { new WorkClaimMod(cells::contains, standCell::equals) };
+        Runnable cleanup = () -> {
+            if (claim[0] != null) {
+                claim[0].close();
+                claim[0] = null;
+            }
+            for (ArmorStand stand : level.getEntitiesOfClass(ArmorStand.class, EntityArenaUtil.cellBounds(helper))) {
+                stand.discard();
+            }
+        };
+        TileBuilder tile = BuilderRefloodTester.setUpBuilder(helper, column, new BlockPos[0],
+                List.of(standSchematic));
+        tile.setResource(3, new ItemStack(Items.ARMOR_STAND, 1));
+
+        int[] heldSince = { -1 };
+        int[] tick = { 0 };
+        EntityArenaUtil.tickUntil(helper, RETRY_BUDGET + 300, () -> {
+            tick[0]++;
+            // Spawning waits on a full battery: keep it topped up, so only the claim can hold the stand back.
+            tile.getBattery().addPower(tile.getBattery().getCapacity() - tile.getBattery().getStored(), false);
+            boolean standSpawned = !level.getEntitiesOfClass(ArmorStand.class, EntityArenaUtil.cellBounds(helper))
+                    .isEmpty();
+            WorkClaimMod asked = claim[0];
+            if (asked != null) {
+                check(!standSpawned, "an entity whose cell is claimed must not be spawned");
+                boolean blocksBuilt = level.getBlockState(first).is(Blocks.STONE)
+                        && level.getBlockState(third).is(Blocks.STONE);
+                if (asked.placeAsks(standCell) == 0 || !blocksBuilt) {
+                    return false;
+                }
+                check(asked.placeAsks(standCell) == 1, "the claimed entity cell is asked about once and parked, "
+                        + "asked " + asked.placeAsks(standCell) + " times");
+                if (heldSince[0] < 0) {
+                    heldSince[0] = tick[0];
+                } else {
+                    check(!tile.isDone(), "the base position must stay unfinished while the refused entity is owed");
+                }
+                if (tick[0] - heldSince[0] >= 40) {
+                    asked.close();
+                    claim[0] = null;
+                }
+                return false;
+            }
+            return standSpawned && tile.isDone();
+        }, helper::succeed, "the refused stand is held with the build unfinished, then spawned once the claim is "
+                + "lifted", cleanup);
     }
 }

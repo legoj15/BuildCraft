@@ -858,6 +858,12 @@ public class TileBuilder extends TileBC_Neptune
         return battery;
     }
 
+    /** Whether the last tick found the current base position finished (server side): what moves a path-fed
+     *  Builder on to its next position. */
+    public boolean isDone() {
+        return isDone;
+    }
+
     @Override
     public BlockPos getBuilderPos() {
         return worldPosition;

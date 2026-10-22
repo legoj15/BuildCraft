@@ -766,6 +766,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
 
         // Call superclass method
         if (super.tick()) {
+            boolean entityRefused = false;
             // Spawn needed entities
             if (!toSpawn.isEmpty()) {
                 if (!tile.getBattery().isFull()) {
@@ -773,25 +774,32 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 } else {
                     // ⚡ Bolt: Use standard for loop for entity spawning
                     for (ISchematicEntity schematicEntity : toSpawn) {
-                        if (tryExtractRequired(
+                        if (!tryExtractRequired(
                                 getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
                                 getBuildingInfo().entitiesRequiredFluids.get(schematicEntity),
                                 true
-                            ).isPresent()
-                            && mayPlaceEntityAt(
+                            ).isPresent()) {
+                            continue;
+                        }
+                        if (!mayPlaceEntityAt(
                                 schematicEntity.getPos().add(Vec3.atLowerCornerOf(getBuildingInfo().offsetPos)))) {
-                            if (schematicEntity.build(tile.getWorldBC(), getBuildingInfo().offsetPos) != null) {
-                                tryExtractRequired(
-                                    getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
-                                    getBuildingInfo().entitiesRequiredFluids.get(schematicEntity),
-                                    false
-                                );
-                            }
+                            entityRefused = true;
+                            continue;
+                        }
+                        if (schematicEntity.build(tile.getWorldBC(), getBuildingInfo().offsetPos) != null) {
+                            tryExtractRequired(
+                                getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
+                                getBuildingInfo().entitiesRequiredFluids.get(schematicEntity),
+                                false
+                            );
                         }
                     }
                 }
             }
-            return true;
+            // A claim-refused entity is still owed, like a parked block: the position is not finished, so a path-fed
+            // Builder stays here (moving on would rebuild the building info and drop it) and asks again once the
+            // refusal's window ends.
+            return !entityRefused;
         } else {
             return false;
         }

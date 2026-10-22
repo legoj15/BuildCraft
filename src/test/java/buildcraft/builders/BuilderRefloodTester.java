@@ -7,6 +7,7 @@ package buildcraft.builders;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntConsumer;
@@ -29,6 +30,7 @@ import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.schematics.ISchematicBlock;
+import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.EnumFluidHandlingMode;
@@ -92,7 +94,8 @@ public class BuilderRefloodTester {
 
     /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
      *  {@link #AIR} or {@link #SNOW} (one snow layer). */
-    private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column) {
+    private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column,
+            List<ISchematicEntity> entities) {
         Blueprint blueprint = new Blueprint();
         blueprint.size = new BlockPos(1, 1, column.length);
         blueprint.facing = Direction.EAST;
@@ -109,6 +112,7 @@ public class BuilderRefloodTester {
         for (int z = 0; z < column.length; z++) {
             blueprint.data[blueprint.posToIndex(0, 0, z)] = column[z];
         }
+        blueprint.entities.addAll(entities);
         blueprint.computeKey();
         GlobalSavedDataSnapshots.get(level).addSnapshot(blueprint);
 
@@ -148,6 +152,13 @@ public class BuilderRefloodTester {
     /** The shared arena: a stone floor, the given walls, and a CLEAR-mode Builder with enough MJ and items to build
      *  {@code column}, loaded with its blueprint. The column itself is NOT placed; the Builder builds it. */
     public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls) {
+        return setUpBuilder(helper, column, walls, List.of());
+    }
+
+    /** {@link #setUpBuilder(GameTestHelper, int[], BlockPos[])} with {@code entities} in the blueprint too (their
+     *  positions relative to the column's first cell). Their items are the caller's to load. */
+    public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls,
+            List<ISchematicEntity> entities) {
         EntityArenaUtil.forceLoadEntityArena(helper);
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 5; z++) {
@@ -157,7 +168,8 @@ public class BuilderRefloodTester {
         for (BlockPos wall : walls) {
             helper.setBlock(wall, Blocks.STONE);
         }
-        ItemStack blueprintStack = makeBlueprint(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5)), column);
+        ItemStack blueprintStack = makeBlueprint(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5)), column,
+                entities);
 
         helper.setBlock(BUILDER, BCBuildersBlocks.BUILDER.get().defaultBlockState()
                 .setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));

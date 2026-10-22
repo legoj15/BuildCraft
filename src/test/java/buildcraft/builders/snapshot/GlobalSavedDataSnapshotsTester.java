@@ -8,6 +8,7 @@ package buildcraft.builders.snapshot;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,6 +24,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -661,5 +663,24 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(downloaded.key)), snapshotFileNames());
         Assertions.assertEquals(modified, Files.getLastModifiedTime(fileOf(downloaded.key).toPath()).toMillis(),
             "the file that was right all along is not rewritten");
+    }
+
+    @Test
+    public void aStaleFileThatCannotBeDeletedStaysAsItWasSoDeletingItDoesNotLeaveItListed() throws IOException {
+        // Windows refuses to delete a file another handle holds open; elsewhere the delete goes through.
+        Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"), "needs a delete-blocking lock");
+        Snapshot.Key stale = writeOlderFile(stairsBlueprint(), "stairs", nbt -> {});
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        try (FileInputStream lock = new FileInputStream(fileOf(stale))) {
+            Assertions.assertEquals(stale, listedKey(client), "listed under the key the file holds");
+            Assertions.assertTrue(fileOf(stale).exists(), "precondition: the lock blocked the delete");
+            Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(stale)), snapshotFileNames(),
+                "no second copy under the new key");
+        }
+
+        client.removeSnapshot(stale);
+        client.scanNow();
+        Assertions.assertEquals(List.of(), client.getList(), "deleting the one entry empties the list");
+        Assertions.assertEquals(List.of(), snapshotFileNames(), "and leaves nothing for a later scan to bring back");
     }
 }

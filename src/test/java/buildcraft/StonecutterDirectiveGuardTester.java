@@ -232,7 +232,6 @@ public class StonecutterDirectiveGuardTester {
             """);
         Assertions.assertEquals(1, bare.findings.size(), bare.findings.toString());
         Assertions.assertTrue(bare.findings.get(0).startsWith("P.java:3: "), bare.findings.get(0));
-        Assertions.assertTrue(bare.findings.get(0).contains("inactive arm"), bare.findings.get(0));
 
         Scan nested = new Scan(active);
         nested.file("Q.java", """

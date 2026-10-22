@@ -305,7 +305,9 @@ public class GlobalSavedDataSnapshots {
      * would refuse it for as long as the stored key stayed.
      * <p>
      * The name and the rest of the header are kept. A failed write or delete leaves the file as it was, listed under
-     * the key it holds.
+     * the key it holds: when the old file cannot be deleted (another program holds it open), the copy just written
+     * under the new key is removed again, since a second file whose content answers the new key would keep that key
+     * listed after the player deleted it, and bring it back at the next start. The next start tries again.
      */
     private Snapshot.Key rekeyed(File snapshotFile, Snapshot snapshot) {
         Snapshot.Key stored = snapshot.key;
@@ -319,20 +321,32 @@ public class GlobalSavedDataSnapshots {
         Snapshot.Key current = snapshot.key;
         if (Arrays.equals(stored.hash, current.hash)) return stored;
 
+        // A file already holding the new key (the same item downloaded again) is merged into, never rolled back.
+        boolean heldAlready = alreadyStored(current);
         addSnapshot(snapshot);
         if (!alreadyStored(current)) {
             LOGGER.warn("Could not re-key the snapshot {} to {}", snapshotFile, current);
             return stored;
         }
-        LOGGER.info("Re-keyed the snapshot {} from {} to {}", snapshotFile.getName(), stored, current);
-        if (snapshotFile.delete()) {
-            intactFiles.remove(snapshotFile.getName());
-            index.remove(snapshotFile.getName());
-        } else {
-            // Listed under the new key too, so the list shows one entry for it; a later scan leaves the unchanged
-            // file alone rather than trying to move it again every few seconds.
-            LOGGER.warn("Failed to delete the snapshot file {} after re-keying it", snapshotFile);
+        if (!snapshotFile.delete()) {
+            // Left listed under its old key; a later scan leaves the unchanged file alone rather than trying to move
+            // it again every few seconds.
+            LOGGER.warn("Failed to delete the snapshot file {}, so it keeps the key {}", snapshotFile, stored);
+            if (!heldAlready) {
+                File copy = new File(snapshotsFile, fileName(current));
+                if (copy.delete()) {
+                    intactFiles.remove(copy.getName());
+                    index.remove(copy.getName());
+                } else {
+                    LOGGER.warn("Failed to delete the re-keyed copy {}", copy);
+                }
+                invalidate(current);
+            }
+            return stored;
         }
+        LOGGER.info("Re-keyed the snapshot {} from {} to {}", snapshotFile.getName(), stored, current);
+        intactFiles.remove(snapshotFile.getName());
+        index.remove(snapshotFile.getName());
         invalidate(stored);
         return current;
     }

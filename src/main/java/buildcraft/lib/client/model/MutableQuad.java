@@ -180,7 +180,8 @@ public class MutableQuad {
     }
     //?}
 
-    /** Converts this MutableQuad into a MC 26.1 BakedQuad, preserving per-vertex colours. */
+    /** Converts this MutableQuad into a BakedQuad, preserving per-vertex colours. Built as the MC 26.1+ record on
+     * those nodes; the older nodes' branches below build their own BakedQuad shape. */
     public BakedQuad toBakedBlock() {
         //? if >=26.1 {
         BakedQuad.MaterialInfo matInfo = materialInfo(false);
@@ -282,7 +283,7 @@ public class MutableQuad {
         //?}
     }
 
-    /** In 26.1, block and item use the same vertex format. Alias for {@link #toBakedBlock()}. */
+    /** On MC 26.1+, block and item use the same vertex format. Alias for {@link #toBakedBlock()} on every node. */
     public BakedQuad toBakedItem() {
         return toBakedBlock();
     }

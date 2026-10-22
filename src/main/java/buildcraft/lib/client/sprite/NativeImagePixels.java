@@ -8,7 +8,9 @@ package buildcraft.lib.client.sprite;
 
 import com.mojang.blaze3d.platform.NativeImage;
 
-/** Version-neutral ARGB pixel access for {@link NativeImage}.
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+
+/** Version-neutral ARGB pixel access for {@link NativeImage} and {@link TextureAtlasSprite}.
  *
  * <p>On 1.21.10+ {@code NativeImage.getPixel(x,y)} / {@code setPixel(x,y,argb)} already work in <b>ARGB</b>
  * (they swizzle to/from the native ABGR storage internally). On 1.21.1 the only accessors are
@@ -17,6 +19,23 @@ import com.mojang.blaze3d.platform.NativeImage;
  * keep every caller in ARGB on both nodes: identity on modern, an explicit ABGR&lt;-&gt;ARGB swizzle on 1.21.1. */
 public final class NativeImagePixels {
     private NativeImagePixels() {}
+
+    /** @return the pixel at (x,y) of one frame of {@code sprite} as 0xAARRGGBB.
+     *
+     * <p>NeoForge's sprite accessor is misleadingly named on the way: through 26.2 it is still called
+     * {@code getPixelRGBA}, yet from 1.21.10 on it forwards to {@code NativeImage.getPixel} and so already
+     * returns ARGB (26.3 finally renames it {@code getPixelARGB}); only 1.21.1 hands back the raw ABGR int.
+     * {@code frameIndex} is the cell index into the sprite sheet (row-major, {@code index % cellsPerRow}), not a
+     * position in the animation's frame order, so {@code 0} is always the top-left cell. */
+    public static int getSpriteArgb(TextureAtlasSprite sprite, int frameIndex, int x, int y) {
+        //? if >=26.3 {
+        return sprite.getPixelARGB(frameIndex, x, y);
+        //?} elif >=1.21.10 {
+        /*return sprite.getPixelRGBA(frameIndex, x, y);*/
+        //?} else {
+        /*return swizzle(sprite.getPixelRGBA(frameIndex, x, y));*/
+        //?}
+    }
 
     /** @return the pixel at (x,y) as 0xAARRGGBB. */
     public static int getArgb(NativeImage img, int x, int y) {

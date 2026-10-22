@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.client.zone;
 
+import javax.annotation.Nullable;
+
 /**
  * The Zone Planner viewport's camera and projection. Pure (no Minecraft client types) so it can be
  * unit-tested and shared between the renderer (which draws terrain through it) and the GUI (which
@@ -239,7 +241,8 @@ public class ZoneMapCamera {
     /** Most chunks the terrain scan covers along one axis: a safety cap for a world whose build range is absurdly
      *  deep (the window then clips around the camera, not off one side). 512 chunks is 8,192 blocks.
      *
-     *  <p>This bounds the terrain scan's walk of the window each frame; it no longer bounds the zone overlay's memory,
+     *  <p>This bounds the terrain scan's walk of the window each frame (which is then cut down again to the chunks the
+     *  client can hold, {@link #clipWindow}); it no longer bounds the zone overlay's memory,
      *  which follows the painted chunks ({@code ZoneOverlayCache} keeps no entry for an empty chunk). Since the camera
      *  rises as it zooms out ({@link #camHeight()}), the build floor barely de-magnifies at the survey zoom: a vanilla
      *  overworld (floor at -64) needs about 115 chunks for a planner at y=64 and about 125 for one at the top of the
@@ -276,6 +279,23 @@ public class ZoneMapCamera {
         int[] x = clipAround((int) Math.floor(b[0]) >> 4, (int) Math.floor(b[2]) >> 4, (int) Math.floor(camX) >> 4);
         int[] z = clipAround((int) Math.floor(b[1]) >> 4, (int) Math.floor(b[3]) >> 4, (int) Math.floor(camZ) >> 4);
         return new int[] {x[0], z[0], x[1], z[1]};
+    }
+
+    /**
+     * {@code window} (as {@link #visibleChunkWindow} returns it) intersected with {@code mapped}, the chunks the map
+     * can hold data for (same layout; {@code null} when there is no known limit, which leaves the window as it was).
+     * The scan visits every chunk of the window whether or not the client has it, so cutting the window down to the
+     * area that can be loaded keeps the per-frame walk proportional to the view distance, not to how far the camera
+     * could see. A window that misses the area entirely comes back empty (a minimum above its maximum), which every
+     * consumer of a window treats as "no chunks". Returns a new array.
+     */
+    public static int[] clipWindow(int[] window, @Nullable int[] mapped) {
+        if (mapped == null) {
+            return window.clone();
+        }
+        return new int[] {
+                Math.max(window[0], mapped[0]), Math.max(window[1], mapped[1]),
+                Math.min(window[2], mapped[2]), Math.min(window[3], mapped[3])};
     }
 
     /** {@code [lo, hi]}, limited to {@link #MAX_CHUNK_SPAN} values centred (as far as it allows) on {@code centre}. */

@@ -415,6 +415,28 @@ public class ZoneMapCameraTest {
         Assertions.assertEquals(0, window[1] + window[3], 1, "the cap is symmetric about the camera chunk (Z)");
     }
 
+    @Test
+    void windowIsCutDownToTheChunksTheMapCanHold() {
+        // The terrain scan visits every chunk of the window, loaded or not; the client holds chunks only near the
+        // player, so the window is intersected with that area and the scan stays proportional to what is loaded.
+        int[] window = {-10, -20, 30, 40};
+        Assertions.assertArrayEquals(new int[] {-3, -20, 12, 7},
+                ZoneMapCamera.clipWindow(window, new int[] {-3, -50, 12, 7}), "each side takes the nearer bound");
+        Assertions.assertArrayEquals(new int[] {-10, -20, 30, 40}, window, "the camera's own window is not edited");
+        Assertions.assertArrayEquals(window, ZoneMapCamera.clipWindow(window, new int[] {-99, -99, 99, 99}),
+                "a mapped area that holds the whole window leaves it as it was");
+        Assertions.assertArrayEquals(window, ZoneMapCamera.clipWindow(window, null),
+                "no known limit (a level that is not the client's) leaves it as it was");
+    }
+
+    @Test
+    void windowThatMissesTheMappedAreaIsEmpty() {
+        int[] window = {-10, -20, 30, 40};
+        int[] clipped = ZoneMapCamera.clipWindow(window, new int[] {100, 100, 120, 120});
+        Assertions.assertTrue(clipped[0] > clipped[2] && clipped[1] > clipped[3],
+                "nothing in view is mapped, so no chunk is visited: " + java.util.Arrays.toString(clipped));
+    }
+
     // ── Render and pick agree on what is where ─────────────────────────────────────────────
 
     @Test

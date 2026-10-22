@@ -26,6 +26,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -92,6 +94,9 @@ public class GlobalSavedDataSnapshots {
         }
     }
     private final File snapshotsFile;
+    /** Snapshot files decompressed so far, whatever for (a lookup, a save's check, a scan). The cost the lookups try
+     *  to avoid, counted so a test can hold them to it. */
+    private final AtomicInteger fileReads = new AtomicInteger();
 
     private GlobalSavedDataSnapshots(Side side) {
         this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)));
@@ -124,6 +129,11 @@ public class GlobalSavedDataSnapshots {
                 LOGGER.warn("Failed to delete the leftover snapshot temp file {}", file);
             }
         }
+    }
+
+    /** How many snapshot files this store has decompressed so far, for tests. */
+    int fileReads() {
+        return fileReads.get();
     }
 
     public static void reInit(Side side) {
@@ -169,12 +179,20 @@ public class GlobalSavedDataSnapshots {
         return readSnapshot(key, false);
     }
 
-    /** The first file answering {@code key}; with {@code exact}, only a file holding that very key (deletes). */
+    /**
+     * The first file answering {@code key}; with {@code exact}, only a file holding that very key (deletes).
+     *
+     * <p>Decompressing a file is the cost here, and one build kept under several names puts several files under one
+     * hash, so a file the {@link SnapshotIndex} already knows holds something else (same size and time as when it
+     * was read) is skipped rather than read again to be rejected: a miss, and the sweep that ends a delete, read
+     * nothing the index has seen. A file the index has not seen, or that changed since, is read as it always was.
+     */
     private Pair<Snapshot, File> readSnapshot(Snapshot.Key key, boolean exact) {
         String targetPrefix = key.toString();
+        Predicate<Snapshot.Key> answering = stored -> answers(stored, key, exact);
         // Try the file addSnapshot would write before scanning for older or hand-copied ones (<hash>*.bcnbt).
         File exactFile = new File(snapshotsFile, fileName(key));
-        if (exactFile.isFile()) {
+        if (exactFile.isFile() && !knownNotToAnswer(exactFile, answering)) {
             Pair<Snapshot, File> found = matching(exactFile, key, exact);
             if (found != null) return found;
         }
@@ -186,7 +204,8 @@ public class GlobalSavedDataSnapshots {
         for (File snapshotFile : files) {
             if (snapshotFile.equals(exactFile)) continue;
             if (snapshotFile.getName().startsWith(targetPrefix) &&
-                snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION)) {
+                snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION) &&
+                !knownNotToAnswer(snapshotFile, answering)) {
                 Pair<Snapshot, File> found = matching(snapshotFile, key, exact);
                 if (found != null) return found;
             }
@@ -195,10 +214,16 @@ public class GlobalSavedDataSnapshots {
         return null;
     }
 
+    /** Whether the index already knows {@code snapshotFile}, as it is on disk now, holds nothing {@code answering}
+     *  accepts, so it need not be decompressed to be turned down. */
+    private boolean knownNotToAnswer(File snapshotFile, Predicate<Snapshot.Key> answering) {
+        return index.rulesOut(snapshotFile.getName(), snapshotFile.lastModified(), snapshotFile.length(), answering);
+    }
+
     /** The snapshot in {@code snapshotFile} if it answers {@code key}; a content-only lookup gets it without its
      *  header, so anything derived from it (a Replacer copy) carries no stale name. */
     @Nullable
-    private static Pair<Snapshot, File> matching(File snapshotFile, Snapshot.Key key, boolean exact) {
+    private Pair<Snapshot, File> matching(File snapshotFile, Snapshot.Key key, boolean exact) {
         Snapshot snapshot = readSnapshotFile(snapshotFile);
         if (snapshot == null || !answers(snapshot.key, key, exact)) return null;
         if (key.header == null && snapshot.key.header != null) {
@@ -208,7 +233,8 @@ public class GlobalSavedDataSnapshots {
     }
 
     @Nullable
-    private static Snapshot readSnapshotFile(File snapshotFile) {
+    private Snapshot readSnapshotFile(File snapshotFile) {
+        fileReads.incrementAndGet();
         try (FileInputStream fileInputStream = new FileInputStream(snapshotFile)) {
             return Snapshot.readFromNBT(NbtSquisher.expand(fileInputStream));
         } catch (InvalidInputDataException e) {
@@ -224,7 +250,7 @@ public class GlobalSavedDataSnapshots {
     /** The index's reader: the key stored in {@code snapshotFile}, or null if the file is unreadable or is not
      *  named after the key it holds. */
     @Nullable
-    private static Snapshot.Key readListedKey(File snapshotFile) {
+    private Snapshot.Key readListedKey(File snapshotFile) {
         Snapshot snapshot = readSnapshotFile(snapshotFile);
         if (snapshot == null || snapshot.key == null) return null;
         return snapshotFile.getName().startsWith(snapshot.key.toString()) ? snapshot.key : null;
@@ -355,7 +381,7 @@ public class GlobalSavedDataSnapshots {
                 && rescanQueued.compareAndSet(false, true)) {
             RESCAN_EXECUTOR.execute(() -> {
                 try {
-                    index.rescan(snapshotsFile, SNAPSHOT_FILE_EXTENSION, GlobalSavedDataSnapshots::readListedKey);
+                    index.rescan(snapshotsFile, SNAPSHOT_FILE_EXTENSION, this::readListedKey);
                 } catch (RuntimeException e) {
                     LOGGER.error("Failed to scan the snapshot directory {}", snapshotsFile, e);
                 } finally {

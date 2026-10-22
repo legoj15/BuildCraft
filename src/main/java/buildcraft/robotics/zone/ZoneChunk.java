@@ -93,28 +93,6 @@ public class ZoneChunk {
         return result;
     }
 
-    /** Receives one marked column of a chunk, as chunk-local coordinates 0-15. */
-    @FunctionalInterface
-    public interface ColumnVisitor {
-        void visit(int xChunk, int zChunk);
-    }
-
-    /** Visits every marked column, in the order {@link #getAll()} lists them, without allocating (a full-survey
-     *  layer holds millions of columns, so a per-column array is not affordable on a render path). */
-    public void forEachSet(ColumnVisitor visitor) {
-        if (fullSet) {
-            for (int z = 0; z < 16; z++) {
-                for (int x = 0; x < 16; x++) {
-                    visitor.visit(x, z);
-                }
-            }
-        } else if (property != null) {
-            for (int bit = property.nextSetBit(0); bit >= 0 && bit < BITS; bit = property.nextSetBit(bit + 1)) {
-                visitor.visit(bit & 15, bit >> 4);
-            }
-        }
-    }
-
     /** The marked columns of one row (fixed {@code zChunk}) as a 16-bit mask, bit {@code x} for column {@code x}. */
     public int rowBits(int zChunk) {
         if (fullSet) {

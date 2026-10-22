@@ -52,6 +52,19 @@ public enum ZonePlannerMapDataClient {
         return cache.get(level, chunkX, chunkZ);
     }
 
+    /**
+     * The chunks of {@code level} this source can have map data for, as {@code {minChunkX, minChunkZ, maxChunkX,
+     * maxChunkZ}} (all inclusive), or {@code null} when it cannot say. For a client level that is the square of chunks
+     * the client can hold ({@link #getChunk} answers {@code null} beyond it), so a caller walking a wide window can
+     * stop at its edge instead of asking about every chunk past it. A source that can map further out than the
+     * client's own chunks (a server-sampled far map) widens this answer; callers take it as the limit and never assume
+     * the loaded area is the whole of it.
+     */
+    @Nullable
+    public int[] mappedChunkBounds(Level level) {
+        return level.isClientSide() ? ClientLoadedChunks.bounds(level) : null;
+    }
+
     /** Drops one chunk (it was reloaded or unloaded); the next look rebuilds it from the client's chunk. */
     public void invalidateChunk(Level level, int chunkX, int chunkZ) {
         cache.invalidate(level, chunkX, chunkZ);

@@ -128,10 +128,33 @@ public class SnapshotIndexTester {
         index.put(a.toString() + EXT, a, 0, 0);
         Assertions.assertEquals(List.of("a@1", "b@2"), names(index.list()));
         Assertions.assertTrue(index.contains(a));
+        Assertions.assertFalse(index.contains(new Snapshot.Key(a, (Snapshot.Header) null)),
+            "the same build without its name is another entry: only an equal key is contained");
+        Assertions.assertFalse(index.contains(key(1, "a", 2)), "so is the same name saved at another time");
         index.remove(a.toString() + EXT);
         Assertions.assertEquals(List.of("b@2"), names(index.list()));
         Assertions.assertFalse(index.contains(a));
         Assertions.assertEquals(0, reads.get());
+    }
+
+    @Test
+    public void aFileIsRuledOutOnlyWhileItsSizeAndTimeAreWhatTheIndexRead() throws IOException {
+        Snapshot.Key held = key(1, "a", 1);
+        String name = write(held);
+        Files.writeString(dir.resolve("corrupt" + EXT), "x");
+        SnapshotIndex index = new SnapshotIndex();
+        index.rescan(dir.toFile(), EXT, reader);
+        long modified = Files.getLastModifiedTime(dir.resolve(name)).toMillis();
+        long length = Files.size(dir.resolve(name));
+        long corruptModified = Files.getLastModifiedTime(dir.resolve("corrupt" + EXT)).toMillis();
+
+        Assertions.assertTrue(index.rulesOut(name, modified, length, k -> false), "known to hold nothing that answers");
+        Assertions.assertFalse(index.rulesOut(name, modified, length, held::equals), "it holds the answer");
+        Assertions.assertFalse(index.rulesOut(name, modified + 1, length, k -> false), "touched since: must be read");
+        Assertions.assertFalse(index.rulesOut(name, modified, length + 1, k -> false), "resized since: must be read");
+        Assertions.assertFalse(index.rulesOut("never-seen" + EXT, modified, length, k -> false), "unknown: must be read");
+        Assertions.assertTrue(index.rulesOut("corrupt" + EXT, corruptModified, 1, k -> true),
+            "a file the index could not read holds no key to answer with");
     }
 
     @Test

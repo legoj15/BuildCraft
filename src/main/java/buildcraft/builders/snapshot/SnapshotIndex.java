@@ -6,14 +6,16 @@
 package buildcraft.builders.snapshot;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -47,17 +49,29 @@ public final class SnapshotIndex {
     private final Set<String> touchedDuringScan = new HashSet<>();
     private int scansInFlight;
     private volatile List<Snapshot.Key> sorted = List.of();
+    /** The same keys as {@link #sorted}, for {@link #contains}; replaced whole by {@link #publish}. */
+    private volatile Set<Snapshot.Key> keys = Collections.emptySet();
 
     /** The indexed snapshots in {@link #ORDER}. Never blocks; immutable. */
     public List<Snapshot.Key> list() {
         return sorted;
     }
 
-    public synchronized boolean contains(Snapshot.Key key) {
-        for (Entry e : entries.values()) {
-            if (key.equals(e.key)) return true;
-        }
-        return false;
+    /** Whether a file holding exactly {@code key} (header included) is indexed. A set lookup: the library screen asks
+     *  this every tick, and it never waits on a save or a scan. */
+    public boolean contains(Snapshot.Key key) {
+        return keys.contains(key);
+    }
+
+    /**
+     * Whether the index already knows that {@code fileName} holds nothing that {@code answers}, so a lookup can skip
+     * decompressing it: the file is indexed with exactly this size and modification time (so it has not changed since
+     * it was read), and its key is either unreadable or not one {@code answers} accepts. A file the index has not seen,
+     * or that has changed since, is never ruled out: only reading it can say.
+     */
+    public synchronized boolean rulesOut(String fileName, long modified, long length, Predicate<Snapshot.Key> answers) {
+        Entry e = entries.get(fileName);
+        return e != null && e.modified == modified && e.length == length && (e.key == null || !answers.test(e.key));
     }
 
     /** Record a snapshot the game just wrote to {@code fileName}. */
@@ -121,11 +135,11 @@ public final class SnapshotIndex {
     }
 
     private void publish() {
-        sorted = entries.values().stream()
-            .map(Entry::key)
-            .filter(Objects::nonNull)
-            .distinct()
-            .sorted(ORDER)
-            .toList();
+        Set<Snapshot.Key> distinct = new LinkedHashSet<>();
+        for (Entry e : entries.values()) {
+            if (e.key != null) distinct.add(e.key);
+        }
+        keys = Collections.unmodifiableSet(distinct);
+        sorted = distinct.stream().sorted(ORDER).toList();
     }
 }

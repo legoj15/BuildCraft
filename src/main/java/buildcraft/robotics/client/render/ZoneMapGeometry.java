@@ -72,7 +72,9 @@ public final class ZoneMapGeometry {
      *  pixel count instead of the world area, and sub-pixel blocks can't alias. At every zoom the scan
      *  covers the chunks that can project into the viewport ({@link ZoneMapCamera#visibleChunkWindow}), which
      *  reaches out past the ground-level span to take in terrain far below the planner: that is de-magnified,
-     *  so it shows at the viewport's edge from beyond the ground span.
+     *  so it shows at the viewport's edge from beyond the ground span. Only chunks the client can hold are visited
+     *  at all ({@link ZonePlannerMapDataClient#mappedChunkBounds}), so the walk follows the view distance, not the
+     *  window.
      *
      *  <p>Columns whose top comes within {@link ZoneMapCamera#NEAR_CLIP} of the camera's own height
      *  ({@link ZoneMapCamera#isNearClipped}) are left out, here and in the overlays, exactly as picking steps over
@@ -114,10 +116,14 @@ public final class ZoneMapGeometry {
     }
 
     /** The world chunks the terrain scan covers for a viewport of {@code wPx}x{@code hPx} pixels, as
-     *  {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} (all inclusive). The zone overlays are drawn on that same
-     *  terrain, so they use the same window. */
+     *  {@code {minChunkX, minChunkZ, maxChunkX, maxChunkZ}} (all inclusive): the chunks that can project into the
+     *  viewport, cut down to the ones the map can have data for ({@link ZonePlannerMapDataClient#mappedChunkBounds}).
+     *  At survey zoom of a deep world the first is hundreds of chunks across while a client holds a few dozen, and
+     *  every chunk of the window costs a lookup each frame whether or not it is loaded. The zone overlays and the
+     *  survey border are drawn on that same terrain, so they use the same window. */
     private static int[] visibleChunkWindow(ZoneMapCamera cam, int wPx, int hPx, Level level) {
-        return cam.visibleChunkWindow(wPx, hPx, RobotUtils.minBuildY(level));
+        int[] window = cam.visibleChunkWindow(wPx, hPx, RobotUtils.minBuildY(level));
+        return ZoneMapCamera.clipWindow(window, ZonePlannerMapDataClient.INSTANCE.mappedChunkBounds(level));
     }
 
     /** Emits one terrain cell: a stride&times;stride top face at the sampled surface, with skirt faces

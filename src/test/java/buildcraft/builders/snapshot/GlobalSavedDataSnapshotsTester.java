@@ -84,6 +84,32 @@ public class GlobalSavedDataSnapshotsTester {
     }
 
     @Test
+    public void lookupsAndDeletesDecompressOnlyTheFilesThatCanAnswer() {
+        // One build kept under several names shares a hash prefix, so a lookup for one name used to decompress every
+        // sibling to find out they hold other names; a miss paid for all of them, and a delete paid again for the
+        // sweep that found nothing more to delete. A file the store itself wrote is already known to hold its key.
+        Template content = build();
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(named(content, "house", 100));
+        store.addSnapshot(named(content, "cabin", 200));
+        Template house = named(content, "house", 100);
+
+        int before = store.fileReads();
+        Assertions.assertNull(store.getSnapshot(named(content, "barn", 300).key), "no file holds that name");
+        Assertions.assertEquals(0, store.fileReads() - before, "a miss reads no sibling that holds another name");
+
+        before = store.fileReads();
+        Assertions.assertNotNull(store.getSnapshot(new Snapshot.Key(house.key, (Snapshot.Header) null)));
+        Assertions.assertEquals(1, store.fileReads() - before, "a lookup by content reads the one file it returns");
+
+        before = store.fileReads();
+        store.removeSnapshot(house.key);
+        Assertions.assertEquals(1, store.fileReads() - before, "a delete reads the file it deletes and nothing else");
+        Assertions.assertFalse(store.isListed(house.key));
+        Assertions.assertNotNull(store.getSnapshot(named(content, "cabin", 200).key), "the other name stays");
+    }
+
+    @Test
     public void deletingOneNameLeavesTheOther() throws IOException {
         Template content = build();
         Template house = named(content, "house", 100);

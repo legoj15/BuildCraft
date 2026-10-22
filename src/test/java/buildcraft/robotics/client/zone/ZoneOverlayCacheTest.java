@@ -122,12 +122,6 @@ public class ZoneOverlayCacheTest {
             reads++;
             return super.rowBits(zChunk);
         }
-
-        @Override
-        public void forEachSet(ColumnVisitor visitor) {
-            reads++;
-            super.forEachSet(visitor);
-        }
     }
 
     @Test

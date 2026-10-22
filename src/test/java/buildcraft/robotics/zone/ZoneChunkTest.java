@@ -5,10 +5,8 @@
  */
 package buildcraft.robotics.zone;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.List;
 import java.util.Random;
 
 import io.netty.buffer.Unpooled;
@@ -219,19 +217,6 @@ public class ZoneChunkTest {
         chunk.set(4, 7, true);
         chunk.set(15, 15, true);
         return chunk;
-    }
-
-    @Test
-    public void testForEachSetVisitsExactlyGetAllInTheSameOrder() {
-        for (ZoneChunk chunk : new ZoneChunk[] {sample(), ZoneChunk.full(), new ZoneChunk()}) {
-            List<String> viaVisitor = new ArrayList<>();
-            chunk.forEachSet((x, z) -> viaVisitor.add(x + "," + z));
-            List<String> viaList = new ArrayList<>();
-            for (int[] p : chunk.getAll()) {
-                viaList.add(p[0] + "," + p[1]);
-            }
-            Assertions.assertEquals(viaList, viaVisitor);
-        }
     }
 
     @Test

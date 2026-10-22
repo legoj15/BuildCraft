@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fluidmode_clear_only_under_clear",
+    "function": "buildcraftunofficial:builder_replace_settled_water_places_fragile",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 600,
     "setup_ticks": 0,
     "required": true
 }

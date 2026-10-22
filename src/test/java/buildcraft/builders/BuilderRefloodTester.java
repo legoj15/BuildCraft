@@ -17,13 +17,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.mj.MjAPI;
@@ -75,10 +76,6 @@ public class BuilderRefloodTester {
     /** Consecutive quiet ticks that count as "the Builder stopped re-queuing". The sources re-flood a dry cell
      *  within ~5 ticks, so any live cycle breaks the streak many times over in this window. */
     public static final int QUIET_TICKS = 40;
-
-    /** How long the lava test watches the Builder not rest: several lava flow cycles (lava spreads every 30 ticks in
-     *  the overworld) and five times {@link #QUIET_TICKS}. */
-    private static final int LAVA_WATCH_TICKS = 200;
 
     /** How many ticks {@link #drive} polls: the {@code max_ticks} of every {@code builder_clear_*} manifest, so the
      *  watchdog, not an exhausted poll budget, ends a test whose phase windows run long (an un-polled test would
@@ -417,6 +414,16 @@ public class BuilderRefloodTester {
      */
     private static void runFragileAcceptScenario(GameTestHelper helper, int[] column, BlockPos[] walls,
             BlockPos[] sources, int fragile, Predicate<BlockState[]> settled, String what) {
+        runAcceptScenario(helper, column, walls, sources, Blocks.WATER, Fluids.WATER, fragile, settled, what, () -> {});
+    }
+
+    /**
+     * As {@link #runFragileAcceptScenario}, with {@code sources} of {@code fluid} (placed as {@code fluidBlock}) and
+     * {@code cleanup} run on every way out, after the drops near cell {@code watched} are discarded.
+     */
+    private static void runAcceptScenario(GameTestHelper helper, int[] column, BlockPos[] walls, BlockPos[] sources,
+            Block fluidBlock, Fluid fluid, int watched, Predicate<BlockState[]> settled, String what,
+            Runnable cleanup) {
         TileBuilder tile = setUpBuilder(helper, column, walls);
         int[] phase = { 0 };
         int[] phaseStart = { 0 };
@@ -424,9 +431,10 @@ public class BuilderRefloodTester {
         int[] busyTicks = { 0 };
         boolean[] finished = { false };
         Runnable discardDrops = () -> {
-            for (var drop : EntityArenaUtil.droppedItems(helper, cell(fragile), 3.0)) {
+            for (var drop : EntityArenaUtil.droppedItems(helper, cell(watched), 3.0)) {
                 drop.discard();
             }
+            cleanup.run();
         };
         drive(helper, finished, t -> {
             SnapshotBuilder<?> builder = tile.getBuilder();
@@ -441,7 +449,7 @@ public class BuilderRefloodTester {
                 case 0 -> {
                     if (allBuilt && builderQuiet(builder)) {
                         for (BlockPos source : sources) {
-                            BlockWaterloggingTester.placeSource(helper, source, Blocks.WATER, Fluids.WATER);
+                            BlockWaterloggingTester.placeSource(helper, source, fluidBlock, fluid);
                         }
                         phase[0] = 1;
                         phaseStart[0] = t;
@@ -515,89 +523,43 @@ public class BuilderRefloodTester {
                 "a fragile cell re-made into a water source by outside water");
     }
 
-    /**
-     * The fragile-cell acceptance is water-only. Outside-fed flowing LAVA in a fragile cell is not water the
-     * Builder may leave alone: it keeps the plain CLEAR behaviour (the lava in the cell is mopped and the area is
-     * never reported built). Before the fix any fluid outside the box counted as permanent, so the cell was silently
-     * accepted with lava in it.
-     *
-     * <p>Column (z = 2..3): snow layer, stone. A lava source at {@code (1,2,2)}, walled in on every side but the
-     * column's, and {@code (2,2,1)} walled so the lava it feeds into the snow cell stays there.
-     *
-     * <p>This is a negative check, so it needs a bounded window: once the lava is seen to have washed the snow layer
-     * away (observed state, not a fixed tick), the Builder must not rest for {@link #QUIET_TICKS} straight ticks
-     * within the next {@link #LAVA_WATCH_TICKS}, several lava flow cycles. A pre-fix Builder rests within a few
-     * dozen ticks with the lava in the cell. The lava itself cannot be the gate: post-fix the Builder mops it before
-     * any poll sees it, and the cell then stays empty with the snow layer still to place (it cannot stand beside the
-     * lava source), so the Builder reports the area unfinished.
-     */
-    public static void clearModeKeepsMoppingOutsideLavaInFragileCell(GameTestHelper helper) {
-        int[] column = { SNOW, STONE };
-        BlockPos lavaSource = new BlockPos(1, 2, 2);
-        TileBuilder tile = setUpBuilder(helper, column, new BlockPos[] {
-            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3), new BlockPos(2, 2, 1) });
-        ServerLevel level = helper.getLevel();
+    /** The outside lava geometry: a lava source at {@code (1,2,2)} west of the first cell, walled in on every side
+     *  but the column's, with {@code (2,2,1)} walled so the lava it feeds into that cell stays there. */
+    private static final BlockPos LAVA_SOURCE = new BlockPos(1, 2, 2);
+    private static final BlockPos[] LAVA_WALLS = {
+        new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3), new BlockPos(2, 2, 1) };
 
-        int[] phase = { 0 };
-        int[] phaseStart = { 0 };
-        int[] quiet = { 0 };
-        int[] lavaSeen = { 0 };
-        int[] busyTicks = { 0 };
-        boolean[] finished = { false };
-        // Never leave lava behind: its random ticks can start fires, and the next test in this cell expects a void.
-        Runnable clearLava = () -> {
-            helper.setBlock(lavaSource, Blocks.STONE);
-            helper.setBlock(cell(0), Blocks.AIR);
-        };
-        drive(helper, finished, t -> {
-            SnapshotBuilder<?> builder = tile.getBuilder();
-            BlockState snowCell = helper.getBlockState(cell(0));
-            BlockState stoneCell = helper.getBlockState(cell(1));
-            boolean lava = level.getFluidState(helper.absolutePos(cell(0))).is(FluidTags.LAVA);
-            int inPhase = t - phaseStart[0];
-            switch (phase[0]) {
-                case 0 -> {
-                    if (snowCell.is(Blocks.SNOW) && stoneCell.is(Blocks.STONE) && builderQuiet(builder)) {
-                        BlockWaterloggingTester.placeSource(helper, lavaSource, Blocks.LAVA, Fluids.LAVA);
-                        phase[0] = 1;
-                        phaseStart[0] = t;
-                    } else {
-                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, snow cell="
-                                + snowCell + ", stone cell=" + stoneCell);
-                    }
-                }
-                case 1 -> {
-                    if (!snowCell.is(Blocks.SNOW)) {
-                        phase[0] = 2;
-                        phaseStart[0] = t;
-                    } else {
-                        expect(inPhase < 300, "phase 1 (test premise): the outside lava never washed the snow "
-                                + "layer away");
-                    }
-                }
-                case 2 -> {
-                    if (lava) {
-                        lavaSeen[0]++;
-                    }
-                    boolean quietNow = builderQuiet(builder);
-                    if (!quietNow) {
-                        busyTicks[0]++;
-                    }
-                    quiet[0] = quietNow ? quiet[0] + 1 : 0;
-                    expect(quiet[0] < QUIET_TICKS, "the Builder rested with outside-fed lava washing a fragile "
-                            + "cell, accepting the cell as built (cell=" + snowCell + ", lava seen in the cell on "
-                            + lavaSeen[0] + " and the Builder busy on " + busyTicks[0] + " of " + inPhase + " ticks)");
-                    expect(!snowCell.is(Blocks.SNOW), "sanity: a snow layer cannot stand beside the lava, cell="
-                            + snowCell);
-                    if (inPhase >= LAVA_WATCH_TICKS) {
-                        clearLava.run();
-                        finished[0] = true;
-                        helper.succeed();
-                    }
-                }
-                default -> throw new IllegalStateException("bad phase " + phase[0]);
-            }
-        }, clearLava);
+    /** Runs the accept scenario on the outside-lava geometry, never leaving lava behind: its random ticks can start
+     *  fires, and the next test in this cell expects a void. */
+    private static void runOutsideLavaScenario(GameTestHelper helper, int[] column, String what) {
+        runAcceptScenario(helper, column, LAVA_WALLS, new BlockPos[] { LAVA_SOURCE }, Blocks.LAVA, Fluids.LAVA, 0,
+                cells -> cells[0].is(Blocks.LAVA) && cells[1].is(Blocks.STONE), what, () -> {
+                    helper.setBlock(LAVA_SOURCE, Blocks.STONE);
+                    helper.setBlock(cell(0), Blocks.AIR);
+                });
+    }
+
+    /**
+     * Fragile-cell acceptance is fluid-agnostic, as for water: outside-fed flowing LAVA washing a fragile cell is
+     * fluid the Builder can never remove (the source lies outside the box), so the snow layer can never stand and
+     * the cell must be accepted, lava and all, and the Builder must rest. Before the fix only water counted, so the
+     * Builder mopped the lava, the outside source flowed straight back in, and the build never finished.
+     *
+     * <p>Column (z = 2..3): snow layer, stone, on the outside-lava geometry.
+     */
+    public static void clearModeAcceptsFragileCellBesideOutsideLava(GameTestHelper helper) {
+        runOutsideLavaScenario(helper, new int[] { SNOW, STONE }, "outside-fed lava in a fragile cell");
+    }
+
+    /**
+     * Air-cell tolerance is fluid-agnostic too: flowing LAVA fed into a schematic-air cell from a source outside the
+     * box is refilled the moment it is mopped, so mopping it is a forever loop and the cell must count as clear.
+     * Before the fix only water was tolerated, and the Builder mopped the lava for ever.
+     *
+     * <p>Column (z = 2..3): air, stone, on the outside-lava geometry.
+     */
+    public static void clearModeToleratesOutsideLavaFlowingIntoAirCell(GameTestHelper helper) {
+        runOutsideLavaScenario(helper, new int[] { AIR, STONE }, "outside-fed lava in a schematic-air cell");
     }
 
     /**

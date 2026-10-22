@@ -852,54 +852,6 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * isWaterlogClearOnly directly. Confirms the predicate the Builder uses to skip item
-     * extraction matches "world wet / schematic dry / same block / CLEAR mode." Other mode
-     * values must return false even with the same block setup, otherwise REPLACE/NO_REPLACE
-     * placements would skip their item costs.
-     */
-    public static void testIsWaterlogClearOnlyOnlyFiresUnderClear(GameTestHelper helper) {
-        try {
-            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
-            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState()
-                    .setValue(BlockStateProperties.WATERLOGGED, true);
-            helper.getLevel().setBlock(abs, wetFence, 3);
-
-            SchematicBlockDefault s = schem(Blocks.OAK_FENCE.defaultBlockState());
-            assertTrue(s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR),
-                    "CLEAR + matching block + world wet + schematic dry must flag as waterlog-clear-only");
-            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.REPLACE),
-                    "REPLACE must NOT flag — opportunistic waterlog is the correct behaviour there, the place would just keep it wet");
-            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE),
-                    "NO_REPLACE must NOT flag — fluid positions are skipped entirely in that mode");
-            helper.succeed();
-        } catch (Throwable t) {
-            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
-        }
-    }
-
-    /**
-     * Different block in world vs schematic must NOT trigger the dry-only path — those are real
-     * place operations that need items extracted normally. Guards against the predicate being
-     * over-broad.
-     */
-    public static void testIsWaterlogClearOnlyRequiresMatchingBlock(GameTestHelper helper) {
-        try {
-            BlockPos abs = helper.absolutePos(new BlockPos(2, 2, 2));
-            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState()
-                    .setValue(BlockStateProperties.WATERLOGGED, true);
-            helper.getLevel().setBlock(abs, wetFence, 3);
-
-            // Schematic captured a different block — birch fence — at this position.
-            SchematicBlockDefault s = schem(Blocks.BIRCH_FENCE.defaultBlockState());
-            assertTrue(!s.isWaterlogClearOnly(helper.getLevel(), abs, EnumFluidHandlingMode.CLEAR),
-                    "different block types must not be treated as a waterlog-only modification — that's a real block placement");
-            helper.succeed();
-        } catch (Throwable t) {
-            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
-        }
-    }
-
-    /**
      * Vanilla water/lava ship with strength=100 — that's their *explosion resistance*, not break
      * time, but {@code BlockUtil.computeBlockBreakPower}'s {@code (hardness+1)*2 * 16 MJ}
      * formula reads it as time-to-break and produces 3232 MJ per fluid block (40× stone, more

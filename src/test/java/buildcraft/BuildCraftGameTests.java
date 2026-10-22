@@ -496,8 +496,6 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_replace_still_opportunistically_waterlogs", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceModeStillOpportunisticallyWaterlogs);
         reg.accept("buildcraftunofficial:fluidmode_isbuilt_strict_in_clear", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsBuiltStrictInClearMode);
         reg.accept("buildcraftunofficial:fluidmode_isbuilt_lenient_in_replace", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsBuiltLenientInReplaceMode);
-        reg.accept("buildcraftunofficial:fluidmode_clear_only_under_clear", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsWaterlogClearOnlyOnlyFiresUnderClear);
-        reg.accept("buildcraftunofficial:fluidmode_clear_only_requires_matching_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsWaterlogClearOnlyRequiresMatchingBlock);
         // Live Builder tick loop in CLEAR mode: a dry waterloggable beside OUTSIDE water must not loop.
         reg.accept("buildcraftunofficial:builder_clear_outside_reflood_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesOutsideFedWaterlogging);
         reg.accept("buildcraftunofficial:builder_clear_outside_reflood_cascade_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesCascadingWaterlogging);
@@ -508,11 +506,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_beside_water_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileBlockBesideToleratedWater);
         reg.accept("buildcraftunofficial:builder_clear_flanked_no_floor_dries", () -> buildcraft.builders.BuilderRefloodTester::clearModeDriesFlankedBlockWithNoFloor);
         reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_resourced_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileCellResourcedByOutsideWater);
-        reg.accept("buildcraftunofficial:builder_clear_fragile_outside_lava_still_mopped", () -> buildcraft.builders.BuilderRefloodTester::clearModeKeepsMoppingOutsideLavaInFragileCell);
+        reg.accept("buildcraftunofficial:builder_clear_fragile_outside_lava_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileCellBesideOutsideLava);
+        reg.accept("buildcraftunofficial:builder_clear_outside_lava_into_air_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesOutsideLavaFlowingIntoAirCell);
         // The whole-box fluid sweep behind the place-task gate must not run every tick.
         reg.accept("buildcraftunofficial:builder_fluid_sweep_bounded_with_tolerated_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::toleratedWaterDoesNotMakeTheBuilderSweepEveryTick);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_allocates_nothing_per_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::sweepAllocatesNothingPerCell);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_no_stale_fragile_placement", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::fragilePlacementIsNotLetThroughOnAStaleSweep);
+        reg.accept("buildcraftunofficial:builder_replace_settled_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledWaterDoesNotHoldBackADistantFragileBlock);
 
         // Builder block-survival gating (canSurvive guard in SchematicBlockDefault.build()).
         reg.accept("buildcraftunofficial:builder_support_torch_on_floor", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTorchOnFloorPlaces);

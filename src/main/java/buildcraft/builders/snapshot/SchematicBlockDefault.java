@@ -810,29 +810,6 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /**
-     * Returns true if this schematic, under {@code fluidMode}, would treat a placement at
-     * {@code blockPos} as a "dry the existing block" operation — i.e. the world already holds
-     * the same block as the schematic, but with WATERLOGGED=true while the schematic captured
-     * WATERLOGGED=false. Only meaningful in CLEAR mode (REPLACE/NO_REPLACE leave waterlogged
-     * blocks alone). The Builder uses this to skip item extraction for the place task: there's
-     * no block to be physically built, just a waterlog property to toggle, so consuming a fresh
-     * item from inventory would be wasteful (the user already has the block they want, just
-     * with water in it).
-     */
-    public boolean isWaterlogClearOnly(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
-        if (fluidMode != EnumFluidHandlingMode.CLEAR) return false;
-        if (blockState == null) return false;
-        BlockState worldState = level.getBlockState(blockPos);
-        if (worldState.getBlock() != blockState.getBlock()) return false;
-        if (!worldState.hasProperty(BlockStateProperties.WATERLOGGED)
-                || !blockState.hasProperty(BlockStateProperties.WATERLOGGED)) {
-            return false;
-        }
-        return worldState.getValue(BlockStateProperties.WATERLOGGED)
-                && !blockState.getValue(BlockStateProperties.WATERLOGGED);
-    }
-
-    /**
      * Mode-aware variant. The plain {@link #isBuilt(Level, BlockPos)} treats "world wet,
      * schematic dry" on a waterloggable block as built, because REPLACE-mode placement
      * opportunistically sets WATERLOGGED=true when a source sits at the placement position

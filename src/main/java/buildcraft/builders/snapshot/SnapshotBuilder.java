@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.DynamicOps;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
@@ -127,23 +128,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * Per-position carve-out for the CLEAR-mode "wait for mop to finish before placing" gate.
-     * Default: never allowed (regular placements wait). Subclasses override to return true for
-     * positions whose placement is itself part of mopping — specifically waterlog-clear-only
-     * tasks that toggle WATERLOGGED off on already-existing world blocks. Without this exception
-     * a build area containing waterlogged blocks deadlocks: the waterlogged blocks emit water to
-     * neighbours, the corner-flow break tasks fire forever as water keeps refilling, and the
-     * place tasks that would dry the source-emitting blocks sit deferred behind the gate.
-     */
-    protected boolean isAllowedDuringFluidMop(BlockPos blockPos) {
-        return false;
-    }
-
-    /**
      * Returns true if the schematic block at {@code blockPos} is "fragile" — i.e. fluid flowing
      * into it would wash it away (snow_layer, carpet, button, redstone wire, sapling, torch, …;
-     * see {@link SchematicBlockDefault#isWashedAwayBy}). Used by the REPLACE-mode place-
-     * task-add filter to defer fragile placements when the area has any fluid; the per-build
+     * see {@link SchematicBlockDefault#isWashedAwayBy}). Used by the place-task-add filter to
+     * defer fragile placements while fluid in the area could still reach them; the per-build
      * fragile defer catches most cases but has a blind spot for fluid 2+ cells away that flows
      * in over a few ticks (timing race), and the visible symptom is a bouncing inventory slot
      * count as items get repeatedly extracted-then-refunded by the place-then-defer loop.
@@ -156,7 +144,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     /**
      * Would fluid already beside or above {@code blockPos} wash the schematic block there away the moment it is
-     * placed? The CLEAR gate's per-cell fragile check once only tolerated fluid is left (see the place-task gate in
+     * placed? The gate's per-cell fragile check once only fluid that stays put is left (see the place-task gate in
      * {@link #tick()}). Default: false. Overridden in {@link BlueprintBuilder}.
      */
     protected boolean isFragileWashedAwayAt(BlockPos blockPos) {
@@ -164,10 +152,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * Is the fluid in schematic-air cell {@code blockPos} water the Builder should leave alone, because mopping it
-     * is futile (vanilla refills it at once from water the Builder can never remove)? Such a cell counts as
-     * {@code CORRECT} in {@link #check} and as tolerated in {@link #scanAreaFluid()}. Default: false (the cell is
-     * mopped). Overridden in {@link BlueprintBuilder}.
+     * Is the fluid in schematic-air cell {@code blockPos} fluid the Builder should leave alone: the fluid mode never
+     * removes fluid, or mopping it is futile (vanilla refills it at once from fluid the Builder can never remove)?
+     * Such a cell counts as {@code CORRECT} in {@link #check} and as tolerated in {@link #scanAreaFluid()}. Default:
+     * false (the cell is to break). Overridden in {@link BlueprintBuilder}.
      */
     protected boolean isToleratedFluidAt(BlockPos blockPos) {
         return false;
@@ -175,29 +163,43 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     /** What the fluid in the build area means to the place-task gate; see {@link #scanAreaFluid()}. */
     protected enum AreaFluid {
-        /** No fluid anywhere in the build box. */
+        /** No fluid anywhere in the build box (either mode). */
         NONE,
-        /** Fluid only inside cells the check sweep accepted as correct (a block the schematic wants waterlogged,
-         *  or, in CLEAR, a block or air cell vanilla re-floods from water the Builder cannot remove). It will
+        /** CLEAR: fluid only inside cells the check sweep accepted as correct (a block the schematic wants
+         *  waterlogged, or a block or air cell vanilla re-floods from fluid the Builder cannot remove). It will
          *  never be mopped, but it can still wash a fragile block beside it away. */
         TOLERATED_ONLY,
-        /** Fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
-        UNCLEARED
+        /** CLEAR: fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
+        UNCLEARED,
+        /** REPLACE: fluid that stays where it is: sources with nowhere to flow. It can wash away only a fragile
+         *  block placed beside or below it. */
+        SETTLED,
+        /** REPLACE: fluid that is moving or about to: any flowing fluid, or a source with an open cell beside or
+         *  below it. It may reach any cell of the box a few flow steps from now. */
+        MOVING
     }
 
     /**
-     * O(n) sweep of the build area for fluid (source or flowing), split into what mopping must still clear and
-     * what the check sweep already accepted. Used by the place-task-add gate: CLEAR defers placements while any
-     * fluid is {@link AreaFluid#UNCLEARED}, and once only tolerated fluid is left defers just the fragile blocks
-     * that fluid touches. Counting accepted cells as "still to mop" would hold the gate shut for every other
-     * block for as long as one tolerated wet block stands, since mopping can never remove its water.
+     * O(n) sweep of the build area for fluid (source or flowing), classified for the place-task-add gate of the
+     * current fluid mode.
      *
-     * <p>The sweep stops at the first uncleared fluid, so it is cheap while mopping (typical case), but a clear
-     * area, and one holding only tolerated fluid, are only known after every cell has been read. That is why the
-     * gate does not call this directly: {@link #areaFluid} asks for it only once a placement actually reaches the
-     * gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks, except to let a fragile placement
-     * through (see {@link #areaFluid} for what a reused answer may get wrong). The walk itself allocates nothing per
-     * cell (one reused cursor); a fluid-holding cell costs a few position objects while its tolerance is derived.
+     * <p>CLEAR splits it into what mopping must still clear and what the check sweep already accepted: the gate
+     * defers placements while any fluid is {@link AreaFluid#UNCLEARED}, and once only tolerated fluid is left defers
+     * just the fragile blocks that fluid touches. Counting accepted cells as "still to mop" would hold the gate shut
+     * for every other block for as long as one tolerated wet block stands, since mopping can never remove its water.
+     *
+     * <p>REPLACE never removes fluid, so it splits it into fluid that can still move ({@link AreaFluid#MOVING}) and
+     * fluid that cannot ({@link AreaFluid#SETTLED}); see {@link #isMovingFluidAt}. Moving fluid holds every fragile
+     * placement back, settled fluid only the fragile blocks it touches. Holding them back on any fluid at all meant a
+     * REPLACE build with one still pond in its box never placed its torches.
+     *
+     * <p>The sweep stops at the first uncleared (CLEAR) or moving (REPLACE) fluid, so it is cheap while there is any,
+     * but a clear area, and one holding only tolerated or settled fluid, are only known after every cell has been
+     * read. That is why the gate does not call this directly: {@link #areaFluid} asks for it only once a placement
+     * actually reaches the gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks, except to let a
+     * fragile placement through (see {@link #areaFluid} for what a reused answer may get wrong). The walk itself
+     * allocates nothing per cell (one reused cursor); a fluid-holding cell costs a few position objects while it is
+     * classified.
      */
     protected AreaFluid scanAreaFluid() {
         fluidSweeps++;
@@ -207,6 +209,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         BlockPos max = info.box.max();
         if (min == null || max == null) return AreaFluid.NONE;
         Level world = tile.getWorldBC();
+        boolean replace = getFluidMode() == EnumFluidHandlingMode.REPLACE;
         AreaFluid result = AreaFluid.NONE;
         // y outermost, x innermost: the order a chunk section stores its blocks in.
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
@@ -214,9 +217,17 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             for (int z = min.getZ(); z <= max.getZ(); z++) {
                 for (int x = min.getX(); x <= max.getX(); x++) {
                     cursor.set(x, y, z);
-                    if (world.getFluidState(cursor).isEmpty()) continue;
-                    // The tolerance checks below may hand the position on, so give them one that stays put.
+                    FluidState fluid = world.getFluidState(cursor);
+                    if (fluid.isEmpty()) continue;
+                    // The checks below may hand the position on, so give them one that stays put.
                     BlockPos pos = cursor.immutable();
+                    if (replace) {
+                        if (isMovingFluidAt(pos, fluid)) {
+                            return AreaFluid.MOVING;
+                        }
+                        result = AreaFluid.SETTLED;
+                        continue;
+                    }
                     // A non-air cell: CORRECT means the check accepted the block, fluid and all (a stale CORRECT
                     // is re-checked within a sweep). An air cell's CORRECT may be stale from before the fluid
                     // arrived, so its tolerance is re-derived from the world here rather than read off
@@ -235,10 +246,39 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
+     * Is {@code fluid}, at {@code pos}, moving or about to move? Flowing fluid always is (it is still spreading or
+     * draining, or is fed by fluid that may change). A source is once it has somewhere to go: a cell below or beside
+     * it that the fluid would wash into ({@link SchematicBlockDefault#isWashedAwayBy}: air, snow layers, torches, …),
+     * or another fluid to meet. Its next fluid tick sends flowing fluid there, so a source placed this tick, with
+     * nothing flowing yet, already counts. A source walled in by solid blocks, waterloggables (which only take a
+     * source, never flowing fluid) and fluid of its own kind never moves. Neighbours outside the box count too:
+     * fluid that leaves the box can still flow back in around a wall.
+     */
+    private boolean isMovingFluidAt(BlockPos pos, FluidState fluid) {
+        if (!fluid.isSource()) return true;
+        Level world = tile.getWorldBC();
+        for (Direction direction : SPREAD_DIRECTIONS) {
+            BlockPos neighbour = pos.relative(direction);
+            FluidState there = world.getFluidState(neighbour);
+            if (!there.isEmpty()) {
+                if (!there.getType().isSame(fluid.getType())) return true;
+                continue;
+            }
+            if (SchematicBlockDefault.isWashedAwayBy(world.getBlockState(neighbour), fluid.getType())) return true;
+        }
+        return false;
+    }
+
+    /** The directions a fluid source spreads in: down, and the four horizontals (never up). */
+    private static final Direction[] SPREAD_DIRECTIONS = {
+        Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST
+    };
+
+    /**
      * What the fluid in the build area means to the place-task gate, from the last sweep if it is recent enough.
      * Only a placement that reaches the gate asks, so a Builder with nothing to place never sweeps; and the result
-     * is reused for {@link #FLUID_SCAN_INTERVAL} ticks (a sweep reads every cell of the box and, with tolerated
-     * water standing, never stops early). A change of fluid mode, or of snapshot, discards the result.
+     * is reused for {@link #FLUID_SCAN_INTERVAL} ticks (a sweep reads every cell of the box and, with tolerated or
+     * settled fluid standing, never stops early). A change of fluid mode, or of snapshot, discards the result.
      *
      * <p>What a stale result can and cannot do:
      * <ul>
@@ -266,15 +306,20 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * the fluid {@link #areaFluid} reports? See the long comment at the call site for the modes' reasoning.
      */
     private boolean passesFluidGate(EnumFluidHandlingMode mode, BlockPos pos) {
-        if (mode != EnumFluidHandlingMode.CLEAR && mode != EnumFluidHandlingMode.REPLACE) return true;
-        AreaFluid fluid = areaFluid(mode);
         if (mode == EnumFluidHandlingMode.CLEAR) {
-            if (fluid == AreaFluid.UNCLEARED) return isAllowedDuringFluidMop(pos);
+            AreaFluid fluid = areaFluid(mode);
+            if (fluid == AreaFluid.UNCLEARED) return false;
             return !(fluid == AreaFluid.TOLERATED_ONLY && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos));
         }
-        return !(fluid != AreaFluid.NONE && isFragileSchematicAt(pos));
+        if (mode == EnumFluidHandlingMode.REPLACE) {
+            // Only fragile blocks wait in REPLACE, so only they need the sweep.
+            if (!isFragileSchematicAt(pos)) return true;
+            AreaFluid fluid = areaFluid(mode);
+            if (fluid == AreaFluid.MOVING) return false;
+            return !(fluid == AreaFluid.SETTLED && isFragileWashedAwayAt(pos));
+        }
+        return true;
     }
-
     /**
      * The last step before a placement that passed {@link #passesFluidGate} takes its items: a fragile placement is
      * let through only on a sweep taken this tick (re-sweeping if the reused one is older), so water that entered
@@ -534,35 +579,24 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             // cell over within the same or next tick lands on the freshly placed block and
             // destroys it (the dropped item entity is lost; the position re-classifies as
             // TO_PLACE; the place-then-destroy loop wastes one item per cycle). Sequencing the
-            // operations defers normal placements until the mop finishes. Trade-off at a leaky
-            // boundary (source outside the build area): the Builder mops forever and never
-            // places — visible activity, user can extend the area / switch to REPLACE.
-            //
-            // EXCEPTION: waterlog-clear-only tasks bypass the gate. These positions hold a
-            // waterlogged block whose schematic counterpart is dry — drying them in-place
-            // *contributes* to mopping (a waterlogged block emits water to neighbours, so the
-            // block IS a fluid source as far as the build area's fluid presence is concerned).
-            // Waiting for fluid to clear before drying them is a deadlock: the area never goes
-            // dry while the waterlogged blocks keep emitting, and the waterlogged blocks never
-            // get dried while the area has fluid. Carve them out of the gate so they queue
-            // alongside fluid-break tasks.
+            // operations defers normal placements until the mop finishes. (A waterlogged block the
+            // schematic wants dry needs no exception here: BlueprintBuilder#canPlace refuses every
+            // fluid cell under CLEAR, so such a block is broken with the mop, not dried in place.)
             // Build-area-fluid gates (mode-dependent):
-            // - CLEAR: defer everything except waterlog-clear-only (those contribute to mopping)
-            //   while fluid is left to mop. Fluid the check sweep ACCEPTED (a wet block the schematic
-            //   wants wet, or a block / air cell CLEAR tolerates because vanilla re-floods it from water
-            //   the Builder cannot remove, see BlueprintBuilder#isRefloodedByUnmoppableWater) can never be
-            //   mopped, so it must not hold the gate shut: once nothing else is left to mop, a fragile
-            //   placement waits only while that fluid is beside or above its own cell (the same test
-            //   SchematicBlockDefault.build applies, done here so no items are extracted for a placement
-            //   build would refuse). Gating every fragile block on any tolerated fluid in the box would
-            //   defer them for ever, since that water never goes away. The REPLACE-style "anywhere in
-            //   the box" gate guards against moving fluid; tolerated fluid is settled water. A fragile
-            //   cell whose washing fluid is ALL water the Builder will never remove can never be built
-            //   at all. When the cell itself holds nothing to break (air, flowing water, or a water
-            //   source vanilla's infinite-water rule keeps re-making from that permanent water) the
-            //   check accepts it as done (BlueprintBuilder#isFragileUnbuildableAt) rather than leaving
-            //   it here, deferred for ever with the build reported busy. Any other fluid (lava, or a
-            //   source that will not come back) is still mopped as usual.
+            // - CLEAR: defer everything while fluid is left to mop. Fluid the check sweep ACCEPTED (a
+            //   wet block the schematic wants wet, or a block / air cell CLEAR tolerates because vanilla
+            //   re-floods it from fluid the Builder cannot remove, see
+            //   BlueprintBuilder#isResourcedByUnmoppableFluid) can never be mopped, so it must not hold
+            //   the gate shut: once nothing else is left to mop, a fragile placement waits only while
+            //   that fluid is beside or above its own cell (the same test SchematicBlockDefault.build
+            //   applies, done here so no items are extracted for a placement build would refuse).
+            //   Gating every fragile block on any tolerated fluid in the box would defer them for ever,
+            //   since that fluid never goes away. A fragile cell whose washing fluid is ALL fluid the
+            //   Builder will never remove (water, lava or any other) can never be built at all. When the
+            //   cell itself holds nothing to break (air, flowing fluid, or a source that fluid's
+            //   infinite-source rule keeps re-making from that permanent fluid) the check accepts it as
+            //   done (BlueprintBuilder#isFragileUnbuildableAt) rather than leaving it here, deferred for
+            //   ever with the build reported busy. A source that will not come back is still mopped.
             // - REPLACE: defer fragile placements only — solid placements proceed because they
             //   displace water on placement and aren't replaceable. Without this, fragile
             //   schematic blocks (snow_layer in the user's case) at positions where water flows
@@ -572,7 +606,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   getToPlaceItems at queue time. The user-visible symptom is the inventory slot
             //   counter bouncing up and down as items repeatedly cycle through extract+refund.
             //   Gating at queue-add stops the cycle entirely — items never leave inventory if
-            //   the placement would defer.
+            //   the placement would defer. Only fluid that can reach the cell holds it back:
+            //   MOVING fluid anywhere in the box (flowing, or a source with somewhere to flow, see
+            //   isMovingFluidAt), or SETTLED fluid beside or above the cell itself. A still pond
+            //   walled in elsewhere in the box no longer holds every torch back for ever.
             //
             // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it, from
             // a sweep up to FLUID_SCAN_INTERVAL ticks old. passesFreshFluidGate, the last filter before items are

@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:builder_clear_fragile_outside_lava_still_mopped",
+    "function": "buildcraftunofficial:builder_clear_outside_lava_into_air_settles",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 1050,

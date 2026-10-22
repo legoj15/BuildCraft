@@ -20,8 +20,10 @@ public class GuidePartLink extends GuidePart {
     @Override
     public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
         int mouseX, int mouseY) {
-        PagePosition pos = renderLine(current, link.text, x, y, width, height, -1);
-        if (pos.page == index && wasHovered()) {
+        // The hit test only answers for segments drawn on the clicked page, so the END position is not consulted: a
+        // link that wraps over a page break is clickable on both of its pages.
+        PagePosition pos = hitTestLine(current, link.text, x, y, width, height, index);
+        if (wasHovered()) {
             GuidePageFactory factory = link.getFactoryLink();
             if (factory != null) {
                 gui.openPage(factory.createNew(gui));

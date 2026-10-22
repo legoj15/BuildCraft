@@ -75,7 +75,7 @@ public class GuidePartGroup extends GuidePart {
         for (int i = 0; i < texts.length; i++) {
             GuideText text = texts[i];
             current = text.handleMouseClick(x, y, width, height, current, index, mouseX, mouseY);
-            if (text.wasHovered && current.page == index && i > 0) {
+            if (text.wasHovered && i > 0) {
                 Object value = values[i - 1];
                 GuidePageFactory factory = GuideManager.INSTANCE.getFactoryFor(value);
                 if (factory != null) {

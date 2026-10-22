@@ -94,10 +94,14 @@ public class ContentsNodeGui {
         return iterate(current, height, (pos, part, link) -> part.renderIntoArea(x, y, width, height, pos, index));
     }
 
-    public void onClicked(int x, int y, int width, int height, PagePosition current, int index) {
+    public void onClicked(int x, int y, int width, int height, PagePosition current, int index, int mouseX,
+        int mouseY) {
         iterate(current, height, (pos, part, link) -> {
-            pos = part.renderIntoArea(x, y, width, height, pos, -1);
-            if (pos.page == index && part.wasHovered()) {
+            // handleMouseClick lays the part out exactly as render does but draws nothing, and its hover test only
+            // answers for what is drawn on the clicked page — so an entry wrapped over a page break is clickable on
+            // both pages and the END position is not consulted.
+            pos = part.handleMouseClick(x, y, width, height, pos, index, mouseX, mouseY);
+            if (part.wasHovered()) {
                 if (link != null) {
                     GuidePageFactory factory = link.getFactoryLink();
                     if (factory != null) {

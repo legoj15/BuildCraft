@@ -329,7 +329,7 @@ public class GuidePageContents extends GuidePageBase {
         }
 
         if (new GuiRectangle(x, y, width, height).contains(mouseX, mouseY)) {
-            contents.onClicked(x, y, width, height, new PagePosition(2, 0), index);
+            contents.onClicked(x, y, width, height, new PagePosition(2, 0), index, mouseX, mouseY);
         }
     }
 

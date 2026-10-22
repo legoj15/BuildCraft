@@ -21,6 +21,7 @@ import buildcraft.lib.client.guide.font.IFontRenderer;
 import buildcraft.lib.client.guide.node.FormatString;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import buildcraft.lib.gui.pos.IGuiPosition;
 
 /** A text part with one or more clickable hyperlink spans embedded inside it.
  *  Produced by the {@code <link inline="true" to="..."/>} directive — see
@@ -65,18 +66,23 @@ public class GuideInlineLinkText extends GuidePart {
     private final String formattedText;
     private final List<InlineLinkSpan> spans;
 
-    /** Per-span hit rects, populated each render/click pass. A span can have multiple
-     *  rects when its title wraps across visual lines — every fragment is clickable. */
-    private final List<List<GuiRectangle>> spanRects;
+    /** Per-span hit rects of the last render/click pass, for the rows drawn on the page of that pass only. A span can
+     *  have multiple rects when its title wraps across visual lines — every fragment on the page is clickable. */
+    private List<List<GuiRectangle>> spanRects;
 
     public GuideInlineLinkText(GuiGuide gui, String formattedText, List<InlineLinkSpan> spans) {
         super(gui);
         this.formattedText = formattedText;
         this.spans = spans;
-        this.spanRects = new ArrayList<>(spans.size());
-        for (int i = 0; i < spans.size(); i++) {
-            this.spanRects.add(new ArrayList<>());
+        this.spanRects = emptyRects(spans.size());
+    }
+
+    private static List<List<GuiRectangle>> emptyRects(int spanCount) {
+        List<List<GuiRectangle>> rects = new ArrayList<>(spanCount);
+        for (int i = 0; i < spanCount; i++) {
+            rects.add(new ArrayList<>());
         }
+        return rects;
     }
 
     @Override
@@ -87,32 +93,38 @@ public class GuideInlineLinkText extends GuidePart {
     @Override
     public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
         int mouseX, int mouseY) {
-        // Mirror GuidePartLink.handleMouseClick: re-run the layout with no drawing
-        // (sentinel pageRenderIndex == -1 disables the rendered-on-this-page check)
-        // to populate spanRects, then hit-test.
-        PagePosition end = walk(x, y, width, height, current, -1, false);
-        if (wasHovered) {
-            for (int i = 0; i < spans.size(); i++) {
-                InlineLinkSpan span = spans.get(i);
-                for (GuiRectangle rect : spanRects.get(i)) {
-                    if (rect.contains(gui.mouse)) {
-                        if (span.url != null) {
-                            // untrusted: resource packs can add guide pages, so keep vanilla's warning line
-                            // URI overload: 26.3 dropped the String ones. XmlPageLoader.validWebUrl already ran
-                            // new URI(url) on this string, so create() cannot throw here.
-                            ConfirmLinkScreen.confirmLinkNow(gui, java.net.URI.create(span.url), false);
-                            return end;
-                        }
-                        GuidePageFactory factory = span.factoryFn.apply(gui);
-                        if (factory != null) {
-                            gui.openPage(factory.createNew(gui));
-                        }
-                        return end;
-                    }
-                }
+        // Mirror GuidePartLink.handleMouseClick: re-run the layout for the clicked page with no drawing to
+        // populate spanRects, then hit-test. Only rows drawn on that page get rects, so a span that wraps over a
+        // page break is clickable on both of its pages and a row of the other page cannot answer for this one.
+        PagePosition end = walk(x, y, width, height, current, index, false);
+        int hit = hitSpan(spanRects, gui.mouse);
+        if (hit >= 0) {
+            InlineLinkSpan span = spans.get(hit);
+            if (span.url != null) {
+                // untrusted: resource packs can add guide pages, so keep vanilla's warning line
+                // URI overload: 26.3 dropped the String ones. XmlPageLoader.validWebUrl already ran
+                // new URI(url) on this string, so create() cannot throw here.
+                ConfirmLinkScreen.confirmLinkNow(gui, java.net.URI.create(span.url), false);
+                return end;
+            }
+            GuidePageFactory factory = span.factoryFn.apply(gui);
+            if (factory != null) {
+                gui.openPage(factory.createNew(gui));
             }
         }
         return end;
+    }
+
+    /** Index of the first span with a rect under {@code mouse}, or -1. */
+    static int hitSpan(List<List<GuiRectangle>> spanRects, IGuiPosition mouse) {
+        for (int i = 0; i < spanRects.size(); i++) {
+            for (GuiRectangle rect : spanRects.get(i)) {
+                if (rect.contains(mouse)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     /** Per-row layout state captured during the layout pass and replayed during the
@@ -120,38 +132,47 @@ public class GuideInlineLinkText extends GuidePart {
      *  (across all of its rects) before drawing — so a link that wraps across two
      *  visual lines highlights both rows together when the mouse is on either, instead
      *  of each row lighting up independently. */
-    private static final class RowLayout {
+    static final class RowLayout {
         final String text;
         final int rowY;
+        /** The page this row falls on. */
+        final int page;
+        /** Whether the row falls on the page being laid out; only such rows carry rects. */
         final boolean rendered;
         // spanIndex -> rect on this row (a row can have at most one rect per span)
         final java.util.Map<Integer, GuiRectangle> rectsBySpan;
 
-        RowLayout(String text, int rowY, boolean rendered, java.util.Map<Integer, GuiRectangle> rectsBySpan) {
+        RowLayout(String text, int rowY, int page, boolean rendered,
+            java.util.Map<Integer, GuiRectangle> rectsBySpan) {
             this.text = text;
             this.rowY = rowY;
+            this.page = page;
             this.rendered = rendered;
             this.rectsBySpan = rectsBySpan;
         }
     }
 
-    /** Single wrap walk shared by render and click. Performs three passes:
-     *  <ol>
-     *    <li>Layout — compute one {@link RowLayout} per wrap segment, populating
-     *        {@link #spanRects} as the source of truth for click hit-testing.</li>
-     *    <li>Hover roll-up — a span counts as hovered if ANY of its rects contains the
-     *        mouse, so highlights span across wrapped rows of the same link.</li>
-     *    <li>Render — when {@code draw} is true, paint hover fills (for every rect of
-     *        every hovered span on rendered rows) and the row text.</li>
-     *  </ol> */
-    private PagePosition walk(int x, int y, int width, int height, PagePosition current, int pageRenderIndex,
-        boolean draw) {
-        wasHovered = false;
-        for (List<GuiRectangle> list : spanRects) {
-            list.clear();
-        }
+    /** The outcome of the layout pass: every wrapped row, the hit rects per span for the rows on the laid-out page,
+     *  and the position after the text. Pure geometry, so a unit test can run it without a client. */
+    static final class InlineLayout {
+        final List<RowLayout> rows;
+        final List<List<GuiRectangle>> spanRects;
+        final PagePosition end;
 
-        IFontRenderer font = getFontRenderer();
+        InlineLayout(List<RowLayout> rows, List<List<GuiRectangle>> spanRects, PagePosition end) {
+            this.rows = rows;
+            this.spanRects = spanRects;
+            this.end = end;
+        }
+    }
+
+    /** Layout pass: walks the wrap segments, recording per-row metadata for all of them but hit rects only for the
+     *  rows that fall on {@code page} — the other column's call lays the same rows out again at its own x, and a rect
+     *  from a row of another page would answer for a point the player is not looking at. */
+    static InlineLayout layoutRows(@Nullable IFontRenderer font, String formattedText, List<InlineLinkSpan> spans,
+        int x, int y, int width, int height, PagePosition current, int page) {
+        List<List<GuiRectangle>> spanRects = emptyRects(spans.size());
+
         int allowedWidth = width;
         FormatString next = FormatString.split(formattedText);
         int neededSpace = font != null ? font.getFontHeight(formattedText) : 9;
@@ -160,7 +181,6 @@ public class GuideInlineLinkText extends GuidePart {
         int visibleConsumed = 0;
         List<RowLayout> rows = new ArrayList<>();
 
-        // Pass 1: layout — walk wrap segments, record rects + per-row metadata.
         while (next != null) {
             FormatString[] strings = font != null
                 ? next.wrap(font, allowedWidth)
@@ -168,11 +188,11 @@ public class GuideInlineLinkText extends GuidePart {
             String segText = strings[0].getFormatted();
             int segVisibleLen = visibleLengthOf(segText);
             int fontHeight = font != null ? font.getFontHeight(segText) : 9;
-            // Same rule as GuidePart.renderLine: the whole segment must fit above the footer.
+            // Same rule as GuidePart.layoutLine: the whole segment must fit above the footer.
             current = current.guaranteeSpace(fontHeight, height);
             int rowY = y + current.pixel;
             int rowTop = rowY - 5;
-            boolean rendered = current.page == pageRenderIndex;
+            boolean rendered = current.page == page;
 
             java.util.Map<Integer, GuiRectangle> rectsBySpan = new java.util.HashMap<>();
             for (int i = 0; i < spans.size(); i++) {
@@ -184,6 +204,9 @@ public class GuideInlineLinkText extends GuidePart {
                 int overlapStart = Math.max(spanVisibleStart, segVisibleStart);
                 int overlapEnd = Math.min(spanVisibleEnd, segVisibleEnd);
                 if (overlapStart >= overlapEnd) {
+                    continue;
+                }
+                if (!rendered) {
                     continue;
                 }
 
@@ -201,16 +224,40 @@ public class GuideInlineLinkText extends GuidePart {
                 rectsBySpan.put(i, rect);
             }
 
-            rows.add(new RowLayout(segText, rowY, rendered, rectsBySpan));
+            rows.add(new RowLayout(segText, rowY, current.page, rendered, rectsBySpan));
 
             visibleConsumed += segVisibleLen;
             next = strings.length == 1 ? null : strings[1];
             current = current.nextLine(fontHeight + 3, height);
         }
 
-        // Pass 2: hover roll-up — a span is hovered if any of its rects contains the
-        // mouse. {@link #wasHovered} reflects whether ANY span is hovered (used by
-        // {@link #handleMouseClick} as a fast-path gate).
+        int fontHeight = font != null ? font.getFontHeight(formattedText) : 9;
+        int additional = LINE_HEIGHT - fontHeight - 3;
+        current = current.nextLine(additional, height);
+        return new InlineLayout(rows, spanRects, current);
+    }
+
+    /** Single wrap walk shared by render and click. Performs three passes:
+     *  <ol>
+     *    <li>Layout — {@link #layoutRows}, one {@link RowLayout} per wrap segment and the hit rects of the
+     *        rows on {@code pageIndex}, kept in {@link #spanRects} as the source of truth for click
+     *        hit-testing.</li>
+     *    <li>Hover roll-up — a span counts as hovered if ANY of its rects contains the
+     *        mouse, so highlights span across wrapped rows of the same link.</li>
+     *    <li>Render — when {@code draw} is true, paint hover fills (for every rect of
+     *        every hovered span on rendered rows) and the row text.</li>
+     *  </ol>
+     *  With {@code draw} false nothing is painted, so a click can pass the page it landed on. */
+    private PagePosition walk(int x, int y, int width, int height, PagePosition current, int pageIndex,
+        boolean draw) {
+        wasHovered = false;
+
+        IFontRenderer font = getFontRenderer();
+        InlineLayout layout = layoutRows(font, formattedText, spans, x, y, width, height, current, pageIndex);
+        spanRects = layout.spanRects;
+
+        // Hover roll-up — a span is hovered if any of its rects contains the mouse. {@link #wasHovered}
+        // reflects whether ANY span is hovered.
         boolean[] spanHovered = new boolean[spans.size()];
         for (int i = 0; i < spans.size(); i++) {
             for (GuiRectangle rect : spanRects.get(i)) {
@@ -222,12 +269,12 @@ public class GuideInlineLinkText extends GuidePart {
             }
         }
 
-        // Pass 3: render — for each rendered row, paint hover fills (every rect of
+        // Render — for each rendered row, paint hover fills (every rect of
         // every hovered span, not just rects under the mouse), then the row text.
         boolean drewAny = false;
         if (draw) {
             BCGraphics g = GuiIcon.getGuiGraphics();
-            for (RowLayout row : rows) {
+            for (RowLayout row : layout.rows) {
                 if (!row.rendered) {
                     continue;
                 }
@@ -251,10 +298,7 @@ public class GuideInlineLinkText extends GuidePart {
         }
 
         didRender = drewAny;
-        int fontHeight = font != null ? font.getFontHeight(formattedText) : 9;
-        int additional = LINE_HEIGHT - fontHeight - 3;
-        current = current.nextLine(additional, height);
-        return current;
+        return layout.end;
     }
 
     /** Counts characters in {@code s} that are NOT part of a {@code §X} formatting code.

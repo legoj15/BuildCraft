@@ -6,12 +6,18 @@
 
 package buildcraft.lib.client.guide.parts;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
 import buildcraft.lib.client.guide.GuiGuide;
 import buildcraft.lib.client.guide.PageLine;
 import buildcraft.lib.client.guide.font.IFontRenderer;
 import buildcraft.lib.client.guide.node.FormatString;
 import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.gui.pos.GuiRectangle;
+import buildcraft.lib.gui.pos.IGuiPosition;
 
 /** Represents a single page, image or crafting recipe for displaying. Only exists on the client. */
 public abstract class GuidePart {
@@ -92,10 +98,139 @@ public abstract class GuidePart {
 
     public void handleMouseDragFinish(int startX, int startY, int endX, int endY, int button) {}
 
+    /** Lays {@code line} out, tests the mouse against it on page {@code pageRenderIndex} only, and draws the parts of
+     *  it that sit on that page (plus the hover tooltip). Use {@link #hitTestLine} when only the hover state is
+     *  wanted. */
     protected PagePosition renderLine(PagePosition current, PageLine line, int x, int y, int width, int height,
         int pageRenderIndex) {
+        return layoutAndHit(current, line, x, y, width, height, pageRenderIndex, true);
+    }
+
+    /** Same layout and the same page-restricted hover test as {@link #renderLine} for page {@code pageIndex}, but
+     *  nothing is drawn and no tooltip is queued. Click handling calls this with the page that was clicked, so a line
+     *  that wraps over a page break is hit only where it is drawn on that page. {@link #wasHovered()} holds the
+     *  result.
+     *  @return where the line ends, as {@code renderLine} does. */
+    protected PagePosition hitTestLine(PagePosition current, PageLine line, int x, int y, int width, int height,
+        int pageIndex) {
+        return layoutAndHit(current, line, x, y, width, height, pageIndex, false);
+    }
+
+    private PagePosition layoutAndHit(PagePosition current, PageLine line, int x, int y, int width, int height,
+        int page, boolean draw) {
         wasHovered = false;
         wasIconHovered = false;
+        didRender = false;
+
+        LineLayout layout = layoutLine(fontRenderer, current, line, x, y, width, height);
+
+        // Hit-test pass: one hover flag for the whole entry — true if the mouse is
+        // over the icon OR any wrapped text segment on this page, so icon and text act
+        // as a single click target. wasIconHovered is also exposed for callers that
+        // need to know whether the icon specifically was the target.
+        boolean iconHovered = layout.iconHovered(gui.mouse, page);
+        boolean entryHovered = iconHovered || layout.textHovered(gui.mouse, page);
+        wasHovered = entryHovered;
+        wasIconHovered = iconHovered;
+
+        if (!draw) {
+            return layout.end;
+        }
+
+        // Render pass — order matters for z-stacking:
+        //   1) Highlight fills first, extended back over the icon column on the
+        //      first rendered segment so the visual click-target matches the hit
+        //      region (icon + text read as one row).
+        //   2) Icon next, on top of the extended fill so it stays visible.
+        //   3) Text last.
+        // Hovering text now also swaps the icon to its hovered drawable, since both
+        // share the unified entryHovered state.
+        boolean iconVisibleHere = line.startIcon != null && layout.iconPage == page;
+        boolean drewAny = false;
+        if (entryHovered && line.link) {
+            buildcraft.lib.gui.BCGraphics g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+            if (g != null) {
+                boolean isFirstRendered = true;
+                for (WrapSegment seg : layout.segments) {
+                    if (seg.page != page) continue;
+                    int fillLeft = (isFirstRendered && iconVisibleHere) ? layout.textX - 20 : layout.textX - 2;
+                    g.fill(fillLeft, seg.rowTop, layout.textX + seg.width + 2, seg.rowTop + LINE_HEIGHT, 0xFFD3AD6C);
+                    isFirstRendered = false;
+                }
+            }
+        }
+        if (iconVisibleHere) {
+            ISimpleDrawable toDraw = (entryHovered && line.startIconHovered != null)
+                ? line.startIconHovered
+                : line.startIcon;
+            toDraw.drawAt(layout.iconX, layout.iconY);
+        }
+        for (WrapSegment seg : layout.segments) {
+            if (seg.page != page) continue;
+            drewAny = true;
+            if (fontRenderer != null) {
+                fontRenderer.drawString(seg.text, layout.textX, seg.y, 0xFF000000);
+            }
+        }
+        didRender = drewAny;
+        // The hover test above is already restricted to this page; this only keeps a tooltip from
+        // surfacing for a line none of which was drawn.
+        if (entryHovered && didRender) {
+            renderTooltip();
+        }
+        return layout.end;
+    }
+
+    /** Where one {@link PageLine} lands: its wrapped segments (each tagged with the page it falls on), the icon's hit
+     *  rect and the position after it. Pure geometry — no mouse, no drawing — and package-private so a unit test can
+     *  lay a line out without a client. */
+    static final class LineLayout {
+        final List<WrapSegment> segments;
+        /** The icon's hit rect, or null when the line has no icon. */
+        @Nullable
+        final GuiRectangle iconRect;
+        /** The page the icon sits on (the page the line starts on, after reserving its first row). */
+        final int iconPage;
+        final int textX;
+        final int iconX;
+        final int iconY;
+        /** Where the next part starts, after the line's trailing spacing. */
+        final PagePosition end;
+
+        LineLayout(List<WrapSegment> segments, @Nullable GuiRectangle iconRect, int iconPage, int textX, int iconX,
+            int iconY, PagePosition end) {
+            this.segments = segments;
+            this.iconRect = iconRect;
+            this.iconPage = iconPage;
+            this.textX = textX;
+            this.iconX = iconX;
+            this.iconY = iconY;
+            this.end = end;
+        }
+
+        /** True if the mouse is over the icon, which counts only on the page the icon is drawn on. */
+        boolean iconHovered(IGuiPosition mouse, int page) {
+            return iconRect != null && iconPage == page && iconRect.contains(mouse);
+        }
+
+        /** True if the mouse is over a wrapped segment that is drawn on {@code page}. The other column's call lays
+         *  the same line out again at its own x, so a segment of another page would otherwise answer for a point
+         *  the player is not looking at. */
+        boolean textHovered(IGuiPosition mouse, int page) {
+            for (WrapSegment seg : segments) {
+                if (seg.page == page && seg.rect.contains(mouse)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /** Layout pass: walks the wrap segments and records geometry for each. Decoupling layout from render lets us
+     *  compute a single hover state for the whole entry BEFORE drawing, so a multi-line wrapped entry highlights as
+     *  one cohesive block rather than each visual line lighting up independently. */
+    static LineLayout layoutLine(@Nullable IFontRenderer fontRenderer, PagePosition current, PageLine line, int x,
+        int y, int width, int height) {
         int allowedWidth = width - INDENT_WIDTH * line.indent;
         if (allowedWidth <= 0) {
             throw new IllegalStateException("Was indented too far");
@@ -112,33 +247,22 @@ public abstract class GuidePart {
 
         int _x = x + INDENT_WIDTH * line.indent;
 
-        // Icon geometry up front so the hit-test below can fold the icon rect into
-        // the unified entry-hover region — making the icon part of the same click
-        // target as the text. The icon DRAW is deferred until after the hit-test
-        // (and after the highlight fill) so we can pick the hovered drawable from
-        // the whole-entry hover state, and so the icon paints on top of the
-        // extended highlight rather than under it.
+        // Icon geometry up front so the hit-test can fold the icon rect into the unified entry-hover region —
+        // making the icon part of the same click target as the text. The icon DRAW comes after the hit-test (and
+        // after the highlight fill) so we can pick the hovered drawable from the whole-entry hover state, and so
+        // the icon paints on top of the extended highlight rather than under it.
         //
-        // Note that iconRect is computed whenever an icon is configured, NOT gated
-        // on current.page == pageRenderIndex — click handling calls renderLine with
-        // pageRenderIndex == -1, so a page-gated rect would never hit. The
-        // wrong-page false positive is filtered by callers via `pos.page == index`,
-        // matching how text segments already work.
+        // The rect is computed whenever an icon is configured and carries its page; the hit-test accepts it only
+        // on that page.
         int iconX = _x - 18;
         int iconY = y + current.pixel - 5;
+        int iconPage = current.page;
         // Hit rect spans [_x - 20, _x] to match the highlight's leftward extent and to
         // meet the first text segment's expanded rect at _x — closing the dead strip
         // that used to sit between icon and text. Icon is still DRAWN at iconX (16×16).
         GuiRectangle iconRect = (icon != null) ? new GuiRectangle(_x - 20, iconY, 20, 16) : null;
-        boolean iconVisibleHere = (icon != null) && (current.page == pageRenderIndex);
 
-        didRender = false;
-
-        // Layout pass: walk the wrap segments and record geometry for each. Decoupling
-        // layout from render lets us compute a single hover state for the whole entry
-        // BEFORE drawing — so a multi-line wrapped entry highlights as one cohesive
-        // block rather than each visual line lighting up independently.
-        java.util.List<WrapSegment> segments = new java.util.ArrayList<>();
+        List<WrapSegment> segments = new ArrayList<>();
         PagePosition cursor = current;
         while (next != null) {
             FormatString[] strings = fontRenderer != null
@@ -157,102 +281,38 @@ public abstract class GuidePart {
             // adjacent TOC entries (16 px apart) are flush.
             int rowTop = _y - 5;
             // Hit rect inflated by 2 px on each side to match the highlight's horizontal
-            // padding (see fill bounds below). With the icon rect now ending at _x and
+            // padding (see the fill bounds in layoutAndHit). With the icon rect now ending at _x and
             // this rect starting at _x - 2, the two overlap by 2 px and leave no gap.
             GuiRectangle rect = new GuiRectangle(_x - 2, rowTop, _w + 4, LINE_HEIGHT);
-            boolean rendered = cursor.page == pageRenderIndex;
-            segments.add(new WrapSegment(text, rect, _y, rowTop, _w, rendered));
+            segments.add(new WrapSegment(text, rect, _y, rowTop, _w, cursor.page));
 
             next = strings.length == 1 ? null : strings[1];
             cursor = cursor.nextLine(fontHeight + 3, height);
         }
-        current = cursor;
-
-        // Hit-test pass: one hover flag for the whole entry — true if the mouse is
-        // over the icon OR any wrapped text segment, so icon and text act as a single
-        // click target. wasIconHovered is also exposed for callers that need to know
-        // whether the icon specifically was the target.
-        boolean iconHovered = iconRect != null && iconRect.contains(gui.mouse);
-        boolean entryHovered = iconHovered;
-        if (!entryHovered) {
-            for (WrapSegment seg : segments) {
-                if (seg.rect.contains(gui.mouse)) {
-                    entryHovered = true;
-                    break;
-                }
-            }
-        }
-        wasHovered = entryHovered;
-        wasIconHovered = iconHovered;
-
-        // Render pass — order matters for z-stacking:
-        //   1) Highlight fills first, extended back over the icon column on the
-        //      first rendered segment so the visual click-target matches the hit
-        //      region (icon + text read as one row).
-        //   2) Icon next, on top of the extended fill so it stays visible.
-        //   3) Text last.
-        // Hovering text now also swaps the icon to its hovered drawable, since both
-        // share the unified entryHovered state.
-        boolean drewAny = false;
-        if (entryHovered && line.link) {
-            buildcraft.lib.gui.BCGraphics g = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
-            if (g != null) {
-                boolean isFirstRendered = true;
-                for (WrapSegment seg : segments) {
-                    if (!seg.rendered) continue;
-                    int fillLeft = (isFirstRendered && iconVisibleHere) ? _x - 20 : _x - 2;
-                    g.fill(fillLeft, seg.rowTop, _x + seg.width + 2, seg.rowTop + LINE_HEIGHT, 0xFFD3AD6C);
-                    isFirstRendered = false;
-                }
-            }
-        }
-        if (iconVisibleHere) {
-            ISimpleDrawable toDraw = (entryHovered && line.startIconHovered != null)
-                ? line.startIconHovered
-                : icon;
-            toDraw.drawAt(iconX, iconY);
-        }
-        for (WrapSegment seg : segments) {
-            if (!seg.rendered) continue;
-            drewAny = true;
-            if (fontRenderer != null) {
-                fontRenderer.drawString(seg.text, _x, seg.y, 0xFF000000);
-            }
-        }
-        didRender = drewAny;
-        // Tooltip is gated on didRender: the hit-test above intentionally isn't page-
-        // gated (click handling reuses the same rects via pageRenderIndex=-1 and
-        // filters by `pos.page == index` at the caller), which means an entry on the
-        // opposite page still produces entryHovered==true when the mouse is at the
-        // same y inside the other page's column. Without this gate the right-page
-        // entry's tooltip would surface while the user is mousing over the left page.
-        if (entryHovered && didRender) {
-            renderTooltip();
-        }
 
         int fontHeight = fontRenderer != null ? fontRenderer.getFontHeight(toRender) : 9;
         int additional = LINE_HEIGHT - fontHeight - 3;
-        current = current.nextLine(additional, height);
-        return current;
+        PagePosition end = cursor.nextLine(additional, height);
+        return new LineLayout(segments, iconRect, iconPage, _x, iconX, iconY, end);
     }
 
     /** One wrapped segment of a PageLine — its text, hover rect, draw position, and
-     *  whether it falls on the page being rendered this frame. */
-    private static final class WrapSegment {
+     *  the page it falls on. */
+    static final class WrapSegment {
         final String text;
         final GuiRectangle rect;
         final int y;
         final int rowTop;
         final int width;
-        final boolean rendered;
+        final int page;
 
-        WrapSegment(String text, GuiRectangle rect, int y, int rowTop, int width, boolean rendered) {
+        WrapSegment(String text, GuiRectangle rect, int y, int rowTop, int width, int page) {
             this.text = text;
             this.rect = rect;
             this.y = y;
             this.rowTop = rowTop;
             this.width = width;
-            this.rendered = rendered;
+            this.page = page;
         }
     }
 

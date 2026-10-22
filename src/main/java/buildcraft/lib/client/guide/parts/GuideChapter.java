@@ -88,7 +88,7 @@ public abstract class GuideChapter extends GuidePart {
         if (current.page == index) {
             int _x = x + 12;
             int _y = y + current.pixel;
-            PagePosition n2 = renderLine(current, chapter, x, y, width, height, -1);
+            PagePosition n2 = hitTestLine(current, chapter, x, y, width, height, index);
             int _height = n2.pixel - current.pixel;
             GuiGuide.CHAPTER_MARKER_9.drawTinted(_x - 5, _y - 4, width - 24, _height, asARGB(colour));
         }
@@ -118,7 +118,7 @@ public abstract class GuideChapter extends GuidePart {
         if (getFontRenderer() != null) {
             current = current.guaranteeSpace(getFontRenderer().getMaxFontHeight() * 4, height);
         }
-        return renderLine(current, chapter, x, y, width, height, -1);
+        return hitTestLine(current, chapter, x, y, width, height, index);
     }
 
     /** @return The additional number of chapter segments drawn. */

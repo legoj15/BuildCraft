@@ -38,7 +38,7 @@ public class GuideText extends GuidePart {
     @Override
     public PagePosition handleMouseClick(int x, int y, int width, int height, PagePosition current, int index,
         int mouseX, int mouseY) {
-        return renderLine(current, text, x, y, width, height, -1);
+        return hitTestLine(current, text, x, y, width, height, index);
     }
 
     @Override

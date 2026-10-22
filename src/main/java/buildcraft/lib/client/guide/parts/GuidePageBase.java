@@ -97,19 +97,6 @@ public abstract class GuidePageBase extends GuidePart {
 
     public abstract List<GuideChapter> getChapters();
 
-    protected GuidePart getClicked(Iterable<GuidePart> iterable, int x, int y, int width, int height, int mouseX,
-        int mouseY, int index) {
-        PagePosition pos = new PagePosition(0, 0);
-        for (GuidePart part : iterable) {
-            pos = part.renderIntoArea(x, y, width, height, pos, -1);
-            if (pos.page == index && part.wasHovered) {
-                return part;
-            }
-            if (pos.page > index) return null;
-        }
-        return null;
-    }
-
     public void renderFirstPage(int x, int y, int width, int height) {
         renderPage(x, y, width, height, index);
     }

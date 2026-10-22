@@ -244,6 +244,23 @@ public class Blueprint extends Snapshot {
         return n;
     }
 
+    /** Every palette entry and entity must vouch for its read. BuildCraft's own schematics can: air holds nothing,
+     *  the block and fluid schematics check every block they name, and the default entity schematic keeps the
+     *  entity's NBT as it was saved. A schematic an addon registered cannot say, so it counts as not read fully. */
+    @Override
+    boolean readFully() {
+        for (ISchematicBlock block : palette) {
+            boolean full = block instanceof SchematicBlockAir
+                || block instanceof SchematicBlockDefault schematic && schematic.readFully()
+                || block instanceof SchematicBlockFluid fluid && fluid.readFully();
+            if (!full) return false;
+        }
+        for (ISchematicEntity entity : entities) {
+            if (!(entity instanceof SchematicEntityDefault)) return false;
+        }
+        return true;
+    }
+
     @SuppressWarnings("WeakerAccess")
     public class BuildingInfo extends Snapshot.BuildingInfo {
         public final List<ItemStack>[] toPlaceRequiredItems;

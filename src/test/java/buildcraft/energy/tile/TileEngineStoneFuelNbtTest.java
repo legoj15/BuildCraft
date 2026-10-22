@@ -79,6 +79,15 @@ public class TileEngineStoneFuelNbtTest extends VanillaSetupBaseTester {
     }
 
     @Test
+    public void aCountAboveWhatTheItemCodecCarriesSurvives() {
+        // ItemStack.CODEC bounds a count to 1..99, so a stack of more (an item whose stack limit a mod or datapack
+        // raised) would fail to encode and the slot would save empty. The count is saved beside the stack instead.
+        ItemStack fuel = new ItemStack(Items.COAL, 128);
+
+        assertSameStack(fuel, roundTrip(fuel), "128 coal");
+    }
+
+    @Test
     public void anEmptySlotSavesNoFuelAndClearsOnLoad() {
         TileEngineStone_BC8 empty = newEngine();
         CompoundTag saved = save(empty);

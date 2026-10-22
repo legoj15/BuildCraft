@@ -304,6 +304,10 @@ public class GlobalSavedDataSnapshots {
      * required offsets), so a file saved before a rule changed deserialises to different NBT. Either way the server
      * would refuse it for as long as the stored key stayed.
      * <p>
+     * A file is moved only when it {@linkplain Snapshot#readFully() read fully}: one that names a block (or property
+     * value) this game lacks loads with a default in its place, and its content hashes differently for that reason
+     * alone, so it is left as it was rather than overwritten with the poorer copy.
+     * <p>
      * The name and the rest of the header are kept. A failed write or delete leaves the file as it was, listed under
      * the key it holds: when the old file cannot be deleted (another program holds it open), the copy just written
      * under the new key is removed again, since a second file whose content answers the new key would keep that key
@@ -320,6 +324,15 @@ public class GlobalSavedDataSnapshots {
         }
         Snapshot.Key current = snapshot.key;
         if (Arrays.equals(stored.hash, current.hash)) return stored;
+        if (!snapshot.readFully()) {
+            // The copy in memory has a default (air, mostly) where the file names something this game lacks, such as
+            // a block of a mod that is not installed: writing it back would destroy the original. It keeps its key;
+            // a start with that mod present re-keys it.
+            LOGGER.debug("Leaving the snapshot {} under its key {}: it names content this game lacks",
+                snapshotFile.getName(), stored);
+            snapshot.key = stored;
+            return stored;
+        }
 
         // A file already holding the new key (the same item downloaded again) is merged into, never rolled back.
         boolean heldAlready = alreadyStored(current);

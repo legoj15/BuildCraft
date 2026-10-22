@@ -683,4 +683,47 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertEquals(List.of(), client.getList(), "deleting the one entry empties the list");
         Assertions.assertEquals(List.of(), snapshotFileNames(), "and leaves nothing for a later scan to bring back");
     }
+
+    /** Apply {@code edit} to the {@code data} of every palette entry: the piston of {@link #pistonBlueprint()}. */
+    private static Consumer<CompoundTag> pistonData(Consumer<CompoundTag> edit) {
+        return nbt -> NBTUtilBC.readCompoundList(nbt.get("palette"))
+            .forEach(entry -> edit.accept(NBTUtilBC.getCompound(entry, "data")));
+    }
+
+    /** A file that names something this game cannot resolve reads back with a default in its place (a block this
+     *  game lacks reads as air), so writing the loaded copy under its new key would destroy the original: it is left
+     *  under the key it holds, byte for byte. */
+    private void assertLeftAsItWas(Consumer<CompoundTag> olderForm) throws IOException {
+        Snapshot.Key stale = writeOlderFile(pistonBlueprint(), "piston", olderForm);
+        byte[] before = Files.readAllBytes(fileOf(stale).toPath());
+        GlobalSavedDataSnapshots asStored = new GlobalSavedDataSnapshots(dir.toFile());
+        Assertions.assertFalse(serverAgreesOn(asStored, listedKey(asStored)),
+            "precondition: the loaded copy differs from the file, so its key is stale and a re-key would rewrite it");
+
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Assertions.assertEquals(stale, listedKey(client), "listed under the key the file holds");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(stale)), snapshotFileNames());
+        Assertions.assertArrayEquals(before, Files.readAllBytes(fileOf(stale).toPath()), "the file is untouched");
+    }
+
+    @Test
+    public void aClientFileWhoseBlockThisGameLacksIsNotRekeyed() throws IOException {
+        assertLeftAsItWas(pistonData(data -> {
+            NBTUtilBC.getCompound(data, "blockState").putString("Name", "missingmod:gizmo");
+            data.putString("placeBlock", "missingmod:gizmo");
+        }));
+    }
+
+    @Test
+    public void aClientFileWhoseReplaceableBlockThisGameLacksIsNotRekeyed() throws IOException {
+        assertLeftAsItWas(pistonData(data -> data.put("canBeReplacedWithBlocks",
+            NBTUtilBC.writeStringList(Stream.of("minecraft:stone", "missingmod:gizmo")))));
+    }
+
+    @Test
+    public void aClientFileWhosePropertyValueThisGameLacksIsNotRekeyed() throws IOException {
+        // The piston's facing is among its saved properties; a value the block does not have reads as the default.
+        assertLeftAsItWas(pistonData(data -> NBTUtilBC.getCompound(NBTUtilBC.getCompound(data, "blockState"),
+            "Properties").putString("facing", "sideways")));
+    }
 }

@@ -36,6 +36,9 @@ import buildcraft.lib.misc.NBTUtilBC;
 public class SchematicBlockFluid implements ISchematicBlock {
     private BlockState blockState;
     private boolean isFlowing;
+    /** Whether {@link #deserializeNbt} met a block or property value this game lacks (see
+     *  {@link SchematicBlockDefault#readFully()}). Not part of the schematic's value. */
+    private boolean readWithDefaults;
 
     @SuppressWarnings("unused")
     public static boolean predicate(SchematicBlockContext context) {
@@ -140,8 +143,16 @@ public class SchematicBlockFluid implements ISchematicBlock {
 
     @Override
     public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
-        blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "blockState"));
+        CompoundTag blockStateNbt = NBTUtilBC.getCompound(nbt, "blockState");
+        blockState = BlockStateNbt.read(blockStateNbt);
+        readWithDefaults = !BlockStateNbt.readsBack(blockStateNbt, blockState);
         isFlowing = NBTUtilBC.getBoolean(nbt, "isFlowing", false);
+    }
+
+    /** Whether everything {@link #deserializeNbt} read resolved in this game (see
+     *  {@link SchematicBlockDefault#readFully()}). */
+    boolean readFully() {
+        return !readWithDefaults;
     }
 
     @Override

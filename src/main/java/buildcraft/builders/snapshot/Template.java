@@ -76,6 +76,12 @@ public class Template extends Snapshot {
         return data == null ? 0 : data.cardinality();
     }
 
+    /** A template is a filled-cell mask and names no block, so it always reads fully. */
+    @Override
+    boolean readFully() {
+        return true;
+    }
+
     public class BuildingInfo extends Snapshot.BuildingInfo {
         public BuildingInfo(BlockPos basePos, Rotation rotation) {
             super(basePos, rotation);

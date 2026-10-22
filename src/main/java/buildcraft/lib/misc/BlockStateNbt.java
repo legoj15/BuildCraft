@@ -6,10 +6,13 @@
 
 package buildcraft.lib.misc;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 
 /** Reads block states out of BuildCraft's own NBT (blueprints, snapshots, facades) whichever way the keys are
  * spelled.
@@ -56,6 +59,31 @@ public class BlockStateNbt {
 
     public static BlockState read(CompoundTag nbt) {
         return NbtUtils.readBlockState(RegistryUtilBC.blockLookup(), withNativeKeys(nbt));
+    }
+
+    /** Whether {@code read}, what {@link #read} made of {@code nbt}, holds everything {@code nbt} names: the same
+     *  block (a block this game lacks reads as air), and each of its properties that {@code nbt} sets at the value
+     *  {@code nbt} sets (a value the block does not have reads as the default). A property {@code nbt} leaves out
+     *  takes its default without losing anything; a property the block no longer has is not checked. */
+    public static boolean readsBack(CompoundTag nbt, BlockState read) {
+        CompoundTag nativeNbt = withNativeKeys(nbt);
+        Identifier id = Identifier.tryParse(NBTUtilBC.getString(nativeNbt, ID, ""));
+        if (id == null || !id.equals(BuiltInRegistries.BLOCK.getKey(read.getBlock()))) {
+            return false;
+        }
+        CompoundTag properties = NBTUtilBC.getCompound(nativeNbt, PROPERTIES);
+        for (Property<?> property : read.getProperties()) {
+            String name = property.getName();
+            if (properties.contains(name)
+                    && !NBTUtilBC.getString(properties, name, "").equals(valueName(read, property))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static <T extends Comparable<T>> String valueName(BlockState state, Property<T> property) {
+        return property.getName(state.getValue(property));
     }
 
     /** {@code nbt} itself when it already uses the running node's keys; otherwise a copy that does. */

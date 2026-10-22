@@ -372,8 +372,8 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         if (!fuelStack.isEmpty()) {
             // The full stack, data components included: a named or otherwise tagged fuel (and the container item its
             // stack-sensitive crafting remainder hands back) must come out of a reload as it went in. The stack goes
-            // in at count 1 with the real count beside it because worlds already hold that form (see readFuel);
-            // ItemStack.CODEC itself only bounds a count to 1..99 and never checks the item's own stack limit.
+            // in at count 1 with the real count beside it: ItemStack.CODEC bounds a count to 1..99 (it never checks
+            // the item's own stack limit), so a larger stack would fail to encode and the slot would save empty.
             output.store(FUEL_KEY, ItemStack.CODEC, fuelStack.copyWithCount(1));
             output.putInt(FUEL_COUNT_KEY, fuelStack.getCount());
         }

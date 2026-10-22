@@ -194,6 +194,11 @@ public abstract class Snapshot {
      */
     abstract public int countNonAirCells();
 
+    /** Whether everything this snapshot was read from resolved in this game, so writing it back loses nothing that
+     *  was saved (load-time migrations aside). False when it names a block, property value or schematic content this
+     *  game lacks, or holds a schematic that cannot vouch for its own read. */
+    abstract boolean readFully();
+
     public void computeKey() {
         CompoundTag nbt = writeToNBT(this);
         if (nbt.contains("key")) {

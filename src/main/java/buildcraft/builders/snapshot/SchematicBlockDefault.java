@@ -132,6 +132,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
     protected final Set<BlockPos> updateBlockOffsets = new HashSet<>();
     @SuppressWarnings("WeakerAccess")
     protected final Set<Block> canBeReplacedWithBlocks = new HashSet<>();
+    /** Whether {@link #deserializeNbt} met a block or property value this game lacks and put a default in its place
+     *  (see {@link #readFully()}). Not part of the schematic's value. */
+    private boolean readWithDefaults;
 
     @SuppressWarnings("unused")
     public static boolean predicate(SchematicBlockContext context) {
@@ -906,7 +909,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         NBTUtilBC.readCompoundList(nbt.get("requiredBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(requiredBlockOffsets::add);
-        blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "blockState"));
+        CompoundTag blockStateNbt = NBTUtilBC.getCompound(nbt, "blockState");
+        blockState = BlockStateNbt.read(blockStateNbt);
+        readWithDefaults = !BlockStateNbt.readsBack(blockStateNbt, blockState);
         NBTUtilBC.readStringList(nbt.get("ignoredProperties"))
             .map(propertyName ->
                 blockState.getProperties().stream()
@@ -921,14 +926,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
         tileRotation = NBTUtilBC.readEnum(nbt.get("tileRotation"), Rotation.class);
         if (tileRotation == null) tileRotation = Rotation.NONE;
-        placeBlock = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, Identifier.parse(NBTUtilBC.getString(nbt, "placeBlock", "")));
+        // The block registry answers an id it lacks with air, so each id is checked before it is looked up.
+        Identifier placeBlockId = Identifier.parse(NBTUtilBC.getString(nbt, "placeBlock", ""));
+        readWithDefaults |= !BuiltInRegistries.BLOCK.containsKey(placeBlockId);
+        placeBlock = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, placeBlockId);
         NBTUtilBC.readCompoundList(nbt.get("updateBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(updateBlockOffsets::add);
         NBTUtilBC.readStringList(nbt.get("canBeReplacedWithBlocks"))
             .map(Identifier::parse)
-            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
-            .forEach(canBeReplacedWithBlocks::add);
+            .forEach(id -> {
+                readWithDefaults |= !BuiltInRegistries.BLOCK.containsKey(id);
+                canBeReplacedWithBlocks.add(buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id));
+            });
         // Migrate old schematics to current JSON rules. Schematics saved before a rule was added
         // (e.g. before walls/leaves got their connection/persistent properties listed in
         // multiple_variants.json) have empty/incomplete ignoredProperties baked in — and since
@@ -980,6 +990,14 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 .flatMap(java.util.Collection::stream)
                 .forEach(requiredBlockOffsets::add);
         }
+    }
+
+    /** Whether everything {@link #deserializeNbt} read resolved in this game, so writing this schematic back keeps
+     *  every block it was saved with (migrations aside). False when a block or a property value it names is missing
+     *  here (its mod is not installed, or no longer has it) and a default took its place. A schematic made by a scan
+     *  is always read fully. */
+    boolean readFully() {
+        return !readWithDefaults;
     }
 
     @SuppressWarnings("unchecked")

@@ -1,7 +1,7 @@
 ###### Changes since 2026.2.0:
 
-- Added Minecraft 26.3 support.
-- Robots and Stripes pipes now ask land-claim and protection mods before every block action (tilling, planting, placing, shearing, using items, interacting with mobs) through the same checks a player's click goes through, and stop at the first refusal, on every Minecraft version.
-- The Electronic Library no longer refuses, after a restart, blueprints that hold pistons or other blocks with several replaceable variants (blueprints saved before this fix need saving again).
-- Stripes pipes and robots no longer lose what a single bucket or bottle turns into when used (a filled or emptied bucket, a water bottle): it comes back down the pipe, or drops at the robot.
-- Fixed the guide book printing the last line of a long paragraph over the page number; the line now moves to the next page.
+- Added Minecraft 26.3 support. Minimum required NeoForge version is 26.3.0.38.
+- Robots and Stripes pipes now respect land-claim and protection mods just like how player interactions work.
+- Robots and Stripes pipes no longer lose fluid containers after consuming the fluid, it ejects it somewhere.
+- Electronic Library no longer rejects blueprints that hold pistons/blocks with replaceable variants (blueprints saved before this fix need saving again).
+- Fixed the guide book putting text over a page number in specific cases.

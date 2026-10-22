@@ -2,7 +2,7 @@ Last audited: 2026-10-17
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
-## 🔧 Outstanding work
+## 🔧 Outstanding work (version 2026.2.1)
 
 - Finish the Minecraft 26.3 port (automated and in-game checks pass; release work remains) — [plan](docs/port-26.3.md)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
@@ -13,10 +13,11 @@ Last audited: 2026-10-17
 - Land-claim mods can't stop a Builder building a blueprint — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
 - Decide: delete or finish the Stripes pipe's minecart-breaking and pipe-extending handlers (never called) — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
-
-## 🆕 New Features (version 2026.2)
-
 - Interpolation for robots, so they move smoothly on clients (planned for 2026.2.1)
+
+## 🆕 New Features (version 2026.3)
+
+- Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length
 - Guide book follow-ups from the Robots chapter: board icons, sort-button art, robot name tags — [list](docs/todo-details.md#guide-book-follow-ups)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
@@ -34,7 +35,6 @@ Last audited: 2026-10-17
 - Empty "to" slot on the Replacer flips its button to "Remove" (useful for clearing grass tufts)
 - Builder highlights blocks it can't place yet, so a stalled build is legible — [quick notes](docs/todo-details.md#quick-notes)
 - AE2 GuideME support
-- Quarry item transport visualization
 - Alternate recipe input/output pickers on the Advanced Crafting Table (different woods, stones, stairs, doors)
 - Enchantable Quarry and Mining Well
 - Give the heat exchanger a better in-world look — [notes](docs/todo-details.md#heat-exchanger-visual-overhaul)

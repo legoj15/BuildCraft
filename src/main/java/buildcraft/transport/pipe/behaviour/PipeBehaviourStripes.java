@@ -60,6 +60,9 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     public static final long BLOCK_HANDLER_COST = MjAPI.MJ;
     /** How long a refused block-handler ask keeps the handlers from asking again (one second). */
     private static final long BLOCK_HANDLER_BACKOFF_TICKS = 20;
+    /** How often (in ticks) the block handlers get their go: each one leases and resets the owner's fake player and
+     *  scans the cell in front, which an idle powered pipe would otherwise pay every tick for nothing. */
+    private static final int BLOCK_HANDLER_INTERVAL = 5;
 
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
     // The behaviour must itself be an IMjRedstoneReceiver (the pulsar plug + power-adaptor placement test
@@ -357,15 +360,18 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
 
     /**
      * Gives the registered block handlers (breaking the minecart in front, an addon's) their go at the cell in front,
-     * before the block itself is dug: 7.1.x ran them first on every powered tick, and charged a flat 10 RF. A handler
-     * that acts costs {@link #BLOCK_HANDLER_COST}; with less than that stored, none runs. A refused ask backs the
-     * handlers off for {@link #BLOCK_HANDLER_BACKOFF_TICKS}, so a claim is not asked again every tick.
+     * before the block itself is dug: 7.1.x ran them first on every powered tick, and charged a flat 10 RF. Here they
+     * run every {@link #BLOCK_HANDLER_INTERVAL} ticks (staggered by position, so a row of pipes does not all lease on
+     * one tick). A handler that acts costs {@link #BLOCK_HANDLER_COST}; with less than that stored, none runs. A
+     * refused ask backs the handlers off for {@link #BLOCK_HANDLER_BACKOFF_TICKS}, so a claim is not asked again soon.
      *
      * @return true when a handler acted (this tick's digging is skipped, as 7.1.x returned there)
      */
     private boolean runBlockHandlers(ServerLevel world, BlockPos pos, Direction dir) {
+        long now = world.getGameTime();
         if (PipeApi.stripeRegistry == null || battery.getStored() < BLOCK_HANDLER_COST
-                || world.getGameTime() < blockHandlersBackOffUntil) {
+                || now < blockHandlersBackOffUntil
+                || Math.floorMod(now + pos.asLong(), (long) BLOCK_HANDLER_INTERVAL) != 0) {
             return false;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(world, pipe.getHolder().getOwner(), pos, dir)) {

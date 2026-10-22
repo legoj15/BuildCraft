@@ -142,7 +142,9 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             return null;
         }
         BlockPos p = r.pos.relative(r.dir);
-        if (!canTakeStripesPipe(w.getBlockState(p))) {
+        // Above or below the build limit getBlockState reads void air, which looks free, but setBlock places
+        // nothing there: the move would delete the stripes pipe (its cargo, parts and wires) and drop nothing.
+        if (w.isOutsideBuildHeight(p) || !canTakeStripesPipe(w.getBlockState(p))) {
             sendBack(w, r.pos, List.of(r.stack), r.dir);
             return null;
         }

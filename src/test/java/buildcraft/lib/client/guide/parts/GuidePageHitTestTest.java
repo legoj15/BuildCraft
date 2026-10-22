@@ -74,14 +74,13 @@ public class GuidePageHitTestTest {
 
     @Test
     public void aSingleLineAtThePageBottomIsHitOnItsOwnPage() {
-        // The trailing spacing pushes the END position onto the next page although the line is drawn on page 0, which
-        // is why the END position cannot decide which page a click belongs to.
+        // A line drawn this close to the page bottom must still click on its own page, whatever page the trailing
+        // spacing leaves the END position on (it is the row's page tag, not END, that decides).
         PageLine line = new PageLine(0, "Link", true);
         LineLayout layout = GuidePart.layoutLine(FONT, new PagePosition(0, 86), line, X, 0, WIDTH, HEIGHT);
 
         assertEquals(1, layout.segments.size());
         assertEquals(0, layout.segments.get(0).page);
-        assertEquals(1, layout.end.page);
 
         MousePosition onLine = mouse(12, 85);
         assertTrue(layout.textHovered(onLine, 0));

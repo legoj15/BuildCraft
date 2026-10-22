@@ -115,20 +115,27 @@ public class EngineTester {
             /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
             //?}
             // Push to 84% (right at the boundary below OVERHEAT which is 85%)
-            // The engine naturally maxes out at 80% (0.8f). 
+            // The engine naturally maxes out at 80% (0.8f).
             fastForwardEnergy(engine, 0.84f);
-            
-            helper.runAfterDelay(20, () -> {
-                // Engine should comfortably lock internally at RED, but never OVERHEAT
-                if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Redstone Engine entered an OVERHEAT stage. Redstone engines should be perfectly safe and lock at RED.");
-                }
-                if (engine.getPowerStage() != EnumPowerStage.RED) {
-                    throw new IllegalStateException("Redstone Engine failed to reach RED stage. Found: " + engine.getPowerStage());
-                }
-                
-                helper.succeed();
-            });
+        });
+
+        // Scheduled up front, from the test body, never from inside the runnable above: the framework runs its
+        // scheduled runnables while iterating the map a nested runAfterDelay would insert into.
+        helper.runAfterDelay(1 + 20, () -> {
+            //? if >=1.21.10 {
+            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+            // Engine should comfortably lock internally at RED, but never OVERHEAT
+            if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException("Redstone Engine entered an OVERHEAT stage. Redstone engines should be perfectly safe and lock at RED.");
+            }
+            if (engine.getPowerStage() != EnumPowerStage.RED) {
+                throw new IllegalStateException("Redstone Engine failed to reach RED stage. Found: " + engine.getPowerStage());
+            }
+
+            helper.succeed();
         });
     }
 
@@ -411,40 +418,43 @@ public class EngineTester {
             // Sit just inside the OVERHEAT band (0.86 > 0.85); the bleed must now cool the engine
             // through the whole hysteresis band before the stage may leave OVERHEAT.
             fastForwardEnergy(engine, 0.86f);
+        });
 
-            // Hysteresis hold: at tick 50 (power ~0.81 — below entry, above the 0.75 exit) the stage
-            // must still read OVERHEAT instead of flapping back to RED.
-            helper.runAfterDelay(50, () -> {
-                //? if >=1.21.10 {
-                TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-                //?} else {
-                /*TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos);*/
-                //?}
-                if (engineHeld.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Hysteresis should hold OVERHEAT through the cool-down band at tick 50. Found: " + engineHeld.getPowerStage());
-                }
-            });
+        // Both checks are scheduled up front, from the test body, never from inside the setup runnable above: the
+        // framework runs its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
 
-            // By tick 140 the bleed has crossed the 0.75 exit: stage out of OVERHEAT, block intact
-            // (no explosion with canEnginesExplode=false).
-            helper.runAfterDelay(140, () -> {
-                BlockState stateAfter = helper.getBlockState(enginePos);
-                if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
-                    throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
-                }
-                //? if >=1.21.10 {
-                TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-                //?} else {
-                /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
-                //?}
-                if (engineAfter == null) {
-                    throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
-                }
-                if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Engine should self-cool past overheatExitLevel within ~140 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
-                }
-                helper.succeed();
-            });
+        // Hysteresis hold: at tick 50 (power ~0.81 — below entry, above the 0.75 exit) the stage
+        // must still read OVERHEAT instead of flapping back to RED.
+        helper.runAfterDelay(1 + 50, () -> {
+            //? if >=1.21.10 {
+            TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engineHeld.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException("Hysteresis should hold OVERHEAT through the cool-down band at tick 50. Found: " + engineHeld.getPowerStage());
+            }
+        });
+
+        // By tick 140 the bleed has crossed the 0.75 exit: stage out of OVERHEAT, block intact
+        // (no explosion with canEnginesExplode=false).
+        helper.runAfterDelay(1 + 140, () -> {
+            BlockState stateAfter = helper.getBlockState(enginePos);
+            if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
+                throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
+            }
+            //? if >=1.21.10 {
+            TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engineAfter == null) {
+                throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
+            }
+            if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException("Engine should self-cool past overheatExitLevel within ~140 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
+            }
+            helper.succeed();
         });
     }
 
@@ -479,15 +489,22 @@ public class EngineTester {
             if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
                 throw new IllegalStateException("Combustion engine should be OVERHEAT at heat 0.86. Found: " + engine.getPowerStage());
             }
+        });
 
-            helper.runAfterDelay(80, () -> {
-                if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException(
-                        "Redstone-powered, water-cooled combustion engine failed to self-recover from OVERHEAT "
-                        + "within 80 ticks — overheatExitLevel() likely sits at/below the 0.80 coolant equilibrium");
-                }
-                helper.succeed();
-            });
+        // Scheduled up front, from the test body, never from inside the setup runnable above: the framework runs
+        // its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
+        helper.runAfterDelay(2 + 80, () -> {
+            //? if >=1.21.10 {
+            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
+            //?} else {
+            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException(
+                    "Redstone-powered, water-cooled combustion engine failed to self-recover from OVERHEAT "
+                    + "within 80 ticks — overheatExitLevel() likely sits at/below the 0.80 coolant equilibrium");
+            }
+            helper.succeed();
         });
     }
 
@@ -652,17 +669,20 @@ public class EngineTester {
             // buffer, so the heat re-derived from power each tick stays low and the engine must NOT
             // slide back into OVERHEAT on subsequent ticks. (The pre-fix clearOverheat reset only heat,
             // which the next tick's updateHeatLevel undid from the still-full buffer.)
-            helper.runAfterDelay(5, () -> {
-                //? if >=1.21.10 {
-                TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-                //?} else {
-                /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
-                //?}
-                if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                    throw new IllegalStateException("Engine re-entered OVERHEAT after a wrench-clear — the power buffer was not vented");
-                }
-                helper.succeed();
-            });
+        });
+
+        // Scheduled up front, from the test body, never from inside the setup runnable above: the framework runs
+        // its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
+        helper.runAfterDelay(1 + 5, () -> {
+            //? if >=1.21.10 {
+            TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
+            //?} else {
+            /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
+            //?}
+            if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                throw new IllegalStateException("Engine re-entered OVERHEAT after a wrench-clear — the power buffer was not vented");
+            }
+            helper.succeed();
         });
     }
 

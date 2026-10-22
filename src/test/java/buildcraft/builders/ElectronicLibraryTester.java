@@ -101,40 +101,35 @@ public class ElectronicLibraryTester {
     }
 
     /**
-     * Verifies the full download cycle: after 50 ticks with a used snapshot in invDownIn
-     * and invDownOut empty, the item moves to invDownOut.
+     * Verifies the full download cycle: with a used snapshot in invDownIn and invDownOut empty, the item moves to
+     * invDownOut once the 50-tick cycle completes. Waits on the item arriving, not on a fixed tick, so a tile that
+     * starts ticking late only starts the cycle late.
      */
     public static void testDownloadCycle(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
-        helper.runAfterDelay(2, () -> {
-            //? if >=1.21.10 {
-            TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
-            //?} else {
-            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
-            //?}
-            if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
-
-            assertTrue(tile.progressDown == -1, "progressDown should be idle (-1) initially");
-
-            Snapshot.Header header = fakeHeader();
-            ItemStack usedBlueprint = BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header);
-            tile.invDownIn.setStackInSlot(0, usedBlueprint);
-
-            // Wait long enough for the 50-tick download cycle to complete
-            helper.runAfterDelay(55, () -> {
+        runSteps(helper, DOWNLOAD_CYCLE_TICKS, List.of(
+            new Step("the library to be seeded", () -> true, () -> {
+                assertTrue(tile.progressDown == -1, "progressDown should be idle (-1) initially");
+                Snapshot.Header header = fakeHeader();
+                tile.invDownIn.setStackInSlot(0, BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header));
+            }),
+            new Step("the download to deliver the item into invDownOut",
+                () -> !tile.invDownOut.getStackInSlot(0).isEmpty(), () -> {
                 assertTrue(tile.invDownIn.getStackInSlot(0).isEmpty(),
                     "invDownIn should be empty after download completes");
-                assertFalse(tile.invDownOut.getStackInSlot(0).isEmpty(),
-                    "invDownOut should hold the item after download completes");
                 assertTrue(tile.invDownOut.getStackInSlot(0).getItem() == BCBuildersItems.BLUEPRINT_USED.get(),
                     "invDownOut should contain the used blueprint");
                 assertTrue(tile.progressDown == -1,
                     "progressDown should return to idle after download");
-                helper.succeed();
-            });
-        });
+            })), () -> {});
     }
 
     /**
@@ -144,29 +139,27 @@ public class ElectronicLibraryTester {
     public static void testUploadProgressIncrements(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
-        helper.runAfterDelay(2, () -> {
-            //? if >=1.21.10 {
-            TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
-            //?} else {
-            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
-            //?}
-            if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
-
+        int[] started = {-1};
+        runSteps(helper, UPLOAD_PROGRESS_TICKS, List.of(
             // Seed: selected key + clean blueprint in invUpIn (simulates player picked a snapshot
             // and inserted a blank item to write to)
-            tile.selected = new Snapshot.Key(new CompoundTag());
-            tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
-
-            helper.runAfterDelay(10, () -> {
-                // After 10 ticks: progressUp should be somewhere between 1 and 49
-                assertTrue(tile.progressUp > 0,
-                    "progressUp should be > 0 after 10 ticks, got: " + tile.progressUp);
+            new Step("the library to be seeded", () -> true, () -> {
+                tile.selected = new Snapshot.Key(new CompoundTag());
+                tile.invUpIn.setStackInSlot(0, new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+            }),
+            new Step("progressUp to start counting", () -> tile.progressUp > 0, () -> started[0] = tile.progressUp),
+            new Step("progressUp to climb ten ticks further", () -> tile.progressUp >= started[0] + 10, () -> {
+                // Still counting after the climb, and nowhere near the 50 ticks a request takes.
                 assertTrue(tile.progressUp < 50,
-                    "progressUp should not complete in just 10 ticks, got: " + tile.progressUp);
-                helper.succeed();
-            });
-        });
+                    "progressUp should not complete in just ten ticks past " + started[0] + ", got: " + tile.progressUp);
+            })), () -> {});
     }
 
     /**
@@ -176,37 +169,30 @@ public class ElectronicLibraryTester {
     public static void testDownloadIdleWhenEmpty(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
-        helper.runAfterDelay(5, () -> {
-            //? if >=1.21.10 {
-            TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
-            //?} else {
-            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
-            //?}
-            if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
-
-            // Nothing in invDownIn: progress must stay idle
-            assertTrue(tile.progressDown == -1,
-                "progressDown should be -1 (idle) with empty invDownIn, got: " + tile.progressDown);
-            assertTrue(tile.progressUp == -1,
-                "progressUp should be -1 (idle) with no conditions met, got: " + tile.progressUp);
-
-            // Seed, wait a bit, remove item, wait again — progress should reset
-            Snapshot.Header header = fakeHeader();
-            ItemStack usedBlueprint = BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header);
-            tile.invDownIn.setStackInSlot(0, usedBlueprint);
-
-            helper.runAfterDelay(10, () -> {
-                assertTrue(tile.progressDown > 0, "progressDown should have started after seeding");
-                // Remove the item — progress should reset
-                tile.invDownIn.setStackInSlot(0, ItemStack.EMPTY);
-                helper.runAfterDelay(2, () -> {
-                    assertTrue(tile.progressDown == -1,
-                        "progressDown should reset to -1 after invDownIn cleared, got: " + tile.progressDown);
-                    helper.succeed();
-                });
-            });
-        });
+        runSteps(helper, DOWNLOAD_IDLE_TICKS, List.of(
+            new Step("the idle library to be checked and seeded", () -> true, () -> {
+                // Nothing in invDownIn: progress must stay idle
+                assertTrue(tile.progressDown == -1,
+                    "progressDown should be -1 (idle) with empty invDownIn, got: " + tile.progressDown);
+                assertTrue(tile.progressUp == -1,
+                    "progressUp should be -1 (idle) with no conditions met, got: " + tile.progressUp);
+                // Seed, wait for the cycle to start, remove the item — progress should reset
+                Snapshot.Header header = fakeHeader();
+                tile.invDownIn.setStackInSlot(0, BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header));
+            }),
+            new Step("progressDown to start after seeding", () -> tile.progressDown > 0,
+                () -> tile.invDownIn.setStackInSlot(0, ItemStack.EMPTY)),
+            new Step("progressDown to reset to -1 after invDownIn was cleared", () -> tile.progressDown == -1, () -> {
+                assertTrue(tile.invDownOut.getStackInSlot(0).isEmpty(),
+                    "clearing invDownIn mid-cycle aborts the download: nothing may come out");
+            })), () -> {});
     }
 
     // ── Client-driven menu messages ─────────────────────────────────────────
@@ -346,6 +332,12 @@ public class ElectronicLibraryTester {
         sendChunk(menu, request, false, Arrays.copyOfRange(whole, third, 2 * third));
         sendChunk(menu, request, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
     }
+
+    /** Poll budgets of the three library-cycle tests, each well past the 50-tick cycle it waits for and under its
+     *  manifest's {@code max_ticks} (200). */
+    private static final int DOWNLOAD_CYCLE_TICKS = 150;
+    private static final int UPLOAD_PROGRESS_TICKS = 150;
+    private static final int DOWNLOAD_IDLE_TICKS = 150;
 
     /** One step of {@link #runSteps}: wait until {@code ready}, then run {@code action}. */
     private record Step(String waitingFor, BooleanSupplier ready, Runnable action) {}

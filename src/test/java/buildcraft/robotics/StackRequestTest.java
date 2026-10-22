@@ -169,5 +169,19 @@ public class StackRequestTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(new ResourceIdRequest(station, 4), request.getResourceId(null),
                 "the reservation id is the station's cell plus the provider slot — what keeps two delivery"
                         + " robots off the same order");
+
+        // The id comes from the by-value link, not the live station: a reloaded order whose station no longer
+        // resolves still names the reservation the search took, so giving it up can hand that back.
+        CompoundTag nbt = new CompoundTag();
+        request.writeToNBT(nbt);
+        StackRequest loaded = StackRequest.loadFromNBT(nbt);
+        var previous = registryResolving(null, BlockPos.ZERO, Direction.DOWN);
+        try {
+            Assertions.assertNull(loaded.getStation(null), "precondition: the station no longer resolves");
+            Assertions.assertEquals(new ResourceIdRequest(station, 4), loaded.getResourceId(null),
+                    "a reloaded order whose station is gone keeps the id it was reserved under");
+        } finally {
+            RobotManager.registryProvider = previous;
+        }
     }
 }

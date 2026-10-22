@@ -133,13 +133,11 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 StackRequest order = ((AIRobotSearchStackRequest) ai).request;
                 currentRequest.adopt(order, true);
 
-                // A station that is gone is guarded as OrderClaimer.reclaim guards it: the order has no requester to
-                // deliver to, so it is given up (a live search always sets the station first, so this is a guard;
-                // giving the order up still frees its reservation, whose id needs only the station's position).
+                // The search sets the order's station before it reserves it, so the station is always there. The
+                // search skips requesters in unloaded chunks; checked again here because no goods are held yet, so an
+                // order nobody can reach costs nothing to give up.
                 DockingStation requester = order.getStation(robot.level());
-                // The search skips requesters in unloaded chunks; checked again here because no goods are held yet,
-                // so an order nobody can reach costs nothing to give up.
-                if (requester == null || !requester.isChunkLoaded()
+                if (!requester.isChunkLoaded()
                         || !JobClaim.STATION_VISIT.reclaim(robot, robot.getRegistry(), requester)) {
                     releaseCurrentRequest();
                 }

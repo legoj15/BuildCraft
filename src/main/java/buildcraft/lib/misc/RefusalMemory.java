@@ -44,7 +44,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * <p><b>Refusals.</b> A refusal holds while the block's state is unchanged, until its window ends. The state check
  * forgets it the moment the block becomes something else (a new block is a new question); the window exists because
  * lifting a claim, or trusting the machine's owner in it, fires no event a machine could hear. The refusals are kept
- * in a {@link PositionMemory}, the store every remembered-block memory shares, whose policy sets the window and cap:
+ * in a {@link PositionMemory}, the store this memory and the robots' unreachable-block cache share (robot block
+ * claims are owner-held, never windowed, and stay outside it: see {@code BlockClaims}), whose policy sets the window
+ * and cap:
  * <ul>
  * <li>A <em>fixed</em> window is the same length for every refusal, so entries end in the order they were made: an
  *     optional cap drops the oldest, and {@link #takeExpired} can hand back the due ones without scanning the rest.</li>

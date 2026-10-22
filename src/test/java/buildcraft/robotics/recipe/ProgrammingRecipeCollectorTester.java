@@ -106,16 +106,18 @@ public class ProgrammingRecipeCollectorTester extends VanillaSetupBaseTester {
     public void gridIsTheTablesOwnGridInItsOwnOrder() {
         List<ItemStack> tableGrid = boardRecipe.getOptions(TileProgrammingTable.OPTION_COLS,
                 TileProgrammingTable.OPTION_ROWS);
-        int expectedSize = Math.min(tableGrid.size(), GRID_SIZE);
         Assertions.assertFalse(boardEntries.isEmpty(), "liveness");
         for (ProgrammingRecipeJei entry : boardEntries) {
-            Assertions.assertEquals(expectedSize, entry.grid().size(), entry.id() + " grid is the table's visible grid");
-            for (int i = 0; i < expectedSize; i++) {
-                Assertions.assertTrue(ItemStack.matches(tableGrid.get(i), entry.grid().get(i)),
-                        entry.id() + " grid cell " + i + " matches the table");
+            // Each entry shows the page its option is on: a full grid, or what is left on the last page.
+            int first = (entry.optionIndex() / GRID_SIZE) * GRID_SIZE;
+            int pageSize = Math.min(GRID_SIZE, tableGrid.size() - first);
+            Assertions.assertEquals(pageSize, entry.grid().size(), entry.id() + " grid is the table's page for it");
+            for (int i = 0; i < pageSize; i++) {
+                Assertions.assertTrue(ItemStack.matches(tableGrid.get(first + i), entry.grid().get(i)),
+                        entry.id() + " grid cell " + i + " matches the table's page");
             }
-            Assertions.assertTrue(entry.gridIndex() >= 0 && entry.gridIndex() < expectedSize,
-                    entry.id() + " highlights a visible cell");
+            Assertions.assertEquals(entry.optionIndex() - first, entry.gridIndex(),
+                    entry.id() + " highlights its own cell on that page");
         }
     }
 
@@ -134,8 +136,8 @@ public class ProgrammingRecipeCollectorTester extends VanillaSetupBaseTester {
     public void entriesFollowTheTablesCheapestFirstOrder() {
         Assertions.assertTrue(boardEntries.size() > 1, "liveness: more than one entry to order");
         for (int i = 1; i < boardEntries.size(); i++) {
-            Assertions.assertTrue(boardEntries.get(i - 1).gridIndex() < boardEntries.get(i).gridIndex(),
-                    "entries are listed in grid order (position " + i + ")");
+            Assertions.assertTrue(boardEntries.get(i - 1).optionIndex() < boardEntries.get(i).optionIndex(),
+                    "entries are listed in the table's option order across pages (position " + i + ")");
             Assertions.assertTrue(boardEntries.get(i - 1).microJoules() <= boardEntries.get(i).microJoules(),
                     "grid order is cheapest first (position " + i + ")");
         }

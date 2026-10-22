@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * delimiters stripped (a {@code //} is removed, a block comment loses its opening and closing marks); an arm the
  * node disables that is not "commented" gets wrapped in a block comment; anything else is left alone. That is right
  * for the arm Stonecutter itself wrote, a deactivated block of code inside one block comment, and wrong for prose.
- * Two shapes break it:
+ * Three shapes break it:
  * <ul>
  * <li><b>A live arm that holds only comments.</b> {@code src/} is the ACTIVE node's text, so its enabled arms are
  *     uncommented code. One made only of comments reads as "commented", and every node that enables the arm (or
@@ -43,15 +43,24 @@ import org.junit.jupiter.api.Test;
  * <li><b>A {@code //} comment beside an inactive arm's block comment.</b> The arm is then several comments rather
  *     than one, and the {@code //} is stripped to bare prose the moment a node enables the arm. Prose that belongs
  *     to the arm goes INSIDE the block comment (it survives as a {@code //} line once the wrapper is stripped).</li>
+ * <li><b>An inactive arm that holds code outside a block comment.</b> {@code src/} is the ACTIVE node's text, and the
+ *     active node compiles it as written: bare code in a disabled arm is compiled beside the live arm (a duplicate
+ *     definition if it is lucky, two branches running if it is not). Stonecutter wraps what it disables in one block
+ *     comment, so any code the scan sees in an inactive arm was left unwrapped by hand. A nested directive chain in
+ *     the arm counts as code. A {@code //} comment beside code is not the second hazard (an arm with code is not read
+ *     as commented, so the {@code //} stays), and such an arm still has its block comments re-scanned.</li>
  * </ul>
  * Several stacked block comments in an inactive arm are fine (each is stripped to code), as is any arm with real
- * code in it, whatever comments sit around that code.
+ * code in it that is live, whatever comments sit around that code.
  *
  * <p><b>Chains inside a block comment.</b> Stonecutter re-lexes what an enabled arm held once its block comment is
  * stripped (confirmed on a scratch project: a comment-only arm of a nested chain came out as bare prose), so a
- * directive chain written inside an inactive arm's block comment obeys the same two rules there. Which of its arms
+ * directive chain written inside an inactive arm's block comment obeys the same rules there. Which of its arms
  * is live depends on the node that enables the outer arm, so the guard judges the chain as the active node would
- * see it, the state the tree's one such chain (PipePlacementHighlight) is written in.
+ * see it, the state the tree's one such chain (PipePlacementHighlight) is written in. Java's block comments do not
+ * nest, so Stonecutter writes the block comment of a nested inactive arm, and a doc comment inside the wrapper, as
+ * {@code /^ ... ^/} (and {@code /^* ... *^/}); inside a block comment's body the scanner reads that form as a comment.
+ * In a file's own text it is not Java, so there the scanner does not read it as one and it counts as code.
  *
  * <p><b>What Stonecutter processes.</b> Every file in the {@code src/} source dirs, resources included, whose
  * extension has a handler in Stonecutter's {@code Defaults.kt}; everything else (json, toml, md, txt, images) is
@@ -68,11 +77,13 @@ import org.junit.jupiter.api.Test;
  * verdict is too. Which arms are live is decided against the active node, read from the {@code stonecutter active}
  * line of {@code stonecutter.gradle.kts}, whose text {@code src/} always matches.
  *
- * <p><b>What it cannot see.</b> Whether an inactive arm's block comment holds code: Stonecutter wraps code in exactly
- * that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first node to
- * enable the arm is what shows it. Nor does it read the {@code /^ ^/} nested-comment form as a comment, so the arm
- * holding one counts as code. Conditions beyond version comparisons joined by {@code &&} and {@code ||} are reported
- * rather than guessed at. */
+ * <p><b>What it cannot see.</b> Whether an inactive arm's block comment holds code or prose. Stonecutter wraps code in
+ * exactly that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first
+ * node to enable the arm is what shows it. Telling the two apart takes a Java parser: any text rule (every line ends
+ * in {@code ; { } ,}, say) misreads the wrapped fragments the tree does hold, such as a lone trailing
+ * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Conditions
+ * beyond version comparisons joined by {@code &&} and {@code ||} are reported rather than guessed at, and the arms of
+ * such a chain are not judged. */
 public class StonecutterDirectiveGuardTester {
 
     /** Extensions whose Stonecutter handler is the same slash scanner and block-comment wrapping as {@code .java}. */
@@ -174,7 +185,7 @@ public class StonecutterDirectiveGuardTester {
             //? if >=1.21.10 {
             // prose only
             //?} else {
-            int d = 1;
+            /^int d = 1;^/
             //?}
             *///?}
             """);
@@ -203,6 +214,77 @@ public class StonecutterDirectiveGuardTester {
             .replace("\n", "\r\n"));
         Assertions.assertEquals(1, crlf.findings.size(), crlf.findings.toString());
         Assertions.assertTrue(crlf.findings.get(0).startsWith("F.java:4: "), crlf.findings.get(0));
+    }
+
+    /** An inactive arm holds its code inside one block comment. Code left bare there is compiled on the active node
+     *  beside the live arm, so it is reported, at the top level and one level down inside a block comment. */
+    @Test
+    public void scannerFlagsAnInactiveArmHoldingBareCode() {
+        int[] active = {26, 3};
+
+        Scan bare = new Scan(active);
+        bare.file("P.java", """
+            //? if >=26.3 {
+            int p = 3;
+            //?} else {
+            int p = 1; // a trailing note is no extra finding
+            //?}
+            """);
+        Assertions.assertEquals(1, bare.findings.size(), bare.findings.toString());
+        Assertions.assertTrue(bare.findings.get(0).startsWith("P.java:3: "), bare.findings.get(0));
+        Assertions.assertTrue(bare.findings.get(0).contains("inactive arm"), bare.findings.get(0));
+
+        Scan nested = new Scan(active);
+        nested.file("Q.java", """
+            //? if >=26.3 {
+            int q = 3;
+            //?} else {
+            /*
+            //? if >=26.3 {
+            int q = 2;
+            //?} else {
+            int q = 1;
+            //?}
+            *///?}
+            """);
+        Assertions.assertEquals(1, nested.findings.size(), nested.findings.toString());
+        Assertions.assertTrue(nested.findings.get(0).startsWith("Q.java:7: "), nested.findings.get(0));
+
+        // An unwrapped nested chain is bare content of the arm too: Stonecutter wraps the whole arm in one comment.
+        Scan chain = new Scan(active);
+        chain.file("R.java", """
+            //? if >=26.3 {
+            int r = 3;
+            //?} else {
+            //? if >=1.21.10 {
+            int r = 2;
+            //?}
+            //?}
+            """);
+        Assertions.assertEquals(1, chain.findings.size(), chain.findings.toString());
+        Assertions.assertTrue(chain.findings.get(0).startsWith("R.java:3: "), chain.findings.get(0));
+    }
+
+    /** An inactive arm that holds bare code still has its block comments re-scanned: the code is one finding, and a
+     *  nested chain in a comment beside it is judged as it would be in a sound arm. */
+    @Test
+    public void anInactiveArmWithBareCodeStillHasItsBlockCommentsRescanned() {
+        Scan mixed = new Scan(new int[] {26, 3});
+        mixed.file("S.java", """
+            //? if >=26.3 {
+            int s = 3;
+            //?} else {
+            int s = 1;
+            /*
+            //? if >=26.3 {
+            // prose only
+            //?}
+            */
+            //?}
+            """);
+        Assertions.assertEquals(2, mixed.findings.size(), mixed.findings.toString());
+        Assertions.assertTrue(mixed.findings.get(0).startsWith("S.java:3: "), mixed.findings.get(0));
+        Assertions.assertTrue(mixed.findings.get(1).startsWith("S.java:6: "), mixed.findings.get(1));
     }
 
     /** The false-positive guard rails: arms that look odd to a text scan but that Stonecutter handles correctly. */
@@ -274,6 +356,24 @@ public class StonecutterDirectiveGuardTester {
         Assertions.assertEquals(List.of(), nested.findings);
         Assertions.assertEquals(2, nested.liveArms, "the outer live arm and the nested one");
         Assertions.assertEquals(2, nested.inactiveArms, "the outer inactive arm and the nested one");
+
+        // The same inside a wrapper, with the doc comment form (/^* ... *^/) beside the code form: every nested
+        // block comment is a comment, not the bare code a /^ ^/ would look like to a scan that did not know it.
+        Scan nestedDoc = new Scan(active);
+        nestedDoc.file("H2.java", """
+            //? if >=26.3 {
+            int w = 3;
+            //?} else {
+            /*
+            //? if >=1.21.11 {
+            int w = 2;
+            //?} else {
+            /^* A doc comment. *^/
+            /^int w = 1;^/
+            //?}
+            *///?}
+            """);
+        Assertions.assertEquals(List.of(), nestedDoc.findings);
 
         Scan crlf = new Scan(active);
         crlf.file("I.java", "//? if >=26.3 {\nint i = 3;\n//?} else {\n/*// prose inside\nint i = 1;\n*///?}\n"
@@ -372,6 +472,8 @@ public class StonecutterDirectiveGuardTester {
         final String marker;
         final int markerLine;
         final boolean live;
+        /** Set when the chain's condition could not be evaluated: which arm is live is unknown, so none is judged. */
+        boolean unjudged;
         /** Real content, including a nested directive: Stonecutter does not call such an arm commented. */
         boolean code;
         final List<Tok> comments = new ArrayList<>();
@@ -385,6 +487,8 @@ public class StonecutterDirectiveGuardTester {
 
     private static final class Chain {
         boolean taken;
+        /** A condition of this chain could not be evaluated (already reported), so its arms are not judged. */
+        boolean unknown;
         Arm arm;
     }
 
@@ -404,7 +508,7 @@ public class StonecutterDirectiveGuardTester {
         void file(String where, String text) {
             this.where = where;
             this.lineStarts = lineStarts(text);
-            run(tokenize(text, 0));
+            run(tokenize(text, 0, false));
         }
 
         /** One run of tokens with its own directive stack: a whole file, or the body of a block comment in an
@@ -462,10 +566,12 @@ public class StonecutterDirectiveGuardTester {
                     live = cond == null || holds(cond, active);
                 } catch (IllegalArgumentException e) {
                     report(tok, e.getMessage());
+                    chain.unknown = true;
                 }
             }
             chain.taken |= live;
             chain.arm = new Arm(marker, lineOf(tok), live);
+            chain.arm.unjudged = chain.unknown;
             if (live) {
                 liveArms++;
             } else {
@@ -474,23 +580,35 @@ public class StonecutterDirectiveGuardTester {
         }
 
         private void end(Arm arm) {
-            if (arm.code || arm.comments.isEmpty()) {
+            if (arm.unjudged) {
                 return;
             }
             if (arm.live) {
-                findings.add(where + ":" + arm.markerLine + ": the live arm of `" + arm.marker + "` holds only comments. "
-                    + "Stonecutter reads that as a commented arm and strips the comment delimiters on every node that "
-                    + "enables it: a // line is left as bare text, and what sits in a /* */ is compiled as live code. "
-                    + "Move the comment above the directive, or put uncommented code in the arm");
+                if (!arm.code && !arm.comments.isEmpty()) {
+                    findings.add(where + ":" + arm.markerLine + ": the live arm of `" + arm.marker + "` holds only "
+                        + "comments. Stonecutter reads that as a commented arm and strips the comment delimiters on "
+                        + "every node that enables it: a // line is left as bare text, and what sits in a /* */ is "
+                        + "compiled as live code. Move the comment above the directive, or put uncommented code in "
+                        + "the arm");
+                }
                 return;
             }
+            if (arm.code) {
+                findings.add(where + ":" + arm.markerLine + ": the inactive arm of `" + arm.marker + "` holds code "
+                    + "outside a block comment. Stonecutter wraps what it disables in one /* */; bare code here is "
+                    + "compiled on the active node beside the live arm. Wrap the arm's content in a block comment, "
+                    + "or delete it");
+            }
             for (Tok tok : arm.comments) {
-                if (tok.line) {
+                if (!tok.line) {
+                    // Re-lexed once a node enables the arm and its wrapper is stripped; an arm that also holds code is
+                    // reported above and still has its comments judged, so fixing that finding reveals nothing new.
+                    run(tokenize(tok.body, tok.start + 2, true));
+                } else if (!arm.code) {
+                    // With code in the arm Stonecutter does not read it as commented and leaves a // alone.
                     report(tok, "a // comment in the inactive arm of `" + arm.marker + "` sits outside the arm's block "
                         + "comment. Stonecutter strips the // when a node enables the arm, leaving bare text. Move it "
                         + "above the directive or inside the block comment");
-                } else {
-                    run(tokenize(tok.body, tok.start + 2));
                 }
             }
         }
@@ -533,8 +651,11 @@ public class StonecutterDirectiveGuardTester {
     }
 
     /** Stonecutter's slash scanner: comments, with string, char and text-block literals skipped whole. {@code base} is
-     *  the offset of {@code s} in its file, so a block comment's body can be scanned with file-wide positions. */
-    private static List<Tok> tokenize(String s, int base) {
+     *  the offset of {@code s} in its file, so a block comment's body can be scanned with file-wide positions.
+     *  {@code nested} is set for the body of a block comment: Java's block comments do not nest, so Stonecutter writes
+     *  a block comment that sits inside another one as {@code /^ ... ^/} (a doc comment as {@code /^* ... *^/}), and
+     *  only there is that form a comment; in a file's own text it would be bare code. */
+    private static List<Tok> tokenize(String s, int base, boolean nested) {
         List<Tok> out = new ArrayList<>();
         int n = s.length();
         int i = 0;
@@ -552,6 +673,11 @@ public class StonecutterDirectiveGuardTester {
                 inCode = false;
             } else if (c == '/' && next == '*') {
                 int close = s.indexOf("*/", i + 2);
+                out.add(new Tok(true, false, base + i, s.substring(i + 2, close < 0 ? n : close)));
+                i = close < 0 ? n : close + 2;
+                inCode = false;
+            } else if (nested && c == '/' && next == '^') {
+                int close = s.indexOf("^/", i + 2);
                 out.add(new Tok(true, false, base + i, s.substring(i + 2, close < 0 ? n : close)));
                 i = close < 0 ? n : close + 2;
                 inCode = false;

@@ -97,13 +97,28 @@ public class GlobalSavedDataSnapshots {
         }
     }
     private final File snapshotsFile;
+    /** Whether the scan re-keys a file whose stored key no longer matches its content (see {@link #rekeyed}). */
+    private final boolean healKeys;
 
     private GlobalSavedDataSnapshots(Side side) {
-        this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)));
+        this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)),
+            side == Side.CLIENT);
     }
 
-    /** A store over {@code directory}; the game uses one per side under the game directory. */
+    /** A store over {@code directory} that leaves every file under the key it holds. */
     GlobalSavedDataSnapshots(File directory) {
+        this(directory, false);
+    }
+
+    /**
+     * A store over {@code directory}; the game uses one per side under the game directory.
+     *
+     * @param healKeys whether the scan that builds the list re-keys the files it reads (the client's library does:
+     *                 the server re-keys every upload from its content and refuses one whose key differs from the
+     *                 key it asked for; the server's own files are what blueprint items point at, so they never move)
+     */
+    GlobalSavedDataSnapshots(File directory, boolean healKeys) {
+        this.healKeys = healKeys;
         snapshotsFile = directory;
         if (!snapshotsFile.exists()) {
             if (!snapshotsFile.mkdirs()) {
@@ -228,7 +243,7 @@ public class GlobalSavedDataSnapshots {
         FileStamp stamp = FileStamp.of(snapshotFile);
         FileRead read = readSnapshotFile(snapshotFile);
         if (read.unreadable() == null) {
-            index.put(snapshotFile.getName(), listedKey(snapshotFile, read.snapshot()), stamp.modified(), stamp.length());
+            index.put(snapshotFile.getName(), listedKey(snapshotFile, read.snapshot(), false), stamp.modified(), stamp.length());
         }
         Snapshot snapshot = read.snapshot();
         if (snapshot == null || !answers(snapshot.key, key, exact)) return null;
@@ -274,9 +289,52 @@ public class GlobalSavedDataSnapshots {
     /** The key {@code snapshot} (read from {@code snapshotFile}) is listed under, or null if there is none or the file
      *  is not named after it. */
     @Nullable
-    private static Snapshot.Key listedKey(File snapshotFile, @Nullable Snapshot snapshot) {
+    private Snapshot.Key listedKey(File snapshotFile, @Nullable Snapshot snapshot, boolean heal) {
         if (snapshot == null || snapshot.key == null) return null;
-        return snapshotFile.getName().startsWith(snapshot.key.toString()) ? snapshot.key : null;
+        if (!snapshotFile.getName().startsWith(snapshot.key.toString())) return null;
+        return heal ? rekeyed(snapshotFile, snapshot) : snapshot.key;
+    }
+
+    /**
+     * The key {@code snapshotFile} is listed under, after moving it to the key its content now hashes to if that is
+     * not the key it holds. A key is the hash of the snapshot as it serialises, and the server keys every upload
+     * from the content it unpacks, refusing one whose hash differs from the key it asked for. A file can hold a key
+     * the content no longer has for two reasons: an older build hashed a schematic's replaceable blocks in the order
+     * of one JVM's identity hashes, and loading a schematic migrates it to the current rules (ignored properties,
+     * required offsets), so a file saved before a rule changed deserialises to different NBT. Either way the server
+     * would refuse it for as long as the stored key stayed.
+     * <p>
+     * The name and the rest of the header are kept. A failed write or delete leaves the file as it was, listed under
+     * the key it holds.
+     */
+    private Snapshot.Key rekeyed(File snapshotFile, Snapshot snapshot) {
+        Snapshot.Key stored = snapshot.key;
+        try {
+            snapshot.computeKey();
+        } catch (RuntimeException e) {
+            LOGGER.warn("Could not recompute the key of the snapshot {}", snapshotFile, e);
+            snapshot.key = stored;
+            return stored;
+        }
+        Snapshot.Key current = snapshot.key;
+        if (Arrays.equals(stored.hash, current.hash)) return stored;
+
+        addSnapshot(snapshot);
+        if (!alreadyStored(current)) {
+            LOGGER.warn("Could not re-key the snapshot {} to {}", snapshotFile, current);
+            return stored;
+        }
+        LOGGER.info("Re-keyed the snapshot {} from {} to {}", snapshotFile.getName(), stored, current);
+        if (snapshotFile.delete()) {
+            intactFiles.remove(snapshotFile.getName());
+            index.remove(snapshotFile.getName());
+        } else {
+            // Listed under the new key too, so the list shows one entry for it; a later scan leaves the unchanged
+            // file alone rather than trying to move it again every few seconds.
+            LOGGER.warn("Failed to delete the snapshot file {} after re-keying it", snapshotFile);
+        }
+        invalidate(stored);
+        return current;
     }
 
     /** The index's reader: {@link #listedKey} of what {@code snapshotFile} holds; a file that cannot be read right now
@@ -285,7 +343,7 @@ public class GlobalSavedDataSnapshots {
     private Snapshot.Key readListedKey(File snapshotFile) {
         FileRead read = readSnapshotFile(snapshotFile);
         if (read.unreadable() != null) throw new UncheckedIOException(read.unreadable());
-        return listedKey(snapshotFile, read.snapshot());
+        return listedKey(snapshotFile, read.snapshot(), healKeys);
     }
 
     public void addSnapshot(Snapshot snapshot) {
@@ -415,13 +473,15 @@ public class GlobalSavedDataSnapshots {
      * the list comes from a cached index that saves and deletes update directly, and that a background thread
      * re-checks against the directory at most every {@link #RESCAN_INTERVAL_NANOS} (to notice files copied in or
      * deleted outside the game). The very first call returns an empty list; the first scan lands a frame or so later.
+     * On the client's store that scan also moves a file whose key no longer matches its content to the key it now
+     * hashes to (see {@link #rekeyed}), so a key listed before a scan can be gone after it.
      */
     public List<Snapshot.Key> getList() {
         if ((!rescannedOnce || System.nanoTime() - lastRescanNanos >= RESCAN_INTERVAL_NANOS)
                 && rescanQueued.compareAndSet(false, true)) {
             RESCAN_EXECUTOR.execute(() -> {
                 try {
-                    index.rescan(snapshotsFile, SNAPSHOT_FILE_EXTENSION, this::readListedKey);
+                    scanNow();
                 } catch (RuntimeException e) {
                     LOGGER.error("Failed to scan the snapshot directory {}", snapshotsFile, e);
                 } finally {
@@ -432,6 +492,11 @@ public class GlobalSavedDataSnapshots {
             });
         }
         return index.list();
+    }
+
+    /** Bring the index in line with the directory on this thread: what the background scan does. */
+    void scanNow() {
+        index.rescan(snapshotsFile, SNAPSHOT_FILE_EXTENSION, this::readListedKey);
     }
 
     /** Whether {@code key} is in the {@link #getList() list}. Never touches disk. */

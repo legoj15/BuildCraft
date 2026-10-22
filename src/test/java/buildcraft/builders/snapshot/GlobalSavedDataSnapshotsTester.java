@@ -5,6 +5,8 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -13,8 +15,11 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -24,8 +29,11 @@ import org.junit.jupiter.api.io.TempDir;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.Blocks;
 
 import buildcraft.builders.tile.TileElectronicLibrary;
+import buildcraft.lib.misc.HashUtil;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.nbt.NbtSquisher;
 
 /**
@@ -501,5 +509,157 @@ public class GlobalSavedDataSnapshotsTester {
         long modified = Files.getLastModifiedTime(target).toMillis();
         store.addSnapshot(good);
         Assertions.assertEquals(modified, Files.getLastModifiedTime(target).toMillis(), "the rewritten file is trusted");
+    }
+
+    // --- Re-keying the client's library files ---
+
+    /** A blueprint whose one stair schematic has no ignored properties, the way a schematic saved before stairs
+     *  auto-ignored their {@code shape} is: loading it adds the property, so its NBT changes on every load. */
+    private static Blueprint stairsBlueprint() {
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(2, 1, 1);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.data = new int[] {0, 0};
+        SchematicBlockDefault stairs = new SchematicBlockDefault();
+        stairs.blockState = Blocks.OAK_STAIRS.defaultBlockState();
+        stairs.placeBlock = Blocks.OAK_STAIRS;
+        blueprint.palette.add(stairs);
+        return blueprint;
+    }
+
+    /** A blueprint whose one piston schematic lists eight replaceable blocks. */
+    private static Blueprint pistonBlueprint() {
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(2, 1, 1);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.data = new int[] {0, 0};
+        SchematicBlockDefault piston = new SchematicBlockDefault();
+        piston.blockState = Blocks.PISTON.defaultBlockState();
+        piston.placeBlock = Blocks.PISTON;
+        piston.canBeReplacedWithBlocks.addAll(List.of(Blocks.STONE, Blocks.PISTON, Blocks.STICKY_PISTON,
+            Blocks.MOVING_PISTON, Blocks.PISTON_HEAD, Blocks.AIR, Blocks.DIRT, Blocks.OAK_LOG));
+        blueprint.palette.add(piston);
+        return blueprint;
+    }
+
+    /** The older form of {@link #pistonBlueprint()}: the replaceable blocks in descending order, as a JVM whose
+     *  identity hashes ran that way wrote them, where the current write sorts them ascending. */
+    private static void replaceableBlocksDescending(CompoundTag nbt) {
+        NBTUtilBC.readCompoundList(nbt.get("palette")).forEach(entry -> {
+            CompoundTag data = NBTUtilBC.getCompound(entry, "data");
+            data.put("canBeReplacedWithBlocks", NBTUtilBC.writeStringList(
+                NBTUtilBC.readStringList(data.get("canBeReplacedWithBlocks")).sorted(Comparator.reverseOrder())));
+        });
+    }
+
+    /** Write the file an older build left in the library under {@code name}: the NBT as {@code olderForm} leaves it,
+     *  keyed by the hash of that very NBT, which is what the older build stored. Returns the key it stored. */
+    private Snapshot.Key writeOlderFile(Blueprint blueprint, String name, Consumer<CompoundTag> olderForm)
+            throws IOException {
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint);
+        olderForm.accept(nbt);
+        CompoundTag unkeyed = nbt.copy();
+        unkeyed.remove("key");
+        Snapshot.Key bare = new Snapshot.Key(new Snapshot.Key(), HashUtil.computeHash(unkeyed));
+        Snapshot.Key key = new Snapshot.Key(bare, new Snapshot.Header(bare, new UUID(0, 7), new Date(100), name));
+        nbt.put("key", key.serializeNBT());
+        try (FileOutputStream out = new FileOutputStream(fileOf(key))) {
+            NbtSquisher.squishVanilla(nbt, out);
+        }
+        return key;
+    }
+
+    private File fileOf(Snapshot.Key key) {
+        return new File(dir.toFile(), GlobalSavedDataSnapshots.fileName(key));
+    }
+
+    /** {@code snapshot} as the server's library receives it: sent over the wire, unpacked, and keyed from its content
+     *  ({@code LibraryUploadBuffer#decode}). The server refuses an upload whose key is not the one it asked for. */
+    private static Snapshot receivedByTheServer(Snapshot snapshot) throws IOException {
+        ByteArrayOutputStream wire = new ByteArrayOutputStream();
+        NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), wire);
+        Snapshot received = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(wire.toByteArray())));
+        received.computeKey();
+        return received;
+    }
+
+    /** The one key in the store's list after a scan. */
+    private static Snapshot.Key listedKey(GlobalSavedDataSnapshots store) {
+        store.scanNow();
+        List<Snapshot.Key> list = store.getList();
+        Assertions.assertEquals(1, list.size(), list.toString());
+        return list.get(0);
+    }
+
+    /** Whether an upload of what the store holds under {@code key} would be answered with that same key. */
+    private static boolean serverAgreesOn(GlobalSavedDataSnapshots store, Snapshot.Key key) throws IOException {
+        return receivedByTheServer(store.getSnapshot(key)).key.toString().equals(key.toString());
+    }
+
+    /** The snapshot files in the directory, by name. */
+    private List<String> snapshotFileNames() throws IOException {
+        try (Stream<Path> files = Files.list(dir)) {
+            return files.map(f -> f.getFileName().toString()).filter(n -> n.endsWith(".bcnbt")).sorted().toList();
+        }
+    }
+
+    @Test
+    public void aClientFileKeyedBeforeALoadTimeMigrationIsRekeyedToWhatTheServerComputes() throws IOException {
+        Snapshot.Key stale = writeOlderFile(stairsBlueprint(), "stairs", nbt -> {});
+        GlobalSavedDataSnapshots asStored = new GlobalSavedDataSnapshots(dir.toFile());
+        Assertions.assertFalse(serverAgreesOn(asStored, listedKey(asStored)),
+            "precondition: loading the file adds the stair's ignored property, so the server's key for it differs");
+
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Snapshot.Key offered = listedKey(client);
+        Assertions.assertTrue(serverAgreesOn(client, offered), "an upload of the offered key is not refused");
+        Assertions.assertEquals("stairs", offered.header.name, "the name travels with the file");
+        Assertions.assertFalse(fileOf(stale).exists(), "the file under the stale key is gone");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(offered)), snapshotFileNames(),
+            "renamed for the key it now holds, not copied");
+    }
+
+    @Test
+    public void aClientFileKeyedInAnotherJvmsReplaceableBlockOrderIsRekeyedToWhatTheServerComputes() throws IOException {
+        Snapshot.Key stale = writeOlderFile(pistonBlueprint(), "piston",
+            GlobalSavedDataSnapshotsTester::replaceableBlocksDescending);
+        GlobalSavedDataSnapshots asStored = new GlobalSavedDataSnapshots(dir.toFile());
+        Assertions.assertFalse(serverAgreesOn(asStored, listedKey(asStored)),
+            "precondition: the stored key hashes the descending order, the server hashes the sorted one");
+
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Snapshot.Key offered = listedKey(client);
+        Assertions.assertTrue(serverAgreesOn(client, offered));
+        Assertions.assertFalse(fileOf(stale).exists());
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(offered)), snapshotFileNames());
+    }
+
+    @Test
+    public void aServerStoreNeverMovesAFileBecauseItemsPointAtItsKey() throws IOException {
+        Snapshot.Key stale = writeOlderFile(stairsBlueprint(), "stairs", nbt -> {});
+
+        Assertions.assertEquals(stale, listedKey(new GlobalSavedDataSnapshots(dir.toFile())));
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(stale)), snapshotFileNames());
+    }
+
+    @Test
+    public void aStaleFileMergesIntoTheCopyTheSameItemDownloadedUnderTheRightKey() throws IOException {
+        // The Library refused the stale file's upload; the player downloads the same item again, which keys the
+        // content correctly under the same header. Re-keying the old file must not leave a second entry.
+        Snapshot.Key stale = writeOlderFile(pistonBlueprint(), "piston",
+            GlobalSavedDataSnapshotsTester::replaceableBlocksDescending);
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Blueprint downloaded = (Blueprint) receivedByTheServer(pistonBlueprint());
+        downloaded.key = new Snapshot.Key(downloaded.key, stale.header);
+        client.addSnapshot(downloaded);
+        long modified = Files.getLastModifiedTime(fileOf(downloaded.key).toPath()).toMillis();
+
+        Assertions.assertEquals(downloaded.key, listedKey(client));
+        Assertions.assertFalse(fileOf(stale).exists(), "the stale file is removed");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(downloaded.key)), snapshotFileNames());
+        Assertions.assertEquals(modified, Files.getLastModifiedTime(fileOf(downloaded.key).toPath()).toMillis(),
+            "the file that was right all along is not rewritten");
     }
 }

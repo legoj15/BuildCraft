@@ -79,18 +79,6 @@ public class TileEngineStoneFuelNbtTest extends VanillaSetupBaseTester {
     }
 
     @Test
-    public void aCountAboveTheItemsStackLimitSurvives() {
-        // ItemStack.CODEC rejects a count above the item's max stack size, which would delete a slot whose item had
-        // its limit lowered (a datapack, an updated mod) since the world was saved. The count is saved beside the
-        // stack instead.
-        ItemStack fuel = new ItemStack(Items.COAL, 99);
-        Assertions.assertTrue(fuel.getCount() > fuel.getMaxStackSize(),
-                "precondition: 99 must exceed coal's stack limit");
-
-        assertSameStack(fuel, roundTrip(fuel), "99 coal");
-    }
-
-    @Test
     public void anEmptySlotSavesNoFuelAndClearsOnLoad() {
         TileEngineStone_BC8 empty = newEngine();
         CompoundTag saved = save(empty);

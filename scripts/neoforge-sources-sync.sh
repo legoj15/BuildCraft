@@ -174,7 +174,10 @@ done
     echo "# Regenerate this file and the dirs with:  bash scripts/neoforge-sources-sync.sh"
     echo "#"
     for i in "${!node_ids[@]}"; do
-        printf 'node %-10s  sources-%-18s  vanilla-%s\n' "${node_ids[$i]}" "${node_neos[$i]}/" "${node_mcs[$i]}/"
+        # The vanilla jar is optional (needs a launcher install); list only what is on disk.
+        vanilla="vanilla-${node_mcs[$i]}/"
+        [ -d "$ref_dir/vanilla-${node_mcs[$i]}" ] || vanilla="(no vanilla jar; use sources-*)"
+        printf 'node %-10s  sources-%-18s  %s\n' "${node_ids[$i]}" "${node_neos[$i]}/" "$vanilla"
     done
 } > "$ref_dir/INDEX.txt"
 

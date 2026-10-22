@@ -10,6 +10,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -75,8 +76,15 @@ public class LocalBlockUpdateNotifier {
         }
     }
 
-    @SubscribeEvent
+    /** Last priority, so a placement a protection mod cancels (and NeoForge takes back) wakes nobody: a cancelled
+     *  event is not delivered here. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        // A machine's "may I place here?" probe (BlockUtil.canMachinePlace) places nothing; forwarding it would wake
+        // nearby lasers once per Builder placement, as the break probe once did for every scanned block.
+        if (buildcraft.lib.misc.PlaceEventProbe.isProbe(event)) {
+            return;
+        }
         if (event.getLevel() instanceof Level level && !level.isClientSide()) {
             dispatch(level, event.getPos(), event.getPlacedAgainst(), event.getPlacedBlock());
         }

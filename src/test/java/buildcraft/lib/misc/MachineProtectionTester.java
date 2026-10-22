@@ -29,7 +29,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import net.neoforged.neoforge.common.util.BlockSnapshot;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.level.BlockEvent;
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
@@ -42,6 +44,7 @@ import buildcraft.lib.block.ILocalBlockUpdateSubscriber;
 import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotBreak;
@@ -122,6 +125,60 @@ public class MachineProtectionTester {
                 LocalBlockUpdateNotifier.onBlockBroken(BreakEventCompat.create(level, pos, stone, lease.player()));
             }
             check(updates.contains(pos), "a genuine break event still reaches subscribers");
+        } finally {
+            notifier.removeSubscriberFromUpdateNotifications(laser);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The placement probe ({@link BlockUtil#canMachinePlace}, the Builder's ask before it sets a blueprint block down)
+     * is a real placement event that places nothing: a claim can refuse it, and a nearby laser must not be told a
+     * block changed. A genuine placement event still reaches the laser.
+     */
+    public static void placeProbeIsNotABlockUpdate(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(2, 2, 2);
+        helper.setBlock(rel.below(), Blocks.STONE);
+        BlockPos pos = helper.absolutePos(rel);
+        BlockPos claimed = pos.east();
+
+        List<BlockPos> updates = new ArrayList<>();
+        ILocalBlockUpdateSubscriber laser = new ILocalBlockUpdateSubscriber() {
+            @Override
+            public BlockPos getSubscriberPos() {
+                return pos;
+            }
+
+            @Override
+            public int getUpdateRange() {
+                return 1;
+            }
+
+            @Override
+            public void setLevelUpdated(Level world, BlockPos eventPos, BlockState oldState, BlockState newState,
+                    int flags) {
+                updates.add(eventPos);
+            }
+        };
+        LocalBlockUpdateNotifier notifier = LocalBlockUpdateNotifier.instance(level);
+        notifier.registerSubscriberForUpdateNotifications(laser);
+        GameProfile owner = new GameProfile(UUID.randomUUID(), "bc_protection_test");
+        try (WorkClaimMod claim = new WorkClaimMod(p -> p.equals(pos) || p.equals(claimed), claimed::equals)) {
+            check(BlockUtil.canMachinePlace(level, pos, owner), "an unclaimed cell may be placed in");
+            check(claim.placeAsks(pos) == 1, "precondition: the probe was actually posted, asked "
+                    + claim.placeAsks(pos) + " times");
+            check(!BlockUtil.canMachinePlace(level, claimed, owner), "a claimed cell may not be placed in");
+            check(level.getBlockState(pos).isAir() && level.getBlockState(claimed).isAir(), "the probe places nothing");
+            check(updates.isEmpty(), "the placement probe must not reach block-update subscribers, got " + updates);
+
+            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level)) {
+                LocalBlockUpdateNotifier.onBlockPlaced(new BlockEvent.EntityPlaceEvent(
+                        BlockSnapshot.create(level.dimension(), level, pos), Blocks.STONE.defaultBlockState(),
+                        lease.player()));
+            }
+            check(updates.contains(pos), "a genuine placement event still reaches subscribers");
         } finally {
             notifier.removeSubscriberFromUpdateNotifications(laser);
         }

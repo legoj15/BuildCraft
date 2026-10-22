@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_claim_blueprint_asks_and_parks",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 800,
+    "setup_ticks": 0,
+    "required": true
+}

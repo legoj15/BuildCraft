@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -514,12 +515,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * structural tags (custom name, lock string, loot table seed, brewing fuel level, …) are
      * preserved.
      */
-    @SuppressWarnings("Duplicates")
-    public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
-                         boolean includeContainerContents) {
-        if (placeBlock == Blocks.AIR) {
-            return true;
-        }
+    /** The state {@link #build} places, before its fluid and leaf adjustments: the captured state carried over to
+     *  the place block, with the ignored properties reset to the place block's defaults. */
+    private BlockState placedState() {
         BlockState newBlockState = blockState;
         if (placeBlock != blockState.getBlock()) {
             newBlockState = placeBlock.defaultBlockState();
@@ -532,6 +530,62 @@ public class SchematicBlockDefault implements ISchematicBlock {
         for (Property<?> property : ignoredProperties) {
             newBlockState = copyProperty(property, newBlockState, placeBlock.defaultBlockState());
         }
+        return newBlockState;
+    }
+
+    /**
+     * The cells {@link #build} at {@code blockPos} sets: none for a schematic that places nothing, {@code blockPos}
+     * itself, then the other half's cell for a two-cell block (a bed's head, a door's or tall plant's upper half),
+     * which {@code build} sets in the same call. What a machine asks protection mods about before building.
+     */
+    public List<BlockPos> placedCells(BlockPos blockPos) {
+        if (placeBlock == Blocks.AIR) {
+            return List.of();
+        }
+        BlockPos other = secondHalfPos(placedState(), blockPos);
+        return other == null ? List.of(blockPos) : List.of(blockPos, other);
+    }
+
+    /**
+     * Where the other half of the two-cell block {@code state} placed at {@code blockPos} goes, when {@code state} is
+     * the half that {@link #build} places both from (a bed's FOOT, a door's or double plant's LOWER half); else null.
+     * The other half's schematic places nothing itself (no required items, a linkage offset back to this one).
+     */
+    @Nullable
+    static BlockPos secondHalfPos(BlockState state, BlockPos blockPos) {
+        if (state.getBlock() instanceof BedBlock && state.hasProperty(BedBlock.PART)
+                && state.getValue(BedBlock.PART) == BedPart.FOOT) {
+            return blockPos.relative(state.getValue(BedBlock.FACING));
+        }
+        if (state.getBlock() instanceof DoorBlock && state.hasProperty(DoorBlock.HALF)
+                && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+            return blockPos.above();
+        }
+        if (state.getBlock() instanceof DoublePlantBlock && state.hasProperty(DoublePlantBlock.HALF)
+                && state.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
+            return blockPos.above();
+        }
+        return null;
+    }
+
+    /** The other half of {@code state}, for a state {@link #secondHalfPos} names a cell for. */
+    private static BlockState secondHalfState(BlockState state) {
+        if (state.getBlock() instanceof BedBlock) {
+            return state.setValue(BedBlock.PART, BedPart.HEAD);
+        }
+        if (state.getBlock() instanceof DoorBlock) {
+            return state.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);
+        }
+        return state.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
+    }
+
+    @SuppressWarnings("Duplicates")
+    public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
+                         boolean includeContainerContents) {
+        if (placeBlock == Blocks.AIR) {
+            return true;
+        }
+        BlockState newBlockState = placedState();
         // Pre-compute fluid handling: under REPLACE/CLEAR, decide up-front whether the source at
         // blockPos will be waterlogged into the placed state or destroyed first. Don't actually
         // destroy yet — every "should we abort?" check (canSurvive, fragile-block defer) needs to
@@ -592,42 +646,16 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 return false;
             }
         }
-        // Bed FOOT pre-check: HEAD position must also be clear (or replaceable) for the bed to
-        // be a valid two-half structure. Vanilla bed item placement fails if either half is
-        // blocked, leaving no bed and no item consumed. The Builder's flow is similar — defer
-        // FOOT placement (refund the bed item via cancelPlaceTask) until HEAD position is
-        // clear. Without this, FOOT would setBlock alone, then vanilla updateShape would
-        // destroy it on the next tick when it can't find its other half, and the Builder
-        // would have already consumed the bed item.
-        if (newBlockState.getBlock() instanceof BedBlock
-                && newBlockState.hasProperty(BedBlock.PART)
-                && newBlockState.getValue(BedBlock.PART) == BedPart.FOOT) {
-            Direction facing = newBlockState.getValue(BedBlock.FACING);
-            BlockPos headPos = blockPos.relative(facing);
-            BlockState atHead = level.getBlockState(headPos);
-            if (!atHead.isAir() && !atHead.canBeReplaced(Fluids.WATER)) {
-                return false;
-            }
-        }
-        // Same shape for doors: LOWER's atomic placement also sets the UPPER half. If UPPER
-        // position is blocked, defer the door placement (refunds the door item).
-        if (newBlockState.getBlock() instanceof DoorBlock
-                && newBlockState.hasProperty(DoorBlock.HALF)
-                && newBlockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
-            BlockPos upperPos = blockPos.above();
-            BlockState atUpper = level.getBlockState(upperPos);
-            if (!atUpper.isAir() && !atUpper.canBeReplaced(Fluids.WATER)) {
-                return false;
-            }
-        }
-        // Same shape for double-plant blocks: LOWER's build atomically sets the UPPER half above
-        // it, so defer (refunding the item) if the UPPER position is blocked.
-        if (newBlockState.getBlock() instanceof DoublePlantBlock
-                && newBlockState.hasProperty(DoublePlantBlock.HALF)
-                && newBlockState.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
-            BlockPos upperPos = blockPos.above();
-            BlockState atUpper = level.getBlockState(upperPos);
-            if (!atUpper.isAir() && !atUpper.canBeReplaced(Fluids.WATER)) {
+        // Two-cell pre-check (bed FOOT, door LOWER, double-plant LOWER): the other half's cell must also be clear
+        // (or replaceable) for the block to be a valid two-half structure. Vanilla's item placement fails if either
+        // half is blocked, leaving no block and no item consumed. The Builder's flow is similar: defer the placement
+        // (refund the item via cancelPlaceTask) until the other cell is clear. Without this, the first half would
+        // setBlock alone, then vanilla updateShape would destroy it on the next tick when it can't find its other
+        // half, and the Builder would have already consumed the item.
+        BlockPos otherHalfPos = secondHalfPos(newBlockState, blockPos);
+        if (otherHalfPos != null) {
+            BlockState atOther = level.getBlockState(otherHalfPos);
+            if (!atOther.isAir() && !atOther.canBeReplaced(Fluids.WATER)) {
                 return false;
             }
         }
@@ -656,31 +684,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
             // the matching half and returns the synced state instead of AIR. One bed/door item
             // per bed/door total — the HEAD/UPPER position's schematic returns empty required
             // items and a linkage offset, so it never queues an independent place task.
-            BlockPos secondHalfPos = null;
-            if (newBlockState.getBlock() instanceof BedBlock
-                    && newBlockState.hasProperty(BedBlock.PART)
-                    && newBlockState.getValue(BedBlock.PART) == BedPart.FOOT) {
-                Direction facing = newBlockState.getValue(BedBlock.FACING);
-                secondHalfPos = blockPos.relative(facing);
-                BlockState headState = newBlockState.setValue(BedBlock.PART, BedPart.HEAD);
-                level.setBlock(secondHalfPos, headState, 3);
-            } else if (newBlockState.getBlock() instanceof DoorBlock
-                    && newBlockState.hasProperty(DoorBlock.HALF)
-                    && newBlockState.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
-                secondHalfPos = blockPos.above();
-                BlockState upperState = newBlockState.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);
-                level.setBlock(secondHalfPos, upperState, 3);
-            } else if (newBlockState.getBlock() instanceof DoublePlantBlock
-                    && newBlockState.hasProperty(DoublePlantBlock.HALF)
-                    && newBlockState.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
-                // Place the UPPER half before the updateShape sweep below runs, so the LOWER
-                // half's UP-direction updateShape sees its partner and returns the synced state
-                // instead of AIR. One plant item per two-tall plant total — the UPPER position's
-                // schematic returns empty required items and a linkage offset, so it never queues
-                // an independent place task.
-                secondHalfPos = blockPos.above();
-                BlockState upperState = newBlockState.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
-                level.setBlock(secondHalfPos, upperState, 3);
+            // (The double plant's UPPER half likewise goes in before the sweep, so the LOWER half's UP-direction
+            // updateShape sees its partner.)
+            BlockPos secondHalfPos = secondHalfPos(newBlockState, blockPos);
+            if (secondHalfPos != null) {
+                level.setBlock(secondHalfPos, secondHalfState(newBlockState), 3);
             }
             // Force the placed block to recompute neighbour-aware properties (glass-pane /
             // fence / wall connection bits, stair shape, redstone wire connections). Vanilla

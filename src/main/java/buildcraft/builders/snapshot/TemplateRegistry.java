@@ -19,6 +19,8 @@ import buildcraft.api.core.EnumHandlerPriority;
 import buildcraft.api.template.ITemplateHandler;
 import buildcraft.api.template.ITemplateRegistry;
 
+import buildcraft.lib.misc.MachineRefusals;
+
 public enum TemplateRegistry implements ITemplateRegistry {
     INSTANCE;
 
@@ -35,15 +37,28 @@ public enum TemplateRegistry implements ITemplateRegistry {
         handlers.get(priority).add(handler);
     }
 
+    /**
+     * Offers the placement to each handler in priority order until one places it. A handler whose click a claim mod
+     * refused (a {@link MachineRefusals} refusal for {@code player}: the right-click, the item gate, or the placement
+     * itself, which is counted for the whole dispatch) ends the dispatch, as a refused click ends a player's, the way
+     * {@code StripesRegistry#handleItem} does: the next handler would place into the same claimed cell by another
+     * route.
+     */
     @Override
     public boolean handle(Level world, BlockPos pos, Player player, ItemStack stack) {
-        for (EnumHandlerPriority priority : EnumHandlerPriority.VALUES) {
-            for (ITemplateHandler handler : handlers.get(priority)) {
-                if (handler.handle(world, pos, player, stack)) {
-                    return true;
+        return MachineRefusals.countingPlacements(player, () -> {
+            for (EnumHandlerPriority priority : EnumHandlerPriority.VALUES) {
+                for (ITemplateHandler handler : handlers.get(priority)) {
+                    long refusals = MachineRefusals.count(player);
+                    if (handler.handle(world, pos, player, stack)) {
+                        return true;
+                    }
+                    if (MachineRefusals.count(player) != refusals) {
+                        return false;
+                    }
                 }
             }
-        }
-        return false;
+            return false;
+        });
     }
 }

@@ -25,8 +25,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * What a machine remembers about the answers protection mods (and refusing blocks) gave it, so it neither asks again
- * nor spends power or travel on a block every cycle. The one memory every block-breaking or fluid-draining machine
- * keeps; each picks a {@link Policy}, and they are all here:
+ * nor spends power or travel on a block every cycle. The one memory every block-breaking, block-placing or
+ * fluid-draining machine keeps; each picks a {@link Policy}, and they are all here:
  *
  * <table>
  * <caption>Refusal policy per machine (pinned by {@code RefusalMemoryOwnerAndPermitTest})</caption>
@@ -34,6 +34,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * <tr><td>Quarry (frame-volume cells)</td><td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are
  *     re-probed as they come due ({@link #takeExpired}), even by an idle quarry</td><td>none: the cells held are
  *     cells of the frame box</td><td>tile owner</td><td>-</td></tr>
+ * <tr><td>Builder and Filler placements</td><td>{@link #BUILDER_PLACE}</td><td>fixed 200 ticks; a refused cell is
+ *     parked (skipped when queuing placements) and asked again once its window ends</td><td>none: the cells held
+ *     are cells of the build box</td><td>tile owner</td><td>-</td></tr>
  * <tr><td>Stripes pipe</td><td>{@link #STRIPES}</td><td>fixed 200 ticks</td><td>4 (it faces one block at a
  *     time)</td><td>pipe owner</td><td>the block the current break cycle charges</td></tr>
  * <tr><td>Robot search boards (lumberjack, miner, ...)</td><td>{@link #ROBOT_SEARCH}</td><td>fixed 1200 ticks</td>
@@ -109,6 +112,8 @@ public final class RefusalMemory {
 
     /** The quarry's frame-volume cells: see the class table. */
     public static final Policy QUARRY_FRAME = Policy.fixed(200, Integer.MAX_VALUE);
+    /** The Builder's and the Filler's refused placements: see the class table. */
+    public static final Policy BUILDER_PLACE = Policy.fixed(200, Integer.MAX_VALUE);
     /** The stripes pipe: see the class table. */
     public static final Policy STRIPES = Policy.fixed(200, 4);
     /** The robot search boards: see the class table. */

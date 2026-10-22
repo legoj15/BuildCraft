@@ -43,6 +43,7 @@ import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicEntityContext;
 
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
@@ -625,11 +626,21 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     @Override
-    protected boolean doPlaceTask(PlaceTask placeTask) {
+    protected PlaceResult doPlaceTask(PlaceTask placeTask) {
         // noinspection ConstantConditions
-        if (getBuildingInfo() == null) return false;
+        if (getBuildingInfo() == null) return PlaceResult.FAILED;
         ISchematicBlock schematic = getSchematicBlock(placeTask.pos);
-        if (schematic == null) return false;
+        if (schematic == null) return PlaceResult.FAILED;
+        // A schematic sets its block down directly (level.setBlock), so no item use posts the placement events a
+        // player's placement does: ask protection mods first, about every cell the block fills (a bed's head too).
+        if (tile.getWorldBC() instanceof ServerLevel server) {
+            List<BlockPos> cells = schematic instanceof SchematicBlockDefault def
+                ? def.placedCells(placeTask.pos)
+                : List.of(placeTask.pos);
+            if (!cells.isEmpty() && !BlockUtil.canMachinePlace(server, cells, tile.getOwner())) {
+                return PlaceResult.REFUSED;
+            }
+        }
         // Fluid-aware path: SchematicBlockDefault has an overload that waterlogs the placed block
         // or destroys a fluid source at the target position under REPLACE/CLEAR. Third-party
         // ISchematicBlock implementations fall back to the plain build(level, pos), which just
@@ -638,9 +649,31 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // hoppers/etc. place either filled (INCLUDE — current behaviour) or empty (IGNORE).
         if (schematic instanceof SchematicBlockDefault def) {
             boolean includeContents = tile.getContainerContentsMode() != EnumContainerContentsMode.IGNORE;
-            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode(), includeContents);
+            return def.build(tile.getWorldBC(), placeTask.pos, tile.getFluidMode(), includeContents)
+                ? PlaceResult.PLACED : PlaceResult.FAILED;
         }
-        return schematic.build(tile.getWorldBC(), placeTask.pos);
+        return schematic.build(tile.getWorldBC(), placeTask.pos) ? PlaceResult.PLACED : PlaceResult.FAILED;
+    }
+
+    /**
+     * May the schematic entity whose world position is {@code entityPos} be spawned? Entities are spawned straight
+     * into the level too, so a protection mod is asked about the cell the entity stands in, through the same
+     * placement probe as a block; a refused cell is parked with the block refusals (the same question: may this
+     * builder place here), so a claimed item frame is not re-asked on every tick of a finished build.
+     */
+    private boolean mayPlaceEntityAt(Vec3 entityPos) {
+        if (!(tile.getWorldBC() instanceof ServerLevel server)) {
+            return true;
+        }
+        BlockPos cell = BlockPos.containing(entityPos);
+        if (isPlaceParked(cell)) {
+            return false;
+        }
+        if (BlockUtil.canMachinePlace(server, cell, tile.getOwner())) {
+            return true;
+        }
+        placeRefusals.remember(server, cell, tile.getOwner());
+        return false;
     }
 
     @Override
@@ -744,7 +777,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                                 getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
                                 getBuildingInfo().entitiesRequiredFluids.get(schematicEntity),
                                 true
-                            ).isPresent()) {
+                            ).isPresent()
+                            && mayPlaceEntityAt(
+                                schematicEntity.getPos().add(Vec3.atLowerCornerOf(getBuildingInfo().offsetPos)))) {
                             if (schematicEntity.build(tile.getWorldBC(), getBuildingInfo().offsetPos) != null) {
                                 tryExtractRequired(
                                     getBuildingInfo().entitiesRequiredItems.get(schematicEntity),

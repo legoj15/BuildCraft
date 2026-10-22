@@ -44,6 +44,7 @@ import buildcraft.api.mj.MjAPI;
 
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.misc.RegistryUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.net.PacketBufferBC;
@@ -109,6 +110,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private long replaceCensus;
     /** Game time at which {@link #replaceCensus} was first read as it is now. */
     private long replaceCensusSince;
+    /** Cells a protection mod refused this builder's placement in ({@link PlaceResult#REFUSED}), parked: they are
+     *  not queued again until the block there changes or the {@link RefusalMemory#BUILDER_PLACE} window ends, so a
+     *  build inside a claim neither re-asks every pass nor drops the cell for good (the build stays unfinished and
+     *  goes on once the claim is lifted). Server side only, never saved: a reloaded builder asks once more. */
+    protected final RefusalMemory placeRefusals = new RefusalMemory(RefusalMemory.BUILDER_PLACE);
 
     @SuppressWarnings("WeakerAccess")
     protected SnapshotBuilder(T tile) {
@@ -414,10 +420,26 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     protected abstract List<ItemStack> getToPlaceItems(BlockPos blockPos);
 
+    /** What {@link #doPlaceTask} came to. */
+    protected enum PlaceResult {
+        /** The block was placed. */
+        PLACED,
+        /** Nothing was placed (no room, a block that cannot stand, a fluid defer): the cell is queued again. */
+        FAILED,
+        /** A protection mod refused the placement: the cell is parked in {@link #placeRefusals}. */
+        REFUSED
+    }
+
     /**
-     * @return true if task done successfully, false otherwise
+     * Places the task's block. Anything but {@link PlaceResult#PLACED} refunds the task through
+     * {@link #cancelPlaceTask}.
      */
-    protected abstract boolean doPlaceTask(PlaceTask placeTask);
+    protected abstract PlaceResult doPlaceTask(PlaceTask placeTask);
+
+    /** Whether a protection mod refused this builder's placement at {@code pos} and the cell is still parked. */
+    protected boolean isPlaceParked(BlockPos pos) {
+        return !placeRefusals.isEmpty() && placeRefusals.isRefused(tile.getWorldBC(), pos, tile.getOwner());
+    }
 
     /**
      * Executed if break task failed
@@ -690,6 +712,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                         return has;
                     })
                     .mapToObj(this::indexToPos)
+                    .filter(pos -> !isPlaceParked(pos))
                     .filter(pos -> passesFluidGate(fluidMode, pos))
                     .filter(this::isReadyToPlace)
                     .limit(MAX_QUEUE_SIZE - placeTasks.size())
@@ -787,8 +810,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     )
                 );
                 if (placeTask.power >= target) {
-                    if (!doPlaceTask(placeTask)) {
+                    PlaceResult placed = doPlaceTask(placeTask);
+                    if (placed != PlaceResult.PLACED) {
                         cancelPlaceTask(placeTask);
+                    }
+                    if (placed == PlaceResult.REFUSED) {
+                        placeRefusals.remember(tile.getWorldBC(), placeTask.pos, tile.getOwner());
                     }
                     if (check(placeTask.pos)) {
                         checkResultsChanged = true;

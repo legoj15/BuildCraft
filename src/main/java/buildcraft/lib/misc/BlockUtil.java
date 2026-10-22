@@ -177,6 +177,29 @@ public class BlockUtil {
     }
 
     /**
+     * {@link #canMachineBreak}'s twin for placing: returns true if a BuildCraft machine that sets a block down without
+     * using an item (the Blueprint Builder) may place a block filling {@code cells} (the cell the block goes in first,
+     * then any other cell it fills, such as a bed's head). Always true while {@link BCCoreConfig#minePlayerProtected}
+     * is on; otherwise posts a placement event for the owner-bound fake player standing on the first cell, through
+     * {@link PlaceEventProbe}, and answers whether no protection mod cancelled it. The event is a probe that places
+     * nothing. A machine that places by using an item needs no probe: the item's use posts the right-click and
+     * placement events itself (see {@link #tryUseItemOnBlock}).
+     */
+    public static boolean canMachinePlace(ServerLevel level, List<BlockPos> cells, @Nullable GameProfile owner) {
+        if (BCCoreConfig.minePlayerProtected.get()) {
+            return true;
+        }
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), cells.get(0))) {
+            return PlaceEventProbe.canPlace(level, cells, lease.player());
+        }
+    }
+
+    /** {@link #canMachinePlace(ServerLevel, List, GameProfile)} for a block that fills one cell. */
+    public static boolean canMachinePlace(ServerLevel level, BlockPos pos, @Nullable GameProfile owner) {
+        return canMachinePlace(level, List.of(pos), owner);
+    }
+
+    /**
      * Right-clicks {@code stack} (the item {@code player} holds in {@code hand}) on the block {@code hit} names, for
      * a machine standing in for a player: the right-click-block event is posted first, so a claim or protection mod
      * can refuse the use; then vanilla's gate (an empty stack, or an item on the player's cooldown, is not used

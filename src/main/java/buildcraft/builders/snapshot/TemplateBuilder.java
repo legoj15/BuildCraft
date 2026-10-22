@@ -12,6 +12,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.template.TemplateApi;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.MachineRefusals;
 
 public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
     public TemplateBuilder(ITileForTemplateBuilder tile) {
@@ -81,22 +83,24 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
     }
 
     @Override
-    protected boolean doPlaceTask(PlaceTask placeTask) {
+    protected PlaceResult doPlaceTask(PlaceTask placeTask) {
         if (placeTask.items == null || placeTask.items.isEmpty()) {
-            return false;
+            return PlaceResult.FAILED;
         }
         // A leased (cached, reset) owner player standing at the builder; closing the lease takes the placed
         // stack back out of its hand so the shared player never holds a live reference to it. An unowned
         // builder (set-block placed) places as the "[BuildCraft]" player.
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(
                 (ServerLevel) tile.getWorldBC(), tile.getOwner(), tile.getBuilderPos())) {
-            lease.player().setItemInHand(InteractionHand.MAIN_HAND, placeTask.items.get(0));
-            return TemplateApi.templateRegistry.handle(
-                tile.getWorldBC(),
-                placeTask.pos,
-                lease.player(),
-                placeTask.items.get(0)
-            );
+            // The handlers click like a player (TemplateHandlerDefault): a claim mod can refuse the right-click or
+            // the placement, and either shows as a refusal in the player's tally, so the cell is parked.
+            Player player = lease.player();
+            player.setItemInHand(InteractionHand.MAIN_HAND, placeTask.items.get(0));
+            long refusals = MachineRefusals.count(player);
+            if (TemplateApi.templateRegistry.handle(tile.getWorldBC(), placeTask.pos, player, placeTask.items.get(0))) {
+                return PlaceResult.PLACED;
+            }
+            return MachineRefusals.count(player) != refusals ? PlaceResult.REFUSED : PlaceResult.FAILED;
         }
     }
 

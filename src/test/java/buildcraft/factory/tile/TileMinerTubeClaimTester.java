@@ -101,6 +101,58 @@ public class TileMinerTubeClaimTester {
     }
 
     /**
+     * Column (local x=2 z=2): well y=7, claimed water source y=6 (walled in so it cannot run into a neighbouring
+     * arena), air y=5, stone y=4 (the target), stone y=3. The well drills through water without breaking it, so it
+     * never asks about the water; the tube must ask before it takes the cell, be refused, and leave the claimed water
+     * where it is while still filling the air below.
+     */
+    public static void testWellTubeLeavesClaimedWaterAlone(GameTestHelper helper) {
+        BlockPos claimed = new BlockPos(2, 6, 2);
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            ServerLevel level = helper.getLevel();
+            BlockPos wellLocal = new BlockPos(2, 7, 2);
+            BlockPos lowerAir = new BlockPos(2, 5, 2);
+            BlockPos target = new BlockPos(2, 4, 2);
+            helper.setBlock(new BlockPos(1, 6, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(3, 6, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 6, 1), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 6, 3), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 3, 2), Blocks.STONE);
+            helper.setBlock(target, Blocks.STONE);
+            helper.setBlock(claimed, Blocks.WATER);
+            helper.setBlock(wellLocal, BCFactoryBlocks.MINING_WELL.get());
+            //? if >=1.21.10 {
+            TileMiningWell well = helper.getBlockEntity(wellLocal, TileMiningWell.class);
+            //?} else {
+            /*TileMiningWell well = helper.getBlockEntity(wellLocal);*/
+            //?}
+            assertTrue(well != null, "mining well block-entity must be present");
+
+            try (ClaimProtectionMod claim = new ClaimProtectionMod(helper.absolutePos(claimed), true)) {
+                well.mine(); // one downward scan: drills through the water, targets the stone below the air
+                assertTrue(helper.absolutePos(target).equals(well.currentPos),
+                        "the well must drill through the water to the stone below it, got " + well.currentPos);
+                assertTrue(claim.asks() >= 1, "the tube must ask the claim before it takes the water's cell");
+                BlockState water = level.getBlockState(helper.absolutePos(claimed));
+                assertTrue(water.is(Blocks.WATER) && water.getFluidState().isSource(),
+                        "the tube replaced a claimed water source, which is now " + water);
+                assertTrue(isTube(level, helper, lowerAir), "the tube must still run through the air below the water");
+
+                well.onRemove();
+                assertTrue(!isTube(level, helper, lowerAir),
+                        "breaking the well must remove the tube below the claimed water too, not stop at it");
+            }
+            helper.setBlock(claimed, Blocks.AIR);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.setBlock(claimed, Blocks.AIR);
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
      * Column (local x=2 z=2): pump y=6, air y=5, waterlogged oak slab y=4, oil source y=3, stone y=2; the slab and
      * oil cells are walled in so neither fluid can run into a neighbouring arena. The pump's probe walks through the
      * slab (it holds a water source) and finds the oil under it, so the tube runs past the slab's cell: it must put

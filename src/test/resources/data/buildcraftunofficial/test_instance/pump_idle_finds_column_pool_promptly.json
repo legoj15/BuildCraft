@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:drain_refuses_block_that_cannot_survive_dry",
+    "function": "buildcraftunofficial:pump_idle_finds_column_pool_promptly",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 100,

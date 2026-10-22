@@ -17,16 +17,26 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 /**
- * A test-only stand-in for a modded water plant: a waterloggable block that lives only while it holds water. Vanilla's
- * {@code SimpleWaterloggedBlock.pickupBlock} dries such a block and, for one whose survival test fails, destroys it
- * (with drops); no vanilla waterloggable block fails that test once dry, so this is the only way to reach the case
- * from {@code BlockUtil.drainBlock}. Registered by {@link TestOnlyBlocks}.
+ * A test-only waterloggable block whose survival test depends only on whether it is waterlogged, standing in for a
+ * modded block. Registered by {@link TestOnlyBlocks} twice:
+ * <ul>
+ * <li>{@code dry_fragile} ({@code aliveWhenWaterlogged = true}): a water plant that lives only while it holds
+ * water. Vanilla's {@code SimpleWaterloggedBlock.pickupBlock} leaves it dry (its destroy check reads the state as it
+ * was before the pickup, which survives), in a state it cannot hold.</li>
+ * <li>{@code wet_fragile} ({@code aliveWhenWaterlogged = false}): a block whose waterlogged state fails its survival
+ * test. That is exactly the case {@code pickupBlock} destroys (with drops) after drying it.</li>
+ * </ul>
+ * No vanilla waterloggable block fails either test while it stands supported, so this is the only way to reach both
+ * cases from {@code BlockUtil.drainBlock}.
  */
 @SuppressWarnings("this-escape")
-public final class DryFragileBlock extends Block implements SimpleWaterloggedBlock {
+public final class WaterSensitiveBlock extends Block implements SimpleWaterloggedBlock {
 
-    public DryFragileBlock(BlockBehaviour.Properties properties) {
+    private final boolean aliveWhenWaterlogged;
+
+    public WaterSensitiveBlock(BlockBehaviour.Properties properties, boolean aliveWhenWaterlogged) {
         super(properties);
+        this.aliveWhenWaterlogged = aliveWhenWaterlogged;
         registerDefaultState(stateDefinition.any().setValue(BlockStateProperties.WATERLOGGED, true));
     }
 
@@ -41,9 +51,9 @@ public final class DryFragileBlock extends Block implements SimpleWaterloggedBlo
                 ? Fluids.WATER.getSource(false) : Fluids.EMPTY.defaultFluidState();
     }
 
-    /** Alive only while waterlogged. */
+    /** Alive only while waterlogged ({@code dry_fragile}), or only while dry ({@code wet_fragile}). */
     @Override
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
-        return state.getValue(BlockStateProperties.WATERLOGGED);
+        return state.getValue(BlockStateProperties.WATERLOGGED) == aliveWhenWaterlogged;
     }
 }

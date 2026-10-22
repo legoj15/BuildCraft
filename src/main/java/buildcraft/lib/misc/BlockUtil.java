@@ -413,11 +413,11 @@ public class BlockUtil {
     }
 
     /**
-     * {@link #getDrainableFluid(BlockState)} at a world position, minus a waterlogged block that cannot live
-     * without its water. Vanilla's {@code SimpleWaterloggedBlock.pickupBlock} dries such a block and then destroys
-     * it with drops, so a machine must never offer the cell: the block would be deleted by what is meant to take only
-     * the water. (The survival test runs on the block as it would stand dry, in the world as it is now; a block
-     * whose survival depends on water in its own cell cannot be foreseen that way.)
+     * {@link #getDrainableFluid(BlockState)} at a world position, minus a waterlogged block whose survival depends on
+     * its water. Vanilla's {@code SimpleWaterloggedBlock.pickupBlock} dries the block and then destroys it with drops
+     * when the state it had <em>before</em> drying fails {@code canSurvive}; a block that passes that but fails as it
+     * stands dry is kept, in a state it cannot hold (it pops at its next shape update, or never should have been
+     * dry). A machine must offer neither: the block would be lost to what is meant to take only the water.
      */
     @Nullable
     public static Fluid getDrainableFluid(Level world, BlockPos pos) {
@@ -429,21 +429,25 @@ public class BlockUtil {
         return fluid;
     }
 
-    /** False for a waterlogged block that would not survive without its water; true for everything else, so a
-     *  fluid block or a modded {@link BucketPickup} keeps its own pickup logic. */
+    /** False for a waterlogged block that drying would kill: its waterlogged state fails {@code canSurvive}
+     *  (vanilla's pickup destroys it) or its dry state does (it could not stand dry). True for everything else, so a
+     *  fluid block or a modded {@link BucketPickup} keeps its own pickup logic. Both tests read the world as it is
+     *  now; vanilla's runs with the dry state already in the cell, which only a block whose survival reads its own
+     *  cell could tell apart. */
     private static boolean survivesDrying(Level world, BlockPos pos, BlockState state) {
         if (state.getBlock() instanceof LiquidBlock || !state.hasProperty(BlockStateProperties.WATERLOGGED)
                 || !state.getValue(BlockStateProperties.WATERLOGGED)) {
             return true;
         }
-        return state.setValue(BlockStateProperties.WATERLOGGED, false).canSurvive(world, pos);
+        return state.canSurvive(world, pos)
+                && state.setValue(BlockStateProperties.WATERLOGGED, false).canSurvive(world, pos);
     }
 
     /**
      * Drains one bucket of source fluid from the world, as a bucket would: a fluid block becomes air, a
      * waterlogged block is un-waterlogged and kept (block entity, contents and all). Anything
      * {@link #getDrainableFluid(Level, BlockPos)} rejects is left untouched, including a waterlogged block that
-     * could not survive dry (a bucket's pickup would destroy it).
+     * drying would kill (a bucket's pickup could destroy it).
      *
      * @param world    the level
      * @param pos      the position to drain

@@ -27,8 +27,12 @@ public final class TestOnlyBlocks {
     /** A water source whose bucket pickup is always refused; see {@link RefusingSourceBlock}. */
     public static final Identifier REFUSING_SOURCE_ID = Identifier.parse(NAMESPACE + ":refusing_source");
 
-    /** A waterloggable block that cannot survive dry; see {@link DryFragileBlock}. */
+    /** A waterloggable block that cannot survive dry; see {@link WaterSensitiveBlock}. */
     public static final Identifier DRY_FRAGILE_ID = Identifier.parse(NAMESPACE + ":dry_fragile");
+
+    /** A waterloggable block that cannot survive waterlogged (vanilla's pickup destroys it); see
+     *  {@link WaterSensitiveBlock}. */
+    public static final Identifier WET_FRAGILE_ID = Identifier.parse(NAMESPACE + ":wet_fragile");
 
     private TestOnlyBlocks() {}
 
@@ -38,10 +42,16 @@ public final class TestOnlyBlocks {
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, REFUSING_SOURCE_ID);
     }
 
-    /** The registered {@link DryFragileBlock} (valid once registries are populated). */
+    /** The registered {@code dry_fragile} {@link WaterSensitiveBlock} (valid once registries are populated). */
     public static Block dryFragile() {
         return buildcraft.lib.misc.RegistryUtilBC.getValue(
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, DRY_FRAGILE_ID);
+    }
+
+    /** The registered {@code wet_fragile} {@link WaterSensitiveBlock} (valid once registries are populated). */
+    public static Block wetFragile() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, WET_FRAGILE_ID);
     }
 
     /**
@@ -61,13 +71,21 @@ public final class TestOnlyBlocks {
                     //?} else {
                     /*BlockBehaviour.Properties.of().noOcclusion()));*/
                     //?}
-            event.register(Registries.BLOCK, DRY_FRAGILE_ID, () -> new DryFragileBlock(
+            event.register(Registries.BLOCK, DRY_FRAGILE_ID, () -> new WaterSensitiveBlock(
                     //? if >=1.21.10 {
                     BlockBehaviour.Properties.of()
                             .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, DRY_FRAGILE_ID))
-                            .noOcclusion()));
+                            .noOcclusion(), true));
                     //?} else {
-                    /*BlockBehaviour.Properties.of().noOcclusion()));*/
+                    /*BlockBehaviour.Properties.of().noOcclusion(), true));*/
+                    //?}
+            event.register(Registries.BLOCK, WET_FRAGILE_ID, () -> new WaterSensitiveBlock(
+                    //? if >=1.21.10 {
+                    BlockBehaviour.Properties.of()
+                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, WET_FRAGILE_ID))
+                            .noOcclusion(), false));
+                    //?} else {
+                    /*BlockBehaviour.Properties.of().noOcclusion(), false));*/
                     //?}
         }
     }

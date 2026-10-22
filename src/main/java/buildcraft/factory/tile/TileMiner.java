@@ -10,6 +10,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -143,18 +144,30 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     }
 
     /** Lays tubes in the cells at depth {@code oldLength} (the old target's) down to just above depth
-     *  {@code newLength}. A cell holding a water source gets a waterlogged tube so the water survives. A cell that
-     *  holds anything but air, a fluid block or a tube is left alone: it is a block the machine was refused (a claim
-     *  the well skipped past) or one that is not the tube's to replace (a waterlogged slab in a pump's column); the
-     *  tube simply has a gap there. */
+     *  {@code newLength}. A cell holding a water source gets a waterlogged tube so the water survives. The tube takes
+     *  only air and bare fluid; anything else is left alone, so the tube has a gap there: a block the machine was
+     *  refused (a claim the well skipped past) or one that is not the tube's to replace (a waterlogged slab in a
+     *  pump's column). A fluid cell is replaced only once the claim system allows it: the well drills through water
+     *  and the pump past it without ever breaking it, so this is the only ask that cell gets. */
     private void extendTubes(int oldLength, int newLength) {
         for (int depth = Math.max(1, oldLength); depth < newLength; depth++) {
             BlockPos blockPos = worldPosition.below(depth);
             BlockState existing = level.getBlockState(blockPos);
-            if (existing.isAir() || existing.getBlock() instanceof LiquidBlock) {
+            if (existing.isAir() || (isBareFluid(existing) && mayReplace(blockPos))) {
                 level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().stateFor(level, blockPos));
             }
         }
+    }
+
+    /** A cell that is only fluid: a fluid block, or a replaceable block holding fluid that is no block of its own
+     *  (a modded fluid block outside {@link LiquidBlock}), never a waterlogged block, kelp or seagrass. */
+    private static boolean isBareFluid(BlockState state) {
+        return state.getBlock() instanceof LiquidBlock
+                || (state.canBeReplaced() && !state.getFluidState().isEmpty() && !BlockUtil.isFluidloggedBlock(state));
+    }
+
+    private boolean mayReplace(BlockPos pos) {
+        return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachineBreak(serverLevel, pos, getOwner());
     }
 
     /** Removes the tubes in the cells at depth {@code newLength} down to just above depth {@code oldLength}

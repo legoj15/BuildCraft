@@ -20,8 +20,8 @@ import buildcraft.lib.misc.BlockUtil;
  *
  *  <p>"Source" means a source the pump board can actually drain ({@link BlockUtil#getDrainableFluid}): a
  *  waterlogged block counts (the robot un-waterlogs it), an always-waterlogged plant such as kelp does not —
- *  the robot would drain nothing there and retarget it forever — and neither does a waterlogged block that cannot
- *  live dry (draining it would destroy it). 7.1.x only ever saw fluid blocks. */
+ *  the robot would drain nothing there and retarget it forever — and neither does a waterlogged block that drying
+ *  would kill. 7.1.x only ever saw fluid blocks. */
 public class WorldPropertyIsFluidSource implements IWorldProperty {
     @Override
     public boolean get(Level world, BlockPos pos) {

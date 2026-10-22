@@ -89,9 +89,9 @@ public class BlockPump extends BlockBCTile_Neptune<TilePump> {
         //?} else {
         /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
         //?}
-        // An idle pump backs its flood-fill rebuilds off; a block changing beside it ends the wait (TilePump#wake).
+        // An idle pump backs its flood-fill rebuilds off; a block changing beside it makes it re-check its column
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TilePump pump) {
-            pump.wake();
+            pump.wake(); // (TilePump#wake)
         }
     }
 

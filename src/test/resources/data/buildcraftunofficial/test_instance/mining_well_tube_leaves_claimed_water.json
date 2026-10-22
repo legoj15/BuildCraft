@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:pump_idle_finds_later_pool_within_cap",
+    "function": "buildcraftunofficial:mining_well_tube_leaves_claimed_water",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 100,

@@ -31,6 +31,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -128,8 +129,31 @@ public class TilePump extends TileMiner implements IDebuggable {
     /** The longest the pump waits between rebuilds once they keep finding nothing to pump. The wait doubles from
      *  {@link #REBUILD_DELAY} with every empty rebuild up to this, because a rebuild walks the whole pool out to
      *  {@code pumpMaxDistance} blocks and an idle pump over a big refused or exhausted pool would otherwise redo that
-     *  walk every 30 ticks for nothing. A block changing next to the pump ({@link #wake}) cuts the wait short. */
+     *  walk every 30 ticks for nothing. The wait is cut short when the pump's column changes: the idle pump re-probes
+     *  it (a walk down one column, not the pool) every {@link #REBUILD_DELAY} ticks and whenever a block beside it
+     *  changes ({@link #wake}). So fluid reaching the column is found at the old cadence, and only a change out in
+     *  the pool that leaves the column as it was (a claim lifted, a source poured far from the bore) waits out the
+     *  back-off, at most this many ticks. */
     static final int MAX_IDLE_REBUILD_DELAY = 600;
+
+    /** What the last rebuild saw down the pump's column; an idle pump rebuilds early when the column no longer
+     *  matches it. Null until the first rebuild. */
+    @Nullable
+    private ColumnSignature idleColumn;
+    /** Set by {@link #wake}: re-probe the column on the next idle tick instead of waiting for the next period. */
+    private boolean columnCheckPending;
+
+    /** The column probe plus the fluid states at the cells it found: a probe alone cannot see flowing water turning
+     *  into a source in the same cell, which is how a refilled pond often first reaches the bore. FluidStates are
+     *  interned, so record equality compares them correctly. */
+    private record ColumnSignature(ColumnProbe probe, @Nullable FluidState atFirstFluid,
+            @Nullable FluidState atFirstOil) {
+        static ColumnSignature of(Level level, ColumnProbe probe) {
+            return new ColumnSignature(probe,
+                    probe.firstFluid() == null ? null : level.getFluidState(probe.firstFluid()),
+                    probe.firstOil() == null ? null : level.getFluidState(probe.firstOil()));
+        }
+    }
 
     /**
      * Cells that refused to be drained (a claim mod cancelled the break probe, or a modded {@code BucketPickup}
@@ -182,6 +206,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         targetPos = worldPosition.below();
 
         ColumnProbe probe = probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
+        idleColumn = ColumnSignature.of(level, probe);
         BlockPos oilPos = probe.firstOil();
         BlockPos springPos = probe.spring();
 
@@ -510,16 +535,18 @@ public class TilePump extends TileMiner implements IDebuggable {
     // --- Ticking ---
 
     /**
-     * Cuts a long idle wait short because the world next to the pump changed (its block's neighbour update): the
-     * next {@code mine()} rebuilds at once. Only a wait longer than {@link #REBUILD_DELAY} is cut, and the back-off
-     * starts over, so a stream of neighbour updates can never rebuild the pool faster than the fixed cadence this
-     * replaced. Server thread.
+     * The world next to the pump changed (its block's neighbour update): an idle pump re-probes its column on the
+     * next {@code mine()} and rebuilds at once if the column changed. A change that leaves the column as it was
+     * (flowing water flickering beside the pump) costs one column probe and keeps the back-off. Server thread.
      */
     public void wake() {
-        idleRebuilds = 0;
-        if (rebuildDelay > REBUILD_DELAY) {
-            rebuildDelay = 0;
-        }
+        columnCheckPending = true;
+    }
+
+    /** Whether the column no longer matches what the last rebuild saw. Walks one column, never the pool. */
+    private boolean columnChanged() {
+        ColumnProbe probe = probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
+        return !ColumnSignature.of(level, probe).equals(idleColumn);
     }
 
     @Override
@@ -644,8 +671,16 @@ public class TilePump extends TileMiner implements IDebuggable {
                 return;
             }
         } else if (currentPos == null && rebuildDelay > 0) {
-            return;
+            // Idle and waiting: look down the column every REBUILD_DELAY ticks (and when woken); only a changed
+            // column ends the wait early, and it starts the back-off over.
+            boolean look = columnCheckPending || rebuildDelay % REBUILD_DELAY == 0;
+            columnCheckPending = false;
+            if (!look || !columnChanged()) {
+                return;
+            }
+            idleRebuilds = 0;
         }
+        columnCheckPending = false;
         rebuildAndPickNext();
     }
 

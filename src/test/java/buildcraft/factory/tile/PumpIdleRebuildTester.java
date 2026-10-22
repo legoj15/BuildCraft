@@ -22,7 +22,7 @@ import buildcraft.lib.test.ClaimProtectionMod;
  * blocks out, 512 at most) every 30 ticks. A big pool whose every cell refuses the pump (a claim) or is not
  * drainable is walked in full each time, which is the standing cost of an idle pump. The rebuilds now back off the
  * longer they keep finding nothing, up to {@link TilePump#MAX_IDLE_REBUILD_DELAY}, and start over the moment the
- * pump finds work or an adjacent block changes.
+ * pump finds work, its column changes, or an adjacent block change turns out to have changed the column.
  *
  * <p>Layout (one arena cell): the pump at y=6 over a tube column of air, a two-cell pool at y=2 ringed with stone
  * (so the water cannot run into a neighbouring arena), nothing adjacent to the pump but the cell below it. The pump
@@ -126,19 +126,28 @@ public class PumpIdleRebuildTester {
     }
 
     /**
-     * A pool that appears while the pump sits fully backed off, in a cell that is not next to the pump (nothing wakes
-     * it), is still found and pumped within the longest back-off.
+     * A pool that appears in the pump's column while the pump sits fully backed off, in a cell that is not next to the
+     * pump (no neighbour update wakes it), is still found at the cadence the back-off replaced: the idle pump looks
+     * down its column every {@link TilePump#REBUILD_DELAY} ticks and rebuilds as soon as it changed, instead of
+     * waiting out the rest of a back-off of up to {@link TilePump#MAX_IDLE_REBUILD_DELAY} ticks.
      */
-    public static void idlePumpFindsALaterPoolWithinTheCap(GameTestHelper helper) {
+    public static void idlePumpFindsAColumnPoolPromptly(GameTestHelper helper) {
         try {
             TilePump pump = buildPump(helper);
             runPump(pump, IDLE_TICKS); // an empty basin: every rebuild finds nothing, so the back-off is at its cap
             check(pump.getTank().getAmountMb(0) == 0, "precondition: nothing to pump yet");
+            // Pool the water just after a rebuild, so the next scheduled one is the whole capped wait away.
+            int seen = pump.rebuildCount;
+            for (int i = 0; i < TilePump.MAX_IDLE_REBUILD_DELAY + 50 && pump.rebuildCount == seen; i++) {
+                runPump(pump, 1);
+            }
+            check(pump.rebuildCount > seen, "precondition: an idle pump must rebuild again within the longest back-off");
 
             helper.setBlock(POOL_A, Blocks.WATER); // y=2, four blocks under the pump: no neighbour update reaches it
-            int ticks = ticksToFirstBucket(pump, TilePump.MAX_IDLE_REBUILD_DELAY + 20);
-            check(ticks > 0, "the pump never found the pool that appeared under it within the longest back-off ("
-                    + TilePump.MAX_IDLE_REBUILD_DELAY + " ticks)");
+            int limit = 2 * TilePump.REBUILD_DELAY + 20;
+            int ticks = ticksToFirstBucket(pump, limit);
+            check(ticks > 0, "a backed-off pump took more than " + limit + " ticks to find a pool that appeared in its"
+                    + " column (the back-off waits up to " + TilePump.MAX_IDLE_REBUILD_DELAY + ")");
             drainTheRig(helper);
             helper.succeed();
         } catch (Throwable t) {

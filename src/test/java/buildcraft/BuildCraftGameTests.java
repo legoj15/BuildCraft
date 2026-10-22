@@ -635,10 +635,13 @@ public class BuildCraftGameTests {
         // waterlogged block standing in a pump's column, where they are.
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_block", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedBlockAlone);
         reg.accept("buildcraftunofficial:pump_tube_leaves_waterlogged_block", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testPumpTubeLeavesWaterloggedBlockInColumn);
+        // ... and a claimed fluid cell: the well drills through water without breaking it, so the tube must ask first.
+        reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_water", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedWaterAlone);
 
-        // An idle pump backs its flood-fill rebuilds off, wakes on an adjacent block change, and still finds a later pool.
+        // An idle pump backs its flood-fill rebuilds off, yet still finds fluid reaching its column at the old cadence
+        // and wakes on an adjacent block change.
         reg.accept("buildcraftunofficial:pump_idle_rebuilds_back_off", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idleRebuildsBackOffOverARefusedPool);
-        reg.accept("buildcraftunofficial:pump_idle_finds_later_pool_within_cap", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsALaterPoolWithinTheCap);
+        reg.accept("buildcraftunofficial:pump_idle_finds_column_pool_promptly", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsAColumnPoolPromptly);
         reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
@@ -771,8 +774,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:dense_oil_sinks_through_plain_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testDenseOilStillSinksThroughPlainWater);
         // Pumps and robots drain a waterlogged block like a bucket (un-waterlog it), never delete it; kelp is not drainable.
         reg.accept("buildcraftunofficial:drain_keeps_waterlogged_blocks", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockKeepsWaterloggedBlocks);
-        // ... and refuses a waterlogged block that cannot survive dry (vanilla's pickup would destroy it with drops).
-        reg.accept("buildcraftunofficial:drain_refuses_block_that_cannot_survive_dry", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockRefusesBlockThatCannotSurviveDry);
+        // ... and refuses a waterlogged block whose survival depends on its water (vanilla's pickup would destroy it).
+        reg.accept("buildcraftunofficial:drain_refuses_block_drying_would_kill", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockRefusesBlockDryingWouldKill);
         reg.accept("buildcraftunofficial:pump_keeps_waterlogged_marker", () -> buildcraft.lib.block.BlockWaterloggingTester::testPumpKeepsWaterloggedMarker);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as

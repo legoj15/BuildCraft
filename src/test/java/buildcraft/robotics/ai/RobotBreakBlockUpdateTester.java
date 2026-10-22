@@ -133,6 +133,17 @@ public class RobotBreakBlockUpdateTester {
      *  E2Es), enough for a three-log chop at the 1.1 MJ-per-break + per-tick costs. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
+    /** The canopy test's poll, in two budgets that must not share a clock. The arena cell's chunks are promoted to
+     *  entity-ticking asynchronously, so how long that takes is the machine's (a straddling cell's far half came up
+     *  20 ticks late on an idle 26.3, and later under {@code fullTestSuite}'s six servers), while the robot's own
+     *  work takes ~90 ticks once the cell ticks. {@link #CANOPY_READY_TICKS} is the wait for the cell,
+     *  {@link #CANOPY_WORK_TICKS} what the chop-and-decay lifecycle gets after that; {@link #CANOPY_POLL_TICKS} is
+     *  their sum (the poll's budget, kept a literal so the poll-budget guard can read it) and stays under the
+     *  manifest's {@code max_ticks}. */
+    private static final int CANOPY_READY_TICKS = 300;
+    private static final int CANOPY_WORK_TICKS = 450;
+    private static final int CANOPY_POLL_TICKS = 750;
+
     /**
      * The user report end to end: a REAL lumberjack robot (live {@code AIRobotMain} tree — search,
      * fly, equip check, {@link AIRobotBreak}) sent against a vined tree. Once every log is gone, no
@@ -224,7 +235,8 @@ public class RobotBreakBlockUpdateTester {
     public static void testLumberjackCanopyTreeVinesFallWithLeafDecay(GameTestHelper helper) {
         ServerLevel level = (ServerLevel) helper.getLevel();
         BlockPos robotRel = new BlockPos(4, 3, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        // The whole cell, not just the robot's chunk: the tree and its vines can sit in the chunk next door.
+        EntityArenaUtil.forceLoadCell(helper);
 
         BlockState leaf = Blocks.OAK_LEAVES.defaultBlockState()
                 .setValue(LeavesBlock.DISTANCE, 1)
@@ -296,8 +308,8 @@ public class RobotBreakBlockUpdateTester {
         // chance) — decaying leaves must pop their anchored strands the same way decaying logs do.
         BlockPos regionMin = helper.absolutePos(new BlockPos(0, 0, 0));
         BlockPos regionMax = helper.absolutePos(new BlockPos(5, 6, 4));
-        EntityArenaUtil.tickUntil(helper, 900,
-                () -> {
+        EntityArenaUtil.tickUntil(helper, CANOPY_POLL_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, CANOPY_READY_TICKS, CANOPY_WORK_TICKS, () -> {
                     boolean chopped = level.getBlockState(logBottom).isAir()
                             && level.getBlockState(logMid).isAir()
                             && level.getBlockState(logTop).isAir();
@@ -325,7 +337,7 @@ public class RobotBreakBlockUpdateTester {
                         }
                     }
                     return true;
-                },
+                }),
                 helper::succeed,
                 "the lumberjack robot never finished the chop-and-decay lifecycle (trunk chopped, every leaf decayed and"
                         + " every vine fallen)",

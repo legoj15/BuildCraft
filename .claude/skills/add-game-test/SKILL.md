@@ -73,6 +73,16 @@ random world position every run, so the same test passes or flakes run to run. G
 state (`EntityArenaUtil.tickUntil`/`tickUntilThen`, or poll for your own registration) instead
 of `runAfterDelay(N)`.
 
+**Never schedule from inside a scheduled runnable** (a `runAfterDelay`/`tickUntil` call written
+inside the lambda of another one): `GameTestInfo.tickInternal` runs those runnables while iterating
+the fastutil map the new entry goes into, and an insert that rehashes it can skip or double-run
+another entry, a flake that appears only once enough runnables are pending. A multi-phase test queues
+every phase from the test body at an absolute delay (`runAfterDelay(1 + 20, ...)`, looking the tile
+up inside each), or waits on observed state with a poll (`ElectronicLibraryTester.runSteps` is a
+step runner built that way). `GameTestNestedSchedulingTester` fails on a lexical nesting; the
+framework's own sequences (`helper.succeedWhen`, `startSequence`) are ticked outside the map loop and
+are fine.
+
 Also keep ALL relative positions inside the test's own arena grid cell — with the
 `minecraft:empty` structure the framework spaces arenas 6 apart in X and 7 apart in Z, so x
 beyond 5 or z beyond 6 writes into the NEXT test's arena. (z=7 is the next ROW, not the same
@@ -128,6 +138,18 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   added there is invisible to `getEntitiesOfClass` in the same tick, so a test that adds something
   and scans for it at once polls `isEntityTicking` first (and `forceLoadEntityArena` around the
   position).
+- **A test whose work spans the cell starts its budget when the whole cell ticks.** The cell
+  straddles a chunk border about as often as not, and the half the robot is not in starts ticking
+  later (measured on 26.3 with only the robot's chunk forced: far corners at tick 20-23, the robot's
+  at tick 1), far later when several servers share the machine. A poll budget that starts at tick 1
+  then measures the machine: `robot_break_canopy_tree_vines_fall_with_decay` and
+  `robot_picker_picks_up_dropped_item` flaked that way. Call `EntityArenaUtil.forceLoadCell(helper)`
+  (the 5x5 around every chunk the cell touches; with it every corner ticked on tick 1 in 48 of 48
+  arenas) and wrap the condition: `tickUntil(helper, READY + WORK, whenCellTicking(helper, READY,
+  WORK, cond), ...)`. The wrapper answers false until `isCellEntityTicking`, then gives `cond`
+  `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. Write
+  `READY + WORK` as a literal (or constant) so `GameTestPollBudgetTester` can read it, and keep
+  `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic.
 - **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
   as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
   arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.

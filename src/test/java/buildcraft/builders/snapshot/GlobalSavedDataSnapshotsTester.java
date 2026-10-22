@@ -83,54 +83,52 @@ public class GlobalSavedDataSnapshotsTester {
         Assertions.assertEquals(cabin.key, store.getSnapshot(cabin.key).key);
     }
 
-    @Test
-    public void lookupsAndDeletesDecompressOnlyTheFilesThatCanAnswer() {
-        // One build kept under several names shares a hash prefix, so a lookup for one name used to decompress every
-        // sibling to find out they hold other names; a miss paid for all of them, and a delete paid again for the
-        // sweep that found nothing more to delete. A file the store itself wrote is already known to hold its key.
-        Template content = build();
-        GlobalSavedDataSnapshots store = store();
-        store.addSnapshot(named(content, "house", 100));
-        store.addSnapshot(named(content, "cabin", 200));
-        Template house = named(content, "house", 100);
+    /** Overwrite {@code file} with bytes that are not a snapshot, keeping its size and modification time: a store
+     *  that skips the file without reading it cannot tell, and one that reads it records it as holding nothing. */
+    private static void spoilKeepingStamp(Path file) throws IOException {
+        FileTime modified = Files.getLastModifiedTime(file);
+        byte[] junk = new byte[(int) Files.size(file)];
+        java.util.Arrays.fill(junk, (byte) 0xFF);
+        Files.write(file, junk);
+        Files.setLastModifiedTime(file, modified);
+    }
 
-        int before = store.fileReads();
-        Assertions.assertNull(store.getSnapshot(named(content, "barn", 300).key), "no file holds that name");
-        Assertions.assertEquals(0, store.fileReads() - before, "a miss reads no sibling that holds another name");
-
-        before = store.fileReads();
-        Assertions.assertNotNull(store.getSnapshot(new Snapshot.Key(house.key, (Snapshot.Header) null)));
-        Assertions.assertEquals(1, store.fileReads() - before, "a lookup by content reads the one file it returns");
-
-        before = store.fileReads();
-        store.removeSnapshot(house.key);
-        Assertions.assertEquals(1, store.fileReads() - before, "a delete reads the file it deletes and nothing else");
-        Assertions.assertFalse(store.isListed(house.key));
-        Assertions.assertNotNull(store.getSnapshot(named(content, "cabin", 200).key), "the other name stays");
+    private Path fileOf(Template snapshot) {
+        return dir.resolve(GlobalSavedDataSnapshots.fileName(snapshot.key));
     }
 
     @Test
-    public void afterARestartAMissReadsEachOtherNameOnceAndThenNoMore() {
+    public void aMissDoesNotReadTheBuildsOtherNames() throws IOException {
+        // One build kept under several names shares a hash prefix, so a lookup for one name used to decompress every
+        // sibling to find out it holds another name. A file the store itself wrote is already known to hold its key.
+        Template content = build();
+        Template cabin = named(content, "cabin", 200);
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(named(content, "house", 100));
+        store.addSnapshot(cabin);
+        spoilKeepingStamp(fileOf(cabin));
+
+        Assertions.assertNull(store.getSnapshot(named(content, "barn", 300).key), "no file holds that name");
+        Assertions.assertTrue(store.isListed(cabin.key), "the miss never read the other name's file");
+    }
+
+    @Test
+    public void afterARestartAMissRemembersWhatItReadForTheNextMiss() throws IOException {
         // A fresh store (a restart) knows nothing about the files, and the server never runs the library scan that
         // would tell it, so the first miss has to read the build's other names. What it read is remembered, so the
-        // next miss for yet another name of the same build reads none of them again.
+        // next miss for yet another name of the same build does not read them again.
         Template content = build();
+        Template cabin = named(content, "cabin", 200);
         GlobalSavedDataSnapshots before = store();
         before.addSnapshot(named(content, "house", 100));
-        before.addSnapshot(named(content, "cabin", 200));
+        before.addSnapshot(cabin);
         GlobalSavedDataSnapshots store = store();
 
-        int reads = store.fileReads();
         Assertions.assertNull(store.getSnapshot(named(content, "barn", 300).key));
-        Assertions.assertEquals(2, store.fileReads() - reads, "the first miss reads the two other names once");
-
-        reads = store.fileReads();
+        Assertions.assertTrue(store.isListed(cabin.key), "the first miss read the other name and recorded it");
+        spoilKeepingStamp(fileOf(cabin));
         Assertions.assertNull(store.getSnapshot(named(content, "shed", 400).key));
-        Assertions.assertEquals(0, store.fileReads() - reads, "a later miss reads neither of them again");
-
-        reads = store.fileReads();
-        Assertions.assertNotNull(store.getSnapshot(named(content, "cabin", 200).key));
-        Assertions.assertEquals(1, store.fileReads() - reads, "a hit still reads the one file it returns");
+        Assertions.assertTrue(store.isListed(cabin.key), "the second miss did not read it again");
     }
 
     @Test

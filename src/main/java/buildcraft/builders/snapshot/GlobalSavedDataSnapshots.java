@@ -27,7 +27,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
@@ -94,9 +93,6 @@ public class GlobalSavedDataSnapshots {
         }
     }
     private final File snapshotsFile;
-    /** Snapshot files decompressed so far, whatever for (a lookup, a save's check, a scan). The cost the lookups try
-     *  to avoid, counted so a test can hold them to it. */
-    private final AtomicInteger fileReads = new AtomicInteger();
 
     private GlobalSavedDataSnapshots(Side side) {
         this(new File(FMLPaths.GAMEDIR.get().toFile(), "snapshots-" + side.name().toLowerCase(Locale.ROOT)));
@@ -129,11 +125,6 @@ public class GlobalSavedDataSnapshots {
                 LOGGER.warn("Failed to delete the leftover snapshot temp file {}", file);
             }
         }
-    }
-
-    /** How many snapshot files this store has decompressed so far, for tests. */
-    int fileReads() {
-        return fileReads.get();
     }
 
     public static void reInit(Side side) {
@@ -248,7 +239,6 @@ public class GlobalSavedDataSnapshots {
     private record FileRead(@Nullable Snapshot snapshot, @Nullable IOException unreadable) {}
 
     private FileRead readSnapshotFile(File snapshotFile) {
-        fileReads.incrementAndGet();
         // Read the bytes first, then decode them, so a failure says which it was: vanilla's NBT reader reports an I/O
         // error inside a tag as an unchecked exception, indistinguishable from bad data once the two are mixed.
         byte[] bytes;

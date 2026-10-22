@@ -241,7 +241,7 @@ Wave 0: P0 plus the decisions in section 7 (defaults apply if unanswered). Wave 
 
 ### Adjacent issues found in passing (not in any packet)
 
-- **Stale comments** that go wrong after the port: `MutableQuad` (26.1 wording), `BCLibRenderTypes:61` (says the default depth state is less-than-or-equal; it is greater-than-or-equal), `CraftingUtil:100-102` and `AssemblyRecipeCollector:81` (mention `FUEL_VALUES`), `BCEnergyFeatures` Javadoc (configured-feature paths), `BCEnergyJeiPlugin`, `StirlingFuelCategory`, `EngineFuelJeiTypes`.
+- **Stale comments** that go wrong after the port: `BCLibRenderTypes:61` (says the default depth state is less-than-or-equal; it is greater-than-or-equal), `CraftingUtil:100-102` and `AssemblyRecipeCollector:81` (mention `FUEL_VALUES`), `BCEnergyFeatures` Javadoc (configured-feature paths), `BCEnergyJeiPlugin`, `StirlingFuelCategory`, `EngineFuelJeiTypes`.
 - **`.neoforge-ref/INDEX.txt`** lists `vanilla-26.2` and `vanilla-1.21.10`, which do not exist; the sync script and index disagree.
 - **`BlueprintGuiRenderer`** is gated to 1.21.1 only and contains four `mulPose(Axis)` sites; dead on 26.3, but any future 26.3 port of that file needs the same fix.
 - **`GpuBuffer`** became an interface and `Axis` stopped being a functional interface; BC has no subclassing or lambda use today.

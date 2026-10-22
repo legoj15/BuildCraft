@@ -30,6 +30,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.schematics.ISchematicBlock;
@@ -395,6 +396,86 @@ public class BuilderFluidSweepTester {
                                 + (cells[3].is(Blocks.SNOW) ? "rested" : "placed the snow layer")
                                 + " with a walled water source three cells from it; cells=" + Arrays.toString(cells)
                                 + ", " + describe(builder));
+                    }
+                }
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        });
+    }
+
+    /** {@link #waterloggedBlockInAirCellIsBrokenOutsideClear} in REPLACE mode. */
+    public static void replaceBreaksWaterloggedBlockInAirCell(GameTestHelper helper) {
+        waterloggedBlockInAirCellIsBrokenOutsideClear(helper, EnumFluidHandlingMode.REPLACE);
+    }
+
+    /** {@link #waterloggedBlockInAirCellIsBrokenOutsideClear} in NO_REPLACE mode. */
+    public static void noReplaceBreaksWaterloggedBlockInAirCell(GameTestHelper helper) {
+        waterloggedBlockInAirCellIsBrokenOutsideClear(helper, EnumFluidHandlingMode.NO_REPLACE);
+    }
+
+    /**
+     * REPLACE and NO_REPLACE never remove fluid, but a real block holding fluid in a schematic-air cell (a
+     * waterlogged fence, seagrass, kelp) is still a block the schematic does not want. The break queue once refused
+     * every fluid-holding cell outside CLEAR, so such a cell stayed "to break" for ever and the Builder never rested.
+     * Breaking the block leaves its water behind, which those modes then leave alone.
+     *
+     * <p>Phases, all gated on observed state:
+     * <ol start="0">
+     * <li>build the dry column in {@code mode};</li>
+     * <li>put a waterlogged oak fence in the walled first cell (schematic air);</li>
+     * <li>the fence must go, its water source must stay, and the Builder must rest for
+     *     {@link BuilderRefloodTester#QUIET_TICKS} straight ticks.</li>
+     * </ol>
+     */
+    private static void waterloggedBlockInAirCellIsBrokenOutsideClear(GameTestHelper helper,
+            EnumFluidHandlingMode mode) {
+        ServerLevel level = helper.getLevel();
+        TileBuilder tile = setUpBuilder(helper, SETTLED_COLUMN, SETTLED_WALLS);
+        while (tile.getFluidMode() != mode) {
+            tile.cycleFluidMode();
+        }
+        BlockPos wet = cell(0);
+
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        boolean[] finished = { false };
+
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            expect(builder != null, "the Builder lost its blueprint builder");
+            BlockState[] cells = new BlockState[SETTLED_COLUMN.length];
+            boolean allBuilt = true;
+            for (int i = 0; i < cells.length; i++) {
+                cells[i] = helper.getBlockState(cell(i));
+                allBuilt &= isBuilt(SETTLED_COLUMN[i], cells[i]);
+            }
+            int inPhase = t - phaseStart[0];
+            switch (phase[0]) {
+                case 0 -> {
+                    if (allBuilt && builderQuiet(builder)) {
+                        helper.setBlock(wet, Blocks.OAK_FENCE.defaultBlockState()
+                                .setValue(BlockStateProperties.WATERLOGGED, true));
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 0: the " + mode + " Builder never finished the dry build, "
+                                + "cells=" + Arrays.toString(cells) + ", " + describe(builder));
+                    }
+                }
+                case 1 -> {
+                    boolean water = cells[0].is(Blocks.WATER)
+                            && level.getFluidState(helper.absolutePos(wet)).isSource();
+                    boolean rested = water && builderQuiet(builder);
+                    quiet[0] = rested ? quiet[0] + 1 : 0;
+                    if (quiet[0] >= QUIET_TICKS) {
+                        helper.setBlock(wet, Blocks.AIR);
+                        finished[0] = true;
+                        helper.succeed();
+                    } else {
+                        expect(inPhase < 300, "phase 1: the " + mode + " Builder never "
+                                + (water ? "rested" : "broke the waterlogged fence") + " in a schematic-air cell; "
+                                + "cells=" + Arrays.toString(cells) + ", " + describe(builder));
                     }
                 }
                 default -> throw new IllegalStateException("bad phase " + phase[0]);

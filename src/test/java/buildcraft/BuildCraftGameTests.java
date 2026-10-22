@@ -513,6 +513,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_fluid_sweep_allocates_nothing_per_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::sweepAllocatesNothingPerCell);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_no_stale_fragile_placement", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::fragilePlacementIsNotLetThroughOnAStaleSweep);
         reg.accept("buildcraftunofficial:builder_replace_settled_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledWaterDoesNotHoldBackADistantFragileBlock);
+        reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceBreaksWaterloggedBlockInAirCell);
+        reg.accept("buildcraftunofficial:builder_no_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceBreaksWaterloggedBlockInAirCell);
 
         // Builder block-survival gating (canSurvive guard in SchematicBlockDefault.build()).
         reg.accept("buildcraftunofficial:builder_support_torch_on_floor", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTorchOnFloorPlaces);

@@ -33,6 +33,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BubbleColumnBlock;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -886,8 +889,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     /**
      * Break-queue admission filter, mode-aware.
      * <ul>
-     *   <li>NO_REPLACE — skip any position with a fluid (flowing or source). Original behavior.</li>
-     *   <li>REPLACE — also skip fluid positions; schematic-solid over fluid is handled through
+     *   <li>NO_REPLACE — skip any position that is only fluid (flowing or source; {@link #isFluidOnly}). A block
+     *       holding fluid (waterlogged, seagrass, kelp) is broken, and its fluid stays.</li>
+     *   <li>REPLACE — also skip fluid-only positions; schematic-solid over fluid is handled through
      *       the place path ({@link SchematicBlockDefault#build(net.minecraft.world.level.Level,
      *       BlockPos, EnumFluidHandlingMode)}), which can waterlog instead of destroying.</li>
      *   <li>CLEAR — allow ALL fluid (both sources and flowing) through. The earlier "sources
@@ -905,9 +909,22 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * </ul>
      */
     private boolean shouldBreakQueueAcceptFluid(BlockPos blockPos) {
-        FluidState fs = tile.getWorldBC().getFluidState(blockPos);
-        if (fs.isEmpty()) return true;
-        return getFluidMode() == EnumFluidHandlingMode.CLEAR;
+        BlockState state = tile.getWorldBC().getBlockState(blockPos);
+        if (state.getFluidState().isEmpty()) return true;
+        if (getFluidMode() == EnumFluidHandlingMode.CLEAR) return true;
+        // REPLACE / NO_REPLACE never remove fluid, but a real block holding it (a waterlogged fence, seagrass, kelp)
+        // is still a block to break: BlockUtil's break leaves the fluid behind, which these modes then leave alone.
+        // Refusing it too left such a cell "to break" for ever, and the build never finished.
+        return !isFluidOnly(state);
+    }
+
+    /**
+     * Is {@code state} fluid and nothing else: a {@link LiquidBlock} (water, lava, BC oil, a modded fluid), or a
+     * bubble column (water that soul sand or magma below keeps turning back into one, so breaking it only swaps it
+     * for the water it stands in)? A waterlogged block, seagrass or kelp is not: it is a block that holds fluid.
+     */
+    protected static boolean isFluidOnly(BlockState state) {
+        return state.getBlock() instanceof LiquidBlock || state.getBlock() instanceof BubbleColumnBlock;
     }
 
     /**

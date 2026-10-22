@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_replace_breaks_waterlogged_air_cell",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 700,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -554,8 +554,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      *
      * <p>REPLACE and NO_REPLACE never remove fluid (the break queue refuses every fluid cell outside CLEAR), so a
      * cell holding nothing but fluid is as clear as those modes ever make it, and counts as done; otherwise it stayed
-     * "to break" for ever and the build never finished. A real block holding fluid (a waterlogged fence) is not
-     * covered: it is still a block the schematic does not want.
+     * "to break" for ever and the build never finished. A bubble column counts as fluid too
+     * ({@link #isFluidOnly}): breaking it only leaves water that the floor turns back into one. A real block holding
+     * fluid (a waterlogged fence, seagrass, kelp) is not covered: it is still a block the schematic does not want,
+     * so it is broken (those modes' break queue accepts it) and the fluid it leaves then counts as done.
      *
      * <p>CLEAR: is the fluid in this cell refilled at once, whenever the Builder mops it, from fluid it can never
      * remove? A tolerated wet block (or fluid just outside the box) is a permanent source, so vanilla keeps spreading
@@ -572,10 +574,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     protected boolean isToleratedFluidAt(BlockPos blockPos) {
         if (getBuildingInfo() == null) return false;
         BlockState state = tile.getWorldBC().getBlockState(blockPos);
-        if (!(state.getBlock() instanceof LiquidBlock)) return false;
         FluidState fluid = state.getFluidState();
         if (fluid.isEmpty()) return false;
-        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return true;
+        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return isFluidOnly(state);
+        if (!(state.getBlock() instanceof LiquidBlock)) return false;
         Fluid type = fluid.getType();
         if (fluid.isSource()) return isResourcedByUnmoppableFluid(blockPos, type);
         BlockPos above = blockPos.above();

@@ -7,6 +7,7 @@ package buildcraft.builders.snapshot;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -155,6 +157,33 @@ public class SnapshotIndexTester {
         Assertions.assertFalse(index.rulesOut("never-seen" + EXT, modified, length, k -> false), "unknown: must be read");
         Assertions.assertTrue(index.rulesOut("corrupt" + EXT, corruptModified, 1, k -> true),
             "a file the index could not read holds no key to answer with");
+    }
+
+    @Test
+    public void aFileThatCannotBeReadRightNowIsRetriedNotRuledOut() throws IOException {
+        // A file held open by another program (antivirus, a sync tool) fails to read for a moment. Caching that as
+        // "unreadable" would hide it from the list and let lookups skip it until something changed its size or time.
+        String name = write(key(1, "a", 1));
+        write(key(2, "b", 2));
+        AtomicBoolean inUse = new AtomicBoolean(true);
+        Function<File, Snapshot.Key> busyReader = file -> {
+            if (inUse.get() && file.getName().equals(name)) {
+                throw new UncheckedIOException(new IOException("in use by another process"));
+            }
+            return reader.apply(file);
+        };
+        SnapshotIndex index = new SnapshotIndex();
+        index.rescan(dir.toFile(), EXT, busyReader);
+        Assertions.assertEquals(List.of("b@2"), names(index.list()), "the rest of the scan still lands");
+        long modified = Files.getLastModifiedTime(dir.resolve(name)).toMillis();
+        long length = Files.size(dir.resolve(name));
+        Assertions.assertFalse(index.rulesOut(name, modified, length, k -> false),
+            "a file that was never read is not known to hold nothing");
+
+        inUse.set(false);
+        index.rescan(dir.toFile(), EXT, busyReader);
+        Assertions.assertEquals(List.of("a@1", "b@2"), names(index.list()),
+            "the next scan reads it again although it is unchanged on disk");
     }
 
     @Test

@@ -7,9 +7,10 @@
 package buildcraft.builders.snapshot;
 
 import java.time.Duration;
+import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +44,6 @@ import net.minecraft.world.level.Level;
 import net.neoforged.fml.loading.FMLPaths;
 
 import buildcraft.api.core.BCLog;
-import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.nbt.NbtSquisher;
 
@@ -184,8 +184,10 @@ public class GlobalSavedDataSnapshots {
      *
      * <p>Decompressing a file is the cost here, and one build kept under several names puts several files under one
      * hash, so a file the {@link SnapshotIndex} already knows holds something else (same size and time as when it
-     * was read) is skipped rather than read again to be rejected: a miss, and the sweep that ends a delete, read
-     * nothing the index has seen. A file the index has not seen, or that changed since, is read as it always was.
+     * was read) is skipped rather than read again to be rejected. A file the index has not seen, or that changed
+     * since, is read, and what it held goes into the index: the server never runs the library scan that fills it,
+     * so after a restart the first miss reads a build's other names once, and every later miss (and the sweep that
+     * ends a delete) reads none of them again while they stay unchanged.
      */
     private Pair<Snapshot, File> readSnapshot(Snapshot.Key key, boolean exact) {
         String targetPrefix = key.toString();
@@ -221,10 +223,18 @@ public class GlobalSavedDataSnapshots {
     }
 
     /** The snapshot in {@code snapshotFile} if it answers {@code key}; a content-only lookup gets it without its
-     *  header, so anything derived from it (a Replacer copy) carries no stale name. */
+     *  header, so anything derived from it (a Replacer copy) carries no stale name. What the file held is recorded in
+     *  the index either way (unless it could not be read at all), so the next lookup that it cannot answer skips it. */
     @Nullable
     private Pair<Snapshot, File> matching(File snapshotFile, Snapshot.Key key, boolean exact) {
-        Snapshot snapshot = readSnapshotFile(snapshotFile);
+        // Stat before reading: a file replaced between the two is recorded with a stamp it no longer has, so the next
+        // lookup reads it again instead of trusting what this read saw.
+        FileStamp stamp = FileStamp.of(snapshotFile);
+        FileRead read = readSnapshotFile(snapshotFile);
+        if (read.unreadable() == null) {
+            index.put(snapshotFile.getName(), listedKey(snapshotFile, read.snapshot()), stamp.modified(), stamp.length());
+        }
+        Snapshot snapshot = read.snapshot();
         if (snapshot == null || !answers(snapshot.key, key, exact)) return null;
         if (key.header == null && snapshot.key.header != null) {
             snapshot.key = new Snapshot.Key(snapshot.key, (Snapshot.Header) null);
@@ -232,28 +242,47 @@ public class GlobalSavedDataSnapshots {
         return Pair.of(snapshot, snapshotFile);
     }
 
-    @Nullable
-    private Snapshot readSnapshotFile(File snapshotFile) {
+    /** What reading one file found: its snapshot, or null when its bytes are not one (corrupt: reading them again
+     *  gives the same answer until the file changes); or, in {@code unreadable}, why its bytes could not be read at
+     *  all (another program holds the file, or it was just deleted), which may pass, so nothing is concluded. */
+    private record FileRead(@Nullable Snapshot snapshot, @Nullable IOException unreadable) {}
+
+    private FileRead readSnapshotFile(File snapshotFile) {
         fileReads.incrementAndGet();
-        try (FileInputStream fileInputStream = new FileInputStream(snapshotFile)) {
-            return Snapshot.readFromNBT(NbtSquisher.expand(fileInputStream));
-        } catch (InvalidInputDataException e) {
-            LOGGER.warn("Skipping corrupted snapshot file {}: {}", snapshotFile, e.getMessage());
+        // Read the bytes first, then decode them, so a failure says which it was: vanilla's NBT reader reports an I/O
+        // error inside a tag as an unchecked exception, indistinguishable from bad data once the two are mixed.
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(snapshotFile.toPath());
         } catch (IOException e) {
             LOGGER.warn("Failed to read the snapshot {}", snapshotFile, e);
+            return new FileRead(null, e);
+        }
+        try {
+            return new FileRead(Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(bytes))), null);
+        } catch (IOException e) { // InvalidInputDataException included: the bytes decode, but not to a snapshot
+            LOGGER.warn("Skipping corrupted snapshot file {}: {}", snapshotFile, e.getMessage());
         } catch (RuntimeException e) {
             LOGGER.error("Unexpected error reading the snapshot {}", snapshotFile, e);
         }
-        return null;
+        return new FileRead(null, null);
     }
 
-    /** The index's reader: the key stored in {@code snapshotFile}, or null if the file is unreadable or is not
-     *  named after the key it holds. */
+    /** The key {@code snapshot} (read from {@code snapshotFile}) is listed under, or null if there is none or the file
+     *  is not named after it. */
     @Nullable
-    private Snapshot.Key readListedKey(File snapshotFile) {
-        Snapshot snapshot = readSnapshotFile(snapshotFile);
+    private static Snapshot.Key listedKey(File snapshotFile, @Nullable Snapshot snapshot) {
         if (snapshot == null || snapshot.key == null) return null;
         return snapshotFile.getName().startsWith(snapshot.key.toString()) ? snapshot.key : null;
+    }
+
+    /** The index's reader: {@link #listedKey} of what {@code snapshotFile} holds; a file that cannot be read right now
+     *  throws, so the index leaves it out and the next scan tries again. */
+    @Nullable
+    private Snapshot.Key readListedKey(File snapshotFile) {
+        FileRead read = readSnapshotFile(snapshotFile);
+        if (read.unreadable() != null) throw new UncheckedIOException(read.unreadable());
+        return listedKey(snapshotFile, read.snapshot());
     }
 
     public void addSnapshot(Snapshot snapshot) {
@@ -333,7 +362,7 @@ public class GlobalSavedDataSnapshots {
         // file that answered this name's key is ever stamped, so a matching stamp vouches for the key too.
         FileStamp stamp = FileStamp.of(snapshotFile);
         if (stamp.equals(intactFiles.get(snapshotFile.getName()))) return true;
-        Snapshot held = stamp.length() == 0 ? null : readSnapshotFile(snapshotFile);
+        Snapshot held = stamp.length() == 0 ? null : readSnapshotFile(snapshotFile).snapshot();
         if (held == null || !answers(held.key, key, false)) {
             intactFiles.remove(snapshotFile.getName());
             return false;

@@ -110,6 +110,30 @@ public class GlobalSavedDataSnapshotsTester {
     }
 
     @Test
+    public void afterARestartAMissReadsEachOtherNameOnceAndThenNoMore() {
+        // A fresh store (a restart) knows nothing about the files, and the server never runs the library scan that
+        // would tell it, so the first miss has to read the build's other names. What it read is remembered, so the
+        // next miss for yet another name of the same build reads none of them again.
+        Template content = build();
+        GlobalSavedDataSnapshots before = store();
+        before.addSnapshot(named(content, "house", 100));
+        before.addSnapshot(named(content, "cabin", 200));
+        GlobalSavedDataSnapshots store = store();
+
+        int reads = store.fileReads();
+        Assertions.assertNull(store.getSnapshot(named(content, "barn", 300).key));
+        Assertions.assertEquals(2, store.fileReads() - reads, "the first miss reads the two other names once");
+
+        reads = store.fileReads();
+        Assertions.assertNull(store.getSnapshot(named(content, "shed", 400).key));
+        Assertions.assertEquals(0, store.fileReads() - reads, "a later miss reads neither of them again");
+
+        reads = store.fileReads();
+        Assertions.assertNotNull(store.getSnapshot(named(content, "cabin", 200).key));
+        Assertions.assertEquals(1, store.fileReads() - reads, "a hit still reads the one file it returns");
+    }
+
+    @Test
     public void deletingOneNameLeavesTheOther() throws IOException {
         Template content = build();
         Template house = named(content, "house", 100);

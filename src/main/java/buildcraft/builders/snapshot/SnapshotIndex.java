@@ -6,6 +6,7 @@
 package buildcraft.builders.snapshot;
 
 import java.io.File;
+import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ import buildcraft.lib.misc.HashUtil;
  * The cached list of snapshots stored in one snapshot directory, in display order. Each file is decompressed once;
  * a {@link #rescan} re-reads only files that are new or changed on disk (by size and modification time), so it is
  * cheap enough to repeat. {@link #put}/{@link #remove} keep the index current for the saves and deletes the game
- * makes itself, without touching disk.
+ * makes itself, and for the files a lookup has just read, without touching disk again.
  * <p>
  * Thread-safe: a rescan reads files outside the lock (it is meant to run off the render thread) and merges under
  * it; a put or remove that lands while a scan is reading wins over what that scan saw.
@@ -40,8 +41,9 @@ public final class SnapshotIndex {
             Comparator.reverseOrder())
         .thenComparing(k -> HashUtil.convertHashToString(k.hash));
 
-    /** One file: its key ({@code null} if it could not be read, so a corrupt file is not re-read every scan) and
-     *  the size/time it had when read. */
+    /** One file: its key ({@code null} if its bytes are not a snapshot named after its key, so a corrupt file is not
+     *  re-read every scan) and the size/time it had when read. A file that could not be read at all (in use
+     *  elsewhere, gone) gets no entry, so the next scan or lookup tries it again. */
     private record Entry(@Nullable Snapshot.Key key, long modified, long length) {}
 
     private Map<String, Entry> entries = new HashMap<>();
@@ -67,15 +69,17 @@ public final class SnapshotIndex {
      * Whether the index already knows that {@code fileName} holds nothing that {@code answers}, so a lookup can skip
      * decompressing it: the file is indexed with exactly this size and modification time (so it has not changed since
      * it was read), and its key is either unreadable or not one {@code answers} accepts. A file the index has not seen,
-     * or that has changed since, is never ruled out: only reading it can say.
+     * or that has changed since, is never ruled out: only reading it can say. Nor is one that could not be read at
+     * all, since such a file is never entered.
      */
     public synchronized boolean rulesOut(String fileName, long modified, long length, Predicate<Snapshot.Key> answers) {
         Entry e = entries.get(fileName);
         return e != null && e.modified == modified && e.length == length && (e.key == null || !answers.test(e.key));
     }
 
-    /** Record a snapshot the game just wrote to {@code fileName}. */
-    public synchronized void put(String fileName, Snapshot.Key key, long modified, long length) {
+    /** Record what {@code fileName} holds, as of the given size and time: a snapshot the game just wrote, or what a
+     *  lookup just read there ({@code key} null if that was not a snapshot named after its key). */
+    public synchronized void put(String fileName, @Nullable Snapshot.Key key, long modified, long length) {
         entries.put(fileName, new Entry(key, modified, length));
         if (scansInFlight > 0) touchedDuringScan.add(fileName);
         publish();
@@ -90,8 +94,10 @@ public final class SnapshotIndex {
 
     /**
      * Bring the index in line with {@code dir}: drop entries whose file is gone, read files that are new or changed
-     * with {@code reader} (which returns null for an unreadable file), keep the rest as they are. A directory that
-     * cannot be listed leaves the index unchanged.
+     * with {@code reader}, keep the rest as they are. The reader returns null for a file whose bytes are not a
+     * snapshot (remembered, so it is not re-read until it changes), and throws {@link UncheckedIOException} for one it
+     * could not read at all (left out, so the next scan tries it again). A directory that cannot be listed leaves the
+     * index unchanged.
      */
     public void rescan(File dir, String extension, Function<File, Snapshot.Key> reader) {
         Map<String, Entry> known;
@@ -112,7 +118,11 @@ public final class SnapshotIndex {
                 if (old != null && old.modified == modified && old.length == length) {
                     fresh.put(name, old);
                 } else {
-                    fresh.put(name, new Entry(reader.apply(file), modified, length));
+                    try {
+                        fresh.put(name, new Entry(reader.apply(file), modified, length));
+                    } catch (UncheckedIOException e) {
+                        // Unreadable right now (another program holds it, or it was just deleted): no entry.
+                    }
                 }
             }
             synchronized (this) {

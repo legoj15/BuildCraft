@@ -62,11 +62,11 @@ public class ClearableTwinGuardTest {
             }
         }
 
-        // Liveness: a scan that found no spill overrides passes vacuously.
-        Assertions.assertTrue(spillers.contains("buildcraft.factory.tile.TileTank#dropContentsOnRemoval"),
-                "TileTank's spill hook must be scanned, found " + spillers);
-        Assertions.assertTrue(spillers.contains("buildcraft.builders.tile.TileBuilder#dropExtraContentsOnRemoval"),
-                "TileBuilder's extra spill hook must be scanned, found " + spillers);
+        // Liveness: a scan that found no spill overrides of a kind would pass vacuously for that kind.
+        for (String spillHook : TWINS.keySet()) {
+            Assertions.assertTrue(spillers.stream().anyMatch(s -> s.endsWith("#" + spillHook)),
+                    "No block entity overriding " + spillHook + " was scanned, found " + spillers);
+        }
         Assertions.assertTrue(offenders.isEmpty(),
                 "A command replace on 1.21.1 would spill what these tiles' wipe leaves behind. Override the wipe hook "
                         + "over exactly the contents the spill hook drops: " + offenders);

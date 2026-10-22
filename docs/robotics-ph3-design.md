@@ -353,8 +353,13 @@ passengerOffset, nameTag, nameTagAttachment, leashStates, shadowRadius, shadowPi
 1.21.10-only: hitboxesRenderState, serverHitboxesRenderState; 26.2-only: scoreText — **never name a
 field any of these** (a 26.2-only name compiles on four nodes and shadows on the fifth), and don't
 name methods getRenderData/setRenderData (NeoForge base). State is created once and re-filled every
-frame — every added field must be unconditionally overwritten in `extractRenderState`. On 1.21.1 add
-the `lerpTo` snap override on the ENTITY (`EntityQuarryRig:170-182`) or movement visibly lags.
+frame — every added field must be unconditionally overwritten in `extractRenderState`. Client
+movement smoothing lives on the ENTITY, not the renderer: a plain `Entity` snaps to every packet on
+every line (1.21.1 `lerpTo` is a bare `setPos`; 1.21.10+ have no interpolation handler by default), so
+`EntityRobot` supplies vanilla's three-step linear interpolation per line (26.3
+`createInterpolationHandler`, 1.21.10–26.2 a field + `getInterpolation()` stepped first in `tick()`,
+1.21.1 a hand-rolled `lerpTo` stepper), position only — body yaw stays with the client stepper. The
+quarry rig deliberately keeps the snap (collision proxy for a BER visual).
 
 **Assets — explicit move list, NOT a glob:** `git mv` from `misc/unused_textures/` into new
 `src/main/resources/assets/buildcraftunofficial/textures/entity/`: the **23** `robot_*.png` entity

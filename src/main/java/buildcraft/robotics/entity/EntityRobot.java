@@ -49,8 +49,15 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 //? if >=1.21.10 {
+import net.minecraft.world.entity.InterpolationHandler;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+//?}
+//? if >=26.3 {
+import net.minecraft.core.PositionAndRotation;
+import net.minecraft.world.entity.InterpolationTracker;
+import net.minecraft.world.entity.LinearInterpolationHandler;
+import net.minecraft.world.entity.PositionPath;
 //?}
 
 import net.neoforged.neoforge.common.NeoForge;
@@ -796,12 +803,157 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         }
     }
 
+    // ── Client movement smoothing ───────────────────────────────────────────
+    // The server moves a robot every tick and sends it every tick (updateInterval 1). A plain Entity has no
+    // client-side smoothing on any line: 1.21.1's Entity.lerpTo is a bare setPos, and 1.21.10+ hand each packet
+    // to the entity's interpolation handler, which a plain Entity does not have (null up to 26.2, NO_OP on
+    // 26.3), so the packet ends in setPos again. Rendering lerps between the previous and current tick
+    // position, so a snapped robot moves in visible 20 Hz steps. Each line below gives the robot vanilla's
+    // three-step linear interpolation (ExperienceOrb's), which reaches each packet's position over the next
+    // three client ticks.
+    //
+    // Only the POSITION is interpolated. The body yaw belongs to clientTick's stepper, which walks yRot toward
+    // the synced aim yaw at CLIENT_YAW_STEP a tick; letting the packets' yaw in as well would either snap the
+    // body (the old behaviour on 1.21.10+, defeating the stepper) or have the handler and the stepper both
+    // turning it. The server's yRot is the aim yaw (aimItemAt), so both would end up in the same place anyway.
+    //
+    // Docking and undocking are server-side setPos jumps of under a block; they glide over the same three ticks
+    // rather than snap, like any vanilla interpolated entity. A jump vanilla thinks too big to interpolate (over
+    // 64 blocks, or an entity not being ticked) is snapped by the packet listener before it reaches us.
+
+    //? if >=26.3 {
+    // 26.3: the handler is final on Entity and built by this factory from Entity's constructor, so it must not
+    // read any EntityRobot field. commonTick already steps it on the client, before tick(), so tick() must not.
+    // (Line comments only inside a gated arm: the other nodes wrap it in a block comment.)
+    @Override
+    protected InterpolationHandler createInterpolationHandler() {
+        InterpolationHandler linear = LinearInterpolationHandler.create(this);
+        // Server side create() hands back NO_OP, which the server's entity tracker also asks for its tracker.
+        return linear == InterpolationHandler.NO_OP ? linear : new PositionOnlyInterpolation(this, linear);
+    }
+
+    // Hands each packet's position to vanilla's linear handler with the robot's own current rotation, so the
+    // interpolation never touches yaw or pitch (see the section comment). A rotation-only packet is consumed
+    // and dropped: returning false would make moveOrInterpolateTo snap the rotation instead.
+    private record PositionOnlyInterpolation(Entity robot, InterpolationHandler delegate)
+            implements InterpolationHandler {
+        @Override
+        public boolean interpolateTo(PositionPath position, float yRot, float xRot, boolean hasRotation) {
+            return position == null || delegate.interpolateTo(position, robot.getYRot(), robot.getXRot(), true);
+        }
+
+        @Override
+        public PositionAndRotation target() {
+            return delegate.target();
+        }
+
+        @Override
+        public InterpolationTracker interpolationTracker() {
+            return delegate.interpolationTracker();
+        }
+
+        @Override
+        public void interpolate() {
+            delegate.interpolate();
+        }
+
+        @Override
+        public void applyPredictedMovement(Vec3 delta) {
+            delegate.applyPredictedMovement(delta);
+        }
+
+        @Override
+        public boolean hasActiveInterpolation() {
+            return delegate.hasActiveInterpolation();
+        }
+
+        @Override
+        public void cancel() {
+            delegate.cancel();
+        }
+    }
+    //?}
+
+    //? if >=1.21.10 && <26.3 {
+    /*// 1.21.10 to 26.2: Entity.getInterpolation() is an overridable getter returning null. A field initialiser is
+    // fine here because nothing asks for the handler during Entity's constructor on these lines. tick() steps it.
+    private final InterpolationHandler interpolation = new PositionOnlyInterpolation(this);
+
+    @Override
+    public InterpolationHandler getInterpolation() {
+        return interpolation;
+    }
+
+    // Vanilla's three-step handler, fed the robot's current rotation instead of the packet's so it only ever
+    // moves the position (see the section comment). A rotation-only packet arrives here as the current target
+    // position plus the packet's rotation; restarting the steps for an unchanged target would only slow the
+    // final approach, so it is dropped.
+    private static final class PositionOnlyInterpolation extends InterpolationHandler {
+        private final Entity robot;
+
+        PositionOnlyInterpolation(Entity robot) {
+            super(robot);
+            this.robot = robot;
+        }
+
+        @Override
+        public void interpolateTo(Vec3 position, float yRot, float xRot) {
+            if (hasActiveInterpolation() && position.equals(position())) {
+                return;
+            }
+            super.interpolateTo(position, robot.getYRot(), robot.getXRot());
+        }
+    }
+    *///?}
+
     //? if <1.21.10 {
-    /*// 1.21.1 only: snap to each synced position rather than running the classic fixed-step client lerp,
-    // which visibly trails a robot that changes direction. 1.21.10+ use the adaptive InterpolationHandler.
+    /*// 1.21.1: Entity.lerpTo is a bare setPos/setRot (the stepped lerp lives on LivingEntity only), so the robot
+    // carries its own copy of vanilla's three-step linear interpolation. ClientLevel sets the old position
+    // before tick(), and tick() steps this first, so the renderer lerps across each step. The packet's rotation
+    // is ignored (see the section comment).
+    private double lerpTargetX;
+    private double lerpTargetY;
+    private double lerpTargetZ;
+    private int lerpSteps;
+
     @Override
     public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        this.setPos(x, y, z);
+        if (steps <= 0) {
+            lerpSteps = 0;
+            setPos(x, y, z);
+            return;
+        }
+        lerpTargetX = x;
+        lerpTargetY = y;
+        lerpTargetZ = z;
+        lerpSteps = steps;
+    }
+
+    // The packet listener re-sends these with a rotation-only packet, so they must be the pending target, not
+    // the half-way position, or that packet would cut the approach short.
+    @Override
+    public double lerpTargetX() {
+        return lerpSteps > 0 ? lerpTargetX : getX();
+    }
+
+    @Override
+    public double lerpTargetY() {
+        return lerpSteps > 0 ? lerpTargetY : getY();
+    }
+
+    @Override
+    public double lerpTargetZ() {
+        return lerpSteps > 0 ? lerpTargetZ : getZ();
+    }
+
+    private void stepClientLerp() {
+        if (lerpSteps <= 0) {
+            return;
+        }
+        double alpha = 1.0 / lerpSteps;
+        setPos(Mth.lerp(alpha, getX(), lerpTargetX), Mth.lerp(alpha, getY(), lerpTargetY),
+                Mth.lerp(alpha, getZ(), lerpTargetZ));
+        lerpSteps--;
     }*/
     //?}
 
@@ -832,6 +984,18 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     @Override
     public void tick() {
+        // Client movement smoothing, first, as ExperienceOrb does (26.3 steps it in commonTick instead). The
+        // server never receives a position packet, so on the server there is never a step to run.
+        //? if >=1.21.10 && <26.3 {
+        /*if (level().isClientSide()) {
+            interpolation.interpolate();
+        }
+        *///?}
+        //? if <1.21.10 {
+        /*if (level().isClientSide()) {
+            stepClientLerp();
+        }
+        *///?}
         super.tick();
 
         if (!firstUpdateDone) {

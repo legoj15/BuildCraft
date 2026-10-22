@@ -167,19 +167,12 @@ public class EntityQuarryRig extends Entity {
         return true;
     }
 
-    //? if <1.21.10 {
-    /*// 1.21.1 only: snap to each synced position instead of smoothing. The classic client entity lerp
-    // (lerpTo with a fixed multi-step interpolation) made this collision entity lag visibly behind the
-    // BER-rendered drill arm — the visual follows the block entity's per-tick clientDrillPos, so the
-    // multi-tick lerp left the collision "somewhere other than where it visually is". With
-    // updateInterval(1) the rig gets a position every tick, so snapping tracks the visual within a
-    // tick. 1.21.10+/26.1 use the adaptive InterpolationHandler, which already keeps pace — so this
-    // override is 1.21.1-only.
-    @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        this.setPos(x, y, z);
-    }*/
-    //?}
+    // Client sync: deliberately NO interpolation, on every node. The rig is a collision proxy whose visual is
+    // the BER-rendered drill arm, which follows the block entity's per-tick clientDrillPos; a client lerp would
+    // leave the collision trailing behind what the player sees. A plain Entity already snaps to each packet on
+    // every line (1.21.1's Entity.lerpTo is a bare setPos; 1.21.10+ have no interpolation handler unless the
+    // entity supplies one), and updateInterval(1) sends a position every tick, so the rig tracks the arm within
+    // a tick. Do not give it the handler EntityRobot has.
 
     // ── Tick ──────────────────────────────────────────────────────────────
 

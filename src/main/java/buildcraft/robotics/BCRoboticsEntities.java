@@ -22,8 +22,9 @@ public class BCRoboticsEntities {
 
     /** The robot. {@code MobCategory.MISC} keeps it out of mob-cap/spawning entirely; the 0.25 cube matches
      * 7.1.x's model and {@code fireImmune} matches its lava behaviour (a robot flying over lava should not
-     * catch fire). Tracking mirrors the quarry rig: a short range with a per-tick update interval, because a
-     * robot's visible position is driven by its own movement rather than interpolation from a block entity. */
+     * catch fire). Tracking mirrors the quarry rig: a short range with a per-tick update interval, so every
+     * client gets the robot's server position each tick; {@code EntityRobot} smooths between those packets with
+     * a three-step client interpolation (see its "Client movement smoothing" section). */
     public static final Supplier<EntityType<EntityRobot>> ROBOT = ENTITIES.register(
             "robot",
             (key) -> EntityType.Builder.<EntityRobot>of(EntityRobot::new, MobCategory.MISC)

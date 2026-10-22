@@ -65,9 +65,10 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
         super(BCFactoryBlockEntities.TANK.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / command) ---
-    // TileTank extends BlockEntity directly (not TileBC_Neptune), so it carries its own copy of the
-    // drop hook. Spills the tank as fragile fluid shards, mirroring BlockTank#playerWillDestroy.
+    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
+    // TileTank sits beside TileBC_Neptune on the synced base (no itemManager, one bespoke tank), so it
+    // carries its own copy of the drop hook. Spills the tank as fragile fluid shards, mirroring
+    // BlockTank#playerWillDestroy. A command REPLACE wipes the tank instead (clearContent below).
 
     private boolean dropsHandled = false;
 
@@ -81,6 +82,13 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
         }
         dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+    }
+
+    /** Wipes this tank's own fluid (not the rest of the column), exactly what {@link #dropContentsOnRemoval}
+     *  would spill; see {@code AbstractBCBlockEntity#clearContent}. */
+    @Override
+    public void clearContent() {
+        tank.setFluidStack(0, FluidStack.EMPTY);
     }
 
     //? if >=1.21.10 {

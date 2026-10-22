@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Clearable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -48,7 +49,7 @@ import buildcraft.lib.misc.BCValueOutput;
  * {@link AbstractBCSyncedBlockEntity} subclass, which adds that pair (plus the {@code <1.21.10}
  * {@code onDataPacket} fix) in one place — {@link TileBC_Neptune} and the machine tiles do.
  */
-public abstract class AbstractBCBlockEntity extends BlockEntity {
+public abstract class AbstractBCBlockEntity extends BlockEntity implements Clearable {
 
     @SuppressWarnings("this-escape")
     public AbstractBCBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -129,12 +130,30 @@ public abstract class AbstractBCBlockEntity extends BlockEntity {
     // --- Non-player-removal drop hook ---
     // The block base's <1.21.10 onRemove catch-all (and, on >=1.21.10, TileBC_Neptune's
     // preRemoveSideEffects) call this polymorphically on a non-player removal (explosion / piston /
-    // /setblock / mod tools). Default no-op — TileBC_Neptune (gated on spillsContentsOnRemoval) and the
-    // raw fluid/engine tiles override it with their own spill logic; tiles that never spill inherit this
-    // no-op, so the base's catch-all is safe to add uniformly (byte-identical for non-spilling tiles).
+    // /setblock ... destroy / mod tools). Default no-op — TileBC_Neptune (gated on spillsContentsOnRemoval)
+    // and the raw fluid/engine tiles override it with their own spill logic; tiles that never spill inherit
+    // this no-op, so the base's catch-all is safe to add uniformly (byte-identical for non-spilling tiles).
 
     /** Spills this tile's contents on a non-player removal. Default no-op. */
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {}
+
+    // --- Replace-by-command wipe hook ---
+    // Vanilla's contract for a command or structure REPLACING a block entity: the contents vanish, they do not
+    // spill (a replaced chest keeps nothing). On 1.21.1, /setblock (replace and keep), /fill, /clone and
+    // structure placement call Clearable.tryClear on the old block entity and then swap the block with no
+    // skip-side-effects flag, so the <1.21.10 onRemove catch-all would spill everything dropContentsOnRemoval
+    // covers (and /clone ... move would copy it to the destination AND spill it at the source). The newer nodes
+    // place with the skip flag (256) and never reach the catch-all, so nothing calls Clearable there at all.
+    // /setblock ... destroy never calls it on any node: that mode is a deliberate break and keeps spilling.
+
+    /**
+     * Wipes what {@link #dropContentsOnRemoval} would spill, so a command replace spills nothing. A tile that
+     * overrides the drop hook overrides this one over exactly the same contents (and the pipe holder over its
+     * in-transit cargo); everything else inherits this no-op. Contents only: no ownership, configuration or
+     * phantom (filter / template) slots, which a spill never returns either.
+     */
+    @Override
+    public void clearContent() {}
 
     // --- Player tracking + GUI reach (used by ContainerBCTile / ContainerBCCrafting) ---
     // Lives here (not on TileBC_Neptune) so the container base can bind its generic to

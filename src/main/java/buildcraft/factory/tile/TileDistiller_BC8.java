@@ -62,8 +62,7 @@ import buildcraft.lib.tile.OwnerData;
  * Ported from 1.12.2 TileDistiller_BC8.
  */
 @SuppressWarnings("this-escape")
-public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable,
-        net.minecraft.world.Clearable {
+public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable {
 
     public static final long MAX_MJ_PER_TICK = 6 * MjAPI.MJ;
 
@@ -131,9 +130,10 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         super(BCFactoryBlockEntities.DISTILLER.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / command) ---
-    // Standalone BlockEntity (not TileBC_Neptune): carries its own drop hook. Spills the three tanks
-    // as fragile fluid shards, mirroring BlockDistiller#playerWillDestroy.
+    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
+    // Sits on the synced base beside TileBC_Neptune (three bespoke tanks, no itemManager): carries its own
+    // drop hook. Spills the three tanks as fragile fluid shards plus the three bucket / bottle container
+    // slots, mirroring BlockDistiller#playerWillDestroy.
 
     private boolean dropsHandled = false;
 
@@ -148,20 +148,19 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos,
                 getTankIn(), getTankGasOut(), getTankLiquidOut());
+        buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, containerSlots);
     }
 
-    // Vanilla's command/structure replacement contract: /setblock (replace/keep) and structure placement call
-    // Clearable.tryClear before swapping the block, so the old contents vanish instead of spilling. 1.21.10+
-    // /setblock also skips preRemoveSideEffects (flag 256); 1.21.1 has no such flag and relies on this alone, so
-    // without it the <1.21.10 onRemove catch-all spilled the tanks as shards on every command replace.
+    // Wipes the same set dropContentsOnRemoval spills, so a command REPLACE spills nothing: vanilla's
+    // /setblock (replace/keep), /fill, /clone and structure placement call Clearable.tryClear on the old
+    // tile before swapping the block, and the <1.21.10 onRemove catch-all would otherwise spill it all.
+    // See AbstractBCBlockEntity#clearContent.
     @Override
     public void clearContent() {
         tankIn.setFluidStack(0, FluidStack.EMPTY);
         tankGasOut.setFluidStack(0, FluidStack.EMPTY);
         tankLiquidOut.setFluidStack(0, FluidStack.EMPTY);
-        for (int i = 0; i < containerSlots.getSlots(); i++) {
-            containerSlots.setStackInSlot(i, net.minecraft.world.item.ItemStack.EMPTY);
-        }
+        containerSlots.clearStacks();
     }
 
     //? if >=1.21.10 {

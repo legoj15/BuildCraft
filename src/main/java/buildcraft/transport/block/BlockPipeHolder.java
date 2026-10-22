@@ -787,10 +787,12 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         return super.getDrops(state, params);
     }
 
-    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock, mod tools):
-    // spill the in-transit cargo while the BlockEntity is still alive in onRemove. On >=1.21.10 the BE
-    // is already gone by affectNeighborsAfterRemoval, so that line uses TilePipeHolder#preRemoveSideEffects
-    // instead. Player breaks set dropsHandled in playerWillDestroy, so dropPipeCargo is a no-op there.
+    // Non-player removal catch-all for the pre-1.21.10 API (explosion, piston, /setblock ... destroy, mod tools):
+    // spill the in-transit cargo while the BlockEntity is still alive in onRemove. A command that REPLACES the
+    // pipe has already wiped that cargo (TilePipeHolder#clearContent), so there is nothing left to spill.
+    // On >=1.21.10 the BE is already gone by affectNeighborsAfterRemoval, so that line uses
+    // TilePipeHolder#preRemoveSideEffects instead. Player breaks set dropsHandled in playerWillDestroy, so
+    // dropPipeCargo is a no-op there.
     //? if <1.21.10 {
     /*@Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {

@@ -97,6 +97,14 @@ public abstract class PipeFlow {
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
     }
 
+    /**
+     * Discards the in-transit cargo {@link #addDrops} would return (traversing items, fluid in the sections),
+     * without dropping it. Called when a command replaces the pipe, which wipes a block entity's contents
+     * instead of spilling them. Default: nothing to clear.
+     */
+    public void clearCargo() {
+    }
+
     public boolean onFlowActivate(Player player, HitResult trace, float hitX, float hitY, float hitZ,
             EnumPipePart part) {
         return false;

@@ -145,6 +145,13 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
         }
     }
 
+    @Override
+    public void clearCargo() {
+        super.clearCargo();
+        items.clear();
+        postDropCache.clear();
+    }
+
     // IFlowItems
 
     @Override

@@ -103,15 +103,22 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     }
 
     /** Spills the tank as fragile fluid-shard items when the gate is removed by non-player means
-     *  (explosion, piston, /setblock, mod tools). No-op on the client and once drops are handled.
-     *  TileFloodGate extends BlockEntity directly (not TileBC_Neptune), so it carries its own copy of
-     *  this hook rather than inheriting the shared one. */
+     *  (explosion, piston, /setblock ... destroy, mod tools). No-op on the client and once drops are handled.
+     *  TileFloodGate sits on the synced base beside TileBC_Neptune (one bespoke tank, no itemManager), so it
+     *  carries its own copy of this hook rather than inheriting the shared one. */
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
         if (dropsHandled || level.isClientSide()) {
             return;
         }
         dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+    }
+
+    /** Wipes the tank {@link #dropContentsOnRemoval} would spill, so a command replace leaves nothing to
+     *  spill; see {@code AbstractBCBlockEntity#clearContent}. */
+    @Override
+    public void clearContent() {
+        tank.setFluidStack(0, FluidStack.EMPTY);
     }
 
     // Non-player removal catch-all on the >=1.21.10 API — the BlockEntity is still alive here.

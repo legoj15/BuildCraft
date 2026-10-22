@@ -686,6 +686,15 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:drops_floodgate_nonplayer", () -> BlockDropsTester::testFloodGateNonPlayerRemovalDropsFluid);
         reg.accept("buildcraftunofficial:drops_architect_nonplayer", () -> BlockDropsTester::testArchitectNonPlayerRemovalDropsContents);
         reg.accept("buildcraftunofficial:drops_tank_nonplayer", () -> BlockDropsTester::testTankNonPlayerRemovalDropsFluid);
+        // The distiller's bucket / bottle slots drop with the machine, on a player break and a non-player removal.
+        reg.accept("buildcraftunofficial:drops_distiller_hand", () -> BlockDropsTester::testDistillerHandBreakDropsContainerSlots);
+        reg.accept("buildcraftunofficial:drops_distiller_nonplayer", () -> BlockDropsTester::testDistillerNonPlayerRemovalDropsContainerSlots);
+        // A replace-mode /setblock (and /fill, /clone, structure placement) wipes the old tile instead of spilling
+        // it (Clearable on 1.21.1, the skip-side-effects flag on the newer nodes); destroy mode keeps spilling.
+        reg.accept("buildcraftunofficial:setblock_replace_spills_nothing", () -> CommandReplaceTester::testSetblockReplaceSpillsNothing);
+        reg.accept("buildcraftunofficial:setblock_destroy_still_spills", () -> CommandReplaceTester::testSetblockDestroyStillSpills);
+        reg.accept("buildcraftunofficial:clearable_wipes_what_removal_spills", () -> CommandReplaceTester::testClearableWipesWhatRemovalSpills);
+        reg.accept("buildcraftunofficial:clone_move_neither_spills_nor_duplicates", () -> CommandReplaceTester::testCloneMoveNeitherSpillsNorDuplicates);
 
         // Stripes pipe direction NBT sync — covered by JUnit unit tests rather than game tests
         // (the regression is in PipeBehaviour.readFromNbt's no-op default; PipeBehaviourStripesSyncTester

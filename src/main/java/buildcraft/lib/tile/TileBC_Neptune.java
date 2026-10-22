@@ -80,7 +80,7 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
     }
 
     /** Whether this tile spills its inventory/tank contents when removed by NON-player means
-     *  (explosion, piston, /setblock, mod tools) — restoring the universal drop that 1.12.2's
+     *  (explosion, piston, /setblock ... destroy, mod tools) — restoring the universal drop that 1.12.2's
      *  breakBlock&rarr;onRemove&rarr;addDrops gave every tile. Opt-in (default false) so tiles with
      *  bespoke drop logic aren't double-dropped; flip to true once a tile's full content set is
      *  covered by {@link #addDrops} + {@link #getDropTanks}. The matching block must also call
@@ -111,10 +111,35 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
     /** Override to spill contents NOT held in the itemManager or {@link #getDropTanks} — e.g. loose
      *  ItemStack fields a tile keeps outside ItemHandlerManager (the Builder's snapshot + resource grid).
      *  Called from {@link #dropContentsOnRemoval} after the itemManager + tank drops, so it only fires
-     *  for opted-in tiles on a non-player removal. Mirror the tile's playerWillDestroy drop set exactly. */
+     *  for opted-in tiles on a non-player removal. Mirror the tile's playerWillDestroy drop set exactly.
+     *  Override {@link #clearExtraContents} over the same contents. */
     protected void dropExtraContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {}
 
-    // Non-player removal catch-all (explosion / piston / /setblock / mod tools) on the >=1.21.10 API:
+    /** Wipes the contents {@link #dropContentsOnRemoval} would spill — the itemManager's droppable handlers
+     *  (never the phantom filter / template slots), the {@link #getDropTanks} fluid and
+     *  {@link #clearExtraContents} — so a command that replaces this tile (1.21.1 {@code /setblock},
+     *  {@code /fill}, {@code /clone}, structure placement) leaves nothing to spill. Not gated on
+     *  {@link #spillsContentsOnRemoval()}: like a vanilla chest, a tile that survives such a command (the same
+     *  block set over it) is emptied too, and a tile that never spills has nothing droppable to lose. */
+    @Override
+    public void clearContent() {
+        itemManager.clearDroppable();
+        buildcraft.lib.fluid.BCFluidTank[] tanks = getDropTanks();
+        if (tanks != null) {
+            for (buildcraft.lib.fluid.BCFluidTank tank : tanks) {
+                if (tank != null && !tank.isTankEmpty(0)) {
+                    tank.setFluidStack(0, net.neoforged.neoforge.fluids.FluidStack.EMPTY);
+                }
+            }
+        }
+        clearExtraContents();
+    }
+
+    /** Override to wipe contents NOT held in the itemManager or {@link #getDropTanks} — the counterpart of
+     *  {@link #dropExtraContentsOnRemoval}, over exactly the same contents. */
+    protected void clearExtraContents() {}
+
+    // Non-player removal catch-all (explosion / piston / /setblock ... destroy / mod tools) on the >=1.21.10 API:
     // the BlockEntity is still alive here (removed right after, before affectNeighborsAfterRemoval).
     // Player breaks set contentsDropped via markDropsHandled in playerWillDestroy, so this is a no-op there.
     //? if >=1.21.10 {

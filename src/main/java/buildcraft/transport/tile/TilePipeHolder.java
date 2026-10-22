@@ -556,8 +556,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
      * Spills ONLY the in-transit cargo — traversing items
      * (via {@link buildcraft.transport.pipe.flow.PipeFlowItems#addDrops}) and fluid contents as fragile fluid-shard
      * items (via {@link buildcraft.transport.pipe.flow.PipeFlowFluids#addDrops}) — when the pipe is removed by
-     * something other than a player's hand: explosions, pistons, {@code /setblock} (on 1.21.1, or in destroy mode),
-     * another mod's tool, world edits, etc. The pipe item, pluggables and wires are intentionally NOT returned in
+     * something other than a player's hand: explosions, pistons, {@code /setblock ... destroy}, another mod's tool,
+     * world edits, etc. (a command that REPLACES the pipe wipes the cargo instead: {@link #clearContent}).
+     * The pipe item, pluggables and wires are intentionally NOT returned in
      * these cases (the block is treated as destroyed, like a chest spilling its contents on explosion). A survival
      * hand/pickaxe break instead returns everything via
      * {@link buildcraft.transport.block.BlockPipeHolder#playerWillDestroy} → {@link #dropPipeItems}, which calls
@@ -580,6 +581,21 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         }
     }
 
+    /**
+     * Discards the in-transit cargo {@link #dropPipeCargo} would spill (traversing items, fluid in the
+     * sections) when a command replaces the pipe, so the cargo vanishes like a vanilla chest's contents. Only
+     * the cargo: the pipe item, pluggables and wires are not part of a spill either, and the pluggables must
+     * still be told they are gone, which {@link #detachPluggables} does on the removal that follows. Leaves
+     * {@code dropsHandled} alone, so a pipe that survives the command still drops everything when it is
+     * broken later. See {@code AbstractBCBlockEntity#clearContent}.
+     */
+    @Override
+    public void clearContent() {
+        if (pipe != null) {
+            pipe.getFlow().clearCargo();
+        }
+    }
+
     // Non-player removal catch-all (explosion / piston / /setblock … destroy / mod tools) on the >=1.21.10 API.
     // The BlockEntity is still alive here — it is removed immediately after this returns, before
     // affectNeighborsAfterRemoval — so this is the last point where the in-transit cargo can spill.
@@ -587,7 +603,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     // NOT reached by /fill or replace-mode /setblock on these nodes: both place with
     // UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS (256), so the cargo vanishes like a vanilla chest's contents and the
     // pluggables are never detached (DockingStationPipe.getHolder copes with the station that leaves behind).
-    // On 1.21.1 those commands run Block.onRemove, i.e. BlockPipeHolder's catch-all below.
+    // On 1.21.1 those commands call clearContent first (the cargo vanishes the same way), then run
+    // Block.onRemove, i.e. BlockPipeHolder's catch-all below, which still detaches the pluggables.
     //? if >=1.21.10 {
     @Override
     public void preRemoveSideEffects(BlockPos pos, BlockState state) {

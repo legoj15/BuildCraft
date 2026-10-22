@@ -37,7 +37,10 @@ Initialization order: `BCLib` → core registries → per-subsystem registries �
 `AbstractBCBlockEntity` hosts the cross-version save/load directive (subclasses override
 version-neutral `writeData`/`readData` — never `saveAdditional` directly), owner persistence
 (`OwnerData` + `onPlacedBy`), the menu-open/`canInteractWith` machinery, and the
-`dropContentsOnRemoval` hook. `AbstractBCSyncedBlockEntity` adds the standard
+`dropContentsOnRemoval` hook with its twin `clearContent` (vanilla `Clearable`: what a command *replace*
+wipes instead of spilling — 1.21.1 `/setblock`, `/fill`, `/clone` and structure placement call it first, the
+newer nodes skip the side effects; every tile overriding the drop hook overrides the wipe over the same
+contents, and `CommandReplaceTester` fails when they drift). `AbstractBCSyncedBlockEntity` adds the standard
 `getUpdateTag`/`getUpdatePacket` sync pair (with the `<1.21.10 onDataPacket` fix) plus
 `markForRenderUpdate()`/`markForGuiUpdate()` — the no-re-mesh data push; use these for
 BER/GUI-only state, and `sendBlockUpdated` only when the *block model* genuinely changes.

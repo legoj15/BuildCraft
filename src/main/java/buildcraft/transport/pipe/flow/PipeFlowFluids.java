@@ -240,6 +240,18 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
     }
 
+    @Override
+    public void clearCargo() {
+        super.clearCargo();
+        for (Section section : sections.values()) {
+            section.amount = 0;
+            section.incomingTotalCache = 0;
+        }
+        // Rebuilds each section's `incoming` delay line and resets its timers, as the tick does when the last
+        // drop leaves the pipe. The next server tick sees amount != lastSentAmount and syncs the empty pipe.
+        setFluid(FluidStack.EMPTY);
+    }
+
     public boolean doesContainFluid() {
         for (EnumPipePart part : EnumPipePart.VALUES) {
             if (sections.get(part).amount > 0) {

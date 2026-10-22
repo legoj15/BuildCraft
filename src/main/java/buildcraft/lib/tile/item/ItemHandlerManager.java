@@ -126,6 +126,18 @@ public class ItemHandlerManager implements INBTSerializable<CompoundTag> {
         }
     }
 
+    /** Empties every handler {@link #addDrops} would drop (never the phantom ones): the wipe a command replace
+     *  applies to the tile, so the two sets can never drift apart. Every droppable handler BuildCraft registers
+     *  is an {@link ItemHandlerSimple}; any other kind would keep its contents, which the rigs of
+     *  {@code CommandReplaceTester} would then report. */
+    public void clearDroppable() {
+        for (IBCItemHandler itemHandler : handlersToDrop) {
+            if (itemHandler instanceof ItemHandlerSimple simple) {
+                simple.clearStacks();
+            }
+        }
+    }
+
     /** Gets the combined item handler for the given direction, or null if none. */
     public IBCItemHandler getItemHandler(Direction facing) {
         Wrapper wrapper = wrappers.get(EnumPipePart.fromFacing(facing));

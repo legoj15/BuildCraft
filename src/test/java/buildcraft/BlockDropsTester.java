@@ -25,6 +25,7 @@ import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileChute;
+import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
@@ -235,12 +236,14 @@ public class BlockDropsTester {
         //?}
     }
 
-    // ---------- Non-player removal (explosion / piston / command) spills contents ----------
-    // A bare level.removeBlock stands in for an explosion / piston / /setblock. It routes through
+    // ---------- Non-player removal (explosion / piston / mod tool) spills contents ----------
+    // A bare level.removeBlock stands in for an explosion / piston / mod setBlock. It routes through
     // TileBC_Neptune.preRemoveSideEffects (>=1.21.10) or the block's onRemove (1.21.1) → the central
     // dropContentsOnRemoval, with no playerWillDestroy involved. The block item itself is gone (it
     // only returns via the loot table on a tool harvest), but the stored contents must still spill —
-    // matching 1.12.2's universal breakBlock→onRemove→addDrops.
+    // matching 1.12.2's universal breakBlock→onRemove→addDrops. It is NOT a stand-in for a replace-mode
+    // /setblock, /fill or /clone: those wipe the old tile first (Clearable) or skip the side effects
+    // entirely, so they spill nothing (CommandReplaceTester).
 
     public static void testChuteNonPlayerRemovalDropsContents(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
@@ -304,6 +307,57 @@ public class BlockDropsTester {
         helper.runAfterDelay(10, () -> {
             helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
             helper.assertItemEntityNotPresent(BCFactoryBlocks.FLOOD_GATE.get().asItem(), pos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    // ---------- Distiller: the bucket / bottle slots drop too ----------
+
+    public static void testDistillerHandBreakDropsContainerSlots(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+
+        //? if >=1.21.10 {
+        TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
+        //?}
+        // The three container slots hold the buckets / bottles the player parked there; only the fluids
+        // used to drop, so breaking the machine silently destroyed them.
+        distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET));
+        distiller.containerSlots.setStackInSlot(2, new ItemStack(Items.GLASS_BOTTLE));
+        distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+
+        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(Items.BUCKET, pos, 2.0);
+            helper.assertItemEntityPresent(Items.GLASS_BOTTLE, pos, 2.0);
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
+            helper.succeed();
+        });
+    }
+
+    public static void testDistillerNonPlayerRemovalDropsContainerSlots(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+
+        //? if >=1.21.10 {
+        TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+        //?} else {
+        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
+        //?}
+        distiller.containerSlots.setStackInSlot(1, new ItemStack(Items.BUCKET));
+        distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+
+        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
+        helper.assertBlockPresent(Blocks.AIR, pos);
+
+        helper.runAfterDelay(10, () -> {
+            helper.assertItemEntityPresent(Items.BUCKET, pos, 2.0);
+            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
+            helper.assertItemEntityNotPresent(BCFactoryBlocks.DISTILLER.get().asItem(), pos, 2.0);
             helper.succeed();
         });
     }

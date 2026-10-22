@@ -333,6 +333,16 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
     }
     //?}
 
+    /** Empties every non-empty slot through {@link #setStackInSlot}, so the change callback fires once per slot
+     *  that held something. */
+    public void clearStacks() {
+        for (int slot = 0; slot < stacks.size(); slot++) {
+            if (!stacks.get(slot).isEmpty()) {
+                setStackInSlot(slot, ItemStack.EMPTY);
+            }
+        }
+    }
+
     public void setStackInSlot(int slot, @Nonnull ItemStack stack) {
         if (badSlotIndex(slot)) {
             throw new IndexOutOfBoundsException("Slot index out of range: " + slot);

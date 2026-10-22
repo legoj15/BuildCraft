@@ -102,10 +102,11 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         super(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / command) ---
-    // Standalone BlockEntity (not TileBC_Neptune): carries its own drop hook. Spills the section tanks
-    // (START/END tiles only) as fragile shards plus the container slots, mirroring
-    // BlockHeatExchange#playerWillDestroy.
+    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
+    // Sits on the synced base beside TileBC_Neptune (a bespoke section per multiblock end, no itemManager):
+    // carries its own drop hook. Spills the section tanks (START/END tiles only) as fragile shards plus the
+    // container slots, mirroring BlockHeatExchange#playerWillDestroy. A command REPLACE wipes the same set
+    // (clearContent below).
 
     private boolean dropsHandled = false;
 
@@ -123,6 +124,18 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, section.tankInput, section.tankOutput);
         }
         buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, containerSlots);
+    }
+
+    /** Wipes exactly what {@link #dropContentsOnRemoval} would spill: the section tanks (when this tile owns
+     *  a section) and the container slots; see {@code AbstractBCBlockEntity#clearContent}. */
+    @Override
+    public void clearContent() {
+        ExchangeSection section = getSection();
+        if (section != null) {
+            section.tankInput.setFluidStack(0, FluidStack.EMPTY);
+            section.tankOutput.setFluidStack(0, FluidStack.EMPTY);
+        }
+        containerSlots.clearStacks();
     }
 
     //? if >=1.21.10 {

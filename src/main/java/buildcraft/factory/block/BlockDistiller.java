@@ -193,6 +193,9 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
                 for (ItemStack drop : toDrop) {
                     Block.popResource(level, pos, drop);
                 }
+                // The bucket / bottle slots, as the Heat Exchanger drops its own: breaking the machine used to
+                // destroy whatever the player had left in them.
+                buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, distiller.containerSlots);
                 distiller.markDropsHandled();
             }
         }

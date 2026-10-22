@@ -299,6 +299,16 @@ public class TileBuilder extends TileBC_Neptune
         }
     }
 
+    // The wipe twin of dropExtraContentsOnRemoval: the 27 resource slots and the 4 tanks are cleared by
+    // TileBC_Neptune#clearContent, leaving the loose snapshot slot. Through setSnapshot, the way taking the
+    // snapshot out in the GUI does, so the builder forgets the snapshot it was working from.
+    @Override
+    protected void clearExtraContents() {
+        if (!invSnapshot.isEmpty()) {
+            setSnapshot(ItemStack.EMPTY);
+        }
+    }
+
     @Override
     public void setRemoved() {
         super.setRemoved();

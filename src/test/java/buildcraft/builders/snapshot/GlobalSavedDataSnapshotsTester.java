@@ -173,6 +173,24 @@ public class GlobalSavedDataSnapshotsTester {
     }
 
     @Test
+    public void aRepeatSaveOfAnEntryAnOldFileHoldsDoesNotReadItAgain() throws IOException {
+        // A named save first checks the old <hash>.bcnbt; once it has read that file, a later save of the same entry
+        // trusts what it found while the file is unchanged, rather than decompressing a large snapshot every save.
+        Template house = named(build(), "house", 100);
+        Path legacy = dir.resolve(house.key + ".bcnbt");
+        try (FileOutputStream out = new FileOutputStream(legacy.toFile())) {
+            NbtSquisher.squishVanilla(Snapshot.writeToNBT(house), out);
+        }
+        GlobalSavedDataSnapshots store = store();
+        store.addSnapshot(named(build(), "house", 100));
+        Assertions.assertEquals(1, fileCount(), "the old file already holds the entry");
+
+        spoilKeepingStamp(legacy);
+        store.addSnapshot(named(build(), "house", 100));
+        Assertions.assertEquals(1, fileCount(), "the repeat save did not read the old file again");
+    }
+
+    @Test
     public void aLookupByContentAloneFindsANamedFile() {
         // Uploads used to be stored with their name, but items look them up by content alone.
         Template house = named(build(), "house", 100);

@@ -334,13 +334,21 @@ public class GlobalSavedDataSnapshots {
      * decompressed once first: an empty or truncated one (left by a crash under the old in-place write, or by
      * something outside the game replacing a file this store had trusted) is not "stored" and is overwritten by
      * the save.
+     * <p>
+     * The old {@code <hash>.bcnbt} is trusted through the {@link SnapshotIndex} (which records exactly which key a
+     * read found there), not through {@link #intactFiles}: that name is also the content-only file name, so a stamp on
+     * it vouches only that it answers the content, not which name it holds.
      */
     private boolean alreadyStored(Snapshot.Key key) {
         File stored = new File(snapshotsFile, fileName(key));
         if (stored.isFile() && isIntact(stored, key)) return true;
         if (key.header == null) return false;
         File legacy = new File(snapshotsFile, key + SNAPSHOT_FILE_EXTENSION);
-        return legacy.isFile() && matching(legacy, key, true) != null;
+        if (!legacy.isFile()) return false;
+        FileStamp stamp = FileStamp.of(legacy);
+        if (index.knownToHold(legacy.getName(), stamp.modified(), stamp.length(), key)) return true;
+        if (knownNotToAnswer(legacy, held -> answers(held, key, true))) return false;
+        return matching(legacy, key, true) != null;
     }
 
     /** Whether {@code snapshotFile} (the file {@link #fileName} gives {@code key}) holds a readable snapshot that

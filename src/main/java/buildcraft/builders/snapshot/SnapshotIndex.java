@@ -77,6 +77,13 @@ public final class SnapshotIndex {
         return e != null && e.modified == modified && e.length == length && (e.key == null || !answers.test(e.key));
     }
 
+    /** Whether the index already knows that {@code fileName}, unchanged (same size and modification time) since it was
+     *  read, holds exactly {@code key}: the positive counterpart of {@link #rulesOut}. */
+    public synchronized boolean knownToHold(String fileName, long modified, long length, Snapshot.Key key) {
+        Entry e = entries.get(fileName);
+        return e != null && e.modified == modified && e.length == length && key.equals(e.key);
+    }
+
     /** Record what {@code fileName} holds, as of the given size and time: a snapshot the game just wrote, or what a
      *  lookup just read there ({@code key} null if that was not a snapshot named after its key). */
     public synchronized void put(String fileName, @Nullable Snapshot.Key key, long modified, long length) {

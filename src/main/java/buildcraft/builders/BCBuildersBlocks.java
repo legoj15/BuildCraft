@@ -29,6 +29,9 @@ public class BCBuildersBlocks {
     // Forcing solid makes blocksMotion()==true so fluid flows AROUND the frame instead of destroying
     // it. No other effect on a non-full block: suffocation/view-blocking/redstone all additionally
     // require a full collision cube, which the frame is not.
+    // From 26.3 blocksMotion() is gone and both checks read block tags: the frame keeps this behaviour by
+    // being in minecraft:blocks_motion_no_leaves and not in washed_away_by_fluids (BlockMotionTagsTester
+    // derives those lists from isSolid(), which forceSolidOn() still drives).
     public static final DeferredBlock<BlockFrame> FRAME = RegistrationUtilBC.registerBlock(BLOCKS,
             "frame",
             BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.METAL).requiresCorrectToolForDrops());

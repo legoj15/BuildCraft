@@ -44,10 +44,11 @@ public class BlockStateNbt {
      *  whose hash must not depend on the Minecraft line. {@link #read} accepts it everywhere. */
     public static CompoundTag write(BlockState state) {
         CompoundTag nbt = NbtUtils.writeBlockState(state);
-        if (!ID.equals(LEGACY_ID) && nbt.contains(ID)) {
+        // Before 26.3 the native keys already are the legacy ones, and the move is a no-op.
+        if (nbt.contains(ID)) {
             move(nbt, ID, LEGACY_ID);
         }
-        if (!PROPERTIES.equals(LEGACY_PROPERTIES) && nbt.contains(PROPERTIES)) {
+        if (nbt.contains(PROPERTIES)) {
             move(nbt, PROPERTIES, LEGACY_PROPERTIES);
         }
         return nbt;

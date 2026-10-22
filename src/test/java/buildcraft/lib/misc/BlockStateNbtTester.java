@@ -6,12 +6,15 @@
 
 package buildcraft.lib.misc;
 
+import com.google.common.collect.ImmutableSet;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -20,6 +23,8 @@ import net.minecraft.world.level.block.state.properties.Half;
 import buildcraft.api.core.InvalidInputDataException;
 
 import buildcraft.builders.snapshot.SchematicBlockFluid;
+import buildcraft.silicon.plug.FacadeBlockStateInfo;
+import buildcraft.silicon.plug.FacadePhasedState;
 
 /**
  * Block states BuildCraft keeps in its own NBT (blueprints, snapshots, facades) must decode whichever
@@ -75,6 +80,10 @@ public class BlockStateNbtTester {
         schematic.deserializeNbt(saved);
         Assertions.assertEquals(stairsTag("Name", "Properties"),
             NBTUtilBC.getCompound(schematic.serializeNbt(), "blockState"));
+        // A facade's state rides inside a pipe's block-entity NBT, which a blueprint captures and hashes too.
+        FacadePhasedState facade = new FacadePhasedState(
+            new FacadeBlockStateInfo(STAIRS, ItemStack.EMPTY, ImmutableSet.of()), null);
+        Assertions.assertEquals(stairsTag("Name", "Properties"), NBTUtilBC.getCompound(facade.writeToNbt(), "state"));
     }
 
     /** One real read site, fed the spelling that is not the running node's. */

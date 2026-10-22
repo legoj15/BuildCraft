@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.TreeSet;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import org.junit.jupiter.api.Assertions;
@@ -34,7 +35,13 @@ import buildcraft.TestHelper;
  * goes in {@code blocks_motion_no_leaves}; one that was solid in none and is no fluid container (it was washed away)
  * goes in {@code washed_away_by_fluids}. On the older lines both tags are inert.
  * <p>
- * Breaks when a block is added, or its shape or {@code forceSolidOn/Off} changes, without updating the tag files.
+ * Every entry is written {@code {"id": ..., "required": false}}: these files merge into vanilla tags the whole game
+ * reads, and one required entry naming a block that is not registered (the decorated blocks exist only in a dev
+ * environment) makes the loader drop the merged tag, vanilla's own entries included, together with every tag that
+ * includes it. Optional entries cannot do that; a misspelt id is still caught here, where every block is registered.
+ * <p>
+ * Breaks when a block is added, or its shape or {@code forceSolidOn/Off} changes, without updating the tag files, or
+ * when an entry is written as a required one.
  */
 public class BlockMotionTagsTester {
     private static final String NAMESPACE = "buildcraftunofficial";
@@ -76,16 +83,27 @@ public class BlockMotionTagsTester {
 
     private static TreeSet<String> readTag(String file) throws IOException {
         Path path = TestHelper.repoRoot().resolve(TAG_DIR + file);
-        TreeSet<String> values = new TreeSet<>();
-        if (!Files.exists(path)) {
-            return values;
-        }
+        Assertions.assertTrue(Files.exists(path), "missing tag file " + path);
         var json = JsonParser.parseString(Files.readString(path)).getAsJsonObject();
         Assertions.assertFalse(json.has("replace") && json.get("replace").getAsBoolean(),
             file + " must not replace the vanilla tag");
+        TreeSet<String> values = new TreeSet<>();
+        List<String> required = new ArrayList<>();
         for (JsonElement value : json.getAsJsonArray("values")) {
-            values.add(value.getAsString());
+            if (value.isJsonObject()) {
+                JsonObject entry = value.getAsJsonObject();
+                values.add(entry.get("id").getAsString());
+                if (!entry.has("required") || entry.get("required").getAsBoolean()) {
+                    required.add(entry.get("id").getAsString());
+                }
+            } else {
+                values.add(value.getAsString());
+                required.add(value.getAsString());
+            }
         }
+        Assertions.assertEquals(List.of(), required,
+            file + ": entries must be {\"id\": ..., \"required\": false}; a required entry for an unregistered block"
+                + " drops the whole vanilla tag");
         return values;
     }
 }

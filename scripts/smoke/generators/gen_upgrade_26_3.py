@@ -20,8 +20,8 @@ sees. Both scenarios play the save `bc-upgrade`.
    26.3's with `disableRfPipe = true`; `-RestoreConfig` puts 26.3's own back afterwards.
 3. Verify on 26.3, then on 26.2 as the baseline (after `Copy-UpgradeWorld.ps1 -To 26.2`, which resets 26.2's copy):
      pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Scenario scripts/smoke/scenarios/upgrade-26-3-verify.json
-   Facade plugs and items must show their blocks, `data get` must show the facade states re-saved with the node's own
-   keys (not air), the library must list upgrade-a, upgrade-b and upgrade-t, and Builders fed blueprint A (from the
+   Facade plugs and items must show their blocks, `data get` must show the facade states re-saved (not air; BuildCraft
+   writes them with the pre-26.3 Name/Properties keys on every node, so hashed blueprint NBT matches across lines), the library must list upgrade-a, upgrade-b and upgrade-t, and Builders fed blueprint A (from the
    chest) and blueprint B (uploaded from the library) must rebuild both structures state for state
    (`execute if blocks ... all` passes). The template upload is the control: it holds no block state.
    B8: with `disableRfPipe = true` read from the carried-over -common.toml the RF pipe recipe is unknown on 26.3 (the
@@ -268,7 +268,7 @@ V.wait(3000)
 V.shot("facades", "B0: the four facades from 26.2 exactly as on 26.2: oak log (axis z), hollow purpur pillar (axis x), "
        "phased quartz pillar (axis x), hollow birch log (axis x); no bare pipe, no missing texture")
 for i, p in enumerate(PIPES):
-    V.echo("B0: pipe %d facade read back (expect the block and its axis in the node's own keys, never air)" % (i + 1),
+    V.echo("B0: pipe %d facade read back (expect the block and its axis, never air; Name/Properties keys on every node)" % (i + 1),
            "data get block %s plugs" % at(*p))
 
 # Facade items carried over in the chest: place each one on a fresh pipe.

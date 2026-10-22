@@ -894,6 +894,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 canBeReplacedWithBlocks.stream()
                     .map(BuiltInRegistries.BLOCK::getKey)
                     .map(Object::toString)
+                    // Blocks hash by identity, so set order differs between JVMs; the snapshot key hashes this NBT.
+                    .sorted()
             )
         );
         return nbt;

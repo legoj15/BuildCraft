@@ -50,7 +50,7 @@
    "look": "B0: the four facades from 26.2 exactly as on 26.2: oak log (axis z), hollow purpur pillar (axis x), phased quartz pillar (axis x), hollow birch log (axis x); no bare pipe, no missing texture"
   },
   {
-   "label": "B0: pipe 1 facade read back (expect the block and its axis in the node's own keys, never air)",
+   "label": "B0: pipe 1 facade read back (expect the block and its axis, never air; Name/Properties keys on every node)",
    "do": "cmd",
    "run": [
     "data get block {X} {Y} {Z+12} plugs"
@@ -59,7 +59,7 @@
    "echo": true
   },
   {
-   "label": "B0: pipe 2 facade read back (expect the block and its axis in the node's own keys, never air)",
+   "label": "B0: pipe 2 facade read back (expect the block and its axis, never air; Name/Properties keys on every node)",
    "do": "cmd",
    "run": [
     "data get block {X+2} {Y} {Z+12} plugs"
@@ -68,7 +68,7 @@
    "echo": true
   },
   {
-   "label": "B0: pipe 3 facade read back (expect the block and its axis in the node's own keys, never air)",
+   "label": "B0: pipe 3 facade read back (expect the block and its axis, never air; Name/Properties keys on every node)",
    "do": "cmd",
    "run": [
     "data get block {X+4} {Y} {Z+12} plugs"
@@ -77,7 +77,7 @@
    "echo": true
   },
   {
-   "label": "B0: pipe 4 facade read back (expect the block and its axis in the node's own keys, never air)",
+   "label": "B0: pipe 4 facade read back (expect the block and its axis, never air; Name/Properties keys on every node)",
    "do": "cmd",
    "run": [
     "data get block {X+6} {Y} {Z+12} plugs"

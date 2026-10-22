@@ -75,6 +75,10 @@ public final class BCLibRenderTypes {
      * depth writes so the GPU can z-test subsequent LED fragments against earlier
      * ones in the same batch.
      * <p>
+     * That holds with 26.3's improved transparency (OIT) off. With it on, the pipeline's blending routes every type
+     * built on it through the type's OIT pipelines (see {@link #ledPipelineSetup}), which depth-test but do not write
+     * depth, so overlapping LED fragments blend there instead of occluding, as vanilla's own debug filled boxes do.
+     * <p>
      * Must be registered via {@link net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent}
      * — see {@link buildcraft.lib.client.BCLibClient#initClient}.
      */
@@ -94,7 +98,8 @@ public final class BCLibRenderTypes {
      * with 26.3's improved transparency (OIT) on, geometry drawn with it goes through the type's OIT pipelines, and a
      * type that has none throws "does not have OIT pipelines set up" and crashes the client on the first frame it is
      * in view. The OIT stages are vanilla's debug filled box ones: the same {@code position_color} shaders and vertex
-     * format. They do not write depth (OIT resolves the order itself), so the LED's depth write applies only with OIT off.
+     * format. They depth-test against the world but do not write depth, so with OIT on the LED's own depth write is
+     * lost: overlapping LED or debug fragments blend rather than occlude (cosmetic; vanilla's debug boxes do the same).
      */
     //? if >=1.21.11 {
     private static RenderSetup.RenderSetupBuilder ledPipelineSetup() {
@@ -138,9 +143,9 @@ public final class BCLibRenderTypes {
     //?}
 
     /**
-     * Opaque sibling of {@link #LED}: the same depth-writing {@link #LED_PIPELINE}, minus the LED's
-     * view-offset Z layering (which only matters for quads mounted flush on a block face). For
-     * free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
+     * Opaque sibling of {@link #LED}: the same {@link #LED_PIPELINE} (depth-writing with improved
+     * transparency off), minus the LED's view-offset Z layering (which only matters for quads mounted
+     * flush on a block face). For free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
      */
     //? if >=1.21.11 {
     private static final RenderType DEBUG_SOLID = RenderType.create(
@@ -190,7 +195,8 @@ public final class BCLibRenderTypes {
     }
 
     /**
-     * Translucent, vertex-coloured QUADs with depth writes and <em>no view-offset Z layering</em> — the
+     * Translucent, vertex-coloured QUADs with depth writes (with improved transparency off) and <em>no
+     * view-offset Z layering</em> — the
      * zone tints and hover highlight of the Zone Planner's map viewport. NOT vanilla's
      * {@code debugFilledBox()} (what {@link #debugFilled()} returns): that type carries
      * {@code VIEW_OFFSET_Z_LAYERING}, a modelview shrink-to-eye hack calibrated for OpenGL's forward depth
@@ -248,10 +254,12 @@ public final class BCLibRenderTypes {
     }
 
     /**
-     * Opaque, depth-writing vertex-coloured QUADs — for solid debug geometry that must sort
-     * correctly against the world. Unlike {@link #debugFilled()} (vanilla's debug filled-box type,
-     * which disables depth writes for see-through translucent overlays), boxes drawn through this
-     * write depth, so opaque markers occlude and are occluded by world geometry correctly.
+     * Opaque vertex-coloured QUADs for solid debug geometry that must sort correctly against the
+     * world. Unlike {@link #debugFilled()} (vanilla's debug filled-box type, which disables depth
+     * writes for see-through translucent overlays), boxes drawn through this write depth with
+     * improved transparency off, so opaque markers occlude and are occluded by world geometry
+     * correctly. With 26.3's improved transparency on they draw through OIT pipelines that
+     * depth-test but do not write depth (see {@link #ledPipelineSetup}).
      */
     public static RenderType debugSolid() {
         return DEBUG_SOLID;

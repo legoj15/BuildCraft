@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
@@ -55,7 +54,8 @@ public class FacadePhasedState implements IFacadePhasedState {
     public CompoundTag writeToNbt() {
         CompoundTag nbt = new CompoundTag();
         try {
-            nbt.put("state", NbtUtils.writeBlockState(stateInfo.state));
+            // One spelling on every node: this NBT ends up in pipe tile NBT that blueprints capture and hash.
+            nbt.put("state", BlockStateNbt.write(stateInfo.state));
         } catch (Throwable t) {
             throw new IllegalStateException("Writing facade block state"
                 + "\n\tState = " + stateInfo

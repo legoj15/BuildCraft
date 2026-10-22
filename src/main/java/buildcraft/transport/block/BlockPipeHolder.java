@@ -101,7 +101,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     }
 
     // Waterlogging — a pipe's collision is a partial centre cube, and (because the block is
-    // .dynamicShape()) it reports blocksMotion()==false, so without this any flowing fluid would
+    // .dynamicShape()) it reports blocksMotion()==false (from 26.3: it is not in minecraft:blocks_motion,
+    // and fluid replaceability reads tags plus the LiquidBlockContainer check), so without this any flowing fluid would
     // wash the pipe away. Worse, the pipe item is dropped only on a player break (code-driven, no
     // loot table), so a fluid-driven removal would delete the pipe with NO drop. Implementing
     // SimpleWaterloggedBlock makes the pipe a LiquidBlockContainer, so FlowingFluid.spreadTo takes

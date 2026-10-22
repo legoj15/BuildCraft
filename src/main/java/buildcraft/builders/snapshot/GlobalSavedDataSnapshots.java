@@ -304,7 +304,7 @@ public class GlobalSavedDataSnapshots {
      * required offsets), so a file saved before a rule changed deserialises to different NBT. Either way the server
      * would refuse it for as long as the stored key stayed.
      * <p>
-     * A file is moved only when it {@linkplain Snapshot#readFully() read fully}: one that names a block (or property
+     * A file is moved only when it {@linkplain Snapshot#readFully() read fully}: one that names a block (or a property, or
      * value) this game lacks loads with a default in its place, and its content hashes differently for that reason
      * alone, so it is left as it was rather than overwritten with the poorer copy.
      * <p>

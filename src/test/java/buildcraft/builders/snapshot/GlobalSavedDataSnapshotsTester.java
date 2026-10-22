@@ -726,4 +726,11 @@ public class GlobalSavedDataSnapshotsTester {
         assertLeftAsItWas(pistonData(data -> NBTUtilBC.getCompound(NBTUtilBC.getCompound(data, "blockState"),
             "Properties").putString("facing", "sideways")));
     }
+
+    @Test
+    public void aClientFilePropertyThisGamesBlockLacksIsNotRekeyed() throws IOException {
+        // Saved by a build whose piston had one more property: this game's piston drops it on read.
+        assertLeftAsItWas(pistonData(data -> NBTUtilBC.getCompound(NBTUtilBC.getCompound(data, "blockState"),
+            "Properties").putString("bogus_prop", "true")));
+    }
 }

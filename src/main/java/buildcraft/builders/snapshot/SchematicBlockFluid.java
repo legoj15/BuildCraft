@@ -36,7 +36,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 public class SchematicBlockFluid implements ISchematicBlock {
     private BlockState blockState;
     private boolean isFlowing;
-    /** Whether {@link #deserializeNbt} met a block or property value this game lacks (see
+    /** Whether {@link #deserializeNbt} met a block, property or property value this game lacks (see
      *  {@link SchematicBlockDefault#readFully()}). Not part of the schematic's value. */
     private boolean readWithDefaults;
 

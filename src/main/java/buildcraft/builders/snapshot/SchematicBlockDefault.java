@@ -132,7 +132,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
     protected final Set<BlockPos> updateBlockOffsets = new HashSet<>();
     @SuppressWarnings("WeakerAccess")
     protected final Set<Block> canBeReplacedWithBlocks = new HashSet<>();
-    /** Whether {@link #deserializeNbt} met a block or property value this game lacks and put a default in its place
+    /** Whether {@link #deserializeNbt} met a block, property or property value this game lacks and put a default in its place
      *  (see {@link #readFully()}). Not part of the schematic's value. */
     private boolean readWithDefaults;
 
@@ -993,7 +993,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /** Whether everything {@link #deserializeNbt} read resolved in this game, so writing this schematic back keeps
-     *  every block it was saved with (migrations aside). False when a block or a property value it names is missing
+     *  every block it was saved with (migrations aside). False when a block, property or property value it names is missing
      *  here (its mod is not installed, or no longer has it) and a default took its place. A schematic made by a scan
      *  is always read fully. */
     boolean readFully() {

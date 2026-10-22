@@ -63,8 +63,8 @@ public class BlockStateNbt {
 
     /** Whether {@code read}, what {@link #read} made of {@code nbt}, holds everything {@code nbt} names: the same
      *  block (a block this game lacks reads as air), and each of its properties that {@code nbt} sets at the value
-     *  {@code nbt} sets (a value the block does not have reads as the default). A property {@code nbt} leaves out
-     *  takes its default without losing anything; a property the block no longer has is not checked. */
+     *  {@code nbt} sets (a value the block does not have reads as the default), with no property the block lacks
+     *  (the read drops it). A property {@code nbt} leaves out takes its default without losing anything. */
     public static boolean readsBack(CompoundTag nbt, BlockState read) {
         CompoundTag nativeNbt = withNativeKeys(nbt);
         Identifier id = Identifier.tryParse(NBTUtilBC.getString(nativeNbt, ID, ""));
@@ -72,14 +72,20 @@ public class BlockStateNbt {
             return false;
         }
         CompoundTag properties = NBTUtilBC.getCompound(nativeNbt, PROPERTIES);
+        int matched = 0;
         for (Property<?> property : read.getProperties()) {
             String name = property.getName();
-            if (properties.contains(name)
-                    && !NBTUtilBC.getString(properties, name, "").equals(valueName(read, property))) {
+            if (!properties.contains(name)) {
+                continue;
+            }
+            if (!NBTUtilBC.getString(properties, name, "").equals(valueName(read, property))) {
                 return false;
             }
+            matched++;
         }
-        return true;
+        // Every saved key not matched above names a property this block lacks. Counting avoids iterating the
+        // tag's keys, whose accessor differs across Minecraft lines.
+        return matched == properties.size();
     }
 
     private static <T extends Comparable<T>> String valueName(BlockState state, Property<T> property) {

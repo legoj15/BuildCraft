@@ -17,8 +17,7 @@ import javax.annotation.Nullable;
 import net.minecraft.world.entity.player.Player;
 
 import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -34,11 +33,10 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * addon's nested dispatch) cannot end this player's dispatch. Entries are weak, so a detached player's goes with it.
  *
  * <p>{@link BlockUtil}'s machine-click helpers record their own refusals, and so do the stripes minecart handler for a
- * refused attack and the stripes shears handler for a
- * refused break. The one refusal no helper sees is a mob interaction: {@code Player#interactOn} answers a cancelled
- * entity-interaction event with whatever result the cancelling listener left, the default PASS (the same answer as a
- * mob that ignores the item) or a consuming one (the same answer as a mob that took the item), so
- * {@link #onEntityInteract} records it from the event itself.
+ * refused attack and the stripes shears handler for a refused break. The one refusal no helper sees is a mob
+ * interaction: {@code Player#interactOn} answers a cancelled entity-interaction event with whatever result the
+ * cancelling listener left, the default PASS (the same answer as a mob that ignores the item) or a consuming one (the
+ * same answer as a mob that took the item), so a recorder on the event itself counts it ({@link #registerRecorder}).
  *
  * <p>A placement a protection mod refuses through NeoForge's placement capture (the item's use places the block, the
  * cancelled placement event takes it back) reaches the clicker as the item's FAIL, the same answer as a block item
@@ -47,10 +45,10 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * that scope a cancelled placement is not counted: a stripes pipe's dispatch deliberately goes on to its next click
  * after one (see {@link BlockUtil.ItemUse#PASSED}).
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public final class MachineRefusals {
 
     private static final Map<Player, AtomicLong> TALLIES = Collections.synchronizedMap(new WeakHashMap<>());
+    private static boolean recorderRegistered = false;
 
     /** The machine player {@link #countingPlacements} is counting cancelled placements for right now, or null. */
     @Nullable
@@ -70,13 +68,29 @@ public final class MachineRefusals {
     }
 
     /**
-     * A protection mod cancelling a machine player's interaction with a mob. Last priority and even when cancelled,
-     * so every listener at an earlier priority has had its say; a real player's refused click needs no tally, nothing
-     * asks it. A listener that cancels at this same LOWEST priority and is registered after this one goes unseen
-     * (the event bus runs a priority's listeners in registration order); protection mods cancel earlier than that.
+     * Registers {@link #onEntityInteract} and {@link #onEntityPlace} on the game bus, at last priority and even when cancelled. Called once
+     * mod loading is complete ({@code FMLLoadCompleteEvent}), not at construction: the bus runs one priority's
+     * listeners in registration order, so a recorder registered with the mod would miss a protection mod that also
+     * cancels at LOWEST and was registered after BuildCraft; registered last, it sees every listener any mod added
+     * while loading. One added later still, at run time and at LOWEST, would go unseen; the stripes pipe would then
+     * take that refused interaction for a mob that ignored the item. Repeat calls do nothing.
      */
-    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
-    public static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+    public static synchronized void registerRecorder() {
+        if (recorderRegistered) {
+            return;
+        }
+        recorderRegistered = true;
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, PlayerInteractEvent.EntityInteract.class,
+                MachineRefusals::onEntityInteract);
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, BlockEvent.EntityPlaceEvent.class,
+                MachineRefusals::onEntityPlace);
+    }
+
+    /**
+     * A protection mod cancelling a machine player's interaction with a mob, seen after every other listener (see
+     * {@link #registerRecorder}); a real player's refused click needs no tally, nothing asks it.
+     */
+    private static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (event.isCanceled() && event.getEntity() instanceof FakePlayer machine) {
             record(machine);
         }
@@ -102,8 +116,7 @@ public final class MachineRefusals {
      * and even when cancelled, like {@link #onEntityInteract}; a permission probe ({@link PlaceEventProbe}) places
      * nothing and answers its own caller, so it is not counted.
      */
-    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
-    public static void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
+    private static void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
         Player counting = placingFor;
         if (counting != null && event.isCanceled() && event.getEntity() == counting
                 && !PlaceEventProbe.isProbe(event)) {

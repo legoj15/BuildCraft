@@ -41,6 +41,7 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 
@@ -182,14 +183,29 @@ public class BlockUtil {
             return true;
         }
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, MachineIdentity.of(owner), pos)) {
-            return canMachineBreakAs(level, pos, lease.player());
+            return BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), lease.player());
         }
     }
 
-    /** {@link #canMachineBreak} with the break event posted for {@code machine} as it stands. */
-    private static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
-        return BCCoreConfig.minePlayerProtected.get()
-                || BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), machine);
+    /**
+     * {@link #canMachineBreak} for a machine that already holds its fake player (a stripes handler's, leased by the
+     * pipe for the whole drop), with no second lease: the break event is posted for {@code machine} standing where
+     * {@link #canMachineBreak}'s own player stands, the centre of {@code pos}, so a claim that judges where the actor
+     * stands answers both alike. The player is put back where it was, facing the same way, afterwards.
+     */
+    public static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
+        if (BCCoreConfig.minePlayerProtected.get()) {
+            return true;
+        }
+        Vec3 feet = machine.position();
+        float yRot = machine.getYRot();
+        float xRot = machine.getXRot();
+        FakePlayerUtil.pose(machine, Vec3.atCenterOf(pos), yRot, xRot);
+        try {
+            return BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), machine);
+        } finally {
+            FakePlayerUtil.pose(machine, feet, yRot, xRot);
+        }
     }
 
     /**

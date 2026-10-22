@@ -7,8 +7,6 @@
  */
 package buildcraft.robotics.ai;
 
-import java.util.List;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -107,31 +105,16 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
      * place) stays in the robot's hand for the next cell, and anything else the handler left on the player — a
      * filled bucket, a sheared-off drop — is dropped at the robot's feet, where 7.1.x's handlers dropped their
      * results. Before this the hand was simply cleared and the remainder of the stack deleted; 7.1.x itself dropped
-     * the remainder on the ground. The stripes pipe does the same, sending it all back down the pipe.
-     *
-     * <p>Which stack is "what is left of the stack": the robot's own stack ({@code used}, the object the handlers were
-     * handed) if the handler left it anywhere on the player - a handler that sets it aside and puts a stack of
-     * another count in the hand has made the hand's stack a product, not the remainder. Only when the robot's own
-     * stack is gone (consumed, or swapped out of the player altogether) is the main hand's stack of the same item the
-     * remainder. {@code original} is the pre-use copy, which still names the item after {@code used} was consumed.
+     * the remainder on the ground. Which stack is the remainder is {@link FakePlayerUtil#takeLeftovers}'s rule, the
+     * one the stripes pipe's sweep follows too. {@code original} is the pre-use copy, which still names the item
+     * after {@code used} was consumed.
      */
     private void takeBackFrom(FakePlayer player, ItemStack used, ItemStack original) {
-        ItemStack hand = player.getMainHandItem();
-        // Every distinct stack on the player, taken off it: the rule the stripes pipe's sweep shares.
-        List<ItemStack> onPlayer = FakePlayerUtil.takeDistinctStacks(player);
-
-        ItemStack keep = ItemStack.EMPTY;
-        if (!used.isEmpty() && onPlayer.stream().anyMatch(seen -> seen == used)) {
-            keep = used;
-        } else if (!hand.isEmpty() && ItemStack.isSameItem(hand, original)) {
-            keep = hand;
+        FakePlayerUtil.Leftovers left = FakePlayerUtil.takeLeftovers(player, used, original.getItem());
+        for (ItemStack product : left.products()) {
+            sendItem(product, Direction.NORTH);
         }
-        for (ItemStack left : onPlayer) {
-            if (left != keep) {
-                sendItem(left, Direction.NORTH);
-            }
-        }
-        robot.setItemInUse(keep);
+        robot.setItemInUse(left.remainder());
     }
 
     @Override

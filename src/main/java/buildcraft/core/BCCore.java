@@ -307,6 +307,8 @@ public class BCCore {
     }
 
     private void postInit(net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) {
+        // Last, after every listener the other mods registered while loading: see the method's javadoc.
+        event.enqueueWork(buildcraft.lib.misc.MachineRefusals::registerRecorder);
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {

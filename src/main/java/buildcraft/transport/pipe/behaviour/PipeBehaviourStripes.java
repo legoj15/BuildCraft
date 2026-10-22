@@ -17,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShearsItem;
@@ -325,19 +326,26 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         }
         // The owner's leased fake player (the "[BuildCraft]" one for an unowned pipe), reset and aimed out of the
         // output face, so an item used in the air acts on the cell in front. The travelling stack goes in its hand;
-        // on success every distinct stack left on it is sent back down the pipe, and closing the lease drops the
-        // stack reference a failed handler leaves behind (the stack itself carries on as the dropped item).
+        // on success what is left of it and every other distinct stack on the player are sent back down the pipe,
+        // and closing the lease drops the stack reference a failed handler leaves behind (the stack itself carries
+        // on as the dropped item).
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel, owner, pos, direction)) {
             FakePlayer player = lease.player();
-            player.setItemInHand(InteractionHand.MAIN_HAND, event.getStack());
+            ItemStack used = event.getStack();
+            Item usedItem = used.getItem();
+            player.setItemInHand(InteractionHand.MAIN_HAND, used);
             if (PipeApi.stripeRegistry == null) {
                 return;
             }
             long refusedBefore = MachineRefusals.count(player);
-            if (PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
+            if (PipeApi.stripeRegistry.handleItem(world, pos, direction, used, player, this)) {
                 event.setStack(ItemStack.EMPTY);
-                for (ItemStack stack : FakePlayerUtil.takeDistinctStacks(player)) {
-                    sendItem(stack, direction);
+                FakePlayerUtil.Leftovers left = FakePlayerUtil.takeLeftovers(player, used, usedItem);
+                if (!left.remainder().isEmpty()) {
+                    sendItem(left.remainder(), direction);
+                }
+                for (ItemStack product : left.products()) {
+                    sendItem(product, direction);
                 }
             } else if (breakAsk && MachineRefusals.count(player) != refusedBefore) {
                 // As a refused dig does (mayBreak): the cycle on this block ends and the refusal is remembered.

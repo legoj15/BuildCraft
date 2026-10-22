@@ -114,33 +114,43 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         if (queued == null) {
             return;
         }
+        // Where each stripes pipe moved to this tick. A second pipe stack that reached the same stripes pipe in the
+        // same tick names the cell it left (and a behaviour the move replaced), so it goes back down the moved pipe
+        // and extends the line when it comes round again, as the rest of a pipe stack does.
+        Map<IStripesActivator, BlockPos> movedTo = new IdentityHashMap<>();
         for (PipeExtensionRequest r : queued) {
-            if (retractionPipeDefs.contains(r.pipeDef)) {
-                retract(level, r);
-            } else {
-                extend(level, r);
+            BlockPos moved = movedTo.get(r.stripes);
+            if (moved != null) {
+                sendBack(level, moved, List.of(r.stack), r.dir);
+                continue;
+            }
+            BlockPos to = retractionPipeDefs.contains(r.pipeDef) ? retract(level, r) : extend(level, r);
+            if (to != null) {
+                movedTo.put(r.stripes, to);
             }
         }
     }
 
-    private void extend(ServerLevel w, PipeExtensionRequest r) {
+    /** @return the cell the stripes pipe moved into, or null when it did not move */
+    @Nullable
+    private BlockPos extend(ServerLevel w, PipeExtensionRequest r) {
         TilePipeHolder stripesTile = stripesAt(w, r.pos, r.stripes);
         if (stripesTile == null) {
             BCLog.logger.warn("[transport.stripes] Found an invalid extension request at " + r.pos
                     + ": no stripes pipe there any more");
             InventoryUtil.drop(w, r.pos, r.stack);
-            return;
+            return null;
         }
         BlockPos p = r.pos.relative(r.dir);
         if (!canTakeStripesPipe(w.getBlockState(p))) {
             sendBack(w, r.pos, List.of(r.stack), r.dir);
-            return;
+            return null;
         }
         GameProfile owner = stripesTile.getOwner();
         // Step 1: the stripes pipe leaves its cell, so break protection decides first (as 8.0.x asked it).
         if (!BlockUtil.canMachineBreak(w, r.pos, owner)) {
             sendBack(w, r.pos, List.of(r.stack), r.dir);
-            return;
+            return null;
         }
         Cell stripesCell = Cell.capture(w, r.pos);
         BlockSnapshot aheadBefore = BlockSnapshot.create(w.dimension(), w, p);
@@ -153,7 +163,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             aheadBefore.restore(Block.UPDATE_ALL);
             stripesCell.placeAt(w, r.pos);
             sendBack(w, r.pos, List.of(r.stack), r.dir);
-            return;
+            return null;
         }
 
         // Step 3: the owner's player places ONE of the fed pipes in the cell the stripes pipe left, clicking it as a
@@ -178,18 +188,21 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             }
             stripesCell.placeAt(w, r.pos);
             sendBack(w, r.pos, left, r.dir);
-            return;
+            return null;
         }
         sendBack(w, p, left, r.dir);
+        return p;
     }
 
-    private void retract(ServerLevel w, PipeExtensionRequest r) {
+    /** @return the cell the stripes pipe moved into, or null when it did not move */
+    @Nullable
+    private BlockPos retract(ServerLevel w, PipeExtensionRequest r) {
         TilePipeHolder stripesTile = stripesAt(w, r.pos, r.stripes);
         if (stripesTile == null) {
             BCLog.logger.warn("[transport.stripes] Found an invalid retraction request at " + r.pos
                     + ": no stripes pipe there any more");
             InventoryUtil.drop(w, r.pos, r.stack);
-            return;
+            return null;
         }
         Direction retractDir = r.dir.getOpposite();
         if (!isValidRetractionPath(w, r.pos, retractDir)) {
@@ -202,7 +215,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             }
             if (possible.isEmpty()) {
                 sendBack(w, r.pos, List.of(r.stack), r.dir);
-                return;
+                return null;
             }
             retractDir = possible.get(w.getRandom().nextInt(possible.size()));
         }
@@ -212,7 +225,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         if (!BlockUtil.canMachineBreak(w, p, owner) || !BlockUtil.canMachineBreak(w, r.pos, owner)
                 || !(w.getBlockEntity(p) instanceof TilePipeHolder behindTile) || behindTile.getPipe() == null) {
             sendBack(w, r.pos, List.of(r.stack), r.dir);
-            return;
+            return null;
         }
         Cell stripesCell = Cell.capture(w, r.pos);
         Cell behindCell = Cell.capture(w, p);
@@ -234,13 +247,14 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             behindCell.placeAt(w, p);
             stripesCell.placeAt(w, r.pos);
             sendBack(w, r.pos, List.of(r.stack), r.dir);
-            return;
+            return null;
         }
         if (w.getBlockEntity(p) instanceof TilePipeHolder moved
                 && moved.getPipe() != null && moved.getPipe().getBehaviour() instanceof PipeBehaviourStripes stripes) {
             stripes.direction = retractDir.getOpposite();
         }
         sendBack(w, p, stacksToSendBack, r.dir);
+        return p;
     }
 
     /** The stripes pipe standing at {@code pos} whose behaviour is {@code stripes}, or null. */
@@ -279,10 +293,26 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         }
     }
 
-    /** Sends {@code stacks} down the stripes pipe at {@code pos}, or drops them there when there is none. */
+    /**
+     * Sends {@code stacks} down the stripes pipe at {@code pos}, entering from its open end, or drops them there when
+     * there is no stripes pipe or it is connected to nothing. A stripes pipe with nothing behind it has no line to
+     * send them down: they would come straight back out of its open end into its handlers, and a pipe stack would
+     * ask for the same move again every few ticks. The connections are recomputed first, since a pipe this tick
+     * moved still carries the ones of the cell it came from.
+     */
     private static void sendBack(ServerLevel w, BlockPos pos, List<ItemStack> stacks, Direction dir) {
-        IStripesActivator stripes = w.getBlockEntity(pos) instanceof TilePipeHolder tile && tile.getPipe() != null
-                && tile.getPipe().getBehaviour() instanceof IStripesActivator activator ? activator : null;
+        IStripesActivator stripes = null;
+        Direction from = dir;
+        if (w.getBlockEntity(pos) instanceof TilePipeHolder tile && tile.getPipe() != null
+                && tile.getPipe().getBehaviour() instanceof IStripesActivator activator) {
+            tile.getPipe().refreshConnections();
+            if (hasConnection(tile.getPipe())) {
+                stripes = activator;
+                if (activator instanceof PipeBehaviourStripes behaviour && behaviour.direction != null) {
+                    from = behaviour.direction;
+                }
+            }
+        }
         for (ItemStack s : stacks) {
             if (s.isEmpty()) {
                 continue;
@@ -290,10 +320,19 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
             s = s.copy();
             if (stripes == null) {
                 InventoryUtil.drop(w, pos, s);
-            } else if (!stripes.sendItem(s, dir)) {
-                stripes.dropItem(s, dir);
+            } else if (!stripes.sendItem(s, from)) {
+                stripes.dropItem(s, from);
             }
         }
+    }
+
+    private static boolean hasConnection(IPipe pipe) {
+        for (Direction face : Direction.values()) {
+            if (pipe.isConnected(face)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isValidRetractionPath(Level w, BlockPos pos, Direction retractDir) {

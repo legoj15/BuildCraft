@@ -13,10 +13,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
@@ -128,6 +130,8 @@ public class PipeBehaviourStripesMovesTester {
      * forward and ONE of the fed pipes is placed in the cell it left; the rest of the stack travels back down the
      * moved stripes pipe. 7.1.x (PipeExtensionListener) and 8.0.x (PipeExtensionManager) both did this at the end of
      * the tick; the port had the handler but no manager, so the dispenser fallback placed the pipe in front instead.
+     * A second pipe stack reaching the same stripes pipe in the same tick finds it already moved, and travels back
+     * down it too (to extend the line when it comes round again), instead of being dropped where the pipe stood.
      */
     public static void testItemPipeExtendsTheLine(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 2, 2);
@@ -137,13 +141,17 @@ public class PipeBehaviourStripesMovesTester {
         PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
         rig.stripes().onDrop(drop);
         helper.assertTrue(drop.getStack().isEmpty(), "the pipe stack is taken for the extension");
+        PipeEventItem.Drop sameTick = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        rig.stripes().onDrop(sameTick);
+        helper.assertTrue(sameTick.getStack().isEmpty(), "a second pipe stack in the same tick is taken too");
 
         EntityArenaUtil.tickUntil(helper, POLL_TICKS,
                 () -> isStripes(pipeAt(helper, frontRel)) && isPipe(pipeAt(helper, pipeRel), BCTransportPipes.cobbleItem),
                 () -> {
                     TilePipeHolder moved = pipeAt(helper, frontRel);
-                    helper.assertTrue(count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()) == 1,
-                            "one fed pipe was placed and the other travels back down the moved stripes pipe, found "
+                    helper.assertTrue(count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2,
+                            "one fed pipe was placed, and the rest of its stack and the same-tick stack travel back"
+                                    + " down the moved stripes pipe, found "
                                     + count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()));
                     helper.succeed();
                 }, "the stripes pipe never moved forward with the fed pipe behind it",
@@ -152,14 +160,16 @@ public class PipeBehaviourStripesMovesTester {
 
     /**
      * A void pipe reaching a stripes pipe retracts the line: the stripes pipe takes the place of the pipe behind it,
-     * and that pipe and the void pipe travel back down the stripes pipe.
+     * and that pipe and the void pipe travel back down the stripes pipe, into the rest of the line.
      */
     public static void testVoidPipeRetractsTheLine(GameTestHelper helper) {
-        BlockPos feederRel = new BlockPos(1, 2, 2);
+        BlockPos sourceRel = new BlockPos(0, 2, 2);
+        BlockPos feederRel = sourceRel.east();
         BlockPos pipeRel = feederRel.east();
+        TilePipeHolder source = placePipe(helper, sourceRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
-        connect(feeder, tile);
+        connect(source, feeder, tile);
         PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
         helper.assertTrue(stripes.direction == Direction.EAST,
                 "precondition: the fed stripes pipe points away from its feeder, got " + stripes.direction);
@@ -181,7 +191,7 @@ public class PipeBehaviourStripesMovesTester {
                                     + count(flow, BCTransportItems.PIPE_COBBLE_ITEM.get()));
                     helper.succeed();
                 }, "the stripes pipe never retracted onto the pipe behind it",
-                () -> empty(pipeAt(helper, feederRel), pipeAt(helper, pipeRel)));
+                () -> empty(pipeAt(helper, sourceRel), pipeAt(helper, feederRel), pipeAt(helper, pipeRel)));
     }
 
     /**
@@ -190,13 +200,18 @@ public class PipeBehaviourStripesMovesTester {
      * travels back down the pipe.
      */
     public static void testRefusedExtensionSendsTheStackBack(GameTestHelper helper) {
-        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos feederRel = new BlockPos(1, 2, 2);
+        BlockPos pipeRel = feederRel.east();
         BlockPos frontRel = pipeRel.east();
-        PipeBehaviourStripesDropTester.StripesRig rig =
-                PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
+        TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        connect(feeder, tile);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
+                helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
         ClaimProtectionMod claim = new ClaimProtectionMod(helper.absolutePos(pipeRel), true);
         PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
-        rig.stripes().onDrop(drop);
+        stripes.onDrop(drop);
 
         EntityArenaUtil.tickUntil(helper, POLL_TICKS,
                 () -> claim.asks() >= 1 && rig.count(BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2,
@@ -206,8 +221,45 @@ public class PipeBehaviourStripesMovesTester {
                     helper.succeed();
                 }, "a refused extension never sent the whole pipe stack back down the pipe", () -> {
                     claim.close();
-                    empty(pipeAt(helper, pipeRel), pipeAt(helper, frontRel));
+                    empty(feeder, pipeAt(helper, pipeRel), pipeAt(helper, frontRel));
                 });
+    }
+
+    /**
+     * A void pipe reaching a stripes pipe that has no pipe behind it to take up and nothing it is connected to: there
+     * is no line to send the void pipe back down, so it is dropped where the pipe stands. Sent into the lone stripes
+     * pipe, it came straight back out of the pipe's own open end and asked for the same impossible retraction again
+     * every few ticks (and a returned item pipe re-extended the line).
+     */
+    public static void testLoneStripesPipeDropsWhatItCannotSendBack(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        PipeBehaviourStripesDropTester.StripesRig rig =
+                PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
+        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
+        rig.stripes().onDrop(drop);
+        helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+
+        AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
+        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
+                () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
+                        e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty(),
+                () -> {
+                    helper.assertTrue(rig.count(BCTransportItems.PIPE_VOID_ITEM.get()) == 0,
+                            "nothing is sent into the lone stripes pipe, found "
+                                    + rig.count(BCTransportItems.PIPE_VOID_ITEM.get()));
+                    helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "...and the stripes pipe stays put");
+                    discardItems(helper, around);
+                    helper.succeed();
+                }, "the void pipe a lone stripes pipe could not retract with was never dropped", () -> {
+                    discardItems(helper, around);
+                    rig.close();
+                });
+    }
+
+    private static void discardItems(GameTestHelper helper, AABB box) {
+        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
+            item.discard();
+        }
     }
 
     private static TilePipeHolder placePipe(GameTestHelper helper, BlockPos rel, Item pipeItem) {

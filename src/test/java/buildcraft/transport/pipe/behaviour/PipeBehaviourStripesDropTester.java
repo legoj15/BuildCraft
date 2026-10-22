@@ -628,6 +628,25 @@ public class PipeBehaviourStripesDropTester {
                 NeoForge.EVENT_BUS.unregister(swallowCow);
             }
 
+            // The same refusal from a claim that cancels at LOWEST and registered its listener while the mods
+            // loaded, after BuildCraft was constructed: the refusal recorder registers last, so it still sees it.
+            LoadTimeLowestClaim.target = cow[0];
+            LoadTimeLowestClaim.cancels = 0;
+            try (WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
+                PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.STICK, 3));
+                rig.stripes.onDrop(refused);
+
+                helper.assertTrue(LoadTimeLowestClaim.cancels >= 1,
+                        "the load-time LOWEST claim was asked about the cow, got " + LoadTimeLowestClaim.cancels);
+                helper.assertTrue(claim.toolAsks(target) == 0,
+                        "a refusal from a LOWEST listener registered after BuildCraft ends the use too: the cow's"
+                                + " block is never right-clicked, got " + claim.toolAsks(target));
+                helper.assertTrue(refused.getStack().is(Items.STICK) && refused.getStack().getCount() == 3,
+                        "...and the item is not consumed, got " + refused.getStack());
+            } finally {
+                LoadTimeLowestClaim.target = null;
+            }
+
             // Control: nothing refuses, so the item reaches the dispenser fallback, which clicks the block.
             try (WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
                 PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.STICK, 3));
@@ -641,6 +660,30 @@ public class PipeBehaviourStripesDropTester {
             EntityArenaUtil.discard(cow[0]);
             rig.close();
         });
+    }
+
+    /**
+     * A claim mod that cancels mob interactions at LOWEST and registers its listener during mod loading (common
+     * setup), so after BuildCraft's construction-time listeners: the case a recorder registered with BuildCraft
+     * misses, since one priority's listeners run in registration order. Inert unless a test arms {@link #target}.
+     */
+    @net.neoforged.fml.common.EventBusSubscriber(modid = "buildcraftunofficial")
+    public static final class LoadTimeLowestClaim {
+        static volatile net.minecraft.world.entity.Entity target;
+        static int cancels;
+
+        @net.neoforged.bus.api.SubscribeEvent
+        public static void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
+            event.enqueueWork(() -> NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,
+                    PlayerInteractEvent.EntityInteract.class, LoadTimeLowestClaim::onEntityInteract));
+        }
+
+        private static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
+            if (target != null && event.getTarget() == target) {
+                cancels++;
+                event.setCanceled(true);
+            }
+        }
     }
 
     /** Clicks the handler got refused for its detached player: the test's proof that the handler ran. */

@@ -390,6 +390,14 @@ public final class Pipe implements IPipe, IDebuggable {
         updateMarked = true;
     }
 
+    /**
+     * Recomputes the connections now instead of on the next tick: for a pipe just loaded into a different cell (the
+     * stripes pipe's line extension), whose loaded connections still describe the cell it came from.
+     */
+    public void refreshConnections() {
+        updateConnections();
+    }
+
     @Override
     public BlockEntity getConnectedTile(Direction side) {
         if (connected.containsKey(side)) {

@@ -23,6 +23,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
@@ -272,8 +273,7 @@ public final class FakePlayerUtil {
      * Takes every stack off {@code player} and returns each DISTINCT stack once, by identity: the main hand first,
      * then the inventory slots in order. The hand is itself an inventory slot, and a handler may file one stack object
      * into two slots, so collecting by slot alone would hand the same stack (and its items) out twice. Empty stacks
-     * are left out. What a machine does with the result is its own rule: the stripes pipe sends it all back down the
-     * pipe, a robot keeps what is left of the stack it used ({@code AIRobotStripesHandler}).
+     * are left out. {@link #takeLeftovers} tells what is left of a used stack apart from the rest.
      */
     public static List<ItemStack> takeDistinctStacks(Player player) {
         List<ItemStack> taken = new ArrayList<>();
@@ -288,6 +288,40 @@ public final class FakePlayerUtil {
             }
         }
         return taken;
+    }
+
+    /**
+     * What a handled use left on a machine's player: what is left of the stack it used ({@code remainder}, empty when
+     * the use consumed it all) and every other distinct stack ({@code products}: a filled bucket, a sheared-off drop).
+     * What a machine does with each is its own rule: the stripes pipe sends both back down the pipe, remainder first;
+     * a robot keeps the remainder in its hand for the next cell and drops the products.
+     */
+    public record Leftovers(ItemStack remainder, List<ItemStack> products) {}
+
+    /**
+     * Takes every stack off {@code player} ({@link #takeDistinctStacks}) and tells what is left of {@code used} apart:
+     * the machine's own stack ({@code used}, the object the handlers were handed) if the handler left it anywhere on
+     * the player - a handler that sets it aside and puts a stack of another count in the hand has made the hand's
+     * stack a product, not the remainder. Only when that stack is gone (consumed, or swapped out of the player
+     * altogether) is the main hand's stack of {@code usedItem} the remainder. {@code usedItem} is the item before the
+     * use, which a consumed stack no longer names.
+     */
+    public static Leftovers takeLeftovers(Player player, ItemStack used, Item usedItem) {
+        ItemStack hand = player.getMainHandItem();
+        List<ItemStack> onPlayer = takeDistinctStacks(player);
+        ItemStack remainder = ItemStack.EMPTY;
+        if (!used.isEmpty() && onPlayer.stream().anyMatch(seen -> seen == used)) {
+            remainder = used;
+        } else if (!hand.isEmpty() && hand.is(usedItem)) {
+            remainder = hand;
+        }
+        List<ItemStack> products = new ArrayList<>(onPlayer.size());
+        for (ItemStack left : onPlayer) {
+            if (left != remainder) {
+                products.add(left);
+            }
+        }
+        return new Leftovers(remainder, products);
     }
 
     /** The API path: the API's own cached player (never a leased one), reset. */

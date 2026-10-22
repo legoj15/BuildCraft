@@ -48,11 +48,11 @@ public enum StripesHandlerShears implements IStripesHandlerItem {
             if (shearableBlock.isShearable(player, stack, world, target)) {
                 // Shearing takes the block away, so break protection decides first, as it does for the pipe's own
                 // digging. A refusal is a refused click: it ends the dispatch, so the dispenser fallback after this
-                // handler does not right-click the same block with the same shears. Asked as the same owner standing
-                // on the block, exactly the ask the pipe's digging and a robot make, so a claim that judges where
-                // the actor stands answers them alike (the handler's own player stands at the pipe's face).
+                // handler does not right-click the same block with the same shears. Asked by the handler's own player
+                // (no second lease) stood on the block for the ask, where the pipe's digging and a robot ask from, so
+                // a claim that judges where the actor stands answers them alike.
                 if (world instanceof ServerLevel serverLevel
-                        && !BlockUtil.canMachineBreak(serverLevel, target, player.getGameProfile())) {
+                        && !BlockUtil.canMachineBreakAs(serverLevel, target, player)) {
                     MachineRefusals.record(player);
                     return false;
                 }

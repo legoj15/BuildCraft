@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,6 +40,7 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.lib.block.BlockWaterloggingTester;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.ThreadAllocationMeter;
 
 /**
@@ -340,20 +342,46 @@ public class BuilderFluidSweepTester {
      * Before the fix any fluid anywhere in the box held every fragile placement back, so a REPLACE build with one
      * still pond in it never finished. The schematic-air cell holding the water must also count as done: REPLACE never
      * removes fluid, so the cell was once left "to break" for ever and the Builder never rested.
-     *
-     * <p>Phases, all gated on observed state:
+     */
+    public static void settledWaterDoesNotHoldBackADistantFragileBlock(GameTestHelper helper) {
+        runSettledFragileScenario(helper, SETTLED_COLUMN, SETTLED_WALLS, "a walled water source three cells from it");
+    }
+
+    /** The flowing settled column: the walled source in the first cell spills into the walled air cell after it and
+     *  stops there (flowing water fed by the source, for good), then a stone and the snow layer two cells off. */
+    private static final int[] FLOWING_SETTLED_COLUMN = { AIR, AIR, STONE, SNOW };
+    private static final BlockPos[] FLOWING_SETTLED_WALLS = {
+        new BlockPos(1, 2, 2), new BlockPos(2, 2, 1), new BlockPos(1, 2, 3), new BlockPos(3, 2, 3) };
+
+    /**
+     * As {@link #settledWaterDoesNotHoldBackADistantFragileBlock}, with FLOWING water in the box that has stopped
+     * spreading: a source that spills into a walled cell beside it (as a waterlogged block beside a schematic-air
+     * cell does). Flowing water is not always moving: once it has filled every cell it can reach it stays as it is
+     * for as long as its source does. A gate that held every fragile placement back on any flowing fluid in the box
+     * held this snow layer back for ever.
+     */
+    public static void settledFlowingWaterDoesNotHoldBackADistantFragileBlock(GameTestHelper helper) {
+        runSettledFragileScenario(helper, FLOWING_SETTLED_COLUMN, FLOWING_SETTLED_WALLS,
+                "settled flowing water two cells from it");
+    }
+
+    /**
+     * Phases, all gated on observed state:
      * <ol start="0">
-     * <li>build the dry column in REPLACE mode;</li>
-     * <li>put the walled water source in the first cell and knock the snow layer out in the same tick;</li>
+     * <li>build the dry {@code column} in REPLACE mode;</li>
+     * <li>put a water source in the first cell (walled in by {@code walls}) and knock the snow layer (last cell)
+     *     out in the same tick;</li>
      * <li>the snow layer must be placed again and the Builder must rest for {@link BuilderRefloodTester#QUIET_TICKS}
      *     straight ticks with the water source still standing.</li>
      * </ol>
      */
-    public static void settledWaterDoesNotHoldBackADistantFragileBlock(GameTestHelper helper) {
+    private static void runSettledFragileScenario(GameTestHelper helper, int[] column, BlockPos[] walls,
+            String what) {
         ServerLevel level = helper.getLevel();
-        TileBuilder tile = setUpReplaceBuilder(helper, SETTLED_COLUMN, SETTLED_WALLS);
+        TileBuilder tile = setUpReplaceBuilder(helper, column, walls);
         BlockPos water = cell(0);
-        BlockPos snow = cell(3);
+        int snowIndex = column.length - 1;
+        BlockPos snow = cell(snowIndex);
 
         int[] phase = { 0 };
         int[] phaseStart = { 0 };
@@ -363,11 +391,11 @@ public class BuilderFluidSweepTester {
         drive(helper, finished, t -> {
             SnapshotBuilder<?> builder = tile.getBuilder();
             expect(builder != null, "the Builder lost its blueprint builder");
-            BlockState[] cells = new BlockState[SETTLED_COLUMN.length];
+            BlockState[] cells = new BlockState[column.length];
             boolean allBuilt = true;
             for (int i = 0; i < cells.length; i++) {
                 cells[i] = helper.getBlockState(cell(i));
-                allBuilt &= isBuilt(SETTLED_COLUMN[i], cells[i]);
+                allBuilt &= isBuilt(column[i], cells[i]);
             }
             int inPhase = t - phaseStart[0];
             switch (phase[0]) {
@@ -385,17 +413,87 @@ public class BuilderFluidSweepTester {
                 case 1 -> {
                     expect(level.getFluidState(helper.absolutePos(water)).isSource(), "phase 1 (test premise): the "
                             + "walled water source went away, cells=" + Arrays.toString(cells));
-                    boolean rested = cells[3].is(Blocks.SNOW) && builderQuiet(builder);
+                    boolean rested = cells[snowIndex].is(Blocks.SNOW) && builderQuiet(builder);
                     quiet[0] = rested ? quiet[0] + 1 : 0;
+                    if (quiet[0] >= QUIET_TICKS) {
+                        for (int i = 0; i < snowIndex; i++) {
+                            if (column[i] == AIR) helper.setBlock(cell(i), Blocks.AIR);
+                        }
+                        finished[0] = true;
+                        helper.succeed();
+                    } else {
+                        expect(inPhase < 300, "phase 1: the REPLACE Builder never "
+                                + (cells[snowIndex].is(Blocks.SNOW) ? "rested" : "placed the snow layer")
+                                + " with " + what + "; cells=" + Arrays.toString(cells) + ", " + describe(builder));
+                    }
+                }
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        });
+    }
+
+    /** One schematic stone cell, walled in on every side but the top (the Builder closes the east, the next stone
+     *  the south), so a water source put there stays where it is. */
+    private static final int[] SOLID_COLUMN = { STONE, STONE };
+
+    /**
+     * NO_REPLACE never replaces fluid, so a schematic block whose cell holds nothing but fluid cannot be built. The
+     * check once sent such a cell to "to break", where the break queue (which refuses fluid outside CLEAR) left it
+     * for ever: the build never finished. Like a schematic-air cell holding fluid, it is as built as that mode makes
+     * it, and counts as done (and is built if the fluid ever goes).
+     *
+     * <p>Phases, all gated on observed state:
+     * <ol start="0">
+     * <li>build the dry column in NO_REPLACE mode;</li>
+     * <li>swap the first stone for a water source;</li>
+     * <li>the Builder must rest for {@link BuilderRefloodTester#QUIET_TICKS} straight ticks with the source standing
+     *     (NO_REPLACE must not have replaced it).</li>
+     * </ol>
+     */
+    public static void noReplaceRestsWithFluidInASolidCell(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TileBuilder tile = setUpBuilder(helper, SOLID_COLUMN, SETTLED_WALLS);
+        tile.cycleFluidMode(); // CLEAR -> NO_REPLACE
+        expect(tile.getFluidMode() == EnumFluidHandlingMode.NO_REPLACE, "sanity: the Builder is in NO_REPLACE mode");
+        BlockPos water = cell(0);
+
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        boolean[] finished = { false };
+
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            expect(builder != null, "the Builder lost its blueprint builder");
+            BlockState[] cells = new BlockState[SOLID_COLUMN.length];
+            boolean allBuilt = true;
+            for (int i = 0; i < cells.length; i++) {
+                cells[i] = helper.getBlockState(cell(i));
+                allBuilt &= isBuilt(SOLID_COLUMN[i], cells[i]);
+            }
+            int inPhase = t - phaseStart[0];
+            switch (phase[0]) {
+                case 0 -> {
+                    if (allBuilt && builderQuiet(builder)) {
+                        BlockWaterloggingTester.placeSource(helper, water, Blocks.WATER, Fluids.WATER);
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 0: the NO_REPLACE Builder never finished the dry build, cells="
+                                + Arrays.toString(cells) + ", " + describe(builder));
+                    }
+                }
+                case 1 -> {
+                    expect(level.getFluidState(helper.absolutePos(water)).isSource(), "NO_REPLACE replaced the "
+                            + "water source in a schematic stone cell; cells=" + Arrays.toString(cells));
+                    quiet[0] = builderQuiet(builder) ? quiet[0] + 1 : 0;
                     if (quiet[0] >= QUIET_TICKS) {
                         helper.setBlock(water, Blocks.AIR);
                         finished[0] = true;
                         helper.succeed();
                     } else {
-                        expect(inPhase < 300, "phase 1: the REPLACE Builder never "
-                                + (cells[3].is(Blocks.SNOW) ? "rested" : "placed the snow layer")
-                                + " with a walled water source three cells from it; cells=" + Arrays.toString(cells)
-                                + ", " + describe(builder));
+                        expect(inPhase < 300, "the NO_REPLACE Builder never rested with a water source in a "
+                                + "schematic stone cell; cells=" + Arrays.toString(cells) + ", " + describe(builder));
                     }
                 }
                 default -> throw new IllegalStateException("bad phase " + phase[0]);
@@ -470,6 +568,11 @@ public class BuilderFluidSweepTester {
                     quiet[0] = rested ? quiet[0] + 1 : 0;
                     if (quiet[0] >= QUIET_TICKS) {
                         helper.setBlock(wet, Blocks.AIR);
+                        // The Builder stores what it breaks, but a full inventory drops the fence in the world.
+                        for (ItemEntity drop : level.getEntitiesOfClass(ItemEntity.class,
+                                EntityArenaUtil.cellBounds(helper))) {
+                            drop.discard();
+                        }
                         finished[0] = true;
                         helper.succeed();
                     } else {

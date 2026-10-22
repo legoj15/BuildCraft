@@ -29,7 +29,6 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -423,6 +422,14 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         if (getBuildingInfo() == null) return false;
         ISchematicBlock schematic = getSchematicBlock(blockPos);
         if (schematic == null) return false;
+        // NO_REPLACE never replaces fluid: a cell holding nothing but fluid cannot be built in that mode (canPlace
+        // refuses it, and the break queue refuses fluid outside CLEAR), so it is as built as this mode makes it.
+        // Otherwise it stayed "to break" for ever and the build never finished. The next check sweep after the fluid
+        // goes sends it to TO_PLACE and the block is built. A schematic that wants fluid itself still compares.
+        if (tile.getFluidMode() == EnumFluidHandlingMode.NO_REPLACE && !(schematic instanceof SchematicBlockFluid)
+                && isFluidOnly(tile.getWorldBC().getBlockState(blockPos))) {
+            return true;
+        }
         // Pass fluidMode through to the SchematicBlockDefault overload so CLEAR mode reports
         // "world wet, schematic dry" as NOT built (the cell is then routed to TO_BREAK, since canPlace
         // refuses any fluid cell under CLEAR, and mopped). REPLACE/NO_REPLACE keep the lenient
@@ -469,7 +476,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         if (def.blockState == null || !SchematicBlockDefault.isWashedAwayByFluid(def.blockState)) return false;
         BlockState world = tile.getWorldBC().getBlockState(blockPos);
         if (!world.isAir()) {
-            if (!(world.getBlock() instanceof LiquidBlock)) return false;
+            if (!isFluidOnly(world)) return false;
             FluidState fluid = world.getFluidState();
             if (fluid.isEmpty()) return false;
             if (fluid.isSource() && !isResourcedByUnmoppableFluid(blockPos, fluid.getType())) return false;
@@ -568,7 +575,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * of the same fluid: directly above it, or a horizontal neighbour holding more of it than this cell does.
      * Requiring strictly more sideways and allowing feeding only from above means tolerated flowing cells can never
      * vouch for each other in a circle; every chain ends at fluid that really is permanent. Fluid fed by a source the
-     * Builder will still mop is not tolerated, so it is mopped as before (and drains once its source is gone).
+     * Builder will still mop is not tolerated, so it is mopped as before (and drains once its source is gone). A
+     * bubble column counts here as the water source it stands in: the infinite-source rule re-makes that water, and
+     * the soul sand or magma below turns it straight back into a column, so mopping it loops just as for still water.
      */
     @Override
     protected boolean isToleratedFluidAt(BlockPos blockPos) {
@@ -576,8 +585,8 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         BlockState state = tile.getWorldBC().getBlockState(blockPos);
         FluidState fluid = state.getFluidState();
         if (fluid.isEmpty()) return false;
-        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return isFluidOnly(state);
-        if (!(state.getBlock() instanceof LiquidBlock)) return false;
+        if (!isFluidOnly(state)) return false;
+        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return true;
         Fluid type = fluid.getType();
         if (fluid.isSource()) return isResourcedByUnmoppableFluid(blockPos, type);
         BlockPos above = blockPos.above();

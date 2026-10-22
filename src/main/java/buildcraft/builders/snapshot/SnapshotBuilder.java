@@ -36,6 +36,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
@@ -102,6 +103,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private EnumFluidHandlingMode cachedAreaFluidMode;
     /** Ticks since {@link #cachedAreaFluid} was taken. */
     private int cachedAreaFluidAge;
+    /** Whether {@link #replaceCensus} holds the census of the last REPLACE sweep that found fluid. */
+    private boolean replaceCensusKnown;
+    /** The fluid census of the last REPLACE sweep ({@link #scanReplaceFluid}). */
+    private long replaceCensus;
+    /** Game time at which {@link #replaceCensus} was first read as it is now. */
+    private long replaceCensusSince;
 
     @SuppressWarnings("WeakerAccess")
     protected SnapshotBuilder(T tile) {
@@ -174,11 +181,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         TOLERATED_ONLY,
         /** CLEAR: fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
         UNCLEARED,
-        /** REPLACE: fluid that stays where it is: sources with nowhere to flow. It can wash away only a fragile
-         *  block placed beside or below it. */
+        /** REPLACE: fluid that has stopped changing (a walled pond, or flowing fluid that has filled every cell it
+         *  can reach); see {@link #scanReplaceFluid}. It can wash away only a fragile block placed beside or below
+         *  it. */
         SETTLED,
-        /** REPLACE: fluid that is moving or about to: any flowing fluid, or a source with an open cell beside or
-         *  below it. It may reach any cell of the box a few flow steps from now. */
+        /** REPLACE: fluid that has changed lately, or whose open surroundings have: it may reach any cell of the box
+         *  a few flow steps from now. */
         MOVING
     }
 
@@ -192,13 +200,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * for every other block for as long as one tolerated wet block stands, since mopping can never remove its water.
      *
      * <p>REPLACE never removes fluid, so it splits it into fluid that can still move ({@link AreaFluid#MOVING}) and
-     * fluid that cannot ({@link AreaFluid#SETTLED}); see {@link #isMovingFluidAt}. Moving fluid holds every fragile
-     * placement back, settled fluid only the fragile blocks it touches. Holding them back on any fluid at all meant a
-     * REPLACE build with one still pond in its box never placed its torches.
+     * fluid that has settled ({@link AreaFluid#SETTLED}); see {@link #scanReplaceFluid}. Moving fluid holds every
+     * fragile placement back, settled fluid only the fragile blocks it touches. Holding them back on any fluid at all
+     * meant a REPLACE build with one still pond in its box never placed its torches.
      *
-     * <p>The sweep stops at the first uncleared (CLEAR) or moving (REPLACE) fluid, so it is cheap while there is any,
-     * but a clear area, and one holding only tolerated or settled fluid, are only known after every cell has been
-     * read. That is why the gate does not call this directly: {@link #areaFluid} asks for it only once a placement
+     * <p>The CLEAR sweep stops at the first uncleared fluid, so it is cheap while there is any, but a clear area, and
+     * one holding only tolerated fluid, are only known after every cell has been read; the REPLACE sweep always reads
+     * every cell. That is why the gate does not call this directly: {@link #areaFluid} asks for it only once a placement
      * actually reaches the gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks, except to let a
      * fragile placement through (see {@link #areaFluid} for what a reused answer may get wrong). The walk itself
      * allocates nothing per cell (one reused cursor); a fluid-holding cell costs a few position objects while it is
@@ -212,7 +220,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         BlockPos max = info.box.max();
         if (min == null || max == null) return AreaFluid.NONE;
         Level world = tile.getWorldBC();
-        boolean replace = getFluidMode() == EnumFluidHandlingMode.REPLACE;
+        if (getFluidMode() == EnumFluidHandlingMode.REPLACE) return scanReplaceFluid(world, min, max);
+        replaceCensusKnown = false;
         AreaFluid result = AreaFluid.NONE;
         // y outermost, x innermost: the order a chunk section stores its blocks in.
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
@@ -220,17 +229,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             for (int z = min.getZ(); z <= max.getZ(); z++) {
                 for (int x = min.getX(); x <= max.getX(); x++) {
                     cursor.set(x, y, z);
-                    FluidState fluid = world.getFluidState(cursor);
-                    if (fluid.isEmpty()) continue;
-                    // The checks below may hand the position on, so give them one that stays put.
+                    if (world.getFluidState(cursor).isEmpty()) continue;
+                    // The tolerance checks below may hand the position on, so give them one that stays put.
                     BlockPos pos = cursor.immutable();
-                    if (replace) {
-                        if (isMovingFluidAt(pos, fluid)) {
-                            return AreaFluid.MOVING;
-                        }
-                        result = AreaFluid.SETTLED;
-                        continue;
-                    }
                     // A non-air cell: CORRECT means the check accepted the block, fluid and all (a stale CORRECT
                     // is re-checked within a sweep). An air cell's CORRECT may be stale from before the fluid
                     // arrived, so its tolerance is re-derived from the world here rather than read off
@@ -249,33 +250,85 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * Is {@code fluid}, at {@code pos}, moving or about to move? Flowing fluid always is (it is still spreading or
-     * draining, or is fed by fluid that may change). A source is once it has somewhere to go: a cell below or beside
-     * it that the fluid would wash into ({@link SchematicBlockDefault#isWashedAwayBy}: air, snow layers, torches, …),
-     * or another fluid to meet. Its next fluid tick sends flowing fluid there, so a source placed this tick, with
-     * nothing flowing yet, already counts. A source walled in by solid blocks, waterloggables (which only take a
-     * source, never flowing fluid) and fluid of its own kind never moves. Neighbours outside the box count too:
-     * fluid that leaves the box can still flow back in around a wall.
+     * The REPLACE half of {@link #scanAreaFluid()}: has the fluid in and around the build box stopped changing?
+     *
+     * <p>Whether fluid will move cannot be read off one cell. Flowing fluid that has filled every cell it can reach
+     * stays as it is for as long as its source does (a waterlogged block spilling into the air cell beside it, the
+     * shallow rim of a pond), and a source walled in on every side never moves, while a source placed this tick, or
+     * still water beside a wall broken this tick, has simply not moved YET. So the sweep takes a census: every fluid
+     * cell in the box and in the one-cell shell beside and above it (fluid outside can flow in), by position, fluid
+     * state, and which of the cells it spreads to (below and beside) are open to it (holding no fluid, and
+     * {@link SchematicBlockDefault#isWashedAwayBy washed away} by it). The fluid has settled once the census has read
+     * the same for longer than any fluid in it can wait between two flow steps, {@link #SETTLE_TICK_DELAYS} of its
+     * tick delays (lava's spread can wait four). Until then it is MOVING.
+     *
+     * <p>A new source, fluid entering, a cell filling or draining, and a wall opening beside fluid all change the
+     * census on the first sweep that sees them, so the fresh re-sweep before a fragile placement
+     * ({@link #passesFreshFluidGate}) still refuses one on water that entered the box after the last sweep. What the
+     * census leaves out never moves fluid: sugar cane growing beside a pond changes its block state, not whether
+     * water can flow into it. The walk allocates nothing per cell (two reused cursors).
      */
-    private boolean isMovingFluidAt(BlockPos pos, FluidState fluid) {
-        if (!fluid.isSource()) return true;
-        Level world = tile.getWorldBC();
-        for (Direction direction : SPREAD_DIRECTIONS) {
-            BlockPos neighbour = pos.relative(direction);
-            FluidState there = world.getFluidState(neighbour);
-            if (!there.isEmpty()) {
-                if (!there.getType().isSame(fluid.getType())) return true;
-                continue;
+    private AreaFluid scanReplaceFluid(Level world, BlockPos min, BlockPos max) {
+        long census = 0;
+        boolean any = false;
+        int maxDelay = 0;
+        Fluid lastType = null;
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
+        // Fluid never flows up, so the shell needs no layer below the box.
+        for (int y = min.getY(); y <= max.getY() + 1; y++) {
+            for (int z = min.getZ() - 1; z <= max.getZ() + 1; z++) {
+                for (int x = min.getX() - 1; x <= max.getX() + 1; x++) {
+                    cursor.set(x, y, z);
+                    FluidState fluid = world.getFluidState(cursor);
+                    if (fluid.isEmpty()) continue;
+                    any = true;
+                    Fluid type = fluid.getType();
+                    if (type != lastType) {
+                        lastType = type;
+                        maxDelay = Math.max(maxDelay, type.getTickDelay(world));
+                    }
+                    int open = 0;
+                    for (int i = 0; i < SPREAD_DIRECTIONS.length; i++) {
+                        neighbour.setWithOffset(cursor, SPREAD_DIRECTIONS[i]);
+                        BlockState there = world.getBlockState(neighbour);
+                        if (there.getFluidState().isEmpty() && SchematicBlockDefault.isWashedAwayBy(there, type)) {
+                            open |= 1 << i;
+                        }
+                    }
+                    census = mixCensus(census, cursor.asLong(), Fluid.FLUID_STATE_REGISTRY.getId(fluid), open);
+                }
             }
-            if (SchematicBlockDefault.isWashedAwayBy(world.getBlockState(neighbour), fluid.getType())) return true;
         }
-        return false;
+        if (!any) {
+            replaceCensusKnown = false;
+            return AreaFluid.NONE;
+        }
+        long now = world.getGameTime();
+        if (!replaceCensusKnown || census != replaceCensus) {
+            replaceCensusKnown = true;
+            replaceCensus = census;
+            replaceCensusSince = now;
+            return AreaFluid.MOVING;
+        }
+        return now - replaceCensusSince > (long) SETTLE_TICK_DELAYS * maxDelay ? AreaFluid.SETTLED : AreaFluid.MOVING;
     }
 
-    /** The directions a fluid source spreads in: down, and the four horizontals (never up). */
+    /** Folds one fluid cell into a {@link #scanReplaceFluid} census (order-dependent; the walk order is fixed). */
+    private static long mixCensus(long census, long pos, int state, int open) {
+        long h = (pos * 0x9E3779B97F4A7C15L) ^ ((long) state << 8 | open);
+        h = (h ^ (h >>> 31)) * 0xBF58476D1CE4E5B9L;
+        return census * 31 + (h ^ (h >>> 29));
+    }
+
+    /** The directions a fluid spreads in: down, and the four horizontals (never up). */
     private static final Direction[] SPREAD_DIRECTIONS = {
         Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST
     };
+
+    /** How many of its own tick delays fluid may wait between two flow steps: vanilla lava waits up to four
+     *  ({@code LavaFluid#getSpreadDelay}), water one. A census unchanged for longer than this is settled. */
+    private static final int SETTLE_TICK_DELAYS = 4;
 
     /**
      * What the fluid in the build area means to the place-task gate, from the last sweep if it is recent enough.
@@ -415,6 +468,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             ];
         Arrays.fill(checkResults, CHECK_RESULT_UNKNOWN);
         cachedAreaFluid = null;
+        replaceCensusKnown = false;
         requiredCache = new byte[
             getBuildingInfo().box.size().getX() *
                 getBuildingInfo().box.size().getY() *
@@ -467,6 +521,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         prevClientPlaceTasks.clear();
         checkResults = null;
         cachedAreaFluid = null;
+        replaceCensusKnown = false;
         requiredCache = null;
         breakOrder = null;
         placeOrder = null;
@@ -610,9 +665,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   counter bouncing up and down as items repeatedly cycle through extract+refund.
             //   Gating at queue-add stops the cycle entirely — items never leave inventory if
             //   the placement would defer. Only fluid that can reach the cell holds it back:
-            //   MOVING fluid anywhere in the box (flowing, or a source with somewhere to flow, see
-            //   isMovingFluidAt), or SETTLED fluid beside or above the cell itself. A still pond
-            //   walled in elsewhere in the box no longer holds every torch back for ever.
+            //   MOVING fluid in or beside the box (fluid that has changed lately, or whose open
+            //   surroundings have, see scanReplaceFluid), or SETTLED fluid beside or above the cell
+            //   itself. A still pond, or flowing water that has stopped spreading, elsewhere in the
+            //   box no longer holds every torch back for ever.
             //
             // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it, from
             // a sweep up to FLUID_SCAN_INTERVAL ticks old. passesFreshFluidGate, the last filter before items are
@@ -936,6 +992,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      */
     public void invalidateChecksForFluidPositions() {
         cachedAreaFluid = null;
+        replaceCensusKnown = false;
         if (checkResults == null || getBuildingInfo() == null) return;
         for (int i = 0; i < checkResults.length; i++) {
             BlockPos pos = indexToPos(i);

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_replace_settled_flowing_water_places_fragile",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 600,
+    "setup_ticks": 0,
+    "required": true
+}

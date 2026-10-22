@@ -10,6 +10,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 
+import buildcraft.lib.net.NetEnumUtil;
+
 import buildcraft.builders.addon.AddonFillerPlanner;
 import buildcraft.builders.container.ContainerFillerPlanner;
 
@@ -50,7 +52,7 @@ public enum BCBuildersGuis {
             ),
             buf -> {
                 buf.writeUUID(boxId);
-                buf.writeEnum(slot);
+                NetEnumUtil.write(buf, slot);
             }
         );
     }

@@ -95,7 +95,13 @@ public final class FluidShardTintSource implements ItemTintSource {
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 // getPixelRGBA returns ABGR-ordered int (NativeImage pixel format)
-                int pixel = sprite.getPixelRGBA(0, x, y);
+                //? if >=26.3 {
+                // 26.3 renamed it getPixelARGB (same body, same frame offset); the channel decode below
+                // is unchanged.
+                int pixel = sprite.getPixelARGB(0, x, y);
+                //?} else {
+                /*int pixel = sprite.getPixelRGBA(0, x, y);
+                *///?}
                 int a = (pixel >> 24) & 0xFF;
                 if (a < 128) continue; // skip mostly-transparent pixels
                 // NativeImage ABGR: bits 0-7=R, 8-15=G, 16-23=B, 24-31=A

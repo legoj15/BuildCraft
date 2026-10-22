@@ -75,7 +75,7 @@ public final class CraftingUtil {
     }
 
     /** The {@code namespace:path} id of a recipe holder. {@link RegistryKeyUtil#id} bridges the
-     *  1.21.1 (ResourceLocation id) / 1.21.10+ (ResourceKey id) cliff. Used as the stable key for
+     *  1.21.1 (plain id) / 1.21.10+ (ResourceKey id) cliff. Used as the stable key for
      *  cycle ordering and for remembering the player's selected output across changes and reloads. */
     public static String recipeId(RecipeHolder<?> holder) {
         return RegistryKeyUtil.id(holder.id()).toString();
@@ -98,7 +98,7 @@ public final class CraftingUtil {
 
         //? if >=1.21.10 {
         // Context for resolving ingredient SlotDisplays. fromLevel() supplies
-        // SlotDisplayContext.REGISTRIES (+ FUEL_VALUES); without REGISTRIES a TagSlotDisplay —
+        // SlotDisplayContext.REGISTRIES; without REGISTRIES a TagSlotDisplay —
         // i.e. every tag-based ingredient like #c:ingots/iron or #c:gears/stone — resolves to an
         // empty stream and the phantom slot stays blank. Runs server-side, so the registry source
         // is the Level, not Minecraft.getInstance().

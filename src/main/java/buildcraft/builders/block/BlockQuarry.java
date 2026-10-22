@@ -29,17 +29,21 @@ import buildcraft.lib.block.BlockBCTile_Directional;
 import buildcraft.lib.misc.AdvancementUtil;
 
 public class BlockQuarry extends BlockBCTile_Directional<TileQuarry> {
-    public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
+    //? if <26.3 {
+    /*public static final MapCodec<BlockQuarry> CODEC = simpleCodec(BlockQuarry::new);
+    *///?}
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:shaping_the_world");
 
     public BlockQuarry(Properties properties) {
         super(properties);
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
+    *///?}
 
     @Nullable
     @Override

@@ -43,7 +43,7 @@ import net.minecraft.world.phys.Vec3;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
-/*import net.minecraft.client.renderer.RenderType;*/
+/*import net.minecraft.client.renderer.rendertype.RenderType;*/
 //?}
 
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;

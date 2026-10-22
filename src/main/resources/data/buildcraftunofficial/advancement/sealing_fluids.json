@@ -9,19 +9,19 @@
     "crafted_sealant": {
       "trigger": "minecraft:recipe_crafted",
       "conditions": {
-        "recipe_id": "buildcraftunofficial:pipe_sealant"
+        "recipes": "buildcraftunofficial:pipe_sealant"
       }
     },
     "crafted_sealant_dye": {
       "trigger": "minecraft:recipe_crafted",
       "conditions": {
-        "recipe_id": "buildcraftunofficial:pipe_sealant_from_green_dye"
+        "recipes": "buildcraftunofficial:pipe_sealant_from_green_dye"
       }
     },
     "crafted_sealant_residue": {
       "trigger": "minecraft:recipe_crafted",
       "conditions": {
-        "recipe_id": "buildcraftunofficial:residue_to_pipe_sealant"
+        "recipes": "buildcraftunofficial:residue_to_pipe_sealant"
       }
     }
   },

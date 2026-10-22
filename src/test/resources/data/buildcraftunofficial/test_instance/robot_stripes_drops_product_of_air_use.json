@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_stripes_drops_product_of_air_use",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 100,
+    "setup_ticks": 0,
+    "required": true
+}

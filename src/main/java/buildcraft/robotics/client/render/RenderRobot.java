@@ -47,6 +47,7 @@ import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.BCLibRenderTypes;
+import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.lib.client.render.LightUtil;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
@@ -98,8 +99,8 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
     // ── Textures ────────────────────────────────────────────────────────────
     // Entity textures are direct file paths — full "textures/..." prefix and ".png" suffix — bound as
     // whole textures by the render type. They are NOT atlas sprites, so SpriteHolderRegistry does not
-    // apply (misusing it here fails silently to the missing-texture checkerboard). Written in the
-    // canonical Identifier form; the build rewrites it to ResourceLocation on <1.21.11.
+    // apply (misusing it here fails silently to the missing-texture checkerboard). Written with the
+    // 1.21.11+ id-class name; the build swaps in the old name on the <1.21.11 nodes.
 
     /** Fallback skin, used whenever the robot's board id resolves to no texture (all of Ph3). */
     private static final Identifier TEX_BASE =
@@ -260,7 +261,7 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             // than a spin (0.01 degrees per remaining hurt tick).
             green = 0.6F;
             blue = 0.6F;
-            poseStack.mulPose(Axis.ZP.rotationDegrees(hurtTime * 0.01F));
+            ItemRenderUtil.rotate(poseStack, Axis.ZP.rotationDegrees(hurtTime * 0.01F));
         }
 
         cube(poseStack, sink, cubeType(skin, false), ORDER_BODY, false, light, red, green, blue, 1F);
@@ -279,12 +280,12 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
 
     /** Positions the held item: aim pitch, then the active-use spin, then 8.0.x's fixed offset. */
     private static void applyHeldItemTransform(PoseStack poseStack, float aimPitch, float spin) {
-        poseStack.mulPose(Axis.ZP.rotationDegrees(aimPitch));
+        ItemRenderUtil.rotate(poseStack, Axis.ZP.rotationDegrees(aimPitch));
         if (spin != 0F) {
-            poseStack.mulPose(Axis.ZP.rotationDegrees(spin));
+            ItemRenderUtil.rotate(poseStack, Axis.ZP.rotationDegrees(spin));
         }
         poseStack.translate(-0.4F, 0, 0);
-        poseStack.mulPose(Axis.YP.rotationDegrees(-45F + 180F));
+        ItemRenderUtil.rotate(poseStack, Axis.YP.rotationDegrees(-45F + 180F));
         poseStack.scale(0.8F, 0.8F, 0.8F);
     }
 
@@ -422,7 +423,7 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         drawLaser(poseStack, collector, state.laserVisible, state.laserEnd);
 
         poseStack.pushPose();
-        poseStack.mulPose(Axis.YP.rotationDegrees(-state.bodyYaw));
+        ItemRenderUtil.rotate(poseStack, Axis.YP.rotationDegrees(-state.bodyYaw));
 
         for (int slot = 0; slot < state.inventory.length; slot++) {
             if (state.inventory[slot].isEmpty()) continue;
@@ -502,7 +503,7 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
         drawLaser(poseStack, bufferSource, false, Vec3.ZERO);
 
         poseStack.pushPose();
-        poseStack.mulPose(Axis.YP.rotationDegrees(-bodyYaw));
+        ItemRenderUtil.rotate(poseStack, Axis.YP.rotationDegrees(-bodyYaw));
 
         ItemRenderer itemRenderer = Minecraft.getInstance().getItemRenderer();
         Level level = robot.level();

@@ -82,7 +82,12 @@ public class PipeItemModel implements ItemModel {
     private static final Field EXTENTS_FIELD;
     static {
         try {
-            QUADS_FIELD = CuboidItemModelWrapper.class.getDeclaredField("quads");
+            //? if >=26.3 {
+            // 26.3 stores the quads pre-split as an ItemQuads under a new name.
+            QUADS_FIELD = CuboidItemModelWrapper.class.getDeclaredField("itemQuads");
+            //?} else {
+            /*QUADS_FIELD = CuboidItemModelWrapper.class.getDeclaredField("quads");
+            *///?}
             QUADS_FIELD.setAccessible(true);
             PROPERTIES_FIELD = CuboidItemModelWrapper.class.getDeclaredField("properties");
             PROPERTIES_FIELD.setAccessible(true);
@@ -101,7 +106,7 @@ public class PipeItemModel implements ItemModel {
 
     // Extracted from vanilla model at construction time (null if delegate isn't CuboidItemModelWrapper)
     //? if >=26.1 {
-    private final @Nullable QuadCollection vanillaQuads;
+    private final @Nullable List<BakedQuad> vanillaQuads;
     private final @Nullable ModelRenderProperties renderProperties;
     @SuppressWarnings("unchecked")
     private final java.util.function.Supplier<org.joml.Vector3fc[]> extents;
@@ -115,7 +120,11 @@ public class PipeItemModel implements ItemModel {
         //? if >=26.1 {
         if (vanillaDelegate instanceof CuboidItemModelWrapper wrapper) {
             try {
-                this.vanillaQuads = (QuadCollection) QUADS_FIELD.get(wrapper);
+                //? if >=26.3 {
+                this.vanillaQuads = ((net.minecraft.client.resources.model.geometry.ItemQuads) QUADS_FIELD.get(wrapper)).all();
+                //?} else {
+                /*this.vanillaQuads = ((QuadCollection) QUADS_FIELD.get(wrapper)).getAll();
+                *///?}
                 this.renderProperties = (ModelRenderProperties) PROPERTIES_FIELD.get(wrapper);
                 this.extents = (java.util.function.Supplier<org.joml.Vector3fc[]>) EXTENTS_FIELD.get(wrapper);
             } catch (IllegalAccessException e) {
@@ -160,7 +169,7 @@ public class PipeItemModel implements ItemModel {
             TextureAtlasSprite dyedSprite = itemTexIndex < dyedSprites.length
                     ? dyedSprites[itemTexIndex] : dyedSprites[0];
             var layer = renderState.newLayer();
-            layer.prepareQuadList().addAll(generatePipeQuads(dyedSprite));
+            setLayerQuads(layer, generatePipeQuads(dyedSprite));
             if (extents != null) layer.setExtents(extents);
             renderProperties.applyToLayer(layer, displayContext);
             return;
@@ -169,7 +178,7 @@ public class PipeItemModel implements ItemModel {
         // Transport/kinesis: base quads + overlay layer
         // Layer 1: base pipe quads from vanilla model
         var baseLayer = renderState.newLayer();
-        baseLayer.prepareQuadList().addAll(vanillaQuads.getAll());
+        setLayerQuads(baseLayer, vanillaQuads);
         if (extents != null) baseLayer.setExtents(extents);
         renderProperties.applyToLayer(baseLayer, displayContext);
 
@@ -181,7 +190,7 @@ public class PipeItemModel implements ItemModel {
             List<BakedQuad> overlayQuads = generateOverlayQuads(maskSprite);
             if (!overlayQuads.isEmpty()) {
                 var overlayLayer = renderState.newLayer();
-                overlayLayer.prepareQuadList().addAll(overlayQuads);
+                setLayerQuads(overlayLayer, overlayQuads);
                 if (extents != null) overlayLayer.setExtents(extents);
                 renderProperties.applyToLayer(overlayLayer, displayContext);
                 // Tint: semi-transparent dye colour at tintIndex=0
@@ -240,6 +249,18 @@ public class PipeItemModel implements ItemModel {
         }*/
         //?}
     }
+
+    //? if >=26.1 {
+    /** Hands a quad list to a layer. 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into
+     * solid and translucent submits, so the translucent dye overlay now draws as its own submit. */
+    private static void setLayerQuads(ItemStackRenderState.LayerRenderState layer, List<BakedQuad> quads) {
+        //? if >=26.3 {
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));
+        //?} else {
+        /*layer.prepareQuadList().addAll(quads);
+        *///?}
+    }
+    //?}
 
     /**
      * Generate full pipe item geometry (3-cube model matching pipe_item.json) using the given sprite.
@@ -368,8 +389,8 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     @Override
     public java.util.List<BakedQuad> getQuads(
             net.minecraft.world.level.block.state.BlockState state, Direction side,
-            net.minecraft.util.RandomSource rand, net.neoforged.neoforge.client.model.data.ModelData data,
-            net.minecraft.client.renderer.RenderType renderType) {
+            net.minecraft.util.RandomSource rand, net.neoforged.neoforge.model.data.ModelData data,
+            net.minecraft.client.renderer.rendertype.RenderType renderType) {
         return vanillaDelegate.getQuads(state, side, rand, data, renderType);
     }
 
@@ -380,7 +401,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     // Both getters are abstract on 1.21.1's BakedModel yet deprecated there (NeoForge's ModelData/applyTransform
     // hooks are the real ones); getTransforms is still what ItemEntityRenderer reads for the ground bob.
     @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-        return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+        return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
     }
     @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
         return vanillaDelegate.getTransforms();
@@ -421,7 +442,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         // Transport/kinesis: vanilla base quads + mask overlay (tintIndex 0), all on the translucent sheet.
         java.util.List<BakedQuad> quads = new ArrayList<>();
         net.minecraft.util.RandomSource rand = net.minecraft.util.RandomSource.create(42L);
-        net.neoforged.neoforge.client.model.data.ModelData empty = net.neoforged.neoforge.client.model.data.ModelData.EMPTY;
+        net.neoforged.neoforge.model.data.ModelData empty = net.neoforged.neoforge.model.data.ModelData.EMPTY;
         quads.addAll(vanillaDelegate.getQuads(null, null, rand, empty, null));
         for (Direction d : Direction.values()) {
             quads.addAll(vanillaDelegate.getQuads(null, d, rand, empty, null));
@@ -439,9 +460,9 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
     // (it is already the resolved result, so no further per-stack resolution).
     private final class PaintedPipeModel implements net.neoforged.neoforge.client.model.IDynamicBakedModel {
         private final java.util.List<BakedQuad> quads;
-        private final java.util.List<net.minecraft.client.renderer.RenderType> renderTypes;
+        private final java.util.List<net.minecraft.client.renderer.rendertype.RenderType> renderTypes;
 
-        PaintedPipeModel(java.util.List<BakedQuad> quads, net.minecraft.client.renderer.RenderType renderType) {
+        PaintedPipeModel(java.util.List<BakedQuad> quads, net.minecraft.client.renderer.rendertype.RenderType renderType) {
             this.quads = quads;
             this.renderTypes = java.util.List.of(renderType);
         }
@@ -449,13 +470,13 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         @Override
         public java.util.List<BakedQuad> getQuads(
                 net.minecraft.world.level.block.state.BlockState state, Direction side,
-                net.minecraft.util.RandomSource rand, net.neoforged.neoforge.client.model.data.ModelData data,
-                net.minecraft.client.renderer.RenderType renderType) {
+                net.minecraft.util.RandomSource rand, net.neoforged.neoforge.model.data.ModelData data,
+                net.minecraft.client.renderer.rendertype.RenderType renderType) {
             return side == null ? quads : java.util.Collections.emptyList();
         }
 
         @Override
-        public java.util.List<net.minecraft.client.renderer.RenderType> getRenderTypes(ItemStack stack, boolean fabulous) {
+        public java.util.List<net.minecraft.client.renderer.rendertype.RenderType> getRenderTypes(ItemStack stack, boolean fabulous) {
             return renderTypes;
         }
 
@@ -465,7 +486,7 @@ public class PipeItemModel implements net.neoforged.neoforge.client.model.IDynam
         @Override public boolean isCustomRenderer() { return false; }
         // Same as the outer model: abstract-yet-deprecated 1.21.1 BakedModel getters.
         @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
-            return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+            return vanillaDelegate.getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
         }
         @Override @SuppressWarnings("deprecation") public net.minecraft.client.renderer.block.model.ItemTransforms getTransforms() {
             return vanillaDelegate.getTransforms();

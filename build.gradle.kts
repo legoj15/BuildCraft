@@ -1,6 +1,7 @@
 // Central (per-node) build script. Runs once per Stonecutter version node.
 // moddev's version is declared with `apply false` in stonecutter.gradle.kts (the controller).
 import buildcraft.gradle.DataDownport1211
+import buildcraft.gradle.DataDownportPre263
 
 plugins {
     id("net.neoforged.moddev")
@@ -18,21 +19,30 @@ val javaVersion = property("java_version") as String
 val updateBranch = property("update_branch") as String
 val neoDepRange = property("neo_dep_range") as String
 val mcDepRange = property("mc_dep_range") as String
-// True only on MC lines below 1.21.11 (i.e. the 1.21.10 node). Gates the back-compat source
+// True only on MC lines below 1.21.11 (the 1.21.10 and 1.21.1 nodes). Gates the back-compat source
 // replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
 val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
 // True only on the 1.21.1 node (1.21.10/1.21.11/26.1 have the newer APIs). Gates cliffs that
 // landed AT 1.21.10 — e.g. FMLEnvironment.dist became the getDist() accessor.
 val isPre1_21_10 = stonecutter.eval(stonecutter.current.version, "<1.21.10")
+// True on every node below 26.3: gates the loot/advancement data down-port (DataDownportPre263).
+val isPre26_3 = stonecutter.eval(stonecutter.current.version, "<26.3")
 
 // ─── Stonecutter source replacements ─────────────────────────────────────────
-// The 1.21.10 node (ONLY) reverses Mojang's 1.21.11 ResourceLocation->Identifier rename
-// tree-wide, so the shared source — written in the canonical `Identifier` form used by the
-// 26.1.2 + 1.21.11 nodes — compiles against 1.21.10's older `ResourceLocation`. Word-boundary
-// regex (\b) avoids clobbering substrings like Character.isJavaIdentifierStart, IdentifierException,
-// or REI's CategoryIdentifier. `direction` gates it: false on 26.1.2/1.21.11 => no-op (those nodes
-// are untouched); true only on 1.21.10. Applied during each node's stonecutterGenerate, so it works
-// under per-node `:1.21.10:compileJava` without switching the active node.
+// The pre-1.21.11 nodes (1.21.10 and 1.21.1) reverse Mojang's 1.21.11 ResourceLocation->Identifier
+// rename tree-wide, so the shared source — written in the `Identifier` form used by the 1.21.11+
+// nodes — compiles against their older `ResourceLocation`. Word-boundary regex (\b) avoids
+// clobbering substrings like Character.isJavaIdentifierStart, IdentifierException, or REI's
+// CategoryIdentifier. Every rule is a PAIR, and `direction` picks which half runs: true on the
+// pre-1.21.11 nodes (Identifier -> ResourceLocation), false everywhere else, where the reverse half
+// runs (ResourceLocation -> Identifier) instead of nothing. Applied during each node's
+// stonecutterGenerate, so it works under per-node `:1.21.10:compileJava` without switching the
+// active node.
+// The rewrite is plain text over the whole file, COMMENTS INCLUDED: a comment that contrasts the two
+// names, or says which one a given line uses, reads wrong on one side. Prose may name the type only
+// where it tracks the code on every node (a {@link} to the class in use); otherwise say "the id class" /
+// "the pre-1.21.11 name". The same goes for the other rules below (render-type packages, the 1.21.1
+// accessor renames, `helper.assertTrue(`).
 stonecutter {
     replacements {
         regex {
@@ -67,9 +77,10 @@ stonecutter {
             )
         }
         // Game-test assertions: 1.21.10's GameTestHelper.assertTrue/assertFalse take a Component message
-        // (1.21.11+/26.1 take a String). Route helper.assert*(...) through GameTestUtil (which wraps the
-        // String) on the 1.21.10 node only. `\bhelper\.` matches the GameTestHelper param (never JUnit
-        // Assertions.*). Only test sources contain `helper.assertTrue(`, so this is inert for main code.
+        // (1.21.11+/26.1 and 1.21.1 take a String). Route helper.assert*(...) through GameTestUtil on the
+        // pre-1.21.11 nodes: it wraps the String in a Component on 1.21.10 and passes it straight through on
+        // 1.21.1. `\bhelper\.` matches the GameTestHelper param (never JUnit Assertions.*). Only test sources
+        // contain `helper.assertTrue(`, so this is inert for main code.
         regex {
             direction.set(isPre1_21_11)
             replace(
@@ -86,7 +97,7 @@ stonecutter {
         }
         // 1.21.1 ONLY: FMLEnvironment.getDist() (the accessor, added at 1.21.10) -> the older public
         // static `dist` field. Specific + reversible; no collision since the canonical source only ever
-        // writes getDist(). Inert on 1.21.10/1.21.11/26.1 (direction=false there).
+        // writes getDist(). On every other node the reverse half runs and matches nothing in canonical src.
         regex {
             direction.set(isPre1_21_10)
             replace(
@@ -96,8 +107,8 @@ stonecutter {
         }
         // 1.21.1 ONLY: the model-data API (ModelData/ModelProperty/ModelDataManager) lives under
         // `client.model.data` on 1.21.1; it was moved up to `model.data` at 1.21.10. Pure package move,
-        // same API. Specific + reversible; released nodes only ever write `model.data` so the reverse is
-        // inert there (direction=false). No substring overlap (the moved form inserts `.client` mid-path).
+        // same API. Specific + reversible; canonical src only ever writes `model.data`, so on every other
+        // node the reverse half matches nothing. No substring overlap (the moved form inserts `.client` mid-path).
         regex {
             direction.set(isPre1_21_10)
             replace(
@@ -108,7 +119,7 @@ stonecutter {
         // 1.21.1 ONLY: LevelHeightAccessor.getMaxY()/getMinY() (the short accessors, present from 1.21.2)
         // were getMaxBuildHeight()/getMinBuildHeight() on 1.21.1. All call sites are `level.getMaxY()` /
         // `level.getMinY()` (no BuildCraft class defines either), so the literal `.getMaxY()`/`.getMinY()`
-        // form is unambiguous. Specific + reversible; inert on 1.21.10/1.21.11/26.1 (direction=false).
+        // form is unambiguous. Specific + reversible; on every other node the reverse half matches nothing in canonical src.
         regex {
             direction.set(isPre1_21_10)
             replace(
@@ -127,7 +138,7 @@ stonecutter {
         // getTimer() on 1.21.1 — both return DeltaTracker (with getGameTimeDeltaPartialTick). Every BC
         // call site receives Minecraft (`Minecraft.getInstance().getDeltaTracker()` / `mc.getDeltaTracker()`)
         // and 1.21.1 defines no other getDeltaTracker(), so the literal `.getDeltaTracker()` is unambiguous.
-        // Specific + reversible; inert on 1.21.10/1.21.11/26.1 (direction=false).
+        // Specific + reversible; on every other node the reverse half matches nothing in canonical src.
         regex {
             direction.set(isPre1_21_10)
             replace(
@@ -140,7 +151,7 @@ stonecutter {
         // (JEI 26.x / MC 1.21.10+) was addRecipeCatalysts(RecipeType, ItemLike...) on JEI 19.27 / 1.21.1.
         // Same arg shape (the recipe-type constants already resolve per-node via the recipe.types gate),
         // so the literal method-name swap suffices. JEI-specific name — no BC collision. Reversible;
-        // inert on 1.21.10/1.21.11/26.1 (direction=false).
+        // on every other node the reverse half matches nothing in canonical src.
         regex {
             direction.set(isPre1_21_10)
             replace(
@@ -174,6 +185,15 @@ sourceSets {
 }
 
 tasks.named<Copy>("processResources") {
+    // Loot tables + advancements are authored in the 26.3 loot-condition form; every older node
+    // rewrites its copy, and 26.3+ only validates (see DataDownportPre263). The 1.21.1 doLast below also
+    // rewrites advancements, but only display.background (plus recipes and item models), a key
+    // DataDownportPre263 never touches, so the order of the two hooks does not matter.
+    if (isPre26_3) {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), true) }
+    } else {
+        doLast { DataDownportPre263.apply(destinationDir.resolve("data/buildcraftunofficial"), false) }
+    }
     if (isPre1_21_10) {
         doLast {
             DataDownport1211.downportRecipeDir1211(destinationDir.resolve("data/buildcraftunofficial/recipe"))
@@ -317,21 +337,36 @@ tasks.test {
     // the mod actually runs in.
     systemProperty("buildcraft.dev", "true")
 
-    // CopyrightHeaderTester reads the .java files themselves off disk, so its real inputs are the
-    // source TEXT — not the compiled classes Gradle normally tracks. A header edit is comment-only,
-    // produces byte-identical bytecode, and would otherwise leave `test` UP-TO-DATE: the guard would
-    // silently stop guarding exactly when someone re-introduces a bad header. Declaring the trees as
-    // an input closes that hole. Path-insensitive because only the file CONTENTS matter.
+    // CopyrightHeaderTester and StonecutterDirectiveGuardTester read source files themselves off
+    // disk, so their real inputs are the source TEXT — not the compiled classes Gradle normally tracks.
+    // A header or directive-arm edit is comment-only, produces byte-identical bytecode, and would
+    // otherwise leave `test` UP-TO-DATE: the guard would silently stop guarding exactly when someone
+    // re-introduces a bad header or a mangled directive arm. Declaring the trees as an input closes
+    // that hole. Path-insensitive because only the file CONTENTS matter.
     inputs.files(
         rootProject.fileTree("src/main/java") { include("**/*.java") },
         rootProject.fileTree("src/test/java") { include("**/*.java") }
     ).withPropertyName("sourceHeaders").withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // The directive guard walks all of src/, not just the Java trees: the other extensions Stonecutter
+    // processes (resources such as accesstransformer.cfg) can carry a directive too. Keep this list in
+    // step with the guard's JAVA_LIKE and NOT_JUDGED sets, minus java, which the input above covers.
+    inputs.files(
+        rootProject.fileTree("src") {
+            include(listOf("scala", "sc", "groovy", "gradle", "json5", "kt", "kts", "fsh", "vsh", "cfg", "aw",
+                "accesswidener", "ct", "classtweaker", "yml", "yaml").map { "**/*.$it" })
+        }
+    ).withPropertyName("stonecutterOtherSources").withPathSensitivity(PathSensitivity.RELATIVE)
 
     // Same hole, second door: noticeFileListsEveryMmplFile cross-checks NOTICE.md against those headers,
     // so NOTICE.md is an input too. Verified empirically — deleting a path from NOTICE.md left `test`
     // UP-TO-DATE and the guard silent until this line existed.
     inputs.file(rootProject.file("NOTICE.md"))
         .withPropertyName("licenceNotice").withPathSensitivity(PathSensitivity.NONE)
+
+    // StonecutterDirectiveGuardTester decides which directive arms are live from the `stonecutter active` line.
+    inputs.file(rootProject.file("stonecutter.gradle.kts"))
+        .withPropertyName("activeNode").withPathSensitivity(PathSensitivity.NONE)
 
     // Code-inspecting tests (ForRemovalApiGuardTester, BlocksAtlasIdTester, via buildcraft.lib.test.MainSourceSet)
     // must read THIS node's view of the main code: the active node compiles src/main/java raw, every other node a

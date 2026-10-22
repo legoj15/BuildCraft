@@ -15,6 +15,8 @@ import buildcraft.api.crops.CropManager;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 
+import buildcraft.lib.misc.MachineRefusals;
+
 public enum StripesHandlerPlant implements IStripesHandlerItem {
     INSTANCE;
 
@@ -25,7 +27,12 @@ public enum StripesHandlerPlant implements IStripesHandlerItem {
                           ItemStack stack,
                           Player player,
                           IStripesActivator activator) {
-        return CropManager.plantCrop(world, player, stack, pos.relative(direction).below())
-            || CropManager.plantCrop(world, player, stack, pos.relative(direction));
+        long refusals = MachineRefusals.count(player);
+        if (CropManager.plantCrop(world, player, stack, pos.relative(direction).below())) {
+            return true;
+        }
+        // A refused click ends the handler, as it ends a player's: the second try is a click on another block.
+        return MachineRefusals.count(player) == refusals
+            && CropManager.plantCrop(world, player, stack, pos.relative(direction));
     }
 }

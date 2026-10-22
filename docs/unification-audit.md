@@ -1,6 +1,6 @@
 # BuildCraft Unification Audit — Synthesis Report
 
-**Scope:** `src/main/java/buildcraft/` (single mod, id `buildcraftunofficial`), MC 26.1.x active node, Stonecutter multi-version source tree.
+**Scope:** `src/main/java/buildcraft/` (single mod, id `buildcraftunofficial`), Stonecutter multi-version source tree (audited while 26.1.x was the active node; the active node is now 26.3).
 **Input:** 68 individually-verified findings, deduped and clustered into 18 themes below.
 **Bottom line:** One architectural split (block-entity base) drives most of the duplication. Almost nothing is a live bug — but the duplication *hides* two real ones. The right play is quick wins + the two bug fixes now, then a staged base-class consolidation, leaving the genuinely load-bearing divergence alone.
 

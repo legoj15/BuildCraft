@@ -1,5 +1,6 @@
 package buildcraft.lib.gui.statement;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
@@ -162,7 +163,7 @@ public class GuiElementStatementSource<S extends IGuiSlot> implements IInteracti
 
     @Override
     public void onMouseClicked(int button) {
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             iterateSlots((slot, area) -> {
                 if (area.contains(gui.mouse)) {
                     dragger.startDragging(slot);

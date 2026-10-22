@@ -38,12 +38,12 @@ public record MessageDebugRequest(
 
     private static void encode(RegistryFriendlyByteBuf buf, MessageDebugRequest msg) {
         buf.writeBlockPos(msg.pos);
-        buf.writeEnum(msg.side);
+        NetEnumUtil.write(buf, msg.side);
     }
 
     private static MessageDebugRequest decode(RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
-        Direction side = buf.readEnum(Direction.class);
+        Direction side = NetEnumUtil.read(buf, Direction.class);
         return new MessageDebugRequest(pos, side);
     }
 

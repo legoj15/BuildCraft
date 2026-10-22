@@ -349,7 +349,12 @@ public class FakePlayerUtilTester {
         player.getFoodData().addExhaustion(3);
         player.hurtTime = 8;
         player.hurtDuration = 9;
-        player.invulnerableTime = 20;
+        //? if >=26.3 {
+        // the field went private in 26.3
+        player.setInvulnerableTime(20);
+        //?} else {
+        /*player.invulnerableTime = 20;
+        *///?}
         player.deathTime = 7;
         setDead(player, true);
         player.setTicksFrozen(100);
@@ -361,7 +366,11 @@ public class FakePlayerUtilTester {
         check(again.getFoodData().getSaturationLevel() == fresh.getFoodData().getSaturationLevel(),
                 "saturation is restored");
         check(again.hurtTime == fresh.hurtTime && again.hurtDuration == fresh.hurtDuration, "hurt timers are cleared");
-        check(again.invulnerableTime == fresh.invulnerableTime, "the invulnerability timer is cleared");
+        //? if >=26.3 {
+        check(again.getInvulnerableTime() == fresh.getInvulnerableTime(), "the invulnerability timer is cleared");
+        //?} else {
+        /*check(again.invulnerableTime == fresh.invulnerableTime, "the invulnerability timer is cleared");
+        *///?}
         check(again.deathTime == fresh.deathTime && !isDead(again), "the player is no longer dead");
         check(again.getTicksFrozen() == fresh.getTicksFrozen(), "freezing is cleared");
         check(!again.isOnPortalCooldown(), "the portal cooldown is cleared");

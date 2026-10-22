@@ -9,20 +9,20 @@ import org.jetbrains.annotations.Nullable;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 //? if <26.2 {
-import com.mojang.blaze3d.vertex.VertexConsumer;
-//?}
+/*import com.mojang.blaze3d.vertex.VertexConsumer;
+*///?}
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 //? if <26.2 {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 //? if >=26.2 {
-/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
 //? if >=1.21.10 && <26.2 {
-import net.minecraft.client.renderer.ShapeRenderer;
-//?} elif <1.21.10 {
+/*import net.minecraft.client.renderer.ShapeRenderer;
+*///?} elif <1.21.10 {
 /*import net.minecraft.client.renderer.LevelRenderer;*/
 //?}
 import buildcraft.lib.client.render.BCLibRenderTypes;
@@ -190,7 +190,7 @@ public final class PipePlacementHighlight {
      *  shape — never the level — as {@link CustomBlockOutlineRenderer} requires. */
     private record PreviewRenderer(VoxelShape shape) implements CustomBlockOutlineRenderer {
         //? if >=26.2 {
-        /*@Override
+        @Override
         public boolean render(BlockOutlineRenderState renderState, SubmitNodeCollector submitNodeCollector,
                 PoseStack poseStack, LevelRenderState levelRenderState) {
             // 26.2: outline geometry goes through the retained-mode submit system. There is no
@@ -205,9 +205,9 @@ public final class PipePlacementHighlight {
                     ARGB.black(102), 2.5F, renderState.isTranslucent());
             poseStack.popPose();
             return true;
-        }*/
+        }
         //?} else {
-        @Override
+        /*@Override
         public boolean render(BlockOutlineRenderState renderState, MultiBufferSource.BufferSource buffer,
                 PoseStack poseStack, boolean translucentPass, LevelRenderState levelRenderState) {
             // Draw — and suppress the vanilla outline — only in the pass vanilla itself would
@@ -223,12 +223,12 @@ public final class PipePlacementHighlight {
                     //? if >=1.21.11 {
                     ARGB.black(102), 2.5F);
                     //?} else {
-                    /*0x66000000);*/
+                    /^0x66000000);^/
                     //?}
             buffer.endLastBatch();
             return true;
         }
-        //?}
+        *///?}
     }
     //?}
 }

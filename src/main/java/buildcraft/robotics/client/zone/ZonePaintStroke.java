@@ -9,9 +9,12 @@ import java.util.function.IntPredicate;
 
 import javax.annotation.Nullable;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 /**
  * The state of one paint or erase stroke on the Zone Planner map, from the press that starts it to the release that
- * ends it. Pure (no Minecraft types) so the button rules can be unit-tested without a screen.
+ * ends it. Pure (no Minecraft types, only {@code InputConstants}' inlined button numbers) so the button rules can be
+ * unit-tested without a screen.
  *
  * <p>A stroke belongs to the mouse button that started it ({@link ZonePaintInput#strokeFor}: left paints, right
  * erases). While it is open no other press does anything, so a second button pressed part-way through can neither
@@ -28,8 +31,8 @@ public final class ZonePaintStroke {
     /** A stroke as it stands: the layer it edits, whether it marks or clears, and its two corner columns (world blocks). */
     public record Stroke(int colorIndex, boolean paints, int startX, int startZ, int endX, int endZ) {}
 
-    private static final int LEFT = 0;
-    private static final int RIGHT = 1;
+    private static final int LEFT = InputConstants.MOUSE_BUTTON_LEFT;
+    private static final int RIGHT = InputConstants.MOUSE_BUTTON_RIGHT;
 
     private int button = ZonePaintInput.NONE;
     /** The physical button {@link #move} polls: {@link #button} itself, except for a simulated right click. */
@@ -66,7 +69,7 @@ public final class ZonePaintStroke {
      * too), so the erase is the right button's but the finger is on the left one. Following the right button there
      * froze the erase at the pressed column.
      *
-     * @param physicallyHeld whether a button (Minecraft's number, which is GLFW's) is physically down right now
+     * @param physicallyHeld whether a button (Minecraft's number) is physically down right now
      * @return false, changing nothing, if a stroke is already open or the button starts none (middle, side buttons).
      */
     public boolean press(int mouseButton, int colorIndex, int x, int z, IntPredicate physicallyHeld) {
@@ -82,7 +85,7 @@ public final class ZonePaintStroke {
     }
 
     /**
-     * The mouse button that started the open stroke ({@code 0} left, {@code 1} right) as the press event named it, or
+     * The mouse button that started the open stroke (left or right) as the press event named it, or
      * {@link ZonePaintInput#NONE} between strokes: the button whose release ends it. Not the latest one pressed, which
      * an open stroke ignores.
      */
@@ -96,13 +99,13 @@ public final class ZonePaintStroke {
      * release, and sends drag events only while it is set, so a stroke driven by drag events alone freezes once a
      * second button has been tapped mid-stroke (hold left with a brush, tap right, keep dragging) although the
      * starting button is still down. Cursor moves keep arriving, so the screen forwards each one with a way to ask
-     * GLFW which buttons are physically held, and the stroke polls the physical button fixed at its press.
+     * the window system which buttons are physically held, and the stroke polls the physical button fixed at its press.
      *
      * <p>Unlike a pan, a stroke is not dropped when the button turns out not to be held: the release is a separate
      * event that commits the stroke, and it may be only a moment behind this move (or lost), so a move that finds the
      * button up changes nothing and leaves the stroke for that release to end.
      *
-     * @param physicallyHeld whether a button (Minecraft's number, which is GLFW's) is physically down right now
+     * @param physicallyHeld whether a button (Minecraft's number) is physically down right now
      * @return true if the far corner moved (the preview needs rebuilding); false if there is no open stroke, the
      *         stroke's physical button is not held, or the cursor is still over the corner's column
      */

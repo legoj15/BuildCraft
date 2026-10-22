@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics.client.zone;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -21,10 +22,12 @@ import org.junit.jupiter.api.Test;
  */
 public class ZonePanDragTest {
 
-    private static final int LEFT = 0;
-    private static final int RIGHT = 1;
-    private static final int MIDDLE = 2;
-    private static final int SIDE = 3;
+    private static final int LEFT = InputConstants.MOUSE_BUTTON_LEFT;
+    private static final int RIGHT = InputConstants.MOUSE_BUTTON_RIGHT;
+    private static final int MIDDLE = InputConstants.MOUSE_BUTTON_MIDDLE;
+    /** The first number past left, right and middle, on any line's numbering (0 to 2 up to 26.2, 1 to 3 on 26.3). */
+    private static final int SIDE = 1 + Math.max(InputConstants.MOUSE_BUTTON_LEFT,
+            Math.max(InputConstants.MOUSE_BUTTON_RIGHT, InputConstants.MOUSE_BUTTON_MIDDLE));
 
     private static final boolean HELD = true;
     private static final boolean UP = false;

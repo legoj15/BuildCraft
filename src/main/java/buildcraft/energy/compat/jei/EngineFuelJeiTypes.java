@@ -25,7 +25,7 @@ import buildcraft.api.fuels.IFuel;
  *     and an extra residue output for {@code IFuelManager.IDirtyFuel}.</li>
  * <li>{@link #COMBUSTION_COOLANT} — water + the three ices that cool the combustion engine.</li>
  * <li>{@link #STIRLING_FUEL} — every vanilla furnace fuel (the Stirling engine burns solid
- *     fuel via {@code FuelValues}).</li>
+ *     furnace fuel; {@code FuelValues} before 26.3, the {@code COOKING_FUEL} component after).</li>
  * </ul>
  */
 public final class EngineFuelJeiTypes {

@@ -4,6 +4,8 @@ import java.util.EnumMap;
 
 import javax.annotation.Nullable;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -92,10 +94,12 @@ public class GuiEmzuliPipe extends GuiBC8<ContainerEmzuliPipe> {
 
     private void paint(SlotIndex index, int mouseButton) {
         DyeColor current = menu.behaviour.slotColours.get(index);
+        // Minecraft's button numbers differ by line (left 1 and right 3 on 26.3), so compare the constants. The
+        // button's mask only admits left, right and middle; a keyboard press reports left, so it steps forward too.
         DyeColor next = switch (mouseButton) {
-            case 0 -> ColourUtil.getNextOrNull(current);
-            case 1 -> ColourUtil.getPrevOrNull(current);
-            default -> null;
+            case InputConstants.MOUSE_BUTTON_LEFT -> ColourUtil.getNextOrNull(current);
+            case InputConstants.MOUSE_BUTTON_RIGHT -> ColourUtil.getPrevOrNull(current);
+            default -> null; // middle click clears
         };
         menu.paintWidgets.get(index).setColour(next);
         // Optimistic local copy so the icon and tooltip change this frame; the server's resync agrees.

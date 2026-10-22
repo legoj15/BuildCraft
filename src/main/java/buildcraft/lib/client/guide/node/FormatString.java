@@ -69,10 +69,10 @@ public class FormatString {
                     lastColour = null;
                     lastMisc.clear();
                 //? if >=26.2 {
-                /*} else if (isColour(format)) {
-                *///?} else {
-                } else if (format.isColor()) {
-                //?}
+                } else if (isColour(format)) {
+                //?} else {
+                /*} else if (format.isColor()) {
+                *///?}
                     lastColour = format;
                 } else {
                     lastMisc.add(format);
@@ -168,10 +168,10 @@ public class FormatString {
     }
 
     //? if >=26.2 {
-    /*// On 26.2 ChatFormatting lost isColor(); colours are the first 16 enum constants
+    // On 26.2 ChatFormatting lost isColor(); colours are the first 16 enum constants
     // (BLACK=0 .. WHITE=15), styles and RESET come after.
     private static boolean isColour(ChatFormatting f) {
         return f.ordinal() <= ChatFormatting.WHITE.ordinal();
     }
-    *///?}
+    //?}
 }

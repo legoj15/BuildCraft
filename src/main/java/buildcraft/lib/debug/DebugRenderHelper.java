@@ -23,7 +23,8 @@ import buildcraft.lib.client.render.tile.RenderPartCube;
  * as see-through volumes ({@link #renderTranslucentBox}, the Quarry's chunk highlights) or as solid
  * markers ({@link #renderSolidBox}, the Laser's cone cubes). The two differ only in render type:
  * translucent boxes skip depth writes so they layer cleanly, solid boxes write depth so they sort
- * correctly against the world (water, leaves, the block-selection outline, …).
+ * correctly against the world (water, leaves, the block-selection outline, …). With 26.3's improved
+ * transparency on, both draw through OIT pipelines that depth-test but do not write depth.
  *
  * <p>The draw target is taken from {@link AdvDebugRenderer}'s current frame context — on &gt;=26.1
  * via the retained-mode {@link net.minecraft.client.renderer.SubmitNodeCollector}, on &lt;26.1 via
@@ -44,7 +45,8 @@ public final class DebugRenderHelper {
 
     /**
      * Draws a solid filled box at the given world-space {@link AABB}. Use a full-alpha {@code argb}
-     * — the box writes depth, so it occludes and is occluded by world geometry correctly.
+     * — the box writes depth (with improved transparency off), so it occludes and is occluded by world
+     * geometry correctly.
      */
     public static void renderSolidBox(PoseStack poseStack, AABB box, Vec3 cameraPos, int argb) {
         renderBox(poseStack, box, cameraPos, argb, BCLibRenderTypes.debugSolid());

@@ -288,14 +288,14 @@ public class RobotActionAIsTester {
         // The FORMULA targets are cows — armour-less (a zombie's 2 armour points shave the landed
         // damage below the formula's raw value); the CADENCE target stays a zombie.
         //? if >=26.2 {
-        /*Mob unarmedTarget = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 1, 2, 2);
+        Mob unarmedTarget = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 1, 2, 2);
         Mob swordTarget = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 2, 2, 4);
-        Zombie cadenceTarget = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 4, 2, 2);*/
+        Zombie cadenceTarget = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 4, 2, 2);
         //?} else {
-        Mob unarmedTarget = helper.spawn(net.minecraft.world.entity.EntityType.COW, 1, 2, 2);
+        /*Mob unarmedTarget = helper.spawn(net.minecraft.world.entity.EntityType.COW, 1, 2, 2);
         Mob swordTarget = helper.spawn(net.minecraft.world.entity.EntityType.COW, 2, 2, 4);
         Zombie cadenceTarget = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 4, 2, 2);
-        //?}
+        *///?}
         Mob[] targets = { unarmedTarget, swordTarget, cadenceTarget };
         for (Mob mob : targets) {
             mob.setNoAi(true);
@@ -349,12 +349,12 @@ public class RobotActionAIsTester {
     public static void aimingTurnsTheServerBodyAndKnockbackFollowsIt(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         //? if >=26.2 {
-        /*Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 3);
-        Mob westCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 4);*/
+        Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 3);
+        Mob westCow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 4);
         //?} else {
-        Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 3);
+        /*Mob eastCow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 3);
         Mob westCow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 4);
-        //?}
+        *///?}
         Mob[] cows = { eastCow, westCow };
         for (Mob cow : cows) {
             cow.setNoAi(true);
@@ -413,14 +413,14 @@ public class RobotActionAIsTester {
      *  is exactly what this pins. */
     public static void searchEntityFindsNearestAndHonoursRange(GameTestHelper helper) {
         //? if >=26.2 {
-        /*Mob near = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 2, 2, 2);
+        Mob near = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 2, 2, 2);
         Mob far = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 4, 2, 5);
-        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 5, 2, 5);*/
+        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 5, 2, 5);
         //?} else {
-        Mob near = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 2, 2, 2);
+        /*Mob near = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 2, 2, 2);
         Mob far = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 4, 2, 5);
         Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 5, 2, 5);
-        //?}
+        *///?}
         Mob[] spawned = { near, far, cow };
         for (Mob mob : spawned) {
             mob.setNoAi(true);
@@ -461,10 +461,10 @@ public class RobotActionAIsTester {
         EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         //? if >=26.2 {
-        /*Zombie zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 3, 4, 3);*/
+        Zombie zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 3, 4, 3);
         //?} else {
-        Zombie zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 3, 4, 3);
-        //?}
+        /*Zombie zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 3, 4, 3);
+        *///?}
         zombie.setNoAi(true);
         zombie.setNoGravity(true);
 
@@ -500,12 +500,12 @@ public class RobotActionAIsTester {
         EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
 
         //? if >=26.2 {
-        /*TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, 3, 4, 3);
-        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 4, 4);*/
+        TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, 3, 4, 3);
+        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 4, 4);
         //?} else {
-        TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityType.WOLF, 3, 4, 3);
+        /*TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityType.WOLF, 3, 4, 3);
         Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 4, 4);
-        //?}
+        *///?}
         Player owner = helper.makeMockPlayer(GameType.CREATIVE);
         wolf.tame(owner);
         for (Mob mob : new Mob[] { wolf, cow }) {

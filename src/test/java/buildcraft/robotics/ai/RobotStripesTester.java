@@ -152,6 +152,55 @@ public class RobotStripesTester {
         });
     }
 
+    /**
+     * What an item makes of the held stack is not lost on a robot's use either: a robot holding ONE empty bucket that
+     * takes a water source ends up with the water bucket at its feet (anything the handlers leave on the player but
+     * the remainder is dropped there) and an empty hand. The use used to take the water and lose the bucket as well.
+     * The robot's player faces north from the target cell, so the water sits in that line, two cells out.
+     */
+    public static void stripesDropsTheProductOfAnAirUse(GameTestHelper helper) {
+        whenRobotCellIsEntityTicking(helper, () -> {
+            ServerLevel level = helper.getLevel();
+            BlockPos target = helper.absolutePos(new BlockPos(2, 1, 3));
+            BlockPos waterRel = new BlockPos(2, 2, 1);
+            helper.setBlock(waterRel, Blocks.WATER);
+            try {
+                EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), level);
+                Vec3 at = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
+                robot.setPos(at.x, at.y, at.z);
+                robot.getBattery().addPower(5000L * MjAPI.MJ, false);
+                robot.setItemInUse(new ItemStack(Items.BUCKET));
+                AABB dropZone = new AABB(at, at).inflate(1.5);
+                for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+                    e.discard();
+                }
+
+                AIRobotStripesHandler handler = new AIRobotStripesHandler(robot, target);
+                handler.start();
+                // The use fires on the 61st cycle; stop there (a terminated AI cycled again would fire once more).
+                for (int i = 0; i < 61; i++) {
+                    handler.cycle();
+                }
+
+                helper.assertTrue(!helper.getBlockState(waterRel).is(Blocks.WATER), "the bucket took the water source");
+                int waterBuckets = 0;
+                for (Entity e : level.getEntities((Entity) null, dropZone, e -> e instanceof ItemEntity)) {
+                    if (e instanceof ItemEntity item && item.getItem().is(Items.WATER_BUCKET)) {
+                        waterBuckets += item.getItem().getCount();
+                    }
+                    e.discard();
+                }
+                helper.assertTrue(waterBuckets == 1,
+                        "...and the water bucket it filled is dropped at the robot's feet, found " + waterBuckets);
+                helper.assertTrue(robot.getHeldItem().isEmpty(),
+                        "...leaving the robot's hand empty, holds " + robot.getHeldItem());
+            } finally {
+                helper.setBlock(waterRel, Blocks.AIR);
+            }
+            helper.succeed();
+        });
+    }
+
     /** The robot's cell in the test arena (the robot is never added to the level, only positioned there). */
     private static final BlockPos ROBOT_REL = new BlockPos(2, 2, 2);
 

@@ -1,5 +1,6 @@
 package buildcraft.lib.gui.statement;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
@@ -97,11 +98,12 @@ public class GuiElementStatementParam extends GuiElementSimple
 
     @Override
     public void onMouseClicked(int button) {
-        if (ref.canInteract && contains(gui.mouse) && button == 0) {
+        if (ref.canInteract && contains(gui.mouse) && button == InputConstants.MOUSE_BUTTON_LEFT) {
             IStatementParameter param = get();
             if (param == null) {
                 return;
             }
+            // The API's own numbering (0 is left, what the parameters test), not Minecraft's, which differs by line.
             StatementMouseClick clickEvent = new StatementMouseClick(0, false);
 
             final ItemStack heldStack;

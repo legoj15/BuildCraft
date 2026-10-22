@@ -7,10 +7,12 @@ package buildcraft.robotics.client.zone;
 
 import javax.annotation.Nullable;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 /**
  * The state of one pan drag on the Zone Planner map, from the press that starts it to the release that ends it. Pure
- * (no Minecraft types) so the button rules can be unit-tested without a screen, and the pan twin of
- * {@link ZonePaintStroke}.
+ * (no Minecraft types, only {@code InputConstants}' inlined button numbers) so the button rules can be unit-tested
+ * without a screen, and the pan twin of {@link ZonePaintStroke}.
  *
  * <p>Only the left button pans ({@link #PAN_BUTTON}). The pan belongs to the button that started it: letting go of
  * another button while the left one is still held (a right or middle click mid-drag) does not end it.
@@ -25,7 +27,7 @@ import javax.annotation.Nullable;
 public final class ZonePanDrag {
 
     /** The mouse button that pans (left). */
-    public static final int PAN_BUTTON = 0;
+    public static final int PAN_BUTTON = InputConstants.MOUSE_BUTTON_LEFT;
 
     /** How far the map moves for one cursor move, in screen pixels. */
     public record Delta(double dx, double dy) {}

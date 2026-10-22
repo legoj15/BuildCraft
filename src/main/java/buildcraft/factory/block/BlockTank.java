@@ -59,7 +59,9 @@ import buildcraft.lib.misc.FluidUtilBC;
  */
 @SuppressWarnings("this-escape")
 public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlockConnector {
-    public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
+    //? if <26.3 {
+    /*public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
+    *///?}
     public static final BooleanProperty JOINED_BELOW = BooleanProperty.create("joined_below");
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:fluid_storage");
 
@@ -70,10 +72,12 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
         this.registerDefaultState(this.stateDefinition.any().setValue(JOINED_BELOW, false));
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    *///?}
 
     // Comparator output from the fill level (1.12.2 hasComparatorInputOverride/getComparatorInputOverride);
     // the base reads TileTank.getComparatorLevel. TileTank tracks level changes and calls setChanged(),

@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -49,7 +50,10 @@ import buildcraft.lib.gui.BCGraphics;
  */
 public class BCButton extends AbstractButton {
 
-    /** What a press does. {@code mouseButton} is GLFW's (0 left, 1 right, 2 middle); a keyboard press reports 0. */
+    /**
+     * What a press does. {@code mouseButton} is Minecraft's number for the button, which differs by line: compare it
+     * with {@code InputConstants.MOUSE_BUTTON_*}, never a literal. A keyboard press reports the left button.
+     */
     @FunctionalInterface
     public interface Action {
         void press(int mouseButton);
@@ -205,7 +209,7 @@ public class BCButton extends AbstractButton {
     //? if >=1.21.10 {
     @Override
     public void onPress(InputWithModifiers input) {
-        action.press(0);
+        action.press(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
     @Override
@@ -220,7 +224,7 @@ public class BCButton extends AbstractButton {
     //?} else {
     /*@Override
     public void onPress() {
-        action.press(0);
+        action.press(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
     // NeoForge's button-aware overload (IAbstractWidgetExtension); vanilla's onClick(double, double) has no button.

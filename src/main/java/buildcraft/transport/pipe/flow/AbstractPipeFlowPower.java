@@ -28,6 +28,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.AverageInt;
+import buildcraft.lib.net.NetEnumUtil;
 
 /**
  * Shared distribution engine for the two kinesis pipe flows — {@link PipeFlowPower} (BuildCraft MJ,
@@ -142,7 +143,7 @@ public abstract class AbstractPipeFlowPower extends PipeFlow implements IDebugga
             for (Direction face : Direction.values()) {
                 Section s = sections.get(face);
                 buffer.writeInt(s.displayPower);
-                buffer.writeEnum(s.displayFlow);
+                NetEnumUtil.write(buffer, s.displayFlow);
             }
         }
     }
@@ -154,7 +155,7 @@ public abstract class AbstractPipeFlowPower extends PipeFlow implements IDebugga
             for (Direction face : Direction.values()) {
                 Section s = sections.get(face);
                 s.displayPower = buffer.readInt();
-                s.displayFlow = buffer.readEnum(EnumFlow.class);
+                s.displayFlow = NetEnumUtil.read(buffer, EnumFlow.class);
             }
         }
     }

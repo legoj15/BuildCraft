@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,6 +30,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class SchematicBlockFluid implements ISchematicBlock {
@@ -59,7 +59,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
                 Stream.of(Direction.DOWN)
             )
             .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
-            .map(BlockPos::new)
+            .map(BlockPos.ZERO::offset)
             .collect(Collectors.toSet());
     }
 
@@ -104,7 +104,7 @@ public class SchematicBlockFluid implements ISchematicBlock {
             Stream.concat(
                 Stream.of(Direction.values())
                     .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
-                    .map(BlockPos::new),
+                    .map(BlockPos.ZERO::offset),
                 Stream.of(BlockPos.ZERO)
             )
                 .map(blockPos::offset)
@@ -133,17 +133,14 @@ public class SchematicBlockFluid implements ISchematicBlock {
     @Override
     public CompoundTag serializeNbt() {
         CompoundTag nbt = new CompoundTag();
-        nbt.put("blockState", NbtUtils.writeBlockState(blockState));
+        nbt.put("blockState", BlockStateNbt.write(blockState));
         nbt.putBoolean("isFlowing", isFlowing);
         return nbt;
     }
 
     @Override
     public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
-        blockState = NbtUtils.readBlockState(
-            buildcraft.lib.misc.RegistryUtilBC.blockLookup(),
-            NBTUtilBC.getCompound(nbt, "blockState")
-        );
+        blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "blockState"));
         isFlowing = NBTUtilBC.getBoolean(nbt, "isFlowing", false);
     }
 

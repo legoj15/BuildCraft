@@ -35,7 +35,7 @@ public final class RobotUtils {
         //? if >=1.21.10 {
         return level.getMinY();
         //?} else {
-        /*return level.getMinBuildHeight();*/
+        /*return level.getMinY();*/
         //?}
     }
 
@@ -45,7 +45,7 @@ public final class RobotUtils {
         //? if >=1.21.10 {
         return level.getMaxY();
         //?} else {
-        /*return level.getMaxBuildHeight() - 1;*/
+        /*return level.getMaxY() - 1;*/
         //?}
     }
 

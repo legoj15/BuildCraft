@@ -49,9 +49,10 @@ import buildcraft.lib.misc.data.Box;
  * </ul>
  *
  * <p>NB: the {@link GameTestHelper} parameter is deliberately named {@code gth}, never {@code helper} — the
- * gated build-script regex that routes {@code helper.assertTrue(...)} through {@link GameTestUtil} on the
- * 1.21.10 node is textual, and a {@code helper}-named receiver here would be rewritten. Nothing in this class
- * asserts; it reports failures through {@code fail(String)}, which is uniform on every node.
+ * gated build-script regex that routes assertTrue/assertFalse calls on a {@code helper} receiver through
+ * {@link GameTestUtil} on the pre-1.21.11 nodes (1.21.10 and 1.21.1) is textual, and a {@code helper}-named
+ * receiver here would be rewritten. Nothing in this class asserts; it reports failures through
+ * {@code fail(String)}, which is uniform on every node.
  */
 public final class EntityArenaUtil {
 

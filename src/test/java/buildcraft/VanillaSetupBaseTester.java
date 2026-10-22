@@ -9,10 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeAll;
 
+import net.minecraft.core.HolderLookup;
 //? if >=26.1 {
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.registries.VanillaRegistries;
 //?}
+import net.minecraft.data.registries.VanillaRegistries;
 
 /**
  * Base class for unit tests that construct {@link net.minecraft.world.item.ItemStack}s.
@@ -47,16 +48,31 @@ public class VanillaSetupBaseTester {
             boolean wasIde = net.minecraft.SharedConstants.IS_RUNNING_IN_IDE;
             net.minecraft.SharedConstants.IS_RUNNING_IN_IDE = false;
             try {
-                // VanillaRegistries.createLookup() composes the frozen built-in registries with the
-                // code-built vanilla dynamic ones (damage types, jukebox songs, ...) — the exact
-                // provider vanilla's RegistryComponentsReport hands to the same build() call in datagen.
+                // vanillaLookup() composes the frozen built-in registries with the code-built vanilla
+                // dynamic ones (damage types, jukebox songs, ...) — the exact provider vanilla's
+                // RegistryComponentsReport hands to the same build() call in datagen.
                 BuiltInRegistries.DATA_COMPONENT_INITIALIZERS
-                        .build(VanillaRegistries.createLookup())
+                        .build(vanillaLookup())
                         .forEach(pending -> pending.apply());
             } finally {
                 net.minecraft.SharedConstants.IS_RUNNING_IN_IDE = wasIde;
             }
         }
         //?}
+    }
+
+    /**
+     * The vanilla datagen registry lookup: the frozen built-in registries plus the code-built vanilla dynamic
+     * ones. Available on every node — creative-tab {@code ItemDisplayParameters} need one too, with or without
+     * the 26.1 component binding. 26.3 split {@code VanillaRegistries.createLookup()} into a world layer
+     * ({@code createWorldLookup()}, what vanilla's own datagen hands the component report) and a reloadable layer
+     * (loot, recipes, advancements) stacked on top of it; the world layer is the equivalent of the old single one.
+     */
+    public static HolderLookup.Provider vanillaLookup() {
+        //? if >=26.3 {
+        return VanillaRegistries.createWorldLookup();
+        //?} else {
+        /*return VanillaRegistries.createLookup();
+        *///?}
     }
 }

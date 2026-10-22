@@ -60,6 +60,7 @@ import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.net.NetEnumUtil;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.transport.BCTransportStatements;
@@ -1075,7 +1076,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     section.lastSentAmount = section.amount;
                 }
                 Dir should = Dir.get(section.ticksInDirection);
-                buffer.writeEnum(should);
+                NetEnumUtil.write(buffer, should);
                 section.lastSentDirection = should;
             }
         }
@@ -1105,7 +1106,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                     }
                 }
 
-                Dir dir = buffer.readEnum(Dir.class);
+                Dir dir = NetEnumUtil.read(buffer, Dir.class);
                 section.ticksInDirection = dir == Dir.NONE ? 0 : dir == Dir.IN ? COOLDOWN_INPUT : COOLDOWN_OUTPUT;
             }
             lastMessageMinus1 = lastMessage;

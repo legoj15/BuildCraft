@@ -5,6 +5,7 @@
  */
 package buildcraft.robotics.client.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -110,7 +111,7 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     //? if >=1.21.10 {
     @Override
     public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int mouseX = (int) event.x();
             int mouseY = (int) event.y();
             int clicked = hitTestOption(mouseX, mouseY);
@@ -126,7 +127,7 @@ public class GuiProgrammingTable extends GuiBC8<ContainerProgrammingTable> {
     //?} else {
     /*@Override
     public boolean mouseClicked(double mouseXd, double mouseYd, int button) {
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             int mouseX = (int) mouseXd;
             int mouseY = (int) mouseYd;
             int clicked = hitTestOption(mouseX, mouseY);

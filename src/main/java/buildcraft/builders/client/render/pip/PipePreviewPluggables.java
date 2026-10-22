@@ -20,10 +20,10 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?}
 
 //? if >=26.2 {
-/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+import net.minecraft.client.renderer.SubmitNodeCollector;
 //?} else {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -81,12 +81,12 @@ public final class PipePreviewPluggables {
      * type); pre-26.2 keeps the classic {@code MultiBufferSource.getBuffer(...)} sink.
      */
     //? if >=26.2 {
-    /*public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
-            SubmitNodeCollector collector, int light) {*/
-    //?} else {
     public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
+            SubmitNodeCollector collector, int light) {
+    //?} else {
+    /*public static void render(@Nullable CompoundTag tileNbt, PoseStack poseStack,
             MultiBufferSource buffers, int light) {
-    //?}
+    *///?}
         if (tileNbt == null) {
             return;
         }
@@ -130,7 +130,7 @@ public final class PipePreviewPluggables {
             List<BakedQuad> translucentQuads =
                     PipeModelCachePluggable.cacheTranslucentAll.bake(new PluggableKey(false, holder));
             //? if >=26.2 {
-            /*collector.submitCustomGeometry(poseStack,
+            collector.submitCustomGeometry(poseStack,
                     BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID),
                     (pose, vc) -> renderQuads(cutoutQuads, pose, vc, light));
             collector.submitCustomGeometry(poseStack,
@@ -156,9 +156,9 @@ public final class PipePreviewPluggables {
                                 dyn.render(plug, 0, 0, 0, 0, vc, localStack);
                             }
                         }
-                    });*/
+                    });
             //?} else {
-            PoseStack.Pose pose = poseStack.last();
+            /*PoseStack.Pose pose = poseStack.last();
             renderQuads(cutoutQuads,
                     pose, buffers.getBuffer(BCLibRenderTypes.entityCutoutCull(BCLibRenderTypes.BLOCKS_ATLAS_ID)), light);
             renderQuads(translucentQuads,
@@ -178,7 +178,7 @@ public final class PipePreviewPluggables {
                     dyn.render(plug, 0, 0, 0, 0, dynBuffer, poseStack);
                 }
             }
-            //?}
+            *///?}
         } catch (Throwable t) {
             // Degrade to pipe-body-only on any offline reconstruction/bake failure. Log once — this was
             // a silent black box before, so surface it if a future pluggable can't be rebuilt offline.

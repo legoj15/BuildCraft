@@ -22,6 +22,8 @@ import net.minecraft.world.item.ItemStack;
 
 import com.mojang.math.Axis;
 
+import org.joml.Quaternionf;
+
 /**
  * Utility for rendering item stacks inside pipes as 3D models.
  * Uses NeoForge 1.21.11 ItemModelResolver + ItemStackRenderState.submit() API.
@@ -148,13 +150,26 @@ public class ItemRenderUtil {
     private static void applyDirectionRotation(PoseStack ps, Direction dir) {
         // Default facing is SOUTH (toward +Z). Rotate to match travel direction.
         switch (dir) {
-            case NORTH -> ps.mulPose(Axis.YP.rotationDegrees(180));
-            case EAST -> ps.mulPose(Axis.YP.rotationDegrees(90));
-            case WEST -> ps.mulPose(Axis.YP.rotationDegrees(-90));
-            case UP -> ps.mulPose(Axis.XP.rotationDegrees(-90));
-            case DOWN -> ps.mulPose(Axis.XP.rotationDegrees(90));
+            case NORTH -> rotate(ps, Axis.YP.rotationDegrees(180));
+            case EAST -> rotate(ps, Axis.YP.rotationDegrees(90));
+            case WEST -> rotate(ps, Axis.YP.rotationDegrees(-90));
+            case UP -> rotate(ps, Axis.XP.rotationDegrees(-90));
+            case DOWN -> rotate(ps, Axis.XP.rotationDegrees(90));
             case SOUTH -> {} // default orientation
         }
+    }
+
+    /**
+     * Applies a quaternion rotation to the top of the pose stack. 26.3 removed
+     * {@code PoseStack#mulPose(Quaternionfc)} in favour of {@code rotate(Quaternionfc)} (identical body), which
+     * the older lines lack; every BC render site rotates through here so the split lives in one place.
+     */
+    public static void rotate(PoseStack ps, Quaternionf rotation) {
+        //? if >=26.3 {
+        ps.rotate(rotation);
+        //?} else {
+        /*ps.mulPose(rotation);
+        *///?}
     }
 
     private static void setupModelOffsetRandom(ItemStack stack) {

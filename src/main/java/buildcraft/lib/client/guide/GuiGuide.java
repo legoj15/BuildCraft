@@ -14,6 +14,8 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.Queues;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.client.Minecraft;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -229,10 +231,10 @@ public class GuiGuide extends Screen {
     public void closePage() {
         if (pages.isEmpty()) {
             //? if >=26.2 {
-            /*minecraft.setScreenAndShow(null);*/
+            minecraft.setScreenAndShow(null);
             //?} else {
-            minecraft.setScreen(null);
-            //?}
+            /*minecraft.setScreen(null);
+            *///?}
         } else {
             setPageInternal(pages.pop());
         }
@@ -435,12 +437,8 @@ public class GuiGuide extends Screen {
         // ~0.33 of the way from "last" to "next", visibly snapping rather than smoothly
         // interpolating. Substitute the proper 0-1 fraction here so all downstream
         // partialTicks consumers (cover flip, chapter hover lerp) interpolate correctly.
-        //? if >=1.21.10 {
+        // 1.21.1 names this accessor getTimer(); the build's text replacement renames the call there.
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        //?} else {
-        /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
-        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
-        //?}
 
         lastPartialTicks = partialTicks;
         minX = (this.width - PAGE_LEFT.width * 2) / 2;
@@ -748,7 +746,7 @@ public class GuiGuide extends Screen {
             // contents page's sort-order buttons sit, so offering the click to the page first let a button under a
             // tab steal it; likewise page widgets under the open overlay took clicks through it.
             boolean overlayOpen = isSmallScreen() && showingContentsMenu;
-            if (mouseButton == 0) {
+            if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
                 GuideChapter chapter = chapterUnderMouse();
                 int clickResult = chapter == null ? 0 : chapter.handleClick();
                 if (clickResult > 0) {
@@ -776,7 +774,7 @@ public class GuiGuide extends Screen {
             }
         }
 
-        if (mouseButton == 0) {
+        if (mouseButton == InputConstants.MOUSE_BUTTON_LEFT) {
             if (isOpen) {
                 int page0xMin = this.minX + (int) PAGE_LEFT_TEXT.getX();
                 int page0xMax = page0xMin + (int) PAGE_LEFT_TEXT.getWidth();
@@ -858,10 +856,10 @@ public class GuiGuide extends Screen {
         // Match the bound key (not a hard-coded E) so a rebound inventory shortcut still works.
         if (!isOpen && this.minecraft.options.keyInventory.matches(keyEvent)) {
             //? if >=26.2 {
-            /*this.minecraft.setScreenAndShow(null);*/
+            this.minecraft.setScreenAndShow(null);
             //?} else {
-            this.minecraft.setScreen(null);
-            //?}
+            /*this.minecraft.setScreen(null);
+            *///?}
             return true;
         }
 

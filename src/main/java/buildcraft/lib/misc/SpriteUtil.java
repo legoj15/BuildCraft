@@ -26,7 +26,7 @@ public class SpriteUtil {
         return getBlockAtlas().getSprite(loc);
     }
 
-    /** Resolves a sprite from the block atlas by ResourceLocation. */
+    /** Resolves a sprite from the block atlas by Identifier. */
     public static TextureAtlasSprite getSprite(Identifier loc) {
         return getBlockAtlas().getSprite(loc);
     }

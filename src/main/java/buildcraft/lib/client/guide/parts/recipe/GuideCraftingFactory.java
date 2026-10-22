@@ -231,8 +231,7 @@ public class GuideCraftingFactory implements GuidePartFactory {
         if (level != null) {
             return net.minecraft.world.item.crafting.display.SlotDisplayContext.fromLevel(level);
         }
-        return new net.minecraft.util.context.ContextMap.Builder()
-            .create(net.minecraft.world.item.crafting.display.SlotDisplayContext.CONTEXT);
+        return net.minecraft.util.context.ContextMap.EMPTY;
     }
     //?}
 

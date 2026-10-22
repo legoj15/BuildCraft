@@ -22,10 +22,10 @@ import buildcraft.lib.client.render.BCLibRenderTypes;
 //?}
 
 //? if >=26.2 {
-/*import net.minecraft.client.renderer.SubmitNodeCollector;*/
+import net.minecraft.client.renderer.SubmitNodeCollector;
 //?} else {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -81,12 +81,12 @@ public final class PreviewBlockModelRenderer {
      *         (e.g. an engine — empty model), so the caller should fall back to the item path.
      */
     //? if >=26.2 {
-    /*public static boolean renderBlock(BlockState state, PoseStack poseStack,
-            SubmitNodeCollector sink, int light, int overlay) {*/
-    //?} else {
     public static boolean renderBlock(BlockState state, PoseStack poseStack,
+            SubmitNodeCollector sink, int light, int overlay) {
+    //?} else {
+    /*public static boolean renderBlock(BlockState state, PoseStack poseStack,
             MultiBufferSource.BufferSource sink, int light, int overlay) {
-    //?}
+    *///?}
         //? if >=26.1 {
         BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
         List<BakedQuad> quads = BlockModelQuadExtractor.getAllQuads(model, RANDOM);
@@ -94,12 +94,12 @@ public final class PreviewBlockModelRenderer {
             return false;
         }
         //? if >=26.2 {
-        /*sink.submitCustomGeometry(poseStack, BCLibRenderTypes.cutoutBlockSheet(),
-                (pose, vc) -> emitBlockQuads(vc, pose, quads, state, light, overlay));*/
+        sink.submitCustomGeometry(poseStack, BCLibRenderTypes.cutoutBlockSheet(),
+                (pose, vc) -> emitBlockQuads(vc, pose, quads, state, light, overlay));
         //?} else {
-        emitBlockQuads(sink.getBuffer(BCLibRenderTypes.cutoutBlockSheet()), poseStack.last(),
+        /*emitBlockQuads(sink.getBuffer(BCLibRenderTypes.cutoutBlockSheet()), poseStack.last(),
                 quads, state, light, overlay);
-        //?}
+        *///?}
         return true;
         //?} elif >=1.21.10 {
         /*Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, sink, light, overlay,
@@ -107,7 +107,7 @@ public final class PreviewBlockModelRenderer {
         return true;*/
         //?} else {
         /*Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, sink, light, overlay,
-                net.neoforged.neoforge.client.model.data.ModelData.EMPTY, null);
+                net.neoforged.neoforge.model.data.ModelData.EMPTY, null);
         return true;*/
         //?}
     }
@@ -143,7 +143,8 @@ public final class PreviewBlockModelRenderer {
      * facing, or {@code null} if {@code state} is not an engine (the caller renders it normally). The
      * values mirror the engine blockstate JSON variants so the preview matches the in-world engine.
      * The caller applies them, after translating to the cell centre, as
-     * {@code mulPose(Axis.YP.rotationDegrees(-y))} then {@code mulPose(Axis.XP.rotationDegrees(x))} —
+     * {@code ItemRenderUtil.rotate(pose, Axis.YP.rotationDegrees(-y))} then
+     * {@code ItemRenderUtil.rotate(pose, Axis.XP.rotationDegrees(x))} —
      * Y outer and negated (vanilla blockstate y is the opposite sense to JOML {@code YP}), so X tilts
      * the trunk to horizontal first and Y then yaws it to the facing. (Applying Y first collapses every
      * horizontal facing to south.)

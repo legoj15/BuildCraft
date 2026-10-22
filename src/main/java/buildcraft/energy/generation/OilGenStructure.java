@@ -627,10 +627,16 @@ public abstract class OilGenStructure {
                 if (BlockUtil.getFluidWithFlowing(state.getBlock()) != null) {
                     break;
                 }
-                // blocksMotion() is deprecated but is vanilla's own "solid enough to stand on" test (the
+                //? if >=26.3 {
+                // 26.3 removed blocksMotion(); the MOTION_BLOCKING heightmap now tests this tag instead, so the
+                // spout still stops where vanilla's surface is.
+                boolean surface = state.is(BlockTags.BLOCKS_MOTION_IN_HEIGHTMAP);
+                //?} else {
+                /*// blocksMotion() is deprecated but is vanilla's own "solid enough to stand on" test (the
                 // MOTION_BLOCKING heightmap and FlowingFluid use it); the spout should stop where vanilla's surface is.
                 @SuppressWarnings("deprecation")
                 boolean surface = state.blocksMotion();
+                *///?}
                 if (surface) {
                     break;
                 }

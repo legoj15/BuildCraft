@@ -349,10 +349,10 @@ public enum XmlPageLoader implements IPageLoaderText {
                     XmlTag currentTag = parseTag(line.substring(i));
                     if (currentTag != null) {
                         //? if >=26.2 {
-                        /*ChatFormatting formatting = formattingByName(currentTag.name.replace("_", ""));
-                        *///?} else {
-                        ChatFormatting formatting = ChatFormatting.getByName(currentTag.name.replace("_", ""));
-                        //?}
+                        ChatFormatting formatting = formattingByName(currentTag.name.replace("_", ""));
+                        //?} else {
+                        /*ChatFormatting formatting = ChatFormatting.getByName(currentTag.name.replace("_", ""));
+                        *///?}
                         if (formatting != null) {
                             if (currentTag.state == XmlTagState.END) {
                                 formattingElements.remove(formatting);
@@ -361,10 +361,10 @@ public enum XmlPageLoader implements IPageLoaderText {
                                 }
                             } else if (currentTag.state == XmlTagState.START) {
                                 //? if >=26.2 {
-                                /*if (isColour(formatting)) {
-                                *///?} else {
-                                if (formatting.isColor()) {
-                                //?}
+                                if (isColour(formatting)) {
+                                //?} else {
+                                /*if (formatting.isColor()) {
+                                *///?}
                                     formatColours.push(formatting);
                                 } else {
                                     formattingElements.add(formatting);
@@ -823,7 +823,7 @@ public enum XmlPageLoader implements IPageLoaderText {
     private static GuidePartFactory loadRecipe(XmlTag tag, ProfilerFiller prof) {
         // `id` attribute: display one specific recipe looked up by its registry id. With
         // type="assembling" the id is an Assembly Table recipe's registry name (e.g.
-        // "gate-and-IRON-NO_MODIFIER"); otherwise it's a crafting recipe's ResourceLocation
+        // "gate-and-IRON-NO_MODIFIER"); otherwise it's a crafting recipe's registry id
         // (e.g. "buildcraftunofficial:gate_basic"). Needed for outputs whose data components
         // the stack-based lookup can't address — every gate crafting recipe outputs a
         // component-bearing PLUG_GATE, so the bare <recipes stack="…:plug_gate"/> query never
@@ -871,7 +871,7 @@ public enum XmlPageLoader implements IPageLoaderText {
         // A registered non-crafting type resolves the id in its own id space (IStackRecipes.getFactoryById):
         // type="assembling" → an Assembly Table recipe's registry name; type="programming" /
         // type="integration" → a robot board id (e.g. "buildcraftunofficial:boardRobotMiner"). No type,
-        // "crafting", or an unknown type treats the id as a crafting recipe's ResourceLocation.
+        // "crafting", or an unknown type treats the id as a crafting recipe's registry id.
         IStackRecipes handler = type == null || "crafting".equals(type) ? null : RecipeLookupHelper.handlerTypes.get(type);
         if (handler != null) {
             GuidePartFactory factory = handler.getFactoryById(id.trim());
@@ -1074,7 +1074,7 @@ public enum XmlPageLoader implements IPageLoaderText {
     }
 
     //? if >=26.2 {
-    /*// On 26.2 ChatFormatting lost getByName()/isColor(). These reproduce the old behaviour:
+    // On 26.2 ChatFormatting lost getByName()/isColor(). These reproduce the old behaviour:
     // getByName cleaned the name (lowercase, strip non-[a-z]) and matched the enum's name;
     // isColor() was true for the first 16 colour constants (BLACK=0 .. WHITE=15).
     private static ChatFormatting formattingByName(String name) {
@@ -1093,5 +1093,5 @@ public enum XmlPageLoader implements IPageLoaderText {
     private static boolean isColour(ChatFormatting f) {
         return f.ordinal() <= ChatFormatting.WHITE.ordinal();
     }
-    *///?}
+    //?}
 }

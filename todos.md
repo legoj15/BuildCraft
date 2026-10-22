@@ -4,10 +4,15 @@ Last audited: 2026-10-17
 
 ## 🔧 Outstanding work
 
+- Finish the Minecraft 26.3 port (automated and in-game checks pass; release work remains) — [plan](docs/port-26.3.md)
+- On 26.3 with Improved Transparency on, overlapping BuildCraft status lights and debug boxes blend instead of hiding each other — [notes](docs/port-26.3.md#follow-ups-after-p15)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Builders can sit busy for ever beside fluid they can't remove (outside lava in Clear mode, any water in Replace mode) — [notes](docs/todo-details.md#builder-stalls-beside-unremovable-fluid)
 - On Minecraft 1.21.1, /setblock over a Tank, Heat Exchanger, Flood Gate, Combustion Engine or item machine still spills its contents — [notes](docs/todo-details.md#setblock-spills-on-1211)
 - Guide book: a link that wraps onto the next page only clicks on one of its two pages — [notes](docs/todo-details.md#guide-page-spanning-link-clicks)
+- Stripes pipes use buckets, bottles and thrown items along a fixed line above the pipe instead of on the block in front — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
+- Land-claim mods can't stop a Builder building a blueprint — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
+- Decide: delete or finish the Stripes pipe's minecart-breaking and pipe-extending handlers (never called) — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 
 ## 🆕 New Features (version 2026.2)

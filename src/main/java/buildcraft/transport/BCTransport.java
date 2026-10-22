@@ -311,8 +311,6 @@ public class BCTransport {
         PipeApi.stripeRegistry.addHandler(StripesHandlerEntityInteract.INSTANCE, EnumHandlerPriority.LOW);
         PipeApi.stripeRegistry.addHandler(StripesHandlerHoe.INSTANCE);
         PipeApi.stripeRegistry.addHandler(StripesHandlerDispenser.INSTANCE, EnumHandlerPriority.LOW);
-        PipeApi.stripeRegistry.addHandler(StripesHandlerPlaceBlock.INSTANCE, EnumHandlerPriority.LOW);
-        PipeApi.stripeRegistry.addHandler(StripesHandlerUse.INSTANCE, EnumHandlerPriority.LOW);
 
         PipeApi.stripeRegistry.addHandler(StripesHandlerMinecartDestroy.INSTANCE);
     }

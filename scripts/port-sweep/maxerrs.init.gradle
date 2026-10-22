@@ -1,0 +1,11 @@
+// Gradle init script used by scripts/port-sweep/port-sweep.sh (pass it with `-I`).
+//
+// Raises javac's error/warning caps so a port sweep sees EVERY diagnostic, and keeps javac going into the
+// flow phase after attribution errors (-XDshould-stop.ifError=FLOW) so flow-level errors are not hidden.
+// Runs after each project's build script so it wins over build.gradle.kts's own -Xmaxerrs 2000.
+// Applies to every JavaCompile task of every project; it changes nothing else about the build.
+gradle.afterProject { p ->
+    p.tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs.addAll(['-Xmaxerrs', '100000', '-Xmaxwarns', '100000', '-XDshould-stop.ifError=FLOW'])
+    }
+}

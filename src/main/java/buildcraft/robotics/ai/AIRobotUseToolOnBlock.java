@@ -14,7 +14,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
@@ -24,6 +23,7 @@ import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
 
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 
@@ -80,9 +80,12 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     // or tool listener reads the hand, not the stack the context carries.
                     RobotProtection.holdInMainHand(player, held);
                     // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
-                    BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
-                    UseOnContext useOnContext = new UseOnContext(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
-                    used = held.useOn(useOnContext).consumesAction();
+                    BlockHitResult hit =
+                            new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
+                    // The item half of a player's right-click: the right-click-block event first (a claim mod
+                    // refuses through it on every node), then the item's useOn - the block's own use and
+                    // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock).
+                    used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
                     // Read before the lease closes and takes the hand's contents away.
                     inHand = player.getMainHandItem();
                 }
@@ -90,7 +93,9 @@ public class AIRobotUseToolOnBlock extends AIRobot {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no
                     // 7.1.x-style explicit damageItem here — a tool wears exactly as it would in a
                     // player's hand, and a broken one leaves the hand empty. The robot takes back what is in
-                    // the hand afterwards: the same (now worn) stack, unless the item swapped it for another.
+                    // the hand afterwards: the same (now worn) stack, unless the item swapped it for another (an
+                    // item that sets the hand itself, or on 26.3 one whose use returns a transformed stack, which
+                    // the helper puts in the hand as the player's game mode does).
                     if (inHand != held) {
                         robot.setItemInUse(inHand);
                     } else if (held.isEmpty()) {

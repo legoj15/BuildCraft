@@ -39,7 +39,9 @@ import buildcraft.silicon.tile.TileLaser;
  */
 @SuppressWarnings("this-escape")
 public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
-    public static final MapCodec<BlockLaser> CODEC = simpleCodec(BlockLaser::new);
+    //? if <26.3 {
+    /*public static final MapCodec<BlockLaser> CODEC = simpleCodec(BlockLaser::new);
+    *///?}
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 
     // Collision/outline matches the rendered model (assets/.../models/block/laser.json): a full-footprint
@@ -63,10 +65,12 @@ public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP));
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

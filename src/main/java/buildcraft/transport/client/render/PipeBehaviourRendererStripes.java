@@ -11,8 +11,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 //? if <26.2 {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -61,7 +61,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         int light = beamLight(stripes);
 
         //? if <26.2 {
-        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        /*// 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
         // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above). The BER does not pass a
         // shared VertexConsumer, so create a dedicated buffer.
         MultiBufferSource.BufferSource bufferSource =
@@ -69,7 +69,7 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         VertexConsumer buffer = bufferSource.getBuffer(BCLibRenderTypes.cutoutBlockSheet());
         drawBeam(quads, light, pose, buffer);
         bufferSource.endBatch(BCLibRenderTypes.cutoutBlockSheet());
-        //?}
+        *///?}
     }
 
     private static int beamLight(PipeBehaviourStripes stripes) {

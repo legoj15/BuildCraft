@@ -20,6 +20,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.transport.pipe.PipeBehaviour;
 
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.transport.container.ContainerDiamondPipe;
@@ -153,7 +154,7 @@ public class PipeFilterPersistenceTester {
         // Replay the client -> server filter-mode packet the mode button sends.
         markChunkSaved(helper, chunk);
         PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
-        buffer.writeEnum(FilterMode.BLACK_LIST);
+        NetEnumUtil.write(buffer, FilterMode.BLACK_LIST);
         menu.readMessage(ContainerDiamondWoodPipe.NET_FILTER_MODE, buffer, false, null);
         buffer.release();
 

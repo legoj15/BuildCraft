@@ -13,14 +13,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 //?}
@@ -29,6 +24,7 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
+import buildcraft.lib.test.GameTestUtil;
 
 /**
  * Verifies that breaking the Builder with a survival-mode player holding a wooden pickaxe:
@@ -70,16 +66,7 @@ public class BuilderDropsTester {
         // through the full playerWillDestroy → removeBlock → playerDestroy flow that real
         // gameplay uses, so this actually exercises the tool-requirement gate that plain
         // level.destroyBlock skips.
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WOODEN_PICKAXE));
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(builderPos);
-        BlockState state = level.getBlockState(absPos);
-        BlockEntity be = level.getBlockEntity(absPos);
-        state.getBlock().playerWillDestroy(level, absPos, state, player);
-        level.removeBlock(absPos, false);
-        state.getBlock().playerDestroy(level, player, absPos, state, be, player.getMainHandItem());
+        GameTestUtil.breakAsSurvivalPlayer(helper, builderPos, new ItemStack(Items.WOODEN_PICKAXE));
 
         helper.assertBlockPresent(Blocks.AIR, builderPos);
 
@@ -114,16 +101,7 @@ public class BuilderDropsTester {
         tile.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
         tile.setSnapshotOut(new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
 
-        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WOODEN_PICKAXE));
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(architectPos);
-        BlockState state = level.getBlockState(absPos);
-        BlockEntity be = level.getBlockEntity(absPos);
-        state.getBlock().playerWillDestroy(level, absPos, state, player);
-        level.removeBlock(absPos, false);
-        state.getBlock().playerDestroy(level, player, absPos, state, be, player.getMainHandItem());
+        GameTestUtil.breakAsSurvivalPlayer(helper, architectPos, new ItemStack(Items.WOODEN_PICKAXE));
 
         helper.assertBlockPresent(Blocks.AIR, architectPos);
 

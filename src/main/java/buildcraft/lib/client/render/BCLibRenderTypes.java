@@ -7,12 +7,17 @@ package buildcraft.lib.client.render;
 
 import java.util.function.Function;
 
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.DepthStencilState;
-//?}
-//? if >=1.21.10 {
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-//?}
+// 26.3 moved the GPU abstraction from com.mojang.blaze3d.* to com.mojang.renderpearl.api.*.
+//? if >=26.3 {
+import com.mojang.renderpearl.api.pipeline.DepthStencilState;
+//?} elif >=26.1 {
+/*import com.mojang.blaze3d.pipeline.DepthStencilState;
+*///?}
+//? if >=26.3 {
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+//?} elif >=1.21.10 {
+/*import com.mojang.blaze3d.pipeline.RenderPipeline;
+*///?}
 
 //? if >=1.21.11 {
 import net.minecraft.util.Util;
@@ -24,8 +29,8 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 //?}
-// RenderType: `rendertype.` subpackage on 1.21.11+, moved by the build-script regex
-// replacement to `net.minecraft.client.renderer.RenderType` on the 1.21.10 node.
+// RenderType: `rendertype.` subpackage on 1.21.11+; on the <1.21.11 nodes the build-script regex
+// replacement moves this import back up to the parent package.
 import net.minecraft.client.renderer.rendertype.RenderType;
 //? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -60,7 +65,8 @@ public final class BCLibRenderTypes {
      * Inherits {@code core/position_color} shaders + {@link com.mojang.blaze3d.vertex.DefaultVertexFormat#POSITION_COLOR}
      * vertex format from vanilla's {@link RenderPipelines#DEBUG_FILLED_SNIPPET}, but
      * <strong>overrides depth state to {@link DepthStencilState#DEFAULT}</strong>
-     * (depth test {@code LESS_THAN_OR_EQUAL} <em>with depth write enabled</em>).
+     * (depth test {@code LESS_THAN_OR_EQUAL} on 26.1, {@code GREATER_THAN_OR_EQUAL} from 26.2's reversed-Z
+     * depth onward, <em>with depth write enabled</em> either way).
      * <p>
      * Vanilla's {@code DEBUG_FILLED_BOX} disables depth write because it's intended
      * for debug-overlay rendering where the overlay shouldn't occlude itself; in our
@@ -68,6 +74,10 @@ public final class BCLibRenderTypes {
      * to correctly hide each other when viewed at grazing angles — which requires
      * depth writes so the GPU can z-test subsequent LED fragments against earlier
      * ones in the same batch.
+     * <p>
+     * That holds with 26.3's improved transparency (OIT) off. With it on, the pipeline's blending routes every type
+     * built on it through the type's OIT pipelines (see {@link #ledPipelineSetup}), which depth-test but do not write
+     * depth, so overlapping LED fragments blend there instead of occluding, as vanilla's own debug filled boxes do.
      * <p>
      * Must be registered via {@link net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent}
      * — see {@link buildcraft.lib.client.BCLibClient#initClient}.
@@ -83,10 +93,28 @@ public final class BCLibRenderTypes {
             .build();
     //?}
 
+    /**
+     * A {@code RenderSetup} over {@link #LED_PIPELINE}, for every render type built on it. The pipeline blends, so
+     * with 26.3's improved transparency (OIT) on, geometry drawn with it goes through the type's OIT pipelines, and a
+     * type that has none throws "does not have OIT pipelines set up" and crashes the client on the first frame it is
+     * in view. The OIT stages are vanilla's debug filled box ones: the same {@code position_color} shaders and vertex
+     * format. They depth-test against the world but do not write depth, so with OIT on the LED's own depth write is
+     * lost: overlapping LED or debug fragments blend rather than occlude (cosmetic; vanilla's debug boxes do the same).
+     */
+    //? if >=1.21.11 {
+    private static RenderSetup.RenderSetupBuilder ledPipelineSetup() {
+        RenderSetup.RenderSetupBuilder builder = RenderSetup.builder(LED_PIPELINE);
+        //? if >=26.3 {
+        builder.setOitPipelines(RenderPipelines.OIT_DEBUG_FILLED_BOX);
+        //?}
+        return builder;
+    }
+    //?}
+
     //? if >=1.21.11 {
     private static final RenderType LED = RenderType.create(
             "buildcraft:led",
-            RenderSetup.builder(LED_PIPELINE)
+            ledPipelineSetup()
                     .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                     .createRenderSetup()
     );
@@ -115,14 +143,14 @@ public final class BCLibRenderTypes {
     //?}
 
     /**
-     * Opaque sibling of {@link #LED}: the same depth-writing {@link #LED_PIPELINE}, minus the LED's
-     * view-offset Z layering (which only matters for quads mounted flush on a block face). For
-     * free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
+     * Opaque sibling of {@link #LED}: the same {@link #LED_PIPELINE} (depth-writing with improved
+     * transparency off), minus the LED's view-offset Z layering (which only matters for quads mounted
+     * flush on a block face). For free-standing solid debug geometry — see {@link buildcraft.lib.debug.DebugRenderHelper}.
      */
     //? if >=1.21.11 {
     private static final RenderType DEBUG_SOLID = RenderType.create(
             "buildcraft:debug_solid",
-            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+            ledPipelineSetup().createRenderSetup()
     );
     //?} elif >=1.21.10 {
     /*private static final RenderType DEBUG_SOLID = RenderType.create(
@@ -167,7 +195,8 @@ public final class BCLibRenderTypes {
     }
 
     /**
-     * Translucent, vertex-coloured QUADs with depth writes and <em>no view-offset Z layering</em> — the
+     * Translucent, vertex-coloured QUADs with depth writes (with improved transparency off) and <em>no
+     * view-offset Z layering</em> — the
      * zone tints and hover highlight of the Zone Planner's map viewport. NOT vanilla's
      * {@code debugFilledBox()} (what {@link #debugFilled()} returns): that type carries
      * {@code VIEW_OFFSET_Z_LAYERING}, a modelview shrink-to-eye hack calibrated for OpenGL's forward depth
@@ -181,7 +210,7 @@ public final class BCLibRenderTypes {
     //? if >=1.21.11 {
     private static final RenderType ZONE_OVERLAY = RenderType.create(
             "buildcraft:zone_overlay",
-            RenderSetup.builder(LED_PIPELINE).createRenderSetup()
+            ledPipelineSetup().createRenderSetup()
     );
     //?} elif >=1.21.10 {
     /*private static final RenderType ZONE_OVERLAY = RenderType.create(
@@ -225,17 +254,19 @@ public final class BCLibRenderTypes {
     }
 
     /**
-     * Opaque, depth-writing vertex-coloured QUADs — for solid debug geometry that must sort
-     * correctly against the world. Unlike {@link #debugFilled()} (vanilla's debug filled-box type,
-     * which disables depth writes for see-through translucent overlays), boxes drawn through this
-     * write depth, so opaque markers occlude and are occluded by world geometry correctly.
+     * Opaque vertex-coloured QUADs for solid debug geometry that must sort correctly against the
+     * world. Unlike {@link #debugFilled()} (vanilla's debug filled-box type, which disables depth
+     * writes for see-through translucent overlays), boxes drawn through this write depth with
+     * improved transparency off, so opaque markers occlude and are occluded by world geometry
+     * correctly. With 26.3's improved transparency on they draw through OIT pipelines that
+     * depth-test but do not write depth (see {@link #ledPipelineSetup}).
      */
     public static RenderType debugSolid() {
         return DEBUG_SOLID;
     }
 
     /**
-     * Back-face-culling sibling of vanilla's {@link RenderTypes#entityTranslucent} (which is
+     * Back-face-culling sibling of vanilla's {@code RenderTypes.entityTranslucent} (which is
      * {@code NO_CULL}). Same {@code ENTITY_TRANSLUCENT_CULL} pipeline vanilla reserves for its
      * item-target translucent type, but built with the standard setup so it renders to the active
      * output target — usable in the picture-in-picture pass.
@@ -250,6 +281,10 @@ public final class BCLibRenderTypes {
             texture -> RenderType.create(
                     "buildcraft:entity_translucent_cull",
                     RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                            //? if >=26.3 {
+                            // Blending, so it needs vanilla's matching OIT set under 26.3's improved transparency.
+                            .setOitPipelines(RenderPipelines.OIT_ENTITY_CULL)
+                            //?}
                             .withTexture("Sampler0", texture)
                             .useLightmap()
                             .useOverlay()
@@ -335,10 +370,10 @@ public final class BCLibRenderTypes {
      */
     public static RenderType cutoutBlockSheet() {
         //? if >=26.2 {
-        /*return RenderTypes.entityCutoutCull(BLOCKS_ATLAS_ID);*/
+        return RenderTypes.entityCutoutCull(BLOCKS_ATLAS_ID);
         //?} else {
-        return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
-        //?}
+        /*return net.minecraft.client.renderer.Sheets.cutoutBlockSheet();
+        *///?}
     }
 
     /** Translucent sheet for item-layer overlays: 1.21.11+ has a block-item variant; 1.21.10 the plain item sheet. */

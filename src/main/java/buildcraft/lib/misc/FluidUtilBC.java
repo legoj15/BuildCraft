@@ -255,7 +255,7 @@ public class FluidUtilBC {
                     } else {
                         held.shrink(1);
                         if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                            player.drop(singleCopy, false);
+                            EntityUtil.dropOverflow(player, singleCopy);
                         }
                     }
                     player.containerMenu.broadcastChanges();
@@ -279,7 +279,7 @@ public class FluidUtilBC {
                     } else {
                         held.shrink(1);
                         if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                            player.drop(singleCopy, false);
+                            EntityUtil.dropOverflow(player, singleCopy);
                         }
                     }
                     player.containerMenu.broadcastChanges();

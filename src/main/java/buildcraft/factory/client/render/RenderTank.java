@@ -12,8 +12,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 //? if <26.2 {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 import net.minecraft.client.renderer.Sheets;
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -158,7 +158,7 @@ public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> 
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);
         //?} else {
-        /*net.minecraft.client.renderer.RenderType renderType =
+        /*net.minecraft.client.renderer.rendertype.RenderType renderType =
                 FluidUtilBC.shouldRenderTranslucent(fluid)
                     ? BCLibRenderTypes.entityTranslucent(BCLibRenderTypes.BLOCKS_ATLAS_ID) : BCLibRenderTypes.entityCutout(BCLibRenderTypes.BLOCKS_ATLAS_ID);*/
         //?}
@@ -172,16 +172,16 @@ public class RenderTank implements BlockEntityRenderer<TileTank, BCRenderState> 
         // geometry through the retained-mode submit system. Pre-26.2 nodes (incl. 1.21.1) keep the
         // classic renderBuffers().bufferSource() draw path with identical output.
         //? if >=26.2 {
-        /*collector.submitCustomGeometry(poseStack, renderType, (pose, consumer) ->
+        collector.submitCustomGeometry(poseStack, renderType, (pose, consumer) ->
                 renderFluid(pose, consumer, sprite, fluidTop, fluidBottom, gaseous, fillRatio,
-                        connectedDown, renderTop, renderBottom, r, g, b, fa, light, overlay));*/
+                        connectedDown, renderTop, renderBottom, r, g, b, fa, light, overlay));
         //?} else {
-        MultiBufferSource.BufferSource bufferSource =
+        /*MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         renderFluid(poseStack.last(), bufferSource.getBuffer(renderType), sprite, fluidTop, fluidBottom,
                 gaseous, fillRatio, connectedDown, renderTop, renderBottom, r, g, b, a, light, overlay);
         bufferSource.endBatch();
-        //?}
+        *///?}
 
         poseStack.popPose();
         } finally {

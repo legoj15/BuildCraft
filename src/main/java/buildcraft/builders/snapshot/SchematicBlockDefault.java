@@ -23,7 +23,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
@@ -60,6 +59,7 @@ import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class SchematicBlockDefault implements ISchematicBlock {
@@ -333,7 +333,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         } else {
             Stream.of(Direction.values())
                 .map(buildcraft.lib.misc.PositionUtil::getDirectionNormal)
-                .map(BlockPos::new)
+                .map(BlockPos.ZERO::offset)
                 .forEach(updateBlockOffsets::add);
             updateBlockOffsets.add(BlockPos.ZERO);
         }
@@ -868,7 +868,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     .map(NBTUtilBC::writeBlockPos)
             )
         );
-        nbt.put("blockState", NbtUtils.writeBlockState(blockState));
+        nbt.put("blockState", BlockStateNbt.write(blockState));
         nbt.put(
             "ignoredProperties",
             NBTUtilBC.writeStringList(
@@ -894,6 +894,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 canBeReplacedWithBlocks.stream()
                     .map(BuiltInRegistries.BLOCK::getKey)
                     .map(Object::toString)
+                    // Blocks hash by identity, so set order differs between JVMs; the snapshot key hashes this NBT.
+                    .sorted()
             )
         );
         return nbt;
@@ -904,10 +906,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         NBTUtilBC.readCompoundList(nbt.get("requiredBlockOffsets"))
             .map(NBTUtilBC::readBlockPos)
             .forEach(requiredBlockOffsets::add);
-        blockState = NbtUtils.readBlockState(
-            buildcraft.lib.misc.RegistryUtilBC.blockLookup(),
-            NBTUtilBC.getCompound(nbt, "blockState")
-        );
+        blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "blockState"));
         NBTUtilBC.readStringList(nbt.get("ignoredProperties"))
             .map(propertyName ->
                 blockState.getProperties().stream()

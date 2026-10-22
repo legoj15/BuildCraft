@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
@@ -20,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.facades.IFacadePhasedState;
 import buildcraft.api.facades.IFacadeState;
 
+import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -38,8 +38,7 @@ public class FacadePhasedState implements IFacadePhasedState {
         FacadeBlockStateInfo stateInfo = FacadeStateManager.defaultState;
         if (nbt.contains("state")) {
             try {
-                BlockState blockState = NbtUtils.readBlockState(
-                    buildcraft.lib.misc.RegistryUtilBC.blockLookup(), NBTUtilBC.getCompound(nbt, "state"));
+                BlockState blockState = BlockStateNbt.read(NBTUtilBC.getCompound(nbt, "state"));
                 stateInfo = FacadeStateManager.validFacadeStates.get(blockState);
                 if (stateInfo == null) {
                     stateInfo = FacadeStateManager.createFallbackInfo(blockState);
@@ -55,7 +54,8 @@ public class FacadePhasedState implements IFacadePhasedState {
     public CompoundTag writeToNbt() {
         CompoundTag nbt = new CompoundTag();
         try {
-            nbt.put("state", NbtUtils.writeBlockState(stateInfo.state));
+            // One spelling on every node: this NBT ends up in pipe tile NBT that blueprints capture and hash.
+            nbt.put("state", BlockStateNbt.write(stateInfo.state));
         } catch (Throwable t) {
             throw new IllegalStateException("Writing facade block state"
                 + "\n\tState = " + stateInfo

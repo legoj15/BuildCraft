@@ -20,7 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 //? if >=26.2 {
-/*import net.minecraft.world.level.block.ColorCollection;*/
+import net.minecraft.world.level.block.ColorCollection;
 //?}
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -38,7 +38,7 @@ public class VanillaPaintHandlers {
 
     public static void fmlInit() {
         //? if >=26.2 {
-        /*registerColorFamily(Blocks.GLASS, Blocks.STAINED_GLASS);
+        registerColorFamily(Blocks.GLASS, Blocks.STAINED_GLASS);
         registerColorFamily(Blocks.GLASS_PANE, Blocks.STAINED_GLASS_PANE);
         registerColorFamily(Blocks.TERRACOTTA, Blocks.DYED_TERRACOTTA);
         registerColorOnlyFamily(Blocks.WOOL);
@@ -49,9 +49,9 @@ public class VanillaPaintHandlers {
         // 26.2-only paint families (these became ColorCollections in 26.2, so they're one line each):
         registerColorOnlyFamily(Blocks.GLAZED_TERRACOTTA);
         registerColorFamily(Blocks.CANDLE, Blocks.DYED_CANDLE);
-        registerBedFamily(Blocks.BED);*/
+        registerBedFamily(Blocks.BED);
         //?} else {
-        // --- Glass ---
+        /*// --- Glass ---
         registerColorFamily(Blocks.GLASS,
             Blocks.WHITE_STAINED_GLASS, Blocks.ORANGE_STAINED_GLASS, Blocks.MAGENTA_STAINED_GLASS,
             Blocks.LIGHT_BLUE_STAINED_GLASS, Blocks.YELLOW_STAINED_GLASS, Blocks.LIME_STAINED_GLASS,
@@ -130,12 +130,12 @@ public class VanillaPaintHandlers {
             Blocks.BROWN_SHULKER_BOX, Blocks.GREEN_SHULKER_BOX, Blocks.RED_SHULKER_BOX,
             Blocks.BLACK_SHULKER_BOX
         );
-        //?}
+        *///?}
     }
 
     // region Registration helpers
     //? if >=26.2 {
-    /*private static void registerColorFamily(Block clearBlock, ColorCollection<Block> coloredFamily) {
+    private static void registerColorFamily(Block clearBlock, ColorCollection<Block> coloredFamily) {
         registerColorFamily(clearBlock, coloredFamily.asList().toArray(new Block[0]));
     }
 
@@ -174,7 +174,7 @@ public class VanillaPaintHandlers {
         for (Block bed : list) {
             CustomPaintHelper.INSTANCE.registerHandler(bed, handler);
         }
-    }*/
+    }
     //?}
 
     /**

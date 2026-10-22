@@ -10,7 +10,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
@@ -18,6 +17,8 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
+
+import buildcraft.lib.misc.BlockUtil;
 
 /** Stripes handler that tries to use items by calling their useOn method — acts like
  *  a player right-clicking with the item. This is a simplified port from the 1.12.2
@@ -42,15 +43,20 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
 
         BlockPos target = pos.relative(direction);
 
+        // Each click asks the right-click event first (BlockUtil), as a player's does, and a refusal ends the handler
+        // as it ends a player's click: strategy 2 names the pipe, though its effect lands on the target, so trying it
+        // after strategy 1 was refused would carry the item to the block a claim just refused. StripesRegistry ends
+        // the whole dispatch on a refusal too. Strategy 1 is also how a block item is placed in front of the pipe.
+
         // Strategy 1: Click directly on the block in front of the pipe.
         // This handles items that affect the clicked block itself (e.g. bonemeal on crops,
         // hoe on dirt, shears on leaves).
         BlockHitResult hitDirect = new BlockHitResult(
             Vec3.atCenterOf(target), direction.getOpposite(), target, false
         );
-        UseOnContext ctxDirect = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitDirect);
-        if (stack.useOn(ctxDirect).consumesAction()) {
-            return true;
+        BlockUtil.ItemUse direct = BlockUtil.tryUseItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hitDirect);
+        if (direct != BlockUtil.ItemUse.PASSED) {
+            return direct == BlockUtil.ItemUse.USED;
         }
 
         // Strategy 2: Click on the pipe-side face of the pipe block, with the face
@@ -60,20 +66,12 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
         BlockHitResult hitFromPipe = new BlockHitResult(
             Vec3.atCenterOf(pos), direction, pos, false
         );
-        UseOnContext ctxFromPipe = new UseOnContext(world, player, InteractionHand.MAIN_HAND, stack, hitFromPipe);
-        if (stack.useOn(ctxFromPipe).consumesAction()) {
-            return true;
+        BlockUtil.ItemUse fromPipe = BlockUtil.tryUseItemOnBlock(world, player, InteractionHand.MAIN_HAND, stack, hitFromPipe);
+        if (fromPipe != BlockUtil.ItemUse.PASSED) {
+            return fromPipe == BlockUtil.ItemUse.USED;
         }
 
         // Strategy 3: Use in air (right-click with no target block)
-        //? if >=1.21.10 {
-        if (stack.getItem().use(world, player, InteractionHand.MAIN_HAND).consumesAction()) {
-        //?} else {
-        /*if (stack.getItem().use(world, player, InteractionHand.MAIN_HAND).getResult().consumesAction()) {*/
-        //?}
-            return true;
-        }
-
-        return false;
+        return BlockUtil.useItemInAir(world, player, InteractionHand.MAIN_HAND, stack);
     }
 }

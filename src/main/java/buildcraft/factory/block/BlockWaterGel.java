@@ -44,7 +44,9 @@ import buildcraft.factory.BCFactoryItems;
 
 @SuppressWarnings("this-escape")
 public class BlockWaterGel extends Block {
-    public static final MapCodec<BlockWaterGel> CODEC = simpleCodec(BlockWaterGel::new);
+    //? if <26.3 {
+    /*public static final MapCodec<BlockWaterGel> CODEC = simpleCodec(BlockWaterGel::new);
+    *///?}
 
     public enum GelStage implements StringRepresentable {
         SPREAD_0(0.3f, true, 3f),
@@ -106,10 +108,12 @@ public class BlockWaterGel extends Block {
         this.registerDefaultState(this.stateDefinition.any().setValue(PROP_STAGE, GelStage.SPREAD_0));
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends Block> codec() {
         return CODEC;
     }
+    *///?}
 
     // BlockState
 

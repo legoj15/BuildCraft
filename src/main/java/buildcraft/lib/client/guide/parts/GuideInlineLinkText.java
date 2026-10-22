@@ -98,7 +98,9 @@ public class GuideInlineLinkText extends GuidePart {
                     if (rect.contains(gui.mouse)) {
                         if (span.url != null) {
                             // untrusted: resource packs can add guide pages, so keep vanilla's warning line
-                            ConfirmLinkScreen.confirmLinkNow(gui, span.url, false);
+                            // URI overload: 26.3 dropped the String ones. XmlPageLoader.validWebUrl already ran
+                            // new URI(url) on this string, so create() cannot throw here.
+                            ConfirmLinkScreen.confirmLinkNow(gui, java.net.URI.create(span.url), false);
                             return end;
                         }
                         GuidePageFactory factory = span.factoryFn.apply(gui);

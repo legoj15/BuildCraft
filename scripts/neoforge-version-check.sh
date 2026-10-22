@@ -12,6 +12,7 @@
 #       MC 1.21.10 -> NeoForge 21.10.x
 #       MC 26.1.2  -> NeoForge 26.1.2.x
 #       MC 26.2    -> NeoForge 26.2.0.x  (inserts a ".0"; -beta suffix dropped at 26.2.0.57)
+#       MC 26.3    -> NeoForge 26.3.0.x
 #   Deriving the line from minecraft_version only ever lines up for 26.1.2, so a
 #   naive per-node loop keyed on minecraft_version would silently find "no builds"
 #   for every other node and stay quiet -- the worst failure for a staleness check.

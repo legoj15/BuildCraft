@@ -172,7 +172,7 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
     @Override
     public java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(
             BlockState state, net.minecraft.core.Direction side, RandomSource random,
-            ModelData extraData, net.minecraft.client.renderer.RenderType renderType) {
+            ModelData extraData, net.minecraft.client.renderer.rendertype.RenderType renderType) {
         // Pipe quads are sub-block and unculled — only emit on the general (null-side) pass.
         if (side != null) {
             return java.util.List.of();
@@ -185,10 +185,10 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
         // Split by chunk layer: the pipe body rides the cutout pass, the painted-pipe colour overlay
         // rides the translucent pass so its 30%-tint mask alpha-blends instead of rendering opaque.
         // (renderType is null for non-chunk callers — emit everything in that case.)
-        if (renderType == null || renderType == net.minecraft.client.renderer.RenderType.cutout()) {
+        if (renderType == null || renderType == net.minecraft.client.renderer.rendertype.RenderTypes.cutout()) {
             out.addAll(PipeModelCacheAll.getCutoutModel(tile));
         }
-        if (renderType == null || renderType == net.minecraft.client.renderer.RenderType.translucent()) {
+        if (renderType == null || renderType == net.minecraft.client.renderer.rendertype.RenderTypes.translucent()) {
             out.addAll(PipeModelCacheAll.getTranslucentModel(tile));
         }
         return out;
@@ -201,8 +201,8 @@ public class PipeBlockStateModel implements net.neoforged.neoforge.client.model.
         // alpha-blends (otherwise the 30%-tint mask renders opaque). Matches the modern nodes, which
         // route the translucent part to the translucent chunk layer via collectParts.
         return net.neoforged.neoforge.client.ChunkRenderTypeSet.of(
-                net.minecraft.client.renderer.RenderType.cutout(),
-                net.minecraft.client.renderer.RenderType.translucent());
+                net.minecraft.client.renderer.rendertype.RenderTypes.cutout(),
+                net.minecraft.client.renderer.rendertype.RenderTypes.translucent());
     }
 
     @Override

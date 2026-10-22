@@ -10,7 +10,7 @@ from robotrig import *  # noqa: F401,F403
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "scenarios", "robots-misc.json")
 
-NODES_26 = ["1.21.10", "1.21.11", "26.1.2", "26.2"]
+NODES_26 = ["1.21.10", "1.21.11", "26.1.2", "26.2", "26.3"]
 
 
 def tank_water(x, z, nodes, nbt):

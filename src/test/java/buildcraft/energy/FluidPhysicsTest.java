@@ -68,10 +68,10 @@ public class FluidPhysicsTest {
 
         // Spawn a pig at the bottom with AI intact (FloatGoal only drives the bob while AI is enabled).
         //? if >=26.2 {
-        /*helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 1, 1);*/
+        helper.spawn(net.minecraft.world.entity.EntityTypes.PIG, 1, 1, 1);
         //?} else {
-        helper.spawn(EntityType.PIG, 1, 1, 1);
-        //?}
+        /*helper.spawn(EntityType.PIG, 1, 1, 1);
+        *///?}
 
         // Surface region of the oil column (upper blocks, relative y 2..4). A region — not the single block
         // (1,3,1) — keeps the positive case robust: a bobbing mob often settles with its body in block
@@ -79,22 +79,22 @@ public class FluidPhysicsTest {
         AABB surface = new AABB(0.5, 2.0, 0.5, 2.5, 4.5, 2.5);
 
         //? if >=26.2 {
-        /*// FluidType-gated water physics (PR #3249; 26.1.x identical via the PR #3303 backport): crude oil
+        // FluidType-gated water physics (PR #3249; 26.1.x identical via the PR #3303 backport): crude oil
         // isn't water-like, so prove the pig did NOT float — after a settle window it remains out of the
         // surface region (resting on the floor at the bottom).
         helper.runAtTickTime(100, () -> {
             helper.assertEntityNotPresent(net.minecraft.world.entity.EntityTypes.PIG, surface);
             helper.succeed();
         });
-        *///?} elif >=1.21.10 {
-        // FluidType-gated water physics (26.2 since PR #3249, 26.1.x since the PR #3303 backport,
+        //?} elif >=1.21.10 {
+        /*// FluidType-gated water physics (26.2 since PR #3249, 26.1.x since the PR #3303 backport,
         // 26.1.2.95): crude oil isn't water-like, so prove the pig did NOT float — after a settle window
         // it remains out of the surface region (resting on the floor at the bottom).
         helper.runAtTickTime(100, () -> {
             helper.assertEntityNotPresent(EntityType.PIG, surface);
             helper.succeed();
         });
-        //?} else {
+        *///?} else {
         /*// 1.21.1: GameTestHelper has no assertEntityNotPresent(EntityType, AABB) overload yet — use the
         // (EntityType, Vec3 min, Vec3 max) corner form against the same surface region.
         helper.runAtTickTime(100, () -> {

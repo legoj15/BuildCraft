@@ -36,18 +36,22 @@ import buildcraft.lib.block.BlockBCTile_Neptune;
 public class BlockMiningWell extends BlockBCTile_Neptune<TileMiningWell> {
     public static final Property<Direction> FACING = BuildCraftProperties.BLOCK_FACING;
 
-    public static final MapCodec<BlockMiningWell> CODEC =
+    //? if <26.3 {
+    /*public static final MapCodec<BlockMiningWell> CODEC =
             simpleCodec(BlockMiningWell::new);
+    *///?}
 
     public BlockMiningWell(Properties properties) {
         super(properties);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
+    *///?}
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

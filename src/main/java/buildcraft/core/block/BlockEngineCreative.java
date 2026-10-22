@@ -73,7 +73,7 @@ public class BlockEngineCreative extends BlockEngineBase_BC8 {
                 // Crouch-with-nothing-to-rotate-to: same soft-fail sound as the other engines.
                 level.playSound(null, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.4f, 1.3f);
             }
-            player.swing(hand);
+            EntityUtil.swing(player, hand);
             return BlockUtil.itemUseConsume();
         }
 

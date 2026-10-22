@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ShearsItem;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -21,6 +22,9 @@ import net.neoforged.neoforge.common.IShearable;
 
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
+
+import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.MachineRefusals;
 
 public enum StripesHandlerShears implements IStripesHandlerItem {
     INSTANCE;
@@ -42,6 +46,14 @@ public enum StripesHandlerShears implements IStripesHandlerItem {
 
         if (block instanceof IShearable shearableBlock) {
             if (shearableBlock.isShearable(player, stack, world, target)) {
+                // Shearing takes the block away, so break protection decides first, as it does for the pipe's own
+                // digging. A refusal is a refused click: it ends the dispatch, so the dispenser fallback after this
+                // handler does not right-click the same block with the same shears.
+                if (world instanceof ServerLevel serverLevel
+                        && !BlockUtil.canMachineBreakAs(serverLevel, target, player)) {
+                    MachineRefusals.record(player);
+                    return false;
+                }
                 List<ItemStack> drops = shearableBlock.onSheared(player, stack, world, target);
                 stack.hurtAndBreak(1, player, player.getEquipmentSlotForItem(stack));
                 world.setBlock(target, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);

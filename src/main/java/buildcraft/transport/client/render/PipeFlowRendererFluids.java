@@ -12,8 +12,8 @@ import org.joml.Vector3f;
 
 import net.minecraft.client.Minecraft;
 //? if <26.2 {
-import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -127,7 +127,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         ensureRenderCache(flow, forRender);
         if (flow.renderCacheSpriteId == null) return;
         //? if <26.2 {
-        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        /*// 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
         // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above).
         RenderType rt = fluidRenderType(flow.renderCacheTranslucent);
         MultiBufferSource.BufferSource bufferSource =
@@ -135,7 +135,7 @@ public enum PipeFlowRendererFluids implements IPipeFlowRenderer<PipeFlowFluids> 
         VertexConsumer fluidBB = bufferSource.getBuffer(rt);
         drawAll(flow, forRender, partialTicks, pose, fluidBB);
         bufferSource.endBatch(rt);
-        //?}
+        *///?}
     }
 
     /** Draws the per-face, centre, and vertical-pillar fluid sections into {@code fluidBB}.

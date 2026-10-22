@@ -38,6 +38,7 @@ import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.StackUtil;
@@ -179,7 +180,7 @@ public class ItemSchematicSingle extends Item {
                                         )
                                     );
                                     SoundUtil.playBlockPlace(world, placePos);
-                                    player.swing(hand);
+                                    EntityUtil.swing(player, hand);
                                     return InteractionResult.SUCCESS;
                                 }
                             } else {

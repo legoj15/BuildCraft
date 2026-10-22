@@ -206,7 +206,12 @@ public class LensItemModel implements ItemModel {
         renderState.appendModelIdentityElement(displayContext);
 
         var layer = renderState.newLayer();
-        layer.prepareQuadList().addAll(quads);
+        //? if >=26.3 {
+        // 26.3 dropped prepareQuadList(): a layer takes one ItemQuads, pre-split into solid/translucent submits.
+        layer.setQuads(net.minecraft.client.resources.model.geometry.ItemQuads.split(quads));
+        //?} else {
+        /*layer.prepareQuadList().addAll(quads);
+        *///?}
         //? if <26.1 {
         /*// Pre-26.1 doesn't infer a layer's render type from its quads, so set one explicitly —
         // without it the lens layer draws nothing (invisible in the inventory). A translucent sheet
@@ -257,8 +262,8 @@ public class LensItemModel implements ItemModel {
     @Override
     public List<BakedQuad> getQuads(@Nullable net.minecraft.world.level.block.state.BlockState s,
             @Nullable Direction side, net.minecraft.util.RandomSource rand,
-            net.neoforged.neoforge.client.model.data.ModelData extraData,
-            net.minecraft.client.renderer.RenderType renderType) {
+            net.neoforged.neoforge.model.data.ModelData extraData,
+            net.minecraft.client.renderer.rendertype.RenderType renderType) {
         return List.of();
     }
 
@@ -287,7 +292,7 @@ public class LensItemModel implements ItemModel {
     @SuppressWarnings("deprecation")
     public net.minecraft.client.renderer.texture.TextureAtlasSprite getParticleIcon() {
         return net.minecraft.client.Minecraft.getInstance().getModelManager().getMissingModel()
-                .getParticleIcon(net.neoforged.neoforge.client.model.data.ModelData.EMPTY);
+                .getParticleIcon(net.neoforged.neoforge.model.data.ModelData.EMPTY);
     }*/
     //?}
 }

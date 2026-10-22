@@ -36,6 +36,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.ModelVariableData;
 import buildcraft.lib.net.IPayloadWriter;
+import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.silicon.BCSiliconItems;
@@ -227,7 +228,7 @@ public class PluggableGate extends PipePluggable implements IWireEmitter {
                     }
                 }, buf -> {
                     buf.writeBlockPos(pos);
-                    buf.writeEnum(side);
+                    NetEnumUtil.write(buf, side);
                 });
             }
         }

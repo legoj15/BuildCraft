@@ -32,7 +32,7 @@ S.append({"label": "cow pen", "do": "cmd", "run": [
     "fill {X-1} {Y} {Z+3} {X+5} {Y} {Z+9} minecraft:oak_fence", "fill {X} {Y} {Z+4} {X+4} {Y} {Z+8} minecraft:air",
     "summon minecraft:cow {X+1} {Y} {Z+5}", "summon minecraft:cow {X+3} {Y} {Z+7}",
     ]})
-S.append({"label": "named cow (text component)", "do": "cmd", "nodes": ["1.21.10", "1.21.11", "26.1.2", "26.2"], "run": ["summon minecraft:cow {X+2} {Y} {Z+6} {CustomName:\"Daisy\"}"]})
+S.append({"label": "named cow (text component)", "do": "cmd", "nodes": ["1.21.10", "1.21.11", "26.1.2", "26.2", "26.3"], "run": ["summon minecraft:cow {X+2} {Y} {Z+6} {CustomName:\"Daisy\"}"]})
 S.append({"label": "named cow (JSON string)", "do": "cmd", "nodes": ["1.21.1"], "run": ["summon minecraft:cow {X+2} {Y} {Z+6} {CustomName:'\"Daisy\"'}"]})
 S.append({"label": "butcher home (sword)", "do": "cmd", "run": station(2, 0, ["minecraft:iron_sword"], "buildcraft:station.provide_items", (-1, -1, 3, 5, 3, 9))})
 S.append({"label": "ore patch", "do": "cmd", "run": [

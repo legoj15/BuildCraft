@@ -20,7 +20,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Resolves an ItemStack from NBT references (item id, amount, tag compound).
- * In 1.21.11, metadata/damage is gone — items are looked up by Identifier only.
+ * In 1.21.11, metadata/damage is gone — items are looked up by id only.
  */
 public class ItemStackRef {
     private final NbtRef<StringTag> item;

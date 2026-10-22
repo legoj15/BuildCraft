@@ -64,12 +64,12 @@ public record MessageEnergyOverlay(String key, Kind kind, long amount, boolean d
     public static final StreamCodec<FriendlyByteBuf, MessageEnergyOverlay> STREAM_CODEC = StreamCodec.of(
             (buf, payload) -> {
                 buf.writeUtf(payload.key);
-                buf.writeEnum(payload.kind);
+                NetEnumUtil.write(buf, payload.kind);
                 buf.writeVarLong(payload.amount);
                 buf.writeBoolean(payload.displayRf);
                 buf.writeVarLong(payload.mjPerRf);
             },
-            buf -> new MessageEnergyOverlay(buf.readUtf(), buf.readEnum(Kind.class), buf.readVarLong(),
+            buf -> new MessageEnergyOverlay(buf.readUtf(), NetEnumUtil.read(buf, Kind.class), buf.readVarLong(),
                     buf.readBoolean(), buf.readVarLong()));
 
     /** The Component to show, built against THIS JVM's language and display settings and the payload's (server's)

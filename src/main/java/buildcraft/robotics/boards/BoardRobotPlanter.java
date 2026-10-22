@@ -38,7 +38,7 @@ import buildcraft.robotics.statements.ActionRobotFilter;
  *  <p>7.1.x searched with {@code maxDistanceToEnd = 1} (the path may end on any soft block within one of
  *  the target) — kept: the planter does not need to stand on the exact cell before the seed spot.
  *
- *  <p>A spot a protection mod would not let the robot plant (a claim mod cancelling the seed's placement event) is
+ *  <p>A spot a protection mod would not let the robot plant (a claim mod refusing the right-click or placement) is
  *  not tried again and again: the failed planting is remembered per spot ({@link WorkRefusals}), so the next search
  *  picks somewhere else, the robot keeps the seed the planting did not use ({@link AIRobotPlant}), and after
  *  {@link WorkRefusals#GIVE_UP_AFTER} failed plantings in a row the planter sleeps instead of working through a
@@ -104,9 +104,9 @@ public class BoardRobotPlanter extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         } else if (ai instanceof AIRobotPlant) {
-            // A planting that failed (a claim mod cancelled the placement, or the soil changed under the seed) must
-            // not be tried again on the same spot while it is unchanged: the AI is one attempt and dies here, so the
-            // memory is the board's. Without it the robot flew back to the same spot on every pass.
+            // A planting that failed (a claim mod refused the right-click or placement, or the soil changed under the
+            // seed) must not be tried again on the same spot while it is unchanged: the AI is one attempt and dies
+            // here, so the memory is the board's. Without it the robot flew back to the same spot on every pass.
             boolean giveUp = false;
             if (ai.success()) {
                 refusals.succeeded();

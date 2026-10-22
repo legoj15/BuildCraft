@@ -16,7 +16,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 
-import org.lwjgl.glfw.GLFW;
+//? if >=26.3 {
+import org.lwjgl.sdl.SDLMouse;
+import org.lwjgl.system.MemoryStack;
+//?} else {
+/*import org.lwjgl.glfw.GLFW;
+*///?}
 
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.robotics.RobotUtils;
@@ -346,15 +351,23 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
         super.mouseMoved(mouseX, mouseY);
     }
 
-    /** Whether {@code button} (a Minecraft button number, which is GLFW's) is physically down now, from GLFW:
-     *  Minecraft tracks only the most recently pressed one, and clears it when any is released. */
+    /** Whether {@code button} (a Minecraft button number, which is the window system's own) is physically down now,
+     *  asked of the window system: Minecraft tracks only the most recently pressed one, and clears it when any is
+     *  released. */
     private static boolean isMouseButtonHeld(int button) {
-        //? if >=1.21.10 {
-        long window = Minecraft.getInstance().getWindow().handle();
-        //?} else {
-        /*long window = Minecraft.getInstance().getWindow().getWindow();*/
-        //?}
+        //? if >=26.3 {
+        // 26.3 swapped GLFW for SDL: no window handle is needed, and SDL numbers the buttons from 1 exactly as
+        // Minecraft does there, so the state mask has bit (button - 1) set while that button is down.
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            return (SDLMouse.SDL_GetMouseState(stack.mallocFloat(1), stack.mallocFloat(1)) & (1 << (button - 1))) != 0;
+        }
+        //?} elif >=1.21.10 {
+        /*long window = Minecraft.getInstance().getWindow().handle();
         return GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS;
+        *///?} else {
+        /*long window = Minecraft.getInstance().getWindow().getWindow();
+        return GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS;*/
+        //?}
     }
 
     @Override

@@ -10,9 +10,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 //? if <26.2 {
-import net.minecraft.client.Minecraft;
+/*import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-//?}
+*///?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
@@ -52,7 +52,7 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
             return;
         }
         //? if <26.2 {
-        // 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
+        /*// 1.21.1..26.1 classic immediate-mode path (this interface overload is only reached on those
         // nodes; >=1.21.10 BERs call the SubmitNodeCollector overload above). Create a dedicated buffer
         // for power rendering — do NOT use the global buffer source shared by other renderers to avoid
         // endBatch() corrupting in-progress vertex data from other BERs.
@@ -61,7 +61,7 @@ public enum PipeFlowRendererPower implements IPipeFlowRenderer<PipeFlowPower> {
         VertexConsumer powerBB = bufferSource.getBuffer(PipeFlowRendererKinesis.kinesisRenderType());
         PipeFlowRendererKinesis.drawAll(flow, partialTicks, pose, powerBB, BCTransportSprites.POWER_FLOW.getSprite());
         bufferSource.endBatch(PipeFlowRendererKinesis.kinesisRenderType());
-        //?}
+        *///?}
     }
 
     /** Kept for {@code PipeFlowRendererPowerGeometryTester} — delegates to the shared clamped box math. */

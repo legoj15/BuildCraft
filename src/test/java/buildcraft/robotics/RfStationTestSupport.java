@@ -33,7 +33,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  * </ul>
  *
  * <p>The {@link GameTestHelper} parameter is deliberately named {@code gth}, never {@code helper}: the
- * 1.21.10 build-script regex that reroutes {@code helper.assertTrue(...)} is textual.
+ * pre-1.21.11 (1.21.10 and 1.21.1) build-script regex that reroutes assertTrue/assertFalse calls on
+ * {@code helper} is textual.
  */
 public final class RfStationTestSupport {
 

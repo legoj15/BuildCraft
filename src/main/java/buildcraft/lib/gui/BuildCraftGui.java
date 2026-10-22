@@ -88,12 +88,8 @@ public class BuildCraftGui {
     public void drawBackgroundLayer(float partialTicks, int mouseX, int mouseY, Runnable menuBackgroundRenderer) {
         // 1.12.2 parity: explicitly source partialTicks from the MC timer
         // to avoid stale values from the incoming argument
-        //? if >=1.21.10 {
+        // 1.21.1 names this accessor getTimer(); the build's text replacement renames the call there.
         partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        //?} else {
-        /*// 1.21.1 exposes the DeltaTracker via getTimer(), not getDeltaTracker().
-        partialTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);*/
-        //?}
         this.lastPartialTicks = partialTicks;
         mouse.setMousePosition(mouseX, mouseY);
         // Always draw the gate background — even when a variant/menu popup is open.

@@ -6,13 +6,26 @@
 
 package buildcraft.energy.generation;
 
-import com.mojang.serialization.Codec;
+//? if >=26.3 {
+import com.mojang.serialization.MapCodec;
+//?} else {
+/*import com.mojang.serialization.Codec;
+*///?}
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
+//? if >=26.3 {
+import net.minecraft.util.RandomSource;
+//?}
 import net.minecraft.world.level.WorldGenLevel;
+//? if >=26.3 {
+import net.minecraft.world.level.chunk.ChunkGenerator;
+//?}
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
+//? if <26.3 {
+/*import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+*///?}
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.energy.BCEnergyConfig;
@@ -41,7 +54,25 @@ import buildcraft.energy.BCEnergyConfig;
  * started before this migration keep identical oil placement — new chunks tile seamlessly against
  * chunks that generated under the {@code ChunkEvent.Load} model.
  */
-public class OilFeature extends Feature<NoneFeatureConfiguration> {
+//? if >=26.3 {
+// 26.3 merged Feature and ConfiguredFeature: Feature is a plain interface that carries its own
+// MapCodec and receives the four place() values directly; the type is registered under
+// Registries.FEATURE_TYPE and instantiated from data/<ns>/worldgen/feature/*.json.
+public record OilFeature() implements Feature {
+
+    public static final MapCodec<OilFeature> CODEC = MapCodec.unit(OilFeature::new);
+
+    @Override
+    public MapCodec<OilFeature> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public boolean place(WorldGenLevel level, ChunkGenerator chunkGenerator, RandomSource random, BlockPos origin) {
+        return generate(level, origin);
+    }
+//?} else {
+/*public class OilFeature extends Feature<NoneFeatureConfiguration> {
 
     public OilFeature(Codec<NoneFeatureConfiguration> codec) {
         super(codec);
@@ -49,14 +80,18 @@ public class OilFeature extends Feature<NoneFeatureConfiguration> {
 
     @Override
     public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        return generate(context.level(), context.origin());
+    }
+*///?}
+
+    private static boolean generate(WorldGenLevel level, BlockPos origin) {
         // Live config reads, mirroring the gates the old ChunkEvent.Load registration checked once
         // at init. The feature itself is always registered (registries are unconditional).
         if (!BCCoreConfig.worldGen.get() || !BCEnergyConfig.enableOilGeneration.get()) {
             return false;
         }
-        WorldGenLevel level = context.level();
-        int chunkX = SectionPos.blockToSectionCoord(context.origin().getX());
-        int chunkZ = SectionPos.blockToSectionCoord(context.origin().getZ());
+        int chunkX = SectionPos.blockToSectionCoord(origin.getX());
+        int chunkZ = SectionPos.blockToSectionCoord(origin.getZ());
         return OilGenerator.generateForChunk(level, chunkX, chunkZ);
     }
 }

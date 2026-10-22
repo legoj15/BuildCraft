@@ -18,9 +18,6 @@ import net.minecraft.util.context.ContextMap;
 //?}
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-//? if >=1.21.10 {
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
-//?}
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.AssemblyRecipe;
@@ -78,11 +75,11 @@ public final class AssemblyRecipeCollector {
     private static void collectStandard(AssemblyRecipe recipe, List<AssemblyRecipeJei> out) {
         // Empty context: the SlotDisplay flavors we hit here — Composite,
         // ItemSlotDisplay, ItemStackSlotDisplay (the DataComponentIngredient one)
-        // — don't read REGISTRIES or FUEL_VALUES from it, so no Level handle is
-        // needed at JEI plugin-init time. Tag-based ingredients would; we don't
-        // use any in this registry.
+        // — don't read REGISTRIES from it, so no Level handle is needed at JEI
+        // plugin-init time. Tag-based ingredients would; we don't use any in this
+        // registry.
         //? if >=1.21.10 {
-        ContextMap displayCtx = new ContextMap.Builder().create(SlotDisplayContext.CONTEXT);
+        ContextMap displayCtx = ContextMap.EMPTY;
         //?}
         for (ItemStack output : recipe.getOutputPreviews()) {
             if (output.isEmpty()) continue;

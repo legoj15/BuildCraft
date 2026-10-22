@@ -22,8 +22,8 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 //? if >=26.2 {
-/*import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;*/
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 //?}
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
@@ -75,11 +75,11 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
             // 26.2 deleted the static BlockEntityType fields, and a hand-built type's intrusive holder
             // needs an unfrozen registry — so 26.2 takes the CHEST type from the built-in registry.
             //? if >=26.2 {
-            /*super(BuiltInRegistries.BLOCK_ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("chest")),
-                    BlockPos.ZERO, Blocks.CHEST.defaultBlockState());*/
+            super(BuiltInRegistries.BLOCK_ENTITY_TYPE.getValue(Identifier.withDefaultNamespace("chest")),
+                    BlockPos.ZERO, Blocks.CHEST.defaultBlockState());
             //?} else {
-            super(BlockEntityType.CHEST, BlockPos.ZERO, Blocks.CHEST.defaultBlockState());
-            //?}
+            /*super(BlockEntityType.CHEST, BlockPos.ZERO, Blocks.CHEST.defaultBlockState());
+            *///?}
             this.station = station;
         }
 

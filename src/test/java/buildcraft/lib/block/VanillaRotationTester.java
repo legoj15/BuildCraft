@@ -121,10 +121,10 @@ public class VanillaRotationTester {
     public static void testStandingBannerSpins16(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         //? if >=26.2 {
-        /*helper.setBlock(pos, Blocks.BANNER.pick(net.minecraft.world.item.DyeColor.WHITE).defaultBlockState().setValue(BannerBlock.ROTATION, 0));*/
+        helper.setBlock(pos, Blocks.BANNER.pick(net.minecraft.world.item.DyeColor.WHITE).defaultBlockState().setValue(BannerBlock.ROTATION, 0));
         //?} else {
-        helper.setBlock(pos, Blocks.WHITE_BANNER.defaultBlockState().setValue(BannerBlock.ROTATION, 0));
-        //?}
+        /*helper.setBlock(pos, Blocks.WHITE_BANNER.defaultBlockState().setValue(BannerBlock.ROTATION, 0));
+        *///?}
 
         for (int i = 1; i <= 16; i++) {
             assertTrue(rotate(helper, pos, Direction.UP) == InteractionResult.SUCCESS, "expected SUCCESS at step " + i);
@@ -308,15 +308,15 @@ public class VanillaRotationTester {
     public static void testWrenchOnItemUseFirstCrouchGate(GameTestHelper helper) {
         BlockPos pos = new BlockPos(2, 2, 2);
         //? if >=26.2 {
-        /*helper.setBlock(pos, Blocks.COPPER_TRAPDOOR.weathering()
+        helper.setBlock(pos, Blocks.COPPER_TRAPDOOR.weathering()
                 .pick(net.minecraft.world.level.block.WeatheringCopper.WeatherState.UNAFFECTED).defaultBlockState()
                 .setValue(TrapDoorBlock.FACING, Direction.NORTH)
-                .setValue(TrapDoorBlock.HALF, Half.BOTTOM));*/
+                .setValue(TrapDoorBlock.HALF, Half.BOTTOM));
         //?} else {
-        helper.setBlock(pos, Blocks.COPPER_TRAPDOOR.defaultBlockState()
+        /*helper.setBlock(pos, Blocks.COPPER_TRAPDOOR.defaultBlockState()
                 .setValue(TrapDoorBlock.FACING, Direction.NORTH)
                 .setValue(TrapDoorBlock.HALF, Half.BOTTOM));
-        //?}
+        *///?}
 
         ItemStack wrench = new ItemStack(BCCoreItems.WRENCH.get());
         BlockPos absPos = helper.absolutePos(pos);

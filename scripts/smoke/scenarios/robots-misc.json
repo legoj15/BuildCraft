@@ -74,13 +74,14 @@
       ]
     },
     {
-      "label": "fill tank at -10,0 (1.21.10/1.21.11/26.1.2/26.2)",
+      "label": "fill tank at -10,0 (1.21.10/1.21.11/26.1.2/26.2/26.3)",
       "do": "cmd",
       "nodes": [
         "1.21.10",
         "1.21.11",
         "26.1.2",
-        "26.2"
+        "26.2",
+        "26.3"
       ],
       "run": [
         "data merge block {X-10} {Y} {Z} {stacks:[{id:\"minecraft:water\",amount:8000}]}"

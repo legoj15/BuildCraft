@@ -11,7 +11,7 @@ plugins {
 
 // The active node — what the IDE/runClient sees and what `compileJava` builds.
 // Stonecutter's "Set active project to ..." task rewrites this line.
-stonecutter active "26.1.2" /* [SC] DO NOT EDIT */
+stonecutter active "26.3" /* [SC] DO NOT EDIT */
 
 // ─── Production boot+connect matrix (PowerShell) ─────────────────────────────
 // Registered on the ROOT — it's a cross-version stage, so it runs exactly ONCE (fullTestSuite, also a

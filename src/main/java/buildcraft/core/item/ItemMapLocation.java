@@ -42,6 +42,7 @@ import buildcraft.api.core.IPathProvider;
 import buildcraft.api.core.IZone;
 import buildcraft.api.items.IMapLocation;
 
+import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.robotics.zone.ZonePlan;
@@ -312,7 +313,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
         if (modified != stack) {
             // We split the stack; give the modified single item back to the player
             if (!player.getInventory().add(modified)) {
-                player.drop(modified, false);
+                EntityUtil.dropOverflow(player, modified);
             }
         }
 

@@ -26,16 +26,20 @@ import buildcraft.builders.tile.TileFiller;
 import buildcraft.lib.block.BlockBCTile_Directional;
 
 public class BlockFiller extends BlockBCTile_Directional<TileFiller> {
-    public static final MapCodec<BlockFiller> CODEC = simpleCodec(BlockFiller::new);
+    //? if <26.3 {
+    /*public static final MapCodec<BlockFiller> CODEC = simpleCodec(BlockFiller::new);
+    *///?}
 
     public BlockFiller(Properties properties) {
         super(properties);
     }
 
-    @Override
+    //? if <26.3 {
+    /*@Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
     }
+    *///?}
 
     @Nullable
     @Override

@@ -184,7 +184,8 @@ public class ElectronicLibraryTester {
         if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
         runSteps(helper, DOWNLOAD_IDLE_TICKS, List.of(
-            new Step("the idle library to be checked and seeded", () -> true, () -> {
+            // Give the library a few ticks on empty input first, so a tile that starts counting on its own fails.
+            new Step("the library to tick on empty input", () -> helper.getTick() >= 5, () -> {
                 // Nothing in invDownIn: progress must stay idle
                 assertTrue(tile.progressDown == -1,
                     "progressDown should be -1 (idle) with empty invDownIn, got: " + tile.progressDown);

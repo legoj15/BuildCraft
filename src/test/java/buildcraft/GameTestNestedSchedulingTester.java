@@ -41,8 +41,6 @@ import org.junit.jupiter.api.Test;
 public class GameTestNestedSchedulingTester {
 
     private static final String TEST_SOURCES = "src/test/java";
-    /** The poll utility every robot and arena test schedules through: the scan must see its calls. */
-    private static final String KNOWN_SCHEDULER = TEST_SOURCES + "/buildcraft/lib/test/EntityArenaUtil.java";
 
     /** Calls that put a runnable into the framework's per-tick map, directly or as a poll queued up front. */
     private static final Pattern SCHEDULER = Pattern.compile(
@@ -118,7 +116,7 @@ public class GameTestNestedSchedulingTester {
     public void noGameTestSchedulesFromInsideAScheduledRunnable() throws IOException {
         Path root = TestHelper.repoRoot();
         List<String> offenders = new ArrayList<>();
-        boolean sawKnownScheduler = false;
+        int calls = 0;
         List<Path> sources;
         try (Stream<Path> walk = Files.walk(root.resolve(TEST_SOURCES))) {
             sources = walk.filter(f -> f.toString().endsWith(".java")).toList();
@@ -129,15 +127,17 @@ public class GameTestNestedSchedulingTester {
             if (here == 0) {
                 continue;
             }
+            calls += here;
             String relative = root.relativize(file).toString().replace('\\', '/');
-            sawKnownScheduler |= relative.equals(KNOWN_SCHEDULER);
             for (String nested : nestedSchedules(source)) {
                 offenders.add(relative + ":" + nested);
             }
         }
         // Liveness: a scan that stopped seeing the calls would pass vacuously.
-        Assertions.assertTrue(sawKnownScheduler,
-            "the scan saw no scheduling call in " + KNOWN_SCHEDULER + " - the call pattern or the path drifted");
+        // The synthetic sources below pin what the pattern recognises; this pins that the walk still reaches code
+        // that schedules, without naming any one file.
+        Assertions.assertTrue(calls > 0,
+            "the scan saw no scheduling call under " + TEST_SOURCES + " - the walk or the call pattern drifted");
         Assertions.assertTrue(offenders.isEmpty(),
             "game tests that schedule from inside a scheduled runnable. The framework runs those while iterating the"
                 + " map the new entry goes into: queue each phase from the test body at an absolute delay, or wait"

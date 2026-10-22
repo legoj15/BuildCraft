@@ -7,8 +7,8 @@
 package buildcraft.robotics.zone;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -168,54 +168,38 @@ public class ZonePlan implements IZone {
                 }
             }
         } else {
-            HashMap<Long, int[]> rowsByChunk = new HashMap<>();
-            // The result chunks one source chunk can reach: [0] same x/z, [1] next x, [2] next z, [3] next both.
-            int[][] reach = new int[4][];
+            // Each source chunk's rows, read once; every result chunk then pulls its rows from the (at most) four
+            // source chunks that reach it, through the shift the map overlay uses too (ZoneChunk.shiftRows).
+            HashMap<Long, int[]> sourceRows = new HashMap<>();
             for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
-                ZoneChunk chunk = e.getValue();
-                if (chunk.isEmpty()) {
-                    continue;
+                if (!e.getValue().isEmpty()) {
+                    sourceRows.put(e.getKey(), e.getValue().rows());
                 }
-                int baseX = unpackChunkX(e.getKey()) + chunkShiftX;
-                int baseZ = unpackChunkZ(e.getKey()) + chunkShiftZ;
-                Arrays.fill(reach, null);
-                for (int z = 0; z < 16; z++) {
-                    int row = chunk.rowBits(z);
-                    if (row == 0) {
-                        continue;
-                    }
-                    int zSlot = ((z + rz) >> 4) << 1;
-                    int destRow = (z + rz) & 15;
-                    int moved = row << rx; // at most 31 bits: the low 16 stay in the column's chunk, the rest spill over
-                    int stay = moved & 0xFFFF;
-                    int spill = moved >>> 16;
-                    if (stay != 0) {
-                        reachRows(rowsByChunk, reach, zSlot, baseX, baseZ)[destRow] |= stay;
-                    }
-                    if (spill != 0) {
-                        reachRows(rowsByChunk, reach, zSlot | 1, baseX, baseZ)[destRow] |= spill;
+            }
+            HashSet<Long> reached = new HashSet<>();
+            for (long key : sourceRows.keySet()) {
+                int baseX = unpackChunkX(key) + chunkShiftX;
+                int baseZ = unpackChunkZ(key) + chunkShiftZ;
+                for (int dz = 0; dz <= (rz == 0 ? 0 : 1); dz++) {
+                    for (int dx = 0; dx <= (rx == 0 ? 0 : 1); dx++) {
+                        reached.add(packChunkKey(baseX + dx, baseZ + dz));
                     }
                 }
             }
-            for (Map.Entry<Long, int[]> e : rowsByChunk.entrySet()) {
-                ZoneChunk chunk = ZoneChunk.fromRows(e.getValue());
+            for (long key : reached) {
+                int srcX = unpackChunkX(key) - chunkShiftX;
+                int srcZ = unpackChunkZ(key) - chunkShiftZ;
+                ZoneChunk chunk = ZoneChunk.fromRows(ZoneChunk.shiftRows(
+                        sourceRows.get(packChunkKey(srcX, srcZ)), sourceRows.get(packChunkKey(srcX - 1, srcZ)),
+                        sourceRows.get(packChunkKey(srcX, srcZ - 1)), sourceRows.get(packChunkKey(srcX - 1, srcZ - 1)),
+                        rx, rz));
                 if (!chunk.isEmpty()) {
-                    out.chunkMapping.put(e.getKey(), chunk);
+                    out.chunkMapping.put(key, chunk);
                 }
             }
         }
         out.modCount++; // like a plan built by set(): its watchers see it as edited
         return out;
-    }
-
-    /** The 16 row masks of the result chunk at {@code slot} relative to {@code (baseX, baseZ)}, created on first use. */
-    private static int[] reachRows(HashMap<Long, int[]> rowsByChunk, int[][] reach, int slot, int baseX, int baseZ) {
-        int[] rows = reach[slot];
-        if (rows == null) {
-            rows = rowsByChunk.computeIfAbsent(packChunkKey(baseX + (slot & 1), baseZ + (slot >> 1)), k -> new int[16]);
-            reach[slot] = rows;
-        }
-        return rows;
     }
 
     public boolean hasChunk(int chunkX, int chunkZ) {

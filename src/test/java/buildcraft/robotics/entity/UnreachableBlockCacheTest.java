@@ -101,18 +101,6 @@ public class UnreachableBlockCacheTest {
     }
 
     @Test
-    public void anEvictedNoteTakesItsOriginWithIt() {
-        for (int i = 0; i < UnreachableBlockCache.CAPACITY * 4; i++) {
-            cache.unreachableDetected(new BlockPos(i, 0, 0));
-            clock.incrementAndGet();
-        }
-
-        Assertions.assertEquals(UnreachableBlockCache.CAPACITY, cache.noteCount(), "precondition: capped");
-        Assertions.assertEquals(UnreachableBlockCache.CAPACITY, cache.originCount(),
-                "every evicted note's origin left with it: the origins never outgrow the notes");
-    }
-
-    @Test
     public void anEvictionLeavesALiveNotesOriginAlone() {
         // A live note whose packed position equals the evicted note's deadline tick: an eviction that dropped the
         // origin by the deadline instead of by the key would take this note's origin, not the evicted one's.

@@ -107,7 +107,7 @@ public class RefusalMemoryOwnerAndPermitTest {
         Assertions.assertEquals(List.of(6000L, 20L, Integer.MAX_VALUE), shape(RefusalMemory.DRAIN));
     }
 
-    private static List<Object> shape(RefusalMemory.Policy policy) {
+    private static List<Object> shape(PositionMemory.Policy policy) {
         return List.of(policy.windowTicks(), policy.spacingTicks(), policy.capacity());
     }
 }

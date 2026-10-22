@@ -18,7 +18,6 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
-import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.StackUtil;
@@ -49,7 +48,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
         super(iRobot);
     }
 
-    /** An order's two claims: the request's registry reservation and the requester's station. */
+    /** An order's two claims: the request's registry reservation and the requester's station, the latter through the
+     *  same plain station claim a goto takes ({@link JobClaim#STATION_VISIT}). */
     private static final class OrderClaimer implements JobClaim.Claimer<StackRequest> {
         /** Both, owner-checked, or neither: a reservation re-taken for a station another robot holds goes back. Neither
          *  for a requester that is no longer registered (the order caches the station it resolved, so one destroyed
@@ -63,9 +63,7 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                     || !registry.reclaim(order.getResourceId(robot.level()), robot.getRobotId())) {
                 return false;
             }
-            // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only ever drives a
-            // real robot.
-            if (station.take((EntityRobotBase) robot)) {
+            if (JobClaim.STATION_VISIT.reclaim(robot, registry, station)) {
                 return true;
             }
             registry.release(order.getResourceId(robot.level()), robot.getRobotId());
@@ -74,13 +72,14 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
 
         /** The station only when it may go: not when it is the robot's home, and not while the robot is docked there
          *  (the delivery flight docks it at the requester), since that claim is the robot's dock now and undocking is
-         *  what frees it - as {@code AIRobotGotoStation.end()} leaves it. */
+         *  what frees it - as {@code AIRobotGotoStation.end()} leaves it. The reservation goes back even when the
+         *  station is gone: the order keeps the station's position and side, which is all its id is made of. */
         @Override
         public void release(IRobotAccess robot, IRobotRegistry registry, StackRequest order) {
             registry.release(order.getResourceId(robot.level()), robot.getRobotId());
             DockingStation station = order.getStation(robot.level());
-            if (station != null && station.robotIdTaking() == robot.getRobotId() && station.canRelease()) {
-                station.release((EntityRobotBase) robot);
+            if (station != null) {
+                JobClaim.STATION_VISIT.release(robot, registry, station);
             }
         }
     }
@@ -134,13 +133,14 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 StackRequest order = ((AIRobotSearchStackRequest) ai).request;
                 currentRequest.adopt(order, true);
 
-                // take() needs the concrete entity (AIRobotGotoStation's rationale): a live board only
-                // ever drives a real robot. A station that is gone is guarded as OrderClaimer.reclaim guards it:
-                // the order has no requester to deliver to, so it is given up.
+                // A station that is gone is guarded as OrderClaimer.reclaim guards it: the order has no requester to
+                // deliver to, so it is given up (a live search always sets the station first, so this is a guard;
+                // giving the order up still frees its reservation, whose id needs only the station's position).
                 DockingStation requester = order.getStation(robot.level());
                 // The search skips requesters in unloaded chunks; checked again here because no goods are held yet,
                 // so an order nobody can reach costs nothing to give up.
-                if (requester == null || !requester.isChunkLoaded() || !requester.take((EntityRobotBase) robot)) {
+                if (requester == null || !requester.isChunkLoaded()
+                        || !JobClaim.STATION_VISIT.reclaim(robot, robot.getRegistry(), requester)) {
                     releaseCurrentRequest();
                 }
             }

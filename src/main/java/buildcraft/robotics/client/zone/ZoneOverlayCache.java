@@ -303,34 +303,22 @@ public final class ZoneOverlayCache {
         int qz = Math.floorDiv(tileZ, 16);
         int rz = Math.floorMod(tileZ, 16);
         Map<Long, ZoneChunk> layer = plan.getChunkMapping();
-        // [0] this layer chunk, [1] the one above it (smaller z), [2] the one to its left (smaller x), [3] both.
-        ZoneChunk[] src = new ZoneChunk[4];
+        // [0] this layer chunk, [1] the one to its left (smaller x), [2] the one above it (smaller z), [3] both.
+        int[][] src = new int[4][];
         boolean any = false;
         for (int dz = 0; dz <= (rz == 0 ? 0 : 1); dz++) {
             for (int dx = 0; dx <= (rx == 0 ? 0 : 1); dx++) {
                 ZoneChunk found = layer.get(ZonePlan.packChunkKey(cx - qx - dx, cz - qz - dz));
-                src[dz * 2 + dx] = found;
-                any |= found != null;
+                if (found != null) {
+                    src[dz * 2 + dx] = found.rows();
+                    any = true;
+                }
             }
         }
         if (!any) {
             return null;
         }
-        int[] rows = new int[16];
-        for (int j = 0; j < 16; j++) {
-            int dz = j >= rz ? 0 : 1;
-            int layerRow = j >= rz ? j - rz : j - rz + 16;
-            int bits = 0;
-            ZoneChunk here = src[dz * 2];
-            if (here != null) {
-                bits |= (here.rowBits(layerRow) << rx) & 0xFFFF;
-            }
-            ZoneChunk left = src[dz * 2 + 1];
-            if (left != null) {
-                bits |= left.rowBits(layerRow) >>> (16 - rx);
-            }
-            rows[j] = bits;
-        }
+        int[] rows = ZoneChunk.shiftRows(src[0], src[1], src[2], src[3], rx, rz);
         return stride == 1 ? cellsOfRows(rows, cx << 4, cz << 4) : cellsOfBands(rows, stride, cx << 4, cz << 4);
     }
 

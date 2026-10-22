@@ -6,6 +6,8 @@ package buildcraft.api.robots;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.core.EnumPipePart;
@@ -20,8 +22,14 @@ public class ResourceIdRequest extends ResourceIdBlock {
     }
 
     public ResourceIdRequest(DockingStation station, int slot) {
-        pos = station.index();
-        side = EnumPipePart.fromFacing(station.side());
+        this(station.index(), station.side(), slot);
+    }
+
+    /** The request in {@code slot} of the station at {@code stationPos} on {@code stationSide}: the same id the station
+     *  form gives, for a holder that keeps the station by value (it may be gone, its reservation still held). */
+    public ResourceIdRequest(BlockPos stationPos, Direction stationSide, int slot) {
+        pos = stationPos;
+        side = EnumPipePart.fromFacing(stationSide);
         this.slot = slot;
     }
 

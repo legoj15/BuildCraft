@@ -26,13 +26,13 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void nothingIsRefusedUntilItIsRemembered() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         Assertions.assertFalse(refusals.isRefused(POS, STONE, 0, null));
     }
 
     @Test
     public void aRefusalHoldsWhileTheStateIsUnchanged() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 10, null);
         Assertions.assertTrue(refusals.isRefused(POS, STONE, 10, null), "refused at once");
         Assertions.assertTrue(refusals.isRefused(POS, STONE, 109, null), "and for the whole retry window");
@@ -40,7 +40,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void aChangedStateIsAskedAboutAgainAtOnce() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 10, null);
         Assertions.assertFalse(refusals.isRefused(POS, DIRT, 11, null), "a different block is a new question");
         Assertions.assertFalse(refusals.isRefused(POS, STONE, 12, null),
@@ -49,7 +49,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void aRefusalExpiresAfterTheRetryWindow() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 10, null);
         Assertions.assertTrue(refusals.isRefused(POS, STONE, 109, null));
         Assertions.assertFalse(refusals.isRefused(POS, STONE, 110, null),
@@ -59,7 +59,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void aFreshRefusalRestartsTheWindow() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         Assertions.assertFalse(refusals.isRefused(POS, STONE, 100, null));
         refusals.remember(POS, STONE, 100, null);
@@ -69,14 +69,14 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void otherPositionsAreUnaffected() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         Assertions.assertFalse(refusals.isRefused(POS.above(), STONE, 1, null));
     }
 
     @Test
     public void forgetDropsARefusal() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         refusals.forget(POS);
         Assertions.assertFalse(refusals.isRefused(POS, STONE, 1, null));
@@ -84,7 +84,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void theOldestRefusalIsDroppedPastCapacity() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 2));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 2));
         refusals.remember(POS, STONE, 0, null);
         refusals.remember(POS.above(), STONE, 0, null);
         refusals.remember(POS.above(2), STONE, 0, null);
@@ -95,7 +95,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void aMutablePositionIsCopiedNotAliased() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         BlockPos.MutableBlockPos cursor = POS.mutable();
         refusals.remember(cursor, STONE, 0, null);
         cursor.move(0, 5, 0);
@@ -105,7 +105,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void clearDropsEveryRefusal() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         refusals.remember(POS.above(), STONE, 0, null);
         Assertions.assertFalse(refusals.isEmpty());
@@ -116,7 +116,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void takeExpiredHandsBackOnlyRefusalsWhoseWindowElapsed() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         refusals.remember(POS.above(), STONE, 50, null);
         Assertions.assertTrue(refusals.takeExpired(99, 8).isEmpty(), "nothing is due yet");
@@ -126,7 +126,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void takeExpiredRestartsTheWindowSoACellIsNotHandedBackTwice() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         Assertions.assertEquals(java.util.List.of(POS), refusals.takeExpired(100, 8));
         Assertions.assertTrue(refusals.takeExpired(101, 8).isEmpty(), "the window restarted");
@@ -136,7 +136,7 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void takeExpiredRespectsTheLimitAndLeavesTheRestDue() {
-        RefusalMemory refusals = new RefusalMemory(RefusalMemory.Policy.fixed(100, 8));
+        RefusalMemory refusals = new RefusalMemory(PositionMemory.Policy.fixed(100, 8));
         refusals.remember(POS, STONE, 0, null);
         refusals.remember(POS.above(), STONE, 0, null);
         refusals.remember(POS.above(2), STONE, 0, null);
@@ -147,6 +147,6 @@ public class RefusalMemoryFixedWindowTest {
 
     @Test
     public void takeExpiredOnAnEmptyMemoryIsCheap() {
-        Assertions.assertTrue(new RefusalMemory(RefusalMemory.Policy.fixed(100, 8)).takeExpired(1_000, 8).isEmpty());
+        Assertions.assertTrue(new RefusalMemory(PositionMemory.Policy.fixed(100, 8)).takeExpired(1_000, 8).isEmpty());
     }
 }

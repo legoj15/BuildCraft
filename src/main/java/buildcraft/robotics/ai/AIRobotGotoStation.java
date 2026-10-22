@@ -17,10 +17,10 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
-import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.robotics.JobClaim;
+import buildcraft.robotics.StationIndex;
 
 /** Flies the robot to a docking station and mounts it: {@link AIRobotGotoBlock} to the face-adjacent block, then
  *  {@link AIRobotStraightMoveTo} to the exact dock point, then {@code dock()}. The station is reserved first
@@ -32,11 +32,11 @@ public class AIRobotGotoStation extends AIRobot {
     private BlockPos stationIndex;
     private Direction stationSide;
     private boolean takeAsMain;
-    /** The station this AI took a plain (visit) claim on in {@link #start}, or null when it took none. */
-    private DockingStation visitClaim;
-    /** Whether this AI holds its station in this session. Not saved: the unload that saved a mid-flight goto freed a
-     *  plain claim, so a reloaded goto has to take the station again ({@link #preempt}) before it may dock. */
-    private boolean taken;
+    /** The plain (visit) claim on the station ({@link JobClaim#station}): held once {@link #start} took it, or once
+     *  {@link #preempt} took it again for a goto reloaded mid-flight - the claim itself is not saved, the unload that
+     *  saved the goto freed it. Only a claim this AI took is given back ({@link #end}): the robot's home and a claim a
+     *  parent took first outlive it. */
+    private final JobClaim<StationIndex> visit = JobClaim.station(robot, JobClaim.OnReload.RECLAIM);
 
     public AIRobotGotoStation(IRobotAccess iRobot) {
         super(iRobot);
@@ -106,7 +106,7 @@ public class AIRobotGotoStation extends AIRobot {
             setSuccess(true);
             terminate();
         } else {
-            if (claim(station)) {
+            if (claim()) {
                 BlockPos approach = approachCell(stationIndex, stationSide, takeAsMain);
                 startDelegateAI(new AIRobotGotoBlock(robot,
                         approach.getX(), approach.getY(), approach.getZ()));
@@ -116,43 +116,15 @@ public class AIRobotGotoStation extends AIRobot {
         }
     }
 
-    /** Takes {@code station} for this flight (owner-checked: free, or this robot's already). Always a plain claim, a
-     *  take-as-main goto's included: the robot's home only moves once it has docked ({@link #promoteToHome}).
+    /** Takes the station for this flight (owner-checked: free, or this robot's already). Always a plain claim, a
+     *  take-as-main goto's included: the robot's home only moves once it has docked
+     *  ({@link JobClaim#promoteToHome}).
      *
      *  <p>Not 7.1.x, whose {@code AIRobotGoAndLinkToDock} linked the new home at its start, releasing the old one: a
      *  redirect whose flight then failed (a target past {@link AIRobotGotoBlock#FLIGHT_REACH}, or walled in) left the
      *  robot homed on a station it never reached and its old home free for any other robot. */
-    private boolean claim(DockingStation station) {
-        // take() needs the concrete entity; a live GotoStation only ever drives a real robot, so the cast
-        // is safe. Abstracting take() onto IRobotAccess would leak entity lifecycle into the AI surface.
-        boolean heldBefore = station.robotIdTaking() == robot.getRobotId();
-        if (!station.take((EntityRobotBase) robot)) {
-            return false;
-        }
-        // Only a plain claim this AI made is its to give back: the home link (the robot's own station it flies home
-        // to) and a claim a parent took first outlive it.
-        visitClaim = !heldBefore ? station : null;
-        taken = true;
-        return true;
-    }
-
-    /** A take-as-main goto's arrival: the station the robot just reached becomes its home, and the old home is let go
-     *  ({@code setMainStation} via {@code takeAsMain}). The flight held the station as a plain claim, which
-     *  {@code takeAsMain} would read as "already this robot's" and leave plain, so that claim is given back first;
-     *  a station that already is this robot's home (a save from before the claim was kept plain, whose goto linked
-     *  it at its start) has nothing to promote. False when the robot no longer holds the station at all. */
-    private boolean promoteToHome(DockingStation station) {
-        EntityRobotBase self = (EntityRobotBase) robot;
-        if (station.robotIdTaking() == robot.getRobotId() && station.isMainStation()) {
-            visitClaim = null;
-            return true;
-        }
-        if (station.robotIdTaking() != robot.getRobotId()) {
-            return false;
-        }
-        station.release(self);
-        visitClaim = null;
-        return station.takeAsMain(self);
+    private boolean claim() {
+        return visit.claim(new StationIndex(stationSide, stationIndex));
     }
 
     /** A flight reloaded from NBT resumes its approach leg, but the unload freed the plain claim it held. Take the
@@ -161,17 +133,11 @@ public class AIRobotGotoStation extends AIRobot {
      *  which flew on unclaimed. */
     @Override
     public void preempt(AIRobot ai) {
-        if (taken || ai == null || stationIndex == null) {
+        if (ai == null || stationIndex == null) {
             return;
         }
-        IRobotRegistry registry = robot.getRegistry();
-        if (registry == null) {
-            return;
-        }
-        DockingStation station = registry.getStation(stationIndex, stationSide);
-        if (station == null || !claim(station)) {
+        if (visit.preempt(this, ai)) {
             setSuccess(false);
-            abortDelegateAI();
         }
     }
 
@@ -198,7 +164,7 @@ public class AIRobotGotoStation extends AIRobot {
                 terminate();
             }
         } else {
-            if (takeAsMain && !promoteToHome(station)) {
+            if (takeAsMain && !JobClaim.promoteToHome(visit, station)) {
                 // The claim was lost under the flight (another robot cannot take a held station, so only a forced
                 // release gets here): docking beside whoever holds it now is not this goto's to do.
                 setSuccess(false);
@@ -224,11 +190,7 @@ public class AIRobotGotoStation extends AIRobot {
      *  {@link #preempt} records the one it takes again. */
     @Override
     public void end() {
-        DockingStation station = visitClaim;
-        visitClaim = null;
-        if (station != null && station.robotIdTaking() == robot.getRobotId() && station.canRelease()) {
-            station.release((EntityRobotBase) robot);
-        }
+        visit.release();
     }
 
     @Override
@@ -265,6 +227,8 @@ public class AIRobotGotoStation extends AIRobot {
         if (pos.length == 3 && side != null) {
             stationIndex = new BlockPos(pos[0], pos[1], pos[2]);
             stationSide = side;
+            // Remembered, not held: the unload that saved this goto freed its claim, so preempt takes it again.
+            visit.restore(new StationIndex(stationSide, stationIndex));
         }
         // Absent in every save written before the flag was kept: those read back as the plain visit they reloaded as.
         takeAsMain = NbtApiUtil.getBoolean(nbt, "takeAsMain", false);

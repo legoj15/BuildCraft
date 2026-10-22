@@ -109,6 +109,45 @@ public class ZoneChunk {
         return row;
     }
 
+    /** All 16 row masks, {@link #rowBits} of rows 0..15: the form {@link #shiftRows} moves. */
+    public int[] rows() {
+        int[] rows = new int[16];
+        for (int z = 0; z < 16; z++) {
+            rows[z] = rowBits(z);
+        }
+        return rows;
+    }
+
+    /**
+     * The one bit-row shift every chunk-unaligned move of a zone uses (a planner transfer's offset, the map overlay's
+     * tile-relative to world translation): the 16 row masks of one destination chunk, pulled from the at most four
+     * source chunks that a shift of {@code (rx, rz)} columns spreads over it. Destination column {@code (i, j)} shows
+     * source column {@code (i - rx, j - rz)}, read from {@code here} when both are in range and from the neighbour to
+     * the left (smaller x), above (smaller z) or both when they wrap below 0. Each argument is a chunk's
+     * {@link #rows()}, or null where no chunk is.
+     *
+     * @param rx the columns to shift along x, 0..15
+     * @param rz the rows to shift along z, 0..15
+     */
+    public static int[] shiftRows(int[] here, int[] left, int[] above, int[] aboveLeft, int rx, int rz) {
+        int[] out = new int[16];
+        for (int j = 0; j < 16; j++) {
+            boolean sameRowChunk = j >= rz;
+            int[] same = sameRowChunk ? here : above;
+            int[] spill = sameRowChunk ? left : aboveLeft;
+            int row = sameRowChunk ? j - rz : j - rz + 16;
+            int bits = 0;
+            if (same != null) {
+                bits |= (same[row] << rx) & 0xFFFF; // the low 16 - rx columns move up by rx
+            }
+            if (spill != null) {
+                bits |= (spill[row] & 0xFFFF) >>> (16 - rx); // the top rx columns of the chunk to the left
+            }
+            out[j] = bits;
+        }
+        return out;
+    }
+
     /** A chunk marking the columns in {@code rows} (16 masks, as {@link #rowBits} reads them); empty rows give an
      *  empty chunk, and 16 full rows give the same chunk {@link #full()} does. */
     public static ZoneChunk fromRows(int[] rows) {

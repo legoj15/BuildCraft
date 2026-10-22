@@ -94,10 +94,10 @@ public class RefusalMemorySpacedWindowTester {
     }
 
     /**
-     * The steady state of a fully refused pool larger than {@link RefusalMemory.Policy#windowTicks()} cells: the pump
+     * The steady state of a fully refused pool larger than {@link PositionMemory.Policy#windowTicks()} cells: the pump
      * probes the next cell of its queue once per tick and rebuilds an empty queue every 30 ticks. A fixed
      * five-minute window would then re-ask on (almost) every tick indefinitely; the window grows with the pool, so
-     * re-asking averages about one probe per {@link RefusalMemory.Policy#spacingTicks()}.
+     * re-asking averages about one probe per {@link PositionMemory.Policy#spacingTicks()}.
      */
     @Test
     public void aFullyRefusedPoolIsReaskedSparingly() {
@@ -152,7 +152,7 @@ public class RefusalMemorySpacedWindowTester {
 
     /**
      * The window stretches only for refusals that are still live. Once a big pool's refusals have all expired, a
-     * single new refusal gets the plain {@link RefusalMemory.Policy#windowTicks()} window, not one sized for cells nobody
+     * single new refusal gets the plain {@link PositionMemory.Policy#windowTicks()} window, not one sized for cells nobody
      * remembers any more.
      */
     @Test

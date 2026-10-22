@@ -12,11 +12,14 @@ import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 
 /** The claim latch of one job a robot works - the block a board or a search-and-goto targets, the order a delivery
- *  board fills - shared by every board and AI that holds one, so they all follow one rule:
+ *  board fills, the station a goto flies to - shared by every board and AI that holds one, so they all follow one
+ *  rule:
  *
  *  <ul>
  *  <li>A job is <b>held</b> when it was claimed in this session: by the search that found it ({@link #adopt} with
@@ -72,6 +75,60 @@ public final class JobClaim<J> {
         }
     };
 
+    /** A plain (visit) claim on a docking station - what a goto takes for its flight and a delivery order takes on its
+     *  requester. The take is owner-checked: true when the station was free, or is this robot's already (its home,
+     *  its dock or a visit), which is left as it was. The release gives back only a plain claim this robot holds
+     *  that may go: never its home, and not while it is docked there ({@code canRelease}), since that claim is the
+     *  robot's dock now and undocking is what frees it.
+     *
+     *  <p>{@code take()} needs the concrete entity: a live board or AI only ever drives a real robot, so the cast is
+     *  safe; abstracting it onto {@link IRobotAccess} would leak entity lifecycle into the AI surface. */
+    public static final Claimer<DockingStation> STATION_VISIT = new Claimer<>() {
+        @Override
+        public boolean reclaim(IRobotAccess robot, IRobotRegistry registry, DockingStation station) {
+            return station.take((EntityRobotBase) robot);
+        }
+
+        @Override
+        public void release(IRobotAccess robot, IRobotRegistry registry, DockingStation station) {
+            if (station.robotIdTaking() == robot.getRobotId() && station.canRelease()) {
+                station.release((EntityRobotBase) robot);
+            }
+        }
+    };
+
+    /** A station job by value, resolved against the registry on every claim ({@link #station}). A station the robot
+     *  already held when it was claimed - its home, or a plain claim a parent AI took first - outlives the claim:
+     *  only one this latch took is given back. One per latch, since it remembers which station that was. */
+    private static final class StationByIndex implements Claimer<StationIndex> {
+        /** The station this latch's claim took, or null when the robot held it already (or nothing is taken). */
+        @Nullable
+        private DockingStation taken;
+
+        @Override
+        public boolean reclaim(IRobotAccess robot, IRobotRegistry registry, StationIndex index) {
+            DockingStation station = registry.getStation(index.index(), index.side());
+            if (station == null) {
+                return false;
+            }
+            boolean heldBefore = station.robotIdTaking() == robot.getRobotId();
+            if (!STATION_VISIT.reclaim(robot, registry, station)) {
+                return false;
+            }
+            taken = heldBefore ? null : station;
+            return true;
+        }
+
+        @Override
+        public void release(IRobotAccess robot, IRobotRegistry registry, StationIndex index) {
+            DockingStation station = taken;
+            taken = null;
+            if (station != null) {
+                STATION_VISIT.release(robot, registry, station);
+            }
+        }
+    }
+
     private final IRobotAccess robot;
     private final OnReload onReload;
     private final Claimer<J> claimer;
@@ -90,6 +147,36 @@ public final class JobClaim<J> {
     /** A claim on a block, the registry's {@code ResourceIdBlock}. */
     public static JobClaim<BlockPos> block(IRobotAccess robot, OnReload onReload) {
         return new JobClaim<>(robot, onReload, BLOCK);
+    }
+
+    /** A plain (visit) claim on the docking station at an index, the claim a goto holds for its flight: taken with
+     *  {@link #STATION_VISIT}'s owner-checked take, and given back only when this latch took it - a station the
+     *  robot already held (its home, a parent's claim) is left as it was. {@link #promoteToHome} is its take-as-main
+     *  variant. */
+    public static JobClaim<StationIndex> station(IRobotAccess robot, OnReload onReload) {
+        return new JobClaim<>(robot, onReload, new StationByIndex());
+    }
+
+    /**
+     * The take-as-main variant of a station claim, for a goto that is to make the station the robot's home once it
+     * gets there: the station it just reached becomes its home and the old home is let go ({@code takeAsMain}). The
+     * flight held the station as a plain claim, which {@code takeAsMain} would read as "already this robot's" and
+     * leave plain, so that claim is given back first; a station that already is this robot's home has nothing to
+     * promote. Either way the latch forgets the visit: a home is not a visit's to give back. False, with the latch
+     * left as it was, when the robot no longer holds the station at all.
+     */
+    public static boolean promoteToHome(JobClaim<StationIndex> claim, DockingStation station) {
+        long robotId = claim.robot.getRobotId();
+        if (station.robotIdTaking() != robotId) {
+            return false;
+        }
+        claim.adopt(null, false);
+        if (station.isMainStation()) {
+            return true;
+        }
+        EntityRobotBase self = (EntityRobotBase) claim.robot;
+        station.release(self);
+        return station.takeAsMain(self);
     }
 
     @Nullable
@@ -112,6 +199,18 @@ public final class JobClaim<J> {
     public void adopt(@Nullable J job, boolean held) {
         this.job = job;
         this.held = job != null && held;
+    }
+
+    /** Claims {@code job} now (owner-checked) and holds it: for an owner that picks its own job rather than taking
+     *  over a search's. False, with the latch left as it was, when the claim is refused. Without a registry nothing
+     *  can be lost to anyone, and the job is taken as held. */
+    public boolean claim(J job) {
+        IRobotRegistry registry = robot.getRegistry();
+        if (registry != null && !claimer.reclaim(robot, registry, job)) {
+            return false;
+        }
+        adopt(job, true);
+        return true;
     }
 
     /** Remembers a job read back from NBT, unheld: the unload that saved it freed its claim. Ignored for

@@ -141,7 +141,11 @@ public class StackRequest {
         return new StackRequest(slot, stack, stationIndex, side);
     }
 
+    /** The registry id this order is reserved under, built from the by-value station link, so an order whose station
+     *  is gone (removed, or never re-resolved after a reload) can still give back the reservation it holds; null for
+     *  an order that never took a station. {@code world} is unused, kept for the callers. */
     public ResourceId getResourceId(Level world) {
-        return getStation(world) != null ? new ResourceIdRequest(getStation(world), slot) : null;
+        return stationIndex != null && stationSide != null ? new ResourceIdRequest(stationIndex, stationSide, slot)
+                : null;
     }
 }

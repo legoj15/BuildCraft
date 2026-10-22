@@ -6,7 +6,6 @@
 
 package buildcraft.lib.misc;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -15,10 +14,6 @@ import javax.annotation.Nullable;
 
 import com.mojang.authlib.GameProfile;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * What a machine remembers about the answers protection mods (and refusing blocks) gave it, so it neither asks again
  * nor spends power or travel on a block every cycle. The one memory every block-breaking, block-placing or
- * fluid-draining machine keeps; each picks a {@link Policy}, and they are all here:
+ * fluid-draining machine keeps; each picks a {@link PositionMemory.Policy}, and they are all here:
  *
  * <table>
  * <caption>Refusal policy per machine (pinned by {@code RefusalMemoryOwnerAndPermitTest})</caption>
@@ -48,7 +43,8 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p><b>Refusals.</b> A refusal holds while the block's state is unchanged, until its window ends. The state check
  * forgets it the moment the block becomes something else (a new block is a new question); the window exists because
- * lifting a claim, or trusting the machine's owner in it, fires no event a machine could hear.
+ * lifting a claim, or trusting the machine's owner in it, fires no event a machine could hear. The refusals are kept
+ * in a {@link PositionMemory}, the store every remembered-block memory shares, whose policy sets the window and cap:
  * <ul>
  * <li>A <em>fixed</em> window is the same length for every refusal, so entries end in the order they were made: an
  *     optional cap drops the oldest, and {@link #takeExpired} can hand back the due ones without scanning the rest.</li>
@@ -69,6 +65,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * <p><b>The owner key.</b> Every answer is about the identity the machine asked as ({@link MachineIdentity}: its named
  * owner, else "[BuildCraft]"). Every call names the owner; when it is a different identity from the one the memory
  * holds answers for (a robot relinked to another player's station), the memory is emptied first, permit included.
+ * The identity is resolved once per owner profile rather than on every call: a search asking about hundreds of
+ * candidates for one owner passes the same profile object each time.
  *
  * <p><b>Clock and lifetime.</b> The clock is the level's game time everywhere; the pure overloads take it as an
  * argument so the logic is testable without a world. The {@link Level} overloads read state and clock from the world
@@ -77,49 +75,16 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public final class RefusalMemory {
 
-    /**
-     * How long a machine's refusals last and how many it keeps.
-     *
-     * @param windowTicks the window of a fixed policy, the shortest window of a spaced one
-     * @param spacingTicks 0 for a fixed window; otherwise how far each other live refusal stretches a new one's window
-     * @param capacity the most refusals kept (oldest dropped first); fixed windows only
-     */
-    public record Policy(long windowTicks, long spacingTicks, int capacity) {
-        public Policy {
-            if (windowTicks <= 0 || spacingTicks < 0 || capacity <= 0) {
-                throw new IllegalArgumentException("bad refusal policy " + windowTicks + "/" + spacingTicks + "/"
-                        + capacity);
-            }
-            if (spacingTicks > 0 && capacity != Integer.MAX_VALUE) {
-                throw new IllegalArgumentException("a spaced window takes no cap: forgetting live refusals thrashes");
-            }
-        }
-
-        /** Every refusal lasts {@code windowTicks}; past {@code capacity} entries the oldest is dropped. */
-        public static Policy fixed(long windowTicks, int capacity) {
-            return new Policy(windowTicks, 0, capacity);
-        }
-
-        /** At least {@code minWindowTicks}, stretched by {@code spacingTicks} per other live refusal; no cap. */
-        public static Policy spaced(long minWindowTicks, long spacingTicks) {
-            return new Policy(minWindowTicks, spacingTicks, Integer.MAX_VALUE);
-        }
-
-        public boolean isSpaced() {
-            return spacingTicks > 0;
-        }
-    }
-
     /** The quarry's frame-volume cells: see the class table. */
-    public static final Policy QUARRY_FRAME = Policy.fixed(200, Integer.MAX_VALUE);
+    public static final PositionMemory.Policy QUARRY_FRAME = PositionMemory.Policy.fixed(200, Integer.MAX_VALUE);
     /** The Builder's and the Filler's refused placements: see the class table. */
-    public static final Policy BUILDER_PLACE = Policy.fixed(200, Integer.MAX_VALUE);
+    public static final PositionMemory.Policy BUILDER_PLACE = PositionMemory.Policy.fixed(200, Integer.MAX_VALUE);
     /** The stripes pipe: see the class table. */
-    public static final Policy STRIPES = Policy.fixed(200, 4);
+    public static final PositionMemory.Policy STRIPES = PositionMemory.Policy.fixed(200, 4);
     /** The robot search boards: see the class table. */
-    public static final Policy ROBOT_SEARCH = Policy.fixed(1200, 256);
+    public static final PositionMemory.Policy ROBOT_SEARCH = PositionMemory.Policy.fixed(1200, 256);
     /** The pump and the robot pump board: five minutes, stretched by a second per other live refusal. */
-    public static final Policy DRAIN = Policy.spaced(6000, 20);
+    public static final PositionMemory.Policy DRAIN = PositionMemory.Policy.spaced(6000, 20);
 
     /** A cell's current state, for telling which remembered refusals are stale. */
     @FunctionalInterface
@@ -130,34 +95,38 @@ public final class RefusalMemory {
         BlockState stateAt(BlockPos pos);
     }
 
-    private record Refusal(BlockState state, long expiresAt) {}
+    /** Stands for "no owner named yet": distinct from every profile, and from null (an unowned machine). */
+    private static final Object NO_OWNER_YET = new Object();
 
-    private final Policy policy;
-    /** Up to this many other live refusals a spaced window is the plain {@link Policy#windowTicks}, so counting them
-     *  exactly (and pruning the stale ones to do it) only starts above it. */
-    private final int plainWindowPool;
-    /** Keyed on {@link BlockPos#asLong()} (a large claimed pool can mean thousands of entries), in the order the
-     *  refusals were made or restarted. */
-    private final Long2ObjectLinkedOpenHashMap<Refusal> refused = new Long2ObjectLinkedOpenHashMap<>();
+    /** The refused cells, each noted with the state it was refused in. */
+    private final PositionMemory<BlockState> refused;
     /** The identity every answer held was given to; null until the first call names one. */
     @Nullable
     private UUID ownerId;
+    /** The profile {@link #ownerId} was last resolved from, or {@link #NO_OWNER_YET}. */
+    @Nullable
+    private Object ownerResolvedFrom = NO_OWNER_YET;
     @Nullable
     private BlockPos permitPos;
     @Nullable
     private BlockState permitState;
 
-    public RefusalMemory(Policy policy) {
-        this.policy = policy;
-        this.plainWindowPool = policy.isSpaced() ? (int) (policy.windowTicks() / policy.spacingTicks()) : 0;
+    public RefusalMemory(PositionMemory.Policy policy) {
+        this.refused = new PositionMemory<>(policy);
     }
 
-    public Policy policy() {
-        return policy;
+    public PositionMemory.Policy policy() {
+        return refused.policy();
     }
 
-    /** Empties the memory if {@code owner} acts as someone other than the identity its answers were given to. */
+    /** Empties the memory if {@code owner} acts as someone other than the identity its answers were given to. The
+     *  profile object passed last time is the same identity again (a profile's id and name never change), so only a
+     *  different object is resolved. */
     private void keyOn(@Nullable GameProfile owner) {
+        if (owner == ownerResolvedFrom) {
+            return;
+        }
+        ownerResolvedFrom = owner;
         UUID id = GameProfileUtil.getId(MachineIdentity.of(owner));
         if (!Objects.equals(id, ownerId)) {
             refused.clear();
@@ -181,38 +150,13 @@ public final class RefusalMemory {
             @Nullable StateLookup lookup) {
         keyOn(owner);
         long key = pos.asLong();
-        refused.remove(key);
         if (permitPos != null && permitPos.asLong() == key) {
             revokePermit();
         }
-        long window = policy.windowTicks();
-        if (policy.isSpaced()) {
-            if (refused.size() > plainWindowPool) {
-                pruneStale(gameTime, lookup);
-            }
-            window = Math.max(window, refused.size() * policy.spacingTicks());
-        }
-        refused.putAndMoveToLast(key, new Refusal(state, gameTime + window));
-        while (refused.size() > policy.capacity()) {
-            refused.removeFirst();
-        }
-    }
-
-    /** Drops every entry that has expired, or whose cell {@code lookup} reports as holding another state. */
-    private void pruneStale(long gameTime, @Nullable StateLookup lookup) {
-        ObjectIterator<Long2ObjectMap.Entry<Refusal>> it = refused.long2ObjectEntrySet().fastIterator();
-        while (it.hasNext()) {
-            Long2ObjectMap.Entry<Refusal> entry = it.next();
-            Refusal refusal = entry.getValue();
-            if (gameTime >= refusal.expiresAt()) {
-                it.remove();
-            } else if (lookup != null) {
-                BlockState now = lookup.stateAt(BlockPos.of(entry.getLongKey()));
-                if (now != null && !now.equals(refusal.state())) {
-                    it.remove();
-                }
-            }
-        }
+        refused.put(key, state, gameTime, lookup == null ? null : (cell, refusedIn) -> {
+            BlockState now = lookup.stateAt(BlockPos.of(cell));
+            return now != null && !now.equals(refusedIn);
+        });
     }
 
     /**
@@ -222,11 +166,11 @@ public final class RefusalMemory {
     public boolean isRefused(BlockPos pos, BlockState state, long gameTime, @Nullable GameProfile owner) {
         keyOn(owner);
         long key = pos.asLong();
-        Refusal refusal = refused.get(key);
-        if (refusal == null) {
+        BlockState refusedIn = refused.get(key, gameTime);
+        if (refusedIn == null) {
             return false;
         }
-        if (refusal.state().equals(state) && gameTime < refusal.expiresAt()) {
+        if (refusedIn.equals(state)) {
             return true;
         }
         refused.remove(key);
@@ -264,20 +208,7 @@ public final class RefusalMemory {
      * @throws IllegalStateException for a spaced policy, whose windows do not end in insertion order
      */
     public List<BlockPos> takeExpired(long gameTime, int limit) {
-        if (policy.isSpaced()) {
-            throw new IllegalStateException("takeExpired needs a fixed window");
-        }
-        List<BlockPos> due = new ArrayList<>();
-        while (due.size() < limit && !refused.isEmpty()) {
-            long key = refused.firstLongKey();
-            Refusal refusal = refused.get(key);
-            if (gameTime < refusal.expiresAt()) {
-                break;
-            }
-            refused.putAndMoveToLast(key, new Refusal(refusal.state(), gameTime + policy.windowTicks()));
-            due.add(BlockPos.of(key));
-        }
-        return due;
+        return refused.takeExpired(gameTime, limit);
     }
 
     /** {@link #takeExpired(long, int)} on the world's clock. */

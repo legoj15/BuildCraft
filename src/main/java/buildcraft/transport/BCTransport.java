@@ -304,6 +304,8 @@ public class BCTransport {
 
     private static void initStripesRegistry() {
         PipeApi.stripeRegistry = StripesRegistry.INSTANCE;
+        PipeApi.extensionManager = buildcraft.transport.stripes.PipeExtensionManager.INSTANCE;
+        PipeApi.extensionManager.registerRetractionPipe(BCTransportPipes.voidItem);
 
         PipeApi.stripeRegistry.addHandler(StripesHandlerPlant.INSTANCE);
         PipeApi.stripeRegistry.addHandler(StripesHandlerShears.INSTANCE);

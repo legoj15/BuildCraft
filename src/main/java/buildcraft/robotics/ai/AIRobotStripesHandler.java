@@ -7,7 +7,6 @@
  */
 package buildcraft.robotics.ai;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
@@ -16,6 +15,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
 
@@ -80,9 +80,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
             // about as that player, and an advancement a used item grants reaches them.
             try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, (ServerLevel) robot.level())) {
                 FakePlayer player = lease.player();
-                player.setPos(useToBlock.getX() + 0.5, useToBlock.getY(), useToBlock.getZ() + 0.5);
-                player.setXRot(0);
-                player.setYRot(180);
+                FakePlayerUtil.pose(player, Vec3.atBottomCenterOf(useToBlock), 180, 0);
                 // In the player's hand, as the stripes pipe does it: handlers that act through the player
                 // (shearing or milking a mob, using an item) read the hand, not their stack argument.
                 player.setItemInHand(InteractionHand.MAIN_HAND, stack);
@@ -119,18 +117,8 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
      */
     private void takeBackFrom(FakePlayer player, ItemStack used, ItemStack original) {
         ItemStack hand = player.getMainHandItem();
-        // Every distinct stack on the player (by identity: the hand and its inventory slot may be one object),
-        // taken off it as they are collected.
-        List<ItemStack> onPlayer = new ArrayList<>();
-        if (!hand.isEmpty()) {
-            onPlayer.add(hand);
-        }
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            ItemStack left = player.getInventory().removeItemNoUpdate(i);
-            if (!left.isEmpty() && onPlayer.stream().noneMatch(seen -> seen == left)) {
-                onPlayer.add(left);
-            }
-        }
+        // Every distinct stack on the player, taken off it: the rule the stripes pipe's sweep shares.
+        List<ItemStack> onPlayer = FakePlayerUtil.takeDistinctStacks(player);
 
         ItemStack keep = ItemStack.EMPTY;
         if (!used.isEmpty() && onPlayer.stream().anyMatch(seen -> seen == used)) {

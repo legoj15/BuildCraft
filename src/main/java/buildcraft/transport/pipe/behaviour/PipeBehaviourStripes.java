@@ -19,9 +19,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.neoforged.neoforge.common.IShearable;
 import net.neoforged.neoforge.common.util.FakePlayer;
 
 import buildcraft.api.mj.IMjConnector;
@@ -46,12 +48,18 @@ import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.InventoryUtil;
+import buildcraft.lib.misc.MachineRefusals;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RefusalMemory;
 
 import buildcraft.transport.BCTransportStatements;
 
 public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActivator, IMjRedstoneReceiver {
+    /** What one handled block-handler action (breaking the minecart in front) costs: 7.1.x charged 10 RF, 1 MJ. */
+    public static final long BLOCK_HANDLER_COST = MjAPI.MJ;
+    /** How long a refused block-handler ask keeps the handlers from asking again (one second). */
+    private static final long BLOCK_HANDLER_BACKOFF_TICKS = 20;
+
     private final MjBattery battery = new MjBattery(256 * MjAPI.MJ);
     // The behaviour must itself be an IMjRedstoneReceiver (the pulsar plug + power-adaptor placement test
     // the pipe behaviour directly via getBehaviour() instanceof IMjRedstoneReceiver), so it can't extend
@@ -73,6 +81,8 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
      *  still on screen. */
     @Nullable
     private BlockPos crackedPos;
+    /** The game time before which a refused block-handler ask is not repeated; not saved (a reload asks again). */
+    private long blockHandlersBackOffUntil;
 
     public PipeBehaviourStripes(IPipe pipe) {
         super(pipe);
@@ -117,6 +127,11 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     /** The power put into breaking the block in front so far this cycle (for tests). */
     public long getBreakProgress() {
         return progress;
+    }
+
+    /** The power in the pipe's battery (for tests). */
+    public long getStoredPower() {
+        return battery.getStored();
     }
 
     /** The block the pipe currently has a break crack drawn on, or null (for tests). */
@@ -207,13 +222,18 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         }
         battery.tick(world, pipe.getHolder().getPipePos());
         if (direction != null) {
+            if (runBlockHandlers((ServerLevel) world, pos, direction)) {
+                return;
+            }
             BlockPos offset = pos.relative(direction);
             BlockState state = world.getBlockState(offset);
             GameProfile owner = pipe.getHolder().getOwner();
             if (!refusals.isPermitted(offset, state, owner)) {
                 endCycle(world); // not the block the progress is for
             }
-            long target = BlockUtil.computeBlockBreakPower(world, offset);
+            // Air is nothing to dig: computeBlockBreakPower prices it like any hardness-0 block (32 MJ), so a pipe
+            // facing an empty cell used to burn that every cycle "breaking" the air and asking claims about it.
+            long target = state.isAir() ? 0 : BlockUtil.computeBlockBreakPower(world, offset);
             // A block protection mods refused is left alone (no power, no asking) until it changes or the retry
             // window passes: 1.12.2 re-charged the whole break and re-asked every cycle for as long as the claim stood.
             if (target > 0 && !refusals.isRefused(world, offset, owner)) {
@@ -294,24 +314,67 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         if (world.isClientSide() || !(world instanceof ServerLevel serverLevel)) {
             return;
         }
-        // The owner's leased fake player (the "[BuildCraft]" one for an unowned pipe), reset and centred on the
-        // pipe. The travelling stack goes in its hand; on success everything left in its inventory is sent back
-        // down the pipe, and closing the lease drops the stack reference a failed handler leaves behind (the
-        // stack itself carries on as the dropped item).
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel, holder.getOwner(), pos)) {
+        GameProfile owner = holder.getOwner();
+        BlockPos target = pos.relative(direction);
+        // Shears asks the same break question the digging does, about the same block: a refusal either one met is
+        // remembered for the cell, so neither re-asks it every drop inside the refusal window.
+        boolean breakAsk = event.getStack().getItem() instanceof ShearsItem
+                && world.getBlockState(target).getBlock() instanceof IShearable;
+        if (breakAsk && refusals.isRefused(world, target, owner)) {
+            return;
+        }
+        // The owner's leased fake player (the "[BuildCraft]" one for an unowned pipe), reset and aimed out of the
+        // output face, so an item used in the air acts on the cell in front. The travelling stack goes in its hand;
+        // on success every distinct stack left on it is sent back down the pipe, and closing the lease drops the
+        // stack reference a failed handler leaves behind (the stack itself carries on as the dropped item).
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(serverLevel, owner, pos, direction)) {
             FakePlayer player = lease.player();
             player.setItemInHand(InteractionHand.MAIN_HAND, event.getStack());
-            if (PipeApi.stripeRegistry != null &&
-                PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
+            if (PipeApi.stripeRegistry == null) {
+                return;
+            }
+            long refusedBefore = MachineRefusals.count(player);
+            if (PipeApi.stripeRegistry.handleItem(world, pos, direction, event.getStack(), player, this)) {
                 event.setStack(ItemStack.EMPTY);
-                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                    ItemStack stack = player.getInventory().removeItemNoUpdate(i);
-                    if (!stack.isEmpty()) {
-                        sendItem(stack, direction);
-                    }
+                for (ItemStack stack : FakePlayerUtil.takeDistinctStacks(player)) {
+                    sendItem(stack, direction);
                 }
+            } else if (breakAsk && MachineRefusals.count(player) != refusedBefore) {
+                // As a refused dig does (mayBreak): the cycle on this block ends and the refusal is remembered.
+                endCycle(world);
+                refusals.remember(world, target, owner);
             }
         }
+    }
+
+    /**
+     * Gives the registered block handlers (breaking the minecart in front, an addon's) their go at the cell in front,
+     * before the block itself is dug: 7.1.x ran them first on every powered tick, and charged a flat 10 RF. A handler
+     * that acts costs {@link #BLOCK_HANDLER_COST}; with less than that stored, none runs. A refused ask backs the
+     * handlers off for {@link #BLOCK_HANDLER_BACKOFF_TICKS}, so a claim is not asked again every tick.
+     *
+     * @return true when a handler acted (this tick's digging is skipped, as 7.1.x returned there)
+     */
+    private boolean runBlockHandlers(ServerLevel world, BlockPos pos, Direction dir) {
+        if (PipeApi.stripeRegistry == null || battery.getStored() < BLOCK_HANDLER_COST
+                || world.getGameTime() < blockHandlersBackOffUntil) {
+            return false;
+        }
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(world, pipe.getHolder().getOwner(), pos, dir)) {
+            FakePlayer player = lease.player();
+            long refusedBefore = MachineRefusals.count(player);
+            if (PipeApi.stripeRegistry.handleBlock(world, pos, dir, player, this)) {
+                battery.extractPower(BLOCK_HANDLER_COST);
+                for (ItemStack stack : FakePlayerUtil.takeDistinctStacks(player)) {
+                    sendItem(stack, dir);
+                }
+                return true;
+            }
+            if (MachineRefusals.count(player) != refusedBefore) {
+                blockHandlersBackOffUntil = world.getGameTime() + BLOCK_HANDLER_BACKOFF_TICKS;
+            }
+        }
+        return false;
     }
 
     // IStripesActivator

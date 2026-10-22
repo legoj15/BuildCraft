@@ -33,7 +33,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * <p>The tally belongs to the player whose click it was, not to the process: a refusal for another player (an
  * addon's nested dispatch) cannot end this player's dispatch. Entries are weak, so a detached player's goes with it.
  *
- * <p>{@link BlockUtil}'s machine-click helpers record their own refusals, and so does the stripes shears handler for a
+ * <p>{@link BlockUtil}'s machine-click helpers record their own refusals, and so do the stripes minecart handler for a
+ * refused attack and the stripes shears handler for a
  * refused break. The one refusal no helper sees is a mob interaction: {@code Player#interactOn} answers a cancelled
  * entity-interaction event with whatever result the cancelling listener left, the default PASS (the same answer as a
  * mob that ignores the item) or a consuming one (the same answer as a mob that took the item), so

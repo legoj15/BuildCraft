@@ -28,10 +28,10 @@ import buildcraft.api.core.EnumHandlerPriority;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
-import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.transport.pipe.StripesRegistry;
 
 /**
  * The Stripes board's use cycle ({@link AIRobotStripesHandler}) with a stack of blocks: ONE block goes down on the
@@ -39,14 +39,13 @@ import buildcraft.robotics.entity.EntityRobot;
  * cell. Before the fix the whole remainder was deleted when the hand was cleared, and the block landed one cell
  * north of the reserved one (the handlers target {@code pos.relative(direction)}, the pipe-relative convention).
  * <p>
- * The swap tests use a test-only stripes handler that only ever acts on paper carrying its own marker name, so it is
- * inert for every other test (the registry has no removal).
+ * The swap tests use a test-only stripes handler that only ever acts on paper carrying its own marker name, added for
+ * the one synchronous use and removed again.
  */
 public class RobotStripesTester {
 
     private static final String SWAP_ASIDE = "bc_takeback_swap_aside";
     private static final String SWAP_GONE = "bc_takeback_swap_gone";
-    private static boolean swapHandlerRegistered;
 
     /**
      * A third-party style handler that replaces the hand stack with a same-item stack of ANOTHER count: either after
@@ -70,10 +69,14 @@ public class RobotStripesTester {
         }
     }
 
-    private static synchronized void registerSwapHandler() {
-        if (!swapHandlerRegistered) {
-            swapHandlerRegistered = true;
-            PipeApi.stripeRegistry.addHandler(new SwapHandler(), EnumHandlerPriority.HIGHEST);
+    /** {@link #useMarkedStack} with a {@link SwapHandler} registered for just that use. */
+    private static EntityRobot useWithSwapHandler(GameTestHelper helper, String mode, int[] drops) {
+        SwapHandler handler = new SwapHandler();
+        StripesRegistry.INSTANCE.addHandler(handler, EnumHandlerPriority.HIGHEST);
+        try {
+            return useMarkedStack(helper, mode, drops);
+        } finally {
+            StripesRegistry.INSTANCE.removeHandler(handler);
         }
     }
 
@@ -122,10 +125,9 @@ public class RobotStripesTester {
      * hand's stack was kept by item type alone and the robot's own stack was the one dropped.
      */
     public static void stripesKeepsTheUsedStackWhenAHandlerSwapsTheHand(GameTestHelper helper) {
-        registerSwapHandler();
         whenRobotCellIsEntityTicking(helper, () -> {
             int[] drops = new int[1];
-            ItemStack held = useMarkedStack(helper, SWAP_ASIDE, drops).getHeldItem();
+            ItemStack held = useWithSwapHandler(helper, SWAP_ASIDE, drops).getHeldItem();
 
             helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 5,
                     "the robot keeps its own used stack of 5, holds " + held);
@@ -140,10 +142,9 @@ public class RobotStripesTester {
      * of the robot's own stack is left on the player, so the hand's stack is the remainder the robot keeps.
      */
     public static void stripesKeepsASwappedHandStackWhenTheUsedOneIsGone(GameTestHelper helper) {
-        registerSwapHandler();
         whenRobotCellIsEntityTicking(helper, () -> {
             int[] drops = new int[1];
-            ItemStack held = useMarkedStack(helper, SWAP_GONE, drops).getHeldItem();
+            ItemStack held = useWithSwapHandler(helper, SWAP_GONE, drops).getHeldItem();
 
             helper.assertTrue(held.is(Items.PAPER) && held.getCount() == 2,
                     "the robot keeps the swapped-in stack of 2, holds " + held);

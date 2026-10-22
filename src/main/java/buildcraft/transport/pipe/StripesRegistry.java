@@ -47,6 +47,28 @@ public enum StripesRegistry implements IStripesRegistry {
         blockHandlers.get(priority).add(handler);
     }
 
+    /**
+     * Takes an item handler out again, whatever priority it was added at; false if it was not registered. On this
+     * class only, not on the addon-facing {@link IStripesRegistry}: it exists so a test that registers its own
+     * handler can remove it afterwards instead of leaving it first in every later dispatch of the run.
+     */
+    public boolean removeHandler(IStripesHandlerItem handler) {
+        boolean removed = false;
+        for (List<IStripesHandlerItem> list : itemHandlers.values()) {
+            removed |= list.removeIf(registered -> registered == handler);
+        }
+        return removed;
+    }
+
+    /** {@link #removeHandler(IStripesHandlerItem)} for a block handler. */
+    public boolean removeHandler(IStripesHandlerBlock handler) {
+        boolean removed = false;
+        for (List<IStripesHandlerBlock> list : blockHandlers.values()) {
+            removed |= list.removeIf(registered -> registered == handler);
+        }
+        return removed;
+    }
+
     @Override
     public boolean handleItem(Level world,
                               BlockPos pos,
@@ -80,8 +102,14 @@ public enum StripesRegistry implements IStripesRegistry {
                                IStripesActivator activator) {
         for (EnumHandlerPriority priority : EnumHandlerPriority.VALUES) {
             for (IStripesHandlerBlock handler : blockHandlers.get(priority)) {
+                long refusals = MachineRefusals.count(player);
                 if (handler.handle(world, pos, direction, player, activator)) {
                     return true;
+                }
+                // As in handleItem: a refused ask ends the dispatch, so a later handler does not act on what a claim
+                // just refused.
+                if (MachineRefusals.count(player) != refusals) {
+                    return false;
                 }
             }
         }

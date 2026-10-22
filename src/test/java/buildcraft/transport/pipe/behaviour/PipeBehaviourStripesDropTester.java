@@ -5,6 +5,7 @@
  */
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -36,7 +37,6 @@ import buildcraft.api.core.EnumHandlerPriority;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 import buildcraft.api.transport.pipe.IFlowItems;
-import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeEventItem;
 
 import buildcraft.core.BCCoreConfig;
@@ -47,6 +47,7 @@ import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
+import buildcraft.transport.pipe.StripesRegistry;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.TravellingItem;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -349,9 +350,12 @@ public class PipeBehaviourStripesDropTester {
 
     /**
      * Shearing a block away is a break, so a stripes pipe carrying shears asks the same break protection its own
-     * digging does, as the pipe's owner: a claim that cancels the break keeps the leaves standing and the shears
-     * unused, and the same pipe shears them when nothing refuses. The shears handler used to remove the block and
-     * emit its drops with no ask at all.
+     * digging does, as the pipe's owner standing on the block (as {@code BlockUtil#canMachineBreak} and a robot ask
+     * it, so a claim that judges where the actor stands answers all three alike): a claim that cancels the break keeps
+     * the leaves standing and the shears unused, and a fresh pipe shears them when nothing refuses. The shears handler
+     * used to remove the block and emit its drops with no ask at all, and then asked as a player standing in the pipe.
+     * The refusal is remembered as the pipe's digging remembers one: a second pair of shears is not asked about the
+     * same block again inside the refusal window.
      */
     public static void testShearsAskBreakProtectionBeforeCutting(GameTestHelper helper) {
         helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
@@ -368,7 +372,9 @@ public class PipeBehaviourStripesDropTester {
                 PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.SHEARS));
                 rig.stripes.onDrop(refused);
 
-                helper.assertTrue(claim.asks() >= 1, "the pipe asks break protection about the block it would shear");
+                helper.assertTrue(claim.asks() == 1, "the pipe asks break protection about the block it would shear");
+                helper.assertTrue(leaves.equals(claim.askedFrom.get(0)),
+                        "...as a player standing on that block, asked from " + claim.askedFrom.get(0));
                 helper.assertTrue(helper.getBlockState(leavesRel).is(Blocks.OAK_LEAVES),
                         "a claim that refuses the break keeps the leaves standing");
                 helper.assertTrue(refused.getStack().is(Items.SHEARS) && !refused.getStack().isDamaged(),
@@ -376,16 +382,24 @@ public class PipeBehaviourStripesDropTester {
                 helper.assertTrue(clicks.toolAsks(leaves) == 0,
                         "a refused break ends the use: the leaves are never right-clicked with the shears, got "
                                 + clicks.toolAsks(leaves));
-            }
 
-            // Control: nothing refuses, so the shears cut (the claim only counts).
-            try (ClaimProtectionMod claim = new ClaimProtectionMod(leaves, false)) {
-                PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.SHEARS));
-                rig.stripes.onDrop(allowed);
-
-                helper.assertTrue(helper.getBlockState(leavesRel).isAir(), "an allowed shearing removes the leaves");
-                helper.assertTrue(allowed.getStack().isEmpty(), "a handled drop no longer carries a stack");
+                PipeEventItem.Drop again = rig.drop(new ItemStack(Items.SHEARS));
+                rig.stripes.onDrop(again);
+                helper.assertTrue(claim.asks() == 1,
+                        "a remembered refusal is not asked again by the next shears, asks " + claim.asks());
+                helper.assertTrue(again.getStack().is(Items.SHEARS) && !again.getStack().isDamaged(),
+                        "...and those shears are not used either, got " + again.getStack());
             }
+        }
+
+        // Control: nothing refuses, so a fresh pipe (no remembered refusal) cuts (the claim only counts).
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST);
+                ClaimProtectionMod claim = new ClaimProtectionMod(leaves, false)) {
+            PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.SHEARS));
+            rig.stripes.onDrop(allowed);
+
+            helper.assertTrue(helper.getBlockState(leavesRel).isAir(), "an allowed shearing removes the leaves");
+            helper.assertTrue(allowed.getStack().isEmpty(), "a handled drop no longer carries a stack");
         }
         helper.succeed();
     }
@@ -397,14 +411,21 @@ public class PipeBehaviourStripesDropTester {
      */
     public static void testAirUseAsksTheItemRightClickEvent(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 2, 2);
-        BlockPos pipe = helper.absolutePos(pipeRel);
-        Set<BlockPos> watched = Set.of(pipe, helper.absolutePos(pipeRel.east()));
+        // Where the aimed player stands: its eye is at the pipe's output face, so its feet are in the column of the
+        // pipe or of the cell in front, up to two blocks down. Every one of those cells is watched (and refused).
+        Set<BlockPos> watched = new HashSet<>();
+        for (BlockPos column : new BlockPos[] { pipeRel, pipeRel.east() }) {
+            for (int down = 0; down <= 2; down++) {
+                watched.add(helper.absolutePos(column.below(down)));
+            }
+        }
         try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
-            try (WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false, pos -> false, pipe::equals)) {
+            try (WorkClaimMod claim =
+                    new WorkClaimMod(watched::contains, pos -> false, pos -> false, watched::contains)) {
                 PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.SNOWBALL, 3));
                 rig.stripes.onDrop(refused);
 
-                helper.assertTrue(claim.itemAsks(pipe) >= 1,
+                helper.assertTrue(claim.totalItemAsks() >= 1,
                         "the pipe asks the item right-click event for the item it would use");
                 helper.assertTrue(refused.getStack().is(Items.SNOWBALL) && refused.getStack().getCount() == 3,
                         "a refused item is not used up, got " + refused.getStack());
@@ -418,7 +439,7 @@ public class PipeBehaviourStripesDropTester {
                 PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.SNOWBALL, 3));
                 rig.stripes.onDrop(allowed);
 
-                helper.assertTrue(claim.itemAsks(pipe) >= 1,
+                helper.assertTrue(claim.totalItemAsks() >= 1,
                         "the pipe asks the item right-click event when nothing refuses too");
                 helper.assertTrue(allowed.getStack().isEmpty(), "an allowed item is used: the drop is handled");
             }
@@ -427,61 +448,66 @@ public class PipeBehaviourStripesDropTester {
     }
 
     /**
-     * What an item does to the stack it was used from is kept, as a player keeps it: a stripes pipe carrying ONE
-     * empty bucket that takes a water source sends the water bucket back down the pipe. The helper behind the
-     * dispenser fallback's in-air use read only whether the use took the action and dropped the stack the use
-     * returned, so a single bucket (or bottle) was consumed with its product nowhere: the source gone and no water
-     * bucket anywhere. A stack of two was safe, because the item files the product into the player's inventory
-     * itself. Pouring is the mirror (the empty bucket comes back) and a bottle that takes water comes back as a water
-     * bottle; the ray is the fake player's own, read off an identical lease because the pipe does not aim it.
+     * What an item does to the stack it was used from is kept, as a player keeps it, and an item used in the air acts
+     * on the cell in front of the pipe: the pipe aims its player out of the output face (7.1.x aimed it too; 8.0.x
+     * used dispenser behaviours on that cell). A stripes pipe carrying ONE empty bucket takes the water source in front
+     * of it and sends the water bucket back down the pipe; pouring is the mirror (the water lands in front, against
+     * the stone beyond, and the empty bucket comes back) and a bottle that takes water comes back as a water bottle.
+     * A pipe pointing down takes the source below it, which pins the pitch. Before the aim the player looked south,
+     * level, from about two blocks above the pipe, so the source in front was never reached; before the product fix a
+     * single bucket was consumed with its product nowhere.
      */
     public static void testAirUseHandsTheProductBackDownThePipe(GameTestHelper helper) {
-        ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(2, 2, 2);
-        BlockPos origin = helper.absolutePos(BlockPos.ZERO);
-        Vec3 eye;
-        Vec3 look;
-        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, null, helper.absolutePos(pipeRel))) {
-            eye = lease.player().getEyePosition();
-            look = lease.player().getViewVector(1.0F);
-        }
-        BlockPos nearRel = BlockPos.containing(eye.add(look.scale(2.0))).subtract(origin);
-        BlockPos farRel = BlockPos.containing(eye.add(look.scale(3.0))).subtract(origin);
-        for (BlockPos rel : new BlockPos[] { nearRel, farRel }) {
-            helper.assertTrue(rel.getX() >= 0 && rel.getX() < EntityArenaUtil.CELL_SIZE_X
-                            && rel.getY() >= 0 && rel.getY() < EntityArenaUtil.CELL_SIZE_Y
-                            && rel.getZ() >= 0 && rel.getZ() < EntityArenaUtil.CELL_SIZE_Z,
-                    "the fake player's in-air ray left the arena cell at " + rel + "; move the pipe");
-        }
+        BlockPos frontRel = pipeRel.east();
+        BlockPos beyondRel = frontRel.east();
         try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
-            // An empty bucket takes the water source.
-            helper.setBlock(farRel, Blocks.WATER);
+            // An empty bucket takes the water source in front.
+            helper.setBlock(frontRel, Blocks.WATER);
             PipeEventItem.Drop bucket = rig.drop(new ItemStack(Items.BUCKET));
             rig.stripes.onDrop(bucket);
-            helper.assertTrue(!helper.getBlockState(farRel).is(Blocks.WATER), "the bucket took the water source");
+            helper.assertTrue(!helper.getBlockState(frontRel).is(Blocks.WATER),
+                    "the bucket took the water source in front of the pipe");
             helper.assertTrue(rig.count(Items.WATER_BUCKET) == 1,
                     "...and the water bucket it filled travels back down the pipe, found "
                             + rig.count(Items.WATER_BUCKET));
             rig.empty();
 
-            // A water bucket pours against the stone it meets.
-            helper.setBlock(farRel, Blocks.STONE);
+            // A water bucket pours against the stone beyond the cell in front: the water lands in front.
+            helper.setBlock(frontRel, Blocks.AIR);
+            helper.setBlock(beyondRel, Blocks.STONE);
             PipeEventItem.Drop water = rig.drop(new ItemStack(Items.WATER_BUCKET));
             rig.stripes.onDrop(water);
-            helper.assertTrue(helper.getBlockState(nearRel).is(Blocks.WATER), "the bucket poured its water");
+            helper.assertTrue(helper.getBlockState(frontRel).is(Blocks.WATER),
+                    "the bucket poured its water in front of the pipe");
             helper.assertTrue(rig.count(Items.BUCKET) == 1,
                     "...and the empty bucket travels back down the pipe, found " + rig.count(Items.BUCKET));
             rig.empty();
-            helper.setBlock(nearRel, Blocks.AIR);
+            helper.setBlock(frontRel, Blocks.AIR);
+            helper.setBlock(beyondRel, Blocks.AIR);
 
             // A glass bottle takes water and leaves the source.
-            helper.setBlock(farRel, Blocks.WATER);
+            helper.setBlock(frontRel, Blocks.WATER);
             PipeEventItem.Drop bottle = rig.drop(new ItemStack(Items.GLASS_BOTTLE));
             rig.stripes.onDrop(bottle);
             helper.assertTrue(rig.count(Items.POTION) == 1,
                     "a bottle that took water travels back down the pipe as a water bottle, found "
                             + rig.count(Items.POTION));
-            helper.setBlock(farRel, Blocks.AIR);
+            helper.setBlock(frontRel, Blocks.AIR);
+        }
+
+        // Pointing down: the source below the pipe.
+        BlockPos downRel = new BlockPos(1, 4, 5);
+        BlockPos belowRel = downRel.below();
+        try (StripesRig rig = StripesRig.build(helper, downRel, Direction.DOWN)) {
+            helper.setBlock(belowRel, Blocks.WATER);
+            PipeEventItem.Drop bucket = rig.drop(new ItemStack(Items.BUCKET));
+            rig.stripes.onDrop(bucket);
+            helper.assertTrue(!helper.getBlockState(belowRel).is(Blocks.WATER),
+                    "a pipe pointing down takes the water source below it");
+            helper.assertTrue(rig.count(Items.WATER_BUCKET) == 1,
+                    "...and sends the water bucket back down the pipe, found " + rig.count(Items.WATER_BUCKET));
+            helper.setBlock(belowRel, Blocks.AIR);
         }
         helper.succeed();
     }
@@ -617,23 +643,18 @@ public class PipeBehaviourStripesDropTester {
         });
     }
 
-    private static boolean otherPlayersRefusalArmed;
-    private static boolean otherPlayersRefusalRegistered;
-    /** Clicks the armed handler got refused for its detached player: the test's proof that the handler ran. */
+    /** Clicks the handler got refused for its detached player: the test's proof that the handler ran. */
     private static int otherPlayersRefusalsMade;
 
     /**
-     * A third-party style handler that, only while {@link #otherPlayersRefusalArmed}, has another machine's player
-     * refused a click (an empty stack is refused by vanilla's item gate, no claim needed) and then declines the stack.
-     * Inert otherwise: the registry has no removal.
+     * A third-party style handler that has another machine's player refused a click (an empty stack is refused by
+     * vanilla's item gate, no claim needed) and then declines the stack. Registered only for the one synchronous test
+     * that uses it, and removed again.
      */
     private static final class OtherPlayersRefusal implements IStripesHandlerItem {
         @Override
         public boolean handle(Level world, BlockPos pos, Direction direction, ItemStack stack, Player player,
                 IStripesActivator activator) {
-            if (!otherPlayersRefusalArmed) {
-                return false;
-            }
             // The pipe's own lease is open, so this one is a different, detached player.
             try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease((ServerLevel) world)) {
                 if (lease.player() == player) {
@@ -651,13 +672,6 @@ public class PipeBehaviourStripesDropTester {
         }
     }
 
-    private static synchronized void registerOtherPlayersRefusal() {
-        if (!otherPlayersRefusalRegistered) {
-            otherPlayersRefusalRegistered = true;
-            PipeApi.stripeRegistry.addHandler(new OtherPlayersRefusal(), EnumHandlerPriority.HIGHEST);
-        }
-    }
-
     /**
      * A click refused for ANOTHER machine's player while a handler runs does not end this pipe's dispatch: the
      * refusal tally belongs to the player whose click it was. It used to be one process-wide counter the registry
@@ -667,11 +681,11 @@ public class PipeBehaviourStripesDropTester {
      * placement below cannot pass because the handler never ran.
      */
     public static void testAnotherPlayersRefusalDoesNotEndTheDispatch(GameTestHelper helper) {
-        registerOtherPlayersRefusal();
         BlockPos pipeRel = new BlockPos(2, 2, 2);
         BlockPos targetRel = pipeRel.east();
         try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
-            otherPlayersRefusalArmed = true;
+            OtherPlayersRefusal handler = new OtherPlayersRefusal();
+            StripesRegistry.INSTANCE.addHandler(handler, EnumHandlerPriority.HIGHEST);
             otherPlayersRefusalsMade = 0;
             try {
                 PipeEventItem.Drop drop = rig.drop(new ItemStack(Items.COBBLESTONE, 3));
@@ -683,7 +697,37 @@ public class PipeBehaviourStripesDropTester {
                         "another player's refusal does not stop the pipe placing its block");
                 helper.assertTrue(drop.getStack().isEmpty(), "a handled drop no longer carries a stack");
             } finally {
-                otherPlayersRefusalArmed = false;
+                StripesRegistry.INSTANCE.removeHandler(handler);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A handler that files the stack it used into a second slot as well as the hand (one object in two slots) has it
+     * sent back down the pipe once, not twice: the success sweep takes each distinct stack off the player once, the
+     * rule the robot's take-back already followed. It used to send every slot's stack, so the aliased stack travelled
+     * twice and its items were duplicated.
+     */
+    public static void testAliasedStackIsSentBackOnce(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        IStripesHandlerItem aliasing = (world, pos, direction, stack, player, activator) -> {
+            if (!stack.is(Items.PAPER)) {
+                return false;
+            }
+            player.getInventory().setItem(9, stack);
+            return true;
+        };
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
+            StripesRegistry.INSTANCE.addHandler(aliasing, EnumHandlerPriority.HIGHEST);
+            try {
+                PipeEventItem.Drop drop = rig.drop(new ItemStack(Items.PAPER, 3));
+                rig.stripes.onDrop(drop);
+                helper.assertTrue(drop.getStack().isEmpty(), "a handled drop no longer carries a stack");
+                helper.assertTrue(rig.count(Items.PAPER) == 3,
+                        "the one stack in two slots travels back once (3 paper), found " + rig.count(Items.PAPER));
+            } finally {
+                StripesRegistry.INSTANCE.removeHandler(aliasing);
             }
         }
         helper.succeed();
@@ -692,7 +736,7 @@ public class PipeBehaviourStripesDropTester {
     /** A stripes pipe at {@code pipeRel} pointing {@code direction}, with its item flow. Closing it discards what
      *  the test launched and empties the cargo (used and returned stacks go back down the pipe), so removing the
      *  arena's pipe drops nothing into neighbouring tests and a failed assertion leaves nothing live in the arena. */
-    private record StripesRig(GameTestHelper helper, TilePipeHolder tile, PipeBehaviourStripes stripes,
+    record StripesRig(GameTestHelper helper, TilePipeHolder tile, PipeBehaviourStripes stripes,
             PipeFlowItems flow) implements AutoCloseable {
         static StripesRig build(GameTestHelper helper, BlockPos pipeRel, Direction direction) {
             helper.setBlock(pipeRel, BCTransportBlocks.PIPE_HOLDER.get());

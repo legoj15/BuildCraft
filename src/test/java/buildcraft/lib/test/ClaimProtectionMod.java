@@ -23,12 +23,16 @@ public final class ClaimProtectionMod implements AutoCloseable {
 
     /** The player each break event at the watched position was posted for, in order. */
     public final List<Player> askedBy = new ArrayList<>();
+    /** Where that player stood (its block) when it asked, in order: the player is shared and moves on afterwards. */
+    public final List<BlockPos> askedFrom = new ArrayList<>();
     private final Object token;
 
     public ClaimProtectionMod(BlockPos pos, boolean refuse) {
         token = BreakEventCompat.onBreak(event -> {
             if (event.getPos().equals(pos)) {
-                askedBy.add(BreakEventCompat.playerOf(event));
+                Player asker = BreakEventCompat.playerOf(event);
+                askedBy.add(asker);
+                askedFrom.add(asker == null ? null : asker.blockPosition());
                 if (refuse) {
                     BreakEventCompat.cancel(event);
                 }

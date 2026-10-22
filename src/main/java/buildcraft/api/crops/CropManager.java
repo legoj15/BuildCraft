@@ -2,6 +2,7 @@ package buildcraft.api.crops;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToLongFunction;
 
 import javax.annotation.Nullable;
 
@@ -16,6 +17,7 @@ import net.minecraft.world.level.Level;
 public final class CropManager {
     private static List<ICropHandler> handlers = new ArrayList<>();
     private static ICropHandler defaultHandler;
+    private static ToLongFunction<Player> refusalCounter = player -> 0;
 
     private CropManager() {
 
@@ -31,6 +33,14 @@ public final class CropManager {
 
     public static ICropHandler getDefaultHandler() {
         return defaultHandler;
+    }
+
+    /** Sets how many of a player's clicks a claim mod has refused so far (BuildCraft points it at its own tally of
+     *  machine clicks). {@link #plantCrop} reads it around each handler: a handler whose click was refused ends the
+     *  planting there, as a refused click ends a player's, instead of the next handler clicking the same seed on the
+     *  same soil the claim just refused. Only differences between two readings mean anything. */
+    public static void setRefusalCounter(ToLongFunction<Player> counter) {
+        refusalCounter = counter;
     }
 
     public static boolean isSeed(ItemStack stack) {
@@ -56,8 +66,14 @@ public final class CropManager {
      * {@link ICropHandler#canSustainPlant(Level, ItemStack, BlockPos)} is true for the position. */
     public static boolean plantCrop(Level world, Player player, ItemStack seed, BlockPos pos) {
         for (ICropHandler cropHandler : handlers) {
-            if (cropHandler.isSeed(seed) && cropHandler.canSustainPlant(world, seed, pos) && cropHandler.plantCrop(world, player, seed, pos)) {
-                return true;
+            if (cropHandler.isSeed(seed) && cropHandler.canSustainPlant(world, seed, pos)) {
+                long refused = player == null ? 0 : refusalCounter.applyAsLong(player);
+                if (cropHandler.plantCrop(world, player, seed, pos)) {
+                    return true;
+                }
+                if (player != null && refusalCounter.applyAsLong(player) != refused) {
+                    return false;
+                }
             }
         }
         if (defaultHandler != null && defaultHandler.isSeed(seed) && defaultHandler.canSustainPlant(world, seed, pos)) {

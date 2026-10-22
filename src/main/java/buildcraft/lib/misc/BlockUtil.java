@@ -186,11 +186,8 @@ public class BlockUtil {
         }
     }
 
-    /**
-     * {@link #canMachineBreak} for a machine that already holds its fake player (a stripes handler's, leased by the
-     * pipe for the whole drop): the break event is posted for {@code machine} as it stands, with no second lease.
-     */
-    public static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
+    /** {@link #canMachineBreak} with the break event posted for {@code machine} as it stands. */
+    private static boolean canMachineBreakAs(ServerLevel level, BlockPos pos, Player machine) {
         return BCCoreConfig.minePlayerProtected.get()
                 || BreakEventCompat.canBreak(level, pos, level.getBlockState(pos), machine);
     }
@@ -270,7 +267,9 @@ public class BlockUtil {
         //? if >=26.3 {
         if (result instanceof InteractionResult.Success success) {
             ItemStack transformed = success.heldItemTransformedTo();
-            if (transformed != null && transformed != player.getItemInHand(hand)) {
+            // Against the stack the use started from, as ServerPlayerGameMode#useItemOn compares: an item that put
+            // a stack in the hand itself and answered with the original keeps the stack it put there.
+            if (transformed != null && transformed != stack) {
                 player.setItemInHand(hand, transformed);
             }
         }
@@ -310,8 +309,13 @@ public class BlockUtil {
         InteractionResult result = used.getResult();
         ItemStack transformed = used.getObject();*/
         //?}
-        if (transformed != null && transformed != player.getItemInHand(hand)) {
+        // Against the stack the use started from, as ServerPlayerGameMode#useItem compares (1.21.1's holder carries
+        // that very stack when the use left it alone), and a hand stack the use emptied is cleared as there.
+        if (transformed != null && transformed != stack) {
             player.setItemInHand(hand, transformed);
+        }
+        if (player.getItemInHand(hand).isEmpty()) {
+            player.setItemInHand(hand, ItemStack.EMPTY);
         }
         return result.consumesAction();
     }

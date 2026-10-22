@@ -240,6 +240,8 @@ public class BCCore {
         // sugar cane, which is not a plant block and so needs its own handler.
         buildcraft.api.crops.CropManager.setDefaultHandler(buildcraft.lib.crops.CropHandlerPlantable.INSTANCE);
         buildcraft.api.crops.CropManager.registerHandler(buildcraft.lib.crops.CropHandlerReeds.INSTANCE);
+        // A refused planting click ends the crop dispatch, as it ends the stripes one (the api cannot see lib).
+        buildcraft.api.crops.CropManager.setRefusalCounter(buildcraft.lib.misc.MachineRefusals::count);
 
         // The "soft" world property the robotics pathfinder queries via BuildCraftAPI.isSoftBlock. 7.1.x
         // registered this in BuildCraftCore's postInit (FMLPostInitializationEvent); the port kept the API

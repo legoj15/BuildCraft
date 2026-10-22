@@ -257,6 +257,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_refused_till_ends_hoe_handler", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedTillEndsTheHoeHandler);
         reg.accept("buildcraftunofficial:stripes_refused_entity_interaction_ends_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedEntityInteractionEndsTheDispatch);
         reg.accept("buildcraftunofficial:stripes_other_players_refusal_keeps_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAnotherPlayersRefusalDoesNotEndTheDispatch);
+        reg.accept("buildcraftunofficial:stripes_alias_sweep_sends_once", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAliasedStackIsSentBackOnce);
+        reg.accept("buildcraftunofficial:stripes_breaks_minecart_after_attack_ask", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testMinecartInFrontIsBrokenAfterAnAttackAsk);
+        reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
+        reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
+        reg.accept("buildcraftunofficial:stripes_refused_extension_returns_stack", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedExtensionSendsTheStackBack);
         
         // Shape Patterns
         reg.accept("buildcraftunofficial:shape_pattern_tiny_template", () -> buildcraft.core.builders.patterns.ShapePatternsTester::testTinyTemplate);

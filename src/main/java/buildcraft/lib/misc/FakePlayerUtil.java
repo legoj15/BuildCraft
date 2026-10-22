@@ -18,8 +18,10 @@ import javax.annotation.Nullable;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -227,6 +229,67 @@ public final class FakePlayerUtil {
         return lease;
     }
 
+    /**
+     * {@link #lease(ServerLevel, GameProfile, BlockPos)}, aimed out of {@code pos}'s {@code facing} face: the eye sits
+     * at the centre of that face (a hair outside it, so a ray never starts inside whatever is attached to the face)
+     * and looks straight along {@code facing}, so an item used in the air (a bucket, a bottle, a thrown snowball, a
+     * rocket) acts on the cell in front, and a block placed with a facing faces the way a player looking that way
+     * would place it. The feet are an eye height below the eye. 7.1.x aimed its stripes player the same way (it stood
+     * the player in the front cell instead, which put a modern bucket's ray above a source in that cell).
+     */
+    public static Lease lease(ServerLevel level, @Nullable GameProfile profile, BlockPos pos, Direction facing) {
+        Lease lease = lease(level, profile, pos);
+        FakePlayer player = lease.player();
+        double out = 0.5 + AIM_OUTSET;
+        Vec3 eye = Vec3.atCenterOf(pos).add(facing.getStepX() * out, facing.getStepY() * out, facing.getStepZ() * out);
+        float yRot = facing.getAxis().isHorizontal() ? facing.toYRot() : 0;
+        float xRot = facing == Direction.DOWN ? 90 : facing == Direction.UP ? -90 : 0;
+        pose(player, eye.subtract(0, player.getEyeHeight(), 0), yRot, xRot);
+        return lease;
+    }
+
+    /** How far outside the face an aimed player's eye sits: far enough to start every ray in the front cell. */
+    private static final double AIM_OUTSET = 1.0E-3;
+
+    /**
+     * Stands {@code player} with its feet at {@code feet} looking along ({@code yRot}, {@code xRot}), and sets the
+     * previous-tick position, head and body rotation to match, so nothing reads a stale pose. For a leased player
+     * that its caller re-poses (a robot standing its player on the block it works).
+     */
+    public static void pose(Player player, Vec3 feet, float yRot, float xRot) {
+        placeAt(player, feet);
+        player.setYRot(yRot);
+        player.yRotO = yRot;
+        player.setXRot(xRot);
+        player.xRotO = xRot;
+        player.setYHeadRot(yRot);
+        player.yHeadRotO = yRot;
+        player.setYBodyRot(yRot);
+        player.yBodyRotO = yRot;
+    }
+
+    /**
+     * Takes every stack off {@code player} and returns each DISTINCT stack once, by identity: the main hand first,
+     * then the inventory slots in order. The hand is itself an inventory slot, and a handler may file one stack object
+     * into two slots, so collecting by slot alone would hand the same stack (and its items) out twice. Empty stacks
+     * are left out. What a machine does with the result is its own rule: the stripes pipe sends it all back down the
+     * pipe, a robot keeps what is left of the stack it used ({@code AIRobotStripesHandler}).
+     */
+    public static List<ItemStack> takeDistinctStacks(Player player) {
+        List<ItemStack> taken = new ArrayList<>();
+        ItemStack hand = player.getMainHandItem();
+        if (!hand.isEmpty()) {
+            taken.add(hand);
+        }
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().removeItemNoUpdate(i);
+            if (!stack.isEmpty() && taken.stream().noneMatch(seen -> seen == stack)) {
+                taken.add(stack);
+            }
+        }
+        return taken;
+    }
+
     /** The API path: the API's own cached player (never a leased one), reset. */
     private static FakePlayer fetch(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
         Entry entry = entryFor(level, profile, true);
@@ -304,7 +367,7 @@ public final class FakePlayerUtil {
     }
 
     /** Moves the player and its previous-tick position together, so nothing interpolates from a stale spot. */
-    private static void placeAt(FakePlayer player, Vec3 at) {
+    private static void placeAt(Player player, Vec3 at) {
         player.setPos(at.x, at.y, at.z);
         player.xo = player.xOld = at.x;
         player.yo = player.yOld = at.y;

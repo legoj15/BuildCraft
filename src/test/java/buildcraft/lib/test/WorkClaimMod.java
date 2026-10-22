@@ -116,6 +116,11 @@ public final class WorkClaimMod implements AutoCloseable {
         return itemAsks.getOrDefault(pos, 0);
     }
 
+    /** How many item uses in the air were attempted by a player standing at any of the watched positions. */
+    public int totalItemAsks() {
+        return itemAsks.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
     @Override
     public void close() {
         NeoForge.EVENT_BUS.unregister(toolListener);

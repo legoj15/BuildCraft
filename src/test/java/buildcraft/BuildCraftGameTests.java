@@ -439,6 +439,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_frame_completes_around_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAroundClaimProtectedBlock);
         // ... and once the claim is lifted (no event fires) the quarry asks again on its own and fills the gap.
         reg.accept("buildcraftunofficial:quarry_frame_completes_after_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAfterClaimIsLifted);
+        // ... and when the parked block is gone for good (bare cell, claim still standing) the retry fills the gap too.
+        reg.accept("buildcraftunofficial:quarry_frame_fills_gap_when_parked_cell_becomes_bare", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapWhenParkedCellBecomesBare);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -610,6 +612,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_infinite_diagonals_dont_count", () -> buildcraft.factory.PumpInfiniteDetectionTester::testDiagonalNeighboursDoNotCount);
         reg.accept("buildcraftunofficial:pump_infinite_water_below_supports", () -> buildcraft.factory.PumpInfiniteDetectionTester::testWaterBelowProvidesSupport);
         reg.accept("buildcraftunofficial:pump_infinite_null_safety", () -> buildcraft.factory.PumpInfiniteDetectionTester::testNullSafetyShortCircuits);
+        // A miner's own waterlogged tube is plumbing: it does not count as a water-source neighbour.
+        reg.accept("buildcraftunofficial:pump_infinite_tube_neighbour_not_a_source", () -> buildcraft.factory.PumpInfiniteDetectionTester::testWaterloggedTubeNeighbourIsNotASource);
 
         // Mining Well fluid handling — low-viscosity fluids (water) are passable, not a mine
         // target: the well drills its tube past them to the solids below and stays finished over
@@ -626,6 +630,16 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_probe_ignores_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpProbeIgnoresWaterloggedTube);
         // ...and so does the flood fill: a waterlogged tube is a water source, but never one of the pump's buckets.
         reg.accept("buildcraftunofficial:pump_never_drains_own_waterlogged_tube", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testPumpNeverDrainsOwnWaterloggedTube);
+
+        // The tube is laid only through cells it may take: it leaves a claimed block the well was refused, and a
+        // waterlogged block standing in a pump's column, where they are.
+        reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_block", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedBlockAlone);
+        reg.accept("buildcraftunofficial:pump_tube_leaves_waterlogged_block", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testPumpTubeLeavesWaterloggedBlockInColumn);
+
+        // An idle pump backs its flood-fill rebuilds off, wakes on an adjacent block change, and still finds a later pool.
+        reg.accept("buildcraftunofficial:pump_idle_rebuilds_back_off", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idleRebuildsBackOffOverARefusedPool);
+        reg.accept("buildcraftunofficial:pump_idle_finds_later_pool_within_cap", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsALaterPoolWithinTheCap);
+        reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
@@ -757,6 +771,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:dense_oil_sinks_through_plain_water", () -> buildcraft.lib.block.BlockWaterloggingTester::testDenseOilStillSinksThroughPlainWater);
         // Pumps and robots drain a waterlogged block like a bucket (un-waterlog it), never delete it; kelp is not drainable.
         reg.accept("buildcraftunofficial:drain_keeps_waterlogged_blocks", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockKeepsWaterloggedBlocks);
+        // ... and refuses a waterlogged block that cannot survive dry (vanilla's pickup would destroy it with drops).
+        reg.accept("buildcraftunofficial:drain_refuses_block_that_cannot_survive_dry", () -> buildcraft.lib.block.BlockWaterloggingTester::testDrainBlockRefusesBlockThatCannotSurviveDry);
         reg.accept("buildcraftunofficial:pump_keeps_waterlogged_marker", () -> buildcraft.lib.block.BlockWaterloggingTester::testPumpKeepsWaterloggedMarker);
 
         // Machine ↔ pipe connectivity — item pipes must see machine inventories exposed as

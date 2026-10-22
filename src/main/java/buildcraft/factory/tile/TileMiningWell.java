@@ -19,7 +19,6 @@ import buildcraft.api.mj.MjBattery;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.BCFactoryBlockEntities;
-import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
@@ -151,7 +150,8 @@ public class TileMiningWell extends TileMiner {
             if (canBreak()) {
                 // Honor third-party player-protection mods. If the owner is not allowed to
                 // break this position, skip past it instead of stopping — claims are usually
-                // small and there may be unclaimed terrain further down.
+                // small and there may be unclaimed terrain further down. The tube leaves the
+                // skipped block where it is (see TileMiner#extendTubes).
                 if (level instanceof ServerLevel serverLevel
                         && !BlockUtil.canMachineBreak(serverLevel, currentPos, getOwner())) {
                     continue;
@@ -163,7 +163,7 @@ public class TileMiningWell extends TileMiner {
             FluidState fluidState = level.getFluidState(currentPos);
             boolean isPassable = !fluidState.isEmpty() && BlockUtil.isPassableFluid(fluidState.getType());
             if (level.isEmptyBlock(currentPos)
-                    || level.getBlockState(currentPos).is(BCFactoryBlocks.TUBE.get())
+                    || BlockUtil.isMinerTube(level.getBlockState(currentPos))
                     || isPassable) {
                 continue;
             } else {

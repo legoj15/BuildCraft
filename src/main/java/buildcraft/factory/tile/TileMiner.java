@@ -10,7 +10,7 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
@@ -27,6 +27,7 @@ import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.mj.MjBatteryComponent;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.TileBC_Neptune;
 
@@ -97,13 +98,15 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     }
 
     /** Removes the whole tube column under the miner. {@code removeBlock} swaps each tube for its fluid state, so
-     *  a waterlogged tube leaves its water source behind and a dry one leaves air. */
+     *  a waterlogged tube leaves its water source behind and a dry one leaves air. The column is the contiguous run
+     *  of tubes below the machine, plus any gap inside the length the machine last laid: {@link #updateLength} leaves
+     *  a cell it may not take (a claimed block the well skipped) untouched, and the tubes below it still go. */
     private void removeTubes() {
         for (int y = worldPosition.getY() - 1; y > worldPosition.getY() - BCCoreConfig.miningMaxDepth.get(); y--) {
             BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
-            if (level.getBlockState(blockPos).is(BCFactoryBlocks.TUBE.get())) {
+            if (BlockUtil.isMinerTube(level.getBlockState(blockPos))) {
                 level.removeBlock(blockPos, false);
-            } else {
+            } else if (worldPosition.getY() - y >= wantedLength) {
                 break;
             }
         }
@@ -117,20 +120,51 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
         }
     }
 
+    /**
+     * Brings the tube column to the length the current target wants, touching only the cells that change: tubes sit
+     * in the cells below the machine down to (but not including) the target, so growing the column lays the cells
+     * between the old and the new end, and shrinking it removes just those. (A mined block lengthens a well's column
+     * by one, so rewriting the whole column per block was O(depth) block updates and, in water, an un-waterlog and
+     * re-waterlog of every cell.)
+     */
     protected void updateLength() {
         int newY = getTargetPos() != null ? getTargetPos().getY() : worldPosition.getY();
         int newLength = worldPosition.getY() - newY;
         if (newLength != wantedLength) {
-            // Remove old tubes (waterlogged ones leave their water source behind)
-            removeTubes();
-            // Place new tubes; a cell holding a water source gets a waterlogged tube so the water survives
-            for (int y = worldPosition.getY() - 1; y > newY; y--) {
-                BlockPos blockPos = new BlockPos(worldPosition.getX(), y, worldPosition.getZ());
-                level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().stateFor(level, blockPos));
+            if (newLength < wantedLength) {
+                retractTubes(newLength, wantedLength);
+            } else {
+                extendTubes(wantedLength, newLength);
             }
             currentLength = wantedLength = newLength;
             setChanged();
             MessageUtil.sendUpdateToTrackingPlayers(this);
+        }
+    }
+
+    /** Lays tubes in the cells at depth {@code oldLength} (the old target's) down to just above depth
+     *  {@code newLength}. A cell holding a water source gets a waterlogged tube so the water survives. A cell that
+     *  holds anything but air, a fluid block or a tube is left alone: it is a block the machine was refused (a claim
+     *  the well skipped past) or one that is not the tube's to replace (a waterlogged slab in a pump's column); the
+     *  tube simply has a gap there. */
+    private void extendTubes(int oldLength, int newLength) {
+        for (int depth = Math.max(1, oldLength); depth < newLength; depth++) {
+            BlockPos blockPos = worldPosition.below(depth);
+            BlockState existing = level.getBlockState(blockPos);
+            if (existing.isAir() || existing.getBlock() instanceof LiquidBlock) {
+                level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().stateFor(level, blockPos));
+            }
+        }
+    }
+
+    /** Removes the tubes in the cells at depth {@code newLength} down to just above depth {@code oldLength}
+     *  (waterlogged ones leave their water source behind). */
+    private void retractTubes(int newLength, int oldLength) {
+        for (int depth = Math.max(1, newLength); depth < oldLength; depth++) {
+            BlockPos blockPos = worldPosition.below(depth);
+            if (BlockUtil.isMinerTube(level.getBlockState(blockPos))) {
+                level.removeBlock(blockPos, false);
+            }
         }
     }
 

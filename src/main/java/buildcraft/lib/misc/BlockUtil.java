@@ -18,7 +18,10 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -32,6 +35,7 @@ import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -51,6 +55,21 @@ import buildcraft.core.BCCoreConfig;
 public class BlockUtil {
     /** Mining multiplier, set by BCCoreConfig on init. Default 1.0. */
     public static double miningMultiplier = 1.0;
+
+    /**
+     * The blocks that are a mining machine's own plumbing: the tube a Mining Well or Pump lays between itself and its
+     * target. Machines treat them as transparent when they probe, flood-fill or count neighbours (a bore drilled
+     * through a pond is waterlogged, a water source that is not the pond's), and robots leave them alone. A data tag
+     * (it holds {@code buildcraftunofficial:tube}) so code outside the factory package can ask without importing the
+     * block.
+     */
+    public static final TagKey<Block> MINER_TUBES =
+            TagKey.create(Registries.BLOCK, Identifier.parse("buildcraftunofficial:miner_tubes"));
+
+    /** Whether {@code state} is a miner's tube; see {@link #MINER_TUBES}. */
+    public static boolean isMinerTube(BlockState state) {
+        return state.is(MINER_TUBES);
+    }
 
     // --- Version-neutral useItemOn result values ---
     // BlockBehaviour#useItemOn returns InteractionResult on 1.21.10+ but the older ItemInteractionResult
@@ -380,6 +399,9 @@ public class BlockUtil {
      * other block (kelp, seagrass: always-waterlogged plants a bucket cannot empty) is not drainable. Pumps
      * and the robot pump board must pick their targets with this, or they would stall on (or, before this
      * existed, delete) such a block.
+     *
+     * <p>This is the state-only half: it cannot tell whether the block survives drying out, so a caller that has
+     * the world must use {@link #getDrainableFluid(Level, BlockPos)}, which also refuses such a block.
      */
     @Nullable
     public static Fluid getDrainableFluid(BlockState state) {
@@ -390,16 +412,38 @@ public class BlockUtil {
         return fluidState.getType();
     }
 
-    /** {@link #getDrainableFluid(BlockState)} at a world position. */
+    /**
+     * {@link #getDrainableFluid(BlockState)} at a world position, minus a waterlogged block that cannot live
+     * without its water. Vanilla's {@code SimpleWaterloggedBlock.pickupBlock} dries such a block and then destroys
+     * it with drops, so a machine must never offer the cell: the block would be deleted by what is meant to take only
+     * the water. (The survival test runs on the block as it would stand dry, in the world as it is now; a block
+     * whose survival depends on water in its own cell cannot be foreseen that way.)
+     */
     @Nullable
     public static Fluid getDrainableFluid(Level world, BlockPos pos) {
-        return getDrainableFluid(world.getBlockState(pos));
+        BlockState state = world.getBlockState(pos);
+        Fluid fluid = getDrainableFluid(state);
+        if (fluid == null || !survivesDrying(world, pos, state)) {
+            return null;
+        }
+        return fluid;
+    }
+
+    /** False for a waterlogged block that would not survive without its water; true for everything else, so a
+     *  fluid block or a modded {@link BucketPickup} keeps its own pickup logic. */
+    private static boolean survivesDrying(Level world, BlockPos pos, BlockState state) {
+        if (state.getBlock() instanceof LiquidBlock || !state.hasProperty(BlockStateProperties.WATERLOGGED)
+                || !state.getValue(BlockStateProperties.WATERLOGGED)) {
+            return true;
+        }
+        return state.setValue(BlockStateProperties.WATERLOGGED, false).canSurvive(world, pos);
     }
 
     /**
      * Drains one bucket of source fluid from the world, as a bucket would: a fluid block becomes air, a
      * waterlogged block is un-waterlogged and kept (block entity, contents and all). Anything
-     * {@link #getDrainableFluid(BlockState)} rejects is left untouched.
+     * {@link #getDrainableFluid(Level, BlockPos)} rejects is left untouched, including a waterlogged block that
+     * could not survive dry (a bucket's pickup would destroy it).
      *
      * @param world    the level
      * @param pos      the position to drain
@@ -409,7 +453,7 @@ public class BlockUtil {
     @Nullable
     public static FluidStack drainBlock(Level world, BlockPos pos, boolean doDrain) {
         BlockState state = world.getBlockState(pos);
-        Fluid fluid = getDrainableFluid(state);
+        Fluid fluid = getDrainableFluid(world, pos);
         if (fluid == null) {
             return null;
         }

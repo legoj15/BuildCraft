@@ -13,11 +13,15 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
+import net.minecraft.world.level.redstone.Orientation;
+//?}
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileMiner;
@@ -70,6 +74,25 @@ public class BlockPump extends BlockBCTile_Neptune<TilePump> {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    //? if >=1.21.10 {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            @Nullable Orientation orientation, boolean movedByPiston) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            BlockPos neighborPos, boolean movedByPiston) {*/
+    //?}
+        //? if >=1.21.10 {
+        super.neighborChanged(state, level, pos, neighborBlock, orientation, movedByPiston);
+        //?} else {
+        /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
+        //?}
+        // An idle pump backs its flood-fill rebuilds off; a block changing beside it ends the wait (TilePump#wake).
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TilePump pump) {
+            pump.wake();
+        }
     }
 
     @Override

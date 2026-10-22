@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import buildcraft.factory.tile.TilePump;
 
@@ -223,6 +224,46 @@ public class PumpInfiniteDetectionTester {
                 "Null level must return false");
         assertTrue(!TilePump.isInfiniteSourceAt(helper.getLevel(), null),
                 "Null pos must return false");
+        helper.succeed();
+    }
+
+    /**
+     * A miner's own tube is plumbing, not part of the pool: a waterlogged tube beside the pump's anchor cell holds a
+     * water source (a bore drilled through a pond), but the pump, its flood fill and the robot pump board all treat
+     * the tube as transparent, so it must not count toward the two source neighbours that make a cell regenerate.
+     * Otherwise a lone real neighbour plus one well's tube would flag a finite cell infinite, and the pump would stop
+     * consuming it. Real water on the same side restores the verdict, so only the tube is being discounted.
+     */
+    public static void testWaterloggedTubeNeighbourIsNotASource(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        BlockPos anchor = new BlockPos(2, 2, 2);
+        BlockPos pool = new BlockPos(1, 2, 2);
+        BlockPos tubeCell = new BlockPos(3, 2, 2);
+
+        for (BlockPos cell : new BlockPos[] { anchor, pool, tubeCell }) {
+            helper.setBlock(cell.below(), Blocks.STONE);
+        }
+        helper.setBlock(anchor, Blocks.WATER);
+        helper.setBlock(pool, Blocks.WATER);
+        helper.setBlock(tubeCell, BCFactoryBlocks.TUBE.get().defaultBlockState()
+                .setValue(BlockStateProperties.WATERLOGGED, true));
+        assertTrue(level.getFluidState(helper.absolutePos(tubeCell)).isSource(),
+                "sanity: the waterlogged tube must report a water source, or the check below is vacuous");
+
+        boolean infiniteBesideTube = TilePump.isInfiniteSourceAt(level, helper.absolutePos(anchor));
+
+        helper.setBlock(tubeCell, Blocks.WATER);
+        boolean infiniteBesideWater = TilePump.isInfiniteSourceAt(level, helper.absolutePos(anchor));
+
+        helper.setBlock(tubeCell, Blocks.AIR);
+        helper.setBlock(pool, Blocks.AIR);
+        helper.setBlock(anchor, Blocks.AIR);
+
+        assertTrue(!infiniteBesideTube,
+                "one real source plus one waterlogged tube must NOT make the anchor infinite (the tube is plumbing)");
+        assertTrue(infiniteBesideWater,
+                "control: two real water sources beside the anchor must make it infinite");
         helper.succeed();
     }
 }

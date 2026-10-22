@@ -26,8 +26,8 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.BlockClaims;
-import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.robotics.JobClaim;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -116,7 +116,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
         return level != null
                 // A Mining Well / Pump tube drilled through water is waterlogged, a source like any other; it is the
                 // machine's own plumbing, so the pond around it is pumped but the tube is left wet (as TilePump does).
-                && !level.getBlockState(pos).is(BCFactoryBlocks.TUBE.get())
+                && !BlockUtil.isMinerTube(level.getBlockState(pos))
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))

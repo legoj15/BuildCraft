@@ -27,12 +27,21 @@ public final class TestOnlyBlocks {
     /** A water source whose bucket pickup is always refused; see {@link RefusingSourceBlock}. */
     public static final Identifier REFUSING_SOURCE_ID = Identifier.parse(NAMESPACE + ":refusing_source");
 
+    /** A waterloggable block that cannot survive dry; see {@link DryFragileBlock}. */
+    public static final Identifier DRY_FRAGILE_ID = Identifier.parse(NAMESPACE + ":dry_fragile");
+
     private TestOnlyBlocks() {}
 
     /** The registered {@link RefusingSourceBlock} (valid once registries are populated). */
     public static Block refusingSource() {
         return buildcraft.lib.misc.RegistryUtilBC.getValue(
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, REFUSING_SOURCE_ID);
+    }
+
+    /** The registered {@link DryFragileBlock} (valid once registries are populated). */
+    public static Block dryFragile() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, DRY_FRAGILE_ID);
     }
 
     /**
@@ -48,6 +57,14 @@ public final class TestOnlyBlocks {
                     //? if >=1.21.10 {
                     BlockBehaviour.Properties.of()
                             .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, REFUSING_SOURCE_ID))
+                            .noOcclusion()));
+                    //?} else {
+                    /*BlockBehaviour.Properties.of().noOcclusion()));*/
+                    //?}
+            event.register(Registries.BLOCK, DRY_FRAGILE_ID, () -> new DryFragileBlock(
+                    //? if >=1.21.10 {
+                    BlockBehaviour.Properties.of()
+                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, DRY_FRAGILE_ID))
                             .noOcclusion()));
                     //?} else {
                     /*BlockBehaviour.Properties.of().noOcclusion()));*/

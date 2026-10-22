@@ -467,7 +467,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
     /**
      * Probes the refused frame cells whose retry window has ended, a few per tick: a cell that can be mined now is
-     * queued again (and wakes a quarry that had finished), anything else keeps its refusal for another window. Runs
+     * queued again (and wakes a quarry that had finished), as is a cell that no longer holds a block to break (air,
+     * bare fluid: the frame goes in), anything else keeps its refusal for another window. Runs
      * for an idle quarry too, which is the point: a claim lifted after the job is done fires no event, and the frame
      * gap it left would otherwise stay until the next chunk reload. Costs one map peek per tick while nothing is due,
      * and never reads a cell in an unloaded chunk (an idle quarry has released its chunk tickets).
@@ -477,8 +478,16 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
         for (BlockPos blockPos : frameRefusals.takeExpired(level, FRAME_RETRY_PROBES_PER_TICK)) {
-            if (level.isLoaded(blockPos) && canMine(blockPos)) {
+            if (!level.isLoaded(blockPos)) {
+                continue;
+            }
+            if (canMine(blockPos)) {
                 frameRefusals.forget(blockPos);
+                check(blockPos);
+            } else if (!canIgnoreInFrameBox(blockPos)) {
+                // The refused block is gone (air under a standing claim, bare fluid): there is nothing left to
+                // break, so canMine never says yes again, but the frame can go in. check() forgets the refusal and
+                // queues the placement. A block that is still there (and still refused) keeps its window.
                 check(blockPos);
             }
         }

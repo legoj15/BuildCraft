@@ -45,7 +45,6 @@ import buildcraft.core.tile.ITileOilSpring;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryAttachments;
 import buildcraft.factory.BCFactoryBlockEntities;
-import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
@@ -119,6 +118,18 @@ public class TilePump extends TileMiner implements IDebuggable {
     private final Deque<BlockPos> queue = new ArrayDeque<>();
     private boolean isInfiniteWaterSource;
     private int rebuildDelay = 0;
+    /** Consecutive rebuilds that found nothing to pump; sets how long the pump waits before the next one. */
+    private int idleRebuilds = 0;
+    /** How many times {@link #buildQueue} has run -- package-private so the idle-rebuild test can count them. */
+    int rebuildCount = 0;
+
+    /** Ticks between flood-fill rebuilds while the pump has work (and the first wait after it runs dry). */
+    static final int REBUILD_DELAY = 30;
+    /** The longest the pump waits between rebuilds once they keep finding nothing to pump. The wait doubles from
+     *  {@link #REBUILD_DELAY} with every empty rebuild up to this, because a rebuild walks the whole pool out to
+     *  {@code pumpMaxDistance} blocks and an idle pump over a big refused or exhausted pool would otherwise redo that
+     *  walk every 30 ticks for nothing. A block changing next to the pump ({@link #wake}) cuts the wait short. */
+    static final int MAX_IDLE_REBUILD_DELAY = 600;
 
     /**
      * Cells that refused to be drained (a claim mod cancelled the break probe, or a modded {@code BucketPickup}
@@ -162,6 +173,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     // --- Queue Building (BFS flood-fill) ---
 
     private void buildQueue() {
+        rebuildCount++;
         builtAtRevision = CONFIG_REVISION.get();
         queue.clear();
         paths.clear();
@@ -273,7 +285,7 @@ public class TilePump extends TileMiner implements IDebuggable {
             BlockState state = level.getBlockState(pos);
             // A tube is the miner's own plumbing, never the fluid to pump -- even when it is waterlogged
             // (a bore drilled through a pond keeps the pond's water inside the tube).
-            if (state.is(BCFactoryBlocks.TUBE.get())) {
+            if (BlockUtil.isMinerTube(state)) {
                 continue;
             }
             Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
@@ -321,12 +333,18 @@ public class TilePump extends TileMiner implements IDebuggable {
                     if (offsetPos.distSqr(targetPos) > maxLengthSquared) {
                         continue;
                     }
+                    // The fill never reads past the loaded world: getBlockState on an unloaded chunk would load it
+                    // (generating it, when it is new) on the server thread, and a rebuild reaches up to
+                    // pumpMaxDistance blocks. The pool beyond is found by a later rebuild, once the chunk loads.
+                    if (!level.isLoaded(offsetPos)) {
+                        continue;
+                    }
                     boolean isNew = checked.add(offsetPos.asLong());
                     if (isNew) {
                         // The miner's own plumbing is transparent to the fill, exactly as in probeDown: a tube
                         // drilled through water is waterlogged -- a source the fill would otherwise queue, path
                         // through and let the pump un-waterlog bucket by bucket.
-                        if (level.getBlockState(offsetPos).is(BCFactoryBlocks.TUBE.get())) {
+                        if (BlockUtil.isMinerTube(level.getBlockState(offsetPos))) {
                             continue;
                         }
                         Fluid fluidAt = BlockUtil.getFluidWithFlowing(level, offsetPos);
@@ -425,7 +443,7 @@ public class TilePump extends TileMiner implements IDebuggable {
      *
      * <p>Vertical neighbours are deliberately ignored — vanilla's regen check is
      * horizontal-only (a water source above does not seed a regenerated source
-     * below; water just flows down).
+     * below; water just flows down). A neighbouring miner tube never counts, waterlogged or not.
      */
     public static boolean isInfiniteSourceAt(@Nullable Level level, @Nullable BlockPos pos) {
         if (level == null || pos == null) {
@@ -442,7 +460,16 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
         int sources = 0;
         for (Direction dir : Direction.Plane.HORIZONTAL) {
-            Fluid neighbour = BlockUtil.getFluid(level, pos.relative(dir));
+            BlockPos neighbourPos = pos.relative(dir);
+            // A miner's tube is plumbing, as everywhere else the pump looks (probeDown, the flood fill): a bore
+            // drilled through a pond is waterlogged -- a source in vanilla's eyes -- but a world from before the tube
+            // was waterloggable had a dry bore there, and a neighbouring well must not decide whether this cell
+            // regenerates. (Vanilla's own rule would count it, as it counts any waterlogged neighbour that lets
+            // water through; the pump deliberately does not.)
+            if (BlockUtil.isMinerTube(level.getBlockState(neighbourPos))) {
+                continue;
+            }
+            Fluid neighbour = BlockUtil.getFluid(level, neighbourPos);
             if (FluidUtilBC.areFluidsEqual(neighbour, Fluids.WATER)) {
                 if (++sources >= 2) {
                     return true;
@@ -482,11 +509,27 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     // --- Ticking ---
 
+    /**
+     * Cuts a long idle wait short because the world next to the pump changed (its block's neighbour update): the
+     * next {@code mine()} rebuilds at once. Only a wait longer than {@link #REBUILD_DELAY} is cut, and the back-off
+     * starts over, so a stream of neighbour updates can never rebuild the pool faster than the fixed cadence this
+     * replaced. Server thread.
+     */
+    public void wake() {
+        idleRebuilds = 0;
+        if (rebuildDelay > REBUILD_DELAY) {
+            rebuildDelay = 0;
+        }
+    }
+
     @Override
     public void serverTick() {
         if (!queueBuilt || builtAtRevision != CONFIG_REVISION.get()) {
             buildQueue();
             queueBuilt = true;
+            // Whatever the pump was waiting for is moot: the queue it just built is what mine() works from now.
+            rebuildDelay = 0;
+            idleRebuilds = 0;
         }
 
         super.serverTick();
@@ -600,15 +643,27 @@ public class TilePump extends TileMiner implements IDebuggable {
             if (rebuildDelay > 0) {
                 return;
             }
-            rebuildDelay = 30;
-        } else {
-            if (currentPos == null && rebuildDelay > 0) {
-                return;
-            }
-            rebuildDelay = 30;
+        } else if (currentPos == null && rebuildDelay > 0) {
+            return;
         }
+        rebuildAndPickNext();
+    }
+
+    /**
+     * Rebuilds the flood fill and lines up the next cell, then sets how long to wait before rebuilding again: the
+     * fixed {@link #REBUILD_DELAY} while there is work, and a doubling wait (capped at
+     * {@link #MAX_IDLE_REBUILD_DELAY}) for as long as rebuilds keep finding nothing to pump.
+     */
+    private void rebuildAndPickNext() {
         buildQueue();
         nextPos();
+        if (currentPos != null) {
+            idleRebuilds = 0;
+            rebuildDelay = REBUILD_DELAY;
+        } else {
+            rebuildDelay = Math.min(REBUILD_DELAY << Math.min(idleRebuilds, 5), MAX_IDLE_REBUILD_DELAY);
+            idleRebuilds++;
+        }
     }
 
     @Nullable

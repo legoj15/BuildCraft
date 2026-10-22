@@ -160,6 +160,57 @@ public class TileQuarryUnminableFrameTester {
         }, "the frame gap was never filled after the claim was lifted");
     }
 
+    /**
+     * A parked cell that stops being a block the quarry has to break: the claim still stands (the quarry may not mine
+     * what is there), but the block the quarry was refused is gone and the cell is bare. The quarry has finished and
+     * gone idle, so its retry is the only probe; it used to re-queue a parked cell only when {@code canMine} was true,
+     * and a cell with nothing left to break (air under a standing claim, or bare fluid) is never mineable, so its
+     * frame gap stayed until the chunk reloaded. The retry must now check the cell and place the frame.
+     *
+     * <p>The cell turns to air rather than water: both are "nothing the frame must break", and water would flow
+     * through the open frame box for the whole 200-tick window.
+     *
+     * <p>Everything but building the quarry waits for the first poll: a placed quarry runs {@code onLoad} on its first
+     * level tick, which rescans the whole frame box and would repair the gap by itself, hiding the retry. The poll's
+     * first call is that tick, so the parking and the wait that follow are the quarry's own.
+     */
+    public static void testFrameFillsGapWhenParkedCellBecomesBare(GameTestHelper helper) {
+        Scenario s;
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            s = new Scenario(helper);
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+            return;
+        }
+        BlockPos stuckAbs = s.abs(STUCK_EDGE);
+        ClaimProtectionMod[] claim = {null};
+        boolean[] parked = {false};
+        int limit = (int) RefusalMemory.QUARRY_FRAME.windowTicks() * 3;
+        EntityArenaUtil.tickUntil(helper, limit + 5, () -> {
+            if (!parked[0]) {
+                parked[0] = true;
+                helper.setBlock(STUCK_EDGE, Blocks.STONE);
+                claim[0] = new ClaimProtectionMod(stuckAbs, true);
+                s.runToDiggingAndVerify(helper, Blocks.STONE);
+                assertTrue(!claim[0].askedBy.isEmpty(), "liveness: the quarry must have asked the claim about the cell");
+                // The refused block goes away; the claim over the cell stays, so canMine keeps saying no.
+                helper.setBlock(STUCK_EDGE, Blocks.AIR);
+                return false;
+            }
+            s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
+            s.quarry.tick();
+            return helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
+        }, helper::succeed, "the frame gap was never filled after the parked cell turned to air under a standing claim",
+                () -> {
+                    if (claim[0] != null) {
+                        claim[0].close();
+                    }
+                    s.cleanUp(helper);
+                });
+    }
+
     private static final class Scenario {
         final TileQuarry quarry;
         final BlockPos quarryAbs;

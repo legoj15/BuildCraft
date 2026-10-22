@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:quarry_frame_fills_gap_when_parked_cell_becomes_bare",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 800,
+    "setup_ticks": 0,
+    "required": true
+}

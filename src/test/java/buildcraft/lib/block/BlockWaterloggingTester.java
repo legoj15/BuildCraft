@@ -38,6 +38,7 @@ import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.test.MarkerArenaUtil;
+import buildcraft.lib.test.TestOnlyBlocks;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -367,6 +368,42 @@ public class BlockWaterloggingTester {
         // Kelp keeps its water: remove it so nothing flows out of this arena cell after the test.
         helper.setBlock(kelpRel, Blocks.AIR);
         helper.succeed();
+    }
+
+    /** A waterlogged block that cannot survive dry is not a bucket's to take: vanilla's {@code pickupBlock} dries
+     *  it and, when it cannot live dry, destroys it with drops. {@code drainBlock} must refuse it -- simulated or
+     *  real -- and {@code getDrainableFluid} must not offer it, so the pump and the robot pump board never pick the
+     *  cell (the board reads the same predicate through the "fluidSource" world property). The block stands in for a
+     *  modded water plant; no vanilla block gets here. */
+    public static void testDrainBlockRefusesBlockThatCannotSurviveDry(GameTestHelper helper) {
+        BlockPos cellRel = new BlockPos(2, 2, 2);
+        try {
+            ServerLevel level = helper.getLevel();
+            helper.setBlock(cellRel.below(), Blocks.STONE);
+            helper.setBlock(cellRel, TestOnlyBlocks.dryFragile().defaultBlockState());
+            BlockPos abs = helper.absolutePos(cellRel);
+            BlockState before = level.getBlockState(abs);
+            helper.assertTrue(before.getValue(BlockStateProperties.WATERLOGGED) && level.getFluidState(abs).isSource(),
+                "sanity: the fragile block must hold a water source, or the refusals below are vacuous");
+            helper.assertFalse(before.setValue(BlockStateProperties.WATERLOGGED, false).canSurvive(level, abs),
+                "sanity: the fragile block must not survive dry, or the refusals below are vacuous");
+
+            helper.assertTrue(BlockUtil.getDrainableFluid(level, abs) == null,
+                "a block that cannot survive dry must not be offered as drainable");
+            helper.assertTrue(!new buildcraft.core.properties.WorldPropertyIsFluidSource().get(level, abs),
+                "the robot pump board must not see a block that cannot survive dry as a fluid source");
+            helper.assertTrue(BlockUtil.drainBlock(level, abs, false) == null,
+                "a simulated drain of a block that cannot survive dry must report nothing to take");
+            helper.assertTrue(BlockUtil.drainBlock(level, abs, true) == null,
+                "draining a block that cannot survive dry must be refused");
+            helper.assertTrue(level.getBlockState(abs).equals(before),
+                "a refused drain must leave the block exactly as it was, got " + level.getBlockState(abs));
+            helper.setBlock(cellRel, Blocks.AIR);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.setBlock(cellRel, Blocks.AIR);
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
     }
 
     /** The Pump end to end: a finite channel of [water][waterlogged marker][kelp]. The pump must drain the

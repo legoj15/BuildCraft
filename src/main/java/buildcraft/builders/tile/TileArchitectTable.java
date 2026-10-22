@@ -123,7 +123,8 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     }
 
     // The snapshot in/out slots are real itemManager handlers, so the central addDrops path spills
-    // them on a non-player removal (explosion / piston / command), matching playerWillDestroy.
+    // them on a non-player removal (explosion / piston / /setblock ... destroy), matching
+    // playerWillDestroy. A command replace wipes them instead (TileBC_Neptune#clearContent).
     @Override
     protected boolean spillsContentsOnRemoval() {
         return true;

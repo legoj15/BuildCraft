@@ -278,7 +278,8 @@ public class TileBuilder extends TileBC_Neptune
     // The Builder keeps its snapshot, 27-slot resource grid and 4 fluid tanks as loose fields outside
     // the itemManager, so the central addDrops path can't see them. Opt in, route the tanks through
     // getDropTanks, and spill the snapshot + resources via dropExtraContentsOnRemoval — mirroring
-    // playerWillDestroy exactly so a non-player removal (explosion / piston / command) drops the same set.
+    // playerWillDestroy exactly so a non-player removal (explosion / piston / /setblock ... destroy) drops
+    // the same set. A command replace wipes that same set instead (clearExtraContents).
     @Override
     protected boolean spillsContentsOnRemoval() {
         return true;

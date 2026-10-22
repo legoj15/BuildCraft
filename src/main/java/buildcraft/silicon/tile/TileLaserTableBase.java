@@ -58,7 +58,8 @@ public abstract class TileLaserTableBase extends TileBC_Neptune implements ILase
     public abstract AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player);
 
     // All real contents live in the itemManager (playerWillDestroy itself drops via addDrops), so the
-    // central addDrops path spills them on a non-player removal (explosion / piston / command).
+    // central addDrops path spills them on a non-player removal (explosion / piston / /setblock ... destroy).
+    // A command replace wipes them instead (TileBC_Neptune#clearContent).
     @Override
     protected boolean spillsContentsOnRemoval() {
         return true;

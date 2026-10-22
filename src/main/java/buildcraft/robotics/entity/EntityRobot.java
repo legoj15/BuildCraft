@@ -819,8 +819,10 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     // turning it. The server's yRot is the aim yaw (aimItemAt), so both would end up in the same place anyway.
     //
     // Docking and undocking are server-side setPos jumps of under a block; they glide over the same three ticks
-    // rather than snap, like any vanilla interpolated entity. A jump vanilla thinks too big to interpolate (over
-    // 64 blocks, or an entity not being ticked) is snapped by the packet listener before it reaches us.
+    // rather than snap, like any vanilla interpolated entity. On 1.21.10+ a jump vanilla thinks too big to
+    // interpolate (over 64 blocks, or an entity the client level is not ticking) is snapped by the packet
+    // listener before it reaches the handler. 1.21.1's listener has no such check and calls lerpTo for every
+    // packet, so the 1.21.1 stepper below applies the same 64-block snap itself.
 
     //? if >=26.3 {
     // 26.3: the handler is final on Entity and built by this factory from Entity's constructor, so it must not
@@ -919,7 +921,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     @Override
     public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        if (steps <= 0) {
+        // Mirrors the 1.21.10+ listener's tooBigToInterpolate snap (distance squared over 4096, i.e. 64 blocks).
+        if (steps <= 0 || position().distanceToSqr(x, y, z) > 4096.0) {
             lerpSteps = 0;
             setPos(x, y, z);
             return;

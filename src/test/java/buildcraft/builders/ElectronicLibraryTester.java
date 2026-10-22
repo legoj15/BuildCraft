@@ -102,8 +102,8 @@ public class ElectronicLibraryTester {
 
     /**
      * Verifies the full download cycle: with a used snapshot in invDownIn and invDownOut empty, the item moves to
-     * invDownOut once the 50-tick cycle completes. Waits on the item arriving, not on a fixed tick, so a tile that
-     * starts ticking late only starts the cycle late.
+     * invDownOut once the 50-tick cycle completes. Times the cycle from its first counted tick rather than from a
+     * fixed tick, so a tile that starts ticking late only starts the cycle late.
      */
     public static void testDownloadCycle(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
@@ -115,14 +115,21 @@ public class ElectronicLibraryTester {
         //?}
         if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
+        long[] started = {-1};
         runSteps(helper, DOWNLOAD_CYCLE_TICKS, List.of(
             new Step("the library to be seeded", () -> true, () -> {
                 assertTrue(tile.progressDown == -1, "progressDown should be idle (-1) initially");
                 Snapshot.Header header = fakeHeader();
                 tile.invDownIn.setStackInSlot(0, BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header));
             }),
+            new Step("the download to start counting", () -> tile.progressDown >= 0,
+                () -> started[0] = helper.getTick()),
             new Step("the download to deliver the item into invDownOut",
                 () -> !tile.invDownOut.getStackInSlot(0).isEmpty(), () -> {
+                // The cycle is 50 ticks from its first counted tick; the start is observed within a tick of it.
+                long cycle = helper.getTick() - started[0];
+                assertTrue(cycle >= 45 && cycle <= 55,
+                    "the download should take about 50 ticks from its start, took " + cycle);
                 assertTrue(tile.invDownIn.getStackInSlot(0).isEmpty(),
                     "invDownIn should be empty after download completes");
                 assertTrue(tile.invDownOut.getStackInSlot(0).getItem() == BCBuildersItems.BLUEPRINT_USED.get(),

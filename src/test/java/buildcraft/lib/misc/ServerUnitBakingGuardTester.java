@@ -48,6 +48,9 @@ public class ServerUnitBakingGuardTester {
      *  payload handler) and shows (in {@code handle}) in the same file, by design. */
     private static final String CLIENT_RESOLVER = "buildcraft/lib/net/MessageEnergyOverlay.java";
 
+    /** Every BC menu's base class: server-side code that sits in a {@code gui} package. */
+    private static final String SERVER_MENU_UNDER_GUI = "buildcraft/lib/gui/ContainerBC_Neptune.java";
+
     /** A file that imports Minecraft's client classes, or extends a screen: it cannot even load on a dedicated
      *  server, so it only ever runs where the client config exists. */
     private static final Pattern TOUCHES_MINECRAFT_CLIENT = Pattern.compile(
@@ -95,15 +98,13 @@ public class ServerUnitBakingGuardTester {
     public void aFileThatMessagesAPlayerNeverFormatsUnitsItself() {
         List<String> offenders = new ArrayList<>();
         int senders = 0;
-        int guiFilesScanned = 0;
+        boolean scannedServerMenu = false;
         for (MainSourceSet.SourceFile file : MainSourceSet.javaFiles()) {
             String code = MainSourceSet.codeOnly(file.text());
             if (isClientOnly(file.relativePath(), code)) {
                 continue;
             }
-            if (file.relativePath().contains("/gui/")) {
-                guiFilesScanned++;
-            }
+            scannedServerMenu |= file.relativePath().equals(SERVER_MENU_UNDER_GUI);
             if (!PLAYER_MESSAGE_SENDER.matcher(code).find()) {
                 continue;
             }
@@ -114,10 +115,10 @@ public class ServerUnitBakingGuardTester {
         }
         // Liveness: the scan must actually see the message senders, or "no offenders" is vacuous.
         Assertions.assertTrue(senders >= 5, "the scan lost the server-side message senders (saw " + senders + ")");
-        // ... and must still reach the server-side menu, widget and slot classes under lib/gui (about sixty files),
-        // or the narrowed gui exemption has quietly grown back to the whole directory.
-        Assertions.assertTrue(guiFilesScanned >= 20,
-                "the scan skips the server-side gui classes again (scanned " + guiFilesScanned + ")");
+        // ... and must still reach the server-side menus under lib/gui, or the narrowed gui exemption has quietly
+        // grown back to the whole directory.
+        Assertions.assertTrue(scannedServerMenu,
+                "the scan skips " + SERVER_MENU_UNDER_GUI + ", the server-side menu base, as client-only again");
         Assertions.assertTrue(offenders.isEmpty(),
                 "These files send a message to a player AND call a LocaleUtil unit formatter " + offenders
                         + " — the formatter reads client-only display settings, so on a dedicated server the unit"

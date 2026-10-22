@@ -759,6 +759,12 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_woodiamond_mode_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondModeEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_diamond_item_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondItemFilterEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_diamond_fluid_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondFluidFilterEditMarksChunkDirty);
+        // The same for the wrench and gate-action edits of the Daizuli, Lapis, Limiter (iron/diamond power) and
+        // Stripes pipes, and the facing the Wood/Iron/Daizuli pipes share: none of them dirtied the chunk.
+        reg.accept("buildcraftunofficial:pipe_daizuli_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::daizuliEditsMarkChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_lapis_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::lapisEditsMarkChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_limiter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::limiterEditsMarkChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_stripes_direction_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::stripesDirectionEditMarksChunkDirty);
         // Force insertion (robot stations / obsidian / stripes pipes) must give items a real entry leg
         // and deliver them end-to-end — the zero-length leg was the server-side half of the
         // robot-cargo-invisible-in-pipes bug (see PipeFlowForceInsertTester javadoc).

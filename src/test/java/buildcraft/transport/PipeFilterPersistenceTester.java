@@ -8,18 +8,29 @@ package buildcraft.transport;
 import io.netty.buffer.Unpooled;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
+import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.statements.IAction;
+import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.transport.pipe.PipeBehaviour;
+import buildcraft.api.transport.pipe.PipeEventActionActivate;
 
+import buildcraft.core.BCCoreItems;
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
@@ -27,16 +38,22 @@ import buildcraft.transport.container.ContainerDiamondPipe;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
 import buildcraft.transport.container.ContainerEmzuliPipe;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourEmzuli.SlotIndex;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourLapis;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourLimiter;
+import buildcraft.transport.pipe.behaviour.PipeBehaviourStripes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
 import buildcraft.transport.tile.TilePipeHolder;
 
 /**
- * Persistence pins for the Emzuli, Diamond-Wood (Emerald) and Diamond (sorting) pipes: every GUI edit of their saved
- * state must mark the chunk dirty, so the edit is written at the next save.
+ * Persistence pins for the pipes whose saved state a player edits: every GUI, wrench or gate edit of it must mark the
+ * chunk dirty, so the edit is written at the next save. Covers the Emzuli, Diamond-Wood (Emerald) and Diamond
+ * (sorting) filters, and the wrench / gate-action edits of the Daizuli, Lapis, Limiter (iron / diamond power) and
+ * Stripes pipes plus the facing Wood, Iron and Daizuli share.
  *
  * <p>These pipes keep their filter inventory (and the Emzuli slot colours / Emerald filter mode) inside the
  * behaviour, which {@code TilePipeHolder.writeData} serialises live under {@code pipe -> beh}. What vanilla
@@ -209,7 +226,160 @@ public class PipeFilterPersistenceTester {
         helper.succeed();
     }
 
+    // --- Wrench and gate edits (Daizuli, Lapis, Limiter, Stripes, and the facing Wood / Iron / Daizuli share) ---
+
+    public static void daizuliEditsMarkChunkDirty(GameTestHelper helper) {
+        TilePipeHolder tile = placePipe(helper, BCTransportItems.PIPE_DAIZULI_ITEM.get());
+        PipeBehaviourDaizuli behaviour = (PipeBehaviourDaizuli) tile.getPipe().getBehaviour();
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+        Player wrencher = wrenchHolder(helper);
+
+        // A wrench on a side re-aims the pipe: PipeBehaviourDirectional.setCurrentDir, which Wood, Iron and
+        // Emerald share (those two cannot be driven from a lone pipe: they only face a connection).
+        markChunkSaved(helper, chunk);
+        helper.assertTrue(behaviour.onPipeActivate(wrencher, hitOn(tile), 0f, 0f, 0f, EnumPipePart.NORTH),
+                "the wrench click on a side was consumed");
+        helper.assertTrue(behaviour.getCurrentDir() == Direction.NORTH, "the wrench re-aimed the pipe");
+        helper.assertTrue(chunk.isUnsaved(), "a wrench re-aim must mark the chunk dirty");
+        helper.assertTrue(((PipeBehaviourDaizuli) reloadedBehaviour(tile)).getCurrentDir() == Direction.NORTH,
+                "the facing survives the pipe's saved NBT");
+
+        // A wrench on the middle cycles the colour.
+        markChunkSaved(helper, chunk);
+        helper.assertTrue(behaviour.onPipeActivate(wrencher, hitOn(tile), 0f, 0f, 0f, EnumPipePart.CENTER),
+                "the wrench click on the centre was consumed");
+        DyeColor cycled = DyeColor.byId(DyeColor.WHITE.getId() + 1);
+        helper.assertTrue(savedColour(behaviour) == cycled, "the wrench advanced the colour");
+        helper.assertTrue(chunk.isUnsaved(), "a wrench colour cycle must mark the chunk dirty");
+        helper.assertTrue(savedColour(reloadedBehaviour(tile)) == cycled, "the colour survives the pipe's saved NBT");
+
+        // The gate's "paint pipe" action.
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_COLOUR[DyeColor.RED.ordinal()]);
+        helper.assertTrue(savedColour(behaviour) == DyeColor.RED, "the gate action set the colour");
+        helper.assertTrue(chunk.isUnsaved(), "a gate colour action must mark the chunk dirty");
+        helper.assertTrue(savedColour(reloadedBehaviour(tile)) == DyeColor.RED, "the colour survives the saved NBT");
+
+        // A gate fires its action every tick while its trigger holds: the same value again changes nothing, and
+        // must not re-dirty (a setChanged also drops the pipe's cached collision shape).
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_COLOUR[DyeColor.RED.ordinal()]);
+        helper.assertFalse(chunk.isUnsaved(), "repeating the colour the pipe already has must not dirty the chunk");
+
+        // The gate's "face this way" action.
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_DIRECTION[Direction.EAST.ordinal()]);
+        helper.assertTrue(behaviour.getCurrentDir() == Direction.EAST, "the gate action re-aimed the pipe");
+        helper.assertTrue(chunk.isUnsaved(), "a gate direction action must mark the chunk dirty");
+        helper.assertTrue(((PipeBehaviourDaizuli) reloadedBehaviour(tile)).getCurrentDir() == Direction.EAST,
+                "the facing survives the saved NBT");
+
+        helper.succeed();
+    }
+
+    public static void lapisEditsMarkChunkDirty(GameTestHelper helper) {
+        TilePipeHolder tile = placePipe(helper, BCTransportItems.PIPE_LAPIS_ITEM.get());
+        PipeBehaviourLapis behaviour = (PipeBehaviourLapis) tile.getPipe().getBehaviour();
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+        Player wrencher = wrenchHolder(helper);
+
+        markChunkSaved(helper, chunk);
+        helper.assertTrue(behaviour.onPipeActivate(wrencher, hitOn(tile), 0f, 0f, 0f, EnumPipePart.CENTER),
+                "the wrench click was consumed");
+        DyeColor cycled = DyeColor.byId(DyeColor.WHITE.getId() + 1);
+        helper.assertTrue(savedColour(behaviour) == cycled, "the wrench advanced the colour");
+        helper.assertTrue(chunk.isUnsaved(), "a wrench colour cycle must mark the chunk dirty");
+        helper.assertTrue(savedColour(reloadedBehaviour(tile)) == cycled, "the colour survives the pipe's saved NBT");
+
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_COLOUR[DyeColor.GREEN.ordinal()]);
+        helper.assertTrue(savedColour(behaviour) == DyeColor.GREEN, "the gate action set the colour");
+        helper.assertTrue(chunk.isUnsaved(), "a gate colour action must mark the chunk dirty");
+        helper.assertTrue(savedColour(reloadedBehaviour(tile)) == DyeColor.GREEN, "the colour survives the saved NBT");
+
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_COLOUR[DyeColor.GREEN.ordinal()]);
+        helper.assertFalse(chunk.isUnsaved(), "repeating the colour the pipe already has must not dirty the chunk");
+
+        helper.succeed();
+    }
+
+    /** The iron power pipe: the limiter behaviour shared by the iron and diamond kinesis and RF pipes. */
+    public static void limiterEditsMarkChunkDirty(GameTestHelper helper) {
+        TilePipeHolder tile = placePipe(helper, BCTransportItems.PIPE_IRON_POWER.get());
+        PipeBehaviourLimiter behaviour = (PipeBehaviourLimiter) tile.getPipe().getBehaviour();
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+        Player wrencher = wrenchHolder(helper);
+
+        markChunkSaved(helper, chunk);
+        helper.assertTrue(behaviour.onPipeActivate(wrencher, hitOn(tile), 0f, 0f, 0f, EnumPipePart.CENTER),
+                "the wrench click was consumed");
+        helper.assertTrue(savedLimitShift(behaviour) == 1, "the wrench stepped the limit");
+        helper.assertTrue(chunk.isUnsaved(), "a wrench limit step must mark the chunk dirty");
+        helper.assertTrue(savedLimitShift(reloadedBehaviour(tile)) == 1, "the limit survives the pipe's saved NBT");
+
+        // The gate's limit actions run from index 0 = fully blocked, so index (MAX_SHIFT - shift) sets that shift.
+        int shift = 3;
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_IRON_POWER_LIMIT[PipeBehaviourLimiter.MAX_SHIFT - shift]);
+        helper.assertTrue(savedLimitShift(behaviour) == shift, "the gate action set the limit");
+        helper.assertTrue(chunk.isUnsaved(), "a gate limit action must mark the chunk dirty");
+        helper.assertTrue(savedLimitShift(reloadedBehaviour(tile)) == shift, "the limit survives the saved NBT");
+
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_IRON_POWER_LIMIT[PipeBehaviourLimiter.MAX_SHIFT - shift]);
+        helper.assertFalse(chunk.isUnsaved(), "repeating the limit the pipe already has must not dirty the chunk");
+
+        helper.succeed();
+    }
+
+    public static void stripesDirectionEditMarksChunkDirty(GameTestHelper helper) {
+        TilePipeHolder tile = placePipe(helper, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        PipeBehaviourStripes behaviour = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        LevelChunk chunk = helper.getLevel().getChunkAt(tile.getBlockPos());
+
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_DIRECTION[Direction.EAST.ordinal()]);
+        helper.assertTrue(behaviour.direction == Direction.EAST, "the gate action aimed the stripes pipe");
+        helper.assertTrue(chunk.isUnsaved(), "a gate direction action must mark the chunk dirty");
+        helper.assertTrue(((PipeBehaviourStripes) reloadedBehaviour(tile)).direction == Direction.EAST,
+                "the direction survives the pipe's saved NBT");
+
+        markChunkSaved(helper, chunk);
+        fireAction(tile, BCTransportStatements.ACTION_PIPE_DIRECTION[Direction.EAST.ordinal()]);
+        helper.assertFalse(chunk.isUnsaved(), "repeating the direction the pipe already has must not dirty the chunk");
+
+        helper.succeed();
+    }
+
     // --- helpers ---
+
+    /** A survival mock player with a BuildCraft wrench in the main hand. */
+    private static Player wrenchHolder(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BCCoreItems.WRENCH.get()));
+        return player;
+    }
+
+    private static BlockHitResult hitOn(TilePipeHolder tile) {
+        BlockPos pos = tile.getBlockPos();
+        return new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+    }
+
+    /** Fires a gate action at the pipe the way {@code GateLogic} does. */
+    private static void fireAction(TilePipeHolder tile, IAction action) {
+        tile.fireEvent(new PipeEventActionActivate(tile, action, new IStatementParameter[0], EnumPipePart.CENTER));
+    }
+
+    /** The colour a Daizuli or Lapis behaviour would save. */
+    private static DyeColor savedColour(PipeBehaviour behaviour) {
+        return NBTUtilBC.readEnum(behaviour.writeToNbt().get("colour"), DyeColor.class);
+    }
+
+    /** The limit a Limiter behaviour would save. */
+    private static int savedLimitShift(PipeBehaviour behaviour) {
+        return NBTUtilBC.getInt(behaviour.writeToNbt(), "limitShift", -1);
+    }
 
     private static TilePipeHolder placePipe(GameTestHelper helper, Item pipeItem) {
         BlockPos pos = new BlockPos(1, 2, 1);

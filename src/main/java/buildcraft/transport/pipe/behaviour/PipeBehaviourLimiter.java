@@ -91,8 +91,12 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
 
     @PipeEventHandler
     public void onActionActivate(PipeEventActionActivate event) {
-        if (event.action instanceof ActionPowerLimit) {
-            limitShift = ((ActionPowerLimit) event.action).limitShift;
+        if (event.action instanceof ActionPowerLimit action) {
+            // A gate repeats its action every tick while its trigger holds: only a real change is an edit to save.
+            if (limitShift != action.limitShift) {
+                limitShift = action.limitShift;
+                PipeBehaviourPersistence.markDirty(pipe);
+            }
 
             requestReconfigure();
         }
@@ -111,6 +115,7 @@ public class PipeBehaviourLimiter extends PipeBehaviour {
             if (limitShift > MAX_SHIFT) {
                 limitShift = 0;
             }
+            PipeBehaviourPersistence.markDirty(pipe);
 
             boolean isRf = pipe.getFlow() instanceof PipeFlowRedstoneFlux;
             // The new limit as a per-tick amount: micro-MJ for kinesis pipes, FE/RF for RF pipes. The player's

@@ -452,6 +452,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
             // redstone output is already pushed via the explicit updateNeighborsAt() above when
             // redstoneChanged — so the per-tick output-signal cascade is pure waste here.
             // blockEntityChanged() does the exact save-dirtying half of setChanged(), nothing more.
+            // Not removable yet: items, fluid and power in transit (and the stripes battery) have no dirty mark of
+            // their own, so this is what saves them. Player edits (GUI, wrench, gate) mark themselves through
+            // PipeBehaviourPersistence.markDirty and must not lean on this line.
             level.blockEntityChanged(worldPosition);
         }
         } finally {

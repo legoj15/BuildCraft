@@ -152,6 +152,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
             direction = newValue;
             if (!pipe.getHolder().getPipeWorld().isClientSide()) {
                 pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+                PipeBehaviourPersistence.markDirty(pipe);
             }
         }
     }

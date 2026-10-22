@@ -101,6 +101,7 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
             int n = colour.getId() + (player.isShiftKeyDown() ? 15 : 1);
             colour = DyeColor.byId(n & 15);
             pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            PipeBehaviourPersistence.markDirty(pipe);
             return true;
         }
         return false;
@@ -126,6 +127,7 @@ public class PipeBehaviourDaizuli extends PipeBehaviourDirectional {
             if (this.colour != action.color) {
                 this.colour = action.color;
                 pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+                PipeBehaviourPersistence.markDirty(pipe);
             }
         }
     }

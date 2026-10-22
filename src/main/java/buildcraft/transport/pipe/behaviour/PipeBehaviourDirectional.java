@@ -144,6 +144,8 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
         // Guard: level may be null during loadAdditional() (deserialization before setLevel)
         if (pipe.getHolder().getPipeWorld() != null && !pipe.getHolder().getPipeWorld().isClientSide()) {
             pipe.getHolder().scheduleNetworkUpdate(PipeMessageReceiver.BEHAVIOUR);
+            // The facing is saved state, reached from the wrench, the gate action and the auto re-aim alike.
+            PipeBehaviourPersistence.markDirty(pipe);
         }
     }
 

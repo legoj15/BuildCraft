@@ -5,30 +5,30 @@
 
 | MC Version | Support | Notes |
 |---|---|---|
-| 26.3 | ✔️ | Latest version (primary support) |
+| 26.3 | ✔️ | Currently supported |
 | 26.2 | ✔️ | Currently supported |
 | 26.1.2 | ✔️ | Currently supported |
-| 26.1.1 | ⚠️ | Not directly supported (may not run) |
-| 26.1 | ⚠️ | Not directly supported (may not run) |
-| 1.21.11 | ✔️ | Currently supported (low priority) |
-| 1.21.10 | ✔️ | Currently supported (low priority) |
-| 1.21.2-9 | ❌ | Not planned |
-| 1.21.1 | ✔️ | Currently supported |
+| 26.1.1 | ⚠️ | Partial support (may not run) |
+| 26.1 | ⚠️ | Partial support (may not run) |
+| 1.21.11 | ✔️ | Currently supported |
+| 1.21.10 | ✔️ | Currently supported |
+| 1.21.2-9 | ❌ | No demand |
+| 1.21.1 | ✔️ | Long-term support |
 | ≤1.21 | ❌ | Not planned |
 
 If you're on a supported version, please open an issue if you encounter anything unexpected! For crashes or bugs/glitches, please ensure:
 
-* you are positive the bug is caused by BuildCraft and not by any other mod (bugged interactions with other mods are a valid issue),
+* you are positive the bug is caused by BuildCraft and not by any other mod (bugged interactions *with* other mods are a valid issue),
 * you have at least one of the following:
   * a crash report or log file/entry, 
   * a step-by-step means of reproducing the bug in question, i.e. "What were you doing at the time of the issue?",
   * and/or screenshots/videos/etc. to demonstrate the bug.
 
-**Only bugfixes are planned for this port.**
+**Only bugfixes are planned for this port.** After a small number of features are added in the upcoming final feature update, all future releases will be bug fixes, mod compatibility support, and Minecraft version ports.
 
-Please check if the bug has been reported beforehand. Also, provide the version of BuildCraft used - if it's a version compiled from source, link to the commit/tree you complied from.
+Please check if the bug or feature request has been reported beforehand. Also, provide the version of BuildCraft used (the actual mod version and game version). If you're a nerd and figured out how to compile the mod from source, please mention what commit hash you built off of.
 
-Please mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
+**Please** mention if you are using any other mods, especially mods which optimize or otherwise severely modify the functioning of the Minecraft engine like MCPC+, Cauldron, OptiFine, FastCraft, Sodium, etc. That is very helpful when trying to reproduce a bug.
 
 ### Compiling and packaging BuildCraft
 1. Install `Java 25` for 26.1.2 and newer, and `Java 21` for 1.21.x (Microsoft OpenJDK, recommended by the NeoForge team, available [here](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-25)) and optionally `Git` (found [here](http://git-scm.com/)). Note: NeoForge's moddev tooling also uses Java 21 internally for its NFRT tasks (asset download, run preparation), but you don't need to install it yourself since the build is configured with the [Foojay toolchain resolver](https://github.com/gradle/foojay-toolchains), so Gradle auto-downloads JDK 21 into its user home on first build. Java 25 is the only JDK you need to install manually.

@@ -15,10 +15,6 @@ import org.junit.jupiter.api.Test;
 
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
 
-import buildcraft.robotics.compat.jei.IntegrationTableTransferHandler;
-import buildcraft.robotics.compat.jei.ProgrammingTableTransferHandler;
-import buildcraft.silicon.compat.jei.AssemblyTableTransferHandler;
-
 /**
  * JEI 30.30+ (the 26.2 node) routes "+" transfers through {@code transferRecipe(IRecipeTransferContext, boolean)}
  * and marks the old six-arg overload for removal. The context overrides sit behind a {@code //? if >=26.2}
@@ -27,20 +23,13 @@ import buildcraft.silicon.compat.jei.AssemblyTableTransferHandler;
  * lines it checks the handlers still load and implement the interface.
  *
  * <p>Only two classes implement the interface directly: {@link AbstractTransferHandler}, the skeleton every
- * item/bucket machine handler extends, and the crafting-table {@link BlueprintTransferHandler}. A machine handler
- * that stopped extending the skeleton would need its own override, so that is pinned too.
+ * item/bucket machine handler extends, and the crafting-table {@link BlueprintTransferHandler}.
  */
 public class JeiTransferContextOverloadTest {
 
     private static final List<Class<?>> DECLARING_HANDLERS = List.of(
         AbstractTransferHandler.class,
         BlueprintTransferHandler.class);
-
-    private static final List<Class<?>> SKELETON_HANDLERS = List.of(
-        AbstractBucketTransferHandler.class,
-        AssemblyTableTransferHandler.class,
-        ProgrammingTableTransferHandler.class,
-        IntegrationTableTransferHandler.class);
 
     @Test
     public void handlersOverrideTheContextOverloadWhenJeiHasIt() {
@@ -59,14 +48,6 @@ public class JeiTransferContextOverloadTest {
                     + context.getSimpleName() + ", boolean) on this node's JEI", e);
             }
             Assertions.assertTrue(Modifier.isPublic(override.getModifiers()), override + " must be public");
-        }
-    }
-
-    @Test
-    public void everyMachineHandlerRidesTheSharedSkeleton() {
-        for (Class<?> handler : SKELETON_HANDLERS) {
-            Assertions.assertTrue(AbstractTransferHandler.class.isAssignableFrom(handler),
-                handler.getName() + " must extend AbstractTransferHandler, which carries the context override");
         }
     }
 

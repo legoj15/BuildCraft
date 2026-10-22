@@ -553,6 +553,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         prevRobotPos = null;
         leftToBreak = 0;
         leftToPlace = 0;
+        // Refusals parked under the torn-down build belong to it: a new build (new snapshot, pattern, box or base
+        // pos) asks its cells afresh instead of waiting out the old window.
+        placeRefusals.clear();
     }
 
     /**

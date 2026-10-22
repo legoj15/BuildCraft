@@ -30,6 +30,9 @@ import net.minecraft.core.BlockPos;
  * <li>{@code WorkRefusals} - a {@link RefusalMemory} plus a count of failures in a row.</li>
  * </ul>
  *
+ * <p>{@code BlockClaims} is not one of them: a claim is held by its owner until given back, never windowed, so it keeps
+ * its own ledger in the robot registry.
+ *
  * <p>Keyed by the packed {@link BlockPos#asLong()} (a large claimed pool can mean thousands of notes, and a fresh
  * position object for a cell finds its note), in the order the notes were made or restarted. A note is dropped when it
  * is read after its window has ended. Transient: never saved. Server thread only, like every caller.

@@ -32,7 +32,12 @@ import buildcraft.robotics.path.PathFindingSearch;
  *  session; job claims are also dropped lazily once their robot is no longer loaded, and persist with the registry.)
  *
  *  <p>Without a registry (a client-side robot) nothing is claimed and nothing can be: {@link #isClaimed} answers
- *  false, {@link #claim} true. */
+ *  false, {@link #claim} true.
+ *
+ *  <p>Deliberately not a layer on {@link buildcraft.lib.misc.PositionMemory} (the shared store under the refusal and
+ *  unreachable-block memories): a claim has an owner and lasts until that owner gives it back or is gone, never until a
+ *  window runs out, it is shared across robots through the registry rather than kept per machine, and the job ledger
+ *  persists. Giving it a window or a cap would let two robots work one block. */
 public final class BlockClaims {
 
     private BlockClaims() {}

@@ -57,8 +57,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  *   <li><b>Fluid pipe break drops fragile shards</b> — a fluid pipe carrying water in a section
  *       buffer drops fragile fluid-container items when broken with a pickaxe.</li>
  *   <li><b>Non-player removal drops cargo only</b> — when the pipe is removed by a no-loot path (here a
- *       plain {@code level.removeBlock(false)}, standing in for a piston move / {@code /setblock} replace /
- *       mod setBlock), only the in-transit items spill; the pipe, pluggables and wires are lost. Exercises
+ *       plain {@code level.removeBlock(false)}, standing in for a piston move / mod setBlock), only the in-transit items spill; the pipe, pluggables and wires are lost. Exercises
  *       {@link buildcraft.transport.tile.TilePipeHolder#dropPipeCargo} via the {@code preRemoveSideEffects}
  *       / {@code onRemove} catch-all rather than {@code playerWillDestroy}. (Loot-bearing non-player
  *       removals — explosion / wither / {@code /…destroy} — instead return the hardware via {@code getDrops}.)</li>
@@ -319,7 +318,7 @@ public class PipeDropsTester {
         });
     }
 
-    // ---------- Non-player removal drops cargo only (explosion / piston / /setblock) ----------
+    // ---------- Non-player removal drops cargo only (piston / mod setBlock) ----------
 
     public static void testNonPlayerBreakDropsCargoOnly(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
@@ -331,8 +330,8 @@ public class PipeDropsTester {
         PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
         flow.insertItemsForce(new ItemStack(Items.DIAMOND, 5), Direction.NORTH, null, 0.04);
 
-        // No playerWillDestroy: a bare level.removeBlock(false) is the no-loot removal — a piston move,
-        // a /setblock|/fill … replace, or a mod setBlock. It drives LevelChunk.setBlockState →
+        // No playerWillDestroy: a bare level.removeBlock(false) is the no-loot removal — a piston move or a
+        // mod setBlock. (A /setblock|/fill … replace wipes the cargo first instead: TilePipeHolder#clearContent.) It drives LevelChunk.setBlockState →
         // preRemoveSideEffects (>=1.21.10) or onRemove (1.21.1) → TilePipeHolder.dropPipeCargo, which
         // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
         // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)

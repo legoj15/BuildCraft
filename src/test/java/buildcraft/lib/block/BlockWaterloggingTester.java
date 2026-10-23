@@ -37,6 +37,7 @@ import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.lib.test.TestOnlyBlocks;
 import buildcraft.silicon.BCSiliconPlugs;
@@ -92,6 +93,15 @@ public class BlockWaterloggingTester {
     public static final BlockPos WEST_SOURCE = new BlockPos(1, 2, 1);
     public static final BlockPos SUBJECT = new BlockPos(2, 2, 1);
     public static final BlockPos EAST_SOURCE = new BlockPos(3, 2, 1);
+
+    /** The lava test's poll, in two budgets that must not share a clock: {@link #LAVA_READY_TICKS} for the arena
+     *  cell's chunks to start ticking (asynchronous, so the machine's, not the lava's), {@link #LAVA_WORK_TICKS} for
+     *  the spread after that (lava's own tick is due 30 ticks after the sources are placed). {@link #LAVA_POLL_TICKS}
+     *  is their sum, the poll's budget (a literal, so the poll-budget guard can read it); the manifest's
+     *  {@code max_ticks} stays above it. */
+    private static final int LAVA_READY_TICKS = 300;
+    private static final int LAVA_WORK_TICKS = 90;
+    private static final int LAVA_POLL_TICKS = 390;
 
     /** Whether flowing water (or an emptied water bucket) would destroy this state instead of
      *  coexisting with it. Mirrors the vanilla rule without the deprecated {@code blocksMotion()}:
@@ -195,6 +205,11 @@ public class BlockWaterloggingTester {
      *  cell: it is held back (vanilla lantern/chain behaviour). Before, lava replaced the marker — and lava,
      *  unlike water, drops nothing, so the marker was simply lost. */
     public static void testMarkerHoldsBackLava(GameTestHelper helper) {
+        // A fluid tick runs only in a chunk that is ticking with its entities loaded, and the framework gates the
+        // test's start on its structure's chunk alone. This basin sits across a chunk border in about a third of the
+        // runs, and then the sources' ticks wait on the neighbour chunk: asynchronous work, against a test server that
+        // is unthrottled (the old 120-tick budget was under a tenth of a second of wall clock). buildBasin force-loads
+        // the cell, and the poll below starts its work budget only once the cell is ticking.
         buildBasin(helper);
         helper.setBlock(SUBJECT, BCCoreBlocks.MARKER_PATH.get());
         ServerLevel level = helper.getLevel();
@@ -204,22 +219,25 @@ public class BlockWaterloggingTester {
         placeSource(helper, WEST_SOURCE, Blocks.LAVA, Fluids.LAVA);
         placeSource(helper, EAST_SOURCE, Blocks.LAVA, Fluids.LAVA);
 
-        helper.succeedWhen(() -> {
-            // Gate on observed state: both lava sources have run their spread tick, so the lava has
-            // already had its one chance to flow into the marker's cell.
-            helper.assertTrue(hasSpread(helper, WEST_SOURCE, Fluids.LAVA), "west lava source has not spread yet");
-            helper.assertTrue(hasSpread(helper, EAST_SOURCE, Fluids.LAVA), "east lava source has not spread yet");
-            helper.assertBlockPresent(BCCoreBlocks.MARKER_PATH.get(), SUBJECT);
-            helper.assertTrue(level.getBlockEntity(abs) == before,
-                "the marker's block entity must survive the lava untouched");
-            BlockState state = helper.getBlockState(SUBJECT);
-            helper.assertTrue(state.hasProperty(BlockStateProperties.WATERLOGGED)
-                    && !state.getValue(BlockStateProperties.WATERLOGGED),
-                "the marker must be waterloggable, and lava must not waterlog it");
-            helper.assertTrue(level.getFluidState(abs).isEmpty(), "lava must not enter the marker's cell");
-            // Last step: don't leave the marker in the shared marker cache (see MarkerTester).
-            MarkerArenaUtil.clearMarkers(helper, SUBJECT);
-        });
+        // Gate on observed state: the cell is ticking (the work budget starts there) and both lava sources have run
+        // their spread tick, so the lava has already had its one chance to flow into the marker's cell.
+        EntityArenaUtil.tickUntil(helper, LAVA_POLL_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, LAVA_READY_TICKS, LAVA_WORK_TICKS,
+                () -> hasSpread(helper, WEST_SOURCE, Fluids.LAVA) && hasSpread(helper, EAST_SOURCE, Fluids.LAVA)),
+            () -> {
+                helper.assertBlockPresent(BCCoreBlocks.MARKER_PATH.get(), SUBJECT);
+                helper.assertTrue(level.getBlockEntity(abs) == before,
+                    "the marker's block entity must survive the lava untouched");
+                BlockState state = helper.getBlockState(SUBJECT);
+                helper.assertTrue(state.hasProperty(BlockStateProperties.WATERLOGGED)
+                        && !state.getValue(BlockStateProperties.WATERLOGGED),
+                    "the marker must be waterloggable, and lava must not waterlog it");
+                helper.assertTrue(level.getFluidState(abs).isEmpty(), "lava must not enter the marker's cell");
+                helper.succeed();
+            },
+            "the lava sources never ran their spread tick",
+            // On every exit: don't leave the marker in the shared marker cache (see MarkerTester).
+            () -> MarkerArenaUtil.clearMarkers(helper, SUBJECT));
     }
 
     /** Heavy oils "sink through" water by deleting the water block beneath them. A waterlogged block also
@@ -506,8 +524,14 @@ public class BlockWaterloggingTester {
     // ---------- shared basin helpers ----------
 
     /** Stone floor under the whole basin plus a one-high wall ring around the three-cell channel, so no
-     *  fluid placed in the channel can ever leave the test's own arena cell. */
+     *  fluid placed in the channel can ever leave the test's own arena cell.
+     *
+     *  <p>Also force-loads the whole cell ({@link EntityArenaUtil#forceLoadCell}): the framework forces only the
+     *  structure's chunk, a fluid's scheduled tick runs only in a chunk that is ticking, and the basin straddles a chunk
+     *  border in about a third of the runs. A test that must wait for the fluid polls
+     *  {@link EntityArenaUtil#isCellEntityTicking} before it starts counting (see {@link #testMarkerHoldsBackLava}). */
     public static void buildBasin(GameTestHelper helper) {
+        EntityArenaUtil.forceLoadCell(helper);
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 2; z++) {
                 helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
@@ -522,7 +546,9 @@ public class BlockWaterloggingTester {
     }
 
     /** Places a fluid source and guarantees it has a pending spread tick regardless of setBlock's onPlace
-     *  scheduling, so {@link #hasSpread} becomes a reliable "this source has had its chance" gate. */
+     *  scheduling, so {@link #hasSpread} becomes a reliable "this source has had its chance" gate. A tick already
+     *  pending for that fluid at that position is kept, not replaced, so the delay is the fluid's own: 5 ticks for
+     *  water, 30 for lava. */
     public static void placeSource(GameTestHelper helper, BlockPos relPos, Block fluidBlock, Fluid fluid) {
         helper.setBlock(relPos, fluidBlock);
         helper.getLevel().scheduleTick(helper.absolutePos(relPos), fluid, 1);

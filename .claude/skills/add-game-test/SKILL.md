@@ -149,7 +149,13 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   WORK, cond), ...)`. The wrapper answers false until `isCellEntityTicking`, then gives `cond`
   `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. Write
   `READY + WORK` as a literal (or constant) so `GameTestPollBudgetTester` can read it, and keep
-  `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic.
+  `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic. Put the spawn of the robot AND of
+  everything it must see inside the gated condition: a drop added to a chunk that does not tick yet is invisible to
+  the picker's first scan, which then sleeps for 60 seconds (`robot_station_unloaded_home_keeps_robot_working` failed
+  about one solo run in eight that way, reading as "froze"). A fluid test needs the same: a scheduled fluid tick runs
+  only in a ticking chunk (`placeSource`'s tick is kept if the fluid already scheduled its own: 5 ticks for water, 30
+  for lava), `BlockWaterloggingTester.buildBasin` force-loads the cell, and `waterloggable_marker_holds_back_lava`
+  waits with `whenCellTicking`.
 - **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
   as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
   arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.

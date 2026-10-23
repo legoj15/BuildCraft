@@ -155,7 +155,14 @@ public class RobotStationRigTester {
 
     /** Far enough from the arena grid that its chunk is never loaded during the run. */
     private static final int UNLOADED_OFFSET = 4096;
-    private static final int UNLOADED_HOME_BUDGET = 240;
+    /** The unloaded-home test's poll, in two budgets that must not share a clock: {@link #UNLOADED_HOME_READY_TICKS} for
+     *  the arena cell's chunks to start ticking (asynchronous, so the machine's, not the robot's),
+     *  {@link #UNLOADED_HOME_WORK_TICKS} for the fetch after that (~40 ticks when it runs).
+     *  {@link #UNLOADED_HOME_POLL_TICKS} is their sum, the poll's budget (a literal, so the poll-budget guard can read
+     *  it); the manifest's {@code max_ticks} stays above it. */
+    private static final int UNLOADED_HOME_READY_TICKS = 300;
+    private static final int UNLOADED_HOME_WORK_TICKS = 240;
+    private static final int UNLOADED_HOME_POLL_TICKS = 540;
     private static final int FILLED_AWAY_BUDGET = 200;
 
     /** A robot working in its cell while its home station's chunk is unloaded, which is ordinary on a server: the
@@ -167,12 +174,18 @@ public class RobotStationRigTester {
      *  <li>Nothing about the station may load that chunk: not the station, not its pipe's neighbour lookups.</li>
      *  </ul>
      *  A second, never-resolved station (the state of every station read back from the save) is checked the same
-     *  way. */
+     *  way.
+     *
+     *  <p>The robot and the drop go in once the WHOLE cell is entity-ticking, not once the robot's own chunk is. The
+     *  framework forces only the structure's chunk, and the diamond sits a few blocks from the robot, which is a chunk
+     *  border away in roughly one run in four: a drop added to a chunk that does not tick yet is invisible to the
+     *  picker's first scan, which then finds nothing and sleeps for 60 seconds (its home is unloaded, so it has
+     *  nowhere to dock first). The fetch is never retried inside the budget, which reads as "froze". */
     public static void unloadedHomeKeepsTheRobotWorking(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos robotRel = new BlockPos(2, 3, 2);
         BlockPos itemRel = new BlockPos(4, 3, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos farA = helper.absolutePos(robotRel).offset(UNLOADED_OFFSET, 0, 0);
         BlockPos farB = farA.offset(0, 0, 64);
         helper.assertFalse(level.isLoaded(farA) || level.isLoaded(farB),
@@ -214,12 +227,9 @@ public class RobotStationRigTester {
 
         EntityRobot[] robot = { null };
         ItemEntity[] diamond = { null };
-        EntityArenaUtil.tickUntil(helper, UNLOADED_HOME_BUDGET,
-                () -> {
+        EntityArenaUtil.tickUntil(helper, UNLOADED_HOME_POLL_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, UNLOADED_HOME_READY_TICKS, UNLOADED_HOME_WORK_TICKS, () -> {
                     if (robot[0] == null) {
-                        if (!EntityArenaUtil.isEntityTicking(helper, robotRel)) {
-                            return false;
-                        }
                         helper.assertTrue(neverResolved.isInitialized(),
                                 "a station in an unloaded chunk must not read as uninitialized");
                         helper.assertTrue(neverResolved.getHolder() == null,
@@ -240,7 +250,7 @@ public class RobotStationRigTester {
                         return false;
                     }
                     return robot[0].containsItems();
-                },
+                }),
                 () -> {
                     helper.assertTrue(robot[0].getLinkedStation() == home, "the robot keeps its unloaded home");
                     helper.assertTrue(stationAt(level, farA) == home && stationAt(level, farB) == neverResolved,

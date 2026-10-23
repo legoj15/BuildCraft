@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_station_unloaded_home_keeps_robot_working",
     "environment": "buildcraftunofficial:robot_station_rig",
     "structure": "minecraft:empty",
-    "max_ticks": 300,
+    "max_ticks": 600,
     "setup_ticks": 0,
     "required": true
 }

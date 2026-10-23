@@ -1,17 +1,13 @@
 ###### Changes since 2026.2.0:
 
 - Added Minecraft 26.3 support. Minimum required NeoForge version is 26.3.0.38.
-- Robots, Stripes pipes, Builders and Fillers now respect land-claim and protection mods just like how player interactions work; a refused spot in a build is retried later.
-- Robots and Stripes pipes no longer lose fluid containers after consuming the fluid, it ejects it somewhere.
-- Electronic Library no longer rejects blueprints that hold pistons/blocks with replaceable variants; older saved blueprints are repaired automatically when the library lists them.
-- Fixed the guide book putting text over a page number in specific cases, and links that wrap onto the next page only being clickable on one of the two pages.
-- Fixed Fragile Fluid Shards showing the wrong colour for coloured fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
 - Robots now glide smoothly on clients instead of stepping.
-- Builder no longer stays busy for ever next to fluid it can't remove (lava, oil or modded fluid outside the area in Clear mode; still pools in Replace mode), and builds with fluid in their empty cells now finish.
-- Stripes pipes now use buckets, bottles and thrown items on the block in front, extend their line when fed item pipes, and break minecarts in front of them, like 1.7.10; a refused click no longer stops them digging the block in front, and a minecart they cannot fully empty is left standing with what is still inside; a stripes pipe that moves its line is no longer drawn as the wrong pipe until the area reloads.
-- On Minecraft 1.21.1, replacing a BuildCraft machine or pipe with /setblock, /fill or /clone no longer spills its contents; breaking a Distiller now drops the items in its container slots.
+- Robots, Stripes pipes, Builders, Fillers, Quarries, Mining Wells and Pumps now respect land-claim and protection mods the way players do; a refused spot is skipped and retried later.
+- Stripes pipes now use buckets, bottles and thrown items on the block in front, extend their line when fed item pipes, and break minecarts in front of them, like 1.7.10. Robots and Stripes pipes keep the container after using up its fluid.
+- Builders and Fillers no longer get stuck next to fluid they can't remove, and builds with fluid in their empty cells now finish.
+- Quarries repair a frame gap once whatever blocked it is gone. Mining Wells and Pumps no longer replace waterlogged blocks with their tube or destroy ones that can't stay dry, and idle Pumps over huge pools and the Zone Planner map use far less work.
+- Machines keep or drop their contents correctly when blown up or replaced by commands: engine fuel and gear upgrades now drop, and a command replace clears them instead of spilling. On Minecraft 1.21.1, /setblock, /fill and /clone no longer spill contents, and breaking a Distiller now drops the items in its container slots.
+- The Electronic Library no longer rejects blueprints holding pistons or blocks with replaceable variants; older saved blueprints are repaired automatically.
+- Guide book: no more text over page numbers, and links that wrap onto the next page are clickable on both pages.
+- Fixed Fragile Fluid Shards showing the wrong colour for coloured fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
 - The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist; the Programming Table pages through more than 24 boards.
-- Mining wells and pumps no longer replace claimed or waterlogged blocks with their tube, or lay it where a claim refuses placement, and pumps no longer destroy waterlogged blocks that can't stay dry; idle pumps over huge pools and the Zone Planner map use far less work.
-- A quarry now repairs a frame gap once whatever blocked it is gone, and leaves a gap where a claim refuses placing a frame block.
-- Stirling engine fuel, and the gear upgrades in FE engines and MJ dynamos, now drop when the block is blown up or removed with /setblock destroy, and are cleared rather than spilled when a command replaces it.
-- A Filler with fluid standing in a cell its pattern leaves empty now finishes (and loops again in Loop mode).

@@ -497,7 +497,8 @@ public class RobotActionAIsTester {
      *  resolve-the-owner check would get wrong. */
     public static void butcherFellsTheCowAndSparesTheTamedWolf(GameTestHelper helper) {
         BlockPos robotRel = new BlockPos(3, 4, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        // The whole cell: the cow and wolf sit a chunk border away from the robot as often as not.
+        EntityArenaUtil.forceLoadCell(helper);
 
         //? if >=26.2 {
         TamableAnimal wolf = helper.spawn(net.minecraft.world.entity.EntityTypes.WOLF, 3, 4, 3);
@@ -522,7 +523,7 @@ public class RobotActionAIsTester {
         robot.getBattery().addPower(SEEDED_CHARGE, false);
         helper.getLevel().addFreshEntity(robot);
 
-        EntityArenaUtil.tickUntil(helper, 280, cow::isDeadOrDying, () -> {
+        EntityArenaUtil.tickUntil(helper, 360, EntityArenaUtil.whenCellTicking(helper, 80, 280, cow::isDeadOrDying), () -> {
             helper.assertTrue(wolf.isAlive() && wolf.getHealth() == wolfHealth,
                     "the tamed wolf was nearer than the cow and must not have been touched (health " + wolfHealth
                             + " -> " + wolf.getHealth() + ", alive " + wolf.isAlive() + ")");

@@ -77,7 +77,7 @@ Follow-ups left by the 2026-10-22 pre-release sweep; none is a known common play
 - Builder, Replace mode: flowing fluid anywhere in the box still holds every fragile placement, even once it has stopped spreading (a box edge in a lake). Telling steady flow apart needs a census over sweeps or a `getNewLiquid` simulation. No-Replace has no fragile-block defer, so a fragile block beside fluid may be placed, washed away (dropping) and placed again.
 - `SchematicBlockDefault.setPlaceBlock` takes `findFirst` over a `HashSet` of rules, so two rules that both set a place block resolve in JVM order.
 - Pump flood fill reads up to `pumpMaxDistance` out, loading (and generating) unloaded chunks on the server thread at each rebuild. Decide: a loaded-chunk guard plus wake-on-load, or accept that pools in unloaded chunks are not pumped.
-- Game tests: `power_display_survives_client_resync` (26.3) flaked once on what reads like a fixed-tick assert; `-PbcTests` seemed not to narrow the run on the 1.21.1 node.
+- Game tests: `power_display_survives_client_resync` (26.3) flaked once on what reads like a fixed-tick assert.
 
 ## In-client smoke 2026-09-26
 

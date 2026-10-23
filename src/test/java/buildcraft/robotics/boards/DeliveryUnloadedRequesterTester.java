@@ -159,29 +159,40 @@ public class DeliveryUnloadedRequesterTester {
         }
     }
 
+    /** Runs {@code body} once the whole arena cell is entity-ticking. The rig drops the goods and counts them in
+     *  the same tick, and an item dropped into a chunk whose entities are not loaded yet is invisible to the count
+     *  (seen under fullTestSuite's parallel servers: "drops them" failed on tick 0 on 1.21.10). */
+    private static void whenCellTicking(GameTestHelper helper, Runnable body) {
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,
+                "the arena cell never became entity-ticking");
+    }
+
     /** The robot waits with the goods, tries again when it wakes, and still does after a reload mid-wait (the wait is
      *  saved with the board, and the reload frees every reservation as an unload does). */
     public static void deliveryKeepsCargoForAnUnloadedRequester(GameTestHelper helper) {
-        try (Rig rig = new Rig(helper, new DockingStationPipe())) {
-            rig.deliver();
-            rig.assertWaiting("after the delivery attempt");
+        whenCellTicking(helper, () -> {
+            try (Rig rig = new Rig(helper, new DockingStationPipe())) {
+                rig.deliver();
+                rig.assertWaiting("after the delivery attempt");
 
-            rig.wake(1);
-            helper.assertFalse(rig.board.getDelegateAI() instanceof AIRobotDisposeItems,
-                    "waking up still holding an order's goods, the robot must not dispose of them");
-            rig.assertWaiting("after waking up");
+                rig.wake(1);
+                helper.assertFalse(rig.board.getDelegateAI() instanceof AIRobotDisposeItems,
+                        "waking up still holding an order's goods, the robot must not dispose of them");
+                rig.assertWaiting("after waking up");
 
-            CompoundTag saved = new CompoundTag();
-            rig.board.writeToNbt(saved);
-            rig.board.abortDelegateAI();
-            rig.registry.releaseResources(rig.robot);
-            AIRobot loaded = AIRobot.loadAI(saved, rig.robot);
-            helper.assertTrue(loaded instanceof BoardRobotDelivery, "precondition: the board reloads, got " + loaded);
-            rig.board = (BoardRobotDelivery) loaded;
-            rig.wake(1);
-            rig.assertWaiting("after a reload mid-wait");
-            helper.succeed();
-        }
+                CompoundTag saved = new CompoundTag();
+                rig.board.writeToNbt(saved);
+                rig.board.abortDelegateAI();
+                rig.registry.releaseResources(rig.robot);
+                AIRobot loaded = AIRobot.loadAI(saved, rig.robot);
+                helper.assertTrue(loaded instanceof BoardRobotDelivery, "precondition: the board reloads, got " + loaded);
+                rig.board = (BoardRobotDelivery) loaded;
+                rig.wake(1);
+                rig.assertWaiting("after a reload mid-wait");
+                helper.succeed();
+            }
+        });
     }
 
     /** The requester was destroyed while its chunk was away (its station left the registry): the order can never be
@@ -189,38 +200,42 @@ public class DeliveryUnloadedRequesterTester {
      *  back first, so the wake reaches {@code OrderClaimer.reclaim} holding a station that is no longer registered:
      *  its identity guard gives the order up there, in the first cycle. */
     public static void deliveryGivesUpAnOrderWhoseRequesterWasDestroyed(GameTestHelper helper) {
-        try (Rig rig = new Rig(helper, new DockingStationPipe())) {
-            rig.deliver();
-            rig.assertWaiting("after the delivery attempt");
+        whenCellTicking(helper, () -> {
+            try (Rig rig = new Rig(helper, new DockingStationPipe())) {
+                rig.deliver();
+                rig.assertWaiting("after the delivery attempt");
 
-            rig.releaseClaims();
-            rig.registry.removeStation(rig.requester);
-            rig.wake(1);
-            rig.assertGaveUp("was destroyed");
-            helper.succeed();
-        }
+                rig.releaseClaims();
+                rig.registry.removeStation(rig.requester);
+                rig.wake(1);
+                rig.assertGaveUp("was destroyed");
+                helper.succeed();
+            }
+        });
     }
 
     /** The requester forbids the robot (a Forbid Robot action added during the wait): the robot may not deliver there,
      *  so it gives the order up when it wakes, as a station search would have skipped the station. Its claims are
      *  given back first, so it is {@code OrderClaimer.reclaim}'s forbid guard that gives the order up. */
     public static void deliveryGivesUpAnOrderWhoseRequesterForbidsTheRobot(GameTestHelper helper) {
-        boolean[] forbidden = { false };
-        DockingStationPipe requester = new DockingStationPipe() {
-            @Override
-            public boolean isRobotForbidden(IRobotAccess robot) {
-                return forbidden[0];
-            }
-        };
-        try (Rig rig = new Rig(helper, requester)) {
-            rig.deliver();
-            rig.assertWaiting("after the delivery attempt");
+        whenCellTicking(helper, () -> {
+            boolean[] forbidden = { false };
+            DockingStationPipe requester = new DockingStationPipe() {
+                @Override
+                public boolean isRobotForbidden(IRobotAccess robot) {
+                    return forbidden[0];
+                }
+            };
+            try (Rig rig = new Rig(helper, requester)) {
+                rig.deliver();
+                rig.assertWaiting("after the delivery attempt");
 
-            rig.releaseClaims();
-            forbidden[0] = true;
-            rig.wake(1);
-            rig.assertGaveUp("forbids the robot");
-            helper.succeed();
-        }
+                rig.releaseClaims();
+                forbidden[0] = true;
+                rig.wake(1);
+                rig.assertGaveUp("forbids the robot");
+                helper.succeed();
+            }
+        });
     }
 }

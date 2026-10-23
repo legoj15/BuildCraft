@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_delivery_gives_up_forbidding_requester",
     "environment": "buildcraftunofficial:robot_station_rig",
     "structure": "minecraft:empty",
-    "max_ticks": 20,
+    "max_ticks": 120,
     "setup_ticks": 0,
     "required": true
 }

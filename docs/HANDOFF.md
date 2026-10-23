@@ -15,8 +15,7 @@ A robots gliding (26.3, 1.21.1, 26.2), B stripes retraction (after the client fi
 ## Next
 1. Flake-fix review follow-ups (not started; partial edit saved at the session scratchpad as `pollbudget-partial.patch`): widen the poll-budget guard past robot tests (BlockWaterloggingTester's doc claims coverage it doesn't have); convert `assertWaterloggedBetweenSources` to the tickUntil+cleanup shape; name the stalled lava side on timeout; fix the "(about 90 ms)" and inconsistent straddle-rate comments.
 2. New flakes: `robot_name_kept_through_wrench_pickup` scans in the same tick as the drop (gate on entity ticking); `drops_stirling_hand` failed once (3 of 4 fragile_fluid_container) under a one-thread run.
-3. Offer the 1.21.1 NeoForge bump 21.1.262 -> 21.1.264 (neutral). Use the `neoforge-bump` skill.
-4. Final `fullTestSuite`, then release work is user-gated.
+3. Final `fullTestSuite`, then release work is user-gated.
 
 ## Uncommitted changes
 - None.

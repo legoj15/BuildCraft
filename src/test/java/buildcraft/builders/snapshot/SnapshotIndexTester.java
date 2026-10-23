@@ -114,10 +114,11 @@ public class SnapshotIndexTester {
     public void anUnreadableFileIsSkippedAndNotRetriedUntilItChanges() throws IOException {
         Files.writeString(dir.resolve("corrupt" + EXT), "x"); // the fake reader returns null for it
         Files.writeString(dir.resolve("notes.txt"), "x");     // wrong extension: ignored entirely
+        Files.createDirectory(dir.resolve("folder" + EXT));   // not a file: never read, so never retried every scan
         SnapshotIndex index = new SnapshotIndex();
         index.rescan(dir.toFile(), EXT, reader);
         index.rescan(dir.toFile(), EXT, reader);
-        Assertions.assertEquals(1, reads.get(), "a corrupt file is read once, not once per scan");
+        Assertions.assertEquals(1, reads.get(), "a corrupt file is read once, not once per scan; a directory never");
         Assertions.assertTrue(index.list().isEmpty());
     }
 

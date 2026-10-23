@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -84,6 +85,9 @@ public class GlobalSavedDataSnapshots {
      *  it was trusted) is decompressed once before it is trusted again. Reads through {@link #getSnapshot} do
      *  not add to this: only a save's own check does. */
     private final Map<String, FileStamp> intactFiles = new ConcurrentHashMap<>();
+    /** Files whose bytes could not be read and that have already logged a warning for it (see
+     *  {@link #readSnapshotFile}); a file leaves once it reads. Written by the scan thread and lookups alike. */
+    private final Set<String> unreadableWarned = ConcurrentHashMap.newKeySet();
 
     /** A file's size and modification time: the cheap fingerprint the trust in {@link #intactFiles} is keyed on,
      *  the same one {@link SnapshotIndex} uses to notice a changed file. */
@@ -198,6 +202,7 @@ public class GlobalSavedDataSnapshots {
             if (snapshotFile.equals(exactFile)) continue;
             if (snapshotFile.getName().startsWith(targetPrefix) &&
                 snapshotFile.getName().endsWith(SNAPSHOT_FILE_EXTENSION) &&
+                snapshotFile.isFile() &&
                 !knownNotToAnswer(snapshotFile, answering)) {
                 Pair<Snapshot, File> found = matching(snapshotFile, key, exact);
                 if (found != null) return found;
@@ -242,12 +247,20 @@ public class GlobalSavedDataSnapshots {
         // Read the bytes first, then decode them, so a failure says which it was: vanilla's NBT reader reports an I/O
         // error inside a tag as an unchecked exception, indistinguishable from bad data once the two are mixed.
         byte[] bytes;
+        String name = snapshotFile.getName();
         try {
             bytes = Files.readAllBytes(snapshotFile.toPath());
         } catch (IOException e) {
-            LOGGER.warn("Failed to read the snapshot {}", snapshotFile, e);
+            // Retried on every scan (about every 5 s while the library is open) and every lookup, so a file another
+            // program keeps open warns once, not each time; it warns again only after it has once been read.
+            if (unreadableWarned.add(name)) {
+                LOGGER.warn("Failed to read the snapshot {}; retrying quietly until it can be read", snapshotFile, e);
+            } else {
+                LOGGER.debug("Still cannot read the snapshot {}: {}", snapshotFile, e.toString());
+            }
             return new FileRead(null, e);
         }
+        unreadableWarned.remove(name);
         try {
             return new FileRead(Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(bytes))), null);
         } catch (IOException e) { // InvalidInputDataException included: the bytes decode, but not to a snapshot

@@ -100,7 +100,8 @@ public final class SnapshotIndex {
     }
 
     /**
-     * Bring the index in line with {@code dir}: drop entries whose file is gone, read files that are new or changed
+     * Bring the index in line with {@code dir}: drop entries whose file is gone (anything that is not a regular file
+     * is never listed), read files that are new or changed
      * with {@code reader}, keep the rest as they are. The reader returns null for a file whose bytes are not a
      * snapshot (remembered, so it is not re-read until it changes), and throws {@link UncheckedIOException} for one it
      * could not read at all (left out, so the next scan tries it again). A directory that cannot be listed leaves the
@@ -118,7 +119,9 @@ public final class SnapshotIndex {
             Map<String, Entry> fresh = new HashMap<>();
             for (File file : files) {
                 String name = file.getName();
-                if (!name.endsWith(extension)) continue;
+                // A directory named like a snapshot can never be read: handing it to the reader would fail, leave no
+                // entry, and so be retried (and logged) on every scan.
+                if (!name.endsWith(extension) || !file.isFile()) continue;
                 long modified = file.lastModified();
                 long length = file.length();
                 Entry old = known.get(name);

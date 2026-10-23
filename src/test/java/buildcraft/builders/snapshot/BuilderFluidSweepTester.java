@@ -432,6 +432,95 @@ public class BuilderFluidSweepTester {
         });
     }
 
+    /** The washed column: a water source walled in the first cell (schematic air) spills over the two snow cells
+     *  after it and stops at the south wall, so both snow cells hold flowing water fed by it for good. */
+    private static final int[] WASHED_COLUMN = { AIR, SNOW, SNOW };
+    private static final BlockPos[] WASHED_WALLS = {
+        new BlockPos(2, 2, 1), new BlockPos(1, 2, 2), new BlockPos(1, 2, 3), new BlockPos(1, 2, 4),
+        new BlockPos(3, 2, 3), new BlockPos(3, 2, 4), new BlockPos(2, 2, 5) };
+
+    /**
+     * REPLACE never removes fluid, so a fragile block whose cell settled fluid keeps washing can never stand (the
+     * gate and {@code SchematicBlockDefault#build} both refuse it). Such a cell must count as done, as CLEAR accepts a
+     * fragile cell beside fluid it will never mop; it was once left waiting for ever, so a REPLACE build with a torch
+     * in a pond never finished. Two snow cells wash each other as well as being washed by the source, so neither may
+     * wait for the other to be accepted first.
+     *
+     * <p>Phases, all gated on observed state:
+     * <ol start="0">
+     * <li>build the dry column in REPLACE mode;</li>
+     * <li>put a water source in the first cell and knock both snow layers out in the same tick;</li>
+     * <li>the Builder must rest for {@link BuilderRefloodTester#QUIET_TICKS} straight ticks with water over both snow
+     *     cells;</li>
+     * <li>control: take the source away, and both snow layers must be placed once the water drains (the acceptance
+     *     lasts only while the water does).</li>
+     * </ol>
+     */
+    public static void replaceRestsWithFragileCellsInSettledWater(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TileBuilder tile = setUpReplaceBuilder(helper, WASHED_COLUMN, WASHED_WALLS);
+        BlockPos water = cell(0);
+
+        int[] phase = { 0 };
+        int[] phaseStart = { 0 };
+        int[] quiet = { 0 };
+        boolean[] finished = { false };
+
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            expect(builder != null, "the Builder lost its blueprint builder");
+            BlockState[] cells = new BlockState[WASHED_COLUMN.length];
+            boolean allBuilt = true;
+            for (int i = 0; i < cells.length; i++) {
+                cells[i] = helper.getBlockState(cell(i));
+                allBuilt &= isBuilt(WASHED_COLUMN[i], cells[i]);
+            }
+            int inPhase = t - phaseStart[0];
+            switch (phase[0]) {
+                case 0 -> {
+                    if (allBuilt && builderQuiet(builder)) {
+                        BlockWaterloggingTester.placeSource(helper, water, Blocks.WATER, Fluids.WATER);
+                        helper.setBlock(cell(1), Blocks.AIR);
+                        helper.setBlock(cell(2), Blocks.AIR);
+                        phase[0] = 1;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 0: the Builder never finished the dry build, cells="
+                                + Arrays.toString(cells) + ", " + describe(builder));
+                    }
+                }
+                case 1 -> {
+                    expect(level.getFluidState(helper.absolutePos(water)).isSource(), "phase 1 (test premise): the "
+                            + "walled water source went away, cells=" + Arrays.toString(cells));
+                    expect(!cells[1].is(Blocks.SNOW) && !cells[2].is(Blocks.SNOW), "phase 1: the REPLACE Builder "
+                            + "placed a snow layer into water that washes it away; cells=" + Arrays.toString(cells));
+                    boolean washed = !level.getFluidState(helper.absolutePos(cell(1))).isEmpty()
+                            && !level.getFluidState(helper.absolutePos(cell(2))).isEmpty();
+                    quiet[0] = washed && builderQuiet(builder) ? quiet[0] + 1 : 0;
+                    if (quiet[0] >= QUIET_TICKS) {
+                        helper.setBlock(water, Blocks.AIR);
+                        phase[0] = 2;
+                        phaseStart[0] = t;
+                    } else {
+                        expect(inPhase < 300, "phase 1: the REPLACE Builder never rested with settled water "
+                                + "washing both snow cells; cells=" + Arrays.toString(cells) + ", "
+                                + describe(builder));
+                    }
+                }
+                case 2 -> {
+                    if (cells[1].is(Blocks.SNOW) && cells[2].is(Blocks.SNOW)) {
+                        finished[0] = true;
+                        helper.succeed();
+                    } else {
+                        expect(inPhase < 300, "phase 2 (control): with the water gone the snow layers were not "
+                                + "placed again; cells=" + Arrays.toString(cells) + ", " + describe(builder));
+                    }
+                }
+                default -> throw new IllegalStateException("bad phase " + phase[0]);
+            }
+        });
+    }
+
     /** One schematic stone cell, walled in on every side but the top (the Builder closes the east, the next stone
      *  the south), so a water source put there stays where it is. */
     private static final int[] SOLID_COLUMN = { STONE, STONE };

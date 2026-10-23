@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -29,6 +30,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
@@ -442,6 +444,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // where the schematic is dry, and vanilla will flood the cell again no matter how often the
             // Builder dries it, tolerate the water: the lenient (NO_REPLACE) comparison isolates exactly
             // that waterlogging difference.
+            if (mode == EnumFluidHandlingMode.REPLACE) return isFragileUnbuildableAt(blockPos, def);
             if (mode != EnumFluidHandlingMode.CLEAR) return false;
             if (def.isBuilt(tile.getWorldBC(), blockPos, EnumFluidHandlingMode.NO_REPLACE)
                 && isResourcedByUnmoppableFluid(blockPos, tile.getWorldBC().getFluidState(blockPos).getType())) {
@@ -453,14 +456,18 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     /**
-     * CLEAR mode: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand, because
-     * fluid the Builder will never remove is beside or above the cell and washes it away the moment it is placed?
-     * Such a cell is accepted as done, left empty (or holding the fluid that flows in), so the build can finish:
-     * the place gate would otherwise defer it for ever while the cell still counts as unbuilt, and the Builder would
-     * report busy without end.
+     * CLEAR and REPLACE: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand,
+     * because fluid the Builder will never remove is beside or above the cell and washes it away the moment it is
+     * placed? Such a cell is accepted as done, left empty (or holding the fluid that flows in), so the build can
+     * finish: the place gate (and {@code SchematicBlockDefault#build}'s fragile defer) would otherwise defer it for
+     * ever while the cell still counts as unbuilt, and the Builder would report busy without end.
+     *
+     * <p>REPLACE never removes fluid, so any fluid in the cell may stay, and a washing neighbour is permanent unless
+     * the Builder is still to build a block into it that displaces its fluid ({@link #isStayingUnderReplace}). The
+     * rest of this comment is about CLEAR, which mops.
      *
      * <p>Any fluid counts (water, lava, oil, a modded fluid): every washing neighbour must be
-     * {@link #isPermanentFluidAt permanent fluid}, and the cell itself must hold nothing to break, which is air or
+     * {@link #isUnmoppable permanent fluid}, and the cell itself must hold nothing to break, which is air or
      * fluid vanilla gives it from that permanent fluid: flowing fluid, or a SOURCE that fluid's own infinite-source
      * rule re-makes ({@link #isResourcedByUnmoppableFluid}; mopping it is futile, the same two sources re-make it
      * within a fluid tick). Any other source in the cell is still mopped, after which the cell refills with flowing
@@ -474,21 +481,37 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      */
     private boolean isFragileUnbuildableAt(BlockPos blockPos, SchematicBlockDefault def) {
         if (def.blockState == null || !SchematicBlockDefault.isWashedAwayByFluid(def.blockState)) return false;
+        boolean replace = tile.getFluidMode() == EnumFluidHandlingMode.REPLACE;
         BlockState world = tile.getWorldBC().getBlockState(blockPos);
         if (!world.isAir()) {
             if (!isFluidOnly(world)) return false;
             FluidState fluid = world.getFluidState();
             if (fluid.isEmpty()) return false;
-            if (fluid.isSource() && !isResourcedByUnmoppableFluid(blockPos, fluid.getType())) return false;
+            if (!replace && fluid.isSource() && !isResourcedByUnmoppableFluid(blockPos, fluid.getType())) return false;
         }
-        return SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState)
-            && !SchematicBlockDefault.hasWashingFluidNeighbour(tile.getWorldBC(), blockPos, def.blockState,
-                neighbour -> !isPermanentFluidAt(neighbour));
+        Predicate<BlockPos> permanent = replace ? this::isStayingUnderReplace : this::isUnmoppable;
+        Level level = tile.getWorldBC();
+        return SchematicBlockDefault.hasWashingFluidNeighbour(level, blockPos, def.blockState)
+            && !SchematicBlockDefault.hasWashingFluidNeighbour(level, blockPos, def.blockState,
+                neighbour -> !permanent.test(neighbour));
     }
 
-    /** Is there fluid, of any kind, at {@code blockPos} that the Builder will never remove ({@link #isUnmoppable})? */
-    private boolean isPermanentFluidAt(BlockPos blockPos) {
-        return !tile.getWorldBC().getFluidState(blockPos).isEmpty() && isUnmoppable(blockPos);
+    /**
+     * REPLACE: will the fluid at {@code blockPos} stay where it is as far as this Builder is concerned? REPLACE never
+     * breaks fluid, and displaces it only by building a block into its cell. So it stays when the cell is outside the
+     * box, accepted ({@code CORRECT}: a schematic-air cell holding fluid, a block the schematic wants wet, a fragile
+     * cell accepted here), or still to receive a FRAGILE block, which cannot be placed into fluid that washes it
+     * either. Counting that last case is what lets two flooded fragile cells beside each other be accepted at all:
+     * each washes the other, and neither would ever be accepted first. Any other cell still to build or break (a solid
+     * block going into a source) may take the fluid away, so the fragile cell beside it waits for that.
+     *
+     * <p>Like CLEAR's acceptance, this lasts only while the fluid does: once it drains (its feeder is gone, or a
+     * fragile neighbour was built into a source after all), the next check sweep sends the cell back to
+     * {@code TO_PLACE} and the block is built.
+     */
+    private boolean isStayingUnderReplace(BlockPos blockPos) {
+        if (isUnmoppable(blockPos)) return true;
+        return checkResults[posToIndex(blockPos)] == CHECK_RESULT_TO_PLACE && isFragileSchematicAt(blockPos);
     }
 
     /**

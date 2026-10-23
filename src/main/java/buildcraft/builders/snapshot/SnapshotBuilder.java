@@ -668,7 +668,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   MOVING fluid in or beside the box (fluid that has changed lately, or whose open
             //   surroundings have, see scanReplaceFluid), or SETTLED fluid beside or above the cell
             //   itself. A still pond, or flowing water that has stopped spreading, elsewhere in the
-            //   box no longer holds every torch back for ever.
+            //   box no longer holds every torch back for ever. A fragile cell that fluid which stays
+            //   put washes can never be built in REPLACE at all; the check accepts it as done
+            //   (BlueprintBuilder#isFragileUnbuildableAt) instead of leaving it deferred here for ever.
             //
             // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it, from
             // a sweep up to FLUID_SCAN_INTERVAL ticks old. passesFreshFluidGate, the last filter before items are

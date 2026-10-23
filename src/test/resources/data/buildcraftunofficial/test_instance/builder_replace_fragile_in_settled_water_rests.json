@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_replace_fragile_in_settled_water_rests",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 600,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -13,4 +13,4 @@
 - The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist; the Programming Table pages through more than 24 boards.
 - Mining wells and pumps no longer replace claimed or waterlogged blocks with their tube, or lay it where a claim refuses placement, and pumps no longer destroy waterlogged blocks that can't stay dry; idle pumps over huge pools and the Zone Planner map use far less work.
 - A quarry now repairs a frame gap once whatever blocked it is gone, and leaves a gap where a claim refuses placing a frame block.
-- Stirling engine fuel, and the gear upgrades in FE engines and MJ dynamos, now drop when the block is blown up, pushed by a piston or removed with /setblock destroy, and are cleared rather than spilled when a command replaces it.
+- Stirling engine fuel, and the gear upgrades in FE engines and MJ dynamos, now drop when the block is blown up or removed with /setblock destroy, and are cleared rather than spilled when a command replaces it.

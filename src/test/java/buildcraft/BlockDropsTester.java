@@ -398,7 +398,7 @@ public class BlockDropsTester {
     private static void breakEnginesAndCheck(GameTestHelper helper, ItemStack tool) {
         BlockPos pos = new BlockPos(1, 2, 1);
         EntityArenaUtil.forceLoadCell(helper);
-        EntityArenaUtil.tickUntilThen(helper, ENGINE_READY_TICKS, () -> EntityArenaUtil.isCellEntityTicking(helper),
+        EntityArenaUtil.tickUntilThen(helper, ENGINE_READY_TICKS + ENGINE_DROP_WAIT_TICKS, () -> EntityArenaUtil.isCellEntityTicking(helper),
                 () -> {
                     helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
                     tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));

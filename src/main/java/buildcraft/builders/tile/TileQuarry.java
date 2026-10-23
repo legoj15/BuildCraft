@@ -1364,6 +1364,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     frameRefusals.remember(level, breakPos, getOwner());
                     check(breakPos);
                 }
+                level.destroyBlockProgress(breakPos.hashCode(), breakPos, -1);
                 return true;
             }
             level.destroyBlockProgress(breakPos.hashCode(), breakPos, -1);

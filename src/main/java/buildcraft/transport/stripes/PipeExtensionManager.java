@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017 SpaceToad and the BuildCraft team
+ * Copyright (c) 2026 the BuildCraftUnofficial contributors
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
@@ -114,20 +115,19 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         if (queued == null) {
             return;
         }
-        // Where each stripes pipe moved to this tick. A second pipe stack that reached the same stripes pipe in the
-        // same tick names the cell it left (and a behaviour the move replaced), so it goes back down the moved pipe
-        // and extends the line when it comes round again, as the rest of a pipe stack does.
-        Map<IStripesActivator, BlockPos> movedTo = new IdentityHashMap<>();
+        // Where each stripes pipe stands after its first request this tick. Any request, moved or not, may have
+        // replaced its block entity (a refused or failed move puts the pipe back as a new one), so a second pipe
+        // stack that reached the same stripes pipe in the same tick names a behaviour that may be gone. It goes back
+        // down the pipe where it now stands and asks again when it comes round, as the rest of a pipe stack does.
+        Map<IStripesActivator, BlockPos> standsAt = new IdentityHashMap<>();
         for (PipeExtensionRequest r : queued) {
-            BlockPos moved = movedTo.get(r.stripes);
-            if (moved != null) {
-                sendBack(level, moved, List.of(r.stack), r.dir);
+            BlockPos at = standsAt.get(r.stripes);
+            if (at != null) {
+                sendBack(level, at, List.of(r.stack), r.dir);
                 continue;
             }
             BlockPos to = retractionPipeDefs.contains(r.pipeDef) ? retract(level, r) : extend(level, r);
-            if (to != null) {
-                movedTo.put(r.stripes, to);
-            }
+            standsAt.put(r.stripes, to != null ? to : r.pos);
         }
     }
 

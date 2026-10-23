@@ -29,6 +29,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.BCTransportPipes;
@@ -223,6 +224,60 @@ public class PipeBehaviourStripesMovesTester {
                     claim.close();
                     empty(feeder, pipeAt(helper, pipeRel), pipeAt(helper, frontRel));
                 });
+    }
+
+    /**
+     * A claim that refuses the cell ahead (the placement event the moved stripes pipe posts there) puts the stripes
+     * pipe back as it was, which makes it a new block entity. A second pipe stack that reached the same stripes pipe
+     * in the same tick must still travel back down the line with the first, not be dropped where the pipe stands
+     * because the pipe it named was replaced.
+     */
+    public static void testRefusedPlacementSendsBothSameTickStacksBack(GameTestHelper helper) {
+        BlockPos feederRel = new BlockPos(1, 2, 2);
+        BlockPos pipeRel = feederRel.east();
+        BlockPos frontRel = pipeRel.east();
+        TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        connect(feeder, tile);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
+                helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
+        BlockPos front = helper.absolutePos(frontRel);
+        WorkClaimMod claim = new WorkClaimMod(front::equals, front::equals);
+        PipeEventItem.Drop first = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
+        stripes.onDrop(first);
+        PipeEventItem.Drop second = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        stripes.onDrop(second);
+        helper.assertTrue(first.getStack().isEmpty() && second.getStack().isEmpty(),
+                "both pipe stacks are taken for the extension");
+
+        Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
+        AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
+        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
+                () -> claim.placeAsks(front) >= 1 && countLine(helper, cobble, feederRel, pipeRel) == 3,
+                () -> {
+                    helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "a refused move leaves the stripes pipe");
+                    helper.assertTrue(helper.getBlockState(frontRel).isAir(), "...and places nothing in front");
+                    helper.assertTrue(helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
+                            e -> e.getItem().is(cobble)).isEmpty(), "...and drops no pipe stack in the world");
+                    helper.succeed();
+                }, "both same-tick pipe stacks never came back down the line after a refused placement", () -> {
+                    claim.close();
+                    discardItems(helper, around);
+                    empty(pipeAt(helper, feederRel), pipeAt(helper, pipeRel), pipeAt(helper, frontRel));
+                });
+    }
+
+    /** How many of {@code item} travel in the pipes at {@code rels} (each looked up now: a re-placed pipe is new). */
+    private static int countLine(GameTestHelper helper, Item item, BlockPos... rels) {
+        int found = 0;
+        for (BlockPos rel : rels) {
+            TilePipeHolder tile = pipeAt(helper, rel);
+            if (tile != null) {
+                found += count(tile.getPipe().getFlow(), item);
+            }
+        }
+        return found;
     }
 
     /**

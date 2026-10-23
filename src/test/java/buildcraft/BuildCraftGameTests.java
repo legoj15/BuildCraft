@@ -262,6 +262,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_refused_extension_returns_stack", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedExtensionSendsTheStackBack);
+        reg.accept("buildcraftunofficial:stripes_refused_placement_returns_same_tick_stacks", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedPlacementSendsBothSameTickStacksBack);
         reg.accept("buildcraftunofficial:stripes_lone_pipe_drops_what_it_cannot_send_back", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testLoneStripesPipeDropsWhatItCannotSendBack);
         
         // Shape Patterns

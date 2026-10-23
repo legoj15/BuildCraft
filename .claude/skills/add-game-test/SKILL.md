@@ -50,7 +50,8 @@ the safety net — this skill is the manual.
    watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests
    that throw or succeed immediately can use `20`. **Any test's `max_ticks` must be strictly
    greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen`/marker
-   `await`/`awaitThen` budget in the test** (see "Entity and robot tests" below) —
+   `await`/`awaitThen` budget in the test, or than `DropArenaUtil.POLL_TICKS` for one that calls
+   `awaitDrops`** (see "Entity and robot tests" below) —
    `GameTestPollBudgetTester` fails the unit run otherwise, so give the poll a literal, a named
    `static final int`, or a `+` sum of those; a budget computed from production code is unreadable to it.
 
@@ -160,6 +161,16 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   only in a ticking chunk (`placeSource`'s tick is kept if the fluid already scheduled its own: 5 ticks for water, 30
   for lava), `BlockWaterloggingTester.buildBasin` force-loads the cell, and `waterloggable_marker_holds_back_lava`
   waits with `whenCellTicking`.
+- **A "break a block, check its drops" test goes through `DropArenaUtil.awaitDrops(helper, act, drops)`.**
+  Never `runAfterDelay(10, ...)` after the break: `filtered_buffer_drops` failed that way (the drop was
+  invisible on tick 10 in a cell chunk that was not entity-ticking yet), and a fixed wait long enough for that is
+  too long for a fragile stack, which drifts out of a one-block scan after about ten ticks. The harness forces the
+  cell, waits for it to tick, runs `act` (place, fill, `breakBlock`/`removeBlock`) in one tick, polls until every
+  `present`/`exactly` drop is there, settles 5 more ticks, and only then asserts (`absent` and exact totals
+  included, so a late duplicate or a stray block is caught); it discards the cell's items on every exit. Put the
+  whole place-and-break inside `act` (nothing ticks between filling a machine and breaking it), describe the
+  result with `Drops.near(pos, radius).present(...).absent(...).alsoNear(...).exactly(item, n)`, and give the
+  manifest `max_ticks` above `POLL_TICKS` (400 today). Counts are totals, not entities: stacks merge.
 - **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
   as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
   arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.

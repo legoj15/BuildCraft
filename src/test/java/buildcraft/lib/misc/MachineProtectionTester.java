@@ -72,17 +72,9 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class MachineProtectionTester {
 
     /** Real ticks to wait, after a claim is lifted, for a stripes pipe to re-ask: its window (200) and some margin.
-     *  A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it; the initializer
-     *  below fails loudly when the window outgrows it. */
-    private static final int STRIPES_RETRY_TICKS = 300;
-
-    static {
-        if (STRIPES_RETRY_TICKS <= RefusalMemory.STRIPES.windowTicks()) {
-            throw new IllegalStateException("STRIPES_RETRY_TICKS (" + STRIPES_RETRY_TICKS + ") must outlast the "
-                    + "refusal window (" + RefusalMemory.STRIPES.windowTicks() + "): raise it, and the manifest's "
-                    + "max_ticks above it");
-        }
-    }
+     *  A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it;
+     *  {@code RefusalWindowBudgetTest} fails when the window outgrows it. */
+    public static final int STRIPES_RETRY_TICKS = 300;
 
     private static void check(boolean condition, String message) {
         if (!condition) {

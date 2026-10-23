@@ -28,7 +28,8 @@ import org.junit.jupiter.api.Test;
  * those runnables inserts into that live map. An insert that makes the map rehash invalidates the iterator's
  * position, so another entry can be skipped, run twice or removed in place of the one that just ran; whether the map
  * rehashes depends on how many runnables are pending, so the test passes for months and then flakes. The polls
- * ({@code EntityArenaUtil.tickUntil}/{@code tickUntilThen}, {@code MarkerArenaUtil.Session.await}/{@code awaitThen})
+ * ({@code EntityArenaUtil.tickUntil}/{@code tickUntilThen}, {@code MarkerArenaUtil.Session.await}/{@code awaitThen},
+ * {@code DropArenaUtil.awaitDrops})
  * therefore queue every tick up front. A test with several phases does the same: it queues each phase at an
  * absolute delay from the test body, or waits on observed state with a poll, or runs its steps through a step
  * runner that polls up front. The framework's own sequences ({@code helper.succeedWhen}, {@code startSequence}) are
@@ -44,7 +45,7 @@ public class GameTestNestedSchedulingTester {
 
     /** Calls that put a runnable into the framework's per-tick map, directly or as a poll queued up front. */
     private static final Pattern SCHEDULER = Pattern.compile(
-        "(?<![\\w])(runAfterDelay|runAtTickTime|tickUntilThen|tickUntil|awaitThen|await)\\s*\\(");
+        "(?<![\\w])(runAfterDelay|runAtTickTime|tickUntilThen|tickUntil|awaitDrops|awaitThen|await)\\s*\\(");
 
     private static String read(Path file) {
         try {

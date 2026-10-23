@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
 //? if >=1.21.10 {
 import net.minecraft.world.level.storage.TagValueInput;
 //?}
@@ -24,7 +23,8 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
-import buildcraft.lib.test.GameTestUtil;
+import buildcraft.lib.test.DropArenaUtil;
+import buildcraft.lib.test.DropArenaUtil.Drops;
 
 /**
  * Verifies that breaking the Builder with a survival-mode player holding a wooden pickaxe:
@@ -42,45 +42,39 @@ public class BuilderDropsTester {
     public static void testBuilderDropsContentsAndSelf(GameTestHelper helper) {
         BlockPos builderPos = new BlockPos(1, 2, 1);
 
-        helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
-        helper.assertBlockPresent(BCBuildersBlocks.BUILDER.get(), builderPos);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(builderPos, BCBuildersBlocks.BUILDER.get());
+            helper.assertBlockPresent(BCBuildersBlocks.BUILDER.get(), builderPos);
 
-        //? if >=1.21.10 {
-        TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
-        //?} else {
-        /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
-        //?}
+            //? if >=1.21.10 {
+            TileBuilder tile = helper.getBlockEntity(builderPos, TileBuilder.class);
+            //?} else {
+            /*TileBuilder tile = helper.getBlockEntity(builderPos);*/
+            //?}
 
-        // Seed the snapshot slot with a used blueprint item — the snapshot-loading logic will
-        // no-op because there's no GlobalSavedDataSnapshots entry for it, but the item itself
-        // must still drop when the block is broken.
-        ItemStack snapshot = new ItemStack(BCBuildersItems.BLUEPRINT_USED.get());
-        tile.setSnapshot(snapshot);
+            // Seed the snapshot slot with a used blueprint item — the snapshot-loading logic will
+            // no-op because there's no GlobalSavedDataSnapshots entry for it, but the item itself
+            // must still drop when the block is broken.
+            ItemStack snapshot = new ItemStack(BCBuildersItems.BLUEPRINT_USED.get());
+            tile.setSnapshot(snapshot);
 
-        // Seed a couple of resource slots at varying indices.
-        tile.setResource(0, new ItemStack(Items.DIAMOND, 7));
-        tile.setResource(13, new ItemStack(Items.IRON_INGOT, 42));
-        tile.setResource(26, new ItemStack(Items.COBBLESTONE, 64));
+            // Seed a couple of resource slots at varying indices.
+            tile.setResource(0, new ItemStack(Items.DIAMOND, 7));
+            tile.setResource(13, new ItemStack(Items.IRON_INGOT, 42));
+            tile.setResource(26, new ItemStack(Items.COBBLESTONE, 64));
 
-        // Simulate a survival-mode player holding a wooden pickaxe breaking the block. Goes
-        // through the full playerWillDestroy → removeBlock → playerDestroy flow that real
-        // gameplay uses, so this actually exercises the tool-requirement gate that plain
-        // level.destroyBlock skips.
-        GameTestUtil.breakAsSurvivalPlayer(helper, builderPos, new ItemStack(Items.WOODEN_PICKAXE));
-
-        helper.assertBlockPresent(Blocks.AIR, builderPos);
-
-        helper.runAfterDelay(10, () -> {
-            // Block item itself — proves the loot table fires with a pickaxe as the tool.
-            helper.assertItemEntityPresent(BCBuildersItems.BUILDER.get(), builderPos, 2.0);
-            // Snapshot item (popped by BlockBuilder.playerWillDestroy).
-            helper.assertItemEntityPresent(BCBuildersItems.BLUEPRINT_USED.get(), builderPos, 2.0);
-            // Resource slot contents.
-            helper.assertItemEntityPresent(Items.DIAMOND, builderPos, 2.0);
-            helper.assertItemEntityPresent(Items.IRON_INGOT, builderPos, 2.0);
-            helper.assertItemEntityPresent(Items.COBBLESTONE, builderPos, 2.0);
-            helper.succeed();
-        });
+            // Simulate a survival-mode player holding a wooden pickaxe breaking the block. Goes
+            // through the full playerWillDestroy → removeBlock → playerDestroy flow that real
+            // gameplay uses, so this actually exercises the tool-requirement gate that plain
+            // level.destroyBlock skips.
+            DropArenaUtil.breakBlock(helper, builderPos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(builderPos, 2.0)
+                // Block item itself — proves the loot table fires with a pickaxe as the tool.
+                .present(BCBuildersItems.BUILDER.get())
+                // Snapshot item (popped by BlockBuilder.playerWillDestroy).
+                .present(BCBuildersItems.BLUEPRINT_USED.get())
+                // Resource slot contents.
+                .present(Items.DIAMOND, Items.IRON_INGOT, Items.COBBLESTONE));
     }
 
     /**
@@ -90,27 +84,21 @@ public class BuilderDropsTester {
     public static void testArchitectDropsContentsAndSelf(GameTestHelper helper) {
         BlockPos architectPos = new BlockPos(1, 2, 1);
 
-        helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
-        helper.assertBlockPresent(BCBuildersBlocks.ARCHITECT.get(), architectPos);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
+            helper.assertBlockPresent(BCBuildersBlocks.ARCHITECT.get(), architectPos);
 
-        //? if >=1.21.10 {
-        TileArchitectTable tile = helper.getBlockEntity(architectPos, TileArchitectTable.class);
-        //?} else {
-        /*TileArchitectTable tile = helper.getBlockEntity(architectPos);*/
-        //?}
-        tile.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
-        tile.setSnapshotOut(new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
+            //? if >=1.21.10 {
+            TileArchitectTable tile = helper.getBlockEntity(architectPos, TileArchitectTable.class);
+            //?} else {
+            /*TileArchitectTable tile = helper.getBlockEntity(architectPos);*/
+            //?}
+            tile.setSnapshotIn(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()));
+            tile.setSnapshotOut(new ItemStack(BCBuildersItems.BLUEPRINT_USED.get()));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, architectPos, new ItemStack(Items.WOODEN_PICKAXE));
-
-        helper.assertBlockPresent(Blocks.AIR, architectPos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCBuildersItems.ARCHITECT.get(), architectPos, 2.0);
-            helper.assertItemEntityPresent(BCBuildersItems.BLUEPRINT_CLEAN.get(), architectPos, 2.0);
-            helper.assertItemEntityPresent(BCBuildersItems.BLUEPRINT_USED.get(), architectPos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, architectPos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(architectPos, 2.0).present(BCBuildersItems.ARCHITECT.get(),
+                BCBuildersItems.BLUEPRINT_CLEAN.get(), BCBuildersItems.BLUEPRINT_USED.get()));
     }
 
     /**

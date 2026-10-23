@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.lib.test.DropArenaUtil;
+
 /**
  * Pins that a game test's framework watchdog ({@code max_ticks} in its {@code test_instance} manifest) outlasts
  * every poll the test body runs. It covers EVERY registered game test, not only the robot ones: any test that polls
@@ -30,25 +32,29 @@ import org.junit.jupiter.api.Test;
  *
  * <p>{@code EntityArenaUtil.tickUntil}, {@code tickUntilThen}, {@code ConfigScope.succeedWhen} and the marker
  * session's {@code await}/{@code awaitThen} clean the test's entities, markers and rig up on EVERY way out of their
- * poll, including their own timeout. The framework's timeout is a second
- * clock, and it knows nothing about that cleanup: when it fires first, it fails the test and the poll's cleanup
- * never runs, so a robot stays in the shared level, keeps its station reservations and keeps flying into later
- * tests (the leak {@code robot_search_entity_nearest_and_range} had with a 20 tick manifest over a 60 tick poll), or
- * a marker stays in the dimension-wide marker cache that every later marker test scans.
- * The failure is silent in the test that caused it and surfaces as a flake in a later one, which is exactly why it
- * is pinned here and not left to review.
+ * poll, including their own timeout. The framework's timeout is a second clock, and it knows nothing about that
+ * cleanup: when it fires first, it fails the test and the poll's cleanup never runs, so a robot stays in the shared
+ * level, keeps its station reservations and keeps flying into later tests (the leak
+ * {@code robot_search_entity_nearest_and_range} had with a 20 tick manifest over a 60 tick poll), or a marker stays
+ * in the dimension-wide marker cache that every later marker test scans. The failure is silent in the test that
+ * caused it and surfaces as a flake in a later one, which is exactly why it is pinned here and not left to review.
  *
  * <p>The poll budget IS computable from source: every poll takes its {@code maxTicks} as the second argument, and
  * in practice that is an integer literal, a {@code static final int} of the same file or a {@code +} sum of those
  * ({@code READY + WORK}). The scan follows the registered method's body plus every same-file method it calls (a
  * poll hidden in a fixture helper still counts), ignores comments and string contents (the inactive branch of a
- * Stonecutter directive is a comment), and resolves the budget of each poll it finds. A budget it cannot resolve to a number (a parameter, a computed value) FAILS
- * the guard instead of being skipped: skipping would let a new poll slip through unchecked, so use a literal or a
- * named {@code static final int}. The guard needs {@code max_ticks > budget}, one tick of margin beyond the
- * poll's last tick, which is the only tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
+ * Stonecutter directive is a comment), and resolves the budget of each poll it finds. A budget it cannot resolve
+ * to a number (a parameter, a computed value) FAILS the guard instead of being skipped: skipping would let a new
+ * poll slip through unchecked, so use a literal or a named {@code static final int}. The one exception is
+ * {@code DropArenaUtil.awaitDrops}, whose budget is fixed by the harness: it counts as the harness's
+ * {@code POLL_TICKS}, read from its source. The guard needs {@code max_ticks > budget}, one tick of margin beyond
+ * the poll's last tick, which is the only tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
  *
- * <p>The scan reads the source tree, not the Stonecutter-processed copy, so its findings hold on every node, and
- * the 1.21.1 node reads {@code max_ticks} from the same manifests (see {@link GameTestManifestTester}).
+ * <p>The scan reads the raw source tree ({@code src/test/java}), not the Stonecutter-processed copy, so it sees the
+ * active node's view: only the active node's arm of a Stonecutter directive is live there, and the other arms are
+ * comments, which the scan ignores. A poll that exists only in another node's arm is therefore not seen. No
+ * directive-gated polls exist today; the 1.21.1 node reads {@code max_ticks} from the same manifests (see
+ * {@link GameTestManifestTester}).
  */
 public class GameTestPollBudgetTester {
 
@@ -155,9 +161,9 @@ public class GameTestPollBudgetTester {
                     + " ticks " + budgets.polls);
             }
         }
-        // Liveness: an empty or tiny match set would make every check above vacuous. Floors sit a little under the
-        // real counts (about 805 tests, about 135 of them polling) so deleting a few tests does not trip them, while
-        // a drifted registration pattern or poll scan, which finds nothing or little, does.
+        // Liveness: an empty or tiny match set would make every check above vacuous. The floors sit well under the
+        // real counts, so deleting a few tests does not trip them, while a drifted registration pattern or poll
+        // scan, which finds nothing or little, does.
         Assertions.assertTrue(tests >= 750,
             "only " + tests + " game tests were registered - the registration scan has drifted, which makes this"
                 + " guard vacuous");
@@ -219,6 +225,18 @@ public class GameTestPollBudgetTester {
             }""");
         Assertions.assertEquals(60, b.max());
         Assertions.assertEquals(2, b.polls.size());
+    }
+
+    @Test
+    public void scannerCountsTheDropHarnessAtItsFixedBudget() {
+        PollBudgets b = scan("""
+            public static void test(GameTestHelper helper) {
+                DropArenaUtil.awaitDrops(helper, () -> { }, Drops.near(pos, 2.0).present(item));
+            }""");
+        Assertions.assertEquals(1, b.polls.size());
+        Assertions.assertEquals(DropArenaUtil.POLL_TICKS, b.max(),
+            "the harness's poll counts as its POLL_TICKS, read from its source");
+        Assertions.assertTrue(b.unresolved.isEmpty());
     }
 
     @Test
@@ -332,8 +350,33 @@ public class GameTestPollBudgetTester {
         private static final Pattern AWAIT_POLL = Pattern.compile(
             "\\b(awaitThen|await)\\s*\\(\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
 
+        /** The drop-test harness ({@code DropArenaUtil.awaitDrops}): one poll whose budget the harness fixes. */
+        private static final Pattern DROP_POLL = Pattern.compile("\\bawaitDrops\\s*\\(");
+
+        private static final String DROP_HARNESS = "src/test/java/buildcraft/lib/test/DropArenaUtil.java";
+
         private static final Pattern CONSTANT =
             Pattern.compile("\\bstatic\\s+final\\s+(?:int|long)\\s+(\\w+)\\s*=\\s*(\\d+)L?\\s*;");
+
+        private static final Pattern POLL_TICKS =
+            Pattern.compile("\\bstatic\\s+final\\s+int\\s+POLL_TICKS\\s*=\\s*([^;]+);");
+
+        /** The harness's {@code POLL_TICKS}: a {@code +} sum of its own constants, resolved like any other budget. */
+        private static int dropPollBudget() {
+            String harness = strip(read(TestHelper.repoRoot().resolve(DROP_HARNESS)));
+            Map<String, Integer> constants = new HashMap<>();
+            Matcher c = CONSTANT.matcher(harness);
+            while (c.find()) {
+                constants.put(c.group(1), Integer.parseInt(c.group(2)));
+            }
+            Matcher budget = POLL_TICKS.matcher(harness);
+            Assertions.assertTrue(budget.find(), "no POLL_TICKS constant in " + DROP_HARNESS
+                + ": the guard cannot read the budget of awaitDrops");
+            Integer value = resolve(budget.group(1).trim(), constants);
+            Assertions.assertNotNull(value, "POLL_TICKS in " + DROP_HARNESS + " is `" + budget.group(1).trim()
+                + "`, not a literal, a constant of that file or a sum of those");
+            return value;
+        }
 
         private static final Pattern CALL = Pattern.compile("(?<![.\\w])([A-Za-z_]\\w*)\\s*\\(");
 
@@ -392,6 +435,12 @@ public class GameTestPollBudgetTester {
                         max = Math.max(max, value);
                     }
                 }
+            }
+            Matcher drops = DROP_POLL.matcher(body);
+            while (drops.find()) {
+                int value = dropPollBudget();
+                polls.add("awaitDrops " + value);
+                max = Math.max(max, value);
             }
             Matcher call = CALL.matcher(body);
             while (call.find()) {

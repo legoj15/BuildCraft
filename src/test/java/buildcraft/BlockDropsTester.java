@@ -5,13 +5,11 @@
  */
 package buildcraft;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -39,8 +37,8 @@ import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.test.EntityArenaUtil;
-import buildcraft.lib.test.GameTestUtil;
+import buildcraft.lib.test.DropArenaUtil;
+import buildcraft.lib.test.DropArenaUtil.Drops;
 import buildcraft.energy.tile.TileDynamoMJ;
 import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.energy.tile.TileEngineIron_BC8;
@@ -74,6 +72,9 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * </ul>
  * Each tool-gated block has two tests: one with a wooden pickaxe (drops block + contents)
  * and one with an empty hand (drops contents only, not the block itself).
+ * <p>
+ * Every test goes through {@link DropArenaUtil#awaitDrops}: the place-fill-break runs once the arena cell is
+ * entity-ticking, and the assertions run after the expected drops have appeared and settled, never on a fixed tick.
  */
 public class BlockDropsTester {
 
@@ -81,142 +82,115 @@ public class BlockDropsTester {
 
     public static void testDecoratedPickaxeDropsSelf(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
-
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreBlocks.DECORATED_LASER.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
+            DropArenaUtil.breakBlock(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pos, 2.0).present(BCCoreBlocks.DECORATED_LASER.get().asItem()));
     }
 
     public static void testDecoratedHandBreakDropsNothing(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
-
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityNotPresent(BCCoreBlocks.DECORATED_LASER.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCCoreBlocks.DECORATED_LASER.get());
+            DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
+        }, Drops.near(pos, 2.0).absent(BCCoreBlocks.DECORATED_LASER.get().asItem()));
     }
 
     // ---------- Chute (itemManager, real inventory) ----------
 
     public static void testChutePickaxeDropsContentsAndSelf(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
 
-        //? if >=1.21.10 {
-        TileChute chute = helper.getBlockEntity(pos, TileChute.class);
-        //?} else {
-        /*TileChute chute = helper.getBlockEntity(pos);*/
-        //?}
-        chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
-        chute.inv.setStackInSlot(3, new ItemStack(Items.GOLD_INGOT, 11));
+            //? if >=1.21.10 {
+            TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+            //?} else {
+            /*TileChute chute = helper.getBlockEntity(pos);*/
+            //?}
+            chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
+            chute.inv.setStackInSlot(3, new ItemStack(Items.GOLD_INGOT, 11));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCFactoryBlocks.CHUTE.get().asItem(), pos, 2.0);
-            helper.assertItemEntityPresent(Items.DIAMOND, pos, 2.0);
-            helper.assertItemEntityPresent(Items.GOLD_INGOT, pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pos, 2.0).present(BCFactoryBlocks.CHUTE.get().asItem(), Items.DIAMOND, Items.GOLD_INGOT));
     }
 
     public static void testChuteHandBreakDropsContentsOnly(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
 
-        //? if >=1.21.10 {
-        TileChute chute = helper.getBlockEntity(pos, TileChute.class);
-        //?} else {
-        /*TileChute chute = helper.getBlockEntity(pos);*/
-        //?}
-        chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
+            //? if >=1.21.10 {
+            TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+            //?} else {
+            /*TileChute chute = helper.getBlockEntity(pos);*/
+            //?}
+            chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            // Contents drop unconditionally — losing the player's items to an accidental
-            // hand-break would feel like a regression even though the block itself shouldn't.
-            helper.assertItemEntityPresent(Items.DIAMOND, pos, 2.0);
-            // Block itself must NOT drop without a pickaxe.
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.CHUTE.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
+        }, Drops.near(pos, 2.0)
+                // Contents drop unconditionally — losing the player's items to an accidental
+                // hand-break would feel like a regression even though the block itself shouldn't.
+                .present(Items.DIAMOND)
+                // Block itself must NOT drop without a pickaxe.
+                .absent(BCFactoryBlocks.CHUTE.get().asItem()));
     }
 
     // ---------- Autoworkbench: PHANTOM slots must NOT drop ----------
 
     public static void testAutoWorkbenchSkipsPhantomSlots(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
 
-        //? if >=1.21.10 {
-        TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos, TileAutoWorkbenchItems.class);
-        //?} else {
-        /*TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos);*/
-        //?}
+            //? if >=1.21.10 {
+            TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos, TileAutoWorkbenchItems.class);
+            //?} else {
+            /*TileAutoWorkbenchItems workbench = helper.getBlockEntity(pos);*/
+            //?}
 
-        // PHANTOM template slots — these never held real items in 1.12.2 and must not
-        // duplicate on break. Use rare items so the assertion below can detect a leak
-        // unambiguously.
-        workbench.invBlueprint.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
-        workbench.invMaterialFilter.setStackInSlot(0, new ItemStack(Items.DRAGON_EGG, 1));
+            // PHANTOM template slots — these never held real items in 1.12.2 and must not
+            // duplicate on break. Use rare items so the assertion below can detect a leak
+            // unambiguously.
+            workbench.invBlueprint.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
+            workbench.invMaterialFilter.setStackInSlot(0, new ItemStack(Items.DRAGON_EGG, 1));
 
-        // REAL inventories — must drop. Use distinct items so the positive case is
-        // clearly attributable to the right slot.
-        workbench.invMaterials.setStackInSlot(0, new ItemStack(Items.OAK_LOG, 6));
-        workbench.invResult.setStackInSlot(0, new ItemStack(Items.CRAFTING_TABLE, 1));
+            // REAL inventories — must drop. Use distinct items so the positive case is
+            // clearly attributable to the right slot.
+            workbench.invMaterials.setStackInSlot(0, new ItemStack(Items.OAK_LOG, 6));
+            workbench.invResult.setStackInSlot(0, new ItemStack(Items.CRAFTING_TABLE, 1));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            // Real inventories + block itself drop.
-            helper.assertItemEntityPresent(BCFactoryBlocks.AUTOWORKBENCH_ITEM.get().asItem(), pos, 2.0);
-            helper.assertItemEntityPresent(Items.OAK_LOG, pos, 2.0);
-            helper.assertItemEntityPresent(Items.CRAFTING_TABLE, pos, 2.0);
-            // PHANTOM slots stay phantom.
-            helper.assertItemEntityNotPresent(Items.NETHER_STAR, pos, 2.0);
-            helper.assertItemEntityNotPresent(Items.DRAGON_EGG, pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pos, 2.0)
+                // Real inventories + block itself drop.
+                .present(BCFactoryBlocks.AUTOWORKBENCH_ITEM.get().asItem(), Items.OAK_LOG, Items.CRAFTING_TABLE)
+                // PHANTOM slots stay phantom.
+                .absent(Items.NETHER_STAR, Items.DRAGON_EGG));
     }
 
     // ---------- Tank (fluid contents drop as shards) ----------
 
     public static void testTankPickaxeDropsFluidShardAndSelf(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.TANK.get());
-
-        //? if >=1.21.10 {
-        TileTank tank = helper.getBlockEntity(pos, TileTank.class);
-        //?} else {
-        /*TileTank tank = helper.getBlockEntity(pos);*/
-        //?}
-        fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
-
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCFactoryBlocks.TANK.get().asItem(), pos, 2.0);
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            placeFilledTank(helper, pos);
+            DropArenaUtil.breakBlock(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pos, 2.0)
+                .present(BCFactoryBlocks.TANK.get().asItem(), BCCoreItems.FRAGILE_FLUID_CONTAINER.get()));
     }
 
     public static void testTankHandBreakDropsFluidShardOnly(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            placeFilledTank(helper, pos);
+            DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
+        }, Drops.near(pos, 2.0)
+                .present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .absent(BCFactoryBlocks.TANK.get().asItem()));
+    }
+
+    /** A tank holding a bucket of water. */
+    private static void placeFilledTank(GameTestHelper helper, BlockPos pos) {
         helper.setBlock(pos, BCFactoryBlocks.TANK.get());
 
         //? if >=1.21.10 {
@@ -225,15 +199,6 @@ public class BlockDropsTester {
         /*TileTank tank = helper.getBlockEntity(pos);*/
         //?}
         fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
-
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.TANK.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
     }
 
     private static void fillTank(TileTank tank, FluidStack stack) {
@@ -263,134 +228,105 @@ public class BlockDropsTester {
 
     public static void testChuteNonPlayerRemovalDropsContents(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.CHUTE.get());
 
-        //? if >=1.21.10 {
-        TileChute chute = helper.getBlockEntity(pos, TileChute.class);
-        //?} else {
-        /*TileChute chute = helper.getBlockEntity(pos);*/
-        //?}
-        chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
+            //? if >=1.21.10 {
+            TileChute chute = helper.getBlockEntity(pos, TileChute.class);
+            //?} else {
+            /*TileChute chute = helper.getBlockEntity(pos);*/
+            //?}
+            chute.inv.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
 
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.DIAMOND, pos, 2.0);
-            // The chute block itself is destroyed (no tool harvest → loot table doesn't fire).
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.CHUTE.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(Items.DIAMOND)
+                // The chute block itself is destroyed (no tool harvest → loot table doesn't fire).
+                .absent(BCFactoryBlocks.CHUTE.get().asItem()));
     }
 
     public static void testPumpNonPlayerRemovalDropsFluid(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.PUMP.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.PUMP.get());
 
-        //? if >=1.21.10 {
-        TilePump pump = helper.getBlockEntity(pos, TilePump.class);
-        //?} else {
-        /*TilePump pump = helper.getBlockEntity(pos);*/
-        //?}
-        // Pump spills its tank via the central getDropTanks() override.
-        fillBcTank(pump.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            //? if >=1.21.10 {
+            TilePump pump = helper.getBlockEntity(pos, TilePump.class);
+            //?} else {
+            /*TilePump pump = helper.getBlockEntity(pos);*/
+            //?}
+            // Pump spills its tank via the central getDropTanks() override.
+            fillBcTank(pump.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.PUMP.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .absent(BCFactoryBlocks.PUMP.get().asItem()));
     }
 
     public static void testFloodGateNonPlayerRemovalDropsFluid(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.FLOOD_GATE.get());
 
-        //? if >=1.21.10 {
-        TileFloodGate gate = helper.getBlockEntity(pos, TileFloodGate.class);
-        //?} else {
-        /*TileFloodGate gate = helper.getBlockEntity(pos);*/
-        //?}
-        // Flood Gate is a standalone BlockEntity; it carries its own preRemoveSideEffects / onRemove.
-        fillBcTank(gate.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            //? if >=1.21.10 {
+            TileFloodGate gate = helper.getBlockEntity(pos, TileFloodGate.class);
+            //?} else {
+            /*TileFloodGate gate = helper.getBlockEntity(pos);*/
+            //?}
+            // Flood Gate is a standalone BlockEntity; it carries its own preRemoveSideEffects / onRemove.
+            fillBcTank(gate.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.FLOOD_GATE.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .absent(BCFactoryBlocks.FLOOD_GATE.get().asItem()));
     }
 
     // ---------- Distiller: the bucket / bottle slots drop too ----------
 
     public static void testDistillerHandBreakDropsContainerSlots(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
 
-        //? if >=1.21.10 {
-        TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
-        //?} else {
-        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
-        //?}
-        // The three container slots hold the buckets / bottles the player parked there; only the fluids
-        // used to drop, so breaking the machine silently destroyed them.
-        distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET));
-        distiller.containerSlots.setStackInSlot(2, new ItemStack(Items.GLASS_BOTTLE));
-        distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            //? if >=1.21.10 {
+            TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+            //?} else {
+            /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
+            //?}
+            // The three container slots hold the buckets / bottles the player parked there; only the fluids
+            // used to drop, so breaking the machine silently destroyed them.
+            distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET));
+            distiller.containerSlots.setStackInSlot(2, new ItemStack(Items.GLASS_BOTTLE));
+            distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.BUCKET, pos, 2.0);
-            helper.assertItemEntityPresent(Items.GLASS_BOTTLE, pos, 2.0);
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
+        }, Drops.near(pos, 2.0)
+                .present(Items.BUCKET, Items.GLASS_BOTTLE, BCCoreItems.FRAGILE_FLUID_CONTAINER.get()));
     }
 
     public static void testDistillerNonPlayerRemovalDropsContainerSlots(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCFactoryBlocks.DISTILLER.get());
 
-        //? if >=1.21.10 {
-        TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
-        //?} else {
-        /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
-        //?}
-        distiller.containerSlots.setStackInSlot(1, new ItemStack(Items.BUCKET));
-        distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
+            //? if >=1.21.10 {
+            TileDistiller_BC8 distiller = helper.getBlockEntity(pos, TileDistiller_BC8.class);
+            //?} else {
+            /*TileDistiller_BC8 distiller = helper.getBlockEntity(pos);*/
+            //?}
+            distiller.containerSlots.setStackInSlot(1, new ItemStack(Items.BUCKET));
+            distiller.getTankIn().setFluidStack(0, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.BUCKET, pos, 2.0);
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.DISTILLER.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(Items.BUCKET, BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .absent(BCFactoryBlocks.DISTILLER.get().asItem()));
     }
 
     // ---------- Stirling engine (raw fuel slot) ----------
     // Both tests go through breakEnginesAndCheck, which also breaks the other engines that hold contents.
-
-    /** Ticks the cell gets to become entity-ticking. A drop popped into a chunk that does not tick yet is invisible
-     *  to the scans below, and the 6x7 cell crosses a chunk border in about 57% of runs. */
-    private static final int ENGINE_READY_TICKS = 60;
-    /** Ticks, after the breaks, for every expected drop to show up in its scan. The breaks spawn them all at once,
-     *  so the first poll normally sees them; the margin is for a slow tick, not a settling time. Asserting at the end
-     *  of a fixed wait instead lost a shard: a fragile container stacks to one, so the four shards of the combustion
-     *  engine are four entities, each popped at up to 0.1 blocks/tick (0.98 drag, spawn offset up to 0.25), and over
-     *  ten ticks one can leave the one-block scan (measured on 26.3 over 400 shards: none outside it 9 ticks after the
-     *  pop, 2 at 10, 9 at 11; the 3-of-4 failure of {@code drops_stirling_hand}). */
-    private static final int ENGINE_DROP_WAIT_TICKS = 10;
 
     public static void testStirlingEngineHandBreakDropsFuel(GameTestHelper helper) {
         breakEnginesAndCheck(helper, ItemStack.EMPTY);
@@ -402,70 +338,33 @@ public class BlockDropsTester {
 
     /** Breaks the Stirling (fuel slot) and the {@link #CONTENT_ENGINES} as a survival player holding {@code tool}.
      *  The Stirling drops its fuel either way and its own block only when the tool can harvest it; every other
-     *  engine's contents must arrive exactly once. */
+     *  engine's contents must arrive exactly once. The shards of the combustion engine are the reason the drops are
+     *  asserted a few ticks after they appear and not on a fixed tick (see {@link DropArenaUtil}). */
     private static void breakEnginesAndCheck(GameTestHelper helper, ItemStack tool) {
         BlockPos pos = new BlockPos(1, 2, 1);
         Item engineItem = BCEnergyBlocks.ENGINE_STONE.get().asItem();
-        EntityArenaUtil.forceLoadCell(helper);
-        // One poll, two phases: the first call after the cell ticks places and breaks everything (a drop popped into a
-        // chunk that does not tick yet would be invisible), every later call asks whether the drops are all there.
-        boolean[] broken = { false };
-        EntityArenaUtil.tickUntil(helper, ENGINE_READY_TICKS + ENGINE_DROP_WAIT_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, ENGINE_READY_TICKS, ENGINE_DROP_WAIT_TICKS, () -> {
-                    if (!broken[0]) {
-                        broken[0] = true;
-                        helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
-                        tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));
-                        placeContentEngines(helper);
-
-                        GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
-                        helper.assertBlockPresent(Blocks.AIR, pos);
-                        breakContentEngines(helper, tool);
-                        return false;
-                    }
-                    return missingDrops(helper, pos, tool, engineItem).isEmpty();
-                }, () -> broken[0] ? "missing " + String.join(", ", missingDrops(helper, pos, tool, engineItem))
-                        : null),
-                () -> {
-                    helper.assertItemEntityPresent(Items.COAL, pos, 2.0);
-                    if (tool.isEmpty()) {
-                        helper.assertItemEntityNotPresent(engineItem, pos, 2.0);
-                    } else {
-                        helper.assertItemEntityPresent(engineItem, pos, 2.0);
-                    }
-                    assertContentEnginesDroppedOnce(helper);
-                    helper.succeed();
-                },
-                "the engines' drops never showed up",
-                () -> discardEngineDrops(helper));
-    }
-
-    private static boolean hasDropped(GameTestHelper helper, BlockPos pos, Item item, double radius) {
-        return EntityArenaUtil.droppedItems(helper, pos, radius).stream().anyMatch(e -> e.getItem().is(item));
-    }
-
-    /** What of the expected drops is not in its scan yet: empty once everything has arrived (more than expected is
-     *  the exact assertion's to reject). Also the text of the timeout, so it names what never came. */
-    private static List<String> missingDrops(GameTestHelper helper, BlockPos pos, ItemStack tool, Item engineItem) {
-        List<String> missing = new ArrayList<>();
-        if (!hasDropped(helper, pos, Items.COAL, 2.0)) {
-            missing.add("the Stirling's coal");
-        }
-        if (!tool.isEmpty() && !hasDropped(helper, pos, engineItem, 2.0)) {
-            missing.add("the Stirling engine block");
+        Drops drops = Drops.near(pos, 2.0).present(Items.COAL);
+        if (tool.isEmpty()) {
+            drops.absent(engineItem);
+        } else {
+            drops.present(engineItem);
         }
         for (ExpectedDrop drop : expectedContentDrops()) {
-            int total = droppedTotal(helper, drop);
-            if (total < drop.count()) {
-                missing.add(total + " of " + drop.count() + " " + drop.item() + " at " + drop.pos());
-            }
+            drops.alsoNear(drop.pos(), 1.0).exactly(drop.item(), drop.count());
         }
-        return missing;
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
+            tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));
+            placeContentEngines(helper);
+
+            DropArenaUtil.breakBlock(helper, pos, tool.copy());
+            breakContentEngines(helper, tool);
+        }, drops);
     }
 
     // The other engines that hold contents. They share the Stirling's cell, three blocks apart (the cell is 6 wide
-    // in x and 7 deep in z): a popped item drifts up to about a block over ten ticks, so two blocks would let
-    // one engine's gear land in the next engine's radius-1 box and be counted there.
+    // in x and 7 deep in z): a popped item drifts up to about a block over the few ticks the drops are watched, so two
+    // blocks would let one engine's gear land in the next engine's radius-1 box and be counted there.
     private static final BlockPos FE_ENGINE_POS = new BlockPos(4, 2, 1);
     private static final BlockPos COMBUSTION_ENGINE_POS = new BlockPos(1, 2, 4);
     private static final BlockPos DYNAMO_POS = new BlockPos(4, 2, 4);
@@ -493,24 +392,13 @@ public class BlockDropsTester {
 
     private static void breakContentEngines(GameTestHelper helper, ItemStack tool) {
         for (BlockPos pos : CONTENT_ENGINES) {
-            GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
-            helper.assertBlockPresent(Blocks.AIR, pos);
+            DropArenaUtil.breakBlock(helper, pos, tool.copy());
         }
     }
 
-    /** Every engine's contents arrived once, not zero times (a hook the break never reached) and not twice (a
-     *  player-break drop on top of the removal hook). Totals, not entity counts: identical stacks may merge. */
-    private static void assertContentEnginesDroppedOnce(GameTestHelper helper) {
-        for (ExpectedDrop drop : expectedContentDrops()) {
-            int total = droppedTotal(helper, drop);
-            if (total != drop.count()) {
-                throw new IllegalStateException("breaking the engine at " + drop.pos() + " should drop exactly "
-                        + drop.count() + " of " + drop.item() + " but dropped " + total);
-            }
-        }
-    }
-
-    /** What one engine must drop: {@code count} of {@code item} within a block of {@code pos}. */
+    /** What one engine must drop: {@code count} of {@code item} within a block of {@code pos}. Every engine's
+     *  contents arrive once, not zero times (a hook the break never reached) and not twice (a player-break drop on
+     *  top of the removal hook). */
     private record ExpectedDrop(BlockPos pos, Item item, int count) {}
 
     private static List<ExpectedDrop> expectedContentDrops() {
@@ -529,21 +417,6 @@ public class BlockDropsTester {
                 new ExpectedDrop(COMBUSTION_ENGINE_POS, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), expectedShards));
     }
 
-    private static int droppedTotal(GameTestHelper helper, ExpectedDrop drop) {
-        return EntityArenaUtil.droppedItems(helper, drop.pos(), 1.0).stream()
-                .filter(e -> e.getItem().is(drop.item()))
-                .mapToInt(e -> e.getItem().getCount())
-                .sum();
-    }
-
-    /** Pass-time cleanup sweeps only about a block, so the engines' drops are discarded by hand. The sweep is the
-     *  test's own cell, never wider: the neighbouring arenas run these same tests at the same time, and a wider
-     *  sweep discards the drops they are about to assert on. */
-    private static void discardEngineDrops(GameTestHelper helper) {
-        helper.getLevel().getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))
-                .forEach(ItemEntity::discard);
-    }
-
     private static <T extends BlockEntity> T tile(GameTestHelper helper, BlockPos rel, Class<T> type) {
         BlockEntity be = helper.getLevel().getBlockEntity(helper.absolutePos(rel));
         if (!type.isInstance(be)) {
@@ -556,34 +429,28 @@ public class BlockDropsTester {
 
     public static void testFilteredBufferSkipsFilterSlots(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCTransportBlocks.FILTERED_BUFFER.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCTransportBlocks.FILTERED_BUFFER.get());
 
-        //? if >=1.21.10 {
-        TileFilteredBuffer buffer = helper.getBlockEntity(pos, TileFilteredBuffer.class);
-        //?} else {
-        /*TileFilteredBuffer buffer = helper.getBlockEntity(pos);*/
-        //?}
+            //? if >=1.21.10 {
+            TileFilteredBuffer buffer = helper.getBlockEntity(pos, TileFilteredBuffer.class);
+            //?} else {
+            /*TileFilteredBuffer buffer = helper.getBlockEntity(pos);*/
+            //?}
 
-        // PHANTOM filter slots — these record what the buffer accepts, they were never
-        // consumed. Use a distinctive item so a leak is visible.
-        buffer.invFilter.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
-        buffer.invFilter.setStackInSlot(4, new ItemStack(Items.DRAGON_EGG, 1));
+            // PHANTOM filter slots — these record what the buffer accepts, they were never
+            // consumed. Use a distinctive item so a leak is visible.
+            buffer.invFilter.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
+            buffer.invFilter.setStackInSlot(4, new ItemStack(Items.DRAGON_EGG, 1));
 
-        // Real stored items.
-        buffer.invMain.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
-        buffer.invMain.setStackInSlot(4, new ItemStack(Items.IRON_INGOT, 12));
+            // Real stored items.
+            buffer.invMain.setStackInSlot(0, new ItemStack(Items.DIAMOND, 5));
+            buffer.invMain.setStackInSlot(4, new ItemStack(Items.IRON_INGOT, 12));
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCTransportBlocks.FILTERED_BUFFER.get().asItem(), pos, 2.0);
-            helper.assertItemEntityPresent(Items.DIAMOND, pos, 2.0);
-            helper.assertItemEntityPresent(Items.IRON_INGOT, pos, 2.0);
-            helper.assertItemEntityNotPresent(Items.NETHER_STAR, pos, 2.0);
-            helper.assertItemEntityNotPresent(Items.DRAGON_EGG, pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pos, 2.0)
+                .present(BCTransportBlocks.FILTERED_BUFFER.get().asItem(), Items.DIAMOND, Items.IRON_INGOT)
+                .absent(Items.NETHER_STAR, Items.DRAGON_EGG));
     }
 
     // ---------- Marker: hand-breakable (no pickaxe gate) ----------
@@ -591,23 +458,16 @@ public class BlockDropsTester {
     public static void testMarkerHandBreakDropsSelf(GameTestHelper helper) {
         BlockPos floor = new BlockPos(1, 1, 1);
         BlockPos markerPos = new BlockPos(1, 2, 1);
-        // Marker needs a solid floor for canSurvive to hold.
-        helper.setBlock(floor, Blocks.STONE);
-        helper.setBlock(markerPos, BCCoreBlocks.MARKER_PATH.get());
+        // Markers were Material.CIRCUITS in 1.12.2 — hand-break returns the marker item without needing a tool. (The
+        // dropped item would outlive the test and could satisfy a later test's "a path marker dropped" check by
+        // proximity; awaitDrops discards the cell's items on every exit.)
+        DropArenaUtil.awaitDrops(helper, () -> {
+            // Marker needs a solid floor for canSurvive to hold.
+            helper.setBlock(floor, Blocks.STONE);
+            helper.setBlock(markerPos, BCCoreBlocks.MARKER_PATH.get());
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, markerPos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, markerPos);
-
-        helper.runAfterDelay(10, () -> {
-            // Markers were Material.CIRCUITS in 1.12.2 — hand-break returns the marker
-            // item without needing a tool.
-            helper.assertItemEntityPresent(BCCoreBlocks.MARKER_PATH.get().asItem(), markerPos, 2.0);
-            // The dropped marker item would outlive the test (pass-time entity cleanup only reaches ~1 block) and
-            // could satisfy a later test's "a path marker dropped" check by proximity.
-            buildcraft.lib.test.EntityArenaUtil.droppedItems(helper, markerPos, 2.0)
-                    .forEach(net.minecraft.world.entity.item.ItemEntity::discard);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, markerPos, ItemStack.EMPTY);
+        }, Drops.near(markerPos, 2.0).present(BCCoreBlocks.MARKER_PATH.get().asItem()));
     }
 
     // ---------- More non-player removal coverage for the second machine batch ----------
@@ -619,45 +479,31 @@ public class BlockDropsTester {
 
     public static void testArchitectNonPlayerRemovalDropsContents(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCBuildersBlocks.ARCHITECT.get());
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(pos, BCBuildersBlocks.ARCHITECT.get());
 
-        //? if >=1.21.10 {
-        TileArchitectTable architect = helper.getBlockEntity(pos, TileArchitectTable.class);
-        //?} else {
-        /*TileArchitectTable architect = helper.getBlockEntity(pos);*/
-        //?}
-        // The snapshot in-slot is a real itemManager handler; addDrops must capture it on a
-        // non-player removal (this is the assumption behind wiring Architect via the opt-in path).
-        architect.invSnapshotIn.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
+            //? if >=1.21.10 {
+            TileArchitectTable architect = helper.getBlockEntity(pos, TileArchitectTable.class);
+            //?} else {
+            /*TileArchitectTable architect = helper.getBlockEntity(pos);*/
+            //?}
+            // The snapshot in-slot is a real itemManager handler; addDrops must capture it on a
+            // non-player removal (this is the assumption behind wiring Architect via the opt-in path).
+            architect.invSnapshotIn.setStackInSlot(0, new ItemStack(Items.NETHER_STAR, 1));
 
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.NETHER_STAR, pos, 2.0);
-            helper.assertItemEntityNotPresent(BCBuildersBlocks.ARCHITECT.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(Items.NETHER_STAR)
+                .absent(BCBuildersBlocks.ARCHITECT.get().asItem()));
     }
 
     public static void testTankNonPlayerRemovalDropsFluid(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCFactoryBlocks.TANK.get());
-
-        //? if >=1.21.10 {
-        TileTank tank = helper.getBlockEntity(pos, TileTank.class);
-        //?} else {
-        /*TileTank tank = helper.getBlockEntity(pos);*/
-        //?}
-        fillTank(tank, new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
-
-        helper.getLevel().removeBlock(helper.absolutePos(pos), false);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pos, 2.0);
-            helper.assertItemEntityNotPresent(BCFactoryBlocks.TANK.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            placeFilledTank(helper, pos);
+            DropArenaUtil.removeBlock(helper, pos);
+        }, Drops.near(pos, 2.0)
+                .present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .absent(BCFactoryBlocks.TANK.get().asItem()));
     }
 }

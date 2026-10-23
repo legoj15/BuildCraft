@@ -217,7 +217,6 @@ public class BlockWaterloggingTester {
         ServerLevel level = helper.getLevel();
         BlockPos abs = helper.absolutePos(SUBJECT);
         BlockEntity before = level.getBlockEntity(abs);
-        helper.assertTrue(before != null, "path marker must have a block entity");
         placeSource(helper, WEST_SOURCE, Blocks.LAVA, Fluids.LAVA);
         placeSource(helper, EAST_SOURCE, Blocks.LAVA, Fluids.LAVA);
 
@@ -228,6 +227,8 @@ public class BlockWaterloggingTester {
                 () -> hasSpread(helper, WEST_SOURCE, Fluids.LAVA) && hasSpread(helper, EAST_SOURCE, Fluids.LAVA),
                 () -> unspreadSources(helper, "lava", Fluids.LAVA)),
             () -> {
+                // Inside the poll, not before it: the marker is already placed, and only the poll's cleanup removes it.
+                helper.assertTrue(before != null, "path marker must have a block entity");
                 helper.assertBlockPresent(BCCoreBlocks.MARKER_PATH.get(), SUBJECT);
                 helper.assertTrue(level.getBlockEntity(abs) == before,
                     "the marker's block entity must survive the lava untouched");

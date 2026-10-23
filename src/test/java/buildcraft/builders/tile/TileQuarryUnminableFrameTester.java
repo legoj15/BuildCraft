@@ -16,7 +16,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreConfig;
-import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.WorkClaimMod;
@@ -57,17 +56,9 @@ public class TileQuarryUnminableFrameTester {
     private static final BlockPos STONE_INTERIOR = new BlockPos(4, 3, 3);
 
     /** Real ticks a quarry gets, after a claim is lifted, to re-ask about a parked frame cell: three of its windows
-     *  (200 each). A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it; the
-     *  initializer below fails loudly when the window outgrows it. */
-    private static final int FRAME_RETRY_TICKS = 600;
-
-    static {
-        if (FRAME_RETRY_TICKS < RefusalMemory.QUARRY_FRAME.windowTicks() * 3) {
-            throw new IllegalStateException("FRAME_RETRY_TICKS (" + FRAME_RETRY_TICKS + ") must cover three refusal "
-                    + "windows (" + RefusalMemory.QUARRY_FRAME.windowTicks() + " each): raise it, and the manifests' "
-                    + "max_ticks above it");
-        }
-    }
+     *  (200 each). A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it;
+     *  {@code RefusalWindowBudgetTest} fails when the window outgrows it. */
+    public static final int FRAME_RETRY_TICKS = 600;
 
     private static void assertTrue(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
@@ -147,16 +138,10 @@ public class TileQuarryUnminableFrameTester {
             return;
         }
         // The claim is lifted: nothing tells the quarry. It must find out by asking again once the window ends.
-        int[] polls = {0};
         EntityArenaUtil.tickUntil(helper, FRAME_RETRY_TICKS, () -> {
-            polls[0]++;
             s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
             s.quarry.tick();
-            boolean filled = helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
-            if (!filled && polls[0] >= FRAME_RETRY_TICKS) {
-                s.cleanUp(helper); // the wait is about to fail the test: leave nothing behind
-            }
-            return filled;
+            return helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
         }, () -> {
             try {
                 for (int i = 0; i < FRAME_RETRY_TICKS && s.quarry.hasPendingWork(); i++) {
@@ -165,13 +150,13 @@ public class TileQuarryUnminableFrameTester {
                 }
                 assertTrue(!s.quarry.hasPendingWork() && !s.quarry.isActive(),
                         "the quarry must settle idle again once the gap is filled");
-                s.cleanUp(helper);
                 helper.succeed();
             } catch (Throwable t) {
-                s.cleanUp(helper);
                 helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
             }
-        }, "the frame gap was never filled after the claim was lifted");
+        }, "the frame gap was never filled after the claim was lifted",
+                // On every exit, a throw on any poll included: don't leave the quarry and its rig behind.
+                () -> s.cleanUp(helper));
     }
 
     /**

@@ -204,7 +204,8 @@ public class RobotNameTagTester {
                             "the dropped robot item is still called Robbie, got " + droppedName);
                     helper.succeed();
                 },
-                "the picked-up robot's item never showed up in the cell",
+                // Unreachable in practice: the gate above fails first, naming what never came.
+                "the pickup poll ran out",
                 () -> {
                     droppedRobotItems(helper).forEach(ItemEntity::discard);
                     EntityArenaUtil.discard(robot[0]);

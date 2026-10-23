@@ -99,14 +99,21 @@ public class EntityArenaReadinessGateTest {
             message[0] = text;
             fail(text);
         }, 300, 5, () -> false, () -> "the east source"), 20);
-        Assertions.assertTrue(message[0] != null && message[0].endsWith(": the east source"),
+        Assertions.assertTrue(message[0] != null && message[0].contains("the east source"),
                 "the timeout names what stalled: " + message[0]);
+        String named = message[0];
 
         failedAt(tick, EntityArenaUtil.gateOnReady(() -> true, text -> {
             message[0] = text;
             fail(text);
         }, 300, 5, () -> false, () -> null), 20);
-        Assertions.assertTrue(message[0].endsWith(")"), "a null detail leaves the plain message: " + message[0]);
+        String plain = message[0];
+        failedAt(tick, EntityArenaUtil.gateOnReady(() -> true, text -> {
+            message[0] = text;
+            fail(text);
+        }, 300, 5, () -> false), 20);
+        Assertions.assertEquals(message[0], plain, "a null detail leaves the plain message");
+        Assertions.assertNotEquals(plain, named, "and a named one is not the plain message");
     }
 
     @Test

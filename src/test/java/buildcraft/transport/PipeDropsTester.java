@@ -28,7 +28,8 @@ import buildcraft.api.transport.EnumWirePart;
 
 import buildcraft.core.BCCoreItems;
 
-import buildcraft.lib.test.GameTestUtil;
+import buildcraft.lib.test.DropArenaUtil;
+import buildcraft.lib.test.DropArenaUtil.Drops;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -70,6 +71,11 @@ import buildcraft.transport.tile.TilePipeHolder;
  * matching what happens in-game when the player aims at a plug and left-clicks. Without that
  * positioning the pick returns no hit on the pipe block and the full-break path runs instead
  * (which is what the pickaxe/hand tests deliberately exercise).
+ * <p>
+ * Every test goes through {@link DropArenaUtil#awaitDrops}: the placing and the break run once the arena cell is
+ * entity-ticking, and the assertions run after the expected drops have appeared and settled. The not-present
+ * checks use radius 2: a neighbouring arena's legitimate hardware drops can never get that close (the cells are
+ * 6 and 7 blocks apart), while a radius-4 box reached them and flaked.
  */
 public class PipeDropsTester {
 
@@ -155,232 +161,183 @@ public class PipeDropsTester {
 
     public static void testPluggableBreakDropsItemAndKeepsPipe(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
-        installBlockerOn(tile, Direction.UP);
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(pipePos);
-        BlockState state = level.getBlockState(absPos);
-
-        // Aim at the pipe's vertical center axis — the UP plug AABB spans
-        // (0.25, 0.75, 0.25)–(0.75, 0.875, 0.75) which includes (0.5, ?, 0.5).
-        Player player = playerLookingDownAt(helper, absPos, 0.5, 0.5, ItemStack.EMPTY);
-        FluidState fluidState = level.getFluidState(absPos);
-
-        // Click-break path: BlockPipeHolder.onDestroyedByPlayer should detect the plug hit,
-        // pop the plug item, remove the plug from the tile, and return false to cancel the
-        // pipe break.
-        //? if >=1.21.10 {
-        boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                player.getMainHandItem(), false, fluidState);
-        //?} else {
-        /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                false, fluidState);*/
-        //?}
-
-        helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a plug");
-        helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
-        helper.assertTrue(tile.getPluggable(Direction.UP) == null, "Plug should be removed from the tile");
-
-        // Radius 4.0: under MC gravity a popResource'd item can fall ~2 blocks in 10 ticks,
-        // putting it right at the boundary of a radius-2.0 search and making the assertion
-        // flake on ~40% of runs. 4.0 gives generous margin while still being tight enough to
+        // Radius 4.0: under MC gravity a popResource'd item can fall ~2 blocks in 10 ticks, putting it right at the
+        // boundary of a radius-2.0 search and making a fixed-tick assertion flake on ~40% of runs. The drops are now
+        // asserted a few ticks after they appear, but 4.0 keeps the generous margin while still being tight enough to
         // detect a real "no item dropped" regression.
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
+            installBlockerOn(tile, Direction.UP);
+
+            ServerLevel level = helper.getLevel();
+            BlockPos absPos = helper.absolutePos(pipePos);
+            BlockState state = level.getBlockState(absPos);
+
+            // Aim at the pipe's vertical center axis — the UP plug AABB spans
+            // (0.25, 0.75, 0.25)–(0.75, 0.875, 0.75) which includes (0.5, ?, 0.5).
+            Player player = playerLookingDownAt(helper, absPos, 0.5, 0.5, ItemStack.EMPTY);
+            FluidState fluidState = level.getFluidState(absPos);
+
+            // Click-break path: BlockPipeHolder.onDestroyedByPlayer should detect the plug hit,
+            // pop the plug item, remove the plug from the tile, and return false to cancel the
+            // pipe break.
+            //? if >=1.21.10 {
+            boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                    player.getMainHandItem(), false, fluidState);
+            //?} else {
+            /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                    false, fluidState);*/
+            //?}
+
+            helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a plug");
+            helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
+            helper.assertTrue(tile.getPluggable(Direction.UP) == null, "Plug should be removed from the tile");
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.PLUG_BLOCKER.get()));
     }
 
     // ---------- Wire click-break ----------
 
     public static void testWireBreakDropsItemAndKeepsPipe(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
-
-        // WEST_UP_NORTH wire AABB (after the 1/16 hit inflation) covers roughly
-        // (0.125, 0.6875, 0.125)–(0.3125, 0.875, 0.3125) — the corner where x and z are
-        // both small and y is high. A pick from a player at local (0.21875, ?, 0.21875)
-        // ray-tracing straight down passes through that box.
         DyeColor wireColor = DyeColor.RED;
         EnumWirePart wirePart = EnumWirePart.WEST_UP_NORTH;
-        boolean added = tile.getWireManager().addPart(wirePart, wireColor);
-        helper.assertTrue(added, "Wire should install on a fresh pipe");
-
-        ServerLevel level = helper.getLevel();
-        BlockPos absPos = helper.absolutePos(pipePos);
-        BlockState state = level.getBlockState(absPos);
-
-        Player player = playerLookingDownAt(helper, absPos, 0.21875, 0.21875, ItemStack.EMPTY);
-        FluidState fluidState = level.getFluidState(absPos);
-
-        //? if >=1.21.10 {
-        boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                player.getMainHandItem(), false, fluidState);
-        //?} else {
-        /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
-                false, fluidState);*/
-        //?}
-
-        helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a wire");
-        helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
-        helper.assertTrue(tile.getWireManager().getColorOfPart(wirePart) == null,
-                "Wire should be removed from the tile");
-
         // Radius 4.0: same gravity-margin reasoning as the plug test above.
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCTransportItems.WIRE_ITEMS.get(wireColor).get().asItem(),
-                    pipePos, 4.0);
-            helper.succeed();
-        });
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
+
+            // WEST_UP_NORTH wire AABB (after the 1/16 hit inflation) covers roughly
+            // (0.125, 0.6875, 0.125)–(0.3125, 0.875, 0.3125) — the corner where x and z are
+            // both small and y is high. A pick from a player at local (0.21875, ?, 0.21875)
+            // ray-tracing straight down passes through that box.
+            boolean added = tile.getWireManager().addPart(wirePart, wireColor);
+            helper.assertTrue(added, "Wire should install on a fresh pipe");
+
+            ServerLevel level = helper.getLevel();
+            BlockPos absPos = helper.absolutePos(pipePos);
+            BlockState state = level.getBlockState(absPos);
+
+            Player player = playerLookingDownAt(helper, absPos, 0.21875, 0.21875, ItemStack.EMPTY);
+            FluidState fluidState = level.getFluidState(absPos);
+
+            //? if >=1.21.10 {
+            boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                    player.getMainHandItem(), false, fluidState);
+            //?} else {
+            /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
+                    false, fluidState);*/
+            //?}
+
+            helper.assertFalse(removed, "Pipe should not be destroyed when clicking on a wire");
+            helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
+            helper.assertTrue(tile.getWireManager().getColorOfPart(wirePart) == null,
+                    "Wire should be removed from the tile");
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.WIRE_ITEMS.get(wireColor).get().asItem()));
     }
 
     // ---------- Pickaxe full break drops pipe + cargo + plug + wire ----------
 
     public static void testPipePickaxeBreakDropsEverything(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
 
-        installBlockerOn(tile, Direction.DOWN);
-        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.BLUE);
+            installBlockerOn(tile, Direction.DOWN);
+            tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.BLUE);
 
-        // Seed a traversing item — PipeFlowItems.addDrops returns every non-phantom
-        // TravellingItem stack, so this should reappear as a drop on break.
-        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
-        flow.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.NORTH, null, 0.04);
+            // Seed a traversing item — PipeFlowItems.addDrops returns every non-phantom
+            // TravellingItem stack, so this should reappear as a drop on break.
+            PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+            flow.insertItemsForce(new ItemStack(Items.EMERALD, 3), Direction.NORTH, null, 0.04);
 
-        // The break player is leased 64 blocks above the pipe, so player.pick returns
-        // no hit and the partial-break check in playerWillDestroy short-circuits — the full
-        // dropPipeItems path runs.
-        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.WIRE_ITEMS.get(DyeColor.BLUE).get().asItem(),
-                    pipePos, 4.0);
-            helper.assertItemEntityPresent(Items.EMERALD, pipePos, 4.0);
-            helper.succeed();
-        });
+            // The break player is leased 64 blocks above the pipe, so player.pick returns
+            // no hit and the partial-break check in playerWillDestroy short-circuits — the full
+            // dropPipeItems path runs.
+            DropArenaUtil.breakBlock(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.PIPE_WOOD_ITEM.get(), BCTransportItems.PLUG_BLOCKER.get(),
+                BCTransportItems.WIRE_ITEMS.get(DyeColor.BLUE).get().asItem(), Items.EMERALD));
     }
 
     // ---------- Hand full break drops everything (pipes are intentionally hand-breakable) ----------
 
     public static void testPipeHandBreakDropsEverything(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+        // Pipes are hand-breakable by design — same drop set as a pickaxe break, the pickaxe just speeds up the break
+        // action via the mineable/pickaxe tag. Anything less would punish players for forgetting to swap to a pickaxe
+        // before tearing down a network.
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
 
-        installBlockerOn(tile, Direction.DOWN);
-        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.GREEN);
+            installBlockerOn(tile, Direction.DOWN);
+            tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.GREEN);
 
-        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
-        flow.insertItemsForce(new ItemStack(Items.LAPIS_LAZULI, 8), Direction.NORTH, null, 0.04);
+            PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+            flow.insertItemsForce(new ItemStack(Items.LAPIS_LAZULI, 8), Direction.NORTH, null, 0.04);
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, ItemStack.EMPTY);
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        helper.runAfterDelay(10, () -> {
-            // Pipes are hand-breakable by design — same drop set as a pickaxe break, the
-            // pickaxe just speeds up the break action via the mineable/pickaxe tag. Anything
-            // less would punish players for forgetting to swap to a pickaxe before tearing
-            // down a network.
-            helper.assertItemEntityPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.WIRE_ITEMS.get(DyeColor.GREEN).get().asItem(),
-                    pipePos, 4.0);
-            helper.assertItemEntityPresent(Items.LAPIS_LAZULI, pipePos, 4.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pipePos, ItemStack.EMPTY);
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.PIPE_WOOD_ITEM.get(), BCTransportItems.PLUG_BLOCKER.get(),
+                BCTransportItems.WIRE_ITEMS.get(DyeColor.GREEN).get().asItem(), Items.LAPIS_LAZULI));
     }
 
     // ---------- Fluid pipe break drops fragile fluid shards ----------
 
     public static void testFluidPipeBreakDropsFluidShards(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeFluidPipe(helper, pipePos);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeFluidPipe(helper, pipePos);
 
-        // Seed a non-trivial amount so the fluid-shard converter has a stack to emit.
-        PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
-        int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
-        helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
+            // Seed a non-trivial amount so the fluid-shard converter has a stack to emit.
+            PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
+            int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
+            helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pipePos, 4.0);
-            helper.succeed();
-        });
+            DropArenaUtil.breakBlock(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.PIPE_COBBLE_FLUID.get(),
+                BCCoreItems.FRAGILE_FLUID_CONTAINER.get()));
     }
 
     // ---------- Non-player removal drops cargo only (piston / mod setBlock) ----------
 
     public static void testNonPlayerBreakDropsCargoOnly(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+        // The in-transit cargo spills (radius 4: gravity margin, see the click-break tests); the pipe, pluggable and
+        // wire must NOT drop on a no-loot removal. The not-present check uses a tight radius: wrongly-dropped hardware
+        // spawns AT the pipe, while a neighbouring arena's legitimate pipe/plug/wire drops can never get this close.
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
 
-        installBlockerOn(tile, Direction.DOWN);
-        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
+            installBlockerOn(tile, Direction.DOWN);
+            tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.YELLOW);
 
-        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
-        flow.insertItemsForce(new ItemStack(Items.DIAMOND, 5), Direction.NORTH, null, 0.04);
+            PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+            flow.insertItemsForce(new ItemStack(Items.DIAMOND, 5), Direction.NORTH, null, 0.04);
 
-        // No playerWillDestroy: a bare level.removeBlock(false) is the no-loot removal — a piston move or a
-        // mod setBlock. (A /setblock|/fill … replace wipes the cargo first instead: TilePipeHolder#clearContent.) It drives LevelChunk.setBlockState →
-        // preRemoveSideEffects (>=1.21.10) or onRemove (1.21.1) → TilePipeHolder.dropPipeCargo, which
-        // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
-        // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)
-        ServerLevel level = helper.getLevel();
-        clearDroppedItemsAround(helper, pipePos);
-        level.removeBlock(helper.absolutePos(pipePos), false);
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        // The pipe, pluggable and wire must NOT drop on a no-loot removal. Checked at tick 2
-        // with a tight radius: wrongly-dropped hardware spawns AT the pipe and has barely moved
-        // by then, while a neighbouring arena's legitimate pipe/plug/wire drops can never get
-        // this close this fast (a radius-4 check at tick 10 flaked exactly that way).
-        helper.runAfterDelay(2, () -> {
-            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 2.0);
-            helper.assertItemEntityNotPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 2.0);
-            helper.assertItemEntityNotPresent(
-                    BCTransportItems.WIRE_ITEMS.get(DyeColor.YELLOW).get().asItem(), pipePos, 2.0);
-        });
-        helper.runAfterDelay(10, () -> {
-            // The in-transit cargo spills (radius 4: gravity margin, see the click-break tests).
-            helper.assertItemEntityPresent(Items.DIAMOND, pipePos, 4.0);
-            helper.succeed();
-        });
+            // No playerWillDestroy: a bare level.removeBlock(false) is the no-loot removal — a piston move or a
+            // mod setBlock. (A /setblock|/fill … replace wipes the cargo first instead: TilePipeHolder#clearContent.) It drives LevelChunk.setBlockState →
+            // preRemoveSideEffects (>=1.21.10) or onRemove (1.21.1) → TilePipeHolder.dropPipeCargo, which
+            // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
+            // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)
+            clearDroppedItemsAround(helper, pipePos);
+            DropArenaUtil.removeBlock(helper, pipePos);
+        }, Drops.near(pipePos, 4.0).present(Items.DIAMOND)
+                .alsoNear(pipePos, 2.0).absent(BCTransportItems.PIPE_WOOD_ITEM.get(),
+                        BCTransportItems.PLUG_BLOCKER.get(),
+                        BCTransportItems.WIRE_ITEMS.get(DyeColor.YELLOW).get().asItem()));
     }
 
     public static void testNonPlayerFluidBreakDropsCargoOnly(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeFluidPipe(helper, pipePos);
+        // Radius 2 for the not-present check — same neighbour-isolation reasoning as testNonPlayerBreakDropsCargoOnly.
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeFluidPipe(helper, pipePos);
 
-        PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
-        int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
-        helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
+            PipeFlowFluids flow = (PipeFlowFluids) tile.getPipe().getFlow();
+            int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
+            helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
-        ServerLevel level = helper.getLevel();
-        clearDroppedItemsAround(helper, pipePos);
-        level.removeBlock(helper.absolutePos(pipePos), false);
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        // Tick-2 / radius-2 for the not-present check — same neighbour-isolation reasoning as
-        // testNonPlayerBreakDropsCargoOnly.
-        helper.runAfterDelay(2, () -> {
-            helper.assertItemEntityNotPresent(BCTransportItems.PIPE_COBBLE_FLUID.get(), pipePos, 2.0);
-        });
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), pipePos, 4.0);
-            helper.succeed();
-        });
+            clearDroppedItemsAround(helper, pipePos);
+            DropArenaUtil.removeBlock(helper, pipePos);
+        }, Drops.near(pipePos, 4.0).present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
+                .alsoNear(pipePos, 2.0).absent(BCTransportItems.PIPE_COBBLE_FLUID.get()));
     }
 
     // ---------- Command/wither loot path (destroyBlock(true)) returns the pipe hardware ----------
@@ -392,31 +349,23 @@ public class PipeDropsTester {
      *  item carries its paint colour. */
     public static void testCommandBreakDropsPipeViaLoot(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        TilePipeHolder tile = placeItemPipe(helper, pipePos);
+        // Hardware comes back via the loot path, the in-transit cargo still spills via the side-effect path, and the
+        // dropped pipe keeps its paint colour.
+        DropArenaUtil.awaitDrops(helper, () -> {
+            TilePipeHolder tile = placeItemPipe(helper, pipePos);
 
-        tile.getPipe().setColour(DyeColor.RED);
-        installBlockerOn(tile, Direction.DOWN);
-        tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.BLUE);
-        PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
-        flow.insertItemsForce(new ItemStack(Items.EMERALD, 2), Direction.NORTH, null, 0.04);
+            tile.getPipe().setColour(DyeColor.RED);
+            installBlockerOn(tile, Direction.DOWN);
+            tile.getWireManager().addPart(EnumWirePart.WEST_DOWN_NORTH, DyeColor.BLUE);
+            PipeFlowItems flow = (PipeFlowItems) tile.getPipe().getFlow();
+            flow.insertItemsForce(new ItemStack(Items.EMERALD, 2), Direction.NORTH, null, 0.04);
 
-        ServerLevel level = helper.getLevel();
-        level.destroyBlock(helper.absolutePos(pipePos), true);
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        helper.runAfterDelay(10, () -> {
-            // Hardware comes back via the loot path...
-            helper.assertItemEntityPresent(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.PLUG_BLOCKER.get(), pipePos, 4.0);
-            helper.assertItemEntityPresent(BCTransportItems.WIRE_ITEMS.get(DyeColor.BLUE).get().asItem(), pipePos, 4.0);
-            // ...the dropped pipe keeps its paint colour...
-            helper.assertTrue(hasColouredPipeDrop(helper, pipePos, DyeColor.RED),
-                    "the dropped pipe item should carry its RED paint colour");
-            // ...and the in-transit cargo still spills via the side-effect path.
-            helper.assertItemEntityPresent(Items.EMERALD, pipePos, 4.0);
-            helper.succeed();
-        });
+            helper.getLevel().destroyBlock(helper.absolutePos(pipePos), true);
+            helper.assertBlockPresent(Blocks.AIR, pipePos);
+        }, Drops.near(pipePos, 4.0).present(BCTransportItems.PIPE_WOOD_ITEM.get(), BCTransportItems.PLUG_BLOCKER.get(),
+                BCTransportItems.WIRE_ITEMS.get(DyeColor.BLUE).get().asItem(), Items.EMERALD)
+                .andCheck(() -> helper.assertTrue(hasColouredPipeDrop(helper, pipePos, DyeColor.RED),
+                        "the dropped pipe item should carry its RED paint colour")));
     }
 
     /** A survival player break drives BOTH the code path (playerWillDestroy → dropPipeItems) and,
@@ -425,20 +374,14 @@ public class PipeDropsTester {
      *  pipe item drops EXACTLY once, not twice. */
     public static void testPlayerBreakNoDoubleDrop(GameTestHelper helper) {
         BlockPos pipePos = new BlockPos(1, 2, 1);
-        placeItemPipe(helper, pipePos);
+        // Radius 2: an exact-count assertion is poisoned by a neighbouring arena's wood pipe drop just like a
+        // not-present one. The count is taken after the drops settle, so a second copy that turns up late is counted.
+        DropArenaUtil.awaitDrops(helper, () -> {
+            placeItemPipe(helper, pipePos);
 
-        clearDroppedItemsAround(helper, pipePos);
-        GameTestUtil.breakAsSurvivalPlayer(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
-
-        helper.assertBlockPresent(Blocks.AIR, pipePos);
-
-        // Tick-2 / radius-2: an exact-count assertion is poisoned by a neighbouring arena's wood
-        // pipe drop just like a not-present one; at tick 2 both copies of a double-drop are still
-        // at their spawn point while no neighbour item can have arrived.
-        helper.runAfterDelay(2, () -> {
-            helper.assertItemEntityCountIs(BCTransportItems.PIPE_WOOD_ITEM.get(), pipePos, 2.0, 1);
-            helper.succeed();
-        });
+            clearDroppedItemsAround(helper, pipePos);
+            DropArenaUtil.breakBlock(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
+        }, Drops.near(pipePos, 2.0).exactly(BCTransportItems.PIPE_WOOD_ITEM.get(), 1));
     }
 
     /** Scans for a dropped wood pipe item carrying the given paint colour data component. */

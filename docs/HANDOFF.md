@@ -10,7 +10,7 @@ Goal (user, 2026-10-22): before releasing 2026.2.1, re-investigate and fix every
 - changelog.md, todos.md, docs/todo-details.md and docs/delegation-log.md updated.
 
 ## In progress
-- Third-party review fan-out `todos-2026-2-1-20261022-205101-ad8d`: 8 angles; stripes and builder on shop26, the rest on glm-flash. It is reviewing `a739c4c02..HEAD`. Collect it with `opencode_wait_group`, verify each finding, fix the real ones as follow-up commits, then run the post-merge pass (Qwen3.8-Flash + GLM-5.3).
+- Third-party review fan-out `todos-2026-2-1-20261022-205101-ad8d` (8 angles over `a739c4c02..HEAD`) FINISHED; findings not yet read or adjudicated. The six glm-flash angles completed: RESULT.md under `%TEMP%\opencode-agents\todos-2026-2-1-<angle>-20261022-205101-*\`. The two shop26 angles (stripes, builder) timed out at 2700 s with partial reports: PARTIAL.md under `%TEMP%\review-agents\todos-2026-2-1-{stripes,builder}-*\`. Re-run those two on dgx if the partials are thin. The merged table: `opencode_wait_group {"group_id": "todos-2026-2-1-20261022-205101-ad8d"}`. Verify each finding, fix the real ones as follow-up commits, then run the post-merge pass (Qwen3.8-Flash + GLM-5.3).
 - No packet's final commit had a passing Haiku review: the loop ended on a fix. The fan-out above is the first review of those final commits.
 
 ## Next

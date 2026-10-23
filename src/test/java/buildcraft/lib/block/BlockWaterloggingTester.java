@@ -94,14 +94,14 @@ public class BlockWaterloggingTester {
     public static final BlockPos SUBJECT = new BlockPos(2, 2, 1);
     public static final BlockPos EAST_SOURCE = new BlockPos(3, 2, 1);
 
-    /** The lava test's poll, in two budgets that must not share a clock: {@link #LAVA_READY_TICKS} for the arena
-     *  cell's chunks to start ticking (asynchronous, so the machine's, not the lava's), {@link #LAVA_WORK_TICKS} for
-     *  the spread after that (lava's own tick is due 30 ticks after the sources are placed). {@link #LAVA_POLL_TICKS}
-     *  is their sum, the poll's budget (a literal, so the poll-budget guard can read it); the manifest's
-     *  {@code max_ticks} stays above it. */
-    private static final int LAVA_READY_TICKS = 300;
+    /** The fluid polls below (lava, waterlogging), each in two budgets that must not share a clock:
+     *  {@link #CELL_READY_TICKS} for the arena cell's chunks to start ticking (asynchronous, so the machine's, not
+     *  the fluid's), then a work budget for the spread after that (lava's own tick is due 30 ticks after the sources
+     *  are placed, water's 5). A poll's budget is the sum of the two, read as such by {@code GameTestPollBudgetTester};
+     *  the manifest's {@code max_ticks} stays above it. */
+    private static final int CELL_READY_TICKS = 300;
     private static final int LAVA_WORK_TICKS = 90;
-    private static final int LAVA_POLL_TICKS = 390;
+    private static final int WATERLOG_WORK_TICKS = 60;
 
     /** Whether flowing water (or an emptied water bucket) would destroy this state instead of
      *  coexisting with it. Mirrors the vanilla rule without the deprecated {@code blocksMotion()}:
@@ -175,8 +175,9 @@ public class BlockWaterloggingTester {
         // Default facing is UP: the marker stands on the stone floor below the subject cell.
         helper.setBlock(SUBJECT, BCCoreBlocks.MARKER_VOLUME.get());
         // The marker must not outlive the test: markers are registered in a dimension-wide cache that the
-        // marker connection tests scan across arenas (see MarkerTester). Last step of the assertion.
-        assertWaterloggedBetweenSources(helper, BCCoreBlocks.MARKER_VOLUME.get(),
+        // marker connection tests scan across arenas (see MarkerTester). The poll's cleanup, so a failing or
+        // timed-out run clears it too.
+        assertWaterloggedBetweenSources(helper, BCCoreBlocks.MARKER_VOLUME.get(), () -> { },
             () -> MarkerArenaUtil.clearMarkers(helper, SUBJECT));
     }
 
@@ -198,7 +199,7 @@ public class BlockWaterloggingTester {
             TilePipeHolder after = (TilePipeHolder) helper.getLevel().getBlockEntity(helper.absolutePos(SUBJECT));
             helper.assertTrue(after != null && after.getPluggable(Direction.UP) == facade,
                 "the facade must still be mounted on the flooded pipe");
-        });
+        }, () -> { });
     }
 
     /** SimpleWaterloggedBlock only accepts water, so lava can neither waterlog the marker nor enter its
@@ -206,10 +207,11 @@ public class BlockWaterloggingTester {
      *  unlike water, drops nothing, so the marker was simply lost. */
     public static void testMarkerHoldsBackLava(GameTestHelper helper) {
         // A fluid tick runs only in a chunk that is ticking with its entities loaded, and the framework gates the
-        // test's start on its structure's chunk alone. This basin sits across a chunk border in about a third of the
-        // runs, and then the sources' ticks wait on the neighbour chunk: asynchronous work, against a test server that
-        // is unthrottled (the old 120-tick budget was under a tenth of a second of wall clock). buildBasin force-loads
-        // the cell, and the poll below starts its work budget only once the cell is ticking.
+        // test's start on its structure's chunk alone. The 6x7 cell crosses a chunk border in about 57% of runs (its
+        // 5x3 basin alone, in about a third), and then the sources' ticks wait on the neighbour chunk: asynchronous
+        // work, against a test server that is unthrottled (the old 120-tick budget could run out before that chunk
+        // ever ticked). buildBasin force-loads the cell, and the poll below starts its work budget only once the cell
+        // is ticking.
         buildBasin(helper);
         helper.setBlock(SUBJECT, BCCoreBlocks.MARKER_PATH.get());
         ServerLevel level = helper.getLevel();
@@ -221,9 +223,10 @@ public class BlockWaterloggingTester {
 
         // Gate on observed state: the cell is ticking (the work budget starts there) and both lava sources have run
         // their spread tick, so the lava has already had its one chance to flow into the marker's cell.
-        EntityArenaUtil.tickUntil(helper, LAVA_POLL_TICKS,
-            EntityArenaUtil.whenCellTicking(helper, LAVA_READY_TICKS, LAVA_WORK_TICKS,
-                () -> hasSpread(helper, WEST_SOURCE, Fluids.LAVA) && hasSpread(helper, EAST_SOURCE, Fluids.LAVA)),
+        EntityArenaUtil.tickUntil(helper, CELL_READY_TICKS + LAVA_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, CELL_READY_TICKS, LAVA_WORK_TICKS,
+                () -> hasSpread(helper, WEST_SOURCE, Fluids.LAVA) && hasSpread(helper, EAST_SOURCE, Fluids.LAVA),
+                () -> unspreadSources(helper, "lava", Fluids.LAVA)),
             () -> {
                 helper.assertBlockPresent(BCCoreBlocks.MARKER_PATH.get(), SUBJECT);
                 helper.assertTrue(level.getBlockEntity(abs) == before,
@@ -527,9 +530,9 @@ public class BlockWaterloggingTester {
      *  fluid placed in the channel can ever leave the test's own arena cell.
      *
      *  <p>Also force-loads the whole cell ({@link EntityArenaUtil#forceLoadCell}): the framework forces only the
-     *  structure's chunk, a fluid's scheduled tick runs only in a chunk that is ticking, and the basin straddles a chunk
-     *  border in about a third of the runs. A test that must wait for the fluid polls
-     *  {@link EntityArenaUtil#isCellEntityTicking} before it starts counting (see {@link #testMarkerHoldsBackLava}). */
+     *  structure's chunk, a fluid's scheduled tick runs only in a chunk that is ticking, and the 6x7 cell crosses a
+     *  chunk border in about 57% of runs (the 5x3 basin alone, in about a third). A test that must wait for the fluid
+     *  gates its work budget on {@link EntityArenaUtil#whenCellTicking} (see {@link #testMarkerHoldsBackLava}). */
     public static void buildBasin(GameTestHelper helper) {
         EntityArenaUtil.forceLoadCell(helper);
         for (int x = 0; x <= 4; x++) {
@@ -561,26 +564,53 @@ public class BlockWaterloggingTester {
         return !helper.getLevel().getFluidTicks().hasScheduledTick(helper.absolutePos(relPos), fluid);
     }
 
-    private static void assertWaterloggedBetweenSources(GameTestHelper helper, Block expected, Runnable extra) {
+    /** Which of the basin's two sources of {@code fluid} has not run its spread tick, named for a timeout message;
+     *  {@code null} when both have. */
+    private static String unspreadSources(GameTestHelper helper, String what, Fluid fluid) {
+        boolean west = hasSpread(helper, WEST_SOURCE, fluid);
+        boolean east = hasSpread(helper, EAST_SOURCE, fluid);
+        if (west && east) {
+            return null;
+        }
+        if (!west && !east) {
+            return "neither the west nor the east " + what + " source has run its spread tick";
+        }
+        return "the " + (west ? "east" : "west") + " " + what + " source has not run its spread tick";
+    }
+
+    /** Waterlogs the subject with two flanking water sources and checks it survived, on observed state: the poll
+     *  starts its work budget when the cell ticks and ends when both sources have run their spread tick, which is
+     *  when anything they were going to flood or destroy is already done. {@code extra} is the caller's own
+     *  assertion, run with the others; {@code cleanup} runs once on every way out of the poll, a failure and a
+     *  timeout included (the marker test clears its marker there). */
+    private static void assertWaterloggedBetweenSources(GameTestHelper helper, Block expected, Runnable extra,
+                                                        Runnable cleanup) {
         BlockPos abs = helper.absolutePos(SUBJECT);
         BlockEntity before = helper.getLevel().getBlockEntity(abs);
-        helper.assertTrue(before != null, expected + " must have a block entity");
         placeSource(helper, WEST_SOURCE, Blocks.WATER, Fluids.WATER);
         placeSource(helper, EAST_SOURCE, Blocks.WATER, Fluids.WATER);
 
-        helper.succeedWhen(() -> {
-            // Pre-fix the subject is replaced by a water source here and this never passes.
-            helper.assertBlockPresent(expected, SUBJECT);
-            BlockState state = helper.getBlockState(SUBJECT);
-            helper.assertTrue(state.hasProperty(BlockStateProperties.WATERLOGGED)
-                    && state.getValue(BlockStateProperties.WATERLOGGED),
-                expected + " must end up waterlogged between two water sources");
-            helper.assertTrue(helper.getLevel().getFluidState(abs).is(Fluids.WATER),
-                "a waterlogged " + expected + " must report a water fluid state");
-            helper.assertTrue(helper.getLevel().getBlockEntity(abs) == before,
-                expected + "'s block entity must survive being waterlogged");
-            extra.run();
-        });
+        EntityArenaUtil.tickUntil(helper, CELL_READY_TICKS + WATERLOG_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, CELL_READY_TICKS, WATERLOG_WORK_TICKS,
+                () -> hasSpread(helper, WEST_SOURCE, Fluids.WATER) && hasSpread(helper, EAST_SOURCE, Fluids.WATER),
+                () -> unspreadSources(helper, "water", Fluids.WATER)),
+            () -> {
+                helper.assertTrue(before != null, expected + " must have a block entity");
+                // Pre-fix the subject is replaced by a water source here.
+                helper.assertBlockPresent(expected, SUBJECT);
+                BlockState state = helper.getBlockState(SUBJECT);
+                helper.assertTrue(state.hasProperty(BlockStateProperties.WATERLOGGED)
+                        && state.getValue(BlockStateProperties.WATERLOGGED),
+                    expected + " must end up waterlogged between two water sources");
+                helper.assertTrue(helper.getLevel().getFluidState(abs).is(Fluids.WATER),
+                    "a waterlogged " + expected + " must report a water fluid state");
+                helper.assertTrue(helper.getLevel().getBlockEntity(abs) == before,
+                    expected + "'s block entity must survive being waterlogged");
+                extra.run();
+                helper.succeed();
+            },
+            "the water sources never ran their spread tick",
+            cleanup);
     }
 
     private static TilePipeHolder placeWoodPipe(GameTestHelper helper, BlockPos relPos) {

@@ -100,7 +100,7 @@ public final class MarkerArenaUtil {
 
     /** Force-loads the chunks under all four corners of the cell (5x5 each, see
      *  {@link EntityArenaUtil#forceLoadEntityArena}). The framework forces only the arena's north-west chunk,
-     *  and the grid drops at a random world position, so a cell often straddles a chunk border. */
+     *  and the grid drops at a random world position, so the cell crosses a chunk border in about 57% of runs. */
     private static void forceLoadCell(GameTestHelper gth) {
         Set<Long> seen = new HashSet<>();
         for (int x : new int[] { 0, CELL_MAX_X }) {

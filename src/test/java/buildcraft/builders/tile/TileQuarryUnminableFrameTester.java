@@ -56,6 +56,19 @@ public class TileQuarryUnminableFrameTester {
     private static final BlockPos STONE_EDGE = new BlockPos(3, 2, 1);
     private static final BlockPos STONE_INTERIOR = new BlockPos(4, 3, 3);
 
+    /** Real ticks a quarry gets, after a claim is lifted, to re-ask about a parked frame cell: three of its windows
+     *  (200 each). A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it; the
+     *  initializer below fails loudly when the window outgrows it. */
+    private static final int FRAME_RETRY_TICKS = 600;
+
+    static {
+        if (FRAME_RETRY_TICKS < RefusalMemory.QUARRY_FRAME.windowTicks() * 3) {
+            throw new IllegalStateException("FRAME_RETRY_TICKS (" + FRAME_RETRY_TICKS + ") must cover three refusal "
+                    + "windows (" + RefusalMemory.QUARRY_FRAME.windowTicks() + " each): raise it, and the manifests' "
+                    + "max_ticks above it");
+        }
+    }
+
     private static void assertTrue(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
     }
@@ -134,20 +147,19 @@ public class TileQuarryUnminableFrameTester {
             return;
         }
         // The claim is lifted: nothing tells the quarry. It must find out by asking again once the window ends.
-        int limit = (int) RefusalMemory.QUARRY_FRAME.windowTicks() * 3;
         int[] polls = {0};
-        EntityArenaUtil.tickUntil(helper, limit, () -> {
+        EntityArenaUtil.tickUntil(helper, FRAME_RETRY_TICKS, () -> {
             polls[0]++;
             s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
             s.quarry.tick();
             boolean filled = helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
-            if (!filled && polls[0] >= limit) {
+            if (!filled && polls[0] >= FRAME_RETRY_TICKS) {
                 s.cleanUp(helper); // the wait is about to fail the test: leave nothing behind
             }
             return filled;
         }, () -> {
             try {
-                for (int i = 0; i < limit && s.quarry.hasPendingWork(); i++) {
+                for (int i = 0; i < FRAME_RETRY_TICKS && s.quarry.hasPendingWork(); i++) {
                     s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
                     s.quarry.tick();
                 }
@@ -189,8 +201,7 @@ public class TileQuarryUnminableFrameTester {
         BlockPos stuckAbs = s.abs(STUCK_EDGE);
         ClaimProtectionMod[] claim = {null};
         boolean[] parked = {false};
-        int limit = (int) RefusalMemory.QUARRY_FRAME.windowTicks() * 3;
-        EntityArenaUtil.tickUntil(helper, limit + 5, () -> {
+        EntityArenaUtil.tickUntil(helper, FRAME_RETRY_TICKS + 5, () -> {
             if (!parked[0]) {
                 parked[0] = true;
                 helper.setBlock(STUCK_EDGE, Blocks.STONE);
@@ -281,8 +292,7 @@ public class TileQuarryUnminableFrameTester {
         WorkClaimMod[] placeClaim = {null};
         ClaimProtectionMod[] breakClaim = {null};
         boolean[] parked = {false};
-        int limit = (int) RefusalMemory.QUARRY_FRAME.windowTicks() * 3;
-        EntityArenaUtil.tickUntil(helper, limit + 5, () -> {
+        EntityArenaUtil.tickUntil(helper, FRAME_RETRY_TICKS + 5, () -> {
             if (!parked[0]) {
                 parked[0] = true;
                 placeClaim[0] = new WorkClaimMod(stuckAbs::equals, stuckAbs::equals);
@@ -303,7 +313,7 @@ public class TileQuarryUnminableFrameTester {
             return helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
         }, () -> {
             try {
-                for (int i = 0; i < limit && s.quarry.hasPendingWork(); i++) {
+                for (int i = 0; i < FRAME_RETRY_TICKS && s.quarry.hasPendingWork(); i++) {
                     s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
                     s.quarry.tick();
                 }

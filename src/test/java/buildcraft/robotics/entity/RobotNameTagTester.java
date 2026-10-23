@@ -155,39 +155,60 @@ public class RobotNameTagTester {
         helper.succeed();
     }
 
+    /** Ticks the cell gets to become entity-ticking: the item the pickup drops is invisible to a scan until its
+     *  chunk is, and the 6x7 cell crosses a chunk border in about 57% of runs. The item then gets
+     *  {@link #PICKUP_WORK_TICKS} to show up. */
+    private static final int PICKUP_READY_TICKS = 300;
+    private static final int PICKUP_WORK_TICKS = 20;
+
+    /** The robot items lying in this test's own cell. */
+    private static List<ItemEntity> droppedRobotItems(GameTestHelper helper) {
+        return helper.getLevel().getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper),
+                item -> item.getItem().is(BCRoboticsItems.ROBOT.get()));
+    }
+
     /** A sneaking wrench turns a named robot back into its item, and that item carries the name: the robot drop is
-     *  the first stack of {@code getDrops()} and the one that lands in the world. */
+     *  the first stack of {@code getDrops()} and the one that lands in the world.
+     *
+     *  <p>The pickup waits for the cell to tick and then polls for the item rather than scanning in the tick of the
+     *  drop: an entity added to a chunk that is not entity-ticking yet is invisible to {@code getEntitiesOfClass}. */
     public static void namedRobotKeepsItsNameThroughWrenchPickup(GameTestHelper helper) {
-        EntityRobot robot = spawnRobot(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         Player player = helper.makeMockPlayer(GameType.CREATIVE);
-        try {
-            robot.setCustomName(Component.literal("Robbie"));
+        EntityRobot[] robot = { null };
+        boolean[] pickedUp = { false };
+        EntityArenaUtil.tickUntil(helper, PICKUP_READY_TICKS + PICKUP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, PICKUP_READY_TICKS, PICKUP_WORK_TICKS, () -> {
+                    if (!pickedUp[0]) {
+                        pickedUp[0] = true;
+                        robot[0] = spawnRobot(helper);
+                        robot[0].setCustomName(Component.literal("Robbie"));
 
-            Component named = robot.getDrops().get(0).get(DataComponents.CUSTOM_NAME);
-            helper.assertTrue(named != null && "Robbie".equals(named.getString()),
-                    "the robot's item drop carries its name, got " + named);
+                        Component named = robot[0].getDrops().get(0).get(DataComponents.CUSTOM_NAME);
+                        helper.assertTrue(named != null && "Robbie".equals(named.getString()),
+                                "the robot's item drop carries its name, got " + named);
 
-            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BCCoreItems.WRENCH.get()));
-            player.setShiftKeyDown(true);
-            interact(robot, player);
-            helper.assertTrue(robot.isRemoved(), "the wrench picked the robot up");
-
-            List<ItemEntity> dropped = EntityArenaUtil.droppedItems(helper, ROBOT_REL, 3).stream()
-                    .filter(item -> item.getItem().is(BCRoboticsItems.ROBOT.get())).toList();
-            try {
-                helper.assertTrue(dropped.size() == 1, "one robot item was dropped, found " + dropped.size());
-                Component droppedName = dropped.get(0).getItem().get(DataComponents.CUSTOM_NAME);
-                helper.assertTrue(droppedName != null && "Robbie".equals(droppedName.getString()),
-                        "the dropped robot item is still called Robbie, got " + droppedName);
-            } finally {
-                dropped.forEach(ItemEntity::discard);
-            }
-        } finally {
-            player.discard();
-            if (!robot.isRemoved()) {
-                robot.discard();
-            }
-        }
-        helper.succeed();
+                        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BCCoreItems.WRENCH.get()));
+                        player.setShiftKeyDown(true);
+                        interact(robot[0], player);
+                        helper.assertTrue(robot[0].isRemoved(), "the wrench picked the robot up");
+                        return false;
+                    }
+                    return !droppedRobotItems(helper).isEmpty();
+                }, () -> pickedUp[0] ? "the picked-up robot's item never showed up in the cell" : null),
+                () -> {
+                    List<ItemEntity> dropped = droppedRobotItems(helper);
+                    helper.assertTrue(dropped.size() == 1, "one robot item was dropped, found " + dropped.size());
+                    Component droppedName = dropped.get(0).getItem().get(DataComponents.CUSTOM_NAME);
+                    helper.assertTrue(droppedName != null && "Robbie".equals(droppedName.getString()),
+                            "the dropped robot item is still called Robbie, got " + droppedName);
+                    helper.succeed();
+                },
+                "the picked-up robot's item never showed up in the cell",
+                () -> {
+                    droppedRobotItems(helper).forEach(ItemEntity::discard);
+                    EntityArenaUtil.discard(robot[0]);
+                    player.discard();
+                });
     }
 }

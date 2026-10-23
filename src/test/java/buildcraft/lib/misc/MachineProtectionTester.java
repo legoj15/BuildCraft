@@ -71,6 +71,19 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class MachineProtectionTester {
 
+    /** Real ticks to wait, after a claim is lifted, for a stripes pipe to re-ask: its window (200) and some margin.
+     *  A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it; the initializer
+     *  below fails loudly when the window outgrows it. */
+    private static final int STRIPES_RETRY_TICKS = 300;
+
+    static {
+        if (STRIPES_RETRY_TICKS <= RefusalMemory.STRIPES.windowTicks()) {
+            throw new IllegalStateException("STRIPES_RETRY_TICKS (" + STRIPES_RETRY_TICKS + ") must outlast the "
+                    + "refusal window (" + RefusalMemory.STRIPES.windowTicks() + "): raise it, and the manifest's "
+                    + "max_ticks above it");
+        }
+    }
+
     private static void check(boolean condition, String message) {
         if (!condition) {
             throw new IllegalStateException("Assertion failed: " + message);
@@ -213,7 +226,7 @@ public class MachineProtectionTester {
 
         // The claim is lifted without the block changing - nothing fires an event for that - so the pipe notices
         // only once its retry window (game time) has passed: wait real ticks for it, gated on the block going.
-        EntityArenaUtil.tickUntil(helper, (int) RefusalMemory.STRIPES.windowTicks() + 100, () -> {
+        EntityArenaUtil.tickUntil(helper, STRIPES_RETRY_TICKS, () -> {
             stripes.receivePower(64 * MjAPI.MJ, false);
             stripes.onTick();
             return level.getBlockState(target).isAir();

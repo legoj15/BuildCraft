@@ -24,22 +24,25 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pins that a robot game test's framework watchdog ({@code max_ticks} in its {@code test_instance} manifest)
- * outlasts every poll the test body runs.
+ * Pins that a game test's framework watchdog ({@code max_ticks} in its {@code test_instance} manifest) outlasts
+ * every poll the test body runs. It covers EVERY registered game test, not only the robot ones: any test that polls
+ * (a fluid test waiting on a scheduled tick, a drop test waiting on its items) cleans up in the poll the same way.
  *
- * <p>{@code EntityArenaUtil.tickUntil}, {@code tickUntilThen} and {@code ConfigScope.succeedWhen} clean the test's
- * entities up on EVERY way out of their poll, including their own timeout. The framework's timeout is a second
+ * <p>{@code EntityArenaUtil.tickUntil}, {@code tickUntilThen}, {@code ConfigScope.succeedWhen} and the marker
+ * session's {@code await}/{@code awaitThen} clean the test's entities, markers and rig up on EVERY way out of their
+ * poll, including their own timeout. The framework's timeout is a second
  * clock, and it knows nothing about that cleanup: when it fires first, it fails the test and the poll's cleanup
- * never runs, so the robot stays in the shared level, keeps its station reservations and keeps flying into later
- * tests (the leak {@code robot_search_entity_nearest_and_range} had with a 20 tick manifest over a 60 tick poll).
+ * never runs, so a robot stays in the shared level, keeps its station reservations and keeps flying into later
+ * tests (the leak {@code robot_search_entity_nearest_and_range} had with a 20 tick manifest over a 60 tick poll), or
+ * a marker stays in the dimension-wide marker cache that every later marker test scans.
  * The failure is silent in the test that caused it and surfaces as a flake in a later one, which is exactly why it
  * is pinned here and not left to review.
  *
  * <p>The poll budget IS computable from source: every poll takes its {@code maxTicks} as the second argument, and
- * in practice that is an integer literal or a {@code static final int} of the same file. The scan follows the
- * registered method's body plus every same-file method it calls (a poll hidden in a fixture helper still counts),
- * ignores comments and string contents (the inactive branch of a Stonecutter directive is a comment), and resolves
- * the budget of each poll it finds. A budget it cannot resolve to a number (a parameter, a computed value) FAILS
+ * in practice that is an integer literal, a {@code static final int} of the same file or a {@code +} sum of those
+ * ({@code READY + WORK}). The scan follows the registered method's body plus every same-file method it calls (a
+ * poll hidden in a fixture helper still counts), ignores comments and string contents (the inactive branch of a
+ * Stonecutter directive is a comment), and resolves the budget of each poll it finds. A budget it cannot resolve to a number (a parameter, a computed value) FAILS
  * the guard instead of being skipped: skipping would let a new poll slip through unchecked, so use a literal or a
  * named {@code static final int}. The guard needs {@code max_ticks > budget}, one tick of margin beyond the
  * poll's last tick, which is the only tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
@@ -79,12 +82,23 @@ public class GameTestPollBudgetTester {
         }
     }
 
+    /** {@code import <fqcn>;} lines of the registrar, by simple class name. */
+    private static final Pattern IMPORT = Pattern.compile("(?m)^import\\s+([\\w.]+\\.(\\w+))\\s*;");
+
     private static List<Registration> registrations() {
         String registrar = read(TestHelper.repoRoot().resolve(REGISTRAR));
+        Map<String, String> imports = new HashMap<>();
+        Matcher imp = IMPORT.matcher(registrar);
+        while (imp.find()) {
+            imports.put(imp.group(2), imp.group(1));
+        }
         List<Registration> all = new ArrayList<>();
         Matcher m = REGISTRATION.matcher(registrar);
         while (m.find()) {
-            all.add(new Registration(m.group(1), m.group(2), m.group(3)));
+            // A simple class name is an import of the registrar, or else a class of the registrar's own package.
+            String className = m.group(2).contains(".") ? m.group(2)
+                : imports.getOrDefault(m.group(2), "buildcraft." + m.group(2));
+            all.add(new Registration(m.group(1), className, m.group(3)));
         }
         int expected = 0;
         Matcher any = ANY_REGISTRATION.matcher(registrar);
@@ -98,29 +112,20 @@ public class GameTestPollBudgetTester {
         return all;
     }
 
-    /** A test is a robot test when a robot is the point of it: its id says so, or its class lives in the
-     *  robotics package. */
-    private static boolean isRobotTest(Registration r) {
-        return r.id().contains("robot") || r.className().startsWith("buildcraft.robotics.");
-    }
-
     // ---------------------------------------------------------------------------------------------------------
     // The real tree
     // ---------------------------------------------------------------------------------------------------------
 
     @Test
-    public void everyRobotTestsWatchdogOutlastsItsPollBudget() {
+    public void everyGameTestsWatchdogOutlastsItsPollBudget() {
         Path manifests = TestHelper.repoRoot().resolve(MANIFEST_DIR);
         List<String> tooShort = new ArrayList<>();
         List<String> uncomputable = new ArrayList<>();
         List<String> missing = new ArrayList<>();
-        int robotTests = 0;
+        int tests = 0;
         int testsWithPolls = 0;
         for (Registration r : registrations()) {
-            if (!isRobotTest(r)) {
-                continue;
-            }
-            robotTests++;
+            tests++;
             Path source = r.source();
             Path manifest = manifests.resolve(r.id() + ".json");
             if (!Files.isRegularFile(source)) {
@@ -150,24 +155,26 @@ public class GameTestPollBudgetTester {
                     + " ticks " + budgets.polls);
             }
         }
-        // Liveness: an empty or tiny match set would make every check above vacuous.
-        Assertions.assertTrue(robotTests >= 100,
-            "only " + robotTests + " robot tests were recognised - the id/class predicate or the registration"
-                + " scan has drifted, which makes this guard vacuous");
-        Assertions.assertTrue(testsWithPolls >= 30,
-            "only " + testsWithPolls + " robot tests had a poll found - the poll scan has drifted, which makes"
+        // Liveness: an empty or tiny match set would make every check above vacuous. Floors sit a little under the
+        // real counts (about 805 tests, about 135 of them polling) so deleting a few tests does not trip them, while
+        // a drifted registration pattern or poll scan, which finds nothing or little, does.
+        Assertions.assertTrue(tests >= 750,
+            "only " + tests + " game tests were registered - the registration scan has drifted, which makes this"
+                + " guard vacuous");
+        Assertions.assertTrue(testsWithPolls >= 110,
+            "only " + testsWithPolls + " game tests had a poll found - the poll scan has drifted, which makes"
                 + " this guard vacuous");
-        Assertions.assertTrue(missing.isEmpty(), "robot test(s) this guard could not read:\n    "
+        Assertions.assertTrue(missing.isEmpty(), "game test(s) this guard could not read:\n    "
             + String.join("\n    ", missing));
         Assertions.assertTrue(uncomputable.isEmpty(),
-            "robot test(s) with a poll whose tick budget is not an integer literal or a static final int of the"
+            "game test(s) with a poll whose tick budget is not an integer literal or a static final int of the"
                 + " same file, so the watchdog cannot be checked against it. Use a literal or a named constant:\n    "
                 + String.join("\n    ", uncomputable));
         Assertions.assertTrue(tooShort.isEmpty(),
-            "robot test(s) whose test_instance max_ticks does not outlast their tickUntil/tickUntilThen/"
+            "game test(s) whose test_instance max_ticks does not outlast their tickUntil/tickUntilThen/"
                 + "succeedWhen budget. The framework's timeout then fires first and the poll's cleanup never runs,"
-                + " leaving the test's robots in the shared level. Raise max_ticks above the budget:\n    "
-                + String.join("\n    ", tooShort));
+                + " leaving the test's robots, markers or entities in the shared level. Raise max_ticks above the"
+                + " budget:\n    " + String.join("\n    ", tooShort));
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -203,6 +210,18 @@ public class GameTestPollBudgetTester {
     }
 
     @Test
+    public void scannerReadsAMarkerSessionAwait() {
+        PollBudgets b = scan("""
+            private static final int REGISTER_TICKS = 40;
+            public static void test(GameTestHelper helper) {
+                arena.await(REGISTER_TICKS, () -> true, helper::succeed, "a");
+                arena.awaitThen(REGISTER_TICKS + 20, () -> true, () -> { }, 5, () -> { }, "b");
+            }""");
+        Assertions.assertEquals(60, b.max());
+        Assertions.assertEquals(2, b.polls.size());
+    }
+
+    @Test
     public void scannerResolvesANamedConstant() {
         PollBudgets b = scan("""
             private static final int RESYNC_TICKS = 180;
@@ -210,6 +229,19 @@ public class GameTestPollBudgetTester {
                 EntityArenaUtil.tickUntil(helper, RESYNC_TICKS, () -> true, helper::succeed, "a");
             }""");
         Assertions.assertEquals(180, b.max());
+    }
+
+    @Test
+    public void scannerResolvesASumOfLiteralsAndConstants() {
+        PollBudgets b = scan("""
+            private static final int RETRY = 400;
+            private static final int SETTLE = 20;
+            public static void test(GameTestHelper helper) {
+                EntityArenaUtil.tickUntil(helper, RETRY + 300, () -> true, helper::succeed, "a");
+                EntityArenaUtil.tickUntil(helper, 5 + RETRY + SETTLE, () -> true, helper::succeed, "b");
+            }""");
+        Assertions.assertEquals(700, b.max());
+        Assertions.assertTrue(b.unresolved.isEmpty(), "sums of literals and constants resolve: " + b.unresolved);
     }
 
     @Test
@@ -295,6 +327,11 @@ public class GameTestPollBudgetTester {
         private static final Pattern POLL = Pattern.compile(
             "\\b(tickUntilThen|tickUntil|succeedWhen)\\s*\\(\\s*\\w+\\s*,\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
 
+        /** The marker session's own polls ({@code MarkerArenaUtil.Session#await}/{@code awaitThen}): the budget is the
+         *  first argument, and they clean the markers up on their timeout like the polls above. */
+        private static final Pattern AWAIT_POLL = Pattern.compile(
+            "\\b(awaitThen|await)\\s*\\(\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
+
         private static final Pattern CONSTANT =
             Pattern.compile("\\bstatic\\s+final\\s+(?:int|long)\\s+(\\w+)\\s*=\\s*(\\d+)L?\\s*;");
 
@@ -324,22 +361,36 @@ public class GameTestPollBudgetTester {
             return result;
         }
 
-        private void scan(String source, String body, Map<String, Integer> constants, Set<String> visited) {
-            Matcher p = POLL.matcher(body);
-            while (p.find()) {
-                String kind = p.group(1);
-                String budget = p.group(2).trim();
-                Integer value = null;
-                if (budget.matches("\\d+")) {
-                    value = Integer.parseInt(budget);
-                } else if (constants.containsKey(budget)) {
-                    value = constants.get(budget);
-                }
-                if (value == null) {
-                    unresolved.add(kind + " budget `" + budget + "`");
+        /** The value of a budget written as an integer literal, a same-file {@code static final int} or a {@code +}
+         *  sum of those ({@code RETRY_BUDGET + 300}); {@code null} for anything else (a parameter, a call, a cast). */
+        private static Integer resolve(String budget, Map<String, Integer> constants) {
+            int sum = 0;
+            for (String term : budget.split("\\+")) {
+                String t = term.trim();
+                if (t.matches("\\d+")) {
+                    sum += Integer.parseInt(t);
+                } else if (constants.containsKey(t)) {
+                    sum += constants.get(t);
                 } else {
-                    polls.add(kind + " " + value);
-                    max = Math.max(max, value);
+                    return null;
+                }
+            }
+            return sum;
+        }
+
+        private void scan(String source, String body, Map<String, Integer> constants, Set<String> visited) {
+            for (Pattern poll : List.of(POLL, AWAIT_POLL)) {
+                Matcher p = poll.matcher(body);
+                while (p.find()) {
+                    String kind = p.group(1);
+                    String budget = p.group(2).trim();
+                    Integer value = resolve(budget, constants);
+                    if (value == null) {
+                        unresolved.add(kind + " budget `" + budget + "`");
+                    } else {
+                        polls.add(kind + " " + value);
+                        max = Math.max(max, value);
+                    }
                 }
             }
             Matcher call = CALL.matcher(body);

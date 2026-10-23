@@ -5,6 +5,9 @@
  */
 package buildcraft;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -379,9 +382,14 @@ public class BlockDropsTester {
     // Both tests go through breakEnginesAndCheck, which also breaks the other engines that hold contents.
 
     /** Ticks the cell gets to become entity-ticking. A drop popped into a chunk that does not tick yet is invisible
-     *  to the scans below, and the cell straddles a chunk border about as often as not. */
+     *  to the scans below, and the 6x7 cell crosses a chunk border in about 57% of runs. */
     private static final int ENGINE_READY_TICKS = 60;
-    /** Ticks between the breaks and the assertions. */
+    /** Ticks, after the breaks, for every expected drop to show up in its scan. The breaks spawn them all at once,
+     *  so the first poll normally sees them; the margin is for a slow tick, not a settling time. Asserting at the end
+     *  of a fixed wait instead lost a shard: a fragile container stacks to one, so the four shards of the combustion
+     *  engine are four entities, each popped at up to 0.1 blocks/tick (0.98 drag, spawn offset up to 0.25), and over
+     *  ten ticks one can leave the one-block scan (measured on 26.3 over 400 shards: none outside it 9 ticks after the
+     *  pop, 2 at 10, 9 at 11; the 3-of-4 failure of {@code drops_stirling_hand}). */
     private static final int ENGINE_DROP_WAIT_TICKS = 10;
 
     public static void testStirlingEngineHandBreakDropsFuel(GameTestHelper helper) {
@@ -397,34 +405,66 @@ public class BlockDropsTester {
      *  engine's contents must arrive exactly once. */
     private static void breakEnginesAndCheck(GameTestHelper helper, ItemStack tool) {
         BlockPos pos = new BlockPos(1, 2, 1);
+        Item engineItem = BCEnergyBlocks.ENGINE_STONE.get().asItem();
         EntityArenaUtil.forceLoadCell(helper);
-        EntityArenaUtil.tickUntilThen(helper, ENGINE_READY_TICKS + ENGINE_DROP_WAIT_TICKS, () -> EntityArenaUtil.isCellEntityTicking(helper),
-                () -> {
-                    helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
-                    tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));
-                    placeContentEngines(helper);
+        // One poll, two phases: the first call after the cell ticks places and breaks everything (a drop popped into a
+        // chunk that does not tick yet would be invisible), every later call asks whether the drops are all there.
+        boolean[] broken = { false };
+        EntityArenaUtil.tickUntil(helper, ENGINE_READY_TICKS + ENGINE_DROP_WAIT_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, ENGINE_READY_TICKS, ENGINE_DROP_WAIT_TICKS, () -> {
+                    if (!broken[0]) {
+                        broken[0] = true;
+                        helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
+                        tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));
+                        placeContentEngines(helper);
 
-                    GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
-                    helper.assertBlockPresent(Blocks.AIR, pos);
-                    breakContentEngines(helper, tool);
-                },
-                ENGINE_DROP_WAIT_TICKS,
+                        GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
+                        helper.assertBlockPresent(Blocks.AIR, pos);
+                        breakContentEngines(helper, tool);
+                        return false;
+                    }
+                    return missingDrops(helper, pos, tool, engineItem).isEmpty();
+                }, () -> broken[0] ? "missing " + String.join(", ", missingDrops(helper, pos, tool, engineItem))
+                        : null),
                 () -> {
                     helper.assertItemEntityPresent(Items.COAL, pos, 2.0);
                     if (tool.isEmpty()) {
-                        helper.assertItemEntityNotPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
+                        helper.assertItemEntityNotPresent(engineItem, pos, 2.0);
                     } else {
-                        helper.assertItemEntityPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
+                        helper.assertItemEntityPresent(engineItem, pos, 2.0);
                     }
                     assertContentEnginesDroppedOnce(helper);
                     helper.succeed();
                 },
-                "the engine cell never became entity-ticking",
+                "the engines' drops never showed up",
                 () -> discardEngineDrops(helper));
     }
 
+    private static boolean hasDropped(GameTestHelper helper, BlockPos pos, Item item, double radius) {
+        return EntityArenaUtil.droppedItems(helper, pos, radius).stream().anyMatch(e -> e.getItem().is(item));
+    }
+
+    /** What of the expected drops is not in its scan yet: empty once everything has arrived (more than expected is
+     *  the exact assertion's to reject). Also the text of the timeout, so it names what never came. */
+    private static List<String> missingDrops(GameTestHelper helper, BlockPos pos, ItemStack tool, Item engineItem) {
+        List<String> missing = new ArrayList<>();
+        if (!hasDropped(helper, pos, Items.COAL, 2.0)) {
+            missing.add("the Stirling's coal");
+        }
+        if (!tool.isEmpty() && !hasDropped(helper, pos, engineItem, 2.0)) {
+            missing.add("the Stirling engine block");
+        }
+        for (ExpectedDrop drop : expectedContentDrops()) {
+            int total = droppedTotal(helper, drop);
+            if (total < drop.count()) {
+                missing.add(total + " of " + drop.count() + " " + drop.item() + " at " + drop.pos());
+            }
+        }
+        return missing;
+    }
+
     // The other engines that hold contents. They share the Stirling's cell, three blocks apart (the cell is 6 wide
-    // in x and 7 deep in z): a popped item drifts up to about a block over the 10-tick wait, so two blocks would let
+    // in x and 7 deep in z): a popped item drifts up to about a block over ten ticks, so two blocks would let
     // one engine's gear land in the next engine's radius-1 box and be counted there.
     private static final BlockPos FE_ENGINE_POS = new BlockPos(4, 2, 1);
     private static final BlockPos COMBUSTION_ENGINE_POS = new BlockPos(1, 2, 4);
@@ -461,10 +501,19 @@ public class BlockDropsTester {
     /** Every engine's contents arrived once, not zero times (a hook the break never reached) and not twice (a
      *  player-break drop on top of the removal hook). Totals, not entity counts: identical stacks may merge. */
     private static void assertContentEnginesDroppedOnce(GameTestHelper helper) {
-        assertDroppedTotal(helper, FE_ENGINE_POS, BCCoreItems.GEAR_IRON.get(), 1);
-        assertDroppedTotal(helper, FE_ENGINE_POS, BCCoreItems.GEAR_GOLD.get(), 1);
-        assertDroppedTotal(helper, DYNAMO_POS, BCCoreItems.GEAR_IRON.get(), 1);
+        for (ExpectedDrop drop : expectedContentDrops()) {
+            int total = droppedTotal(helper, drop);
+            if (total != drop.count()) {
+                throw new IllegalStateException("breaking the engine at " + drop.pos() + " should drop exactly "
+                        + drop.count() + " of " + drop.item() + " but dropped " + total);
+            }
+        }
+    }
 
+    /** What one engine must drop: {@code count} of {@code item} within a block of {@code pos}. */
+    private record ExpectedDrop(BlockPos pos, Item item, int count) {}
+
+    private static List<ExpectedDrop> expectedContentDrops() {
         // The combustion engine spills the shards one drop of its two tanks yields.
         NonNullList<ItemStack> oneSpill = NonNullList.create();
         FluidItemDrops.addFluidDrops(oneSpill, water(), water());
@@ -473,18 +522,18 @@ public class BlockDropsTester {
             throw new IllegalStateException("two tanks of water should yield fluid shards, so the shard count "
                     + "below would pass vacuously");
         }
-        assertDroppedTotal(helper, COMBUSTION_ENGINE_POS, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), expectedShards);
+        return List.of(
+                new ExpectedDrop(FE_ENGINE_POS, BCCoreItems.GEAR_IRON.get(), 1),
+                new ExpectedDrop(FE_ENGINE_POS, BCCoreItems.GEAR_GOLD.get(), 1),
+                new ExpectedDrop(DYNAMO_POS, BCCoreItems.GEAR_IRON.get(), 1),
+                new ExpectedDrop(COMBUSTION_ENGINE_POS, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), expectedShards));
     }
 
-    private static void assertDroppedTotal(GameTestHelper helper, BlockPos pos, Item item, int expected) {
-        int total = EntityArenaUtil.droppedItems(helper, pos, 1.0).stream()
-                .filter(e -> e.getItem().is(item))
+    private static int droppedTotal(GameTestHelper helper, ExpectedDrop drop) {
+        return EntityArenaUtil.droppedItems(helper, drop.pos(), 1.0).stream()
+                .filter(e -> e.getItem().is(drop.item()))
                 .mapToInt(e -> e.getItem().getCount())
                 .sum();
-        if (total != expected) {
-            throw new IllegalStateException("breaking the engine at " + pos + " should drop exactly " + expected
-                    + " of " + item + " but dropped " + total);
-        }
     }
 
     /** Pass-time cleanup sweeps only about a block, so the engines' drops are discarded by hand. The sweep is the

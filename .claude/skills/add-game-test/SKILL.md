@@ -48,10 +48,11 @@ the safety net — this skill is the manual.
    `structure` can point at a saved arena structure if the test needs a pre-built world;
    `minecraft:empty` gives you a void arena to `helper.setBlock(...)` into. `max_ticks` is the
    watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests
-   that throw or succeed immediately can use `20`. **A robot test's `max_ticks` must be strictly
-   greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen` budget in the
-   test** (see "Entity and robot tests" below) — `GameTestPollBudgetTester` fails the unit run
-   otherwise, so give the poll a literal or a named `static final int` budget it can read.
+   that throw or succeed immediately can use `20`. **Any test's `max_ticks` must be strictly
+   greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen`/marker
+   `await`/`awaitThen` budget in the test** (see "Entity and robot tests" below) —
+   `GameTestPollBudgetTester` fails the unit run otherwise, so give the poll a literal, a named
+   `static final int`, or a `+` sum of those; a budget computed from production code is unreadable to it.
 
 ## The 1.21.1 node is different (but the manifest still matters)
 
@@ -113,9 +114,9 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   into later tests. Pass the cleanup on every robot test that spawns something.
 - **The framework's own timeout skips that cleanup.** If `max_ticks` fires before the poll's last
   tick, the framework fails the test and the cleanup never runs. So `max_ticks` must be strictly
-  greater than the poll budget (`GameTestPollBudgetTester` pins this for every robot test: it reads
-  the budget from the registered method and any same-file helper it calls, resolves a literal or a
-  `static final int`, and fails on a budget it cannot read).
+  greater than the poll budget (`GameTestPollBudgetTester` pins this for every registered test: it reads
+  the budget from the registered method and any same-file helper it calls, resolves a literal, a
+  `static final int` or a `+` sum of those, and fails on a budget it cannot read).
 - **A robot test that runs a board's `update()` must be zone-pinned.** A board with no zone
   searches the whole dimension: a picker takes a sibling arena's drops, a carrier or delivery robot
   flies to a sibling's station, a lumberjack chops a sibling's tree, and it is the OTHER test that
@@ -133,13 +134,14 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   its own `test_environment` and the nearest-station rule.
 - **Gate a same-tick scan on `EntityArenaUtil.isEntityTicking(helper, relPos)`.** The framework
   waits only for the 1x1 structure's own chunk, so a position a couple of blocks in can sit in a
-  neighbouring chunk whose entities are not loaded yet (measured on 26.2 and 1.21.11: 20 of 50
-  samples crossed a chunk border, 6 of 50 were not entity-ticking at the first tick). An entity
+  neighbouring chunk whose entities are not loaded yet (measured on 26.2 and 1.21.11: 6 of 50
+  samples were not entity-ticking at the first tick). An entity
   added there is invisible to `getEntitiesOfClass` in the same tick, so a test that adds something
   and scans for it at once polls `isEntityTicking` first (and `forceLoadEntityArena` around the
   position).
-- **A test whose work spans the cell starts its budget when the whole cell ticks.** The cell
-  straddles a chunk border about as often as not, and the half the robot is not in starts ticking
+- **A test whose work spans the cell starts its budget when the whole cell ticks.** The 6x7 cell
+  crosses a chunk border in about 57% of runs (5/16 in x, 6/16 in z, at a random block origin), and
+  the half the robot is not in starts ticking
   later (measured on 26.3 with only the robot's chunk forced: far corners at tick 20-23, the robot's
   at tick 1), far later when several servers share the machine. A poll budget that starts at tick 1
   then measures the machine: `robot_break_canopy_tree_vines_fall_with_decay` and
@@ -147,7 +149,9 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   (the 5x5 around every chunk the cell touches; with it every corner ticked on tick 1 in 48 of 48
   arenas) and wrap the condition: `tickUntil(helper, READY + WORK, whenCellTicking(helper, READY,
   WORK, cond), ...)`. The wrapper answers false until `isCellEntityTicking`, then gives `cond`
-  `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. Write
+  `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. A fifth
+  argument, a `Supplier<String>`, is asked only when `WORK` runs out and its text joins the failure:
+  use it to name the side, source or item that never came. Write
   `READY + WORK` as a literal (or constant) so `GameTestPollBudgetTester` can read it, and keep
   `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic. Put the spawn of the robot AND of
   everything it must see inside the gated condition: a drop added to a chunk that does not tick yet is invisible to

@@ -370,9 +370,9 @@ public class CommandReplaceTester {
         return type.cast(be);
     }
 
-    /** Force-loads the chunk neighbourhood of every rig position. The cell straddles a chunk border about as
-     *  often as not, and a chunk only becomes entity-ticking once its own 5x5 neighbourhood is loaded, so the
-     *  arena origin's neighbourhood alone leaves the far side of the cell waiting forever. */
+    /** Force-loads the chunk neighbourhood of every rig position. The cell crosses a chunk border in about 57% of
+     *  runs, and a chunk only becomes entity-ticking once its own 5x5 neighbourhood is loaded, so the arena
+     *  origin's neighbourhood alone leaves the far side of the cell waiting forever. */
     private static void forceLoadAround(GameTestHelper helper, BlockPos... positions) {
         for (BlockPos pos : positions) {
             EntityArenaUtil.forceLoadEntityArena(helper, pos);

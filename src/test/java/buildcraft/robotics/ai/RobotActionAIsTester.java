@@ -497,7 +497,7 @@ public class RobotActionAIsTester {
      *  resolve-the-owner check would get wrong. */
     public static void butcherFellsTheCowAndSparesTheTamedWolf(GameTestHelper helper) {
         BlockPos robotRel = new BlockPos(3, 4, 2);
-        // The whole cell: the cow and wolf sit a chunk border away from the robot as often as not.
+        // The whole cell: it crosses a chunk border in about 57% of runs, and the cow and wolf may be across it.
         EntityArenaUtil.forceLoadCell(helper);
 
         //? if >=26.2 {

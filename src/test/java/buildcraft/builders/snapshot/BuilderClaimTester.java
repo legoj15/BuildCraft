@@ -47,8 +47,17 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  */
 public class BuilderClaimTester {
 
-    /** Real ticks to wait, after a claim is lifted, for a parked cell to be retried: its window and some building. */
-    private static final int RETRY_BUDGET = (int) RefusalMemory.BUILDER_PLACE.windowTicks() + 200;
+    /** Real ticks to wait, after a claim is lifted, for a parked cell to be retried: its window (200) and some
+     *  building. A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it; the
+     *  initializer below fails loudly when the window outgrows it. */
+    private static final int RETRY_BUDGET = 400;
+
+    static {
+        if (RETRY_BUDGET <= RefusalMemory.BUILDER_PLACE.windowTicks()) {
+            throw new IllegalStateException("RETRY_BUDGET (" + RETRY_BUDGET + ") must outlast the refusal window ("
+                    + RefusalMemory.BUILDER_PLACE.windowTicks() + "): raise it, and the manifests' max_ticks above it");
+        }
+    }
 
     private static void check(boolean condition, String message) {
         if (!condition) {

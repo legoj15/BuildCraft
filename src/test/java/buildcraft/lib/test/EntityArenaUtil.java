@@ -8,6 +8,7 @@ package buildcraft.lib.test;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -92,10 +93,10 @@ public final class EntityArenaUtil {
     }
 
     /** Force-loads the 5x5 chunk block centred on {@code relPos}'s chunk. 5x5 rather than 1x1 or 3x3 for two
-     *  reasons: the framework can drop a test's origin at any chunk alignment, so the arena straddles a chunk
-     *  border about as often as not; and an entity's chunk only starts ticking once its whole 5x5
-     *  neighbourhood is {@code FULL} (see {@link #forceLoadEntityArena(GameTestHelper)}), so the force must
-     *  cover that neighbourhood. Pass the entity's own relative position — not the arena origin — when the
+     *  reasons: the framework can drop a test's origin at any chunk alignment, so the 6x7 cell crosses a chunk
+     *  border in about 57% of runs ({@link #isCellEntityTicking}); and an entity's chunk only starts ticking once
+     *  its whole 5x5 neighbourhood is {@code FULL} (see {@link #forceLoadEntityArena(GameTestHelper)}), so the
+     *  force must cover that neighbourhood. Pass the entity's own relative position — not the arena origin — when the
      *  entity can sit near the arena's far edge. Forces only the chunk {@code relPos} is in, so a test whose work
      *  spans the cell (a tree, a drop or a station beside the robot) uses {@link #forceLoadCell} instead and starts
      *  its budget with {@link #whenCellTicking}. */
@@ -229,15 +230,16 @@ public final class EntityArenaUtil {
     /** Whether entities at {@code relPos} tick. Implies the entity section is accessible, i.e. an entity added
      *  there is visible to {@code getEntitiesOfClass} at once. The framework waits only for the 1x1 structure's
      *  own chunk, so a position two blocks in can sit in a neighbouring chunk that is not there yet (measured on
-     *  26.2 and 1.21.11: 20 of 50 samples crossed a chunk border, 6 of 50 were not yet entity-ticking at the
-     *  test's first tick). A test that adds an entity and then scans for it in the same tick must gate on this. */
+     *  26.2 and 1.21.11: 6 of 50 samples were not yet entity-ticking at the test's first tick). A test that adds
+     *  an entity and then scans for it in the same tick must gate on this. */
     public static boolean isEntityTicking(GameTestHelper gth, BlockPos relPos) {
         return gth.getLevel().isPositionEntityTicking(gth.absolutePos(relPos));
     }
 
     /** Whether every chunk the test's 6x7 cell touches is entity-ticking, read at the cell's four corners.
-     *  {@link #isEntityTicking} on the robot's own block is not enough: the cell straddles a chunk border about as
-     *  often as not, and the chunk next door starts ticking later than the one the force-load was centred on (on
+     *  {@link #isEntityTicking} on the robot's own block is not enough: at a random block origin the cell crosses a
+     *  chunk border in about 57% of runs (5/16 in x for its 6 blocks, 6/16 in z for its 7: 1 - 11/16 * 10/16 =
+     *  146/256), and the chunk next door starts ticking later than the one the force-load was centred on (on
      *  26.3 with only the robot's chunk forced, the far corners came up on tick 20-23 while the robot's was ticking
      *  on tick 1). Blocks, items and vines in that neighbour neither tick nor random-tick until it does. */
     public static boolean isCellEntityTicking(GameTestHelper gth) {
@@ -272,13 +274,26 @@ public final class EntityArenaUtil {
      *  Both fail through {@code gth.fail}, so the poll's cleanup still runs. */
     public static BooleanSupplier whenCellTicking(GameTestHelper gth, int readyTicks, int workTicks,
                                                   BooleanSupplier condition) {
-        return gateOnReady(() -> isCellEntityTicking(gth), gth::fail, readyTicks, workTicks, condition);
+        return whenCellTicking(gth, readyTicks, workTicks, condition, () -> null);
+    }
+
+    /** {@link #whenCellTicking(GameTestHelper, int, int, BooleanSupplier)} whose work-budget failure also says what
+     *  was still missing: {@code stalled} is asked only then (never while the poll passes) and its text, when not
+     *  {@code null}, is appended to the message, so a timeout names the side, source or item that never came. */
+    public static BooleanSupplier whenCellTicking(GameTestHelper gth, int readyTicks, int workTicks,
+                                                  BooleanSupplier condition, Supplier<String> stalled) {
+        return gateOnReady(() -> isCellEntityTicking(gth), gth::fail, readyTicks, workTicks, condition, stalled);
     }
 
     /** The GameTestHelper-free core of {@link #whenCellTicking}: one call of the result is one tick's poll.
      *  {@code fail} must throw, as {@code GameTestHelper.fail} does on every node. */
     static BooleanSupplier gateOnReady(BooleanSupplier ready, Consumer<String> fail, int readyTicks, int workTicks,
                                        BooleanSupplier condition) {
+        return gateOnReady(ready, fail, readyTicks, workTicks, condition, () -> null);
+    }
+
+    static BooleanSupplier gateOnReady(BooleanSupplier ready, Consumer<String> fail, int readyTicks, int workTicks,
+                                       BooleanSupplier condition, Supplier<String> stalled) {
         int[] polls = { 0 };
         int[] readyAt = { -1 };
         return () -> {
@@ -298,8 +313,9 @@ public final class EntityArenaUtil {
                 return true;
             }
             if (poll - readyAt[0] >= workTicks) {
+                String detail = stalled.get();
                 fail.accept("not done " + workTicks + " ticks after the cell became entity-ticking (on tick "
-                        + readyAt[0] + ")");
+                        + readyAt[0] + ")" + (detail == null ? "" : ": " + detail));
             }
             return false;
         };

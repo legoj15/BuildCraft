@@ -84,6 +84,32 @@ public class EntityArenaReadinessGateTest {
     }
 
     @Test
+    void aWorkTimeoutNamesWhatStalledAndAPassNeverAsks() {
+        int[] tick = { 0 };
+        int[] asked = { 0 };
+        Assertions.assertEquals(3, answeredAt(tick, EntityArenaUtil.gateOnReady(() -> true,
+                EntityArenaReadinessGateTest::fail, 300, 20, () -> tick[0] >= 3, () -> {
+                    asked[0]++;
+                    return "the east source";
+                }), 10));
+        Assertions.assertEquals(0, asked[0], "what stalled is asked only once the work budget has run out");
+
+        String[] message = { null };
+        failedAt(tick, EntityArenaUtil.gateOnReady(() -> true, text -> {
+            message[0] = text;
+            fail(text);
+        }, 300, 5, () -> false, () -> "the east source"), 20);
+        Assertions.assertTrue(message[0] != null && message[0].endsWith(": the east source"),
+                "the timeout names what stalled: " + message[0]);
+
+        failedAt(tick, EntityArenaUtil.gateOnReady(() -> true, text -> {
+            message[0] = text;
+            fail(text);
+        }, 300, 5, () -> false, () -> null), 20);
+        Assertions.assertTrue(message[0].endsWith(")"), "a null detail leaves the plain message: " + message[0]);
+    }
+
+    @Test
     void eachBudgetFailsOnTheTickItRunsOut() {
         int[] tick = { 0 };
         Assertions.assertEquals(30, failedAt(tick, EntityArenaUtil.gateOnReady(() -> tick[0] >= 10,

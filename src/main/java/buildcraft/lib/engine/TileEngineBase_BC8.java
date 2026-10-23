@@ -170,6 +170,24 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
 
     // Owner tracking (field, getOwner/setOwner, onPlacedBy) lives on AbstractBCBlockEntity.
 
+    // --- Removal drops (every removal with side effects: player break, explosion, piston, /setblock ... destroy) ---
+    // Engine tiles sit on the synced base, not TileBC_Neptune, so the hook that routes a removal into
+    // dropContentsOnRemoval lives here once for all of them (the <1.21.10 twin is the onRemove catch-all in
+    // BlockEngineBase_BC8). An engine that holds contents overrides dropContentsOnRemoval + clearContent over
+    // exactly those contents and nothing else; the engines that hold none inherit the no-op. A player break
+    // reaches this hook too (playerWillDestroy is followed by the removal), so no engine block drops its contents
+    // in playerWillDestroy. The spill must empty what it drops, which keeps a second call from dropping twice.
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && !level.isClientSide()) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- Overridable methods ---
 
     /**

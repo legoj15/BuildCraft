@@ -16,7 +16,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -118,40 +117,6 @@ public class BlockEngineIron_BC8 extends BlockEngineBase_BC8 {
             Player player, BlockHitResult hitResult) {
         return openGui(state, level, pos, player);
     }
-
-    /**
-     * Drop fragile fluid shards for all tank contents when the engine is broken.
-     * Matches 1.12.2 behavior where TankManager contents were dropped as fluid shard items.
-     */
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
-            Player player) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileEngineIron_BC8 engine) {
-                net.minecraft.core.NonNullList<ItemStack> drops = net.minecraft.core.NonNullList.create();
-                buildcraft.api.items.FluidItemDrops.addFluidDrops(drops,
-                        engine.tankFuel.getFluidStack(0), engine.tankCoolant.getFluidStack(0),
-                        engine.tankResidue.getFluidStack(0));
-                for (ItemStack drop : drops) {
-                    Block.popResource(level, pos, drop);
-                }
-                engine.markDropsHandled();
-            }
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    // Non-player removal catch-all for the pre-1.21.10 API; >=1.21.10 uses TileEngineIron_BC8#preRemoveSideEffects.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof buildcraft.energy.tile.TileEngineIron_BC8 tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 
     /** Open the combustion engine GUI for the given player. */
     private InteractionResult openGui(BlockState state, Level level, BlockPos pos, Player player) {

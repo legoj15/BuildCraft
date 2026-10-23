@@ -29,6 +29,8 @@ import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlocks;
+import buildcraft.energy.tile.TileDynamoMJ;
+import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.factory.BCFactoryBlocks;
@@ -58,9 +60,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  * source.
  * <p>
  * The rigs are the tile families that spill: standalone fluid tiles, itemManager machines, a machine with
- * loose extra contents (the Builder's snapshot slot and tanks), an engine with a loose fuel stack (the Stirling),
- * the multiblock Heat Exchanger and the pipes' in-transit cargo. {@code /setblock ... destroy} is the control: it
- * must keep spilling.
+ * loose extra contents (the Builder's snapshot slot and tanks), engines with loose contents (the Stirling's fuel
+ * stack, the FE engine's and MJ Dynamo's upgrade slots), the multiblock Heat Exchanger and the pipes' in-transit
+ * cargo. {@code /setblock ... destroy} is the control: it must keep spilling.
  */
 public class CommandReplaceTester {
 
@@ -102,10 +104,14 @@ public class CommandReplaceTester {
     private static final BlockPos ITEM_PIPE = new BlockPos(3, 4, 3);
     private static final BlockPos FLUID_PIPE = new BlockPos(1, 4, 5);
     private static final BlockPos STIRLING = new BlockPos(3, 4, 5);
+    // The 2-block grid is full at y=2 and y=4, so the upgrade-slot engines take a third layer; y=3 and y=5 stay
+    // empty so a rig's scan box never reaches the layer beside it.
+    private static final BlockPos FE_ENGINE = new BlockPos(1, 6, 1);
+    private static final BlockPos DYNAMO = new BlockPos(3, 6, 1);
 
     private static final BlockPos[] ALL_POSITIONS = {
         TANK, FLOOD_GATE, ENGINE, DISTILLER, EXCHANGER_END, EXCHANGER_MIDDLE, EXCHANGER_START,
-        CHUTE, BUILDER, PUMP, ITEM_PIPE, FLUID_PIPE, STIRLING
+        CHUTE, BUILDER, PUMP, ITEM_PIPE, FLUID_PIPE, STIRLING, FE_ENGINE, DYNAMO
     };
 
     // ---------- Tests ----------
@@ -339,6 +345,17 @@ public class CommandReplaceTester {
         helper.setBlock(STIRLING, BCEnergyBlocks.ENGINE_STONE.get());
         tile(helper, STIRLING, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 5));
         rigs.add(new Rig("stirling engine", STIRLING, Items.COAL));
+
+        // The FE engine and the MJ Dynamo keep gear upgrades in a raw ItemHandlerSimple, outside any itemManager.
+        helper.setBlock(FE_ENGINE, BCEnergyBlocks.ENGINE_FE.get());
+        TileEngineFE feEngine = tile(helper, FE_ENGINE, TileEngineFE.class);
+        feEngine.upgrades.setStackInSlot(0, new ItemStack(BCCoreItems.GEAR_IRON.get()));
+        feEngine.upgrades.setStackInSlot(2, new ItemStack(BCCoreItems.GEAR_GOLD.get()));
+        rigs.add(new Rig("FE engine", FE_ENGINE, BCCoreItems.GEAR_IRON.get(), BCCoreItems.GEAR_GOLD.get()));
+
+        helper.setBlock(DYNAMO, BCEnergyBlocks.DYNAMO_MJ.get());
+        tile(helper, DYNAMO, TileDynamoMJ.class).upgrades.setStackInSlot(1, new ItemStack(BCCoreItems.GEAR_GOLD.get()));
+        rigs.add(new Rig("MJ dynamo", DYNAMO, BCCoreItems.GEAR_GOLD.get()));
 
         return rigs;
     }

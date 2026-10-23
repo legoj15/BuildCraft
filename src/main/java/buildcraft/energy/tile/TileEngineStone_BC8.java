@@ -174,12 +174,9 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         super(BCEnergyBlockEntities.ENGINE_STONE.get(), pos, state);
     }
 
-    // --- Removal drops (every removal with side effects: player break, explosion, piston, /setblock ... destroy) ---
-    // Engine tiles extend TileEngineBase_BC8 (the synced base, not TileBC_Neptune), so this carries its own hook,
-    // like TileEngineIron_BC8. The fuel slot is a loose ItemStack outside any ItemHandlerManager. A player break
-    // reaches this hook too (playerWillDestroy is followed by the removal), so there is no separate player-break
-    // drop; the slot empties as it spills, which keeps a second call from dropping the fuel again. A command
-    // REPLACE wipes the same stack (clearContent below).
+    // --- Removal drops (the hook is TileEngineBase_BC8's; this is just what this engine holds) ---
+    // The fuel slot is a loose ItemStack outside any ItemHandlerManager. It empties as it spills, which keeps a
+    // second call from dropping the fuel again. A command REPLACE wipes the same stack (clearContent below).
 
     @Override
     public void dropContentsOnRemoval(Level level, BlockPos pos) {
@@ -197,16 +194,6 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     public void clearContent() {
         fuelStack = ItemStack.EMPTY;
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // --- Fuel slot accessors (for container data sync) ---
 

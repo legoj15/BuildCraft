@@ -78,6 +78,8 @@ Follow-ups left by the 2026-10-22 pre-release sweep; none is a known common play
 - `SchematicBlockDefault.setPlaceBlock` takes `findFirst` over a `HashSet` of rules, so two rules that both set a place block resolve in JVM order.
 - Pump flood fill reads up to `pumpMaxDistance` out, loading (and generating) unloaded chunks on the server thread at each rebuild. Decide: a loaded-chunk guard plus wake-on-load, or accept that pools in unloaded chunks are not pumped.
 - Game tests: `power_display_survives_client_resync` (26.3) flaked once on what reads like a fixed-tick assert.
+- `TileDistiller_BC8`, `TileFloodGate`, `TileHeatExchange`, `TileTank` each carry their own `>=1.21.10` `preRemoveSideEffects` hook, a `dropsHandled` flag and a `playerWillDestroy` drop; hoist the hook to `AbstractBCSyncedBlockEntity` the way engines now share theirs on `TileEngineBase_BC8`. `TileEngineFE` and `TileDynamoMJ` duplicate `UPGRADE_VALUES`, the upgrade handler and `getMjPerTick`.
+- Latent, from the 2026-10-23 review: `JobClaim.claim` overwrites a held job without releasing it (a stateful claimer would strand a station); `GlobalSavedDataSnapshots` lookups racing the scan thread can briefly list a key whose file was just re-keyed away; the re-key has no attempt cap if load-time migration ever stops being idempotent.
 
 ## In-client smoke 2026-09-26
 

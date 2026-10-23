@@ -6,10 +6,15 @@
 package buildcraft;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 //? if >=1.21.10 {
@@ -17,6 +22,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
 
+import buildcraft.api.items.FluidItemDrops;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.core.BCCoreBlocks;
@@ -30,7 +36,11 @@ import buildcraft.factory.tile.TileFloodGate;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.GameTestUtil;
+import buildcraft.energy.tile.TileDynamoMJ;
+import buildcraft.energy.tile.TileEngineFE;
+import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.tile.TileFilteredBuffer;
@@ -50,7 +60,10 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  *       template/filter items are <em>not</em> duplicated on break.</li>
  *   <li><b>Tank</b> — fluid-only contents that drop as fragile fluid-shard items.</li>
  *   <li><b>Stirling engine</b> — loose ItemStack fuel slot held outside ItemHandlerManager,
- *       reached via the {@code dropStack} helper.</li>
+ *       reached via the {@code dropStack} helper. The two Stirling tests also break the FE engine (raw
+ *       upgrade slots), the combustion engine (fluid tanks) and the MJ Dynamo (raw upgrade slots) beside it and
+ *       require every one's contents to arrive <em>exactly once</em>: the engine blocks have no player-break drop
+ *       of their own, a player break reaches the shared engine removal hook like an explosion does.</li>
  *   <li><b>Filtered buffer</b> — itemManager with a PHANTOM filter inventory; the filter
  *       template must <em>not</em> drop alongside the real stored items.</li>
  *   <li><b>Path marker</b> — hand-breakable (Material.CIRCUITS in 1.12.2); empty-hand
@@ -363,47 +376,131 @@ public class BlockDropsTester {
     }
 
     // ---------- Stirling engine (raw fuel slot) ----------
+    // Both tests go through breakEnginesAndCheck, which also breaks the other engines that hold contents.
+
+    /** Ticks the cell gets to become entity-ticking. A drop popped into a chunk that does not tick yet is invisible
+     *  to the scans below, and the cell straddles a chunk border about as often as not. */
+    private static final int ENGINE_READY_TICKS = 60;
+    /** Ticks between the breaks and the assertions. */
+    private static final int ENGINE_DROP_WAIT_TICKS = 10;
 
     public static void testStirlingEngineHandBreakDropsFuel(GameTestHelper helper) {
-        BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
-
-        //? if >=1.21.10 {
-        TileEngineStone_BC8 engine = helper.getBlockEntity(pos, TileEngineStone_BC8.class);
-        //?} else {
-        /*TileEngineStone_BC8 engine = helper.getBlockEntity(pos);*/
-        //?}
-        engine.setFuelStack(new ItemStack(Items.COAL, 17));
-
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, ItemStack.EMPTY);
-        helper.assertBlockPresent(Blocks.AIR, pos);
-
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.COAL, pos, 2.0);
-            helper.assertItemEntityNotPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+        breakEnginesAndCheck(helper, ItemStack.EMPTY);
     }
 
     public static void testStirlingEnginePickaxeDropsFuelAndSelf(GameTestHelper helper) {
+        breakEnginesAndCheck(helper, new ItemStack(Items.WOODEN_PICKAXE));
+    }
+
+    /** Breaks the Stirling (fuel slot) and the {@link #CONTENT_ENGINES} as a survival player holding {@code tool}.
+     *  The Stirling drops its fuel either way and its own block only when the tool can harvest it; every other
+     *  engine's contents must arrive exactly once. */
+    private static void breakEnginesAndCheck(GameTestHelper helper, ItemStack tool) {
         BlockPos pos = new BlockPos(1, 2, 1);
-        helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntilThen(helper, ENGINE_READY_TICKS, () -> EntityArenaUtil.isCellEntityTicking(helper),
+                () -> {
+                    helper.setBlock(pos, BCEnergyBlocks.ENGINE_STONE.get());
+                    tile(helper, pos, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 17));
+                    placeContentEngines(helper);
 
-        //? if >=1.21.10 {
-        TileEngineStone_BC8 engine = helper.getBlockEntity(pos, TileEngineStone_BC8.class);
-        //?} else {
-        /*TileEngineStone_BC8 engine = helper.getBlockEntity(pos);*/
-        //?}
-        engine.setFuelStack(new ItemStack(Items.COAL, 17));
+                    GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
+                    helper.assertBlockPresent(Blocks.AIR, pos);
+                    breakContentEngines(helper, tool);
+                },
+                ENGINE_DROP_WAIT_TICKS,
+                () -> {
+                    helper.assertItemEntityPresent(Items.COAL, pos, 2.0);
+                    if (tool.isEmpty()) {
+                        helper.assertItemEntityNotPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
+                    } else {
+                        helper.assertItemEntityPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
+                    }
+                    assertContentEnginesDroppedOnce(helper);
+                    helper.succeed();
+                },
+                "the engine cell never became entity-ticking",
+                () -> discardEngineDrops(helper));
+    }
 
-        GameTestUtil.breakAsSurvivalPlayer(helper, pos, new ItemStack(Items.WOODEN_PICKAXE));
-        helper.assertBlockPresent(Blocks.AIR, pos);
+    // The other engines that hold contents. They share the Stirling's cell, three blocks apart (the cell is 6 wide
+    // in x and 7 deep in z): a popped item drifts up to about a block over the 10-tick wait, so two blocks would let
+    // one engine's gear land in the next engine's radius-1 box and be counted there.
+    private static final BlockPos FE_ENGINE_POS = new BlockPos(4, 2, 1);
+    private static final BlockPos COMBUSTION_ENGINE_POS = new BlockPos(1, 2, 4);
+    private static final BlockPos DYNAMO_POS = new BlockPos(4, 2, 4);
+    private static final BlockPos[] CONTENT_ENGINES = { FE_ENGINE_POS, COMBUSTION_ENGINE_POS, DYNAMO_POS };
 
-        helper.runAfterDelay(10, () -> {
-            helper.assertItemEntityPresent(Items.COAL, pos, 2.0);
-            helper.assertItemEntityPresent(BCEnergyBlocks.ENGINE_STONE.get().asItem(), pos, 2.0);
-            helper.succeed();
-        });
+    private static FluidStack water() {
+        return new FluidStack(Fluids.WATER, 1000);
+    }
+
+    /** An FE engine and an MJ Dynamo with gear upgrades, and a combustion engine with water in two tanks. */
+    private static void placeContentEngines(GameTestHelper helper) {
+        helper.setBlock(FE_ENGINE_POS, BCEnergyBlocks.ENGINE_FE.get());
+        TileEngineFE fe = tile(helper, FE_ENGINE_POS, TileEngineFE.class);
+        fe.upgrades.setStackInSlot(0, new ItemStack(BCCoreItems.GEAR_IRON.get()));
+        fe.upgrades.setStackInSlot(3, new ItemStack(BCCoreItems.GEAR_GOLD.get()));
+
+        helper.setBlock(COMBUSTION_ENGINE_POS, BCEnergyBlocks.ENGINE_IRON.get());
+        TileEngineIron_BC8 combustion = tile(helper, COMBUSTION_ENGINE_POS, TileEngineIron_BC8.class);
+        combustion.tankFuel.setFluidStack(0, water());
+        combustion.tankCoolant.setFluidStack(0, water());
+
+        helper.setBlock(DYNAMO_POS, BCEnergyBlocks.DYNAMO_MJ.get());
+        tile(helper, DYNAMO_POS, TileDynamoMJ.class).upgrades.setStackInSlot(1, new ItemStack(BCCoreItems.GEAR_IRON.get()));
+    }
+
+    private static void breakContentEngines(GameTestHelper helper, ItemStack tool) {
+        for (BlockPos pos : CONTENT_ENGINES) {
+            GameTestUtil.breakAsSurvivalPlayer(helper, pos, tool.copy());
+            helper.assertBlockPresent(Blocks.AIR, pos);
+        }
+    }
+
+    /** Every engine's contents arrived once, not zero times (a hook the break never reached) and not twice (a
+     *  player-break drop on top of the removal hook). Totals, not entity counts: identical stacks may merge. */
+    private static void assertContentEnginesDroppedOnce(GameTestHelper helper) {
+        assertDroppedTotal(helper, FE_ENGINE_POS, BCCoreItems.GEAR_IRON.get(), 1);
+        assertDroppedTotal(helper, FE_ENGINE_POS, BCCoreItems.GEAR_GOLD.get(), 1);
+        assertDroppedTotal(helper, DYNAMO_POS, BCCoreItems.GEAR_IRON.get(), 1);
+
+        // The combustion engine spills the shards one drop of its two tanks yields.
+        NonNullList<ItemStack> oneSpill = NonNullList.create();
+        FluidItemDrops.addFluidDrops(oneSpill, water(), water());
+        int expectedShards = oneSpill.stream().mapToInt(ItemStack::getCount).sum();
+        if (expectedShards <= 0) {
+            throw new IllegalStateException("two tanks of water should yield fluid shards, so the shard count "
+                    + "below would pass vacuously");
+        }
+        assertDroppedTotal(helper, COMBUSTION_ENGINE_POS, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), expectedShards);
+    }
+
+    private static void assertDroppedTotal(GameTestHelper helper, BlockPos pos, Item item, int expected) {
+        int total = EntityArenaUtil.droppedItems(helper, pos, 1.0).stream()
+                .filter(e -> e.getItem().is(item))
+                .mapToInt(e -> e.getItem().getCount())
+                .sum();
+        if (total != expected) {
+            throw new IllegalStateException("breaking the engine at " + pos + " should drop exactly " + expected
+                    + " of " + item + " but dropped " + total);
+        }
+    }
+
+    /** Pass-time cleanup sweeps only about a block, so the engines' drops are discarded by hand. The sweep is the
+     *  test's own cell, never wider: the neighbouring arenas run these same tests at the same time, and a wider
+     *  sweep discards the drops they are about to assert on. */
+    private static void discardEngineDrops(GameTestHelper helper) {
+        helper.getLevel().getEntitiesOfClass(ItemEntity.class, EntityArenaUtil.cellBounds(helper))
+                .forEach(ItemEntity::discard);
+    }
+
+    private static <T extends BlockEntity> T tile(GameTestHelper helper, BlockPos rel, Class<T> type) {
+        BlockEntity be = helper.getLevel().getBlockEntity(helper.absolutePos(rel));
+        if (!type.isInstance(be)) {
+            throw new IllegalStateException("expected a " + type.getSimpleName() + " at " + rel + ", found " + be);
+        }
+        return type.cast(be);
     }
 
     // ---------- Filtered Buffer: PHANTOM filter must NOT drop ----------

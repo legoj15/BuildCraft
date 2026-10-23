@@ -123,16 +123,4 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         }
         return InteractionResult.SUCCESS;
     }
-
-    // The fuel slot (a loose ItemStack, not held by ItemHandlerManager) spills on every removal, whatever tool or
-    // cause: TileEngineStone_BC8#preRemoveSideEffects on >=1.21.10, this onRemove catch-all before that.
-    //? if <1.21.10 {
-    /*@Override
-    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileEngineStone_BC8 tile) {
-            tile.dropContentsOnRemoval(level, pos);
-        }
-        super.onRemove(state, level, pos, newState, movedByPiston);
-    }*/
-    //?}
 }

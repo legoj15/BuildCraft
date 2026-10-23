@@ -15,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
@@ -36,6 +37,7 @@ import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.lib.misc.BlockDropsUtil;
 
 @SuppressWarnings("this-escape")
 public class TileEngineFE extends TileEngineBase_BC8 {
@@ -74,6 +76,27 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     public TileEngineFE(BlockPos pos, BlockState state) {
         super(BCEnergyBlockEntities.ENGINE_FE.get(), pos, state);
+    }
+
+    // --- Removal drops (the hook is TileEngineBase_BC8's; this is just what this engine holds) ---
+    // The upgrade slots are a raw ItemHandlerSimple outside any ItemHandlerManager. They empty as they spill,
+    // which keeps a second call from dropping the gears again. A command REPLACE wipes the same slots
+    // (clearContent below).
+
+    @Override
+    public void dropContentsOnRemoval(Level level, BlockPos pos) {
+        if (level.isClientSide()) {
+            return;
+        }
+        BlockDropsUtil.dropItems(level, pos, upgrades);
+        clearContent();
+    }
+
+    /** Wipes the upgrade slots {@link #dropContentsOnRemoval} would spill; see
+     *  {@code AbstractBCBlockEntity#clearContent}. */
+    @Override
+    public void clearContent() {
+        upgrades.clearStacks();
     }
 
     public int getCurrentFe() {

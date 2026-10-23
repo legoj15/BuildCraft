@@ -94,23 +94,17 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         super(BCEnergyBlockEntities.ENGINE_IRON.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
-    // Engine tiles extend TileEngineBase_BC8 (the synced base, not TileBC_Neptune), so this carries its
-    // own drop hook. Spills the fuel/coolant/residue tanks as fragile shards, mirroring
-    // BlockEngineIron_BC8#playerWillDestroy. A command REPLACE wipes the same tanks (clearContent below).
+    // --- Removal drops (the hook is TileEngineBase_BC8's; this is just what this engine holds) ---
+    // Spills the fuel/coolant/residue tanks as fragile shards, then empties them, which keeps a second call from
+    // dropping the shards again. A command REPLACE wipes the same tanks (clearContent below).
 
-    private boolean dropsHandled = false;
-
-    public void markDropsHandled() {
-        dropsHandled = true;
-    }
-
+    @Override
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
-        if (dropsHandled || level.isClientSide()) {
+        if (level.isClientSide()) {
             return;
         }
-        dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tankFuel, tankCoolant, tankResidue);
+        clearContent();
     }
 
     /** Wipes the three tanks {@link #dropContentsOnRemoval} would spill; see
@@ -121,16 +115,6 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         tankCoolant.setFluidStack(0, FluidStack.EMPTY);
         tankResidue.setFluidStack(0, FluidStack.EMPTY);
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // --- Engine overrides ---
 

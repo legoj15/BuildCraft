@@ -1,27 +1,28 @@
-# Handoff — 2026-10-22 pre-2026.2.1 todos sweep
+# Handoff — 2026-10-23 pre-2026.2.1 review follow-ups + visual checks
 
-Goal (user, 2026-10-22): before releasing 2026.2.1, re-investigate and fix everything in todos.md's Outstanding section.
+Goal (user, 2026-10-22): fix everything in todos.md's Outstanding section before releasing 2026.2.1. Session paused at the user's request (machine shutdown), mid visual checks.
 
 ## Done (on main, committed, not pushed)
-- Re-investigated every Outstanding item. Nearly all were still open; only a few sub-points were already done or obsolete.
-- 13 fix packets merged (`a24f428b8..e28dacdfd`): Builder fluid stalls; land-claim asks for Builder and Filler; 1.21.1 command-replace wipe; Distiller slot drops; guide links across page breaks; Stripes aim plus restored minecart-breaking and pipe extension (user decision); robot client interpolation on every node; robots design-debt refactor; Electronic Library re-key on load (user decision); Allowlist/Blocklist wording (user decision); Programming Table paging; JEI transfer skeleton; miner/pump/quarry fixes; Zone Planner and snapshot-store perf; game-test scheduling guard and flake fixes; shard tint fix.
-- Two more flakes fixed (`e28dacdfd`): delivery give-up and butcher tests now wait for the arena cell to entity-tick.
-- `./gradlew fullTestSuite`: green on all six nodes (second run, 2026-10-22 20:56).
-- changelog.md, todos.md, docs/todo-details.md and docs/delegation-log.md updated.
+- The 2026-10-22 review fan-out was adjudicated; all real findings were fixed with red-first tests: claim asks before Quarry frames and Mining Well/Pump tubes are placed; engine removal drops moved into the engine base (FE engine, MJ dynamo, Stirling); Stripes break-only refusal tally, safe minecart breaking, copy-on-write registry; Filler finishes beside fluid; snapshot rescan survives a bad file; guide Builder/Filler text. Commits `b8f651ec8..0409bc00e`.
+- Two arena-timing flakes fixed (`d92820619`); 26.3 ×3 and 1.21.1 green after.
+- Last full `fullTestSuite` (before the flake fix): five nodes green, 26.3 hit one of those flakes.
+- Third-party reviews: Qwen 27B + GLM-flash on the follow-ups, post-merge Qwen3.8-Flash + GLM; all adjudicated. Delegation log updated for the adjudication.
+- New smoke scenario `scripts/smoke/scenarios/release-2026-2-1.json` (generator `gen_release_2026_2_1.py`), dry run green on 26.3 (`build/smoke/20261023-153158`).
 
-## In progress
-- Third-party review fan-out `todos-2026-2-1-20261022-205101-ad8d` (8 angles over `a739c4c02..HEAD`) FINISHED; findings not yet read or adjudicated. The six glm-flash angles completed: RESULT.md under `%TEMP%\opencode-agents\todos-2026-2-1-<angle>-20261022-205101-*\`. The two shop26 angles (stripes, builder) timed out at 2700 s with partial reports: PARTIAL.md under `%TEMP%\review-agents\todos-2026-2-1-{stripes,builder}-*\`. Re-run those two on dgx if the partials are thin. The merged table: `opencode_wait_group {"group_id": "todos-2026-2-1-20261022-205101-ad8d"}`. Verify each finding, fix the real ones as follow-up commits, then run the post-merge pass (Qwen3.8-Flash + GLM-5.3).
-- No packet's final commit had a passing Haiku review: the loop ended on a fix. The fan-out above is the first review of those final commits.
+## Visual checks (user judges each item from screenshots)
+- A robots gliding: PASSED on 26.3 (user watched live). Still owed: one of 1.21.10–26.2, and 1.21.1.
+- B stripes retraction: FAILED (user confirmed): see todos.md and todo-details "Stripes sideways retraction breaks". Fix needed before release; write a game test for the L-shaped (perpendicular) retraction first.
+- C guide links across a page break (`c1..c6`), D Programming Table (`d1, d2`; no board has >24 programs so no pager in normal play), E gate plugs / LEDs / Architect preview / painted fluid pipes (`e1..e6`): shots exist in the 26.3 dry-run folder, NOT yet shown to the user. Resume by showing item C.
+- Possible bug from the dry run, not yet shown: the Architect Table's owner-ledger head is a solid magenta square when a player placed it.
 
 ## Next
-1. Adjudicate the fan-out findings (above).
-2. In-client smoke for the owed visual checks (todo-details "In-client smoke"), now including robot gliding (26.3, a 1.21.10–26.2 node, 1.21.1, docking), stripes sideways retraction, wrapped guide-link clicks, and Programming Table paging. Use the `in-client-smoke` skill.
-3. Offer the 1.21.1 NeoForge bump 21.1.262 → 21.1.264 (neutral: attachment initial-sync fix, enchanted loot events). Use the `neoforge-bump` skill.
-4. Release work is user-gated (docs/port-26.3.md V3).
-
-## Open questions
-- None blocking. Small follow-ups are in todo-details "Small cleanups" (stacks above 99 in pipes etc., Replace mode with flowing fluid, `setPlaceBlock` ordering, the pump loading unloaded chunks — a gameplay decision — and the `power_display_survives_client_resync` flake).
-- My merge resolution in `GlobalSavedDataSnapshots`: blueprint keys heal only on directory scans, not lookups. A healed file can briefly appear twice in the list until the next rescan. The snapshots-library reviewer is checking this.
+1. Show items C, D, E from `build/smoke/20261023-153158/26.3/` one at a time.
+2. Fix the stripes retraction bug (test first), re-run item B.
+3. Run the scenario on 1.21.1 and one of 1.21.10–26.2 for robot gliding (user watches) and same-shot comparison.
+4. Flake-fix review follow-ups (not started; an agent was stopped, its partial edit to `GameTestPollBudgetTester` reverted and saved at the session scratchpad as `pollbudget-partial.patch`): widen the poll-budget guard past robot tests (BlockWaterloggingTester's doc claims coverage it doesn't have); convert `assertWaterloggedBetweenSources` to the tickUntil+cleanup shape so a failing marker test doesn't leak its marker; name the stalled lava side on timeout; fix the "(about 90 ms)" and inconsistent straddle-rate comments.
+5. `drops_stirling_hand` failed once (3 of 4 fragile_fluid_container) under a one-thread run; watch it.
+6. Offer the 1.21.1 NeoForge bump 21.1.262 → 21.1.264 (neutral). Use the `neoforge-bump` skill.
+7. Final `fullTestSuite`, then release work is user-gated.
 
 ## Uncommitted changes
 - None.

@@ -4,6 +4,7 @@ Last audited: 2026-10-22
 
 ## 🔧 Outstanding work (version 2026.2.1)
 
+- Stripes pipe retracting around a corner vanishes and drops pipes on the floor — [details](docs/todo-details.md#stripes-sideways-retraction-breaks-2026-10-23)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 

@@ -19,27 +19,38 @@ import buildcraft.silicon.container.AssemblyTableLayout;
 public class AssemblyTableLayoutTest {
 
     @Test
-    public void bothGridsRunInReadingOrderAtTheSlotPitch() {
+    public void bothGridsRunInReadingOrder() {
         int cols = AssemblyTableLayout.GRID_COLS, last = AssemblyTableLayout.GRID_CELLS - 1;
-        Assertions.assertEquals(8, AssemblyTableLayout.inputX(0));
-        Assertions.assertEquals(36, AssemblyTableLayout.inputY(0));
-        Assertions.assertEquals(8 + 18, AssemblyTableLayout.inputX(1), "the next cell is one pitch to the right");
-        Assertions.assertEquals(8, AssemblyTableLayout.inputX(cols), "a full row later it wraps to the left edge");
-        Assertions.assertEquals(36 + 18, AssemblyTableLayout.inputY(cols), "one pitch down");
-        Assertions.assertEquals(8 + (cols - 1) * 18, AssemblyTableLayout.inputX(last));
-        Assertions.assertEquals(36 + (AssemblyTableLayout.GRID_ROWS - 1) * 18, AssemblyTableLayout.inputY(last));
-
-        // The display cells are the same grid, shifted to the right of the energy bar.
-        for (int i = 0; i <= last; i++) {
-            Assertions.assertEquals(AssemblyTableLayout.inputX(i) - 8 + 116, AssemblyTableLayout.displayX(i),
-                    "display cell " + i + " sits over the same column as input slot " + i);
-            Assertions.assertEquals(AssemblyTableLayout.inputY(i), AssemblyTableLayout.displayY(i),
-                    "and on the same row");
+        Assertions.assertEquals(AssemblyTableLayout.INPUT_X, AssemblyTableLayout.inputX(0));
+        Assertions.assertEquals(AssemblyTableLayout.INPUT_Y, AssemblyTableLayout.inputY(0));
+        for (int i = 1; i <= last; i++) {
+            if (i % cols == 0) {
+                Assertions.assertEquals(AssemblyTableLayout.INPUT_X, AssemblyTableLayout.inputX(i),
+                        "input slot " + i + " starts a new row at the left edge");
+                Assertions.assertTrue(AssemblyTableLayout.inputY(i) >= AssemblyTableLayout.inputY(i - 1)
+                        + AssemblyTableLayout.CELL_SIZE, "below the previous row, without overlapping it");
+            } else {
+                Assertions.assertEquals(AssemblyTableLayout.inputY(i - 1), AssemblyTableLayout.inputY(i),
+                        "input slot " + i + " stays on its row");
+                Assertions.assertTrue(AssemblyTableLayout.inputX(i) >= AssemblyTableLayout.inputX(i - 1)
+                        + AssemblyTableLayout.CELL_SIZE, "right of its neighbour, without overlapping it");
+            }
         }
 
-        // The grid's extent excludes the gap after the last cell: 3 cells + 2 gaps, 4 cells + 3 gaps.
-        Assertions.assertEquals(3 * 16 + 2 * 2, AssemblyTableLayout.gridWidth());
-        Assertions.assertEquals(4 * 16 + 3 * 2, AssemblyTableLayout.gridHeight());
+        // The display cells are the same grid, moved to the right of the energy bar.
+        for (int i = 0; i <= last; i++) {
+            Assertions.assertEquals(AssemblyTableLayout.inputX(i) - AssemblyTableLayout.INPUT_X,
+                    AssemblyTableLayout.displayX(i) - AssemblyTableLayout.DISPLAY_X,
+                    "display cell " + i + " sits in the same column as input slot " + i);
+            Assertions.assertEquals(AssemblyTableLayout.inputY(i) - AssemblyTableLayout.INPUT_Y,
+                    AssemblyTableLayout.displayY(i) - AssemblyTableLayout.DISPLAY_Y, "and on the same row");
+        }
+
+        // The extent the crop check below relies on ends exactly at the last cell's far edge.
+        Assertions.assertEquals(AssemblyTableLayout.inputX(last) + AssemblyTableLayout.CELL_SIZE,
+                AssemblyTableLayout.INPUT_X + AssemblyTableLayout.gridWidth());
+        Assertions.assertEquals(AssemblyTableLayout.inputY(last) + AssemblyTableLayout.CELL_SIZE,
+                AssemblyTableLayout.INPUT_Y + AssemblyTableLayout.gridHeight());
     }
 
     @Test

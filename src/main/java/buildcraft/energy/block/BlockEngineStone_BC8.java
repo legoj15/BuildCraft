@@ -124,14 +124,15 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
         return InteractionResult.SUCCESS;
     }
 
-    /** Drops the fuel slot contents regardless of the tool used to break the block.
-     *  fuelStack is a loose ItemStack, not held by ItemHandlerManager. */
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileEngineStone_BC8 engine) {
-            buildcraft.lib.misc.BlockDropsUtil.dropStack(level, pos, engine.getFuelStack());
+    // The fuel slot (a loose ItemStack, not held by ItemHandlerManager) spills on every removal, whatever tool or
+    // cause: TileEngineStone_BC8#preRemoveSideEffects on >=1.21.10, this onRemove catch-all before that.
+    //? if <1.21.10 {
+    /*@Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileEngineStone_BC8 tile) {
+            tile.dropContentsOnRemoval(level, pos);
         }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
+        super.onRemove(state, level, pos, newState, movedByPiston);
+    }*/
+    //?}
 }

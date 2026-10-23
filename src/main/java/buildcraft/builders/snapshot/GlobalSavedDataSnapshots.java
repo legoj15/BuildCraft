@@ -365,12 +365,22 @@ public class GlobalSavedDataSnapshots {
     }
 
     /** The index's reader: {@link #listedKey} of what {@code snapshotFile} holds; a file that cannot be read right now
-     *  throws, so the index leaves it out and the next scan tries again. */
+     *  throws, so the index leaves it out and the next scan tries again. Any other failure on this one file (a
+     *  re-key that cannot serialise it, say) is logged and the file is left unlisted, like a corrupt one: it is not
+     *  tried again until it changes, and it never stops the scan from listing the rest. Scan path only: saves made
+     *  through {@link #addSnapshot} still throw to their caller. */
     @Nullable
     private Snapshot.Key readListedKey(File snapshotFile) {
         FileRead read = readSnapshotFile(snapshotFile);
         if (read.unreadable() != null) throw new UncheckedIOException(read.unreadable());
-        return listedKey(snapshotFile, read.snapshot(), healKeys);
+        try {
+            return listedKey(snapshotFile, read.snapshot(), healKeys);
+        } catch (UncheckedIOException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            LOGGER.error("Unexpected error listing the snapshot {}; leaving it out of the library", snapshotFile, e);
+            return null;
+        }
     }
 
     public void addSnapshot(Snapshot snapshot) {

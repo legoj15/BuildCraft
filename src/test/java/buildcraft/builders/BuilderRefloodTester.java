@@ -79,7 +79,8 @@ public class BuilderRefloodTester {
      *  within ~5 ticks, so any live cycle breaks the streak many times over in this window. */
     public static final int QUIET_TICKS = 40;
 
-    /** How many ticks {@link #drive} polls: the {@code max_ticks} of every {@code builder_clear_*} manifest, so the
+    /** How many ticks {@link #drive} polls: the {@code max_ticks} of every manifest whose phase windows can add up to
+     *  that long (all {@code builder_clear_*} ones and the replace-mode and waterlogged sweep ones), so the
      *  watchdog, not an exhausted poll budget, ends a test whose phase windows run long (an un-polled test would
      *  time out without saying which phase it was stuck in). Polls past the watchdog are harmless. */
     private static final int DRIVE_TICKS = 1050;

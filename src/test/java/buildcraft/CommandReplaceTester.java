@@ -30,6 +30,7 @@ import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.tile.TileEngineIron_BC8;
+import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.factory.tile.TileDistiller_BC8;
@@ -57,8 +58,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  * source.
  * <p>
  * The rigs are the tile families that spill: standalone fluid tiles, itemManager machines, a machine with
- * loose extra contents (the Builder's snapshot slot and tanks), the multiblock Heat Exchanger and the pipes'
- * in-transit cargo. {@code /setblock ... destroy} is the control: it must keep spilling.
+ * loose extra contents (the Builder's snapshot slot and tanks), an engine with a loose fuel stack (the Stirling),
+ * the multiblock Heat Exchanger and the pipes' in-transit cargo. {@code /setblock ... destroy} is the control: it
+ * must keep spilling.
  */
 public class CommandReplaceTester {
 
@@ -99,10 +101,11 @@ public class CommandReplaceTester {
     private static final BlockPos PUMP = new BlockPos(1, 4, 3);
     private static final BlockPos ITEM_PIPE = new BlockPos(3, 4, 3);
     private static final BlockPos FLUID_PIPE = new BlockPos(1, 4, 5);
+    private static final BlockPos STIRLING = new BlockPos(3, 4, 5);
 
     private static final BlockPos[] ALL_POSITIONS = {
         TANK, FLOOD_GATE, ENGINE, DISTILLER, EXCHANGER_END, EXCHANGER_MIDDLE, EXCHANGER_START,
-        CHUTE, BUILDER, PUMP, ITEM_PIPE, FLUID_PIPE
+        CHUTE, BUILDER, PUMP, ITEM_PIPE, FLUID_PIPE, STIRLING
     };
 
     // ---------- Tests ----------
@@ -332,6 +335,10 @@ public class CommandReplaceTester {
             throw new IllegalStateException("the fluid pipe rig accepted no water");
         }
         rigs.add(new Rig("fluid pipe", FLUID_PIPE, shard));
+
+        helper.setBlock(STIRLING, BCEnergyBlocks.ENGINE_STONE.get());
+        tile(helper, STIRLING, TileEngineStone_BC8.class).setFuelStack(new ItemStack(Items.COAL, 5));
+        rigs.add(new Rig("stirling engine", STIRLING, Items.COAL));
 
         return rigs;
     }

@@ -26,10 +26,12 @@ import buildcraft.lib.test.MainSourceSet;
  */
 public class ClearableTwinGuardTest {
 
-    /** Spill hook name -> the wipe hook that must be declared beside it. */
+    /** Spill hook name -> the wipe hook that must be declared beside it. The pipe holder's spill hook is
+     *  {@code dropPipeCargo} (it spills only the in-transit cargo), wiped by the same {@code clearContent}. */
     private static final Map<String, String> TWINS = Map.of(
             "dropContentsOnRemoval", "clearContent",
-            "dropExtraContentsOnRemoval", "clearExtraContents");
+            "dropExtraContentsOnRemoval", "clearExtraContents",
+            "dropPipeCargo", "clearContent");
 
     @Test
     public void everySpillOverrideDeclaresItsWipe() throws Exception {

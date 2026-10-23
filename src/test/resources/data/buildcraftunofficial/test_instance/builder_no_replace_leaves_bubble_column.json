@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_no_replace_leaves_bubble_column",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1050,
+    "setup_ticks": 0,
+    "required": true
+}

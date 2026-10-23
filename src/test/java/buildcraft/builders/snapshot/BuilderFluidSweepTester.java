@@ -22,6 +22,8 @@ import static buildcraft.builders.BuilderRefloodTester.setUpBuilder;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -82,7 +84,9 @@ public class BuilderFluidSweepTester {
      * <li>knock the snow layer out AND the floor under it, so it can never be placed again (nothing for it to stand
      *     on) but stays a placement candidate, and wait for the Builder to notice;</li>
      * <li>watch {@link #WATCH_TICKS} ticks of that stuck Builder: the sweep may run, but only about once per
-     *     {@link SnapshotBuilder#FLUID_SCAN_INTERVAL} ticks, not every tick;</li>
+     *     {@link SnapshotBuilder#FLUID_SCAN_INTERVAL} ticks, not every tick. The snow layer cannot stand, so it is
+     *     refused before the last gate and only the reused-result gate sweeps here; the last gate's own sweep is
+     *     bounded by {@link #freshGateSweepsOnceForSeveralFragilePlacements};</li>
      * <li>right after a sweep, change the fluid mode: the next sweep must follow at once, not an interval later.</li>
      * </ol>
      */
@@ -673,6 +677,88 @@ public class BuilderFluidSweepTester {
                 default -> throw new IllegalStateException("bad phase " + phase[0]);
             }
         });
+    }
+
+    /** Four fragile blocks side by side on the dry arena floor, none with fluid anywhere near. */
+    private static final int[] SNOW_ROW = { SNOW, SNOW, SNOW, SNOW };
+
+    /**
+     * A fragile placement is let through only on a sweep taken this tick ({@code passesFreshFluidGate}), but however
+     * many fragile placements queue in one tick, that is ONE sweep: the first one re-sweeps and the rest ride on its
+     * answer. Without that, every queued torch or carpet costs a whole-box sweep of its own, and a build laying
+     * hundreds of them sweeps a big box hundreds of times a tick.
+     *
+     * <p>The Builder is ticked by hand, so each pass is one Builder tick and nothing depends on when the game ticks
+     * run. A sweep result is "this tick's" only on the pass that took it; the first pass has none to reuse, so its one
+     * sweep comes from the reused-result gate, and the second round is set up so the result is a few ticks old and the
+     * sweep can only come from the last gate:
+     * <ol start="0">
+     * <li>four snow layers are all to be placed in the first pass: it must sweep once;</li>
+     * <li>passes go on until all four stand, none sweeping more than once;</li>
+     * <li>three of them are knocked out, with the last sweep a few passes old (younger than
+     *     {@link SnapshotBuilder#FLUID_SCAN_INTERVAL}, so the reused-result gate does not sweep): all three are to be
+     *     placed in the next pass, which must sweep exactly once, for the first of them.</li>
+     * </ol>
+     */
+    public static void freshGateSweepsOnceForSeveralFragilePlacements(GameTestHelper helper) {
+        TileBuilder tile = setUpBuilder(helper, SNOW_ROW, new BlockPos[0]);
+        SnapshotBuilder<?> builder = tile.getBuilder();
+        expect(builder != null, "the Builder lost its blueprint builder");
+        expect(SnapshotBuilder.FLUID_SCAN_INTERVAL > 4, "premise: a sweep result must outlive the passes this test "
+                + "takes between the rounds");
+        int[] sinceSweep = { 0 };
+
+        IntSupplier pass = () -> {
+            tile.getBattery().addPower(tile.getBattery().getCapacity() - tile.getBattery().getStored(), false);
+            int before = builder.getFluidSweepCount();
+            builder.tick();
+            int sweeps = builder.getFluidSweepCount() - before;
+            sinceSweep[0] = sweeps > 0 ? 0 : sinceSweep[0] + 1;
+            return sweeps;
+        };
+        Supplier<String> state = () -> "cells=" + describeSnowRow(helper) + ", " + describe(builder);
+
+        int first = pass.getAsInt();
+        expect(builder.leftToPlace == SNOW_ROW.length, "phase 0 (test premise): all four snow layers should be to "
+                + "place in the first pass; " + state.get());
+        expect(first == 1, "the first pass queued " + SNOW_ROW.length + " fragile placements and swept the whole box "
+                + first + " times (once expected); " + state.get());
+        for (int i = 0; i < 10 && !snowRowStands(helper, 0, SNOW_ROW.length); i++) {
+            int sweeps = pass.getAsInt();
+            expect(sweeps <= 1, "a pass swept the whole box " + sweeps + " times (at most once expected) while the "
+                    + "snow row was placed; " + state.get());
+        }
+        expect(snowRowStands(helper, 0, SNOW_ROW.length), "phase 1 (test premise): the snow row was never built; "
+                + state.get());
+        expect(sinceSweep[0] <= 3, "phase 1 (test premise): the last sweep is too old for the second round, "
+                + sinceSweep[0] + " passes; " + state.get());
+
+        for (int i = 1; i < SNOW_ROW.length; i++) {
+            helper.setBlock(cell(i), Blocks.AIR);
+        }
+        int second = pass.getAsInt();
+        expect(builder.leftToPlace == SNOW_ROW.length - 1, "phase 2 (test premise): the three knocked-out layers "
+                + "should all be to place in the next pass; " + state.get());
+        expect(second == 1, "three fragile placements queued in one pass swept the whole box " + second + " times "
+                + "(once, by the first of them, expected); " + state.get());
+        helper.succeed();
+    }
+
+    private static boolean snowRowStands(GameTestHelper helper, int from, int to) {
+        for (int i = from; i < to; i++) {
+            if (!helper.getBlockState(cell(i)).is(Blocks.SNOW)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String describeSnowRow(GameTestHelper helper) {
+        BlockState[] cells = new BlockState[SNOW_ROW.length];
+        for (int i = 0; i < cells.length; i++) {
+            cells[i] = helper.getBlockState(cell(i));
+        }
+        return Arrays.toString(cells);
     }
 
     /** The edge length (blocks) of the tall air column {@link #sweepAllocatesNothingPerCell} sweeps. */

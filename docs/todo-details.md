@@ -74,7 +74,7 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 Follow-ups left by the 2026-10-22 pre-release sweep; none is a known common player-facing bug.
 - Stacks above 99 of an item whose stack limit a mod raised are lost when saved by plain `ItemStack.CODEC` (counts are capped at 99): `TravellingItem` (pipe cargo), `TileAssemblyTable` instruction output, `TileBuilder` invSnapshot, `ListHandler`, `StackRequest`. `ItemHandlerSimple` and `TileEngineStone_BC8` already store the count beside the stack; share one lib helper.
-- Builder, Replace mode: flowing fluid anywhere in the box still holds every fragile placement, even once it has stopped spreading (a box edge in a lake). Telling steady flow apart needs a census over sweeps or a `getNewLiquid` simulation. No-Replace has no fragile-block defer, so a fragile block beside fluid may be placed, washed away (dropping) and placed again.
+- Builder, No-Replace mode: no fragile-block defer (only Replace and Clear have one), so a fragile block placed just ahead of flowing fluid is washed away once, dropping its item; the cell then holds fluid, which No-Replace counts as done, so it is not placed again.
 - `SchematicBlockDefault.setPlaceBlock` takes `findFirst` over a `HashSet` of rules, so two rules that both set a place block resolve in JVM order.
 - Pump flood fill reads up to `pumpMaxDistance` out, loading (and generating) unloaded chunks on the server thread at each rebuild. Decide: a loaded-chunk guard plus wake-on-load, or accept that pools in unloaded chunks are not pumped.
 - Game tests: `power_display_survives_client_resync` (26.3) flaked once on what reads like a fixed-tick assert.

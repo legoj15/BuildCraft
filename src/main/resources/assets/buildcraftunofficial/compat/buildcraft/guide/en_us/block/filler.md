@@ -5,7 +5,7 @@ Sometimes you don't want a structure. A flat floor, a sphere, wide stairs, or a 
 The Filler builds geometric patterns (boxes, spheres, walls, etc.) inside a marker box and can be configured to invert the pattern or excavate the interior before filling.
 </no_lore>
 <chapter name="Information"/>
-Place the Filler at the corner of a <link inline="buildcraftunofficial:block/marker_volume"/>, drag and drop a pattern from the left of the GUI into the Filler's pattern slot and supply it with power and materials. The Filler optionally takes a few parameters (corner offsets, sizes, percentages), and places blocks from its resource inventory into the matching positions inside the marker volume.
+Place the Filler at the corner of a <link inline="buildcraftunofficial:block/marker_volume"/>, drag and drop a pattern from the left of the GUI into the Filler's pattern slot and supply it with power and materials. The Filler optionally takes a few parameters (corner offsets, sizes, percentages), and places blocks from its resource inventory into the matching positions inside the marker volume. Fluids already inside the volume are left alone, and the Filler still finishes around them. If a protection or claim mod will not let the Filler place a block in a spot, it skips that spot, carries on with the rest, and asks again about ten seconds later.
 
 The <bold>Excavate</bold> toggle clears the interior of the shape before filling. Excavated blocks will be ejected from the filler (assuming they are mineable by an Iron-tier pick).
 The <bold>Invert</bold> toggle augments the pattern by affecting the blocks that <italic>are not</italic> a part of the pattern's shape.

@@ -61,14 +61,16 @@ public class BuilderClaimTester {
                 "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
     }
 
-    /** A Filler stand-in: just what a {@link TemplateBuilder} reads off its tile, unowned (asks as [BuildCraft]). */
-    private static final class TestFiller implements ITileForTemplateBuilder {
+    /** A Filler stand-in: just what a {@link TemplateBuilder} reads off its tile, unowned (asks as [BuildCraft]).
+     *  Excavation is off unless a test turns it on (the real Filler has it on). */
+    static final class TestFiller implements ITileForTemplateBuilder {
         final ServerLevel level;
         final BlockPos pos;
         final MjBattery battery = new MjBattery(100_000 * MjAPI.MJ);
         final ItemHandlerSimple inv = new ItemHandlerSimple(1);
         final Template.BuildingInfo info;
         final TemplateBuilder builder = new TemplateBuilder(this);
+        boolean excavate;
 
         TestFiller(ServerLevel level, BlockPos pos, Template.BuildingInfo info) {
             this.level = level;
@@ -93,7 +95,7 @@ public class BuilderClaimTester {
 
         @Override
         public boolean canExcavate() {
-            return false;
+            return excavate;
         }
 
         @Override
@@ -116,12 +118,15 @@ public class BuilderClaimTester {
             return inv;
         }
 
-        /** Many builder passes inside one game tick, so no refusal window can end while they run. */
-        void run(int passes) {
+        /** Many builder passes inside one game tick, so no refusal window can end while they run. Whether the last
+         *  pass found the build finished (the answer the real Filler marks itself finished on). */
+        boolean run(int passes) {
+            boolean done = false;
             for (int i = 0; i < passes; i++) {
                 battery.addPower(battery.getCapacity() - battery.getStored(), false);
-                builder.tick();
+                done = builder.tick();
             }
+            return done;
         }
     }
 

@@ -583,12 +583,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     /**
      * Should the fluid in this schematic-air cell be left alone?
      *
-     * <p>REPLACE and NO_REPLACE never remove fluid (the break queue refuses every fluid cell outside CLEAR), so a
-     * cell holding nothing but fluid is as clear as those modes ever make it, and counts as done; otherwise it stayed
-     * "to break" for ever and the build never finished. A bubble column counts as fluid too
-     * ({@link #isFluidOnly}): breaking it only leaves water that the floor turns back into one. A real block holding
-     * fluid (a waterlogged fence, seagrass, kelp) is not covered: it is still a block the schematic does not want,
-     * so it is broken (those modes' break queue accepts it) and the fluid it leaves then counts as done.
+     * <p>REPLACE and NO_REPLACE: {@link SnapshotBuilder#isToleratedFluidAt}, shared with the Filler. A bubble column
+     * counts as fluid there ({@link #isFluidOnly}): breaking it only leaves the water source it stands in, which
+     * those modes never remove, and about a second later the soul sand or magma below turns that back into a column
+     * to break again.
      *
      * <p>CLEAR: is the fluid in this cell refilled at once, whenever the Builder mops it, from fluid it can never
      * remove? A tolerated wet block (or fluid just outside the box) is a permanent source, so vanilla keeps spreading
@@ -600,17 +598,22 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * Requiring strictly more sideways and allowing feeding only from above means tolerated flowing cells can never
      * vouch for each other in a circle; every chain ends at fluid that really is permanent. Fluid fed by a source the
      * Builder will still mop is not tolerated, so it is mopped as before (and drains once its source is gone). A
-     * bubble column counts here as the water source it stands in: the infinite-source rule re-makes that water, and
-     * the soul sand or magma below turns it straight back into a column, so mopping it loops just as for still water.
+     * bubble column counts here as the water source it stands in: it is tolerated exactly when that water would be,
+     * when the infinite-source rule re-makes it and the soul sand or magma below then turns it back into a column
+     * about a second later, so mopping it loops just as for still water. Any other column is mopped: breaking it
+     * leaves a plain source, which the next mop removes for good (a fluid block costs one MJ to break) long before the
+     * floor can make a column of it again.
      */
     @Override
     protected boolean isToleratedFluidAt(BlockPos blockPos) {
         if (getBuildingInfo() == null) return false;
+        // The modes that never remove fluid: the rule every builder shares.
+        if (super.isToleratedFluidAt(blockPos)) return true;
+        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return false;
         BlockState state = tile.getWorldBC().getBlockState(blockPos);
         FluidState fluid = state.getFluidState();
         if (fluid.isEmpty()) return false;
         if (!isFluidOnly(state)) return false;
-        if (tile.getFluidMode() != EnumFluidHandlingMode.CLEAR) return true;
         Fluid type = fluid.getType();
         if (fluid.isSource()) return isResourcedByUnmoppableFluid(blockPos, type);
         BlockPos above = blockPos.above();

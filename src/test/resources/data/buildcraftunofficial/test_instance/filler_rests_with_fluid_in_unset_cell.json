@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:filler_rests_with_fluid_in_unset_cell",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 200,
+    "setup_ticks": 0,
+    "required": true
+}

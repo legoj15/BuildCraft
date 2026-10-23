@@ -125,8 +125,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
 
     /**
      * Current fluid-handling mode from the tile. Concrete subclasses may override if they
-     * want different semantics (e.g. {@link TemplateBuilder} always returns NO_REPLACE since
-     * template placement doesn't touch fluids).
+     * want different semantics. The Filler's tile keeps the interface default, NO_REPLACE,
+     * since template placement doesn't touch fluids.
      */
     protected EnumFluidHandlingMode getFluidMode() {
         return tile.getFluidMode();
@@ -170,11 +170,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     /**
      * Is the fluid in schematic-air cell {@code blockPos} fluid the Builder should leave alone: the fluid mode never
      * removes fluid, or mopping it is futile (vanilla refills it at once from fluid the Builder can never remove)?
-     * Such a cell counts as {@code CORRECT} in {@link #check} and as tolerated in {@link #scanAreaFluid()}. Default:
-     * false (the cell is to break). Overridden in {@link BlueprintBuilder}.
+     * Such a cell counts as {@code CORRECT} in {@link #check} and as tolerated in {@link #scanAreaFluid()}.
+     *
+     * <p>This is the first half, which every builder shares: outside CLEAR nothing removes fluid (the break queue
+     * refuses every fluid-only cell, {@link #shouldBreakQueueAcceptFluid}), so a cell holding nothing but fluid
+     * ({@link #isFluidOnly}) is as clear as the mode ever makes it. Without it such a cell stayed "to break" for
+     * ever and the build never finished. A real block holding fluid (a waterlogged fence, seagrass, kelp) is not
+     * covered: it is still a block to break, and the fluid it leaves then counts. The mopping half belongs to
+     * {@link BlueprintBuilder}, the only builder whose mode can be CLEAR.
      */
     protected boolean isToleratedFluidAt(BlockPos blockPos) {
-        return false;
+        if (getFluidMode() == EnumFluidHandlingMode.CLEAR) return false;
+        BlockState state = tile.getWorldBC().getBlockState(blockPos);
+        return !state.getFluidState().isEmpty() && isFluidOnly(state);
     }
 
     /** What the fluid in the build area means to the place-task gate; see {@link #scanAreaFluid()}. */

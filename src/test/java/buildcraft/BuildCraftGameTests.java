@@ -529,6 +529,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_clear_reflood_distant_fragile_builds", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratedWaterDoesNotBlockDistantFragileBlocks);
         reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_beside_water_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileBlockBesideToleratedWater);
         reg.accept("buildcraftunofficial:builder_clear_flanked_no_floor_dries", () -> buildcraft.builders.BuilderRefloodTester::clearModeDriesFlankedBlockWithNoFloor);
+        reg.accept("buildcraftunofficial:builder_clear_bubble_column_is_mopped", () -> buildcraft.builders.BuilderRefloodTester::clearModeMopsBubbleColumn);
+        reg.accept("buildcraftunofficial:builder_clear_bubble_column_resourced_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesBubbleColumnResourcedByOutsideWater);
+        reg.accept("buildcraftunofficial:builder_no_replace_leaves_bubble_column", () -> buildcraft.builders.BuilderRefloodTester::noReplaceLeavesBubbleColumn);
         reg.accept("buildcraftunofficial:builder_clear_reflood_fragile_resourced_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileCellResourcedByOutsideWater);
         reg.accept("buildcraftunofficial:builder_clear_fragile_outside_lava_accepted", () -> buildcraft.builders.BuilderRefloodTester::clearModeAcceptsFragileCellBesideOutsideLava);
         reg.accept("buildcraftunofficial:builder_clear_outside_lava_into_air_settles", () -> buildcraft.builders.BuilderRefloodTester::clearModeToleratesOutsideLavaFlowingIntoAirCell);
@@ -536,12 +539,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_fluid_sweep_bounded_with_tolerated_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::toleratedWaterDoesNotMakeTheBuilderSweepEveryTick);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_allocates_nothing_per_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::sweepAllocatesNothingPerCell);
         reg.accept("buildcraftunofficial:builder_fluid_sweep_no_stale_fragile_placement", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::fragilePlacementIsNotLetThroughOnAStaleSweep);
+        reg.accept("buildcraftunofficial:builder_fluid_sweep_fresh_gate_once_per_tick", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::freshGateSweepsOnceForSeveralFragilePlacements);
         reg.accept("buildcraftunofficial:builder_replace_settled_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledWaterDoesNotHoldBackADistantFragileBlock);
         reg.accept("buildcraftunofficial:builder_replace_settled_flowing_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledFlowingWaterDoesNotHoldBackADistantFragileBlock);
         reg.accept("buildcraftunofficial:builder_replace_fragile_in_settled_water_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceRestsWithFragileCellsInSettledWater);
         reg.accept("buildcraftunofficial:builder_no_replace_fluid_in_solid_cell_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceRestsWithFluidInASolidCell);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceBreaksWaterloggedBlockInAirCell);
         reg.accept("buildcraftunofficial:builder_no_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceBreaksWaterloggedBlockInAirCell);
+        reg.accept("buildcraftunofficial:filler_rests_with_fluid_in_unset_cell", () -> buildcraft.builders.snapshot.FillerFluidTester::fillerRestsWithFluidInAnUnsetCell);
 
         // Builder block-survival gating (canSurvive guard in SchematicBlockDefault.build()).
         reg.accept("buildcraftunofficial:builder_support_torch_on_floor", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTorchOnFloorPlaces);

@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -637,6 +638,89 @@ public class BuilderRefloodTester {
                 QUIET_TICKS,
                 () -> "a flanked waterlogged slab with no floor is never re-flooded, so CLEAR must dry it (slab="
                         + helper.getBlockState(cell(0)) + ", quiet=" + builderQuiet(tile.getBuilder()) + ")");
+    }
+
+    /** The soul sand cell under the first column cell: the arena floor there, swapped for a bubble column's base. */
+    private static final BlockPos SOUL_SAND = new BlockPos(2, 1, 2);
+
+    /**
+     * A bubble column over soul sand in a schematic-air cell, with no water around it. Breaking a column leaves the
+     * water source it stands in, and about a second (20 ticks) later the soul sand turns a source above it back into
+     * a column, so a mop must clear that source before then to be done with the cell for good. It does (a fluid
+     * block costs one MJ to break); the Builder must rest, for longer than that second, with the cell empty.
+     *
+     * <p>Column (z = 2): air, over soul sand, walled on its three free sides (the Builder closes the fourth).
+     */
+    public static void clearModeMopsBubbleColumn(GameTestHelper helper) {
+        TileBuilder tile = setUpBubbleColumnBuilder(helper, EnumFluidHandlingMode.CLEAR);
+        int[] reappearances = { 0 };
+        boolean[] wasColumn = { true };
+        driveUntilRested(helper, () -> {
+            boolean column = helper.getBlockState(cell(0)).is(Blocks.BUBBLE_COLUMN);
+            if (column && !wasColumn[0]) {
+                reappearances[0]++;
+            }
+            wasColumn[0] = column;
+            return helper.getBlockState(cell(0)).isAir() && builderQuiet(tile.getBuilder());
+        }, QUIET_TICKS, () -> "a bubble column in a schematic-air cell must be mopped away, not re-made for ever "
+                + "(cell=" + helper.getBlockState(cell(0)) + ", column re-formed " + reappearances[0] + " times, "
+                + "quiet=" + builderQuiet(tile.getBuilder()) + ")");
+    }
+
+    /**
+     * The same column under No-Replace, which never removes fluid: breaking the column would leave its water source
+     * standing, and the soul sand would turn that back into a column a second later for the Builder to break again.
+     * A column is fluid and nothing else, so the Builder must leave it and rest, for longer than that second, with the
+     * column still standing.
+     */
+    public static void noReplaceLeavesBubbleColumn(GameTestHelper helper) {
+        TileBuilder tile = setUpBubbleColumnBuilder(helper, EnumFluidHandlingMode.NO_REPLACE);
+        driveUntilRested(helper,
+                () -> helper.getBlockState(cell(0)).is(Blocks.BUBBLE_COLUMN) && builderQuiet(tile.getBuilder()),
+                QUIET_TICKS, () -> "a No-Replace Builder must leave a bubble column in a schematic-air cell alone "
+                        + "(cell=" + helper.getBlockState(cell(0)) + ", quiet=" + builderQuiet(tile.getBuilder())
+                        + ")");
+    }
+
+    /** A Builder in {@code mode} over a one-cell schematic-air column, with a bubble column standing in the cell
+     *  (set down directly, so the Builder meets it the way it would a finished one). */
+    private static TileBuilder setUpBubbleColumnBuilder(GameTestHelper helper, EnumFluidHandlingMode mode) {
+        TileBuilder tile = setUpBuilder(helper, new int[] { AIR }, new BlockPos[] {
+            new BlockPos(1, 2, 2), new BlockPos(2, 2, 1), cell(1) });
+        while (tile.getFluidMode() != mode) {
+            tile.cycleFluidMode();
+        }
+        helper.setBlock(SOUL_SAND, Blocks.SOUL_SAND);
+        helper.setBlock(cell(0), Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(BubbleColumnBlock.DRAG_DOWN, false));
+        expect(helper.getBlockState(cell(0)).is(Blocks.BUBBLE_COLUMN), "sanity: the bubble column stands in the cell");
+        return tile;
+    }
+
+    /**
+     * A bubble column over soul sand in a cell flanked by two OUTSIDE water sources: the infinite-water rule re-makes
+     * the source the column stands in however often it is mopped, and the soul sand turns it back into a column, so
+     * the column is fluid the Builder can never remove and must be left alone, as the same cell holding still water
+     * is.
+     *
+     * <p>Column (z = 2): air, over soul sand, with sources {@code (1,2,2)} and {@code (2,2,1)} on the single-slab
+     * geometry and the free fourth side walled.
+     */
+    public static void clearModeToleratesBubbleColumnResourcedByOutsideWater(GameTestHelper helper) {
+        TileBuilder tile = setUpBuilder(helper, new int[] { AIR }, new BlockPos[] {
+            new BlockPos(0, 2, 2), new BlockPos(1, 2, 1), new BlockPos(1, 2, 3),
+            new BlockPos(2, 2, 0), new BlockPos(3, 2, 1), cell(1) });
+        helper.setBlock(SOUL_SAND, Blocks.SOUL_SAND);
+        BlockWaterloggingTester.placeSource(helper, new BlockPos(1, 2, 2), Blocks.WATER, Fluids.WATER);
+        BlockWaterloggingTester.placeSource(helper, new BlockPos(2, 2, 1), Blocks.WATER, Fluids.WATER);
+
+        int[] columnTicks = { 0 };
+        driveUntilRested(helper, () -> {
+            boolean column = helper.getBlockState(cell(0)).is(Blocks.BUBBLE_COLUMN);
+            columnTicks[0] += column ? 1 : 0;
+            return column && builderQuiet(tile.getBuilder());
+        }, QUIET_TICKS, () -> "a bubble column re-made by outside water must be tolerated (cell="
+                + helper.getBlockState(cell(0)) + ", seen as a column on " + columnTicks[0] + " ticks, quiet="
+                + builderQuiet(tile.getBuilder()) + ")");
     }
 
     /**

@@ -20,8 +20,10 @@ import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * What a machine remembers about the answers protection mods (and refusing blocks) gave it, so it neither asks again
- * nor spends power or travel on a block every cycle. The one memory every block-breaking, block-placing or
- * fluid-draining machine keeps; each picks a {@link PositionMemory.Policy}, and they are all here:
+ * nor spends power or travel on a block every cycle. Every block-breaking, block-placing or fluid-draining machine
+ * keeps one, each with a {@link PositionMemory.Policy}, and they are all here, except the Mining Well and Pump tube:
+ * it asks about a cell only when its column grows past it (once per mined block), which is rarer than any window
+ * here, so it remembers nothing.
  *
  * <table>
  * <caption>Refusal policy per machine (pinned by {@code RefusalMemoryOwnerAndPermitTest})</caption>

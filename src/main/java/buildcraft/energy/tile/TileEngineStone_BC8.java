@@ -184,7 +184,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
             return;
         }
         ItemStack spill = fuelStack;
-        fuelStack = ItemStack.EMPTY;
+        clearContent();
         BlockDropsUtil.dropStack(level, pos, spill);
     }
 

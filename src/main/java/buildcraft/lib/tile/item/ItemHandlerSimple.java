@@ -157,6 +157,13 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return callback != null;
     }
 
+    /** The largest count {@code ItemStack.CODEC} carries (it bounds a count to 1..99 and never checks the item's own
+     *  limit). The default inserter fills a slot up to the item's stack limit, which a mod can raise past that. */
+    private static final int CODEC_MAX_COUNT = 99;
+    /** A slot's real count, saved beside its {@code stack} only when the codec cannot carry it. Also the count key of
+     *  the legacy {@code id} + {@code count} form, which has no {@code stack}. */
+    private static final String COUNT_KEY = "count";
+
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag nbt = new CompoundTag();
@@ -166,7 +173,13 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
             if (!stack.isEmpty()) {
                 // Use ItemStack.CODEC so DataComponentPatch (enchantments, custom name,
                 // damage, dyed colors, etc.) round-trips on save/load.
-                ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
+                ItemStack encoded = stack;
+                if (stack.getCount() > CODEC_MAX_COUNT) {
+                    // The codec refuses a larger count, so the stack goes in at one with its count beside it.
+                    encoded = stack.copyWithCount(1);
+                    itemNbt.putInt(COUNT_KEY, stack.getCount());
+                }
+                ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), encoded)
                         .resultOrPartial()
                         .ifPresent(payload -> itemNbt.put("stack", payload));
             }
@@ -187,6 +200,9 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
                 stack = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
                         .resultOrPartial()
                         .orElse(ItemStack.EMPTY);
+                if (!stack.isEmpty() && itemNbt.contains(COUNT_KEY)) {
+                    stack = stack.copyWithCount(NBTUtilBC.getInt(itemNbt, COUNT_KEY, stack.getCount()));
+                }
             } else if (itemNbt.contains("id")) {
                 // Legacy format (id + count, no components) -- read existing world saves.
                 String idStr = NBTUtilBC.getString(itemNbt, "id", "");

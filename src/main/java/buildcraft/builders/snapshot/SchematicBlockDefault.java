@@ -912,15 +912,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
         CompoundTag blockStateNbt = NBTUtilBC.getCompound(nbt, "blockState");
         blockState = BlockStateNbt.read(blockStateNbt);
         readWithDefaults = !BlockStateNbt.readsBack(blockStateNbt, blockState);
+        // A name this block has no property for is dropped, so it too means the file holds what this game lacks.
         NBTUtilBC.readStringList(nbt.get("ignoredProperties"))
-            .map(propertyName ->
-                blockState.getProperties().stream()
+            .forEach(propertyName -> {
+                Property<?> found = blockState.getProperties().stream()
                     .filter(property -> property.getName().equals(propertyName))
                     .findFirst()
-                    .orElse(null)
-            )
-            .filter(java.util.Objects::nonNull)
-            .forEach(ignoredProperties::add);
+                    .orElse(null);
+                if (found == null) {
+                    readWithDefaults = true;
+                } else {
+                    ignoredProperties.add(found);
+                }
+            });
         if (nbt.contains("tileNbt")) {
             tileNbt = NBTUtilBC.getCompound(nbt, "tileNbt");
         }
@@ -993,7 +997,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /** Whether everything {@link #deserializeNbt} read resolved in this game, so writing this schematic back keeps
-     *  every block it was saved with (migrations aside). False when a block, property or property value it names is missing
+     *  every block it was saved with (migrations aside). False when a block, property or property value it names
+     *  (an ignored property included) is missing
      *  here (its mod is not installed, or no longer has it) and a default took its place. A schematic made by a scan
      *  is always read fully. */
     boolean readFully() {

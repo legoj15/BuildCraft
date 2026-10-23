@@ -81,7 +81,9 @@ import org.junit.jupiter.api.Test;
  * exactly that shape, so a block comment holding bare prose instead of code looks right to a text scan, and the first
  * node to enable the arm is what shows it. Telling the two apart takes a Java parser: any text rule (every line ends
  * in {@code ; { } ,}, say) misreads the wrapped fragments the tree does hold, such as a lone trailing
- * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Conditions
+ * {@code 0x66000000);} argument in PipePlacementHighlight, so the gap stays documented rather than closed. Such prose
+ * does not blind the scan to what follows it: a quote or apostrophe in it opens a literal that ends with its line, as
+ * Java's string and char literals do, so a nested chain on a later line is still judged. Conditions
  * beyond version comparisons joined by {@code &&} and {@code ||} are reported rather than guessed at, and the arms of
  * such a chain are not judged. */
 public class StonecutterDirectiveGuardTester {
@@ -262,6 +264,25 @@ public class StonecutterDirectiveGuardTester {
             """);
         Assertions.assertEquals(1, chain.findings.size(), chain.findings.toString());
         Assertions.assertTrue(chain.findings.get(0).startsWith("R.java:3: "), chain.findings.get(0));
+
+        // A quote in prose inside the wrapper must not open a literal that swallows the nested chain after it: string
+        // and char literals end at the line's end, as in Java.
+        Scan apostrophe = new Scan(active);
+        apostrophe.file("T.java", """
+            //? if >=26.3 {
+            int t = 3;
+            //?} else {
+            /*
+            The don't-care rule, "quoted.
+            //? if >=26.3 {
+            int t = 2;
+            //?} else {
+            int t = 1;
+            //?}
+            *///?}
+            """);
+        Assertions.assertEquals(1, apostrophe.findings.size(), apostrophe.findings.toString());
+        Assertions.assertTrue(apostrophe.findings.get(0).startsWith("T.java:8: "), apostrophe.findings.get(0));
     }
 
     /** An inactive arm that holds bare code still has its block comments re-scanned: the code is one finding, and a
@@ -697,12 +718,20 @@ public class StonecutterDirectiveGuardTester {
         return out;
     }
 
-    /** The index just past the string, char or text-block literal starting at {@code i}; a backslash escapes. */
+    /** The index just past the string, char or text-block literal starting at {@code i}; a backslash escapes. A string
+     *  or char literal also ends at the end of its line, as in Java: only a text block spans lines, so a stray quote in
+     *  prose inside a block comment's body cannot swallow the directives on the lines after it. */
     private static int skipLiteral(String s, int i) {
-        String quote = s.startsWith("\"\"\"", i) ? "\"\"\"" : s.substring(i, i + 1);
+        boolean textBlock = s.startsWith("\"\"\"", i);
+        String quote = textBlock ? "\"\"\"" : s.substring(i, i + 1);
         int j = i + quote.length();
         while (j < s.length() && !s.startsWith(quote, j)) {
-            j += s.charAt(j) == '\\' ? 2 : 1;
+            char c = s.charAt(j);
+            if (!textBlock && (c == '\n' || c == '\r')) {
+                return j;
+            }
+            boolean escapesNext = c == '\\' && j + 1 < s.length() && s.charAt(j + 1) != '\n' && s.charAt(j + 1) != '\r';
+            j += escapesNext ? 2 : 1;
         }
         return Math.min(s.length(), j + quote.length());
     }

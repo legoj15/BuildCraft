@@ -733,4 +733,11 @@ public class GlobalSavedDataSnapshotsTester {
         assertLeftAsItWas(pistonData(data -> NBTUtilBC.getCompound(NBTUtilBC.getCompound(data, "blockState"),
             "Properties").putString("bogus_prop", "true")));
     }
+
+    @Test
+    public void aClientFileIgnoringAPropertyThisGamesBlockLacksIsNotRekeyed() throws IOException {
+        // An ignored property is looked up on the block; one the block does not have is dropped on read.
+        assertLeftAsItWas(pistonData(data -> data.put("ignoredProperties",
+            NBTUtilBC.writeStringList(Stream.of("bogus_prop")))));
+    }
 }

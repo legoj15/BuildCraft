@@ -5,6 +5,8 @@
  */
 package buildcraft.factory.tile;
 
+import java.util.Set;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -16,6 +18,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.test.ClaimProtectionMod;
+import buildcraft.lib.test.WorkClaimMod;
 
 /**
  * A miner's tube is laid through the cells between the machine and its target, and it must never take the place of
@@ -152,6 +155,117 @@ public class TileMinerTubeClaimTester {
                 well.onRemove();
                 assertTrue(!isTube(level, helper, lowerAir),
                         "breaking the well must remove the tube below the claimed water too, not stop at it");
+            }
+            helper.setBlock(claimed, Blocks.AIR);
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.setBlock(claimed, Blocks.AIR);
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Column (local x=2 z=2): well y=7, air y=6, air y=5 (a claim refuses placement there, and only placement: the
+     * well may break whatever it likes), air y=4, stone y=3 (the target), stone y=2. A tube in an air cell is a block
+     * placed, so the well must ask before it lays one: the claimed cell stays air and the cells either side get their
+     * tube. Once the claim is lifted the next growth of the column fills the gap, and asks only about that cell: a
+     * cell that already holds a tube is never asked again.
+     */
+    public static void testWellTubeAsksPlacementBeforeTakingAir(GameTestHelper helper) {
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            ServerLevel level = helper.getLevel();
+            BlockPos wellLocal = new BlockPos(2, 7, 2);
+            BlockPos upperAir = new BlockPos(2, 6, 2);
+            BlockPos claimed = new BlockPos(2, 5, 2);
+            BlockPos lowerAir = new BlockPos(2, 4, 2);
+            BlockPos upperAbs = helper.absolutePos(upperAir);
+            BlockPos claimedAbs = helper.absolutePos(claimed);
+            BlockPos lowerAbs = helper.absolutePos(lowerAir);
+            Set<BlockPos> column = Set.of(upperAbs, claimedAbs, lowerAbs);
+            helper.setBlock(new BlockPos(2, 2, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 3, 2), Blocks.STONE);
+            helper.setBlock(wellLocal, BCFactoryBlocks.MINING_WELL.get());
+            //? if >=1.21.10 {
+            TileMiningWell well = helper.getBlockEntity(wellLocal, TileMiningWell.class);
+            //?} else {
+            /*TileMiningWell well = helper.getBlockEntity(wellLocal);*/
+            //?}
+            assertTrue(well != null, "mining well block-entity must be present");
+
+            try (WorkClaimMod claim = new WorkClaimMod(column::contains, claimedAbs::equals)) {
+                well.mine(); // one downward scan: targets the stone at y=3 and lays the tube above it
+                assertTrue(helper.absolutePos(new BlockPos(2, 3, 2)).equals(well.currentPos),
+                        "the well must target the stone below the air, got " + well.currentPos);
+                assertTrue(!isTube(level, helper, claimed),
+                        "the tube was laid in a cell the claim refused for placement, which now holds "
+                                + level.getBlockState(claimedAbs));
+                assertTrue(isTube(level, helper, upperAir) && isTube(level, helper, lowerAir),
+                        "the tube must still run through the air cells the claim allows");
+                assertTrue(claim.placeAsks(claimedAbs) == 1,
+                        "the claimed cell must be asked once for the one growth, was " + claim.placeAsks(claimedAbs));
+                assertTrue(claim.placeAsks(upperAbs) == 1 && claim.placeAsks(lowerAbs) == 1,
+                        "each cell that receives a tube is asked once before it does");
+            }
+
+            // The claim is lifted. The next growth of the column lays the tube in the gap and asks about nothing else.
+            try (WorkClaimMod claim = new WorkClaimMod(column::contains, pos -> false)) {
+                well.currentPos = helper.absolutePos(new BlockPos(2, 2, 2)); // one more block mined
+                well.updateLength();
+                assertTrue(isTube(level, helper, claimed), "the gap must be filled once the claim no longer refuses");
+                assertTrue(claim.placeAsks(claimedAbs) == 1,
+                        "the gap is asked once when it is filled, was " + claim.placeAsks(claimedAbs));
+                assertTrue(claim.placeAsks(upperAbs) == 0 && claim.placeAsks(lowerAbs) == 0,
+                        "a cell that already holds its tube must not be asked again (upper "
+                                + claim.placeAsks(upperAbs) + ", lower " + claim.placeAsks(lowerAbs) + ")");
+            }
+            well.onRemove();
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * Column (local x=2 z=2): well y=7, water source y=6 (walled in so it cannot run into a neighbouring arena; a
+     * claim refuses placement there but not breaking), air y=5, stone y=4 (the target), stone y=3. Taking a water
+     * source's cell is a placement as well as a replacement, so the tube asks both: this claim refuses only the
+     * placement, and the water must stay.
+     */
+    public static void testWellTubeLeavesWaterWherePlacementIsRefused(GameTestHelper helper) {
+        BlockPos claimed = new BlockPos(2, 6, 2);
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            ServerLevel level = helper.getLevel();
+            BlockPos wellLocal = new BlockPos(2, 7, 2);
+            BlockPos lowerAir = new BlockPos(2, 5, 2);
+            BlockPos claimedAbs = helper.absolutePos(claimed);
+            helper.setBlock(new BlockPos(1, 6, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(3, 6, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 6, 1), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 6, 3), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 3, 2), Blocks.STONE);
+            helper.setBlock(new BlockPos(2, 4, 2), Blocks.STONE);
+            helper.setBlock(claimed, Blocks.WATER);
+            helper.setBlock(wellLocal, BCFactoryBlocks.MINING_WELL.get());
+            //? if >=1.21.10 {
+            TileMiningWell well = helper.getBlockEntity(wellLocal, TileMiningWell.class);
+            //?} else {
+            /*TileMiningWell well = helper.getBlockEntity(wellLocal);*/
+            //?}
+            assertTrue(well != null, "mining well block-entity must be present");
+
+            try (WorkClaimMod claim = new WorkClaimMod(claimedAbs::equals, claimedAbs::equals)) {
+                well.mine(); // drills through the water, targets the stone below the air
+                BlockState water = level.getBlockState(claimedAbs);
+                assertTrue(water.is(Blocks.WATER) && water.getFluidState().isSource(),
+                        "the tube replaced water in a cell the claim refused for placement, which now holds " + water);
+                assertTrue(claim.placeAsks(claimedAbs) >= 1,
+                        "the tube must ask the claim for the placement before it takes the water's cell");
+                assertTrue(isTube(level, helper, lowerAir), "the tube must still run through the air below the water");
+                well.onRemove();
             }
             helper.setBlock(claimed, Blocks.AIR);
             helper.succeed();

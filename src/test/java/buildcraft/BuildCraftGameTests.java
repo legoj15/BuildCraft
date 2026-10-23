@@ -448,6 +448,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:quarry_frame_completes_after_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCompletesAfterClaimIsLifted);
         // ... and when the parked block is gone for good (bare cell, claim still standing) the retry fills the gap too.
         reg.accept("buildcraftunofficial:quarry_frame_fills_gap_when_parked_cell_becomes_bare", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapWhenParkedCellBecomesBare);
+        // The frame block is placed by the quarry itself, so it asks for the placement like the Builder does: a frame-line
+        // cell a claim refuses is a parked gap, asked again once its window ends (the cell stays air, so the retry cannot
+        // tell the lift by the cell changing), and a claim that appears while the block is being made still stops it.
+        reg.accept("buildcraftunofficial:quarry_frame_skips_cell_where_placement_refused", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameSkipsCellWherePlacementIsRefused);
+        reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementClaimIsLifted);
+        reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_lifted_under_break_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementLiftedUnderBreakClaim);
+        reg.accept("buildcraftunofficial:quarry_frame_cell_claimed_mid_task_not_framed", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCellClaimedMidTaskIsNotFramed);
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -644,6 +651,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_tube_leaves_waterlogged_block", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testPumpTubeLeavesWaterloggedBlockInColumn);
         // ... and a claimed fluid cell: the well drills through water without breaking it, so the tube must ask first.
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_water", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedWaterAlone);
+        // ... and a tube is a block placed: it asks for the placement of an air cell too (and of a water cell, besides the
+        // break ask), and asks only about the cells that are to receive a tube.
+        reg.accept("buildcraftunofficial:mining_well_tube_asks_placement_before_air", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeAsksPlacementBeforeTakingAir);
+        reg.accept("buildcraftunofficial:mining_well_tube_leaves_water_where_placement_refused", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesWaterWherePlacementIsRefused);
 
         // An idle pump backs its flood-fill rebuilds off, yet still finds fluid reaching its column at the old cadence
         // and wakes on an adjacent block change.

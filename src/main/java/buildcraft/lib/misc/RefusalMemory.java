@@ -26,9 +26,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * <table>
  * <caption>Refusal policy per machine (pinned by {@code RefusalMemoryOwnerAndPermitTest})</caption>
  * <tr><th>Machine</th><th>Policy</th><th>Window</th><th>Cap</th><th>Owner key</th><th>Permit used for</th></tr>
- * <tr><td>Quarry (frame-volume cells)</td><td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are
- *     re-probed as they come due ({@link #takeExpired}), even by an idle quarry</td><td>none: the cells held are
- *     cells of the frame box</td><td>tile owner</td><td>-</td></tr>
+ * <tr><td>Quarry (frame-volume cells: blocks it may not break, frame blocks it may not place)</td>
+ *     <td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are re-probed as they come due
+ *     ({@link #takeExpired}), even by an idle quarry</td><td>none: the cells held are cells of the frame box</td>
+ *     <td>tile owner</td><td>-</td></tr>
  * <tr><td>Builder and Filler placements</td><td>{@link #BUILDER_PLACE}</td><td>fixed 200 ticks; a refused cell is
  *     parked (skipped when queuing placements) and asked again once its window ends</td><td>none: the cells held
  *     are cells of the build box</td><td>tile owner</td><td>-</td></tr>

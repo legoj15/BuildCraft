@@ -148,15 +148,17 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
      *  not hold one yet. A cell holding a water source gets a waterlogged tube so the water survives. The tube takes
      *  only air and bare fluid; anything else is left alone, so the tube has a gap there: a block the machine was
      *  refused (a claim the well skipped past) or one that is not the tube's to replace (a waterlogged slab in a
-     *  pump's column). A fluid cell is replaced only once the claim system allows it: the well drills through water
-     *  and the pump past it without ever breaking it, so this is the only ask that cell gets (repeated each time the
-     *  column grows while the cell stays a refused fluid: one break probe per mined block, against a gap that is
-     *  rare and that the old full rewrite simply overwrote). */
+     *  pump's column). A tube is a block placed, so each cell that would receive one is asked about first: the
+     *  placement for air, and for a fluid cell the break as well (the well drills through water and the pump past it
+     *  without ever breaking it, so that is the only break ask the cell gets). A refused cell is a gap too. A cell
+     *  that already holds its tube is never asked, so a growth costs a probe or two per gap cell, repeated each time
+     *  the column grows while the claim stands: the order of the well's own scan, which asks about every claimed
+     *  block it passes every time, against a gap that is rare and that the old full rewrite simply overwrote. */
     private void extendTubes(int newLength) {
         for (int depth = 1; depth < newLength; depth++) {
             BlockPos blockPos = worldPosition.below(depth);
             BlockState existing = level.getBlockState(blockPos);
-            if (existing.isAir() || (isBareFluid(existing) && mayReplace(blockPos))) {
+            if ((existing.isAir() || (isBareFluid(existing) && mayReplace(blockPos))) && mayPlace(blockPos)) {
                 level.setBlockAndUpdate(blockPos, BCFactoryBlocks.TUBE.get().stateFor(level, blockPos));
             }
         }
@@ -171,6 +173,10 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
 
     private boolean mayReplace(BlockPos pos) {
         return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachineBreak(serverLevel, pos, getOwner());
+    }
+
+    private boolean mayPlace(BlockPos pos) {
+        return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachinePlace(serverLevel, pos, getOwner());
     }
 
     /** Removes the tubes in the cells at depth {@code newLength} down to just above depth {@code oldLength}

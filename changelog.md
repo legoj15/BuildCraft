@@ -11,5 +11,5 @@
 - Stripes pipes now use buckets, bottles and thrown items on the block in front, extend their line when fed item pipes, and break minecarts in front of them, like 1.7.10.
 - On Minecraft 1.21.1, replacing a BuildCraft machine or pipe with /setblock, /fill or /clone no longer spills its contents; breaking a Distiller now drops the items in its container slots.
 - The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist; the Programming Table pages through more than 24 boards.
-- Mining wells and pumps no longer replace claimed or waterlogged blocks with their tube, and pumps no longer destroy waterlogged blocks that can't stay dry; idle pumps over huge pools and the Zone Planner map use far less work.
-- A quarry now repairs a frame gap once whatever blocked it is gone.
+- Mining wells and pumps no longer replace claimed or waterlogged blocks with their tube, or lay it where a claim refuses placement, and pumps no longer destroy waterlogged blocks that can't stay dry; idle pumps over huge pools and the Zone Planner map use far less work.
+- A quarry now repairs a frame gap once whatever blocked it is gone, and leaves a gap where a claim refuses placing a frame block.

@@ -118,12 +118,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     );
     private final Set<BlockPos> framePlaceFramePoses = new HashSet<>();
     // Frame-volume cells the quarry reached the head of the break queue on and may not break (bedrock, a
-    // claim-protected block, a block logged with a thick fluid), each remembered with the state it was refused on.
-    // check() keeps a refused cell out of frameBreakBlockPoses while that state stands and the retry window runs, so
-    // the power loop is not pinned to it; an unminable frame-line cell is a gap in the frame meanwhile. The window
-    // exists because lifting a claim fires no event: retryRefusedFrameCells() probes each cell once its window ends,
-    // even after the quarry has finished and gone idle. Policy RefusalMemory.QUARRY_FRAME (uncapped on purpose, see
-    // the table there); updatePoses() clears it.
+    // claim-protected block, a block logged with a thick fluid), and frame-line cells it may not place a frame block
+    // in (a claim that refuses placement), each remembered with the state it was refused on.
+    // check() keeps a refused cell out of frameBreakBlockPoses (or framePlaceFramePoses) while that state stands and
+    // the retry window runs, so the power loop is not pinned to it; a refused frame-line cell is a gap in the frame
+    // meanwhile. The window exists because lifting a claim fires no event: retryRefusedFrameCells() probes each cell
+    // once its window ends, even after the quarry has finished and gone idle. Policy RefusalMemory.QUARRY_FRAME
+    // (uncapped on purpose, see the table there); updatePoses() clears it.
     private final RefusalMemory frameRefusals = new RefusalMemory(RefusalMemory.QUARRY_FRAME);
     public Task currentTask = null;
     public Vec3 drillPos;
@@ -457,6 +458,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             && (BlockUtil.isFluidloggedBlock(state) || BlockUtil.getFluidWithFlowing(level, blockPos) == null);
     }
 
+    /** Whether the quarry may put a frame block in {@code pos}: the placement ask that its bare {@code setBlock} would
+     *  otherwise skip, so a claim that refuses placement can keep the frame out. */
+    private boolean mayPlaceFrame(BlockPos pos) {
+        return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachinePlace(serverLevel, pos, getOwner());
+    }
+
     /** Queues a cell for clearing, unless it was refused on the block it still holds and the retry window runs. */
     private void queueFrameBreak(BlockPos blockPos) {
         if (frameRefusals.isRefused(level, blockPos, getOwner())) {
@@ -468,10 +475,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     /**
      * Probes the refused frame cells whose retry window has ended, a few per tick: a cell that can be mined now is
      * queued again (and wakes a quarry that had finished), as is a cell that no longer holds a block to break (air,
-     * bare fluid: the frame goes in), anything else keeps its refusal for another window. Runs
-     * for an idle quarry too, which is the point: a claim lifted after the job is done fires no event, and the frame
-     * gap it left would otherwise stay until the next chunk reload. Costs one map peek per tick while nothing is due,
-     * and never reads a cell in an unloaded chunk (an idle quarry has released its chunk tickets).
+     * bare fluid) unless it is a frame-line cell the frame block may still not be placed in, anything else keeps its
+     * refusal for another window. Runs for an idle quarry too, which is the point: a claim lifted after the job is
+     * done fires no event, and the frame gap it left would otherwise stay until the next chunk reload. Costs one map
+     * peek per tick while nothing is due, and never reads a cell in an unloaded chunk (an idle quarry has released its
+     * chunk tickets).
      */
     private void retryRefusedFrameCells() {
         if (frameRefusals.isEmpty()) {
@@ -488,6 +496,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 // The refused block is gone (air under a standing claim, bare fluid): there is nothing left to
                 // break, so canMine never says yes again, but the frame can go in. check() forgets the refusal and
                 // queues the placement. A block that is still there (and still refused) keeps its window.
+                // A frame-line cell refused the frame block itself was always bare: takeExpired has restarted its
+                // window in that state, so check() would read it as still refused. Ask the placement again here.
+                if (shouldBeFrame(blockPos) && !mayPlaceFrame(blockPos)) {
+                    frameRefusals.remember(level, blockPos, getOwner());
+                    continue;
+                }
+                frameRefusals.forget(blockPos);
                 check(blockPos);
             }
         }
@@ -501,6 +516,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             frameRefusals.forget(blockPos);
         } else if (canIgnoreInFrameBox(blockPos)) {
             queueFrameBreak(blockPos);
+        } else if (onFrameLine && frameRefusals.isRefused(level, blockPos, getOwner())) {
+            // A bare frame-line cell the frame block was refused in, and the cell is as it was: parked, so the power
+            // loop does not queue it again until the retry window ends. A refusal of the block that was here before
+            // (now broken) is another state, which isRefused has just forgotten, so it falls to the branch below.
         } else {
             frameRefusals.forget(blockPos);
             if (onFrameLine) {
@@ -779,6 +798,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     check(blockPos);
                     if (!framePlaceFramePoses.contains(blockPos)) {
                         continue;
+                    }
+                    if (!mayPlaceFrame(blockPos)) {
+                        // A claim refuses the frame block here: park the cell (a gap in the frame) before any power
+                        // goes into it, and take it off the queue so this branch does not spin on it.
+                        framePlaceFramePoses.remove(blockPos);
+                        frameRefusals.remember(level, blockPos, getOwner());
+                        continue power_loop;
                     }
                     drillPos = null;
                     currentTask = new TaskAddFrame(blockPos);
@@ -1331,6 +1357,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         protected boolean finish(long added, long target) {
             blockPercentSoFar += added / (double) target;
             if (!canMine(breakPos)) {
+                // canMine flipped under the task (a claim appeared mid-break). A frame-box cell holding a real block
+                // is parked as the power loop parks one, so the retry leg repairs it later; the drill's own column
+                // below the frame box stays out of the frame bookkeeping.
+                if (frameBox.contains(breakPos) && canIgnoreInFrameBox(breakPos)) {
+                    frameRefusals.remember(level, breakPos, getOwner());
+                    check(breakPos);
+                }
                 return true;
             }
             level.destroyBlockProgress(breakPos.hashCode(), breakPos, -1);
@@ -1384,6 +1417,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         @Override
         protected boolean finish(long added, long target) {
             if (canIgnoreInFrameBox(framePos)) {
+                return false;
+            }
+            if (!mayPlaceFrame(framePos)) {
+                // A claim appeared since the task started: park the cell as the power loop does, and the power
+                // is given back (false).
+                framePlaceFramePoses.remove(framePos);
+                frameRefusals.remember(level, framePos, getOwner());
                 return false;
             }
             level.setBlockAndUpdate(framePos, BCBuildersBlocks.FRAME.get().defaultBlockState());

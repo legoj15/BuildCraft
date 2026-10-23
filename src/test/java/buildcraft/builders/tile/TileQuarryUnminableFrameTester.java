@@ -13,11 +13,13 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.mj.MjAPI;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.WorkClaimMod;
 
 /**
  * A cell inside the quarry's frame volume that the quarry may never mine must not stall the quarry.
@@ -211,6 +213,169 @@ public class TileQuarryUnminableFrameTester {
                 });
     }
 
+    /**
+     * A frame-line cell a claim will not let the quarry place into: the frame block is placed by a bare
+     * {@code setBlockAndUpdate} that no placement event sees, so the quarry must ask first. A refused cell is a gap in
+     * the frame, parked like a refused break: the rest of the frame is built, the drill starts, and the quarry settles
+     * idle instead of spinning on the cell or paying for a frame block it cannot place. The claim refuses placement
+     * only; the cell is bare air, so nothing is ever asked about breaking it.
+     */
+    public static void testFrameSkipsCellWherePlacementIsRefused(GameTestHelper helper) {
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            Scenario s = new Scenario(helper);
+            try {
+                BlockPos stuckAbs = s.abs(STUCK_EDGE);
+                try (WorkClaimMod claim = new WorkClaimMod(stuckAbs::equals, stuckAbs::equals)) {
+                    s.runToDiggingAndVerify(helper, Blocks.AIR);
+                    assertTrue(claim.placeAsks(stuckAbs) >= 1,
+                            "liveness: the quarry must have asked the claim before placing the frame block");
+                }
+            } finally {
+                s.cleanUp(helper);
+            }
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * The claim over that frame-line cell is lifted after the quarry parked it and went idle. Lifting fires no event,
+     * so the quarry must ask for the placement again on its own once the cell's window ends, and the gap must fill.
+     */
+    public static void testFrameFillsGapAfterPlacementClaimIsLifted(GameTestHelper helper) {
+        fillsGapAfterPlacementIsAllowed(helper, false);
+    }
+
+    /**
+     * The same, but only the claim's placement rule is lifted: its break rule still stands over the cell (a claim that
+     * lets its players build and not break). The cell is air throughout, so the retry cannot tell the lift by the cell
+     * changing, and {@code canMine} on it stays false: the window ending is all the retry has, and it must ask the
+     * placement again rather than read the cell, whose window {@code takeExpired} has just restarted, as still
+     * refused. (A bare fluid cell takes this same path, since {@code canMine} never accepts a fluid.)
+     */
+    public static void testFrameFillsGapAfterPlacementLiftedUnderBreakClaim(GameTestHelper helper) {
+        fillsGapAfterPlacementIsAllowed(helper, true);
+    }
+
+    /**
+     * Everything but building the quarry waits for the first poll, for the reason
+     * {@link #testFrameFillsGapWhenParkedCellBecomesBare} gives: the quarry's first level tick rescans the frame box
+     * and would fill the gap by itself, hiding the retry.
+     *
+     * @param breakClaimStays whether a claim refusing breaks (and only breaks) stays over the cell all the way
+     */
+    private static void fillsGapAfterPlacementIsAllowed(GameTestHelper helper, boolean breakClaimStays) {
+        Scenario s;
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            s = new Scenario(helper);
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+            return;
+        }
+        BlockPos stuckAbs = s.abs(STUCK_EDGE);
+        WorkClaimMod[] placeClaim = {null};
+        ClaimProtectionMod[] breakClaim = {null};
+        boolean[] parked = {false};
+        int limit = (int) RefusalMemory.QUARRY_FRAME.windowTicks() * 3;
+        EntityArenaUtil.tickUntil(helper, limit + 5, () -> {
+            if (!parked[0]) {
+                parked[0] = true;
+                placeClaim[0] = new WorkClaimMod(stuckAbs::equals, stuckAbs::equals);
+                if (breakClaimStays) {
+                    breakClaim[0] = new ClaimProtectionMod(stuckAbs, true);
+                }
+                s.runToDiggingAndVerify(helper, Blocks.AIR);
+                assertTrue(placeClaim[0].placeAsks(stuckAbs) >= 1,
+                        "liveness: the quarry must have asked the claim before placing the frame block");
+                // The placement is allowed again: nothing tells the quarry. It must find out by asking once the
+                // window ends.
+                placeClaim[0].close();
+                placeClaim[0] = null;
+                return false;
+            }
+            s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
+            s.quarry.tick();
+            return helper.getLevel().getBlockState(stuckAbs).is(BCBuildersBlocks.FRAME.get());
+        }, () -> {
+            try {
+                for (int i = 0; i < limit && s.quarry.hasPendingWork(); i++) {
+                    s.quarry.getBattery().setStored(s.quarry.getBattery().getCapacity());
+                    s.quarry.tick();
+                }
+                assertTrue(!s.quarry.hasPendingWork() && !s.quarry.isActive(),
+                        "the quarry must settle idle again once the gap is filled");
+                helper.succeed();
+            } catch (Throwable t) {
+                helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+            }
+        }, "the frame gap was never filled after the placement claim was lifted", () -> {
+            if (placeClaim[0] != null) {
+                placeClaim[0].close();
+            }
+            if (breakClaim[0] != null) {
+                breakClaim[0].close();
+            }
+            s.cleanUp(helper);
+        });
+    }
+
+    /**
+     * A claim that appears over a frame-line cell while the quarry is partway through making its frame block: the ask
+     * made before the task started was answered yes, so the one made as the block goes in is the only one that can
+     * stop it. The power spent is given back, the cell stays bare, and the quarry carries on around it.
+     *
+     * <p>The quarry is fed a trickle (the frame block costs 24 MJ) so the task is in flight across several ticks, and
+     * the cell is whichever one the quarry started on. The stone the scenario puts in the frame box is cleared first:
+     * a trickle would take far too long to break it, and none of this is about breaking.
+     */
+    public static void testFrameCellClaimedMidTaskIsNotFramed(GameTestHelper helper) {
+        try {
+            assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                    "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+            Scenario s = new Scenario(helper);
+            try {
+                helper.setBlock(STONE_EDGE, Blocks.AIR);
+                helper.setBlock(STONE_INTERIOR, Blocks.AIR);
+                for (int i = 0; i < 400 && !(s.quarry.currentTask instanceof TileQuarry.TaskAddFrame); i++) {
+                    s.quarry.getBattery().setStored(MjAPI.MJ);
+                    s.quarry.tick();
+                }
+                assertTrue(s.quarry.currentTask instanceof TileQuarry.TaskAddFrame,
+                        "the quarry never started a frame block: currentTask is " + s.quarry.currentTask);
+                TileQuarry.TaskAddFrame task = (TileQuarry.TaskAddFrame) s.quarry.currentTask;
+                BlockPos claimedAbs = task.framePos;
+
+                try (WorkClaimMod claim = new WorkClaimMod(claimedAbs::equals, claimedAbs::equals)) {
+                    for (int i = 0; i < 400 && s.quarry.currentTask == task; i++) {
+                        s.quarry.getBattery().setStored(MjAPI.MJ);
+                        s.quarry.tick();
+                    }
+                    assertTrue(s.quarry.currentTask != task, "the frame task never finished");
+                    BlockState cell = helper.getLevel().getBlockState(claimedAbs);
+                    assertTrue(!cell.is(BCBuildersBlocks.FRAME.get()),
+                            "the quarry placed a frame block in a cell a claim refused while it was being made");
+                    assertTrue(claim.placeAsks(claimedAbs) >= 1,
+                            "the quarry must ask the claim again as the frame block goes in");
+
+                    // Around the refused cell the frame still completes and the quarry settles.
+                    s.runToDigging();
+                    s.verifyFrameAround(helper, claimedAbs, cell.getBlock());
+                    s.assertSettlesIdle();
+                }
+            } finally {
+                s.cleanUp(helper);
+            }
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
     private static final class Scenario {
         final TileQuarry quarry;
         final BlockPos quarryAbs;
@@ -258,6 +423,14 @@ public class TileQuarryUnminableFrameTester {
          * @param stuckBlock the block the unminable edge cell must still hold afterwards
          */
         void runToDiggingAndVerify(GameTestHelper helper, Block stuckBlock) {
+            runToDigging();
+            verifyFrameAround(helper, abs(STUCK_EDGE), stuckBlock);
+            assertInteriorClearedAndRouted(helper);
+            assertSettlesIdle();
+        }
+
+        /** Ticks the quarry with a full battery until its drill is seeded, or fails if it never is. */
+        void runToDigging() {
             for (int i = 0; i < 4000 && quarry.drillPos == null; i++) {
                 quarry.getBattery().setStored(quarry.getBattery().getCapacity());
                 quarry.tick();
@@ -265,8 +438,10 @@ public class TileQuarryUnminableFrameTester {
             assertTrue(quarry.drillPos != null,
                     "the quarry never reached the digging phase: it is stuck on the unminable frame cell"
                             + " (hasPendingWork=" + quarry.hasPendingWork() + ")");
+        }
 
-            BlockPos stuckAbs = abs(STUCK_EDGE);
+        /** Every frame-line cell but {@code stuckAbs} holds a frame block; that one still holds {@code stuckBlock}. */
+        void verifyFrameAround(GameTestHelper helper, BlockPos stuckAbs, Block stuckBlock) {
             BlockPos min = quarry.frameBox.min();
             BlockPos max = quarry.frameBox.max();
             for (BlockPos p : BlockPos.betweenClosed(min, max)) {
@@ -276,13 +451,16 @@ public class TileQuarryUnminableFrameTester {
                 }
                 if (p.equals(stuckAbs)) {
                     assertTrue(state.is(stuckBlock),
-                            "the unminable frame-line cell must be left untouched, got " + state);
+                            "the frame-line cell the quarry may not touch must be left alone, got " + state);
                 } else {
                     assertTrue(state.is(BCBuildersBlocks.FRAME.get()),
                             "every other frame-line cell must hold a frame block, but " + p.subtract(quarryAbs)
                                     + " (relative to the quarry) holds " + state);
                 }
             }
+        }
+
+        private void assertInteriorClearedAndRouted(GameTestHelper helper) {
             assertTrue(helper.getLevel().getBlockState(abs(STONE_INTERIOR)).isAir(),
                     "ordinary interior clearing must still happen around the skipped cell");
 
@@ -296,9 +474,11 @@ public class TileQuarryUnminableFrameTester {
                 }
             }
             assertTrue(foundCobble, "the cleared stone must have been routed into the chest beside the quarry");
+        }
 
-            // One more pass: with the frame done and nothing mineable below, the quarry must settle idle
-            // (no pending work, inactive) instead of staying busy on the skipped cell forever.
+        /** One more pass: with the frame done and nothing mineable below, the quarry must settle idle
+         *  (no pending work, inactive) instead of staying busy on the skipped cell forever. */
+        void assertSettlesIdle() {
             quarry.getBattery().setStored(quarry.getBattery().getCapacity());
             quarry.tick();
             assertTrue(!quarry.hasPendingWork(),

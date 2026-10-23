@@ -13,9 +13,11 @@ Goal (user, 2026-10-22): fix everything in todos.md's Outstanding section before
 A robots gliding (26.3, 1.21.1, 26.2), B stripes retraction (after the client fix `997eb737c`), C guide links across a page break, D Programming Table, E gate plugs / LEDs / Architect preview / painted fluid pipes. The magenta owner head is the dev "Dev" user, not a bug.
 
 ## Next
-1. Flake-fix review follow-ups (not started; partial edit saved at the session scratchpad as `pollbudget-partial.patch`): widen the poll-budget guard past robot tests (BlockWaterloggingTester's doc claims coverage it doesn't have); convert `assertWaterloggedBetweenSources` to the tickUntil+cleanup shape; name the stalled lava side on timeout; fix the "(about 90 ms)" and inconsistent straddle-rate comments.
-2. New flakes: `robot_name_kept_through_wrench_pickup` scans in the same tick as the drop (gate on entity ticking); `drops_stirling_hand` failed once (3 of 4 fragile_fluid_container) under a one-thread run.
-3. Final `fullTestSuite`, then release work is user-gated.
+1. Release work is user-gated (version bump, changelog consolidation, publish). Nothing is pushed.
+
+## Done since the visual checks
+- 1.21.1 NeoForge 21.1.262 -> 21.1.264 (`112fed2ec`).
+- Flake follow-ups (`127c81975`, `aeea0107e`, `5c2d593b4`): the poll-budget guard covers every game test; every drop test uses `DropArenaUtil` (waits for the cell to tick and the drops to settle, counts only inside its own cell); click-break pipe tests sit mid-cell.
 
 ## Uncommitted changes
 - None.

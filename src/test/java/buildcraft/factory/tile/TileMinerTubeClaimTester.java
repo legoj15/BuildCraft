@@ -88,6 +88,15 @@ public class TileMinerTubeClaimTester {
                 well.scheduleRecheck();
                 well.mine(); // drill back down, then break the well: the whole column goes, gap or not
                 assertTrue(isTube(level, helper, lowerAir), "the well must lay its tube again");
+
+                // A tube cell lost mid-column (an explosion, a creative player) is laid again the next time the
+                // column grows, as the old rewrite-everything updateLength did: the delta-only extend started at
+                // the old end and never looked back up.
+                helper.setBlock(upperAir, Blocks.AIR);
+                well.currentPos = helper.absolutePos(new BlockPos(2, 2, 2)); // one more block mined
+                well.updateLength();
+                assertTrue(isTube(level, helper, upperAir),
+                        "a tube cell lost above the old end of the column must be laid again when the column grows");
                 well.onRemove();
                 assertTrue(!isTube(level, helper, upperAir) && !isTube(level, helper, lowerAir),
                         "breaking the well must remove the tube below the claimed block too, not stop at it");

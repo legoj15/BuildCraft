@@ -91,31 +91,43 @@ public class PumpIdleRebuildTester {
     }
 
     /**
-     * Every cell of the pool refuses the pump (a claim covers both). The pump takes nothing, and in a long idle
-     * stretch it walks the pool a handful of times, not once per 30 ticks.
+     * The pump's only pool cell refuses it (a claim). The pump takes nothing, and in a long idle stretch it walks the
+     * pool a handful of times, not once per 30 ticks. Then a source is poured beside that cell, away from the column:
+     * the column looks exactly as it did and nothing next to the pump changed, so only the back-off running out can
+     * find it, and it must, within the capped wait.
      */
     public static void idleRebuildsBackOffOverARefusedPool(GameTestHelper helper) {
         try {
             TilePump pump = buildPump(helper);
             helper.setBlock(POOL_A, Blocks.WATER);
-            helper.setBlock(POOL_B, Blocks.WATER);
             ServerLevel level = helper.getLevel();
-            try (ClaimProtectionMod atA = new ClaimProtectionMod(helper.absolutePos(POOL_A), true);
-                    ClaimProtectionMod atB = new ClaimProtectionMod(helper.absolutePos(POOL_B), true)) {
+            try (ClaimProtectionMod atA = new ClaimProtectionMod(helper.absolutePos(POOL_A), true)) {
                 runPump(pump, IDLE_TICKS);
 
-                check(atA.asks() + atB.asks() >= 1, "liveness: the pump must have asked the claim about the pool");
+                check(atA.asks() >= 1, "liveness: the pump must have asked the claim about the pool");
                 check(pump.getTank().getAmountMb(0) == 0,
                         "precondition: a fully refused pool gives the pump nothing, got "
                                 + pump.getTank().getAmountMb(0) + " mB");
-                check(level.getFluidState(helper.absolutePos(POOL_A)).isSource()
-                        && level.getFluidState(helper.absolutePos(POOL_B)).isSource(),
-                        "precondition: the refused cells are still water");
+                check(level.getFluidState(helper.absolutePos(POOL_A)).isSource(),
+                        "precondition: the refused cell is still water");
                 int fixedCadence = IDLE_TICKS / TilePump.REBUILD_DELAY;
                 check(pump.rebuildCount <= 15,
                         "an idle pump over a refused pool must back its rebuilds off, but it rebuilt "
                                 + pump.rebuildCount + " times in " + IDLE_TICKS + " ticks (a fixed "
                                 + TilePump.REBUILD_DELAY + "-tick cadence would be " + fixedCadence + ")");
+
+                // Pour just after a rebuild, so the whole capped wait lies ahead.
+                int seen = pump.rebuildCount;
+                for (int i = 0; i < TilePump.MAX_IDLE_REBUILD_DELAY + 50 && pump.rebuildCount == seen; i++) {
+                    runPump(pump, 1);
+                }
+                check(pump.rebuildCount > seen, "precondition: an idle pump must rebuild again within the longest back-off");
+                helper.setBlock(POOL_B, Blocks.WATER); // y=2 beside the column, four below the pump: wakes nothing
+                int limit = TilePump.MAX_IDLE_REBUILD_DELAY + TilePump.REBUILD_DELAY + 20;
+                int ticks = ticksToFirstBucket(pump, limit);
+                check(ticks > 0, "a backed-off pump took more than " + limit + " ticks to find a source poured into its"
+                        + " pool away from the column (the back-off is capped at "
+                        + TilePump.MAX_IDLE_REBUILD_DELAY + ")");
             }
             drainTheRig(helper);
             helper.succeed();

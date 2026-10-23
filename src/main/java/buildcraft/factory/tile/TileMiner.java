@@ -122,11 +122,12 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     }
 
     /**
-     * Brings the tube column to the length the current target wants, touching only the cells that change: tubes sit
-     * in the cells below the machine down to (but not including) the target, so growing the column lays the cells
-     * between the old and the new end, and shrinking it removes just those. (A mined block lengthens a well's column
-     * by one, so rewriting the whole column per block was O(depth) block updates and, in water, an un-waterlog and
-     * re-waterlog of every cell.)
+     * Brings the tube column to the length the current target wants. Tubes sit in the cells below the machine down to
+     * (but not including) the target. Growing the column fills every cell above the new end that lacks its tube, so
+     * a tube lost mid-column (an explosion, a creative player) comes back with the next mined block, as it did when
+     * this rewrote the whole column; shrinking it removes just the cells it gave up. Only missing cells are written:
+     * rewriting every cell per mined block cost O(depth) block updates and, in water, an un-waterlog and re-waterlog
+     * of every cell, where a cell that already holds its tube now costs one state read.
      */
     protected void updateLength() {
         int newY = getTargetPos() != null ? getTargetPos().getY() : worldPosition.getY();
@@ -135,7 +136,7 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
             if (newLength < wantedLength) {
                 retractTubes(newLength, wantedLength);
             } else {
-                extendTubes(wantedLength, newLength);
+                extendTubes(newLength);
             }
             currentLength = wantedLength = newLength;
             setChanged();
@@ -143,14 +144,16 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
         }
     }
 
-    /** Lays tubes in the cells at depth {@code oldLength} (the old target's) down to just above depth
-     *  {@code newLength}. A cell holding a water source gets a waterlogged tube so the water survives. The tube takes
+    /** Lays a tube in every cell from just below the machine down to just above depth {@code newLength} that does
+     *  not hold one yet. A cell holding a water source gets a waterlogged tube so the water survives. The tube takes
      *  only air and bare fluid; anything else is left alone, so the tube has a gap there: a block the machine was
      *  refused (a claim the well skipped past) or one that is not the tube's to replace (a waterlogged slab in a
      *  pump's column). A fluid cell is replaced only once the claim system allows it: the well drills through water
-     *  and the pump past it without ever breaking it, so this is the only ask that cell gets. */
-    private void extendTubes(int oldLength, int newLength) {
-        for (int depth = Math.max(1, oldLength); depth < newLength; depth++) {
+     *  and the pump past it without ever breaking it, so this is the only ask that cell gets (repeated each time the
+     *  column grows while the cell stays a refused fluid: one break probe per mined block, against a gap that is
+     *  rare and that the old full rewrite simply overwrote). */
+    private void extendTubes(int newLength) {
+        for (int depth = 1; depth < newLength; depth++) {
             BlockPos blockPos = worldPosition.below(depth);
             BlockState existing = level.getBlockState(blockPos);
             if (existing.isAir() || (isBareFluid(existing) && mayReplace(blockPos))) {

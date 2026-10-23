@@ -358,12 +358,6 @@ public class TilePump extends TileMiner implements IDebuggable {
                     if (offsetPos.distSqr(targetPos) > maxLengthSquared) {
                         continue;
                     }
-                    // The fill never reads past the loaded world: getBlockState on an unloaded chunk would load it
-                    // (generating it, when it is new) on the server thread, and a rebuild reaches up to
-                    // pumpMaxDistance blocks. The pool beyond is found by a later rebuild, once the chunk loads.
-                    if (!level.isLoaded(offsetPos)) {
-                        continue;
-                    }
                     boolean isNew = checked.add(offsetPos.asLong());
                     if (isNew) {
                         // The miner's own plumbing is transparent to the fill, exactly as in probeDown: a tube

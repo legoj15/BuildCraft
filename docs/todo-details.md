@@ -70,10 +70,6 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 `AIRobotSearchStation.start()` returns the station a robot is already docked at before it checks `isRobotForbidden` (7.1.x did the same), so a Forbid Robot gate on a robot's own dock does not stop it loading, unloading or recharging there. A fix was tried on 2026-10-17 (make the docked shortcut honour the forbid) and backed out: with no other accepting station in reach, a Delivery robot homed on a forbidding station then disposed of its whole cargo on the ground. Options: keep 7.1.x behaviour; or, when a forbid starts matching the docked robot, undock it so the search picks another station (cargo-safe), and decide whether a robot may still sleep at a home that forbids it.
 
-## Stripes sideways retraction breaks (2026-10-23)
-
-Seen in the release-2026-2-1 smoke (26.3, `build/smoke/20261023-153158/26.3/41-b2-retract-after.png`), confirmed by the user: an L-shaped line (chest, wooden pipe, cobblestone pipe, stripes pipe east of it) fed a void pipe. After the perpendicular retraction there is no stripes pipe at all and two pipe items lie on the floor, though the scenario's server readout reported the stripes pipe in the cobblestone pipe's cell facing SOUTH. The plain-extension shot (`47-b3-extend.png`) also showed the client drawing a stripes pipe where the server held a stone pipe. Suspects: `PipeExtensionManager` (`Cell.placeAt` empties and refills a cell in one tick without a client resync), the perpendicular branch from `d20a69bea`, and what drops the two items. The game test `stripes_void_pipe_retracts_line` covers only a straight line. Re-run: `pwsh scripts/smoke/Invoke-InClientSmoke.ps1 -Nodes 26.3 -Scenario scripts/smoke/scenarios/release-2026-2-1.json`, item B.
-
 ## Small cleanups
 
 Follow-ups left by the 2026-10-22 pre-release sweep; none is a known common player-facing bug.

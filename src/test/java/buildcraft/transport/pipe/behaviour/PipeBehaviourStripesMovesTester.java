@@ -5,6 +5,7 @@
  */
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -12,11 +13,13 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 
@@ -24,6 +27,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeEventItem;
 import buildcraft.api.transport.pipe.PipeFlow;
 
@@ -154,6 +158,13 @@ public class PipeBehaviourStripesMovesTester {
                             "one fed pipe was placed, and the rest of its stack and the same-tick stack travel back"
                                     + " down the moved stripes pipe, found "
                                     + count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()));
+                    // The cell the stripes pipe left was emptied and refilled in one tick, so a client never sees
+                    // it empty: it gets the new pipe's data on the holder that still holds the stripes pipe.
+                    TilePipeHolder client = clientView(helper, pipeAt(helper, pipeRel),
+                            BCTransportItems.PIPE_STRIPES_ITEM.get());
+                    helper.assertTrue(client.getPipe().getDefinition() == BCTransportPipes.cobbleItem,
+                            "a client still holding the stripes pipe in the cell it left draws the placed pipe after"
+                                    + " the update, got " + client.getPipe().getDefinition().identifier);
                     helper.succeed();
                 }, "the stripes pipe never moved forward with the fed pipe behind it",
                 () -> empty(pipeAt(helper, pipeRel), pipeAt(helper, frontRel)));
@@ -193,6 +204,94 @@ public class PipeBehaviourStripesMovesTester {
                     helper.succeed();
                 }, "the stripes pipe never retracted onto the pipe behind it",
                 () -> empty(pipeAt(helper, sourceRel), pipeAt(helper, feederRel), pipeAt(helper, pipeRel)));
+    }
+
+    /**
+     * The release-2026-2-1 smoke's L rig, with the line carrying on past the corner: the pipe behind the stripes pipe
+     * also feeds from a chest, so the straight retraction is refused and the stripes pipe retracts sideways onto the
+     * pipe at the corner. It must stand there pointing back at the cell it left, the corner pipe and the void pipe
+     * travelling down it into the rest of the line, nothing dropped. The corner cell was emptied and refilled in one
+     * tick, so a client never sees it empty: it gets the stripes pipe's data on the holder that still holds the corner
+     * pipe, and drew the corner pipe (with the stripes pipe's lens) until the next chunk reload.
+     */
+    public static void testVoidPipeRetractsSideways(GameTestHelper helper) {
+        BlockPos chestRel = new BlockPos(0, 2, 3);
+        BlockPos feederRel = chestRel.east();
+        BlockPos pipeRel = feederRel.east();
+        BlockPos cornerRel = pipeRel.north();
+        BlockPos lineRel = cornerRel.north();
+        helper.setBlock(chestRel, Blocks.CHEST);
+        TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
+        TilePipeHolder corner = placePipe(helper, cornerRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        TilePipeHolder line = placePipe(helper, lineRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
+        connect(feeder, tile, corner, line);
+        PipeBehaviourStripes stripes = (PipeBehaviourStripes) tile.getPipe().getBehaviour();
+        // Touching two pipes it points nowhere by itself; a direction on an unconnected face stays (the smoke rig
+        // saves it the same way).
+        stripes.setDirection(Direction.EAST);
+        helper.assertTrue(feeder.getPipe().getConnectedType(Direction.WEST) == IPipe.ConnectedType.TILE,
+                "precondition: the pipe behind feeds from the chest, so the straight retraction is refused");
+        PipeBehaviourStripesDropTester.StripesRig rig = new PipeBehaviourStripesDropTester.StripesRig(
+                helper, tile, stripes, (PipeFlowItems) tile.getPipe().getFlow());
+        PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
+        stripes.onDrop(drop);
+        helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
+
+        Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
+        Item voidPipe = BCTransportItems.PIPE_VOID_ITEM.get();
+        AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(2.5);
+        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
+                () -> isStripes(pipeAt(helper, cornerRel)) && helper.getBlockState(pipeRel).isAir(),
+                () -> {
+                    TilePipeHolder moved = pipeAt(helper, cornerRel);
+                    Direction facing = ((PipeBehaviourStripes) moved.getPipe().getBehaviour()).direction;
+                    helper.assertTrue(facing == Direction.SOUTH,
+                            "the stripes pipe at the corner points back at the cell it left, got " + facing);
+                    helper.assertTrue(countLine(helper, voidPipe, cornerRel, lineRel) == 1,
+                            "the void pipe travels down the moved stripes pipe, found "
+                                    + countLine(helper, voidPipe, cornerRel, lineRel));
+                    helper.assertTrue(countLine(helper, cobble, cornerRel, lineRel) == 1,
+                            "...and so does the corner pipe it took the place of, found "
+                                    + countLine(helper, cobble, cornerRel, lineRel));
+                    helper.assertTrue(isPipe(pipeAt(helper, feederRel), BCTransportPipes.cobbleItem)
+                                    && isPipe(pipeAt(helper, lineRel), BCTransportPipes.cobbleItem),
+                            "the pipe behind and the line past the corner stay where they were");
+                    List<ItemEntity> dropped = helper.getLevel().getEntitiesOfClass(ItemEntity.class, around);
+                    helper.assertTrue(dropped.isEmpty(), "nothing is dropped, found " + dropped);
+
+                    TilePipeHolder client = clientView(helper, moved, cobble);
+                    helper.assertTrue(client.getPipe().getDefinition() == BCTransportPipes.stripesItem,
+                            "a client still holding the corner pipe draws the stripes pipe after the update, got "
+                                    + client.getPipe().getDefinition().identifier);
+                    Direction clientFacing = ((PipeBehaviourStripes) client.getPipe().getBehaviour()).direction;
+                    helper.assertTrue(clientFacing == Direction.SOUTH,
+                            "...pointing SOUTH, got " + clientFacing);
+                    helper.succeed();
+                }, "the stripes pipe never retracted sideways onto the corner pipe", () -> {
+                    discardItems(helper, around);
+                    empty(pipeAt(helper, feederRel), pipeAt(helper, pipeRel), pipeAt(helper, cornerRel),
+                            pipeAt(helper, lineRel));
+                });
+    }
+
+    /**
+     * What a client still holding {@code oldPipe} in {@code tile}'s cell makes of the update the server sends for
+     * it: a cell emptied and refilled in one tick reaches the client as the same block, so its holder is kept and
+     * only the block entity data arrives (vanilla's handleUpdateTag and data packet both load it).
+     */
+    private static TilePipeHolder clientView(GameTestHelper helper, TilePipeHolder tile, Item oldPipe) {
+        TilePipeHolder client = new TilePipeHolder(tile.getBlockPos(), tile.getBlockState());
+        client.setLevel(helper.getLevel());
+        client.onPlacedBy(null, new ItemStack(oldPipe));
+        CompoundTag update = tile.getUpdateTag(helper.getLevel().registryAccess());
+        //? if >=1.21.10 {
+        client.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, helper.getLevel().registryAccess(), update));
+        //?} else {
+        /*client.loadWithComponents(update, helper.getLevel().registryAccess());*/
+        //?}
+        return client;
     }
 
     /**

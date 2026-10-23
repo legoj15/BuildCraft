@@ -44,7 +44,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.tiles.IDebuggable;
-import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pluggable.PluggableDefinition;
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IFlowItems;
@@ -56,7 +55,6 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
-import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -155,15 +153,27 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         }
         input.read("pipe", CompoundTag.CODEC).ifPresent(pipeTag -> {
             try {
-                if (pipe != null) {
+                if (pipe != null && isSameDefinition(pipe, pipeTag)) {
                     // Pipe already exists — just update its data from the incoming NBT
                     // instead of recreating from scratch. This prevents the pipe being
                     // destroyed/rebuilt every time the server sends a block entity update.
                     pipe.readFromNbt(pipeTag);
                 } else {
+                    // A different pipe: the cell was emptied and refilled in one tick (a stripes pipe moving
+                    // along its line), which a client sees as the same block, so its holder is kept and only
+                    // this data arrives. The old pipe's behaviour and flow cannot read the new one's.
+                    Pipe replaced = pipe;
+                    if (replaced != null) {
+                        eventBus.unregisterHandler(replaced.behaviour);
+                        eventBus.unregisterHandler(replaced.flow);
+                    }
                     pipe = new Pipe(this, pipeTag);
                     eventBus.registerHandler(pipe.behaviour);
                     eventBus.registerHandler(pipe.flow);
+                    if (replaced != null) {
+                        // A loaded holder gets no second onLoad: recompute the connections it would have asked for.
+                        pipe.onLoad();
+                    }
                 }
             } catch (InvalidInputDataException e) {
                 pipe = null;
@@ -221,6 +231,11 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
             requestModelDataUpdate();
             scheduleRenderUpdate = true;
         }
+    }
+
+    /** Whether {@code pipeTag} (a {@link Pipe#writeToNbt} tag) holds the same kind of pipe as {@code pipe}. */
+    private static boolean isSameDefinition(Pipe pipe, CompoundTag pipeTag) {
+        return PipeApi.pipeRegistry.getDefinition(NBTUtilBC.getString(pipeTag, "def", "")) == pipe.getDefinition();
     }
 
     @Override

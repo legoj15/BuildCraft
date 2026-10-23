@@ -1,19 +1,11 @@
-Last audited: 2026-10-17
+Last audited: 2026-10-22
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
 ## 🔧 Outstanding work (version 2026.2.1)
 
-- Finish the Minecraft 26.3 port (automated and in-game checks pass; release work remains) — [plan](docs/port-26.3.md)
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
-- Builders can sit busy for ever beside fluid they can't remove (outside lava in Clear mode, any water in Replace mode) — [notes](docs/todo-details.md#builder-stalls-beside-unremovable-fluid)
-- On Minecraft 1.21.1, /setblock over a Tank, Heat Exchanger, Flood Gate, Combustion Engine or item machine still spills its contents — [notes](docs/todo-details.md#setblock-spills-on-1211)
-- Guide book: a link that wraps onto the next page only clicks on one of its two pages — [notes](docs/todo-details.md#guide-page-spanning-link-clicks)
-- Stripes pipes use buckets, bottles and thrown items along a fixed line above the pipe instead of on the block in front — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
-- Land-claim mods can't stop a Builder building a blueprint — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
-- Decide: delete or finish the Stripes pipe's minecart-breaking and pipe-extending handlers (never called) — [notes](docs/todo-details.md#machine-claim-checks-and-stripes-gaps)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
-- Interpolation for robots, so they move smoothly on clients (planned for 2026.2.1)
 
 ## 🆕 New Features (version 2026.3)
 

@@ -33,10 +33,16 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  * addon's nested dispatch) cannot end this player's dispatch. Entries are weak, so a detached player's goes with it.
  *
  * <p>{@link BlockUtil}'s machine-click helpers record their own refusals, and so do the stripes minecart handler for a
- * refused attack and the stripes shears handler for a refused break. The one refusal no helper sees is a mob
- * interaction: {@code Player#interactOn} answers a cancelled entity-interaction event with whatever result the
- * cancelling listener left, the default PASS (the same answer as a mob that ignores the item) or a consuming one (the
- * same answer as a mob that took the item), so a recorder on the event itself counts it ({@link #registerRecorder}).
+ * refused attack and the stripes shears handler for a refused break ({@link #recordBreak}). The one refusal no helper
+ * sees is a mob interaction: {@code Player#interactOn} answers a cancelled entity-interaction event with whatever
+ * result the cancelling listener left, the default PASS (the same answer as a mob that ignores the item) or a
+ * consuming one (the same answer as a mob that took the item), so a recorder on the event itself counts it
+ * ({@link #registerRecorder}).
+ *
+ * <p>A refused break is kept apart as well ({@link #breakCount}), for a caller that must tell the break ask being
+ * refused from any other refused click. The stripes pipe remembers a refused break for the cell in front, as its
+ * digging does; a click the dispenser fallback had refused on that cell is not that, and remembering it would stop the
+ * pipe digging a block its owner may break.
  *
  * <p>A placement a protection mod refuses through NeoForge's placement capture (the item's use places the block, the
  * cancelled placement event takes it back) reaches the clicker as the item's FAIL, the same answer as a block item
@@ -47,7 +53,13 @@ import net.neoforged.neoforge.event.level.BlockEvent;
  */
 public final class MachineRefusals {
 
-    private static final Map<Player, AtomicLong> TALLIES = Collections.synchronizedMap(new WeakHashMap<>());
+    /** One player's tallies: every refused click, and the refused breaks among them. */
+    private static final class Tally {
+        final AtomicLong refusals = new AtomicLong();
+        final AtomicLong breaks = new AtomicLong();
+    }
+
+    private static final Map<Player, Tally> TALLIES = Collections.synchronizedMap(new WeakHashMap<>());
     private static boolean recorderRegistered = false;
 
     /** The machine player {@link #countingPlacements} is counting cancelled placements for right now, or null. */
@@ -56,15 +68,29 @@ public final class MachineRefusals {
 
     private MachineRefusals() {}
 
-    /** Clicks refused for {@code player} so far; only differences mean anything. */
+    /** Clicks refused for {@code player} so far, refused breaks included; only differences mean anything. */
     public static long count(Player player) {
-        AtomicLong tally = TALLIES.get(player);
-        return tally == null ? 0 : tally.get();
+        Tally tally = TALLIES.get(player);
+        return tally == null ? 0 : tally.refusals.get();
+    }
+
+    /** Breaks refused for {@code player} so far: the part of {@link #count} that was a break ask. Only differences
+     *  mean anything. */
+    public static long breakCount(Player player) {
+        Tally tally = TALLIES.get(player);
+        return tally == null ? 0 : tally.breaks.get();
     }
 
     /** Notes one click refused for {@code player}. */
     public static void record(Player player) {
-        TALLIES.computeIfAbsent(player, key -> new AtomicLong()).incrementAndGet();
+        TALLIES.computeIfAbsent(player, key -> new Tally()).refusals.incrementAndGet();
+    }
+
+    /** Notes one break refused for {@code player}: a refused click that {@link #breakCount} counts too. */
+    public static void recordBreak(Player player) {
+        Tally tally = TALLIES.computeIfAbsent(player, key -> new Tally());
+        tally.refusals.incrementAndGet();
+        tally.breaks.incrementAndGet();
     }
 
     /**

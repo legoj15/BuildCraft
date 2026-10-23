@@ -238,10 +238,12 @@ public class BlockUtil {
      * unless the event forced the item use); then the item's {@code useOn} runs. That is the item path of
      * {@code ServerPlayerGameMode.useItemOn} and no more: the block's own use, {@code Item#onItemUseFirst}, the
      * block's feature-flag check, the infinite-materials count restore and the item-used-on-block advancement
-     * trigger are not run. On 26.3, where the player's game mode puts the stack a use transformed the held one into
-     * in the hand, so does this; earlier lines do nothing of the kind. On 26.3 the event is the ONLY ask a hoe's
-     * till gets: hoes became a block-transformer component, and tilling no longer posts the tool-modification
-     * event.
+     * trigger are not run. On 26.3, where vanilla's {@code useItemOn} puts the stack a use transformed the held one
+     * into in the hand, so does this; on 1.21.10 through 26.2 vanilla reads the use's transformed stack nowhere in
+     * that method (only {@code useItem} does), and 1.21.1 has no such stack at all, so on those the hand is left as
+     * the item left it. That 26.3 guard is a behaviour boundary, not API availability: the accessor is there from
+     * 1.21.10. On 26.3 the event is the ONLY ask a hoe's till gets: hoes became a block-transformer component, and
+     * tilling no longer posts the tool-modification event.
      *
      * @return {@code true} when the item's use took the action; {@code false} when the event refused it, the gate
      *         stopped it, or the item passed
@@ -280,6 +282,7 @@ public class BlockUtil {
             return refused(player);
         }
         InteractionResult result = stack.useOn(new UseOnContext(level, player, hand, stack, hit));
+        // Behaviour, not API: vanilla's useItemOn swaps the hand only from 26.3 (see the Javadoc above).
         //? if >=26.3 {
         if (result instanceof InteractionResult.Success success) {
             ItemStack transformed = success.heldItemTransformedTo();
@@ -306,7 +309,10 @@ public class BlockUtil {
      * front of {@code ServerPlayerGameMode.useItem}, and what that method does with the answer is done too: the
      * stack the use transformed the held one into goes into {@code hand}, the way a bucket that took a water source
      * leaves the water bucket in a player's hand. (The caller finds it where it finds everything else the player
-     * holds. The refresh of a real player's screen is not run.)
+     * holds. The refresh of a real player's screen is not run.) Vanilla's {@code useItem} does this on every line, so
+     * there is no behaviour boundary in here; the 1.21.10 split below is API availability only: before it the use
+     * answers with a holder carrying the resulting stack, from it with a result whose success carries the transformed
+     * stack (null when the use left the hand alone).
      *
      * @return {@code true} when the item's use took the action; {@code false} when the event refused it, the gate
      *         stopped it, or the item passed
@@ -316,6 +322,7 @@ public class BlockUtil {
             refused(player);
             return false;
         }
+        // API availability, not behaviour: both forms put the same stack in the hand (see the Javadoc above).
         //? if >=1.21.10 {
         InteractionResult result = stack.use(level, player, hand);
         ItemStack transformed =

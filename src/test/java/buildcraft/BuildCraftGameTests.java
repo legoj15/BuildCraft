@@ -252,13 +252,17 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_refused_soil_click_ends_seed_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedSoilClickEndsTheSeedFallthrough);
         reg.accept("buildcraftunofficial:stripes_refused_claim_stops_block_placement", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClaimStopsAStripesPipePlacingABlock);
         reg.accept("buildcraftunofficial:stripes_shears_ask_break_protection", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testShearsAskBreakProtectionBeforeCutting);
+        reg.accept("buildcraftunofficial:stripes_refused_click_after_shears_pass_keeps_digging", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickAfterShearsPassDoesNotStopTheDig);
         reg.accept("buildcraftunofficial:stripes_air_use_asks_item_right_click", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseAsksTheItemRightClickEvent);
         reg.accept("buildcraftunofficial:stripes_air_use_hands_product_back_down_pipe", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseHandsTheProductBackDownThePipe);
         reg.accept("buildcraftunofficial:stripes_refused_till_ends_hoe_handler", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedTillEndsTheHoeHandler);
         reg.accept("buildcraftunofficial:stripes_refused_entity_interaction_ends_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedEntityInteractionEndsTheDispatch);
         reg.accept("buildcraftunofficial:stripes_other_players_refusal_keeps_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAnotherPlayersRefusalDoesNotEndTheDispatch);
+        reg.accept("buildcraftunofficial:stripes_handler_may_change_registry_while_dispatched", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHandlerMayChangeTheRegistryWhileItIsDispatched);
         reg.accept("buildcraftunofficial:stripes_alias_sweep_sends_once", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAliasedStackIsSentBackOnce);
         reg.accept("buildcraftunofficial:stripes_breaks_minecart_after_attack_ask", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testMinecartInFrontIsBrokenAfterAnAttackAsk);
+        reg.accept("buildcraftunofficial:stripes_minecart_stuck_slot_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testSlotThatWillNotClearKeepsTheCartAndItsItem);
+        reg.accept("buildcraftunofficial:stripes_minecart_no_pick_result_destroyed_its_own_way", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCartThatNamesNoItemIsDestroyedItsOwnWay);
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_refused_extension_returns_stack", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedExtensionSendsTheStackBack);

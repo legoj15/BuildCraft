@@ -34,6 +34,9 @@ public final class TestOnlyBlocks {
      *  {@link WaterSensitiveBlock}. */
     public static final Identifier WET_FRAGILE_ID = Identifier.parse(NAMESPACE + ":wet_fragile");
 
+    /** A shearable block that is never ready for shears; see {@link UnshearableBlock}. */
+    public static final Identifier UNSHEARABLE_ID = Identifier.parse(NAMESPACE + ":unshearable");
+
     private TestOnlyBlocks() {}
 
     /** The registered {@link RefusingSourceBlock} (valid once registries are populated). */
@@ -52,6 +55,12 @@ public final class TestOnlyBlocks {
     public static Block wetFragile() {
         return buildcraft.lib.misc.RegistryUtilBC.getValue(
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, WET_FRAGILE_ID);
+    }
+
+    /** The registered {@link UnshearableBlock} (valid once registries are populated). */
+    public static Block unshearable() {
+        return buildcraft.lib.misc.RegistryUtilBC.getValue(
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK, UNSHEARABLE_ID);
     }
 
     /**
@@ -86,6 +95,14 @@ public final class TestOnlyBlocks {
                             .noOcclusion(), false));
                     //?} else {
                     /*BlockBehaviour.Properties.of().noOcclusion(), false));*/
+                    //?}
+            event.register(Registries.BLOCK, UNSHEARABLE_ID, () -> new UnshearableBlock(
+                    //? if >=1.21.10 {
+                    BlockBehaviour.Properties.of()
+                            .setId(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, UNSHEARABLE_ID))
+                            .noOcclusion()));
+                    //?} else {
+                    /*BlockBehaviour.Properties.of().noOcclusion()));*/
                     //?}
         }
     }

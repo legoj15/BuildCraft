@@ -6,9 +6,9 @@
 
 package buildcraft.transport.pipe;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -27,13 +27,16 @@ import buildcraft.lib.misc.MachineRefusals;
 public enum StripesRegistry implements IStripesRegistry {
     INSTANCE;
 
+    // Copy-on-write lists: a dispatch walks each priority's list as it was when the walk reached it, so a handler may
+    // add or remove handlers (itself included) while it is being asked without breaking the walk; registration is
+    // rare, dispatch is not.
     private final EnumMap<EnumHandlerPriority, List<IStripesHandlerItem>> itemHandlers = new EnumMap<>(EnumHandlerPriority.class);
     private final EnumMap<EnumHandlerPriority, List<IStripesHandlerBlock>> blockHandlers = new EnumMap<>(EnumHandlerPriority.class);
 
     StripesRegistry() {
         for (EnumHandlerPriority priority : EnumHandlerPriority.VALUES) {
-            itemHandlers.put(priority, new ArrayList<>());
-            blockHandlers.put(priority, new ArrayList<>());
+            itemHandlers.put(priority, new CopyOnWriteArrayList<>());
+            blockHandlers.put(priority, new CopyOnWriteArrayList<>());
         }
     }
 

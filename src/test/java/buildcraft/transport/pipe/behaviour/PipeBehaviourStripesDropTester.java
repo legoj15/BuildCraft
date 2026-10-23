@@ -5,6 +5,7 @@
  */
 package buildcraft.transport.pipe.behaviour;
 
+import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,9 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import buildcraft.api.core.EnumHandlerPriority;
+import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.IStripesActivator;
+import buildcraft.api.transport.IStripesHandlerBlock;
 import buildcraft.api.transport.IStripesHandlerItem;
 import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.PipeEventItem;
@@ -44,6 +47,7 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.TestOnlyBlocks;
 import buildcraft.lib.test.WorkClaimMod;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -400,6 +404,49 @@ public class PipeBehaviourStripesDropTester {
 
             helper.assertTrue(helper.getBlockState(leavesRel).isAir(), "an allowed shearing removes the leaves");
             helper.assertTrue(allowed.getStack().isEmpty(), "a handled drop no longer carries a stack");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A refusal the shears handler never made is not a refused break. The pipe remembers a refused break ask for the
+     * cell in front (and so stops digging it for the refusal window) only when the break ask itself was refused, not
+     * whenever a click was refused while shears were being handled: with the shears handler passing (a shearable block
+     * that is not ready for shears), the dispenser fallback after it right-clicks the block with the shears, and a
+     * claim that guards only clicks refuses that. The pipe took that for the break being refused and then left a block
+     * its owner may break alone for the window. The claim here refuses the click and nothing else, and the break
+     * claim only counts, so the block may be broken: the shears come back unused, and the pipe still digs it.
+     */
+    public static void testRefusedClickAfterShearsPassDoesNotStopTheDig(GameTestHelper helper) {
+        helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos frontRel = pipeRel.east();
+        BlockPos front = helper.absolutePos(frontRel);
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
+            helper.setBlock(frontRel, TestOnlyBlocks.unshearable());
+            try (ClaimProtectionMod breaks = new ClaimProtectionMod(front, false);
+                    WorkClaimMod clicks = new WorkClaimMod(front::equals, front::equals)) {
+                PipeEventItem.Drop passed = rig.drop(new ItemStack(Items.SHEARS));
+                rig.stripes.onDrop(passed);
+
+                helper.assertTrue(clicks.toolAsks(front) >= 1,
+                        "precondition: the dispenser fallback right-clicked the block and was refused, got "
+                                + clicks.toolAsks(front));
+                helper.assertTrue(breaks.asks() == 0,
+                        "precondition: the shears handler passed, so no break was asked, got " + breaks.asks());
+                helper.assertTrue(passed.getStack().is(Items.SHEARS) && !passed.getStack().isDamaged(),
+                        "...and the shears come back unused, got " + passed.getStack());
+
+                for (int i = 0; i < 20 && !helper.getBlockState(frontRel).isAir(); i++) {
+                    rig.stripes.receivePower(64 * MjAPI.MJ, false);
+                    rig.stripes.onTick();
+                }
+                helper.assertTrue(helper.getBlockState(frontRel).isAir(),
+                        "a refused click is not a refused break: the pipe still digs the block its owner may break,"
+                                + " found " + helper.getBlockState(frontRel));
+                helper.assertTrue(breaks.asks() >= 1, "the dig asked break protection, got " + breaks.asks());
+            }
         }
         helper.succeed();
     }
@@ -771,6 +818,91 @@ public class PipeBehaviourStripesDropTester {
                         "the one stack in two slots travels back once (3 paper), found " + rig.count(Items.PAPER));
             } finally {
                 StripesRegistry.INSTANCE.removeHandler(aliasing);
+            }
+        }
+        helper.succeed();
+    }
+
+    /** A handler that takes itself out of the registry the first time it is asked (and, when given another handler,
+     *  puts that one in then), declining everything. Counts its calls, for the item and the block dispatch alike. */
+    private static final class SelfRemovingHandler implements IStripesHandlerItem, IStripesHandlerBlock {
+        int calls;
+        private final IStripesHandlerItem addsOnFirstCall;
+
+        SelfRemovingHandler(IStripesHandlerItem addsOnFirstCall) {
+            this.addsOnFirstCall = addsOnFirstCall;
+        }
+
+        @Override
+        public boolean handle(Level world, BlockPos pos, Direction direction, ItemStack stack, Player player,
+                IStripesActivator activator) {
+            calls++;
+            StripesRegistry.INSTANCE.removeHandler((IStripesHandlerItem) this);
+            if (addsOnFirstCall != null && calls == 1) {
+                StripesRegistry.INSTANCE.addHandler(addsOnFirstCall, EnumHandlerPriority.HIGHEST);
+            }
+            return false;
+        }
+
+        @Override
+        public boolean handle(Level world, BlockPos pos, Direction direction, Player player,
+                IStripesActivator activator) {
+            calls++;
+            StripesRegistry.INSTANCE.removeHandler((IStripesHandlerBlock) this);
+            return false;
+        }
+    }
+
+    /**
+     * A handler that takes itself out of the registry (or adds another) while the registry is dispatching to it does
+     * not break the dispatch: the pipe's tick used to throw a {@code ConcurrentModificationException} out of the
+     * priority list it was walking, for items and for blocks alike. The handlers after it still run (the block is
+     * placed), and one added mid-dispatch takes part from the next dispatch.
+     */
+    public static void testHandlerMayChangeTheRegistryWhileItIsDispatched(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos targetRel = pipeRel.east();
+        int[] lateCalls = new int[1];
+        IStripesHandlerItem late = (world, pos, direction, stack, player, activator) -> {
+            lateCalls[0]++;
+            return false;
+        };
+        SelfRemovingHandler item = new SelfRemovingHandler(late);
+        SelfRemovingHandler block = new SelfRemovingHandler(null);
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
+            StripesRegistry.INSTANCE.addHandler((IStripesHandlerItem) item, EnumHandlerPriority.HIGHEST);
+            StripesRegistry.INSTANCE.addHandler((IStripesHandlerBlock) block, EnumHandlerPriority.HIGHEST);
+            try {
+                PipeEventItem.Drop drop = rig.drop(new ItemStack(Items.COBBLESTONE, 3));
+                rig.stripes.onDrop(drop);
+                helper.assertTrue(item.calls == 1, "the self-removing item handler ran once, got " + item.calls);
+                helper.assertTrue(helper.getBlockState(targetRel).is(Blocks.COBBLESTONE),
+                        "the handlers after it still ran: the block is placed");
+                helper.assertTrue(lateCalls[0] == 0,
+                        "a handler added mid-dispatch waits for the next one, got " + lateCalls[0]);
+
+                helper.setBlock(targetRel, Blocks.AIR);
+                PipeEventItem.Drop again = rig.drop(new ItemStack(Items.COBBLESTONE, 3));
+                rig.stripes.onDrop(again);
+                helper.assertTrue(item.calls == 1,
+                        "a handler that removed itself is not run again, got " + item.calls);
+                helper.assertTrue(lateCalls[0] == 1,
+                        "...and the one it added takes part in the next dispatch, got " + lateCalls[0]);
+
+                try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
+                    boolean handled = StripesRegistry.INSTANCE.handleBlock(helper.getLevel(),
+                            helper.absolutePos(pipeRel), Direction.EAST, lease.player(), rig.stripes);
+                    helper.assertTrue(!handled, "nothing to act on in front of the pipe");
+                }
+                helper.assertTrue(block.calls == 1,
+                        "the self-removing block handler ran once, got " + block.calls);
+            } catch (ConcurrentModificationException e) {
+                // The exception has no message, which the game test runner cannot report: name it.
+                helper.fail("the registry threw while a handler changed it mid-dispatch: " + e);
+            } finally {
+                StripesRegistry.INSTANCE.removeHandler((IStripesHandlerItem) item);
+                StripesRegistry.INSTANCE.removeHandler((IStripesHandlerBlock) block);
+                StripesRegistry.INSTANCE.removeHandler(late);
             }
         }
         helper.succeed();

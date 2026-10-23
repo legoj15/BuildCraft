@@ -342,7 +342,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
             if (PipeApi.stripeRegistry == null) {
                 return;
             }
-            long refusedBefore = MachineRefusals.count(player);
+            long breaksRefusedBefore = MachineRefusals.breakCount(player);
             if (PipeApi.stripeRegistry.handleItem(world, pos, direction, used, player, this)) {
                 event.setStack(ItemStack.EMPTY);
                 FakePlayerUtil.Leftovers left = FakePlayerUtil.takeLeftovers(player, used, usedItem);
@@ -352,8 +352,10 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
                 for (ItemStack product : left.products()) {
                     sendItem(product, direction);
                 }
-            } else if (breakAsk && MachineRefusals.count(player) != refusedBefore) {
-                // As a refused dig does (mayBreak): the cycle on this block ends and the refusal is remembered.
+            } else if (breakAsk && MachineRefusals.breakCount(player) != breaksRefusedBefore) {
+                // As a refused dig does (mayBreak): the cycle on this block ends and the refusal is remembered. Only
+                // the break ask being refused counts: dispatch ends at the first refused click of any kind, and a
+                // click a later handler had refused (the dispenser fallback's right-click) leaves the block diggable.
                 endCycle(world);
                 refusals.remember(world, target, owner);
             }

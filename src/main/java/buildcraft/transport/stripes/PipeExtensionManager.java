@@ -253,7 +253,7 @@ public enum PipeExtensionManager implements IPipeExtensionManager {
         }
         if (w.getBlockEntity(p) instanceof TilePipeHolder moved
                 && moved.getPipe() != null && moved.getPipe().getBehaviour() instanceof PipeBehaviourStripes stripes) {
-            stripes.direction = retractDir.getOpposite();
+            stripes.setDirection(retractDir.getOpposite());
         }
         sendBack(w, p, stacksToSendBack, r.dir);
         return p;

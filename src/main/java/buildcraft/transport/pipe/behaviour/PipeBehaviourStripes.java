@@ -146,7 +146,8 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
 
     // Direction management
 
-    private void setDirection(@Nullable Direction newValue) {
+    /** Points the pipe at {@code newValue}; the client is told on the next network update when it changes. */
+    public void setDirection(@Nullable Direction newValue) {
         if (direction != newValue) {
             direction = newValue;
             if (!pipe.getHolder().getPipeWorld().isClientSide()) {

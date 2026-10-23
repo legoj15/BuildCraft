@@ -14,6 +14,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 
 /**
  * The one shape every "break a block, check what it dropped" game test goes through.
@@ -33,6 +34,10 @@ import net.minecraft.world.level.block.Blocks;
  * </ol>
  * The poll's whole budget is {@link #POLL_TICKS}; a manifest using it needs {@code max_ticks} above that, which
  * {@code GameTestPollBudgetTester} checks (it reads the constant from this file).
+ *
+ * <p>Only drops inside the test's own cell count, so a drop must not be able to leave it before the assertions. A
+ * drop popped into a block that is still there (a pluggable or wire taken off a pipe) ejects itself at up to 0.3
+ * blocks a tick and travels about 1.5 blocks by then: put that block at least two blocks from every cell edge.
  *
  * <p>NB: the {@link GameTestHelper} parameter is named {@code gth} for the reason given on
  * {@link EntityArenaUtil}: the build script rewrites {@code assertTrue}/{@code assertFalse} on a {@code helper}
@@ -115,8 +120,9 @@ public final class DropArenaUtil {
 
     /**
      * What a drop test expects to find, as a chain: {@code Drops.near(pos, 2.0).present(A, B).absent(C)}. Every entry
-     * counts items within {@code radius} of the centre of {@code pos} ({@link EntityArenaUtil#droppedItems}), by
-     * total count, not entity count: identical stacks may merge. {@link #present} and {@link #exactly} are also
+     * counts items in the box reaching {@code radius} blocks along each axis from the centre of {@code pos}
+     * ({@link EntityArenaUtil#droppedItems}; a box, not a sphere), clipped to the test's own cell, by total count,
+     * not entity count: identical stacks may merge. {@link #present} and {@link #exactly} are also
      * what the poll waits for; {@link #absent} and the exact totals are only checked after the settle.
      */
     public static final class Drops {
@@ -177,8 +183,12 @@ public final class DropArenaUtil {
             return this;
         }
 
+        /** Counts only inside the test's own cell: a radius around a pipe one block from the edge reaches into the
+         *  neighbouring arena, whose own cleanup then discards what this test already counted. */
         private static int total(GameTestHelper gth, Entry entry) {
+            AABB cell = EntityArenaUtil.cellBounds(gth);
             return EntityArenaUtil.droppedItems(gth, entry.pos(), entry.radius()).stream()
+                    .filter(drop -> cell.contains(drop.position()))
                     .filter(drop -> drop.getItem().is(entry.item()))
                     .mapToInt(drop -> drop.getItem().getCount())
                     .sum();

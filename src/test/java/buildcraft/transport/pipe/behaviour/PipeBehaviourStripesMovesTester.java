@@ -410,8 +410,11 @@ public class PipeBehaviourStripesMovesTester {
                 });
     }
 
+    /** Never past the test's own cell: a neighbouring arena's drops may sit inside {@code box}. */
     private static void discardItems(GameTestHelper helper, AABB box) {
-        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
+        AABB cell = EntityArenaUtil.cellBounds(helper);
+        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box,
+                item -> cell.contains(item.position()))) {
             item.discard();
         }
     }

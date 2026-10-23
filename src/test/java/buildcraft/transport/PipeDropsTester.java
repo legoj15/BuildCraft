@@ -30,6 +30,7 @@ import buildcraft.core.BCCoreItems;
 
 import buildcraft.lib.test.DropArenaUtil;
 import buildcraft.lib.test.DropArenaUtil.Drops;
+import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -42,7 +43,7 @@ import buildcraft.transport.tile.TilePipeHolder;
 /**
  * Drop tests for pipes and the things attached to them.
  * <p>
- * Seven scenarios:
+ * The scenarios:
  * <ol>
  *   <li><b>Pluggable click-break</b> — clicking on a pluggable's bounding box drops just that
  *       pluggable's pick stack; the pipe stays in place. Exercises
@@ -145,22 +146,27 @@ public class PipeDropsTester {
         tile.replacePluggable(side, plug);
     }
 
-    /** Discards any item entities already inside the assertion search box. Test arenas are packed
-     *  in a tight grid and run concurrently; hardware legitimately dropped by a NEIGHBOURING pipe
-     *  test (or left behind by a previous occupant of a reused cell) can otherwise sit inside this
-     *  test's radius-4 search box and poison not-present / exact-count assertions. Call right
-     *  before the break/removal under test. */
-    private static void clearDroppedItemsAround(GameTestHelper helper, BlockPos relPos) {
-        AABB box = new AABB(helper.absolutePos(relPos)).inflate(4.0);
-        for (ItemEntity ie : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
+    /** Discards items a previous occupant of this reused cell left behind. Only the test's own cell: arenas are
+     *  packed in a tight grid and run concurrently, and a wider sweep deletes the drops a NEIGHBOURING pipe test is
+     *  about to count. Call right before the break/removal under test. */
+    private static void clearDroppedItemsAround(GameTestHelper helper) {
+        for (ItemEntity ie : helper.getLevel().getEntitiesOfClass(ItemEntity.class,
+                EntityArenaUtil.cellBounds(helper))) {
             ie.discard();
         }
     }
 
     // ---------- Pluggable click-break ----------
 
+    /** Where the click-break tests put their pipe: the middle of the 6x7 cell, not (1, 2, 1). A click-break pops the
+     *  item inside the pipe that stays, so the item ejects itself out of the pipe's collision box at 0.1 to 0.3
+     *  blocks a tick, towards the nearest face; by the assertion it can be 1.5 blocks away. From a pipe one block in
+     *  that crossed the cell edge (measured under fullTestSuite: from x 1.27 to -0.20 in six ticks), where the cell
+     *  clip no longer counts it and the neighbour's cleanup discards it. Here it has more than two blocks each way. */
+    private static final BlockPos CLICK_PIPE_POS = new BlockPos(2, 2, 3);
+
     public static void testPluggableBreakDropsItemAndKeepsPipe(GameTestHelper helper) {
-        BlockPos pipePos = new BlockPos(1, 2, 1);
+        BlockPos pipePos = CLICK_PIPE_POS;
         // Radius 4.0: under MC gravity a popResource'd item can fall ~2 blocks in 10 ticks, putting it right at the
         // boundary of a radius-2.0 search and making a fixed-tick assertion flake on ~40% of runs. The drops are now
         // asserted a few ticks after they appear, but 4.0 keeps the generous margin while still being tight enough to
@@ -198,7 +204,7 @@ public class PipeDropsTester {
     // ---------- Wire click-break ----------
 
     public static void testWireBreakDropsItemAndKeepsPipe(GameTestHelper helper) {
-        BlockPos pipePos = new BlockPos(1, 2, 1);
+        BlockPos pipePos = CLICK_PIPE_POS;
         DyeColor wireColor = DyeColor.RED;
         EnumWirePart wirePart = EnumWirePart.WEST_UP_NORTH;
         // Radius 4.0: same gravity-margin reasoning as the plug test above.
@@ -316,7 +322,7 @@ public class PipeDropsTester {
             // preRemoveSideEffects (>=1.21.10) or onRemove (1.21.1) → TilePipeHolder.dropPipeCargo, which
             // must spill the cargo but nothing else. (The loot-bearing removals — explosion, wither,
             // /…destroy — instead return the hardware via getDrops; see testCommandBreakDropsPipeViaLoot.)
-            clearDroppedItemsAround(helper, pipePos);
+            clearDroppedItemsAround(helper);
             DropArenaUtil.removeBlock(helper, pipePos);
         }, Drops.near(pipePos, 4.0).present(Items.DIAMOND)
                 .alsoNear(pipePos, 2.0).absent(BCTransportItems.PIPE_WOOD_ITEM.get(),
@@ -334,7 +340,7 @@ public class PipeDropsTester {
             int inserted = flow.insertFluidsForce(new FluidStack(Fluids.WATER, 1000), null, false);
             helper.assertTrue(inserted > 0, "Fluid pipe should accept water when empty");
 
-            clearDroppedItemsAround(helper, pipePos);
+            clearDroppedItemsAround(helper);
             DropArenaUtil.removeBlock(helper, pipePos);
         }, Drops.near(pipePos, 4.0).present(BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
                 .alsoNear(pipePos, 2.0).absent(BCTransportItems.PIPE_COBBLE_FLUID.get()));
@@ -379,14 +385,14 @@ public class PipeDropsTester {
         DropArenaUtil.awaitDrops(helper, () -> {
             placeItemPipe(helper, pipePos);
 
-            clearDroppedItemsAround(helper, pipePos);
+            clearDroppedItemsAround(helper);
             DropArenaUtil.breakBlock(helper, pipePos, new ItemStack(Items.WOODEN_PICKAXE));
         }, Drops.near(pipePos, 2.0).exactly(BCTransportItems.PIPE_WOOD_ITEM.get(), 1));
     }
 
     /** Scans for a dropped wood pipe item carrying the given paint colour data component. */
     private static boolean hasColouredPipeDrop(GameTestHelper helper, BlockPos relPos, DyeColor colour) {
-        AABB box = new AABB(helper.absolutePos(relPos)).inflate(4.0);
+        AABB box = new AABB(helper.absolutePos(relPos)).inflate(4.0).intersect(EntityArenaUtil.cellBounds(helper));
         for (ItemEntity ie : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
             ItemStack stack = ie.getItem();
             if (stack.is(BCTransportItems.PIPE_WOOD_ITEM.get())

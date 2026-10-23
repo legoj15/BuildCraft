@@ -170,7 +170,10 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   included, so a late duplicate or a stray block is caught); it discards the cell's items on every exit. Put the
   whole place-and-break inside `act` (nothing ticks between filling a machine and breaking it), describe the
   result with `Drops.near(pos, radius).present(...).absent(...).alsoNear(...).exactly(item, n)`, and give the
-  manifest `max_ticks` above `POLL_TICKS` (400 today). Counts are totals, not entities: stacks merge.
+  manifest `max_ticks` above `POLL_TICKS` (400 today). Counts are totals, not entities: stacks merge, and only
+  items inside the test's own cell count. A drop popped into a block that stays (a plug or wire clicked off a
+  pipe) ejects itself at up to 0.3 blocks a tick, so keep that block two blocks from every cell edge:
+  `pipe_pluggable_break` and `pipe_wire_break` lost their drop across the edge from (1,2,1).
 - **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
   as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
   arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.

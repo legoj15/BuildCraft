@@ -6,10 +6,9 @@
  */
 package buildcraft.robotics.path;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.PriorityQueue;
 
 import net.minecraft.core.BlockPos;
 
@@ -17,16 +16,24 @@ import net.minecraft.core.BlockPos;
  * 3D A* path finder, ported from 7.1.x {@code buildcraft.core.lib.utils.PathFinding}. Follows the
  * guidelines at http://www.policyalmanac.org/games/aStarTutorial.htm.
  *
- * <p>Two deliberate, behaviour-preserving changes were made in the port:
+ * <p>Deliberate, behaviour-preserving changes made in the port:
  * <ul>
  * <li>The live {@code World} dependency was replaced with the injectable {@link SoftBlockAccess}
  *     predicate. The 7.1.x {@code y < 0} void guard is folded into {@code isSoft} (positions outside
  *     the world report not-soft), which also makes the finder correct on modern negative-Y worlds.</li>
- * <li>A deterministic tie-break was added to {@link #findSmallerWeight}: when two open nodes share the
- *     same total weight the one with the smaller {@link BlockPos#asLong()} wins. 7.1.x relied on
- *     {@link HashMap} iteration order here, so identical inputs could yield different (equal-cost)
- *     paths; the tie-break makes the result a pure function of the inputs, which the determinism tests
- *     depend on.</li>
+ * <li>A deterministic tie-break decides between open nodes of equal total weight: the one with the
+ *     smaller {@link BlockPos#asLong()} wins. 7.1.x relied on {@code HashMap} iteration order here, so
+ *     identical inputs could yield different (equal-cost) paths; the tie-break makes the result a pure
+ *     function of the inputs, which the determinism tests depend on.</li>
+ * <li>The open list is a {@link PriorityQueue} under that same ordering (with the {@link #openList}
+ *     map tracking each position's current record, so superseded queue entries are skipped at poll
+ *     time). The port originally re-copied the whole open list and linearly scanned it for the minimum
+ *     on EVERY expansion — O(open) work per step, which is what made a wide search collapse the server
+ *     tick; the queue selects the same minimum in O(log n) with no copying, in the same order, so
+ *     results are unchanged.</li>
+ * <li>{@link #iterateForNanos(long)} drives the same expansion loop to a wall-clock deadline rather
+ *     than a fixed expansion count, so a caller can bound what one tick spends however expensive the
+ *     individual expansions turn out to be.</li>
  * </ul>
  *
  * <p>Cost note: both the movement cost {@code g} and the heuristic {@code h} are squared Euclidean
@@ -44,6 +51,11 @@ public class PathFinding implements IIterableAlgorithm {
     private float maxTotalDistanceSq = 0;
 
     private final HashMap<BlockPos, Node> openList = new HashMap<>();
+    /** The open list as a real priority queue: least (totalWeight, then unsigned {@code asLong}) first — the
+     *  same ordering the per-expansion minimum scan used to pick. May hold superseded entries for a position
+     *  whose record later improved (a priority queue cannot decrease a key); {@link #pollOpen} skips them, so
+     *  they cost nothing but a discarded poll. */
+    private final PriorityQueue<Node> openQueue = new PriorityQueue<>(PathFinding::compareNodes);
     private final HashMap<BlockPos, Node> closedList = new HashMap<>();
 
     private Node nextIteration;
@@ -67,6 +79,7 @@ public class PathFinding implements IIterableAlgorithm {
         startNode.totalWeight = startNode.movementCost + startNode.destinationCost;
         startNode.index = start;
         openList.put(start, startNode);
+        openQueue.add(startNode);
         nextIteration = startNode;
     }
 
@@ -115,6 +128,23 @@ public class PathFinding implements IIterableAlgorithm {
         }
     }
 
+    /** Advances until the finder is done or {@code budgetNanos} of wall clock has passed — the same expansion
+     *  loop as {@link #iterate(int)}, budgeted by time rather than by a fixed expansion count, so one tick's
+     *  share of the search is bounded however expensive the individual expansions turn out to be (an expansion
+     *  costs as much as its 27 traversability asks). Always makes at least one step when the finder is not done,
+     *  and never overshoots the budget by more than one step. The clock is read between steps, so the result is
+     *  identical to any other way of driving the same finder.
+     *
+     * @param budgetNanos the wall-clock slice to spend; always positive for meaningful progress. */
+    public void iterateForNanos(long budgetNanos) {
+        long deadline = System.nanoTime() + budgetNanos;
+        // do-while: one step ALWAYS runs (a budget below the clock's read-to-read spacing must not zero out a
+        // caller's round), further steps only while the deadline has not passed.
+        do {
+            iterate(1);
+        } while (nextIteration != null && System.nanoTime() < deadline);
+    }
+
     /** Caps the node expansions this finder may run: once spent, it ends done with no path. Unbounded by default. */
     public void setExpansionBudget(int budget) {
         expansionBudget = budget;
@@ -146,7 +176,6 @@ public class PathFinding implements IIterableAlgorithm {
         openList.remove(from.index);
         closedList.put(from.index, from);
 
-        ArrayList<Node> nodes = new ArrayList<>();
         byte[][][] resultMoves = movements(from);
 
         for (int dx = -1; dx <= +1; ++dx) {
@@ -185,41 +214,47 @@ public class PathFinding implements IIterableAlgorithm {
                         Node tentative = openList.get(nextNode.index);
 
                         if (tentative.movementCost < nextNode.movementCost) {
-                            nextNode = tentative;
+                            // The queued record already stands: it is in the queue, so nothing to do.
+                            continue;
                         } else {
+                            // A cheaper-or-equal way in: the new record replaces the map entry and joins the
+                            // queue; the superseded entry is skipped by pollOpen when it eventually surfaces.
                             openList.put(nextNode.index, nextNode);
+                            openQueue.add(nextNode);
                         }
                     } else {
                         openList.put(nextNode.index, nextNode);
+                        openQueue.add(nextNode);
                     }
-
-                    nodes.add(nextNode);
                 }
             }
         }
 
-        nodes.addAll(openList.values());
-
-        return findSmallerWeight(nodes);
+        return pollOpen();
     }
 
-    private static Node findSmallerWeight(Collection<Node> collection) {
-        Node found = null;
-
-        for (Node n : collection) {
-            if (found == null) {
-                found = n;
-            } else if (n.totalWeight < found.totalWeight) {
-                found = n;
-            } else if (n.totalWeight == found.totalWeight
-                    && Long.compareUnsigned(n.index.asLong(), found.index.asLong()) < 0) {
-                // Deterministic tie-break (see class javadoc): equal-cost nodes resolve by a stable
-                // ordering of their position rather than by HashMap iteration order.
-                found = n;
+    /** The open node to expand next — the least by (totalWeight, then unsigned {@code asLong}), exactly the
+     *  node the old whole-open-list minimum scan picked. Superseded or already-expanded entries left in the
+     *  queue are skipped: a position's queue entry only counts while it is still that position's record in
+     *  {@link #openList}. Null when the open list is empty: the search is exhausted, done with no path. */
+    private Node pollOpen() {
+        while (!openQueue.isEmpty()) {
+            Node candidate = openQueue.poll();
+            if (openList.get(candidate.index) == candidate) {
+                return candidate;
             }
         }
+        return null;
+    }
 
-        return found;
+    /** The queue's ordering: least total weight first, ties broken by the smaller unsigned
+     *  {@link BlockPos#asLong()} (see the class javadoc — the deterministic tie-break that makes the result
+     *  independent of iteration order). */
+    private static int compareNodes(Node a, Node b) {
+        if (a.totalWeight != b.totalWeight) {
+            return Double.compare(a.totalWeight, b.totalWeight);
+        }
+        return Long.compareUnsigned(a.index.asLong(), b.index.asLong());
     }
 
     private static class Node {

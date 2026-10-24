@@ -114,3 +114,15 @@ One-line technical breadcrumbs for bullets that don't need a full section:
 ## JEI old transfer overload
 
 JEI 30.30.0.203+ (26.2 node) marks the six-arg `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal but keeps it abstract, so `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler` must still declare it; their real entry point on 26.2 is the `//? if >=26.2` `transferRecipe(IRecipeTransferContext, boolean)` override, and both delegate to a private `transfer(...)`. Reopen trigger: a JEI 30.x (or later 26.2+ line) release where the six-arg method is gone. Then delete the old override behind `//? if <that line` (other nodes' JEI never had the context overload), and remove the `IRecipeTransferHandler#transferRecipe` entry from `ForRemovalApiGuardTester.PENDING`. Note that dropping it also drops support for JEI < 30.30 on 26.2, so add a `jei` version range to the mods.toml at that point.
+
+## Fluid mint on aborted pipe insert
+
+`PipeFlowFluids.Section#insert` mutates the section in place as it inserts, with no transaction journal; when an insertion is aborted mid-way (e.g. a neighbouring mod's pipe rejects the push and the caller rolls back), the rollback path restores more fluid than was taken — fluid is minted out of nothing. Fixing it properly means journaling the insert (or making it copy-on-write) so an abort restores the exact pre-insert state. Security-audit 2026-10-23 finding `itemflow-2`, low severity, deferred as a behavior-affecting refactor.
+
+## Zone Planner map clone bloat
+
+Written Zone Planner maps embed the full `chunkMapping` in every item stack, so a creative middle-click clone of a stack of written maps produces N full independent copies (vanilla creative-stack dup only — no survival duplication). Fixing it needs a data-model decision: shared map-id semantics like vanilla `map_#` data vs. keeping per-item payloads and stripping them on clone. Security-audit 2026-10-23 finding `itemflow-3`, low severity, deferred pending that decision.
+
+## Snapshot security follow-ups
+
+Three small gaps the post-fix security review (2026-10-24) flagged as non-gating: (1) a refused `SnapshotRequestPayload` stays in the client's `ClientSnapshots` pending list forever, so that hash's tooltip preview is dead for the session even once the player legitimately holds the item — give pending entries a retry timer or don't pend on refusable paths; (2) nothing fails when a `writeData` gains a key the new `removeComponentsFromTag` discard lists (TilePipeHolder / TileFilteredBuffer / TileZonePlanner) don't know about — add a twin-guard test comparing emitted vs discarded keys, like `ClearableTwinGuardTest` does for clear; (3) `SchematicBlockDefault.serializeNbt`/`getRotated` share the live `tileNbt` reference into returned tags, so an in-process serialize→deserialize would mutate the original — harmless today (every deserialize input is freshly parsed), a foot-gun tomorrow.

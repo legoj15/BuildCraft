@@ -284,6 +284,47 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         progressOutput = input.getIntOr("progressOutput", -1);
     }
 
+    /**
+     * Strips everything {@link #writeData} (and the {@code TileBC_Neptune} owner it calls) saves from
+     * the tag vanilla attaches as {@code BLOCK_ENTITY_DATA} when a picked item captures this tile
+     * (creative Ctrl+middle-click pickblock — see {@code TileTank#removeComponentsFromTag} for the
+     * pipeline). Without this the cloned planner item carries every painted zone layer plus the
+     * entire paintbrush and map-location bank; placing the clone would recreate all of it — real
+     * items included — for free. Every key writeData can emit is discarded, so the tag ends empty
+     * and vanilla drops the component entirely — the clone places as a bare zone planner.
+     */
+    // Mojang's override-only @Deprecated marker (not for removal) — vanilla block entities override it the same way.
+    @SuppressWarnings("deprecation")
+    //? if >=1.21.10 {
+    @Override
+    public void removeComponentsFromTag(net.minecraft.world.level.storage.ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        discardCloneData(output::discard);
+    }
+    //?} else {
+    /*@Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        discardCloneData(tag::remove);
+    }*/
+    //?}
+    private void discardCloneData(java.util.function.Consumer<String> discard) {
+        discard.accept("ownerUUID");
+        discard.accept("ownerName");
+        for (int i = 0; i < layers.length; i++) {
+            discard.accept("layer_" + i);
+        }
+        discard.accept("invPaintbrushes");
+        discard.accept("invInputPaintbrush");
+        discard.accept("invInputMapLocation");
+        discard.accept("invInputResult");
+        discard.accept("invOutputPaintbrush");
+        discard.accept("invOutputMapLocation");
+        discard.accept("invOutputResult");
+        discard.accept("progressInput");
+        discard.accept("progressOutput");
+    }
+
     @Override
     public Component getDisplayName() {
         return Component.translatable("block.buildcraftunofficial.zone_planner");

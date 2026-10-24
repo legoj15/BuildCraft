@@ -207,7 +207,14 @@ public class ContainerElectronicLibrary extends ContainerBCTile<TileElectronicLi
             // Client receives snapshot data from server download
             byte[] data = buffer.readByteArray();
             try {
-                Snapshot snapshot = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(data)));
+                // Bounded by the read ceiling (LibraryUploadBuffer.Limits.readCeiling — the server's config governs
+                // what it may send, not this client's upload setting): the download is compressed, so its size on
+                // the wire says nothing about its size in memory, and what lands here goes into the client's
+                // permanent library.
+                LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.readCeiling();
+                Snapshot snapshot = Snapshot.readFromNBT(
+                    NbtSquisher.expand(new ByteArrayInputStream(data), limits.maxExpandedBytes()),
+                    limits.maxCells());
                 snapshot.computeKey();
                 GlobalSavedDataSnapshots.get(GlobalSavedDataSnapshots.Side.CLIENT).addSnapshot(snapshot);
             } catch (java.io.IOException e) {

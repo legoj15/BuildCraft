@@ -58,6 +58,7 @@ import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -576,7 +577,8 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 // client via updateProgress(), matching 1.12.2 behavior. Loading the server's
                 // progress value would cause jitter due to network latency.
                 int stateOrd = input.getIntOr("progressState", 0);
-                s.progressState = EnumProgressState.values()[Math.min(stateOrd, EnumProgressState.values().length - 1)];
+                // Full-range clamp: a negative count (corrupt or hand-edited save) must not index before the array.
+                s.progressState = EnumProgressState.values()[MathUtil.clamp(stateOrd, 0, EnumProgressState.values().length - 1)];
                 section = s;
             } else {
                 // Reuse existing section to preserve FluidSmoother state

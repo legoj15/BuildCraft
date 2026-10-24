@@ -22,12 +22,14 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
 //?}
+import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -310,7 +312,10 @@ public class SchematicBlockDefault implements ISchematicBlock {
         tileNbt = null;
         BlockEntity tileEntity = context.world.getBlockEntity(context.pos);
         if (tileEntity != null) {
-            tileNbt = tileEntity.saveWithoutMetadata(context.world.registryAccess());
+            // Sanitized at capture as well as at deserialization: a chest scanned in a generated structure carries
+            // the loot-table keys verbatim, and blueprint safety must not depend on the store's file round-trip
+            // re-running the deserialize gate (a cached capture object would bypass it).
+            tileNbt = sanitizeTileNbt(tileEntity.saveWithoutMetadata(context.world.registryAccess()));
         }
     }
 
@@ -911,7 +916,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 }
             });
         if (nbt.contains("tileNbt")) {
-            tileNbt = NBTUtilBC.getCompound(nbt, "tileNbt");
+            tileNbt = sanitizeTileNbt(NBTUtilBC.getCompound(nbt, "tileNbt"));
         }
         tileRotation = NBTUtilBC.readEnum(nbt.get("tileRotation"), Rotation.class);
         if (tileRotation == null) tileRotation = Rotation.NONE;
@@ -1013,6 +1018,37 @@ public class SchematicBlockDefault implements ISchematicBlock {
         Property<T> property, BlockState a, BlockState b
     ) {
         return a.getValue(property).equals(b.getValue(property));
+    }
+
+    /**
+     * The block-entity keys a blueprint must never place: the loot-table pair hands whatever container it lands on
+     * free loot when opened (vanilla's chest/barrel/dispenser/crafter loadAdditional all read it straight from the
+     * tag {@code build} hands to {@code loadWithComponents}), and the {@code container_loot} component does the same
+     * through the component path. A chest scanned in a generated structure carries exactly these keys, so stripping
+     * them here also keeps a legitimate scan from minting loot chests. Everything else in the tag survives: machine
+     * configuration (a tank's contents, an engine's gates, a chest's captured {@code Items}) is what blueprints are
+     * for, and its cost is enforced by the JSON extractors.
+     * <p>
+     * Mutates {@code tileNbt} in place — both callers hand a freshly built tag (deserialization: freshly read;
+     * the architect's capture: freshly saved) — and returns it. Package-private and static so both gates and the
+     * tests share one definition.
+     */
+    static CompoundTag sanitizeTileNbt(CompoundTag tileNbt) {
+        if (tileNbt == null) return null;
+        tileNbt.remove(RandomizableContainer.LOOT_TABLE_TAG);
+        tileNbt.remove(RandomizableContainer.LOOT_TABLE_SEED_TAG);
+        CompoundTag components = NBTUtilBC.getCompoundOrNull(tileNbt, "components");
+        if (components != null) {
+            // Defensive: nothing vanilla writes the loot pair inside components, but nothing reads it there either;
+            // removing it costs one call and closes a renamed-key path.
+            components.remove(RandomizableContainer.LOOT_TABLE_TAG);
+            components.remove(RandomizableContainer.LOOT_TABLE_SEED_TAG);
+            Identifier containerLoot = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(DataComponents.CONTAINER_LOOT);
+            if (containerLoot != null) {
+                components.remove(containerLoot.toString());
+            }
+        }
+        return tileNbt;
     }
 
     @Override

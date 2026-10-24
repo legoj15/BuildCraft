@@ -341,6 +341,10 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
         return true;
     }
 
+    /** The most particles one landing event may spawn: vanilla's own fall-landing effect
+     *  (LivingEntity#checkFallDamage) tops out at 150 * min(0.2 + power / 15, 2.5) = 375. */
+    public static final int MAX_LANDING_PARTICLES = 375;
+
     /**
      * Spawns landing particles using the correct pipe or pluggable texture.
      * Called client-side from MessagePipeLandingEffect.
@@ -362,9 +366,13 @@ public class PipeHolderClientExtensions implements IClientBlockExtensions {
             }
         }
         if (info == null) return;
-        
+
+        // The count comes off the wire, so cap it before spawning: a hostile packet naming billions would otherwise
+        // spin this loop for minutes. Every legitimate landing fits the cap (see MAX_LANDING_PARTICLES).
+        int count = Math.min(Math.max(numberOfParticles, 0), MAX_LANDING_PARTICLES);
+
         var random = level.getRandom();
-        for (int i = 0; i < numberOfParticles; ++i) {
+        for (int i = 0; i < count; ++i) {
             double px = x + (random.nextFloat() - 0.5) * 0.5;
             double py = y;
             double pz = z + (random.nextFloat() - 0.5) * 0.5;

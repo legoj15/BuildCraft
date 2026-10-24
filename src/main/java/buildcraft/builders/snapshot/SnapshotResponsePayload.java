@@ -18,6 +18,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.builders.container.LibraryUploadBuffer;
+
 public record SnapshotResponsePayload(Snapshot snapshot) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<SnapshotResponsePayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:snapshot_response"));
@@ -33,8 +35,14 @@ public record SnapshotResponsePayload(Snapshot snapshot) implements CustomPacket
             },
             buf -> {
                 try {
-                    CompoundTag nbt = net.minecraft.nbt.NbtIo.readCompressed(new ByteBufInputStream(buf), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
-                    return new SnapshotResponsePayload(Snapshot.readFromNBT(nbt));
+                    // Bounded by the read ceiling (LibraryUploadBuffer.Limits.readCeiling — what may arrive is the
+                    // sender's to decide, not this side's upload setting): the payload is compressed, so its size on
+                    // the wire says nothing about its size in memory, and what lands here goes into a permanent
+                    // client cache. Oversized data fails the decode like unreadable data already does.
+                    LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.readCeiling();
+                    CompoundTag nbt = buildcraft.lib.nbt.NbtSquisher.expand(
+                        new ByteBufInputStream(buf), limits.maxExpandedBytes());
+                    return new SnapshotResponsePayload(Snapshot.readFromNBT(nbt, limits.maxCells()));
                 } catch (Exception e) {
                     throw new RuntimeException("Failed to decompress snapshot", e);
                 }

@@ -227,6 +227,47 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
     @SuppressWarnings("NullableProblems")
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        // Mirror of ContainerBCTile's staleness guard, anchored on the volume box the addon lives on
+        // instead of a block entity: the box must still exist in the level's saved data (client: its
+        // ClientVolumeBoxes copy) with this very addon attached, and the player must still be within
+        // reach. Otherwise a removed or replaced box leaves a live menu that reconfigures it remotely.
+        if (addon == null || addon.volumeBox == null) {
+            return false;
+        }
+        if (player.level().isClientSide()) {
+            for (VolumeBox vb : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
+                if (vb.id.equals(addon.volumeBox.id) && vb.addons.containsValue(addon)) {
+                    return isPlayerWithinReach(player);
+                }
+            }
+            return false;
+        }
+        if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {
+            return false;
+        }
+        boolean attached = LevelSavedDataVolumeBoxes.get(serverLevel).volumeBoxes.stream()
+            .anyMatch(vb -> vb.id.equals(addon.volumeBox.id) && vb.addons.containsValue(addon));
+        if (!attached) {
+            return false;
+        }
+        return isPlayerWithinReach(player);
+    }
+
+    /** Within the same 8-block reach {@code ContainerBCTile} grants around a tile, measured to the
+     *  nearest point of the volume box — the box can be far larger than a single block. A box whose
+     *  geometry is transiently uninitialized (mid-edit) has no anchor to measure against, so the
+     *  attachment check above is the only gate then. */
+    private boolean isPlayerWithinReach(Player player) {
+        buildcraft.lib.misc.data.Box box = addon.volumeBox.box;
+        if (box == null || !box.isInitialized()) {
+            return true;
+        }
+        double nx = net.minecraft.util.Mth.clamp(player.getX(), box.min().getX(), box.max().getX() + 1.0);
+        double ny = net.minecraft.util.Mth.clamp(player.getY(), box.min().getY(), box.max().getY() + 1.0);
+        double nz = net.minecraft.util.Mth.clamp(player.getZ(), box.min().getZ(), box.max().getZ() + 1.0);
+        double dx = player.getX() - nx;
+        double dy = player.getY() - ny;
+        double dz = player.getZ() - nz;
+        return dx * dx + dy * dy + dz * dz <= 64.0;
     }
 }

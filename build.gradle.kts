@@ -273,6 +273,21 @@ neoForge {
                 programArguments.add("--tests")
                 programArguments.add(project.property("bcTests").toString())
             }
+            // The `fullTestSuite` tier runs this task on ALL six nodes under a tool that caps captured
+            // stdout at 256 KB; the six server consoles at INFO total ~1.8 MB and blow that cap even on
+            // a fully green run. Swap in the quiet log4j mirror (stdout Console appender at WARN; the
+            // file appenders are untouched, so run-gameTestServer/logs/latest.log still gets full INFO,
+            // and a failing game test still fails this task through the process exit code). This must
+            // be a systemProperty, NOT jvmArgument: MDG writes jvmArguments BEFORE its own computed
+            // args but appends systemProperties AFTER them in gameTestServerRunVmArgs.txt, and the JVM
+            // resolves duplicate -D keys last-wins — so only the systemProperty form overrides MDG's
+            // own -Dlog4j2.configurationFile. `-PbcLoudGameTestLogs` restores the INFO console.
+            if (!project.hasProperty("bcLoudGameTestLogs")) {
+                systemProperty(
+                    "log4j2.configurationFile",
+                    rootProject.file("gradle/gameTestServerLog4j2-quiet.xml").absolutePath
+                )
+            }
         }
     }
 

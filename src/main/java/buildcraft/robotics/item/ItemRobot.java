@@ -8,9 +8,12 @@
  */
 package buildcraft.robotics.item;
 
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
@@ -42,6 +45,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 
 import buildcraft.robotics.BCRoboticsItems;
@@ -85,6 +89,10 @@ public class ItemRobot extends Item {
 
     /** The tooltip line for a robot whose board nothing registers - the reason it refuses placement. */
     public static final String UNKNOWN_BOARD_KEY = "buildcraft.robot.unknown_board";
+
+    /** The action-bar line a player answers a placement click with when the station they clicked is not
+     * theirs to home a robot on (see {@link #canHomeOn}). */
+    public static final String NOT_YOUR_STATION_KEY = "buildcraft.robot.not_your_station";
 
     public ItemRobot(Item.Properties properties) {
         super(properties);
@@ -187,14 +195,43 @@ public class ItemRobot extends Item {
 
     // ── Placement ───────────────────────────────────────────────────────────
 
+    /** Whether {@code station} may home a robot placed by {@code placer}: homing consent is bound to ownership.
+     *
+     * <p>A robot has no owner of its own — once homed it acts for the station's owner (see
+     * {@code RobotProtection}: claim mods are asked as that player, and audit events attribute to them). Letting
+     * any player's robot home on any free station would let one player's robot act and be attributed as another,
+     * so the placing player must be the station's owner. A station with no owner (a pipe placed by a command or
+     * by a machine, or a pre-owner save) still accepts anyone — the robot then asks protection mods as the
+     * generic "[BuildCraft]" identity, which claim mods already treat as a stranger, so nothing is bypassed. A
+     * null {@code placer} (no player behind the click) is refused by an owned station: nobody is vouching for
+     * the robot, and an owned station's identity must not be grantable by a faceless placement.
+     *
+     * <p>Owners are compared by UUID — the stable identity both sides persist ({@code OwnerData} stores
+     * {@code ownerUUID}; a name can change between sessions). Pure decision over profiles, so it is
+     * unit-testable without a level.
+     *
+     * @param placer The placing player's profile, or null when there is no player behind the click.
+     * @return true when the robot may be homed on {@code station}. */
+    public static boolean canHomeOn(@Nullable GameProfile placer, DockingStation station) {
+        GameProfile owner = station.getOwner();
+        if (owner == null || GameProfileUtil.getId(owner) == null) {
+            // An owner without an id is nothing anyone can be shown to be (OwnerData does not even persist
+            // one), so it reads as unowned.
+            return true;
+        }
+        UUID placerId = placer == null ? null : GameProfileUtil.getId(placer);
+        return placerId != null && placerId.equals(GameProfileUtil.getId(owner));
+    }
+
     /** Places a robot onto the {@code RobotStationPluggable} on the clicked face.
      *
      * <p>Order is load-bearing and matches 7.1.x: the face has to carry a station (anything else PASSes), a
      * blank robot ({@link #isUnprogrammed}) is then refused ("Not programmed" on the action bar, {@code FAIL}
      * so the hand does not swing — checked before the taken test, as the more useful answer), the station must be untaken, the
+     * placing player must own it ({@link #canHomeOn} — "Not your station", {@code FAIL}), the
      * cancellable {@code RobotEvent.Place} is posted before <em>anything</em> is committed, the id comes from the registry
-     * before the entity reaches the world, the robot is positioned at the station's face centre, and the
-     * station is taken as MAIN (a plain {@code take} would leave the robot with no linked station and it would
+     * before the entity reaches the world, the robot is positioned at the station's face centre, and
+     * the station is taken as MAIN (a plain {@code take} would leave the robot with no linked station and it would
      * shut itself down on its next tick). {@code level.addFreshEntity} is used deliberately rather than
      * {@code EntityType.spawn}, whose signature forks three ways across the nodes. */
     @Override
@@ -229,6 +266,16 @@ public class ItemRobot extends Item {
         }
 
         Player player = context.getPlayer();
+
+        if (!canHomeOn(player == null ? null : player.getGameProfile(), station)) {
+            // Once homed, this robot acts for the station's owner (RobotProtection) — a robot only that
+            // owner may plant here, or it would act and be attributed as them. Answered like the blank
+            // robot: handled, told why on the action bar, no arm swing, nothing consumed.
+            if (player != null) {
+                MessageUtil.sendOverlayMessage(player, Component.translatable(NOT_YOUR_STATION_KEY));
+            }
+            return InteractionResult.FAIL;
+        }
 
         EntityRobot robot = new EntityRobot(level, getRobotBoard(stack));
         robot.getBattery().setStored(getEnergy(stack));

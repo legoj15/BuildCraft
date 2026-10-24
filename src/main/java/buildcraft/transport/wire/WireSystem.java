@@ -43,6 +43,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeApi;
 
+import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public final class WireSystem {
@@ -51,6 +52,10 @@ public final class WireSystem {
 
     private final transient int cachedHashCode;
     private final transient int cachedWiresHashCode;
+    /** Distinct chunks of {@link #elements} — several elements share a pipe's chunk. Cached because
+     *  {@link #isPlayerWatching} runs against it for every player, every tick, in
+     *  {@link SavedDataWireSystems#tick()}. */
+    private final transient Set<ChunkPos> cachedChunkPoses;
 
     public boolean hasElement(WireElement element) {
         return elements.contains(element);
@@ -111,6 +116,7 @@ public final class WireSystem {
 
         this.cachedHashCode = this.computeHashCode();
         this.cachedWiresHashCode = this.computeCachedWiresHashCode();
+        this.cachedChunkPoses = computeChunkPoses();
     }
 
     public WireSystem(SavedDataWireSystems wireSystems, WireElement startElement) {
@@ -168,6 +174,7 @@ public final class WireSystem {
 
         this.cachedHashCode = this.computeHashCode();
         this.cachedWiresHashCode = this.computeCachedWiresHashCode();
+        this.cachedChunkPoses = computeChunkPoses();
     }
 
     public boolean isEmpty() {
@@ -182,18 +189,27 @@ public final class WireSystem {
     }
 
     public List<ChunkPos> getChunkPoses() {
-        return this.getChunkPosesAsStream().collect(Collectors.toList());
+        return new ArrayList<>(this.cachedChunkPoses);
     }
 
     public Stream<ChunkPos> getChunkPosesAsStream() {
-        return elements.stream().map(element -> buildcraft.lib.misc.PositionUtil.chunkContaining(element.blockPos));
+        return this.cachedChunkPoses.stream();
+    }
+
+    private Set<ChunkPos> computeChunkPoses() {
+        return elements.stream()
+            .map(element -> buildcraft.lib.misc.PositionUtil.chunkContaining(element.blockPos))
+            .collect(Collectors.toUnmodifiableSet());
     }
 
     public boolean isPlayerWatching(ServerPlayer player) {
         Level level = player.level();
         if (level instanceof ServerLevel serverLevel) {
-            return getChunkPosesAsStream().anyMatch(chunkPos ->
-                serverLevel.isPositionEntityTicking(chunkPos.getWorldPosition()));
+            for (ChunkPos chunkPos : this.cachedChunkPoses) {
+                if (serverLevel.isPositionEntityTicking(chunkPos.getWorldPosition())) {
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -230,6 +246,7 @@ public final class WireSystem {
 
         this.cachedHashCode = this.computeHashCode();
         this.cachedWiresHashCode = this.computeCachedWiresHashCode();
+        this.cachedChunkPoses = computeChunkPoses();
     }
 
     @Override
@@ -285,10 +302,12 @@ public final class WireSystem {
         }
 
         public WireElement(FriendlyByteBuf buf) {
-            type = Type.values()[buf.readInt()];
+            // Saved ordinals are clamped to the array range: a corrupt or malicious count (negative or
+            // oversized) must degrade to a known element instead of throwing on array indexing.
+            type = Type.values()[MathUtil.clamp(buf.readInt(), 0, Type.values().length - 1)];
             blockPos = buf.readBlockPos();
             if (type == Type.WIRE_PART) {
-                wirePart = EnumWirePart.VALUES[buf.readInt()];
+                wirePart = EnumWirePart.VALUES[MathUtil.clamp(buf.readInt(), 0, EnumWirePart.VALUES.length - 1)];
                 this.emitterSide = null;
             } else if (type == Type.EMITTER_SIDE) {
                 this.wirePart = null;
@@ -300,13 +319,13 @@ public final class WireSystem {
         }
 
         public WireElement(CompoundTag nbt) {
-            type = Type.values()[NBTUtilBC.getInt(nbt, "type", 0)];
+            type = Type.values()[MathUtil.clamp(NBTUtilBC.getInt(nbt, "type", 0), 0, Type.values().length - 1)];
             int bpX = NBTUtilBC.getInt(nbt, "bpX", 0);
             int bpY = NBTUtilBC.getInt(nbt, "bpY", 0);
             int bpZ = NBTUtilBC.getInt(nbt, "bpZ", 0);
             blockPos = new BlockPos(bpX, bpY, bpZ);
             if (type == Type.WIRE_PART) {
-                wirePart = EnumWirePart.VALUES[NBTUtilBC.getInt(nbt, "wirePart", 0)];
+                wirePart = EnumWirePart.VALUES[MathUtil.clamp(NBTUtilBC.getInt(nbt, "wirePart", 0), 0, EnumWirePart.VALUES.length - 1)];
                 this.emitterSide = null;
             } else if (type == Type.EMITTER_SIDE) {
                 this.wirePart = null;

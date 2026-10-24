@@ -81,7 +81,27 @@ public final class LibraryUploadBuffer {
                 : BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT;
             return ofMegabytes(megabytes);
         }
+
+        /**
+         * The read-side ceiling for snapshot bytes this game expands from a wire payload or a store file — NOT the
+         * local upload config. What a decode may unpack is governed by the SENDER's limits, and their config is
+         * unknowable: a server configured above a client's setting must not have its legitimate previews fail the
+         * client's decode (which is a disconnect), and the server's own store files must not turn unreadable
+         * because the operator later lowered the upload cap. A generous constant multiple of the default upload
+         * ceiling covers both while still bounding a hostile compressed payload to this many bytes instead of the
+         * gigabytes unlimited expansion would grant. The upload path keeps its player-config limits.
+         */
+        public static Limits readCeiling() {
+            return ofMegabytes(READ_CEILING_MB);
+        }
     }
+
+    /** The multiple of the default upload ceiling that {@link Limits#readCeiling()} grants reads (see there for why
+     *  it is a constant rather than the config). */
+    public static final int READ_CEILING_MULTIPLE = 4;
+
+    /** {@link Limits#readCeiling()}'s size, in MB. */
+    static final int READ_CEILING_MB = READ_CEILING_MULTIPLE * BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT;
 
     private final Limits limits;
     private final List<byte[]> chunks = new ArrayList<>();

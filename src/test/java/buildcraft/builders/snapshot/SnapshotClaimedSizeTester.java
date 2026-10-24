@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
 
 import buildcraft.api.core.InvalidInputDataException;
@@ -21,7 +22,8 @@ import buildcraft.lib.misc.NBTUtilBC;
 /**
  * A snapshot's size is read from the file (or from an upload) and its cell count is that size's product, so a size
  * whose product is negative or does not fit an int must be refused as bad data before anything is sized from it,
- * and a blueprint's cell list must be checked against the size before its cells are allocated.
+ * a blueprint's cell list must be checked against the size before its cells are allocated, and every cell's palette
+ * index must be checked against the palette before anything walks it.
  */
 public class SnapshotClaimedSizeTester {
 
@@ -105,5 +107,46 @@ public class SnapshotClaimedSizeTester {
         BlockPos negative = new BlockPos(-2, 1, 1);
         Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(claiming(blueprint(), negative)));
         Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(claiming(template(), negative)));
+    }
+
+    private static ListTag cells(int... values) {
+        ListTag data = new ListTag();
+        for (int value : values) data.add(IntTag.valueOf(value));
+        return data;
+    }
+
+    @Test
+    public void aCellIndexingPastThePaletteIsRefused() {
+        // The blueprint() fixture has one palette entry, so 5 is well-formed NBT, the right length, tiny on the
+        // wire — and an IndexOutOfBounds for the first BuildingInfo walk of the builder tick.
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint());
+        nbt.put("data", cells(0, 5));
+        Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(nbt));
+    }
+
+    @Test
+    public void aNegativeCellIndexIsRefused() {
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint());
+        nbt.put("data", cells(-1, 0));
+        Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(nbt));
+    }
+
+    @Test
+    public void aCellListForAnEmptyPaletteIsRefused() {
+        // Zero is in range for a one-entry palette but not for none: an empty palette makes every cell invalid.
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint());
+        nbt.put("palette", new ListTag());
+        nbt.put("data", cells(0, 0));
+        Assertions.assertThrows(InvalidInputDataException.class, () -> Snapshot.readFromNBT(nbt));
+    }
+
+    @Test
+    public void everyIndexOfAPaletteSizedCellListIsAccepted() {
+        // The boundary: the highest valid index of the one-entry palette reads back unchanged.
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint());
+        nbt.put("data", cells(0, 0));
+        Assertions.assertDoesNotThrow(() -> {
+            Assertions.assertArrayEquals(new int[] {0, 0}, ((Blueprint) Snapshot.readFromNBT(nbt)).data);
+        });
     }
 }

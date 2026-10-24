@@ -568,6 +568,7 @@
     "buildcraft.param.rotation.3": "270° 旋转",
     "buildcraft.robot.not_programmed": "未编程",
     "buildcraft.robot.unknown_board": "未知的电路板",
+    "buildcraft.robot.not_your_station": "这个对接站属于其他玩家",
     "buildcraft.tank.empty": "空的 %s 储罐",
     "buildcraft.unit.bucket": "B",
     "buildcraft.unit.bucket.full.plural": "桶",

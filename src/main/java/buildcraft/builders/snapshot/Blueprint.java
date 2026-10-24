@@ -35,6 +35,9 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 @SuppressWarnings("this-escape")
 public class Blueprint extends Snapshot {
+    private static final org.apache.logging.log4j.Logger LOGGER =
+        org.apache.logging.log4j.LogManager.getLogger("BCBlueprint");
+
     public final List<ISchematicBlock> palette = new ArrayList<>();
     public int[] data;
     public final List<ISchematicEntity> entities = new ArrayList<>();
@@ -205,10 +208,34 @@ public class Blueprint extends Snapshot {
                 }
             }
         }
+        // Every cell indexes the palette, and the cells come from the same untrusted bytes as the palette itself: an
+        // out-of-range index would throw on the first palette lookup of the builder tick (BuildingInfo walks
+        // data[] directly), crash-looping it. Refuse the blueprint here instead — an upload is refused to its sender
+        // by the library, a planted file is skipped by the store — the same treatment a bad length gets above.
+        // (countNonAirCells/countMatchingCells already skip such cells defensively; this keeps one from existing.)
+        for (int idx = 0; idx < data.length; idx++) {
+            if (data[idx] < 0 || data[idx] >= palette.size()) {
+                throw new InvalidInputDataException(
+                    "Blueprint cell " + idx + " holds palette index " + data[idx] +
+                        ", but the palette holds " + palette.size() + " entries"
+                );
+            }
+        }
         entities.clear();
         for (CompoundTag schematicEntityTag :
             NBTUtilBC.readCompoundList(nbt.get("entities")).collect(Collectors.toList())) {
-            entities.add(SchematicEntityManager.readFromNBT(schematicEntityTag));
+            ISchematicEntity entity = SchematicEntityManager.readFromNBT(schematicEntityTag);
+            // Deny-by-default entity gate: an entity no JSON rule sanctions would build for free, so it is dropped
+            // here rather than refused whole-file — one unruled entity (e.g. a modpack removing a rule) must not
+            // brick every stored blueprint that happens to contain it. build() can then never see it.
+            if (entity instanceof SchematicEntityDefault schematicEntity && !SchematicEntityDefault.isPricedByRules(schematicEntity.entityNbt)) {
+                LOGGER.warn(
+                    "Dropping entity no schematic rule sanctions from a blueprint: \"{}\"",
+                    NBTUtilBC.getString(schematicEntity.entityNbt, "id", "")
+                );
+                continue;
+            }
+            entities.add(entity);
         }
     }
 

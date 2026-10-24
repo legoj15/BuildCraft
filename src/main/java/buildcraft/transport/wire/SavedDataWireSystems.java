@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -228,29 +230,48 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         }
 
         if (world instanceof ServerLevel serverLevel) {
-            for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
-                // Send structure updates
-                Map<Integer, WireSystem> changedWires = new HashMap<>();
+            // The send loops below only ever emit when structureChanged, a changed system, or a
+            // changed player exists — skip the whole player×system sweep on a quiet tick, where the
+            // old code still ran the per-element isPlayerWatching scan for every pair.
+            if (structureChanged || !changedSystems.isEmpty() || !changedPlayers.isEmpty()) {
+                List<ServerPlayer> players = serverLevel.getPlayers(p -> true);
+                // Watching-player sets are computed once per system per tick: isPlayerWatching walks
+                // the system's chunks, so calling it per player inside both send loops ran that walk
+                // twice per player×system pair.
+                Map<WireSystem, Set<ServerPlayer>> watching = new HashMap<>();
                 for (WireSystem ws : wireSystems.keySet()) {
-                    if (ws.isPlayerWatching(player) && (structureChanged || changedPlayers.contains(player))) {
-                        changedWires.put(ws.getWiresHashCode(), ws);
+                    Set<ServerPlayer> watchers = new HashSet<>();
+                    for (ServerPlayer player : players) {
+                        if (ws.isPlayerWatching(player)) {
+                            watchers.add(player);
+                        }
                     }
+                    watching.put(ws, watchers);
                 }
-                if (!changedWires.isEmpty()) {
-                    PacketDistributor.sendToPlayer(player, new PayloadWireSystems(changedWires));
-                }
+                for (ServerPlayer player : players) {
+                    // Send structure updates
+                    Map<Integer, WireSystem> changedWires = new HashMap<>();
+                    for (WireSystem ws : wireSystems.keySet()) {
+                        if (watching.get(ws).contains(player) && (structureChanged || changedPlayers.contains(player))) {
+                            changedWires.put(ws.getWiresHashCode(), ws);
+                        }
+                    }
+                    if (!changedWires.isEmpty()) {
+                        PacketDistributor.sendToPlayer(player, new PayloadWireSystems(changedWires));
+                    }
 
-                // Send power updates
-                Map<Integer, Boolean> hashesPowered = new HashMap<>();
-                for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
-                    WireSystem ws = entry.getKey();
-                    if (ws.isPlayerWatching(player) &&
-                        (structureChanged || changedSystems.contains(ws) || changedPlayers.contains(player))) {
-                        hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
+                    // Send power updates
+                    Map<Integer, Boolean> hashesPowered = new HashMap<>();
+                    for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
+                        WireSystem ws = entry.getKey();
+                        if (watching.get(ws).contains(player) &&
+                            (structureChanged || changedSystems.contains(ws) || changedPlayers.contains(player))) {
+                            hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
+                        }
                     }
-                }
-                if (!hashesPowered.isEmpty()) {
-                    PacketDistributor.sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
+                    if (!hashesPowered.isEmpty()) {
+                        PacketDistributor.sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
+                    }
                 }
             }
         }

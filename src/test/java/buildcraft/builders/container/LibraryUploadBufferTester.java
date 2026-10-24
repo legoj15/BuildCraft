@@ -238,6 +238,16 @@ public class LibraryUploadBufferTester {
         Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(new byte[0]));
     }
 
+    @Test
+    public void anUploadWhoseCellsIndexPastThePaletteIsRefused() throws IOException {
+        // Well-formed NBT, the right size, tiny on the wire — and a crash for the first builder that loads it: one
+        // cell naming palette entry 5 of a one-entry palette. The size checks above cannot see it; the value check
+        // in the blueprint's deserialization can, and decode reports it as unreadable so the tile refuses the upload
+        // to its sender.
+        byte[] payload = squish(blueprint(1, i -> 5));
+        Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(payload));
+    }
+
     // ── Requests, drops and releases: what the menu tells the tile ──────────
 
     @Test

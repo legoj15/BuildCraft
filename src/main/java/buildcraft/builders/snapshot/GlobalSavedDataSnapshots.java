@@ -277,7 +277,15 @@ public class GlobalSavedDataSnapshots {
         }
         unreadableWarned.remove(name);
         try {
-            return new FileRead(Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(bytes))), null);
+            // Bounded by the read ceiling (LibraryUploadBuffer.Limits.readCeiling), NOT this server's upload config:
+            // the operator lowering the cap later must not orphan every blueprint file already stored. The file is
+            // compressed, so its size on disk says nothing about its size in memory, and a file planted outside the
+            // game could otherwise name gigabytes. Oversized or corrupt bytes are both just an unreadable file.
+            buildcraft.builders.container.LibraryUploadBuffer.Limits limits =
+                buildcraft.builders.container.LibraryUploadBuffer.Limits.readCeiling();
+            return new FileRead(Snapshot.readFromNBT(
+                NbtSquisher.expand(new ByteArrayInputStream(bytes), limits.maxExpandedBytes()),
+                limits.maxCells()), null);
         } catch (IOException e) { // InvalidInputDataException included: the bytes decode, but not to a snapshot
             LOGGER.warn("Skipping corrupted snapshot file {}: {}", snapshotFile, e.getMessage());
         } catch (RuntimeException e) {

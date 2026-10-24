@@ -54,7 +54,8 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RotationUtil;
 
 public class SchematicEntityDefault implements ISchematicEntity {
-    private CompoundTag entityNbt;
+    /** Package-private: the blueprint read loop names the id in its drop warning. */
+    CompoundTag entityNbt;
     private Vec3 pos;
     private BlockPos hangingPos;
     private Direction hangingFacing;
@@ -220,6 +221,12 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Override
     public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
         entityNbt = NBTUtilBC.getCompound(nbt, "entityNbt");
+        // Entities get the same loot-strip blocks get (structure chest minecarts carry the loot-table pair in their
+        // entity NBT exactly as the block entities do), so a blueprint entity can never mint loot. The pricing gate
+        // (isPricedByRules) is NOT applied here — a single unruled entity drops out of the blueprint at read time
+        // (see Blueprint) instead of refusing the whole file, so a modpack removing a rule cannot brick every
+        // stored blueprint that happens to contain that entity.
+        SchematicBlockDefault.sanitizeTileNbt(entityNbt);
         pos = NBTUtilBC.readVec3(nbt.get("pos"));
         if (pos == null) {
             pos = Vec3.ZERO;
@@ -229,6 +236,24 @@ public class SchematicEntityDefault implements ISchematicEntity {
         if (hangingFacing == null) hangingFacing = Direction.NORTH;
         entityRotation = NBTUtilBC.readEnum(nbt.get("entityRotation"), Rotation.class);
         if (entityRotation == null) entityRotation = Rotation.NONE;
+    }
+
+    /**
+     * Whether this entity is one a blueprint may hold: its NBT names an entity the shipped JSON rules sanction —
+     * a rule that either whitelists it for capture (what the architect's own scan predicate demands) or charges for
+     * it (non-null {@code requiredExtractors}, the exact mechanism {@link #computeRequiredItems()} prices through).
+     * Deny by default: an entity no rule mentions would {@code build()} from its NBT verbatim while costing
+     * nothing. A rule that only matches without doing either is not enough — the gate must be at least as strict
+     * as the price. Package-private and static so the blueprint read loop and the tests share one definition.
+     */
+    static boolean isPricedByRules(CompoundTag entityNbt) {
+        String id = NBTUtilBC.getString(entityNbt, "id", "");
+        Identifier entityId = Identifier.tryParse(id);
+        if (entityId == null) {
+            return false;
+        }
+        return RulesLoader.getRules(entityId, entityNbt).stream()
+            .anyMatch(rule -> rule.capture || rule.requiredExtractors != null);
     }
 
     @Override

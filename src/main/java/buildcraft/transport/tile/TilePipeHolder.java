@@ -238,6 +238,39 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         return PipeApi.pipeRegistry.getDefinition(NBTUtilBC.getString(pipeTag, "def", "")) == pipe.getDefinition();
     }
 
+    /**
+     * Strips everything {@link #writeData} saves from the tag vanilla attaches as
+     * {@code BLOCK_ENTITY_DATA} when this holder is captured into a picked item (creative
+     * Ctrl+middle-click pickblock — see {@code TileTank#removeComponentsFromTag} for the full
+     * pipeline). Without this, the picked pipe item carries the live pipe's behaviour and flow, all
+     * pluggables (gates with their full configured logic), wires and owner; placing that clone
+     * recreates the whole machine for free. Every key writeData can emit is discarded, so the tag
+     * ends empty and vanilla drops the component entirely — the clone places as a bare pipe.
+     */
+    // Mojang's override-only @Deprecated marker (not for removal) — vanilla block entities override it the same way.
+    @SuppressWarnings("deprecation")
+    //? if >=1.21.10 {
+    @Override
+    public void removeComponentsFromTag(net.minecraft.world.level.storage.ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        output.discard("ownerUUID");
+        output.discard("ownerName");
+        output.discard("pipe");
+        output.discard("wires");
+        output.discard("plugs");
+    }
+    //?} else {
+    /*@Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove("ownerUUID");
+        tag.remove("ownerName");
+        tag.remove("pipe");
+        tag.remove("wires");
+        tag.remove("plugs");
+    }*/
+    //?}
+
     @Override
     public void onLoad() {
         super.onLoad();

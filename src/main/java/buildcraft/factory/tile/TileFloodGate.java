@@ -8,6 +8,7 @@ package buildcraft.factory.tile;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -16,9 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-
-import com.google.common.collect.ImmutableList;
 
 
 import net.minecraft.core.BlockPos;
@@ -73,6 +71,17 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
 
     private static final int[] REBUILD_DELAYS = { 16, 32, 64, 128, 256 };
 
+    /**
+     * Caps the flood-fill search itself: at most this many nodes may be visited per (re)build,
+     * fillable or not. The queue cap below only counts fillable nodes, so a gate surrounded by
+     * flowing-fluid cells used to walk (and allocate for) every position in the 64-block radius
+     * hunting for the few it could fill.
+     */
+    private static final int MAX_VISITED_NODES = 16_384;
+
+    /** Fillable-target cap; when the queue holds this many targets the search stops early. */
+    private static final int MAX_QUEUE_SIZE = 4096;
+
     private static final Identifier ADVANCEMENT_FLOODING_THE_WORLD =
         Identifier.parse("buildcraftunofficial:flooding_the_world");
 
@@ -81,7 +90,10 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
             Direction.DOWN, Direction.NORTH, Direction.SOUTH,
             Direction.WEST, Direction.EAST);
     public final Deque<BlockPos> queue = new ArrayDeque<>();
-    private final Map<BlockPos, List<BlockPos>> paths = new HashMap<>();
+    /** Predecessor map of the last search: node &rarr; the node it was reached from (the gate itself
+     *  for the first step). One entry per visited node — the old per-node full-path copies made the
+     *  search allocate O(nodes &times; depth). */
+    private final Map<BlockPos, BlockPos> paths = new HashMap<>();
     private int delayIndex = 0;
     private int tick = 0;
     private int lastSyncedAmount = 0;
@@ -166,7 +178,7 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
         for (Direction face : openSides) {
             BlockPos offset = worldPosition.relative(face);
             nextPosesToCheck.add(offset);
-            paths.put(offset, ImmutableList.of(offset));
+            paths.put(offset, worldPosition);
         }
         Direction[] directions = FluidUtilBC.isGaseous(fluid) ? SEARCH_GASEOUS : SEARCH_NORMAL;
 
@@ -179,29 +191,42 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
                     continue;
                 }
                 if (checked.add(toCheck)) {
+                    if (checked.size() >= MAX_VISITED_NODES) {
+                        break outer;
+                    }
                     if (canSearch(toCheck)) {
                         if (canFill(toCheck)) {
                             queue.push(toCheck);
-                            if (queue.size() >= 4096) {
+                            if (queue.size() >= MAX_QUEUE_SIZE) {
                                 break outer;
                             }
                         }
-                        List<BlockPos> checkPath = paths.get(toCheck);
                         for (Direction side : directions) {
                             BlockPos next = toCheck.relative(side);
                             if (checked.contains(next)) {
                                 continue;
                             }
-                            ImmutableList.Builder<BlockPos> pathBuilder = ImmutableList.builder();
-                            pathBuilder.addAll(checkPath);
-                            pathBuilder.add(next);
-                            paths.put(next, pathBuilder.build());
+                            paths.put(next, toCheck);
                             nextPosesToCheck.add(next);
                         }
                     }
                 }
             }
         }
+    }
+
+    /** Rebuilds the gate&rarr;{@code target} node list by walking {@link #paths} backwards. Holds the
+     *  same nodes the old per-node path copies held — every step from the first block past the gate
+     *  up to and including {@code target} — but is built once, for the one node being filled. */
+    private List<BlockPos> reconstructPath(BlockPos target) {
+        List<BlockPos> path = new ArrayList<>();
+        BlockPos current = target;
+        while (current != null && !current.equals(worldPosition)) {
+            path.add(current);
+            current = paths.get(current);
+        }
+        Collections.reverse(path);
+        return path;
     }
 
     private boolean canFill(BlockPos offsetPos) {
@@ -254,17 +279,15 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
                 FluidStack res = tank.getFluidStack(0);
                 if (tank.getAmountMb(0) >= 1000) {
                     BlockPos currentPos = queue.removeLast();
-                    List<BlockPos> path = paths.get(currentPos);
+                    List<BlockPos> path = reconstructPath(currentPos);
                     boolean canFill = true;
-                    if (path != null) {
-                        for (BlockPos p : path) {
-                            if (p.equals(currentPos)) {
-                                continue;
-                            }
-                            if (!canFillThrough(p)) {
-                                canFill = false;
-                                break;
-                            }
+                    for (BlockPos p : path) {
+                        if (p.equals(currentPos)) {
+                            continue;
+                        }
+                        if (!canFillThrough(p)) {
+                            canFill = false;
+                            break;
                         }
                     }
                     if (canFill && canFill(currentPos)) {

@@ -41,6 +41,18 @@ public class PathFindingSearch implements IIterableAlgorithm {
 
     public static final int PATH_ITERATIONS = 1000;
 
+    /** The wall-clock slice the SCAN phase of one {@link #iterate()} round may spend: a few milliseconds, so
+     *  the candidate scanning a robot does on the server thread each tick stays a bounded cost however
+     *  expensive an individual scan step turns out to be (a step asks the chunk-loaded gate and the world
+     *  about up to seven cells). This REPLACES the fixed 10 000-steps-per-round scan cap: a count of steps
+     *  was a budget only by assumption — on a world whose reads cost real time the count said nothing about
+     *  the tick. The slice is the round's FIRST half, and the path finders' expansion shares below are
+     *  guaranteed their rounds regardless: the scanners do not exhaust (the expanding cube holds two million
+     *  cells, the random ones are endless), so a scan allowed the whole budget could spend every round
+     *  scanning and the finders would never run. Rounds are per robot per tick; the tick's total scanning
+     *  cost is this budget times the searching robots. */
+    public static long TICK_BUDGET_NANOS = 2_000_000L;
+
     /** A search holds at most this many concurrent path finders; once reached, scanning pauses. */
     public static final int MAX_TARGETS = 5;
 
@@ -152,18 +164,21 @@ public class PathFindingSearch implements IIterableAlgorithm {
 
     @Override
     public void iterate() {
+        long start = System.nanoTime();
         if (pathFinders.size() < MAX_TARGETS && blockIter.hasNext()) {
-            iterateSearch(PATH_ITERATIONS * 10);
+            // The scan gets the round's FIRST half only (see TICK_BUDGET_NANOS): the finders' shares below are
+            // count-budgeted and guaranteed to run every round, so the scan may not eat the whole slice.
+            iterateSearch(start + TICK_BUDGET_NANOS / 2);
         }
         iteratePathFind(PATH_ITERATIONS);
     }
 
-    private void iterateSearch(int itNumber) {
-        for (int i = 0; i < itNumber; ++i) {
-            if (!blockIter.hasNext()) {
-                return;
-            }
-
+    /** Scans for new candidate targets until the scan is exhausted, {@link #MAX_TARGETS} finders are running,
+     *  or the scan's half of the round's wall-clock budget is spent. The deadline is checked BEFORE each step, so
+     *  a caller passing an already-stale deadline gets zero steps — only the round's own caller (which computes
+     *  the deadline immediately before the call, leaving a fresh slice) is guaranteed progress. */
+    private void iterateSearch(long deadline) {
+        while (blockIter.hasNext() && System.nanoTime() < deadline) {
             BlockPos delta = blockIter.next();
             BlockPos block = new BlockPos(start.getX() + delta.getX(), start.getY() + delta.getY(),
                     start.getZ() + delta.getZ());
@@ -204,6 +219,13 @@ public class PathFindingSearch implements IIterableAlgorithm {
         return true;
     }
 
+    /** Advances every running path finder, fairly: each is granted an equal slice of the round's
+     *  {@code itNumber} expansions, every round, in list order — the wall-clock budget ({@link
+     *  #TICK_BUDGET_NANOS}) governs the scan phase, while a finder's per-expansion cost is bounded by the
+     *  priority-queue open list (see {@link PathFinding}), so a fixed expansion count is an honest measure of
+     *  a share's cost. Withholding later finders' shares when a round runs long was tried and rejected: the
+     *  finders earlier in the list would eat every round and the later ones would starve, so which target a
+     *  search locks could come to depend on machine speed. */
     public void iteratePathFind(int itNumber) {
         for (PathFinding pathFinding : new ArrayList<>(pathFinders)) {
             // A finder out of budget ends with no path, so the target is dropped below like any unreachable one.

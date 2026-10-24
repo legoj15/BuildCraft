@@ -46,6 +46,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.gui.IBCMenuProvider;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.OwnerData;
@@ -775,7 +776,8 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
     @Override
     protected void readData(BCValueInput input) {
         int ord = input.getByteOr("orientation", (byte) Direction.UP.ordinal());
-        orientation = Direction.values()[Math.min(ord, 5)];
+        // Full-range clamp: a negative byte (corrupt or hand-edited save) must not index before the array.
+        orientation = Direction.values()[MathUtil.clamp(ord, 0, Direction.values().length - 1)];
         power = input.getLongOr("power", 0L);
         heat = input.getFloatOr("heat", MIN_HEAT);
         progress = input.getFloatOr("progress", 0f);
@@ -783,7 +785,7 @@ public abstract class TileEngineBase_BC8 extends AbstractBCSyncedBlockEntity imp
         isPumping = input.getBooleanOr("isPumping", false);
         isRedstonePowered = input.getBooleanOr("isRedstonePowered", false);
         int ps = input.getByteOr("powerStage", (byte) 0);
-        powerStage = EnumPowerStage.VALUES[Math.min(ps, EnumPowerStage.VALUES.length - 1)];
+        powerStage = EnumPowerStage.VALUES[MathUtil.clamp(ps, 0, EnumPowerStage.VALUES.length - 1)];
         owner = OwnerData.readOwner(input);
     }
 }

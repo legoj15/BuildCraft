@@ -27,6 +27,11 @@ public record MessageDebugResponse(
     public static final CustomPacketPayload.Type<MessageDebugResponse> TYPE =
             new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:debug_response"));
 
+    /** The most lines one side may claim: the F3 overlay renders the lines of a single debuggable (tens at most;
+     *  nothing legitimate approaches a thousand, and every line costs at least a length byte on the wire). Clamped
+     *  before each list is sized so a few bytes cannot pre-size a huge array. */
+    public static final int MAX_LINES_PER_SIDE = 1000;
+
     public static final StreamCodec<RegistryFriendlyByteBuf, MessageDebugResponse> STREAM_CODEC =
             StreamCodec.of(MessageDebugResponse::encode, MessageDebugResponse::decode);
 
@@ -42,12 +47,12 @@ public record MessageDebugResponse(
     }
 
     private static MessageDebugResponse decode(RegistryFriendlyByteBuf buf) {
-        int leftCount = buf.readVarInt();
+        int leftCount = NetCodecSanity.clampNonNegative(buf.readVarInt(), MAX_LINES_PER_SIDE);
         List<String> left = new ArrayList<>(leftCount);
         for (int i = 0; i < leftCount; i++) {
             left.add(buf.readUtf());
         }
-        int rightCount = buf.readVarInt();
+        int rightCount = NetCodecSanity.clampNonNegative(buf.readVarInt(), MAX_LINES_PER_SIDE);
         List<String> right = new ArrayList<>(rightCount);
         for (int i = 0; i < rightCount; i++) {
             right.add(buf.readUtf());

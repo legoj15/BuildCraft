@@ -29,6 +29,7 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.PipeFlow;
 
+import buildcraft.lib.net.NetCodecSanity;
 import buildcraft.lib.net.NetEnumUtil;
 
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -170,7 +171,11 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
             Direction side = NetEnumUtil.read(buf, Direction.class);
             int colourByte = buf.readByte();
             DyeColor colour = colourByte < 0 ? null : DyeColor.byId(colourByte);
-            int timeToDest = buf.readVarInt();
+            // The wire value drives DelayedList.add, which materialises one list per tick index: an untrusted huge
+            // (or negative) value would freeze or OOM the client on one small packet. The sending side
+            // (PipeFlowItems.sendItemDataToClient) already caps this at Short.MAX_VALUE; negatives are meaningless
+            // (the value counts ticks until arrival) and fold to 0.
+            int timeToDest = NetCodecSanity.clampNonNegative(buf.readVarInt(), Short.MAX_VALUE);
             return new TravellingItemData(stack, stackCount, toCenter, side, colour, timeToDest);
         }
     }

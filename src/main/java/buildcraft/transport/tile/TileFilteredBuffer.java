@@ -88,4 +88,33 @@ public class TileFilteredBuffer extends TileBC_Neptune implements IBCMenuProvide
         super.readData(input);
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
     }
+
+    /**
+     * Strips everything {@link #writeData} (and the {@code TileBC_Neptune} owner it calls) saves from
+     * the tag vanilla attaches as {@code BLOCK_ENTITY_DATA} when a picked item captures this tile
+     * (creative Ctrl+middle-click pickblock — see {@code TileTank#removeComponentsFromTag} for the
+     * pipeline). Without this the cloned buffer item carries the full 9 filter slots and any stored
+     * cargo; placing the clone would recreate the filters (and duplicate stored items) for free.
+     * Every key writeData can emit is discarded, so the tag ends empty and vanilla drops the
+     * component entirely — the clone places as a bare filtered buffer.
+     */
+    // Mojang's override-only @Deprecated marker (not for removal) — vanilla block entities override it the same way.
+    @SuppressWarnings("deprecation")
+    //? if >=1.21.10 {
+    @Override
+    public void removeComponentsFromTag(net.minecraft.world.level.storage.ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        output.discard("ownerUUID");
+        output.discard("ownerName");
+        output.discard("items");
+    }
+    //?} else {
+    /*@Override
+    public void removeComponentsFromTag(CompoundTag tag) {
+        super.removeComponentsFromTag(tag);
+        tag.remove("ownerUUID");
+        tag.remove("ownerName");
+        tag.remove("items");
+    }*/
+    //?}
 }

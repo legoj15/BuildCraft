@@ -15,7 +15,6 @@ import io.netty.buffer.ByteBufOutputStream;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -53,8 +52,15 @@ public record ArchitectPreviewResponsePayload(BlockPos architectPos, @Nullable B
                 Blueprint bp = null;
                 if (hasBlueprint) {
                     try {
-                        CompoundTag nbt = NbtIo.readCompressed(new ByteBufInputStream(buf), NbtAccounter.unlimitedHeap());
-                        Snapshot snapshot = Snapshot.readFromNBT(nbt);
+                        // Bounded by the read ceiling (LibraryUploadBuffer.Limits.readCeiling — what may arrive is
+                        // the sender's to decide, not this side's upload setting): the payload is compressed, so its
+                        // size on the wire says nothing about its size in memory. Oversized data fails the decode
+                        // like unreadable data already does.
+                        buildcraft.builders.container.LibraryUploadBuffer.Limits limits =
+                            buildcraft.builders.container.LibraryUploadBuffer.Limits.readCeiling();
+                        CompoundTag nbt = buildcraft.lib.nbt.NbtSquisher.expand(
+                            new ByteBufInputStream(buf), limits.maxExpandedBytes());
+                        Snapshot snapshot = Snapshot.readFromNBT(nbt, limits.maxCells());
                         if (snapshot instanceof Blueprint blueprint) {
                             bp = blueprint;
                         }

@@ -53,6 +53,13 @@ public class PipeBehaviourStripesMovesTester {
 
     private static final int POLL_TICKS = 60;
 
+    /** The work budget of the polls that wait on a pipe line, counted from the arena cell ticking: a poll's own
+     *  budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. The line spans up to four cells, the framework forces only
+     *  the structure's chunk, and a pipe in the neighbouring chunk of a straddling cell neither moves items nor runs
+     *  the end-of-tick extension until that chunk ticks. */
+    private static final int LINE_WORK_TICKS = 60;
+
     /**
      * A powered stripes pipe breaks the minecart in front of it, before its block-break logic (the cell is air, so
      * there is nothing to dig): the cart is asked about as a player's attack would be, a refusal keeps it and costs
@@ -141,6 +148,7 @@ public class PipeBehaviourStripesMovesTester {
     public static void testItemPipeExtendsTheLine(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 2, 2);
         BlockPos frontRel = pipeRel.east();
+        EntityArenaUtil.forceLoadCell(helper);
         PipeBehaviourStripesDropTester.StripesRig rig =
                 PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
         PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
@@ -150,8 +158,10 @@ public class PipeBehaviourStripesMovesTester {
         rig.stripes().onDrop(sameTick);
         helper.assertTrue(sameTick.getStack().isEmpty(), "a second pipe stack in the same tick is taken too");
 
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> isStripes(pipeAt(helper, frontRel)) && isPipe(pipeAt(helper, pipeRel), BCTransportPipes.cobbleItem),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> isStripes(pipeAt(helper, frontRel))
+                                && isPipe(pipeAt(helper, pipeRel), BCTransportPipes.cobbleItem)),
                 () -> {
                     TilePipeHolder moved = pipeAt(helper, frontRel);
                     helper.assertTrue(count(moved.getPipe().getFlow(), BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2,
@@ -178,6 +188,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos sourceRel = new BlockPos(0, 2, 2);
         BlockPos feederRel = sourceRel.east();
         BlockPos pipeRel = feederRel.east();
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder source = placePipe(helper, sourceRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
@@ -191,8 +202,9 @@ public class PipeBehaviourStripesMovesTester {
         stripes.onDrop(drop);
         helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
 
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> isStripes(pipeAt(helper, feederRel)) && helper.getBlockState(pipeRel).isAir(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> isStripes(pipeAt(helper, feederRel)) && helper.getBlockState(pipeRel).isAir()),
                 () -> {
                     PipeFlow flow = pipeAt(helper, feederRel).getPipe().getFlow();
                     helper.assertTrue(count(flow, BCTransportItems.PIPE_VOID_ITEM.get()) == 1,
@@ -220,6 +232,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos pipeRel = feederRel.east();
         BlockPos cornerRel = pipeRel.north();
         BlockPos lineRel = cornerRel.north();
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(chestRel, Blocks.CHEST);
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
@@ -241,8 +254,9 @@ public class PipeBehaviourStripesMovesTester {
         Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
         Item voidPipe = BCTransportItems.PIPE_VOID_ITEM.get();
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(2.5);
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> isStripes(pipeAt(helper, cornerRel)) && helper.getBlockState(pipeRel).isAir(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> isStripes(pipeAt(helper, cornerRel)) && helper.getBlockState(pipeRel).isAir()),
                 () -> {
                     TilePipeHolder moved = pipeAt(helper, cornerRel);
                     Direction facing = ((PipeBehaviourStripes) moved.getPipe().getBehaviour()).direction;
@@ -303,6 +317,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos feederRel = new BlockPos(1, 2, 2);
         BlockPos pipeRel = feederRel.east();
         BlockPos frontRel = pipeRel.east();
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
         connect(feeder, tile);
@@ -313,8 +328,9 @@ public class PipeBehaviourStripesMovesTester {
         PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get(), 2));
         stripes.onDrop(drop);
 
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> claim.asks() >= 1 && rig.count(BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> claim.asks() >= 1 && rig.count(BCTransportItems.PIPE_COBBLE_ITEM.get()) == 2),
                 () -> {
                     helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "a refused move leaves the stripes pipe");
                     helper.assertTrue(helper.getBlockState(frontRel).isAir(), "...and places nothing in front");
@@ -335,6 +351,7 @@ public class PipeBehaviourStripesMovesTester {
         BlockPos feederRel = new BlockPos(1, 2, 2);
         BlockPos pipeRel = feederRel.east();
         BlockPos frontRel = pipeRel.east();
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder feeder = placePipe(helper, feederRel, BCTransportItems.PIPE_COBBLE_ITEM.get());
         TilePipeHolder tile = placePipe(helper, pipeRel, BCTransportItems.PIPE_STRIPES_ITEM.get());
         connect(feeder, tile);
@@ -352,8 +369,9 @@ public class PipeBehaviourStripesMovesTester {
 
         Item cobble = BCTransportItems.PIPE_COBBLE_ITEM.get();
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> claim.placeAsks(front) >= 1 && countLine(helper, cobble, feederRel, pipeRel) == 3,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> claim.placeAsks(front) >= 1 && countLine(helper, cobble, feederRel, pipeRel) == 3),
                 () -> {
                     helper.assertTrue(isStripes(pipeAt(helper, pipeRel)), "a refused move leaves the stripes pipe");
                     helper.assertTrue(helper.getBlockState(frontRel).isAir(), "...and places nothing in front");
@@ -387,6 +405,7 @@ public class PipeBehaviourStripesMovesTester {
      */
     public static void testLoneStripesPipeDropsWhatItCannotSendBack(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         PipeBehaviourStripesDropTester.StripesRig rig =
                 PipeBehaviourStripesDropTester.StripesRig.build(helper, pipeRel, Direction.EAST);
         PipeEventItem.Drop drop = rig.drop(new ItemStack(BCTransportItems.PIPE_VOID_ITEM.get()));
@@ -394,9 +413,10 @@ public class PipeBehaviourStripesMovesTester {
         helper.assertTrue(drop.getStack().isEmpty(), "the void pipe is taken for the retraction");
 
         AABB around = new AABB(helper.absolutePos(pipeRel)).inflate(1.5);
-        EntityArenaUtil.tickUntil(helper, POLL_TICKS,
-                () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
-                        e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LINE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LINE_WORK_TICKS,
+                        () -> !helper.getLevel().getEntitiesOfClass(ItemEntity.class, around,
+                                e -> e.getItem().is(BCTransportItems.PIPE_VOID_ITEM.get())).isEmpty()),
                 () -> {
                     helper.assertTrue(rig.count(BCTransportItems.PIPE_VOID_ITEM.get()) == 0,
                             "nothing is sent into the lone stripes pipe, found "

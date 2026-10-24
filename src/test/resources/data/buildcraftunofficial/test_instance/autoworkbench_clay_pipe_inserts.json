@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:autoworkbench_clay_pipe_inserts",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 120,
+    "max_ticks": 420,
     "setup_ticks": 0,
     "required": true
 }

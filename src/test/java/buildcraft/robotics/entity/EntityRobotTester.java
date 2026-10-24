@@ -64,8 +64,9 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     {@code (pos, side)}. Relative positions are also kept distinct from
  *     {@code RobotStationPluggableTester}'s, because a re-used arena origin would otherwise collide on
  *     {@code registerStation}.</li>
- * <li>Every test force-loads its arena's chunks ({@link EntityArenaUtil#forceLoadEntityArena}): an entity in a
- *     non-force-loaded chunk never ticks, and roughly every assertion here needs the robot to tick. The same
+ * <li>Every test that waits on a ticking robot force-loads its whole arena cell
+ *     ({@link EntityArenaUtil#forceLoadCell}): an entity in a non-force-loaded chunk never ticks, and roughly every
+ *     assertion here needs the robot to tick. The same
  *     applies to the docking-station pipes — a {@code RobotStationPluggable} only registers its station from
  *     {@code onTick}, so an unloaded chunk means no station at all.</li>
  * <li>Force-loading is where the wait STARTS, not where it ends: the chunk is promoted to entity/block
@@ -73,7 +74,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     {@link EntityArenaUtil#forceLoadEntityArena}). So no phase below fires on a hard-coded tick. Each one
  *     is gated on the state it actually needs, via {@link EntityArenaUtil#tickUntil} for single-phase tests
  *     and {@link EntityArenaUtil#tickUntilThen} where a second phase has to follow the first by a fixed
- *     number of ticks.</li>
+ *     number of ticks, and each poll's work budget is counted from the cell ticking
+ *     ({@link EntityArenaUtil#whenCellTicking}), never from the test's first tick.</li>
  * <li>Every relative position stays inside the arena's grid cell — with the {@code minecraft:empty} structure
  *     the framework spaces arenas 6 blocks apart in X and 7 in Z, so anything beyond that lands in a
  *     neighbouring test's arena, which is neither cleared between runs nor safe from being written over in the
@@ -94,6 +96,18 @@ public class EntityRobotTester {
     /** One damage point costs this much charge. Chosen, not derived — 7.1.x debited 2600 RF per point at
      *  BuildCraft's canonical 10 RF/MJ bridge. */
     private static final long DAMAGE_DEBIT_PER_POINT = 260L * MjAPI.MJ;
+
+    /** The work budgets of the polls below, each counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum (plus the gap of a two-phase poll). A robot is added to the
+     *  world, and a station registers on its pipe's first tick, but neither ticks until its chunk does, and the
+     *  framework forces only the structure's chunk while a 6x7 cell straddles a chunk border in about 57% of runs.
+     *  {@link #REGISTER_WORK_TICKS} covers the robot's first tick and its stations' registration; the other two are
+     *  the shutdown the AI ladder needs to reach, and the idle window {@link #robotPersistsAndDoesNotDespawn}
+     *  measures (a gap after the cell ticks, not a work budget). */
+    private static final int REGISTER_WORK_TICKS = 60;
+    private static final int SHUTDOWN_WORK_TICKS = 200;
+    private static final int IDLE_TICKS = 60;
 
     // ---------- fixtures ----------
 
@@ -154,7 +168,7 @@ public class EntityRobotTester {
     /** A robot added to the world registers itself with the per-level {@link IRobotRegistry} on its first
      *  tick, is handed a unique non-sentinel id, and can find its own registry again. */
     public static void robotSpawnRegistersWithUniqueId(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 2, 1));
+        EntityArenaUtil.forceLoadCell(helper);
         ServerLevel level = helper.getLevel();
         IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
 
@@ -164,9 +178,11 @@ public class EntityRobotTester {
         helper.assertTrue(a.getRobotId() == EntityRobotBase.NULL_ROBOT_ID,
                 "precondition: a robot that has not ticked yet still carries the NULL_ROBOT_ID sentinel");
 
-        EntityArenaUtil.tickUntil(helper, 40,
-                () -> a.getRobotId() != EntityRobotBase.NULL_ROBOT_ID
-                        && b.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> a.getRobotId() != EntityRobotBase.NULL_ROBOT_ID
+                                && b.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
+                        () -> "robot A ticked: " + hasTicked(a) + ", robot B ticked: " + hasTicked(b)),
                 () -> {
                     helper.assertTrue(a.getRobotId() != b.getRobotId(),
                             "each robot must get its own id from RobotRegistry.getNextRobotId()");
@@ -188,7 +204,7 @@ public class EntityRobotTester {
      *  all — it is still alive, still registered and still exactly where it was left after a long idle. */
     public static void robotPersistsAndDoesNotDespawn(GameTestHelper helper) {
         BlockPos relPos = new BlockPos(5, 4, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper, relPos);
         Vec3 spawnedAt = Vec3.atCenterOf(helper.absolutePos(relPos));
 
@@ -198,7 +214,11 @@ public class EntityRobotTester {
         // Empty first phase on purpose: all it does is pin the start of the idle window to the robot's own
         // first tick, so "60 ticks of idling" really is 60 ticks of TICKING rather than 60 ticks that may
         // have begun before the arena's chunk started ticking at all.
-        EntityArenaUtil.tickUntilThen(helper, 120, () -> hasTicked(robot), () -> { }, 60, () -> {
+        EntityArenaUtil.tickUntilThen(helper,
+                EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS + IDLE_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> hasTicked(robot)),
+                () -> { }, IDLE_TICKS, () -> {
             IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
             helper.assertTrue(robot.isAlive(), "a robot must not despawn or expire while idling");
             helper.assertTrue(registry.getLoadedRobot(robot.getRobotId()) == robot,
@@ -223,15 +243,19 @@ public class EntityRobotTester {
         BlockPos dockRel = new BlockPos(5, 2, 5);
         installStation(helper, mainRel, Direction.UP);
         installStation(helper, dockRel, Direction.DOWN);
-        // Centre on the robot's chunk (5, 3, 4), not the arena origin — the robot only ticks once its
-        // whole 5x5 neighbourhood is FULL, and it can land in the arena's second chunk column.
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 3, 4));
+        // The stations (x=5, z=3 and 5) and the robot (5, 3, 4) can sit in either chunk column of the cell, and
+        // each ticks only once its own chunk does: force the whole cell, and let the poll's budget start when it ticks.
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper, new BlockPos(5, 3, 4));
 
-        EntityArenaUtil.tickUntil(helper, 40,
-                () -> stationAt(helper, mainRel, Direction.UP) != null
-                        && stationAt(helper, dockRel, Direction.DOWN) != null
-                        && hasTicked(robot),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, mainRel, Direction.UP) != null
+                                && stationAt(helper, dockRel, Direction.DOWN) != null
+                                && hasTicked(robot),
+                        () -> "main station registered: " + (stationAt(helper, mainRel, Direction.UP) != null)
+                                + ", dock station registered: " + (stationAt(helper, dockRel, Direction.DOWN) != null)
+                                + ", robot ticked: " + hasTicked(robot)),
                 () -> {
             DockingStationPipe main = stationAt(helper, mainRel, Direction.UP);
             DockingStationPipe dock = stationAt(helper, dockRel, Direction.DOWN);
@@ -342,11 +366,12 @@ public class EntityRobotTester {
         // the next row's first block — the pipe and robot sat inside a neighbouring test's arena.
         BlockPos pipeRel = new BlockPos(5, 2, 6);
         installStation(helper, pipeRel, Direction.UP);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 4, 6));
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper, new BlockPos(3, 4, 6));
 
-        EntityArenaUtil.tickUntilThen(helper, 60,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+        EntityArenaUtil.tickUntilThen(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS + 4,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot)),
                 () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
             station.takeAsMain(robot);
@@ -370,11 +395,14 @@ public class EntityRobotTester {
     /** A hit an undocked robot can pay for debits its battery by {@code 260 MJ} per damage point and raises
      *  the synched hurt flash, which then decays. */
     public static void damageDebitsBatteryAndSetsHurtTime(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 2, 6));
+        EntityArenaUtil.forceLoadCell(helper);
         ServerLevel level = helper.getLevel();
         EntityRobot robot = addRobot(helper, new BlockPos(3, 2, 6));
 
-        EntityArenaUtil.tickUntilThen(helper, 80, () -> hasTicked(robot), () -> {
+        EntityArenaUtil.tickUntilThen(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS + 25,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> hasTicked(robot)),
+                () -> {
             long stored = 5000L * MjAPI.MJ;
             robot.getBattery().addPower(stored, false);
             Player attacker = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -410,7 +438,7 @@ public class EntityRobotTester {
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(5, 2, 2);
         BlockPos robotRel = new BlockPos(5, 3, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
         // Boarded, like every robot that exists through real gameplay — a bare entity could never pin
         // that the dropped item carries the board. Seeding the battery BEFORE the first tick keeps the
@@ -425,8 +453,9 @@ public class EntityRobotTester {
         helper.getLevel().addFreshEntity(robot);
         long[] robotId = { EntityRobotBase.NULL_ROBOT_ID };
 
-        EntityArenaUtil.tickUntilThen(helper, 60,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+        EntityArenaUtil.tickUntilThen(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS + 4,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot)),
                 () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
             // Linked but NOT docked: a docked robot is invulnerable by design, so this test needs the
@@ -498,8 +527,9 @@ public class EntityRobotTester {
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(5, 2, 4);
         installStation(helper, pipeRel, Direction.UP);
-        // Both robots sit in the arena's second chunk column; centre on their chunk.
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 3, 4));
+        // The robots (x=5 and x=3) and the mob (x=3, z=6) can sit in different chunks of the cell: force all of
+        // it, and let the poll's budget start when it ticks.
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot docked = addRobot(helper, new BlockPos(5, 3, 4));
         EntityRobot airborne = addRobot(helper, new BlockPos(3, 3, 4));
 
@@ -516,9 +546,13 @@ public class EntityRobotTester {
         mob.setNoGravity(true);
 
         FallingBlockEntity[] falling = { null };
-        EntityArenaUtil.tickUntil(helper, 40,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null
-                        && hasTicked(docked) && hasTicked(airborne),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null
+                                && hasTicked(docked) && hasTicked(airborne),
+                        () -> "station registered: " + (stationAt(helper, pipeRel, Direction.UP) != null)
+                                + ", docked robot ticked: " + hasTicked(docked)
+                                + ", airborne robot ticked: " + hasTicked(airborne)),
                 () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
             station.takeAsMain(docked);
@@ -577,12 +611,15 @@ public class EntityRobotTester {
      *  test: a real change must go dirty, and an unchanged re-push must NOT (or the robot re-sends five
      *  stacks at 20 Hz forever). */
     public static void inPlaceInventoryMutationPropagatesToSynchedData(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 4, 3));
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper, new BlockPos(5, 4, 3));
 
         // One scheduled block, no ticks in between: a tick could dirty an unrelated accessor (ENERGY_MJ,
         // SLEEPING, …) and make the dirty flag meaningless.
-        EntityArenaUtil.tickUntil(helper, 40, () -> hasTicked(robot), () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> hasTicked(robot)),
+                () -> {
             ItemStack stack = new ItemStack(Items.DIAMOND, 1);
             robot.setInventoryStack(0, stack);
             helper.assertTrue(ItemStack.matches(robot.getInventoryStack(0), new ItemStack(Items.DIAMOND, 1)),
@@ -628,12 +665,13 @@ public class EntityRobotTester {
     public static void dockedRobotChargeIsReadableAndSimulateIsInert(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(5, 4, 5);
         installStation(helper, pipeRel, Direction.UP);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(5, 5, 5));
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper, new BlockPos(5, 5, 5));
         long delivered = 1200L * MjAPI.MJ;
 
-        EntityArenaUtil.tickUntilThen(helper, 60,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot),
+        EntityArenaUtil.tickUntilThen(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS + 4,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null && hasTicked(robot)),
                 () -> {
             DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
             station.takeAsMain(robot);
@@ -778,7 +816,7 @@ public class EntityRobotTester {
         ServerLevel level = helper.getLevel();
         BlockPos pipeRel = new BlockPos(2, 2, 5);
         BlockPos robotRel = new BlockPos(2, 3, 5);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
 
         // Boarded (mainAI is the AIRobotMain ladder that owns the shutdown slot) and charged well above
@@ -790,7 +828,8 @@ public class EntityRobotTester {
         level.addFreshEntity(robot);
 
         int[] phase = { 0 };
-        EntityArenaUtil.tickUntil(helper, 200,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SHUTDOWN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SHUTDOWN_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeRel, Direction.UP) == null || !hasTicked(robot)) {
@@ -821,6 +860,8 @@ public class EntityRobotTester {
                     return robot.mainAI != null
                             && robot.mainAI.getActiveAI() instanceof AIRobotShutdown;
                 },
+                () -> "station and robot ready: " + (phase[0] == 1) + ", robot active AI: "
+                        + (robot.mainAI == null ? "none" : robot.mainAI.getActiveAI())),
                 helper::succeed,
                 "a robot whose home station was destroyed never shut down — it kept running its board "
                         + "with no station at all",
@@ -837,7 +878,7 @@ public class EntityRobotTester {
         ServerLevel level = helper.getLevel();
         BlockPos robotRel = new BlockPos(2, 3, 5);
         BlockPos missingRel = new BlockPos(2, 2, 5);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         // Saved as a boarded, well-charged robot, then patched to name a home that no station answers for.
         ZonePinnedRobot source = new ZonePinnedRobot(helper, BoardRobotPickerNBT.INSTANCE);
@@ -857,8 +898,11 @@ public class EntityRobotTester {
         EntityArenaUtil.loadEntity(level, loaded, tag);
         level.addFreshEntity(loaded);
 
-        EntityArenaUtil.tickUntil(helper, 200,
-                () -> loaded.mainAI != null && loaded.mainAI.getActiveAI() instanceof AIRobotShutdown,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SHUTDOWN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SHUTDOWN_WORK_TICKS,
+                        () -> loaded.mainAI != null && loaded.mainAI.getActiveAI() instanceof AIRobotShutdown,
+                        () -> "robot active AI: "
+                                + (loaded.mainAI == null ? "none" : loaded.mainAI.getActiveAI())),
                 () -> {
                     helper.assertTrue(loaded.getLinkedStation() == null,
                             "there is no home to be linked to: the save's position resolved to nothing");

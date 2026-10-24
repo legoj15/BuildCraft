@@ -97,7 +97,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
                 public void addToolTips(java.util.List<buildcraft.lib.gui.elem.ToolTip> tooltips) {
                     if (contains(mainGui.mouse)) {
                         int current = menu.getSyncedFeStored();
-                        int max = buildcraft.energy.tile.TileDynamoMJ.MAX_FE;
+                        int max = buildcraft.energy.tile.TileEngineGearBase.MAX_FE;
                         tooltips.add(new buildcraft.lib.gui.elem.ToolTip(LocaleUtil.localizeRf(current, max)));
                     }
                 }
@@ -140,7 +140,7 @@ public class ScreenDynamoMJ extends GuiBC8<ContainerDynamoMJ> {
         );*/
         //?}
         
-        double rfHeight = 60.0 * menu.getSyncedFeStored() / buildcraft.energy.tile.TileDynamoMJ.MAX_FE;
+        double rfHeight = 60.0 * menu.getSyncedFeStored() / buildcraft.energy.tile.TileEngineGearBase.MAX_FE;
         double scale = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScale();
         rfHeight = (Math.round(rfHeight * scale)) / scale;
         ICON_RF.drawCutInside(new buildcraft.lib.gui.pos.GuiRectangle(139, 18 + 60 - rfHeight, 6, rfHeight).offset(mainGui.rootElement));

@@ -50,6 +50,12 @@ import buildcraft.robotics.entity.EntityRobot;
  *  visibility gate waits. */
 public class AIRobotFetchItemTester {
 
+    /** The work budget of {@link #whenScannable}'s poll, counted from the arena cell ticking: the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each manifest's
+     *  {@code max_ticks} stays above that sum. A drop in a chunk that is not accessible yet is invisible to the scan,
+     *  and the drops sit in different columns of a cell that straddles a chunk border in about 57% of runs. */
+    private static final int SCAN_WORK_TICKS = 60;
+
     private static EntityRobot robotAt(GameTestHelper helper, BlockPos relPos) {
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
@@ -78,14 +84,17 @@ public class AIRobotFetchItemTester {
         return new AIRobotFetchItem(robot, 16, null, arenaZone(helper));
     }
 
-    /** Force-loads the arena, then runs {@code body} on the first tick every drop is visible to the exact query
-     *  {@link AIRobotFetchItem}'s scan makes. A drop in a not-yet-accessible entity section is in the world but
-     *  invisible to {@code getEntitiesOfClass}; scanning before then is what made the partial-fit test flake. */
+    /** Force-loads the whole arena cell, then runs {@code body} on the first tick every drop is visible to the exact
+     *  query {@link AIRobotFetchItem}'s scan makes (the budget starts once the cell ticks). A drop in a
+     *  not-yet-accessible entity section is in the world but invisible to {@code getEntitiesOfClass}; scanning before
+     *  then is what made the partial-fit test flake. */
     private static void whenScannable(GameTestHelper helper, List<ItemEntity> drops, Runnable body) {
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 2, 3));
-        EntityArenaUtil.tickUntil(helper, 60, () -> drops.stream().allMatch(drop -> helper.getLevel()
-                        .getEntitiesOfClass(ItemEntity.class, AABB.ofSize(drop.position(), 1, 1, 1))
-                        .contains(drop)),
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SCAN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SCAN_WORK_TICKS,
+                        () -> drops.stream().allMatch(drop -> helper.getLevel()
+                                .getEntitiesOfClass(ItemEntity.class, AABB.ofSize(drop.position(), 1, 1, 1))
+                                .contains(drop))),
                 body, "the test's drops never became visible to entity scans",
                 () -> EntityArenaUtil.discard(drops.toArray(new ItemEntity[0])));
     }

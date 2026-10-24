@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_search_entity_nearest_and_range",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 80,
+    "max_ticks": 370,
     "setup_ticks": 0,
     "required": true
 }

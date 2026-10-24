@@ -4,7 +4,6 @@ import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -18,42 +17,18 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /*import net.neoforged.neoforge.energy.IEnergyStorage;*/
 //?}
 
-import buildcraft.lib.mj.BCFeStorage;
-
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.lib.engine.EngineConnector;
-import buildcraft.lib.misc.BCValueInput;
-import buildcraft.lib.misc.BCValueOutput;
 
 @SuppressWarnings("this-escape")
 public class TileEngineFE extends TileEngineGearBase {
-    public static final int MAX_FE = 10_000;
-    public static final float HEAT_RATE = 0.06f;
-    public static final float COOLDOWN_RATE = 0.01f;
-
-    // The gear upgrade slots, their MJ-per-tick table and what they spill on removal are TileEngineGearBase's.
-
-    public final BCFeStorage energyStorage = new BCFeStorage(MAX_FE, MAX_FE, 0) {
-        @Override
-        protected void onFeChanged() {
-            setChanged();
-        }
-    };
 
     public TileEngineFE(BlockPos pos, BlockState state) {
-        super(BCEnergyBlockEntities.ENGINE_FE.get(), pos, state);
-    }
-
-    public int getCurrentFe() {
-        return (int) energyStorage.getAmountAsLong();
-    }
-
-    public void setCurrentFe(int fe) {
-        energyStorage.set(Math.max(0, Math.min(MAX_FE, fe)));
+        super(BCEnergyBlockEntities.ENGINE_FE.get(), pos, state, MAX_FE, 0);
     }
 
     @Override
@@ -90,10 +65,7 @@ public class TileEngineFE extends TileEngineGearBase {
             currentOutput = mjGenerated;
             power += mjGenerated;
             energyStorage.set(currentFe - feConsumed);
-            heat += HEAT_RATE;
-            if (heat >= 200) {
-                heat = 200;
-            }
+            addBurnHeat();
         }
     }
 
@@ -134,17 +106,6 @@ public class TileEngineFE extends TileEngineGearBase {
         }
     }
 
-    @Override
-    public void updateHeatLevel() {
-        if (heat > MIN_HEAT) {
-            heat -= COOLDOWN_RATE;
-        }
-        if (heat <= MIN_HEAT) {
-            heat = MIN_HEAT;
-        }
-        getPowerStage();
-    }
-
     @Nonnull
     @Override
     protected IMjConnector createConnector() {
@@ -181,25 +142,8 @@ public class TileEngineFE extends TileEngineGearBase {
     }
 
     @Override
-    public float explosionRange() {
-        return 4;
-    }
-
-    @Override
     protected int getMaxChainLength() {
         return 4;
-    }
-
-    @Override
-    protected void writeData(BCValueOutput output) {
-        super.writeData(output);
-        output.putInt("currentFe", getCurrentFe());
-    }
-
-    @Override
-    protected void readData(BCValueInput input) {
-        super.readData(input);
-        setCurrentFe(input.getIntOr("currentFe", 0));
     }
 
     // --- IBCMenuProvider (GUI) ---

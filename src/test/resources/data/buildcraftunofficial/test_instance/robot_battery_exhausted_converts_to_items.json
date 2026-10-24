@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_battery_exhausted_converts_to_items",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 374,
     "setup_ticks": 0,
     "required": true
 }

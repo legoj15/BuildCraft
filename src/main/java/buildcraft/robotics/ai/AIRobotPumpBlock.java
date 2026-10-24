@@ -39,7 +39,13 @@ import buildcraft.robotics.RobotProtection;
  *
  *  <p>Before the world changes, the pass asks protection mods ({@link RobotProtection#canBreak}, for the robot's
  *  deployer and its home station's owner alike) about the one block it was sent to. A refusal — from a mod, or
- *  from a block that reports a source yet refuses its pickup — is reported through {@link #refused()} so the board can stop sending the robot there. */
+ *  from a block that reports a source yet refuses its pickup — is reported through {@link #refused()} so the board can stop sending the robot there.
+ *
+ *  <p>The pass never loads a chunk: taking the bucket updates the cells around the block, out to
+ *  {@link BlockUtil#DRAIN_UPDATE_REACH}, and a read in a chunk that is not in memory would load (or generate) it on the
+ *  server thread, so a block whose own chunk, or one within that reach, is absent is left alone
+ *  ({@link BlockUtil#drainStaysInLoadedChunks}, as the pump block does). The pass then pumps nothing and is not
+ *  {@link #refused()}: the chunk can load later, and the board's search does not offer such a block in the first place. */
 public class AIRobotPumpBlock extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -76,7 +82,8 @@ public class AIRobotPumpBlock extends AIRobot {
             return;
         }
 
-        if (blockToPump != null && robot.level() instanceof ServerLevel serverLevel) {
+        if (blockToPump != null && robot.level() instanceof ServerLevel serverLevel
+                && BlockUtil.drainStaysInLoadedChunks(serverLevel, blockToPump, null)) {
             FluidStack preview = BlockUtil.drainBlock(serverLevel, blockToPump, false);
             if (preview != null) {
                 //? if >=1.21.10 {

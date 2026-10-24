@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_charging_latch_rules",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 220,
+    "max_ticks": 510,
     "setup_ticks": 0,
     "required": true
 }

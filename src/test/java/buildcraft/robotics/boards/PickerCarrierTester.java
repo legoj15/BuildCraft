@@ -89,6 +89,20 @@ public class PickerCarrierTester {
     private static final int PICKER_WORK_TICKS = 150;
     private static final int PICKER_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + PICKER_WORK_TICKS;
 
+    /** The work budget of the recharge polls (the MJ rig, its unloaded-home variant and the RF twin), counted from
+     *  the arena cell ticking: each poll's own budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by
+     *  {@code GameTestPollBudgetTester}), and each manifest's {@code max_ticks} stays above that sum. It covers the
+     *  station's registration, the robot's flight to it, docking and the charge climbing past the threshold. */
+    private static final int RECHARGE_WORK_TICKS = 380;
+
+    /** The work budgets of the station-registration poll (the supply and unload pins) and of the carrier load polls,
+     *  counted from the arena cell ticking like the ones above: each poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. A station registers on its pipe's first tick, and the pipe,
+     *  the chest and the robot sit in different columns of a cell that straddles a chunk border in about 57% of runs. */
+    private static final int REGISTER_WORK_TICKS = 120;
+    private static final int CARRIER_WORK_TICKS = 260;
+
     // ---------- fixtures ----------
 
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
@@ -280,6 +294,7 @@ public class PickerCarrierTester {
         BlockPos plainChestRel = new BlockPos(1, 2, 1);
         BlockPos woodRel = new BlockPos(4, 3, 1);
         BlockPos woodChestRel = new BlockPos(4, 2, 1);
+        EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(plainChestRel, Blocks.CHEST);
         installStationOnPlainPipe(helper, plainRel, Direction.UP);
@@ -289,12 +304,13 @@ public class PickerCarrierTester {
         // The wooden pipe aims itself on its first server tick (PipeBehaviourDirectional.onTick advances to
         // the first face carrying a TILE connection), so gate on the station existing AND the wooden one
         // having resolved its chest — never on a fixed tick.
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> {
-                    DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
-                    return wood != null && wood.getItemInput() != null
-                            && stationAt(helper, plainRel, Direction.UP) != null;
-                },
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> {
+                            DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
+                            return wood != null && wood.getItemInput() != null
+                                    && stationAt(helper, plainRel, Direction.UP) != null;
+                        }),
                 () -> {
                     DockingStationPipe plain = stationAt(helper, plainRel, Direction.UP);
                     helper.assertTrue(plain.getItemInput() == null,
@@ -332,14 +348,15 @@ public class PickerCarrierTester {
     public static void unloadStationDoesNotNeedAnOppositeFaceConnection(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 3, 4);
         BlockPos robotRel = new BlockPos(2, 4, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder tile = installStationOnPlainPipe(helper, pipeRel, Direction.UP);
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS);
 
         EntityRobot[] spawned = { null };
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     EntityRobot robot = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);
@@ -377,7 +394,7 @@ public class PickerCarrierTester {
         // One cell below the pipe: the station's input is on side().getOpposite() = DOWN for an UP face.
         BlockPos chestRel = new BlockPos(2, 2, 4);
         BlockPos robotRel = new BlockPos(4, 3, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
@@ -393,7 +410,8 @@ public class PickerCarrierTester {
         // there is anything to find, or its first search comes up empty and it goes to sleep. The spawn is
         // guarded on a single tick so it happens exactly once, and the condition then waits for the load.
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 260,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CARRIER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CARRIER_WORK_TICKS,
                 () -> {
                     if (stationAt(helper, pipeRel, Direction.UP) == null) {
                         return false;
@@ -404,6 +422,8 @@ public class PickerCarrierTester {
                     }
                     return robot[0].containsItems();
                 },
+                () -> robot[0] == null ? "the supply station never registered, so the carrier was never added"
+                        : "the carrier robot never loaded the diamonds from the supply chest"),
                 () -> {
                     helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
                             new ItemStack(Items.DIAMOND, 5)),
@@ -432,7 +452,7 @@ public class PickerCarrierTester {
         BlockPos pipeRel = new BlockPos(2, 3, 4);
         BlockPos chestRel = new BlockPos(2, 2, 4);
         BlockPos robotRel = new BlockPos(4, 3, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
         addAlwaysOnParamGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS,
@@ -447,7 +467,8 @@ public class PickerCarrierTester {
         chest.setItem(1, new ItemStack(Items.DIAMOND, 5));
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 260,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CARRIER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CARRIER_WORK_TICKS,
                 () -> {
                     if (stationAt(helper, pipeRel, Direction.UP) == null) {
                         return false;
@@ -460,6 +481,8 @@ public class PickerCarrierTester {
                     }
                     return robot[0].containsItems();
                 },
+                () -> robot[0] == null ? "the supply station never registered, so the carrier was never added"
+                        : "the carrier never loaded the diamonds from behind the refused cobblestone"),
                 () -> {
                     helper.assertTrue(ItemStack.matches(robot[0].getInventoryStack(0),
                             new ItemStack(Items.DIAMOND, 5)),
@@ -508,7 +531,9 @@ public class PickerCarrierTester {
         BlockPos woodPipeRel = new BlockPos(1, 3, 6);
         BlockPos stonePipeRel = new BlockPos(1, 4, 6);
         BlockPos robotRel = new BlockPos(3, 4, 6);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        // The rig's pipes (x=1) and the robot (x=3) can sit in different chunks: force the whole cell, and start the
+        // poll's work budget only once it ticks.
+        EntityArenaUtil.forceLoadCell(helper);
 
         if (BCCoreBlocks.ENGINE_CREATIVE == null) {
             throw new IllegalStateException(
@@ -553,8 +578,8 @@ public class PickerCarrierTester {
         }
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 380,
-                () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + RECHARGE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, RECHARGE_WORK_TICKS, () -> {
                     DockingStationPipe station = stationAt(helper, stonePipeRel, Direction.WEST);
                     if (station == null) {
                         return false;
@@ -580,7 +605,11 @@ public class PickerCarrierTester {
                     }
                     return robot[0].getDockingStation() == station
                             && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER;
-                },
+                }, () -> "station registered: " + (stationAt(helper, stonePipeRel, Direction.WEST) != null)
+                        + ", robot spawned: " + (robot[0] != null)
+                        + (robot[0] == null ? "" : ", docked: "
+                                + (robot[0].getDockingStation() != null) + ", battery: "
+                                + robot[0].getBattery().getStored())),
                 () -> {
                     helper.assertTrue(robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER,
                             "a robot docked at the powered station must charge past SAFETY_POWER — the "
@@ -607,7 +636,9 @@ public class PickerCarrierTester {
     public static void lowPowerRobotRechargesAtRfStation(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 4, 6);
         BlockPos robotRel = new BlockPos(3, 4, 6);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        // The pipe (x=1) and the robot (x=3) can sit in different chunks: force the whole cell, and start the
+        // poll's work budget only once it ticks.
+        EntityArenaUtil.forceLoadCell(helper);
 
         RfStationTestSupport.ConfigScope scope = new RfStationTestSupport.ConfigScope(
                 BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.2, false);
@@ -618,7 +649,8 @@ public class PickerCarrierTester {
             rfPipe.getPipe().markForUpdate();
 
             EntityRobot[] robot = { null };
-            scope.succeedWhen(helper, 380, () -> {
+            scope.succeedWhen(helper, EntityArenaUtil.CELL_READY_TICKS + RECHARGE_WORK_TICKS,
+                    EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, RECHARGE_WORK_TICKS, () -> {
                 DockingStationPipe station = stationAt(helper, pipeRel, Direction.WEST);
                 if (station == null) {
                     return false;
@@ -639,7 +671,11 @@ public class PickerCarrierTester {
                 }
                 return robot[0].getDockingStation() == station
                         && robot[0].getBattery().getStored() > IRobotAccess.SAFETY_POWER;
-            }, "a robot below SAFETY_POWER never docked at the RF-kinesis station and recharged past it", () -> {
+            }, () -> "station registered: " + (stationAt(helper, pipeRel, Direction.WEST) != null)
+                    + ", robot spawned: " + (robot[0] != null)
+                    + (robot[0] == null ? "" : ", docked: " + (robot[0].getDockingStation() != null)
+                            + ", battery: " + robot[0].getBattery().getStored())),
+                    "a robot below SAFETY_POWER never docked at the RF-kinesis station and recharged past it", () -> {
                 EntityArenaUtil.discard(robot[0]);
                 RfStationTestSupport.removeStation(helper, helper.absolutePos(pipeRel), Direction.WEST);
             });

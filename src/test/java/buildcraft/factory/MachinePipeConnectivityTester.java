@@ -25,6 +25,7 @@ import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.BCLibConfig.PowerMode;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.tile.TileAssemblyTable;
@@ -55,6 +56,11 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class MachinePipeConnectivityTester {
 
     private static final Direction TO_WORKBENCH = Direction.NORTH;
+
+    /** The work budget of both clay-pipe delivery polls, counted from the cell ticking: the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above the sum. */
+    private static final int CLAY_DELIVERY_WORK_TICKS = 110;
 
     // ---------- Wood pipe — extraction source ----------
 
@@ -171,6 +177,9 @@ public class MachinePipeConnectivityTester {
         BlockPos workbenchPos = new BlockPos(1, 2, 1);
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
+        // The framework forces only the structure's chunk, and the pipe or the machine can sit in the neighbouring
+        // one: an item travels only while the pipe's chunk ticks, so the delivery budget must not start before.
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(workbenchPos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
         //? if >=1.21.10 {
         TileAutoWorkbenchItems workbench = helper.getBlockEntity(workbenchPos, TileAutoWorkbenchItems.class);
@@ -187,12 +196,16 @@ public class MachinePipeConnectivityTester {
         PipeFlowItems flow = (PipeFlowItems) pipe.getFlow();
         flow.insertItemsForce(new ItemStack(Items.DIAMOND), Direction.UP, null, 0.08);
 
-        helper.succeedWhen(() -> {
-            helper.assertTrue(pipe.isConnected(TO_WORKBENCH),
-                "Clay pipe should connect to the auto workbench");
-            helper.assertTrue(countItem(workbench.invMaterials, Items.DIAMOND) >= 1,
-                "Clay pipe should have delivered the diamond into the workbench's materials inventory");
-        });
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CLAY_DELIVERY_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CLAY_DELIVERY_WORK_TICKS,
+                () -> pipe.isConnected(TO_WORKBENCH)
+                    && countItem(workbench.invMaterials, Items.DIAMOND) >= 1,
+                () -> (pipe.isConnected(TO_WORKBENCH) ? "the clay pipe is connected to the auto workbench"
+                    : "the clay pipe is not connected to the auto workbench")
+                    + ", diamonds in the workbench's materials inventory: "
+                    + countItem(workbench.invMaterials, Items.DIAMOND)),
+            helper::succeed,
+            "Clay pipe should connect to the auto workbench and deliver the diamond into its materials inventory");
     }
 
     // ---------- Architect Table — snapshot in/out slots ----------
@@ -241,6 +254,8 @@ public class MachinePipeConnectivityTester {
         BlockPos architectPos = new BlockPos(1, 2, 1);
         BlockPos pipePos = new BlockPos(1, 2, 2);
 
+        // See testClayPipeInsertsIntoAutoWorkbench: the pipe moves the item only while its chunk ticks.
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(architectPos, BCBuildersBlocks.ARCHITECT.get());
         //? if >=1.21.10 {
         TileArchitectTable architect = helper.getBlockEntity(architectPos, TileArchitectTable.class);
@@ -258,13 +273,15 @@ public class MachinePipeConnectivityTester {
         PipeFlowItems flow = (PipeFlowItems) pipe.getFlow();
         flow.insertItemsForce(new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get()), Direction.UP, null, 0.08);
 
-        helper.succeedWhen(() -> {
-            helper.assertTrue(pipe.isConnected(TO_WORKBENCH),
-                "Clay pipe should connect to the architect table");
-            helper.assertTrue(
-                architect.getSnapshotIn().getItem() == BCBuildersItems.BLUEPRINT_CLEAN.get(),
-                "Clay pipe should have delivered the blank blueprint into the architect input slot");
-        });
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CLAY_DELIVERY_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CLAY_DELIVERY_WORK_TICKS,
+                () -> pipe.isConnected(TO_WORKBENCH)
+                    && architect.getSnapshotIn().getItem() == BCBuildersItems.BLUEPRINT_CLEAN.get(),
+                () -> (pipe.isConnected(TO_WORKBENCH) ? "the clay pipe is connected to the architect table"
+                    : "the clay pipe is not connected to the architect table")
+                    + ", the architect input slot holds: " + architect.getSnapshotIn()),
+            helper::succeed,
+            "Clay pipe should connect to the architect table and deliver the blank blueprint into its input slot");
     }
 
     // ---------- Capability sweep — every machine fixed by this change ----------

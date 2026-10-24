@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_station_rf_kinesis_charges_at_ratio",
     "environment": "buildcraftunofficial:robot_station_rf",
     "structure": "minecraft:empty",
-    "max_ticks": 200,
+    "max_ticks": 460,
     "setup_ticks": 0,
     "required": true
 }

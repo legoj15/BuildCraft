@@ -19,10 +19,17 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
+import buildcraft.lib.test.EntityArenaUtil;
+
 public class OilWaterInteractionTest {
 
     /** Interior of {@link #buildBasin}: a 3x3 of cells at x/z 1..3. */
     private static final BlockPos CENTRE = new BlockPos(2, 1, 2);
+
+    /** The work budget of the oil-over-water spread poll, counted from the cell ticking (the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}, read as such by {@code GameTestPollBudgetTester}; the manifest's
+     *  {@code max_ticks} stays above the sum). It keeps the headroom the old 400-tick watchdog gave the spread. */
+    private static final int OIL_SPREAD_WORK_TICKS = 390;
 
     /** A stone basin — floor at y=0 over x/z 0..4 and a two-high wall ring around the 3x3 interior — so no fluid
      *  poured into it can leave this test's 6x7 arena cell. The old open layout let the water source run 7
@@ -51,15 +58,26 @@ public class OilWaterInteractionTest {
      *  sideways across the surface, rather than stalling as a one-block puddle. This is the only coverage of
      *  that spread path, which every non-dense BC fluid shares (crude oil and the refined fuels alike). */
     public static void testOilOverWater(GameTestHelper helper) {
+        // A fluid's spread runs as a scheduled tick, and that runs only in a chunk that is ticking. The framework
+        // forces only the structure's chunk, and the 6x7 cell crosses a chunk border in about 57% of runs, so the
+        // basin's far half would sit in a neighbour that starts ticking later: force the cell, and start the poll's
+        // work budget only once it ticks (buildBasin stays pure for the synchronous getSpread test below).
+        EntityArenaUtil.forceLoadCell(helper);
         buildBasin(helper);
         fillPool(helper, Blocks.WATER);
         BlockPos oilPos = CENTRE.above();
         helper.setBlock(oilPos, BCEnergyFluids.OIL_COOL.block().get());
 
-        helper.succeedWhen(() -> {
-            helper.assertBlockPresent(Blocks.WATER, CENTRE);
-            helper.assertBlockPresent(BCEnergyFluids.OIL_COOL.block().get(), oilPos.east());
-        });
+        BlockPos spreadPos = oilPos.east();
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + OIL_SPREAD_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, OIL_SPREAD_WORK_TICKS,
+                        () -> helper.getBlockState(CENTRE).is(Blocks.WATER)
+                                && helper.getBlockState(spreadPos).is(BCEnergyFluids.OIL_COOL.block().get()),
+                        () -> "the water beneath the oil is "
+                                + (helper.getBlockState(CENTRE).is(Blocks.WATER) ? "still there" : "gone")
+                                + ", the cell east of the oil holds " + helper.getBlockState(spreadPos)),
+                helper::succeed,
+                "the oil never spread sideways over the water");
     }
 
     /** The sideways spread over water never targets a neighbour that already holds the same oil: with an oil

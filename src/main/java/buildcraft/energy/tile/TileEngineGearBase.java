@@ -23,13 +23,19 @@ import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockDropsUtil;
+import buildcraft.lib.mj.BCFeStorage;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
- * The part the FE engine ({@link TileEngineFE}) and the MJ Dynamo ({@link TileDynamoMJ}) share: four gear upgrade
- * slots (one iron or gold gear each) that raise the engine's MJ-per-tick conversion rate on top of a base of 4 MJ.
- * Holds the gear table, the slot handler, the rate they sum to, the persistence of the slots, and what the slots
- * spill when the engine is removed (the removal hook itself is {@code AbstractBCSyncedBlockEntity}'s).
+ * The shared base of the two FE converters, the FE engine ({@link TileEngineFE}, FE in and MJ out) and the MJ Dynamo
+ * ({@link TileDynamoMJ}, MJ in and FE out). It holds what is the same in both directions: four gear upgrade slots
+ * (one iron or gold gear each) that raise the MJ-per-tick conversion rate on top of a base of 4 MJ, the gear table,
+ * the rate they sum to, and what the slots spill when the engine is removed (the removal hook itself is
+ * {@code AbstractBCSyncedBlockEntity}'s). It also holds the 10,000 FE buffer with its {@code "currentFe"} save key,
+ * and the heat that burning adds and idling bleeds off. The buffer's direction is the only difference between the
+ * two buffers: each subclass passes its insert and extract limits to the constructor, so the engine's buffer takes
+ * FE in only and the dynamo's gives FE out only. What genuinely differs stays in the subclasses: how FE moves to or
+ * from neighbours, the per-tick update, the chain length and the power limits.
  */
 @SuppressWarnings("this-escape")
 public abstract class TileEngineGearBase extends TileEngineBase_BC8 {
@@ -45,6 +51,18 @@ public abstract class TileEngineGearBase extends TileEngineBase_BC8 {
         }
     }
 
+    /** Capacity of the FE buffer. */
+    public static final int MAX_FE = 10_000;
+    /** Heat gained per tick while the converter is working, capped at 200. */
+    private static final float HEAT_RATE = 0.06f;
+    /** Heat lost per tick back toward {@code MIN_HEAT}. */
+    private static final float COOLDOWN_RATE = 0.01f;
+
+    /** The FE buffer, exposed to neighbours as the energy capability (the facing side decides which tile hands it
+     *  out, see {@code BCEnergy}). One class for both converters: a buffer that takes FE in only (the engine) and one
+     *  that gives FE out only (the dynamo) differ just in the two limits the subclass passes to the constructor. */
+    public final BCFeStorage energyStorage;
+
     public final ItemHandlerSimple upgrades =
         new ItemHandlerSimple(4, (handler, slot, bef, aft) -> setChanged());
 
@@ -56,8 +74,51 @@ public abstract class TileEngineGearBase extends TileEngineBase_BC8 {
         upgrades.setLimitedInsertor(1);
     }
 
-    protected TileEngineGearBase(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    /** @param feMaxInsert how much FE the buffer accepts per transfer ({@link #MAX_FE} for the engine, 0 for the dynamo)
+     *  @param feMaxExtract how much FE the buffer gives out per transfer (0 for the engine, {@link #MAX_FE} for the
+     *         dynamo) */
+    protected TileEngineGearBase(BlockEntityType<?> type, BlockPos pos, BlockState state,
+                                 int feMaxInsert, int feMaxExtract) {
         super(type, pos, state);
+        energyStorage = new BCFeStorage(MAX_FE, feMaxInsert, feMaxExtract) {
+            @Override
+            protected void onFeChanged() {
+                setChanged();
+            }
+        };
+    }
+
+    public int getCurrentFe() {
+        return (int) energyStorage.getAmountAsLong();
+    }
+
+    public void setCurrentFe(int fe) {
+        energyStorage.set(Math.max(0, Math.min(MAX_FE, fe)));
+    }
+
+    /** Heat here is fed by burning, not derived from the stored power as in the base engine. */
+    @Override
+    public void updateHeatLevel() {
+        if (heat > MIN_HEAT) {
+            heat -= COOLDOWN_RATE;
+        }
+        if (heat <= MIN_HEAT) {
+            heat = MIN_HEAT;
+        }
+        getPowerStage();
+    }
+
+    /** One tick of burn heat: {@link #HEAT_RATE} more, capped at 200. */
+    protected void addBurnHeat() {
+        heat += HEAT_RATE;
+        if (heat >= 200) {
+            heat = 200;
+        }
+    }
+
+    @Override
+    public float explosionRange() {
+        return 4;
     }
 
     /** The base 4 MJ per tick plus what each gear in the upgrade slots adds. */
@@ -102,11 +163,13 @@ public abstract class TileEngineGearBase extends TileEngineBase_BC8 {
     protected void writeData(BCValueOutput output) {
         super.writeData(output);
         output.store("upgrades", CompoundTag.CODEC, upgrades.serializeNBT());
+        output.putInt("currentFe", getCurrentFe());
     }
 
     @Override
     protected void readData(BCValueInput input) {
         super.readData(input);
         upgrades.deserializeNBT(input.read("upgrades", CompoundTag.CODEC).orElseGet(CompoundTag::new));
+        setCurrentFe(input.getIntOr("currentFe", 0));
     }
 }

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:pump_drain_rechecks_reach_when_chunk_unloads",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 120,
+    "setup_ticks": 0,
+    "required": true
+}

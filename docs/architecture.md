@@ -124,6 +124,16 @@ mod's blocks are captured at all only when that mod ships BuildCraft builder rul
 (`RulesLoader.READ_DOMAINS`), so such a mod must price or clear its own non-`Clearable` inventories
 itself. This is a documented limit of the design, not a bug.
 
+**Zone Planner maps**: a written zone map carries only a `{store, id}` ref; the zone lives in
+`ZoneMapSavedData` (overworld saved data). Entries are never freed, like vanilla filled maps, and
+this is deliberate (decided 2026-10-24): proving no map anywhere still names a zone means scanning
+offline players, other mods' storage and every blueprint in the game directory, and a wrong free is
+silent (the robot just idles). Entries are content-interned, so growth is bounded by distinct
+layouts painted, roughly 1 KB gzipped per 10x10-chunk zone. If growth ever measures as a problem,
+the fix is one file per entry, not reclaim. Blueprints carry each held map's zone in the captured
+NBT (`ZoneMapPortability`) and re-intern it on build, so a map survives a build in another world;
+the zone keeps its absolute coordinates (blueprints never translate map locations).
+
 **Networking**: Custom payloads using NeoForge's `RegisterPayloadHandlersEvent`. Payloads use
 `StreamCodec<RegistryFriendlyByteBuf, T>` for serialization. Handlers call `ctx.enqueueWork()`
 to execute on the logical thread.

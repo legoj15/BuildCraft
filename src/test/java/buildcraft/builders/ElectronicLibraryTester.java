@@ -36,6 +36,7 @@ import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.nbt.NbtSquisher;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.lib.test.EntityArenaUtil;
 
 /**
  * Verifies the Electronic Library tile entity:
@@ -69,35 +70,34 @@ public class ElectronicLibraryTester {
     public static void testSlotFiltering(GameTestHelper helper) {
         BlockPos pos = new BlockPos(1, 2, 1);
         helper.setBlock(pos, BCBuildersBlocks.LIBRARY.get());
+        // The filters are plain predicates on the tile's inventories, so nothing here waits for a tick: the tile
+        // exists the moment its block is placed (the other tests of this file read it the same way).
+        //? if >=1.21.10 {
+        TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
+        //?} else {
+        /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
-        helper.runAfterDelay(2, () -> {
-            //? if >=1.21.10 {
-            TileElectronicLibrary tile = helper.getBlockEntity(pos, TileElectronicLibrary.class);
-            //?} else {
-            /*TileElectronicLibrary tile = helper.getBlockEntity(pos);*/
-            //?}
-            if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
+        Snapshot.Header header = fakeHeader();
+        ItemStack usedBlueprint = BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header);
+        ItemStack usedTemplate  = BCBuildersItems.TEMPLATE_USED.get().createUsedStack(header);
+        ItemStack cleanBlueprint = new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get());
+        ItemStack cleanTemplate  = new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get());
 
-            Snapshot.Header header = fakeHeader();
-            ItemStack usedBlueprint = BCBuildersItems.BLUEPRINT_USED.get().createUsedStack(header);
-            ItemStack usedTemplate  = BCBuildersItems.TEMPLATE_USED.get().createUsedStack(header);
-            ItemStack cleanBlueprint = new ItemStack(BCBuildersItems.BLUEPRINT_CLEAN.get());
-            ItemStack cleanTemplate  = new ItemStack(BCBuildersItems.TEMPLATE_CLEAN.get());
+        // invDownIn: only used snapshots
+        assertTrue(tile.invDownIn.canSet(0, usedBlueprint),  "invDownIn must accept used blueprint");
+        assertTrue(tile.invDownIn.canSet(0, usedTemplate),   "invDownIn must accept used template");
+        assertFalse(tile.invDownIn.canSet(0, cleanBlueprint), "invDownIn must reject clean blueprint");
+        assertFalse(tile.invDownIn.canSet(0, cleanTemplate),  "invDownIn must reject clean template");
 
-            // invDownIn: only used snapshots
-            assertTrue(tile.invDownIn.canSet(0, usedBlueprint),  "invDownIn must accept used blueprint");
-            assertTrue(tile.invDownIn.canSet(0, usedTemplate),   "invDownIn must accept used template");
-            assertFalse(tile.invDownIn.canSet(0, cleanBlueprint), "invDownIn must reject clean blueprint");
-            assertFalse(tile.invDownIn.canSet(0, cleanTemplate),  "invDownIn must reject clean template");
+        // invUpIn: any snapshot item
+        assertTrue(tile.invUpIn.canSet(0, usedBlueprint),   "invUpIn must accept used blueprint");
+        assertTrue(tile.invUpIn.canSet(0, usedTemplate),    "invUpIn must accept used template");
+        assertTrue(tile.invUpIn.canSet(0, cleanBlueprint),  "invUpIn must accept clean blueprint");
+        assertTrue(tile.invUpIn.canSet(0, cleanTemplate),   "invUpIn must accept clean template");
 
-            // invUpIn: any snapshot item
-            assertTrue(tile.invUpIn.canSet(0, usedBlueprint),   "invUpIn must accept used blueprint");
-            assertTrue(tile.invUpIn.canSet(0, usedTemplate),    "invUpIn must accept used template");
-            assertTrue(tile.invUpIn.canSet(0, cleanBlueprint),  "invUpIn must accept clean blueprint");
-            assertTrue(tile.invUpIn.canSet(0, cleanTemplate),   "invUpIn must accept clean template");
-
-            helper.succeed();
-        });
+        helper.succeed();
     }
 
     /**
@@ -183,9 +183,15 @@ public class ElectronicLibraryTester {
         //?}
         if (tile == null) throw new IllegalStateException("Expected TileElectronicLibrary at " + pos);
 
+        // Counted from the first poll, which runs once the cell ticks: the tile has then ticked on empty input for the
+        // whole wait, however long the chunk took to start (an absolute tick count would pass with zero ticks).
+        long[] firstPoll = {-1};
         runSteps(helper, DOWNLOAD_IDLE_TICKS, List.of(
             // Give the library a few ticks on empty input first, so a tile that starts counting on its own fails.
-            new Step("the library to tick on empty input", () -> helper.getTick() >= 5, () -> {
+            new Step("the library to tick on empty input", () -> {
+                if (firstPoll[0] < 0) firstPoll[0] = helper.getTick();
+                return helper.getTick() >= firstPoll[0] + 5;
+            }, () -> {
                 // Nothing in invDownIn: progress must stay idle
                 assertTrue(tile.progressDown == -1,
                     "progressDown should be -1 (idle) with empty invDownIn, got: " + tile.progressDown);
@@ -341,48 +347,45 @@ public class ElectronicLibraryTester {
         sendChunk(menu, request, true, Arrays.copyOfRange(whole, 2 * third, whole.length));
     }
 
-    /** Poll budgets of the three library-cycle tests, each well past the 50-tick cycle it waits for and under its
-     *  manifest's {@code max_ticks} (200). */
+    /** Work budgets of the three library-cycle tests, each well past the 50-tick cycle it waits for. Like every
+     *  {@link #runSteps} budget they count from the cell ticking, not from the test's first tick. */
     private static final int DOWNLOAD_CYCLE_TICKS = 150;
     private static final int UPLOAD_PROGRESS_TICKS = 150;
     private static final int DOWNLOAD_IDLE_TICKS = 150;
+
+    /** The longest work budget any {@link #runSteps} caller passes (the request-timeout tests). The poll itself is
+     *  scheduled for {@code EntityArenaUtil.CELL_READY_TICKS + LONGEST_STEPS_TICKS} ticks whatever the caller's budget,
+     *  so that is the one number {@code GameTestPollBudgetTester} reads and every manifest here must outlast; the
+     *  caller's own budget is enforced by the readiness gate, which always trips first. */
+    private static final int LONGEST_STEPS_TICKS = 380;
 
     /** One step of {@link #runSteps}: wait until {@code ready}, then run {@code action}. */
     private record Step(String waitingFor, BooleanSupplier ready, Runnable action) {}
 
     /**
      * Run {@code steps} in order, each on the first tick its condition holds, then succeed; fail naming the step
-     * still waiting after {@code maxTicks}. Every tick's poll is scheduled up front (as {@code EntityArenaUtil.tickUntil}
-     * does): the framework must not be scheduled from inside its own runnables.
+     * still waiting once {@code workTicks} have passed. The clock starts when the library's cell is entity-ticking
+     * (the force-load of the cell is done here), not at the test's first tick: a tile in a chunk that starts ticking
+     * late would otherwise spend the budget on the machine. The first poll is the first tick the tile can have ticked
+     * on, so the steps see a library that has been running since then. Built on {@code EntityArenaUtil.tickUntil}, so
+     * every tick's poll is scheduled up front (the framework must not be scheduled from inside its own runnables) and
+     * {@code cleanup} runs once on every way out, after the test passes.
      */
-    private static void runSteps(GameTestHelper helper, int maxTicks, List<Step> steps, Runnable cleanup) {
-        int[] next = {0};
-        boolean[] done = {false};
-        for (int t = 1; t <= maxTicks; t++) {
-            final int tick = t;
-            helper.runAfterDelay(tick, () -> {
-                if (done[0]) return;
-                try {
-                    while (next[0] < steps.size() && steps.get(next[0]).ready().getAsBoolean()) {
-                        steps.get(next[0]++).action().run();
-                    }
-                    if (next[0] == steps.size()) {
-                        done[0] = true;
-                        cleanup.run();
-                        helper.succeed();
-                    } else if (tick == maxTicks) {
-                        done[0] = true;
-                        cleanup.run();
-                        helper.fail("Still waiting for: " + steps.get(next[0]).waitingFor()
-                            + " (waited " + maxTicks + " ticks)");
-                    }
-                } catch (RuntimeException e) {
-                    done[0] = true;
-                    cleanup.run();
-                    throw e;
-                }
-            });
+    private static void runSteps(GameTestHelper helper, int workTicks, List<Step> steps, Runnable cleanup) {
+        if (workTicks > LONGEST_STEPS_TICKS) {
+            throw new IllegalArgumentException("a work budget of " + workTicks + " ticks is past LONGEST_STEPS_TICKS, "
+                + "which the poll (and every manifest's max_ticks) is sized from");
         }
+        EntityArenaUtil.forceLoadCell(helper);
+        int[] next = {0};
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LONGEST_STEPS_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, workTicks, () -> {
+                while (next[0] < steps.size() && steps.get(next[0]).ready().getAsBoolean()) {
+                    steps.get(next[0]++).action().run();
+                }
+                return next[0] == steps.size();
+            }, () -> "Still waiting for: " + steps.get(next[0]).waitingFor()),
+            helper::succeed, "the library steps never finished", cleanup);
     }
 
     /**

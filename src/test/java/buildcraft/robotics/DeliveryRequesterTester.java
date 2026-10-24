@@ -63,6 +63,14 @@ public class DeliveryRequesterTester {
     private static final GateVariant PARAM_GATE =
             new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.QUARTZ);
 
+    /** The work budgets of the polls below, each counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. A station registers on its pipe's first tick, but the
+     *  framework forces only the structure's chunk and a 6x7 cell straddles a chunk border in about 57% of runs, so a
+     *  pipe in the neighbouring chunk does not tick until that chunk does. */
+    private static final int REGISTER_WORK_TICKS = 120;
+    private static final int DELIVERY_WORK_TICKS = 360;
+
     // ---------- fixtures ----------
 
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
@@ -132,6 +140,7 @@ public class DeliveryRequesterTester {
         BlockPos scanPipeRel = new BlockPos(4, 3, 4);
         BlockPos requesterRel = new BlockPos(5, 3, 4);
         BlockPos plainPipeRel = new BlockPos(1, 3, 4);
+        EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(requesterRel, BCRoboticsBlocks.REQUESTER.get());
         TileRequester requester = getRequester(helper, requesterRel);
@@ -140,9 +149,10 @@ public class DeliveryRequesterTester {
         installStation(helper, scanPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
         installStation(helper, plainPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
 
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, scanPipeRel, Direction.UP) != null
-                        && stationAt(helper, plainPipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, scanPipeRel, Direction.UP) != null
+                                && stationAt(helper, plainPipeRel, Direction.UP) != null),
                 () -> {
                     DockingStationPipe scanning = stationAt(helper, scanPipeRel, Direction.UP);
                     IRequestProvider provider = scanning.getRequestProvider();
@@ -172,6 +182,7 @@ public class DeliveryRequesterTester {
      *  encoding 7.1.x used (side/action/param bits over 127 slots). */
     public static void gateRequestItemsActionMakesTheStationAProvider(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 3, 4);
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
 
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_REQUEST_ITEMS,
@@ -179,8 +190,9 @@ public class DeliveryRequesterTester {
                         new StatementParameterItemStackExact(new ItemStack(Items.DIAMOND, 3), 4)
                 });
 
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     IRequestProvider provider = station.getRequestProvider();
@@ -215,6 +227,7 @@ public class DeliveryRequesterTester {
      *  surfaced. */
     public static void gateRequestItemsInEverySlotSurfacesItsOwnParameters(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 3, 4);
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
 
         PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, Direction.WEST,
@@ -230,8 +243,9 @@ public class DeliveryRequesterTester {
         gate.logic.resolveActions();
 
         ItemStack[] wanted = { firstSlot[0], lastSlot[0], lastSlot[1], lastSlot[2] };
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
                 () -> {
                     IRequestProvider provider = stationAt(helper, pipeRel, Direction.UP).getRequestProvider();
                     boolean[] seen = new boolean[wanted.length];
@@ -309,13 +323,15 @@ public class DeliveryRequesterTester {
     public static void stationCargoEntersThroughTheStationFace(GameTestHelper helper) {
         BlockPos offerPipeRel = new BlockPos(2, 3, 2);
         BlockPos unloadPipeRel = new BlockPos(4, 3, 2);
+        EntityArenaUtil.forceLoadCell(helper);
 
         installStation(helper, offerPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
         installStation(helper, unloadPipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
 
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, offerPipeRel, Direction.UP) != null
-                        && stationAt(helper, unloadPipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, offerPipeRel, Direction.UP) != null
+                                && stationAt(helper, unloadPipeRel, Direction.UP) != null),
                 () -> {
                     // The unload chain: AIRobotUnload asks for the output side and passes it straight back.
                     DockingStationPipe unload = stationAt(helper, unloadPipeRel, Direction.UP);
@@ -389,7 +405,7 @@ public class DeliveryRequesterTester {
         BlockPos orderPipeRel = new BlockPos(4, 3, 4);
         BlockPos requesterRel = new BlockPos(5, 3, 4);
         BlockPos robotRel = new BlockPos(2, 4, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         // The supply side: wooden pipe over a chest, provide-items gate so the load policy passes (D1).
         TilePipeHolder supplyPipe = installStation(helper, supplyPipeRel, Direction.UP,
@@ -410,7 +426,8 @@ public class DeliveryRequesterTester {
         requester.setRequest(0, template);
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 360,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DELIVERY_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DELIVERY_WORK_TICKS,
                 () -> {
                     if (stationAt(helper, orderPipeRel, Direction.UP) == null
                             || stationAt(helper, supplyPipeRel, Direction.UP) == null) {
@@ -422,6 +439,10 @@ public class DeliveryRequesterTester {
                     }
                     return requester.invDeliveries.getStackInSlot(0).getCount() == supply.getCount();
                 },
+                () -> "stations registered: " + (stationAt(helper, orderPipeRel, Direction.UP) != null
+                        && stationAt(helper, supplyPipeRel, Direction.UP) != null) + ", robot added: "
+                        + (robot[0] != null) + ", requester holds "
+                        + requester.invDeliveries.getStackInSlot(0).getCount() + " of " + supply.getCount()),
                 () -> {
                     helper.assertTrue(
                             ItemStack.matches(supply, requester.invDeliveries.getStackInSlot(0)),
@@ -455,14 +476,16 @@ public class DeliveryRequesterTester {
     public static void stackRequestNbtRoundTripsAgainstALiveRegistry(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(4, 3, 4);
         BlockPos requesterRel = new BlockPos(5, 3, 4);
+        EntityArenaUtil.forceLoadCell(helper);
 
         installStation(helper, pipeRel, Direction.UP, BCTransportItems.PIPE_COBBLE_ITEM.get());
         helper.setBlock(requesterRel, BCRoboticsBlocks.REQUESTER.get());
         TileRequester requester = getRequester(helper, requesterRel);
         requester.setRequest(2, new ItemStack(Items.IRON_INGOT, 17));
 
-        EntityArenaUtil.tickUntil(helper, 120,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     StackRequest original = new StackRequest(requester, 2, new ItemStack(Items.IRON_INGOT, 17));

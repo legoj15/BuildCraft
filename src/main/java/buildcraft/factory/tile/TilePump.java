@@ -25,7 +25,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -64,8 +63,10 @@ import buildcraft.api.tiles.IDebuggable;
  * Pump tile entity. Searches downward for fluids, then uses BFS flood-fill to
  * find connected source blocks and drains them using MJ power. The fill never reads (so never loads) a chunk that is
  * not in memory: fluid in one is out of reach until it loads, and the next rebuild picks it up (an idle pump looks
- * for that every {@link #REBUILD_DELAY} ticks). A cell on a chunk border is queued only when the chunks beside it are
- * in memory too, because draining it updates the cells around it. Ported from 1.12.2 TilePump.
+ * for that every {@link #REBUILD_DELAY} ticks). A cell within {@link BlockUtil#DRAIN_UPDATE_REACH} blocks of a chunk
+ * border is queued only when the chunks within that reach are in memory too, because draining it updates the cells
+ * around it and the blocks that react to that read further out; the same check runs again when the cell is picked
+ * and when it is drained, since a chunk can unload in between. Ported from 1.12.2 TilePump.
  */
 public class TilePump extends TileMiner implements IDebuggable {
 
@@ -147,7 +148,7 @@ public class TilePump extends TileMiner implements IDebuggable {
     private ColumnSignature idleColumn;
     /** Set by {@link #wake}: re-probe the column on the next idle tick instead of waiting for the next period. */
     private boolean columnCheckPending;
-    /** The chunks ({@link #chunkKey}) the last fill found absent, whether a cell in one was skipped or a cell
+    /** The chunks ({@link BlockUtil#chunkKey}) the last fill found absent, whether a cell in one was skipped or a cell
      *  beside one was not queued. An idle pump rebuilds once any of them is in memory. Small: only a chunk the pool
      *  touches lands here. */
     private final LongSet absentChunks = new LongOpenHashSet();
@@ -453,30 +454,15 @@ public class TilePump extends TileMiner implements IDebuggable {
      *  chunk loads it). An absent chunk is remembered in {@link #absentChunks}, so an idle pump notices when it
      *  loads. */
     private boolean isPresent(BlockPos pos) {
-        if (BlockUtil.isChunkPresent(level, pos)) {
-            return true;
-        }
-        absentChunks.add(chunkKey(SectionPos.blockToSectionCoord(pos.getX()),
-                SectionPos.blockToSectionCoord(pos.getZ())));
-        return false;
+        return BlockUtil.isChunkPresent(level, pos, absentChunks::add);
     }
 
-    /** Whether draining {@code pos} stays inside chunks that are in memory. Taking the fluid sets the cell to air or
-     *  dry, and the block update that follows reads the cells around it: one across a chunk border sits in the chunk
-     *  beside, which a read would load (generating it, if it was never made) on the server thread. A cell at least
-     *  one block in from every border cannot reach another chunk, so only the cells on a border ask. A cell that
-     *  would is not queued, the same as fluid in an absent chunk: the walk still runs through it. */
+    /** Whether draining {@code pos} stays inside chunks that are in memory: its own, and every one within
+     *  {@link BlockUtil#DRAIN_UPDATE_REACH} blocks (see {@link BlockUtil#drainStaysInLoadedChunks}, which the robot pump
+     *  asks too). A cell that would not is not queued, the same as fluid in an absent chunk: the walk still runs
+     *  through it. Every absent chunk it meets is remembered, for the idle wake-up. */
     private boolean drainStaysInLoadedChunks(BlockPos pos) {
-        int localX = pos.getX() & 15;
-        int localZ = pos.getZ() & 15;
-        if (localX != 0 && localX != 15 && localZ != 0 && localZ != 15) {
-            return true;
-        }
-        boolean allPresent = true;
-        for (Direction side : Direction.Plane.HORIZONTAL) {
-            allPresent &= isPresent(pos.relative(side));
-        }
-        return allPresent;
+        return BlockUtil.drainStaysInLoadedChunks(level, pos, absentChunks::add);
     }
 
     /** Whether a chunk the last fill found absent is in memory now, so fluid it could not reach may be reachable. */
@@ -493,13 +479,14 @@ public class TilePump extends TileMiner implements IDebuggable {
     /** Whether the last fill found the chunk at these chunk coordinates absent -- for the tests, which cannot see
      *  inside the fill otherwise. */
     boolean foundAbsent(int chunkX, int chunkZ) {
-        return absentChunks.contains(chunkKey(chunkX, chunkZ));
+        return absentChunks.contains(BlockUtil.chunkKey(chunkX, chunkZ));
     }
 
-    /** A chunk's coordinates as one long, x in the low half. (Not {@code ChunkPos.asLong}: the 26.3 node has no such
-     *  method.) */
-    private static long chunkKey(int chunkX, int chunkZ) {
-        return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
+    /** The cell the pump is working on (null when it has none) -- for the tests, which cannot see inside the queue
+     *  otherwise. */
+    @Nullable
+    BlockPos workingOn() {
+        return currentPos;
     }
 
     /**
@@ -586,8 +573,9 @@ public class TilePump extends TileMiner implements IDebuggable {
         refusals.revokePermit();
         while (!queue.isEmpty()) {
             currentPos = queue.removeLast();
-            // A queued cell whose chunk has unloaded since the rebuild is dropped, not read (which would load it).
-            if (BlockUtil.isChunkPresent(level, currentPos) && canDrain(currentPos)) {
+            // A queued cell whose chunk, or a chunk its drain would update, has unloaded since the rebuild is dropped,
+            // not read (which would load it). The absent chunk is remembered, so an idle pump wakes when it loads.
+            if (drainStaysInLoadedChunks(currentPos) && canDrain(currentPos)) {
                 updateLength();
                 return;
             }
@@ -651,10 +639,11 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
 
         long target = 10 * MjAPI.MJ;
-        if (currentPos != null && paths.containsKey(currentPos) && !BlockUtil.isChunkPresent(level, currentPos)) {
-            // The cell's chunk unloaded since the rebuild that queued it (something else was keeping it loaded). Reading
-            // it again would load it, so the bucket is abandoned like a scooped cell's (permit and charge gone with it)
-            // and the fill is rebuilt now: it leaves cells in absent chunks out, so this happens once per unload.
+        if (currentPos != null && paths.containsKey(currentPos) && !drainStaysInLoadedChunks(currentPos)) {
+            // The cell's chunk, or one beside it that its drain would update, unloaded since the rebuild that queued
+            // it (something else was keeping it loaded). Reading the cell, and draining it, would load that chunk, so
+            // the bucket is abandoned like a scooped cell's (permit and charge gone with it) and the fill is rebuilt
+            // now: it leaves such cells out, so this happens once per unload.
             refusals.revokePermit();
             progress = 0;
             rebuildAndPickNext();

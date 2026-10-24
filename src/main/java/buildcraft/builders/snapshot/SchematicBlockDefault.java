@@ -81,6 +81,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockFiller;
+import buildcraft.core.item.ZoneMapPortability;
 import buildcraft.transport.block.BlockPipeHolder;
 
 public class SchematicBlockDefault implements ISchematicBlock {
@@ -374,6 +375,16 @@ public class SchematicBlockDefault implements ISchematicBlock {
         }
     }
 
+    /**
+     * The capture's last step, for a schematic that is kept (the Architect's scan, a single schematic): a zone map's
+     * ref names a zone in this world's store only, so each zone map in {@link #tileNbt} carries its plan for the build
+     * to hand on ({@link ZoneMapPortability}). Not part of {@link #init}, which also runs for throwaway schematics (the
+     * Architect's live preview) that would copy every plan for nothing.
+     */
+    public void carryZonePlans() {
+        ZoneMapPortability.carryPlans(tileNbt);
+    }
+
     @SuppressWarnings({"unused", "WeakerAccess"})
     protected void setPlaceBlock(SchematicBlockContext context, Set<JsonRule> rules) {
         placeBlock = placeBlockFor(rules, context.block);
@@ -570,7 +581,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * water source at {@code blockPos} is preserved as a waterlogged state if the
      * {@code placeBlock} supports vanilla {@code WATERLOGGED}; otherwise the fluid is
      * destroyed before placing. Lava and non-source fluids always fall through to
-     * destroy-then-place.
+     * destroy-then-place. A placement that fails afterwards (a torch with no floor pops) puts
+     * back what the cell held when it held a fluid source (the lava or water, or the waterlogged
+     * block with its water), in every mode, so a failed build leaves the world's sources alone.
      */
     public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         return build(level, blockPos, fluidMode, true);
@@ -664,6 +677,14 @@ public class SchematicBlockDefault implements ISchematicBlock {
             return true;
         }
         BlockState newBlockState = placedState();
+        // What the cell holds before this call touches it, when that carries a fluid source (a lava or water source
+        // block, or a waterlogged block): the placement below overwrites it, and a placement that is undone
+        // afterwards (the block popped in the updateShape sweep) puts exactly that back instead of leaving air, so a
+        // failed build never costs the world its source, nor the waterlogged slab or stair that held it. The whole
+        // state, not just the fluid's legacy block, because destroyBlock below turns a waterlogged block into bare
+        // water. Every mode keeps it: NO_REPLACE overwrites the cell too.
+        FluidState existing = level.getFluidState(blockPos);
+        BlockState displacedState = existing.isSource() ? level.getBlockState(blockPos) : null;
         // Pre-compute fluid handling: under REPLACE/CLEAR, decide up-front whether the source at
         // blockPos will be waterlogged into the placed state or destroyed first. Don't actually
         // destroy yet — every "should we abort?" check (canSurvive, fragile-block defer) needs to
@@ -671,7 +692,6 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // no replacement placed. The actual destroyBlock fires only after every check passes.
         boolean willDestroyFluidAtPos = false;
         if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
-            FluidState existing = level.getFluidState(blockPos);
             if (!existing.isEmpty() && existing.isSource()) {
                 boolean waterloggable =
                     existing.getType() == Fluids.WATER
@@ -731,14 +751,23 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // (refund the item via cancelPlaceTask) until the other cell is clear. Without this, the first half would
         // setBlock alone, then vanilla updateShape would destroy it on the next tick when it can't find its other
         // half, and the Builder would have already consumed the item.
+        // A water source in that cell passes (it is replaceable) and is overwritten by the other half, so what the
+        // cell held is remembered like the one at blockPos and restored if the placement is undone.
         BlockPos otherHalfPos = secondHalfPos(newBlockState, blockPos);
+        BlockState displacedOtherState = null;
         if (otherHalfPos != null) {
             BlockState atOther = level.getBlockState(otherHalfPos);
             if (!atOther.isAir() && !atOther.canBeReplaced(Fluids.WATER)) {
                 return false;
             }
+            if (atOther.getFluidState().isSource()) {
+                displacedOtherState = atOther;
+            }
         }
-        // All checks passed; commit the deferred fluid-destroy now.
+        // All checks passed; commit the deferred fluid-destroy now. destroyBlock leaves the fluid's own block behind
+        // (the lava or water source itself, or just the water of a waterlogged block, which it removes without
+        // dropping anything: dropBlock is false, so restoring displacedState on a failure duplicates no drop); the
+        // setBlock below is what finally removes the source, and the failure exit restores displacedState.
         if (willDestroyFluidAtPos) {
             level.destroyBlock(blockPos, false);
         }
@@ -798,10 +827,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 if (updated.isAir()) {
                     // Block self-destructed via updateShape (e.g. torch with no sturdy block
                     // below). Roll back this half AND the atomic other half (if applicable),
-                    // then return false so cancelPlaceTask refunds items.
-                    level.setBlock(blockPos, Blocks.AIR.defaultBlockState(), 3);
+                    // putting back any fluid source each cell held, then return false so
+                    // cancelPlaceTask refunds items.
+                    rollBackCell(level, blockPos, displacedState);
                     if (secondHalfPos != null) {
-                        level.setBlock(secondHalfPos, Blocks.AIR.defaultBlockState(), 3);
+                        rollBackCell(level, secondHalfPos, displacedOtherState);
                     }
                     return false;
                 }
@@ -825,7 +855,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
             }
             return true;
         }
+        // setBlock refused: the cell already holds the state, so there is nothing to undo. Restoring displacedState
+        // here would overwrite an identical waterlogged block (a fence the schematic wants) with its own water.
         return false;
+    }
+
+    /**
+     * Puts {@code pos} back after {@link #build} undoes a placement: what the cell held before the placement
+     * overwrote it ({@code displacedState}, a fluid source block or a waterlogged block), or air when it held no
+     * source. Flag 3 notifies the neighbours and lets a liquid block schedule its flow tick again, as it does when
+     * placed in vanilla.
+     */
+    private static void rollBackCell(Level level, BlockPos pos, @Nullable BlockState displacedState) {
+        level.setBlock(pos, displacedState != null ? displacedState : Blocks.AIR.defaultBlockState(), 3);
     }
 
     /**
@@ -836,6 +878,10 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * a rebuilt machine from starting with the stored power it was scanned with. The rules are matched against the
      * captured {@link #tileNbt}, so a selector on tile data sees what the Architect saw, not what the strip or an
      * earlier rule left. Null when the schematic has no tile data.
+     *
+     * <p>The zone plans the capture carried ({@link ZoneMapPortability}) go to this world's zone store, each map
+     * pointed at its entry. Map locations are not moved with the build: a zone, point or area map still names the
+     * world coordinates it named where it was captured.
      */
     @Nullable
     CompoundTag tileNbtToPlace(boolean includeContainerContents) {
@@ -847,7 +893,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (!includeContainerContents) {
             stripContainerContentsFromNbt(rules, data);
         }
-        return JsonRule.applyReplaceNbt(data, rules);
+        CompoundTag placed = JsonRule.applyReplaceNbt(data, rules);
+        ZoneMapPortability.settlePlans(placed);
+        return placed;
     }
 
     /**

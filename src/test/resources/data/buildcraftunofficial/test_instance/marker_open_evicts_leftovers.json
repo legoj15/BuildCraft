@@ -3,7 +3,7 @@
     "function":  "buildcraftunofficial:marker_open_evicts_leftovers",
     "environment":  "buildcraftunofficial:marker_open_evicts_leftovers",
     "structure":  "minecraft:empty",
-    "max_ticks":  100,
+    "max_ticks":  350,
     "setup_ticks":  0,
     "required":  true
 }

@@ -78,6 +78,18 @@ public class RobotGateTester {
      *  sends it recharging mid-task. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
+    /** The work budgets of the polls below, each counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. The stations and the robot sit in different columns of the
+     *  6x7 cell, which straddles a chunk border in about 57% of runs, and a station's gate resolves and a robot's AI
+     *  runs only once its own chunk ticks, so a budget counted from tick 1 would charge the chunk promotion to the
+     *  gate under test. */
+    private static final int SLEEP_WORK_TICKS = 400;
+    private static final int FORBID_WORK_TICKS = 300;
+    private static final int GOTO_WORK_TICKS = 420;
+    private static final int GOTO_NOOP_WORK_TICKS = 300;
+    private static final int BACKOFF_WORK_TICKS = 500;
+
     /** The 1-slot, param-less gate (sleep test). */
     private static final GateVariant BASIC_GATE =
             new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER);
@@ -206,7 +218,7 @@ public class RobotGateTester {
         BlockPos pipeRel = new BlockPos(1, 3, 2);
         BlockPos robotRel = new BlockPos(3, 4, 2);
         BlockPos itemRel = new BlockPos(3, 4, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder tile = installStation(helper, pipeRel, Direction.UP);
 
@@ -220,7 +232,8 @@ public class RobotGateTester {
         // iterator — the framework javadoc itself warns against scheduling from inside a runnable. Each
         // phase transition happens on the tick its guard first passes, and returns false so `then` never
         // fires before the side effects land.
-        EntityArenaUtil.tickUntil(helper, 400,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SLEEP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SLEEP_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeRel, Direction.UP) == null) {
@@ -267,6 +280,8 @@ public class RobotGateTester {
                     }
                     return robot[0].containsItems();
                 },
+                () -> "the picker never fell asleep at the station (or the wakeup never made it fetch), phase "
+                        + phase[0] + " of 0..2"),
                 () -> {
                     // The robot was asleep (override) before the gate and the drop, and a sleeper never
                     // fetches, so a fetch is the proof. Its zone is this cell, so the diamond is the only thing
@@ -309,7 +324,7 @@ public class RobotGateTester {
         BlockPos forbiddenRel = new BlockPos(1, 3, 3);
         BlockPos chestRel = new BlockPos(1, 2, 3);
         BlockPos homeRel = new BlockPos(4, 3, 3);
-        EntityArenaUtil.forceLoadEntityArena(helper, homeRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder forbiddenTile = installStation(helper, forbiddenRel, Direction.UP);
         helper.setBlock(chestRel, Blocks.CHEST);
@@ -338,7 +353,8 @@ public class RobotGateTester {
         DockingStationPipe[] forbidden = { null };
         boolean[] dockedAtForbidden = { false };
         // One flat tickUntil (see sleepTriggerAndWakeupPreemptsPicker for the no-nested-scheduling rule).
-        EntityArenaUtil.tickUntil(helper, 300,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FORBID_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FORBID_WORK_TICKS,
                 () -> {
                     if (robot[0] == null) {
                         // Both stations registered AND every gate resolved: the forbid, the accept and the zone
@@ -364,6 +380,9 @@ public class RobotGateTester {
                     return robot[0].isSleeping() || dockedAtForbidden[0]
                             || !ItemStack.matches(robot[0].getInventoryStack(0), new ItemStack(Items.DIAMOND, 5));
                 },
+                () -> robot[0] == null
+                        ? "the stations or their gates never resolved, so the carrier was never added"
+                        : "the carrier neither docked at the forbidden station nor settled into sleep"),
                 () -> {
                     boolean sleeping = robot[0].isSleeping();
                     ItemStack cargo = robot[0].getInventoryStack(0).copy();
@@ -388,7 +407,7 @@ public class RobotGateTester {
      *  its main station once it docks there (A stays its home for the whole flight). The map's SPOT keys are written directly onto the stack's CUSTOM_DATA — the same
      *  shape {@code ItemMapLocation.useOn} stamps. */
     public static void gotoStationActionRedirectsDockedRobot(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeARel = new BlockPos(1, 3, 2);
         BlockPos pipeBRel = new BlockPos(4, 3, 2);
         BlockPos robotRel = new BlockPos(2, 4, 3);
@@ -408,7 +427,8 @@ public class RobotGateTester {
         DockingStationPipe[] stationB = { null };
         int[] phase = { 0 }; // 0: both stations, 1: robot id + dock + resolve, then docked at B
         // One flat tickUntil (see sleepTriggerAndWakeupPreemptsPicker for the no-nested-scheduling rule).
-        EntityArenaUtil.tickUntil(helper, 420,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GOTO_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeARel, Direction.UP) == null
@@ -454,6 +474,7 @@ public class RobotGateTester {
                     helper.assertFalse(stationA.isTaken(), "...and lets the old home A go");
                     return true;
                 },
+                () -> "the redirected robot never docked at station B, phase " + phase[0] + " of 0..2"),
                 helper::succeed,
                 "the redirected robot never docked at station B",
                 () -> EntityArenaUtil.discard(robot[0]));
@@ -470,7 +491,7 @@ public class RobotGateTester {
      *  Asserted on the redirect being handed out, which is the whole of the difference: the parameter is
      *  unset, so nothing else in the world changes. */
     public static void gotoStationActionWithNoParameterTargetsItsOwnStation(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 2);
         BlockPos robotRel = new BlockPos(3, 4, 3);
 
@@ -485,7 +506,8 @@ public class RobotGateTester {
 
         EntityRobot[] robot = { null };
         int[] phase = { 0 };
-        EntityArenaUtil.tickUntil(helper, 300,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_NOOP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GOTO_NOOP_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeRel, Direction.UP) == null) {
@@ -517,6 +539,8 @@ public class RobotGateTester {
                             "the redirect must be a goto-station move, got " + override);
                     return true;
                 },
+                () -> "the station never registered, or the robot never received its id, phase " + phase[0]
+                        + " of 0..1"),
                 helper::succeed,
                 "the station never registered, or the robot never received its id",
                 () -> EntityArenaUtil.discard(robot[0]));
@@ -528,7 +552,7 @@ public class RobotGateTester {
      *  re-fires every tick while it is on: each tick installed a fresh override that aborted the board's AI and
      *  ended at once, so the robot sat frozen for as long as the gate held. */
     public static void gotoStationActionAtTheDockedStationLeavesTheRobotAlone(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 2);
         BlockPos robotRel = new BlockPos(3, 4, 3);
 
@@ -543,7 +567,8 @@ public class RobotGateTester {
         EntityRobot[] robot = { null };
         int[] phase = { 0 }; // 0: station, 1: id + dock + both checks, 2: let the live gate keep firing
         int[] settled = { 0 };
-        EntityArenaUtil.tickUntil(helper, 300,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_NOOP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GOTO_NOOP_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeRel, Direction.UP) == null) {
@@ -591,6 +616,8 @@ public class RobotGateTester {
                                     + robot[0].getOverridingAI());
                     return ++settled[0] >= 20;
                 },
+                () -> "the station never registered, or the robot never received its id, phase " + phase[0]
+                        + " of 0..2"),
                 helper::succeed,
                 "the station never registered, or the robot never received its id",
                 () -> EntityArenaUtil.discard(robot[0]));
@@ -604,7 +631,7 @@ public class RobotGateTester {
      *  loaded cells. Redirecting there claimed it, failed the flight, and the gate re-fired the redirect, so the robot
      *  never got on with its work; the station searches already skip such stations for the same reason. */
     public static void gotoStationActionAtAnUnloadedStationLeavesTheRobotAlone(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeRel = new BlockPos(2, 3, 2);
         BlockPos robotRel = new BlockPos(3, 4, 3);
         BlockPos farRel = pipeRel.offset(UNLOADED_OFFSET, 0, 0);
@@ -632,7 +659,8 @@ public class RobotGateTester {
         EntityRobot[] robot = { null };
         int[] phase = { 0 }; // 0: station, 1: id + dock + first resolve, 2: let the live gate keep firing
         int[] settled = { 0 };
-        EntityArenaUtil.tickUntil(helper, 300,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_NOOP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GOTO_NOOP_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeRel, Direction.UP) == null) {
@@ -666,6 +694,8 @@ public class RobotGateTester {
                     helper.assertFalse(unloaded.isTaken(), "the unreachable station must never be claimed");
                     return ++settled[0] >= 20;
                 },
+                () -> "the station never registered, or the robot never received its id, phase " + phase[0]
+                        + " of 0..2"),
                 () -> {
                     helper.assertFalse(helper.getLevel().isLoaded(farAbs), "the redirect check loaded the chunk");
                     helper.succeed();
@@ -706,7 +736,7 @@ public class RobotGateTester {
      *  that aborted the board's AI and failed on the spot, so the robot's board never got a cycle. The action must
      *  leave the robot alone: it settles into its sleep and keeps that same sleep AI for as long as the gate holds. */
     public static void gotoStationActionAtAStationAnotherRobotHoldsLeavesTheRobotAlone(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeARel = new BlockPos(1, 3, 2);
         BlockPos pipeBRel = new BlockPos(4, 3, 2);
         BlockPos robotRel = new BlockPos(2, 4, 3);
@@ -727,7 +757,8 @@ public class RobotGateTester {
         buildcraft.api.robots.AIRobot[] sleep = { null };
         int[] phase = { 0 }; // 0: stations, 1: id + home + B held + first resolve, 2: settled asleep under the gate
         int[] settled = { 0 };
-        EntityArenaUtil.tickUntil(helper, 300,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_NOOP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, GOTO_NOOP_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeARel, Direction.UP) == null
@@ -780,6 +811,8 @@ public class RobotGateTester {
                                     + "replaced by " + active);
                     return ++settled[0] >= 20;
                 },
+                () -> "the robot never settled into its sleep at A under the gate, phase " + phase[0]
+                        + " of 0..2"),
                 helper::succeed,
                 "the robot never settled into its sleep at A under the gate",
                 () -> cleanUp(helper, robot[0], holder[0]));
@@ -791,7 +824,7 @@ public class RobotGateTester {
      *  redirects for a while, even with B free again; once that back-off runs out, the gate's next pulse sends the
      *  robot to B after all. */
     public static void gotoStationActionBacksOffAfterAFailedGoto(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos pipeARel = new BlockPos(1, 3, 2);
         BlockPos pipeBRel = new BlockPos(4, 3, 2);
         BlockPos robotRel = new BlockPos(2, 4, 3);
@@ -813,7 +846,8 @@ public class RobotGateTester {
         // 3: B free, the gate holding, the back-off refusing redirects, 4: the back-off ran out -> docked at B
         int[] phase = { 0 };
         int[] refused = { 0 };
-        EntityArenaUtil.tickUntil(helper, 500,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BACKOFF_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BACKOFF_WORK_TICKS,
                 () -> {
                     if (phase[0] == 0) {
                         if (stationAt(helper, pipeARel, Direction.UP) == null
@@ -867,6 +901,8 @@ public class RobotGateTester {
                     // The back-off is temporary: the gate sends the robot to B once it runs out.
                     return robot[0].getDockingStation() == stationB;
                 },
+                () -> "the redirect never failed, or the robot never reached B once the back-off ran out, phase "
+                        + phase[0] + " of 0..4"),
                 helper::succeed,
                 "the redirect never failed, or the robot never reached B once the back-off ran out",
                 () -> cleanUp(helper, robot[0], holder[0]));
@@ -874,7 +910,8 @@ public class RobotGateTester {
 
     // ---------- pump: pumps inside its Work in Area zone, unloads at an Accept Fluids home outside it ----------
 
-    /** Poll budget for the pump test: two whole pump-and-unload cycles take a few hundred ticks; the 60 s
+    /** Work budget for the pump test, counted from the arena cell ticking (the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}): two whole pump-and-unload cycles take a few hundred ticks; the 60 s
      *  ({@code AIRobotSleep}, 1200 ticks) sleep a failed unload search ends in does not fit inside it. */
     private static final int PUMP_BUDGET = 1100;
 
@@ -892,7 +929,9 @@ public class RobotGateTester {
     public static void pumpUnloadsIntoTankAtHomeStation(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 1);
         BlockPos tankRel = new BlockPos(1, 2, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        // The whole cell: the pump AI leaves a source whose drain would read a chunk that is not in memory alone, and
+        // the pool is not in the pipe's chunk when the cell straddles a border.
+        EntityArenaUtil.forceLoadCell(helper);
 
         // A 2x2 pool of water sources at y=1, walled in by stone at y=1 and floored at y=0 so nothing flows.
         for (int x = 2; x <= 5; x++) {
@@ -923,7 +962,8 @@ public class RobotGateTester {
                 areaMap(helper, new BlockPos(2, 0, 3), new BlockPos(5, 3, 6))));
 
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, PUMP_BUDGET,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + PUMP_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PUMP_BUDGET,
                 () -> {
                     if (robot[0] == null) {
                         DockingStationPipe home = stationAt(helper, pipeRel, Direction.UP);
@@ -937,6 +977,8 @@ public class RobotGateTester {
                     }
                     return tank.tank.getAmountMb(0) >= 2000;
                 },
+                () -> "the pump robot " + (robot[0] == null ? "was never added (the home station or its gates "
+                        + "never resolved)" : "delivered only " + tank.tank.getAmountMb(0) + " of 2000 mB")),
                 () -> {
                     helper.assertTrue(tank.tank.getFluidStack(0).getFluid() == Fluids.WATER,
                             "the tank must hold the pumped water, got " + tank.tank.getFluidStack(0));

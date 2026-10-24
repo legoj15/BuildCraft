@@ -238,8 +238,15 @@ public class ProgrammingTableTester {
         helper.succeed();
     }
 
+    /** The work budget of the laser delivery poll, counted from the arena cell ticking: its own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and the manifest's
+     *  {@code max_ticks} stays above that sum. The laser scans and targets on its own tick, and the laser (x=0) and the
+     *  table (x=2) can sit either side of a chunk border, so neither runs until its chunk does. */
+    private static final int LASER_WORK_TICKS = 300;
+
     public static void laserTargetsProgrammingTable(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos laserPos = new BlockPos(0, 1, 2);
         BlockPos tablePos = new BlockPos(2, 1, 2);
         helper.setBlock(laserPos, BCSiliconBlocks.LASER.get().defaultBlockState()
@@ -263,11 +270,12 @@ public class ProgrammingTableTester {
         // the ramp saturated, so delivery is limited only by the scan/target intervals. Delivery alone
         // is the assertion here: the craft itself is pinned by craftsSelectedBoard without the scan
         // latency, and a full craft through the live laser would need ~200 ticks at 4 MJ/t.
-        EntityArenaUtil.tickUntil(helper, 300,
-                () -> {
-                    laser.getMjReceiver().receivePower(64 * MjAPI.MJ, false);
-                    return table.power > 0;
-                },
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LASER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LASER_WORK_TICKS,
+                        () -> {
+                            laser.getMjReceiver().receivePower(64 * MjAPI.MJ, false);
+                            return table.power > 0;
+                        }),
                 helper::succeed,
                 "the laser never delivered power to the working Programming Table");
     }

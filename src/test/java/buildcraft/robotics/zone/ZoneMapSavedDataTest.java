@@ -8,6 +8,9 @@ package buildcraft.robotics.zone;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+
 /** The zone-map store: every written Zone Planner map names its zone here by id, so losing an entry or reusing an id
  *  across a save silently changes or empties the zone a robot works in. */
 public class ZoneMapSavedDataTest {
@@ -66,16 +69,48 @@ public class ZoneMapSavedDataTest {
         Assertions.assertTrue(elsewhere.get(mine).sameContent(plan(-50, 60)), "while this world's own map still reads");
     }
 
-    /** The legacy migration drops a stack's own copy of its plan only once the entry is in a level save. */
+    /** The legacy migration drops a stack's own copy of its plan only once the store's file on disk is seen holding the
+     *  entry. The encode proves nothing: vanilla clears the dirty flag right after it and writes later, on another
+     *  thread, only logging a write that fails. */
     @Test
-    public void anEntryIsDurableOnlyOnceEncodedForASave() {
+    public void anEntryIsDurableOnlyOnceTheWrittenFileIsSeenHoldingIt() {
         ZoneMapSavedData store = new ZoneMapSavedData();
         ZoneMapRef ref = store.intern(plan(7, 7));
-        Assertions.assertFalse(store.isDurable(ref), "a new entry is in no save yet");
-        store.encodeForSave();
-        Assertions.assertTrue(store.isDurable(ref), "encoded for a save, it is");
+        Assertions.assertFalse(store.isDurable(ref), "a new entry is in no file yet");
+
+        CompoundTag written = encode(store);
+        store.setDirty(false); // what vanilla does right after an encode
+        Assertions.assertFalse(store.isDurable(ref), "encoded for a save it still is not: the write may fail");
+
+        store.confirmOnDisk(null);
+        Assertions.assertFalse(store.isDurable(ref), "no file on disk (the write failed) confirms nothing");
+        Assertions.assertTrue(store.isDirty(), "and the entry is written again at the next save");
+
+        // Another world's file, with an entry under the very same id.
+        ZoneMapSavedData elsewhere = new ZoneMapSavedData();
+        Assertions.assertEquals(ref.id(), elsewhere.intern(plan(7, 7)).id(), "precondition: the same first id");
+        store.setDirty(false);
+        store.confirmOnDisk(encode(elsewhere));
+        Assertions.assertFalse(store.isDurable(ref), "another store's file confirms nothing here");
+        Assertions.assertTrue(store.isDirty(), "so this entry is written again");
+
+        store.setDirty(false);
+        store.confirmOnDisk(written);
+        Assertions.assertTrue(store.isDurable(ref), "the file this store wrote, read back, holds it");
+        Assertions.assertFalse(store.isDirty(), "and nothing is left to write again");
+
         ZoneMapRef next = store.intern(plan(8, 8));
-        Assertions.assertFalse(store.isDurable(next), "an entry added after that save is not");
-        Assertions.assertTrue(store.isDurable(ref), "and the saved one stays durable");
+        Assertions.assertFalse(store.isDurable(next), "an entry added after that file was written is not durable");
+        Assertions.assertTrue(store.isDurable(ref), "and the confirmed one stays durable");
+        store.setDirty(false);
+        store.confirmOnDisk(written);
+        Assertions.assertFalse(store.isDurable(next), "an older file does not hold the newer entry");
+        Assertions.assertTrue(store.isDirty(), "which is written again");
+    }
+
+    /** What the level save writes: the storage encodes the store through its codec. */
+    private static CompoundTag encode(ZoneMapSavedData store) {
+        return Assertions.assertInstanceOf(CompoundTag.class,
+                ZoneMapSavedData.CODEC.encodeStart(NbtOps.INSTANCE, store).getOrThrow());
     }
 }

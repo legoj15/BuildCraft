@@ -86,6 +86,13 @@ public class ItemRobotPlacementTester {
      *  somehow left registered after the test, it would be inert. */
     private static volatile boolean vetoPlacement = false;
 
+    /** The work budget of the station-registration polls, counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each manifest's
+     *  {@code max_ticks} stays above that sum (plus the gap of the two-phase one). A station registers on its pipe's
+     *  first tick and a robot gets its id on its own, and neither happens until its chunk ticks: the framework forces
+     *  only the structure's chunk, and the pipe and the squatter can sit in different chunks of the cell. */
+    private static final int STATION_WORK_TICKS = 60;
+
     // ---------- fixtures ----------
 
     /** A robot stack carrying a real (non-empty) board — the only kind that places. The Picker is arbitrary:
@@ -151,9 +158,13 @@ public class ItemRobotPlacementTester {
     /** Runs {@code body} on the first tick at which the pipe's UP face has a registered
      *  {@link DockingStationPipe}, rather than at a hard-coded tick -- the station is only ever registered
      *  from {@code RobotStationPluggable.onTick()}, and the arena's chunk starts block-ticking a variable
-     *  number of ticks after {@link EntityArenaUtil#forceLoadEntityArena} asks it to. */
+     *  number of ticks after {@link EntityArenaUtil#forceLoadCell} asks it to, so the budget starts once the cell
+     *  ticks. */
     private static void whenStationRegistered(GameTestHelper helper, BlockPos pipeRel, Runnable body) {
-        EntityArenaUtil.tickUntil(helper, 40, () -> stationAt(helper, pipeRel, Direction.UP) != null, body,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + STATION_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, STATION_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
+                body,
                 "RobotStationPluggable.onTick() never registered a DockingStation for the UP face of "
                         + pipeRel + " -- its pipe's chunk never started block-ticking",
                 () -> discardRobotsOf(helper, pipeRel));
@@ -192,8 +203,8 @@ public class ItemRobotPlacementTester {
      *  it at the face centre with the stack's charge intact, and consumes the item. */
     public static void robotItemPlacesDockedRobotOnFreeStation(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(3, 2, 1);
-        // Centre on the pipe: the station and the robot placed on it both sit in this chunk.
-        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        // The whole cell, the pipe's chunk included: the station registers once its chunk ticks.
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -262,7 +273,7 @@ public class ItemRobotPlacementTester {
      *  are the same named item. */
     public static void renamedRobotItemPlacesANamedRobot(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 2, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -302,8 +313,8 @@ public class ItemRobotPlacementTester {
         installStation(helper, pipeRel, Direction.UP);
 
         BlockPos squatterRel = new BlockPos(3, 4, 3);
-        // Centre on the squatter's chunk — it is the entity that must actually tick and get an id.
-        EntityArenaUtil.forceLoadEntityArena(helper, squatterRel);
+        // The whole cell: the squatter must actually tick and get an id, and the pipe can sit in the next chunk.
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot squatter = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 squatterPos = Vec3.atCenterOf(helper.absolutePos(squatterRel));
         squatter.setPos(squatterPos.x, squatterPos.y, squatterPos.z);
@@ -312,9 +323,10 @@ public class ItemRobotPlacementTester {
         // The squatter has to have TICKED before it can claim anything: a robot only gets its id from the
         // registry on its first tick, and DockingStation#takeAsMain stores getRobotId() verbatim -- claiming
         // with the NULL_ROBOT_ID sentinel leaves isTaken() reading false and the test asserting nonsense.
-        EntityArenaUtil.tickUntilThen(helper, 60,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null
-                        && squatter.getRobotId() != EntityRobotBase.NULL_ROBOT_ID,
+        EntityArenaUtil.tickUntilThen(helper, EntityArenaUtil.CELL_READY_TICKS + STATION_WORK_TICKS + 4,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, STATION_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null
+                                && squatter.getRobotId() != EntityRobotBase.NULL_ROBOT_ID),
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     helper.assertTrue(station.takeAsMain(squatter),
@@ -349,7 +361,7 @@ public class ItemRobotPlacementTester {
      *  what stops this passing vacuously against a {@code useOn} that does nothing at all. */
     public static void robotItemPlacementIsCancellableViaRobotEventPlace(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(3, 2, 5);
-        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {
@@ -426,7 +438,7 @@ public class ItemRobotPlacementTester {
         // z=6, not z=7: with the empty structure the grid rows are spaced 7 apart, so z=7 is already the
         // NEXT row's first block.
         BlockPos pipeRel = new BlockPos(4, 2, 6);
-        EntityArenaUtil.forceLoadEntityArena(helper, pipeRel);
+        EntityArenaUtil.forceLoadCell(helper);
         installStation(helper, pipeRel, Direction.UP);
 
         whenStationRegistered(helper, pipeRel, () -> {

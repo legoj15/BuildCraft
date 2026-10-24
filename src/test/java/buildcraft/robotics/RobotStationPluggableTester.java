@@ -70,7 +70,7 @@ import buildcraft.transport.tile.TilePipeHolder;
  * arenas out on a grid: with the {@code minecraft:empty} structure they are 6 blocks apart in X and 7 in Z,
  * and the framework force-loads only the chunk(s) the (1x1x1) structure itself occupies. So:
  * <ul>
- * <li><b>Every test force-loads its own 3x3 chunk neighbourhood</b> ({@link EntityArenaUtil#forceLoadEntityArena}).
+ * <li><b>Every test force-loads its whole arena cell</b> ({@link EntityArenaUtil#forceLoadCell}).
  *     A pipe placed even a few blocks from the arena origin can land in a neighbouring chunk, and a block
  *     entity in an unloaded chunk never ticks — which for this suite means {@code RobotStationPluggable.onTick}
  *     never runs, no {@code DockingStation} is ever registered, and the test NPEs on a null station. That was
@@ -79,8 +79,10 @@ import buildcraft.transport.tile.TilePipeHolder;
  *     loaded by a neighbouring arena.</li>
  * <li><b>...and then waits for its station instead of guessing a tick</b>
  *     ({@link #whenStationRegistered}). Force-loading gets the chunk ticking <em>eventually</em>, not
- *     immediately -- see {@link EntityArenaUtil#forceLoadEntityArena} for the measured spread. Every test
- *     below therefore polls for its own station rather than hard-coding {@code runAfterDelay(2)}.</li>
+ *     immediately -- see {@link EntityArenaUtil#forceLoadEntityArena} for the measured spread -- so the wait for the
+ *     station is budgeted from the cell ticking ({@link EntityArenaUtil#whenCellTicking}), not from the test's first
+ *     tick. Every test below therefore polls for its own station rather than hard-coding
+ *     {@code runAfterDelay(2)}.</li>
  * <li><b>Every relative position stays inside the 6x7 cell</b> (x in 1..2, z in 1..6 here). Anything further
  *     out lands in ANOTHER test's arena, where it is neither cleared between runs nor safe from being
  *     overwritten in the same tick.</li>
@@ -88,8 +90,23 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class RobotStationPluggableTester {
 
+    /** The work budgets of the two charge polls, each counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. The MJ budget covers the station's registration on the
+     *  pipe's first tick, the engine's warm-up and the power flow's request/transfer handshake; the RF one the
+     *  registration, one injected packet and its conversion. */
+    private static final int KINESIS_CHARGE_WORK_TICKS = 390;
+    private static final int RF_CHARGE_WORK_TICKS = 150;
+
+    /** The work budget of {@link #whenStationRegistered} and of the FE-gate test's three-station poll, counted from the
+     *  arena cell ticking like the two above (each poll's own budget adds {@code EntityArenaUtil.CELL_READY_TICKS},
+     *  and each manifest's {@code max_ticks} stays above that sum): a station registers on its pipe's first tick, and
+     *  that starts only once the pipe's chunk ticks, which the framework does not wait for beyond the structure's. */
+    private static final int STATION_WORK_TICKS = 40;
+    private static final int FE_GATE_WORK_TICKS = 60;
+
     private static TilePipeHolder placeItemPipe(GameTestHelper helper, BlockPos relPos) {
-        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -115,19 +132,24 @@ public class RobotStationPluggableTester {
      * after {@link EntityArenaUtil#forceLoadEntityArena} asks for it, not synchronously. Waiting a fixed two
      * ticks was therefore a coin flip, and its losing side is not even a clean failure:
      * {@code getRenderState()} falls back to the never-synced {@code NONE}, and a station lookup hands the
-     * next line a null to dereference. The production behaviour is correct, just not instantaneous. */
+     * next line a null to dereference. The production behaviour is correct, just not instantaneous.
+     *
+     * <p>The caller has placed its pipe through {@link #placeItemPipe} or {@link #placePowerPipe}, which force the
+     * whole cell, so the budget starts once the cell ticks (a poll counted from the test's first tick charges the
+     * chunk promotion, which is the machine's, to the station). */
     private static void whenStationRegistered(GameTestHelper helper, BlockPos absPos, Direction side,
                                               Runnable body) {
-        EntityArenaUtil.tickUntil(helper, 40,
-                () -> RobotManager.registryProvider.getRegistry(helper.getLevel())
-                        .getStation(absPos, side) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + STATION_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, STATION_WORK_TICKS,
+                        () -> RobotManager.registryProvider.getRegistry(helper.getLevel())
+                                .getStation(absPos, side) != null),
                 body,
                 "RobotStationPluggable.onTick() never registered a DockingStation for the " + side
                         + " face of " + absPos + " -- its pipe's chunk never started block-ticking");
     }
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
-        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
         TilePipeHolder tile = helper.getBlockEntity(relPos, TilePipeHolder.class);
@@ -364,6 +386,11 @@ public class RobotStationPluggableTester {
                             + "Check build.gradle gameTestServer run config.");
         }
 
+        // The rig is a column at x=2, z=5, but the framework forces only the structure's chunk and a 6x7 cell
+        // straddles a chunk border in about 57% of runs: nothing in the column (engine, pipes, station) ticks until
+        // its chunk does. Force the whole cell first, and gate the poll below on it ticking.
+        EntityArenaUtil.forceLoadCell(helper);
+
         // Engine -> WOOD kinesis -> stone kinesis -> station. The wood pipe is load-bearing, not
         // decoration: only wood/diaWood kinesis pipes accept power from an engine, so an engine
         // feeding a stone pipe directly transfers nothing at all.
@@ -389,22 +416,36 @@ public class RobotStationPluggableTester {
         pipe.getPipe().markForUpdate();
 
         BlockPos absPipePos = helper.absolutePos(pipePos);
-        whenStationRegistered(helper, absPipePos, Direction.WEST, () -> {
-            DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
-                    .getRegistry(helper.getLevel()).getStation(absPipePos, Direction.WEST);
-            helper.assertTrue(station != null, "station must have registered by now");
-            TestRobot robot = new TestRobot(helper.getLevel());
-            station.takeAsMain(robot);
-            robot.dock(station);
-            helper.assertTrue(robot.getBattery().getStored() == 0, "fixture must start drained");
-
-            // Poll rather than assert once: engine warm-up plus the power flow's 2-tick
-            // request/transfer handshake means the first delivery lands a variable number of
-            // ticks out, exactly as in PipeFlowPowerTester.
-            helper.succeedWhen(() -> helper.assertTrue(robot.getBattery().getStored() > 0,
-                    "a robot docked on a station attached to a powered kinesis pipe has received no MJ — "
-                            + "the pipe cannot see the station as a power destination"));
-        });
+        // ONE gated poll, not whenStationRegistered with a poll nested in its body: the station registers on the
+        // pipe's first tick, so waiting for it is part of the work budget that starts once the cell ticks. The
+        // robot is created on the first poll that finds the station (it is never added to the level, so there is
+        // nothing to discard). Poll rather than assert once: engine warm-up plus the power flow's 2-tick
+        // request/transfer handshake means the first delivery lands a variable number of ticks out, exactly as in
+        // PipeFlowPowerTester.
+        TestRobot[] robot = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + KINESIS_CHARGE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, KINESIS_CHARGE_WORK_TICKS,
+                        () -> {
+                            if (robot[0] == null) {
+                                DockingStationPipe station = (DockingStationPipe) RobotManager.registryProvider
+                                        .getRegistry(helper.getLevel()).getStation(absPipePos, Direction.WEST);
+                                if (station == null) {
+                                    return false;
+                                }
+                                robot[0] = new TestRobot(helper.getLevel());
+                                station.takeAsMain(robot[0]);
+                                robot[0].dock(station);
+                                helper.assertTrue(robot[0].getBattery().getStored() == 0,
+                                        "fixture must start drained");
+                                return false;
+                            }
+                            return robot[0].getBattery().getStored() > 0;
+                        },
+                        () -> "station registered: " + (robot[0] != null) + ", docked robot's battery: "
+                                + (robot[0] == null ? "n/a" : robot[0].getBattery().getStored())),
+                helper::succeed,
+                "a robot docked on a station attached to a powered kinesis pipe has received no MJ — "
+                        + "the pipe cannot see the station as a power destination");
     }
 
     /** The client never runs {@link RobotStationPluggable#onTick()} (it early-returns off-server), so
@@ -550,6 +591,10 @@ public class RobotStationPluggableTester {
                 BCLibConfig.PowerMode.MJ_AUTOCONVERT_RF, 0.2, false);
         try {
             BlockPos pipePos = new BlockPos(2, 2, 5);
+            // The framework forces only the structure's chunk, and the pipe at z=5 can sit in the neighbouring one:
+            // its tick (which registers the station and moves the FE) starts only when that chunk ticks. Force the
+            // cell, and let the poll's work budget start once it does.
+            EntityArenaUtil.forceLoadCell(helper);
             TilePipeHolder pipe = placePowerPipe(helper, pipePos, BCTransportItems.PIPE_WOOD_RF.get());
             install(pipe, Direction.WEST);
             pipe.getPipe().markForUpdate();
@@ -561,7 +606,8 @@ public class RobotStationPluggableTester {
 
             TestRobot[] robot = { null };
             boolean[] injected = { false };
-            scope.succeedWhen(helper, 150, () -> {
+            scope.succeedWhen(helper, EntityArenaUtil.CELL_READY_TICKS + RF_CHARGE_WORK_TICKS,
+                    EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, RF_CHARGE_WORK_TICKS, () -> {
                 DockingStation station = RobotManager.registryProvider.getRegistry(helper.getLevel())
                         .getStation(absPipePos, Direction.WEST);
                 if (station == null) {
@@ -599,7 +645,10 @@ public class RobotStationPluggableTester {
                     return true;
                 }
                 return false;
-            }, "a robot docked on a station attached to an RF kinesis pipe never received the " + feSent
+            }, () -> "station registered: " + (robot[0] != null) + ", FE packet injected: " + injected[0]
+                    + ", docked robot's battery: " + (robot[0] == null ? "n/a" : robot[0].getBattery().getStored())
+                    + " of " + expectedMj + " micro-MJ expected"),
+                    "a robot docked on a station attached to an RF kinesis pipe never received the " + feSent
                     + " FE it was sent as " + expectedMj + " micro-MJ -- the pipe cannot see the station as a "
                     + "Forge-Energy destination");
         } catch (Throwable thrown) {
@@ -629,13 +678,14 @@ public class RobotStationPluggableTester {
         BlockPos mjAbs = helper.absolutePos(mjPos);
         BlockPos itemAbs = helper.absolutePos(itemPos);
 
-        EntityArenaUtil.tickUntil(helper, 60,
-                () -> {
-                    IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
-                    return registry.getStation(rfAbs, Direction.UP) != null
-                            && registry.getStation(mjAbs, Direction.UP) != null
-                            && registry.getStation(itemAbs, Direction.UP) != null;
-                },
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FE_GATE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FE_GATE_WORK_TICKS,
+                        () -> {
+                            IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
+                            return registry.getStation(rfAbs, Direction.UP) != null
+                                    && registry.getStation(mjAbs, Direction.UP) != null
+                                    && registry.getStation(itemAbs, Direction.UP) != null;
+                        }),
                 () -> {
                     IRobotRegistry registry = RobotManager.registryProvider.getRegistry(helper.getLevel());
                     DockingStationPipe rfStation = (DockingStationPipe) registry.getStation(rfAbs, Direction.UP);

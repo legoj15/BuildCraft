@@ -30,8 +30,8 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.builders.BCBuildersEventDist;
 import buildcraft.builders.snapshot.BlueprintBuilder;
+import buildcraft.builders.snapshot.RequiredExtractor;
 import buildcraft.builders.tile.TileBuilder;
-import buildcraft.lib.misc.StackUtil;
 import buildcraft.robotics.ai.AIRobotDisposeItems;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
 import buildcraft.robotics.ai.AIRobotGotoSleep;
@@ -287,8 +287,14 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
     }
 
     private IStackFilter matchesRequired() {
-        ItemStack target = requiredStack;
-        return stack -> StackUtil.canMerge(target, stack);
+        return matchesRequired(requiredStack);
+    }
+
+    /** The stacks the robot fetches for the price {@code target}: what the Builder itself takes as payment
+     *  ({@link RequiredExtractor#payer}), so a container holding a written zone map is fetched for a price holding a
+     *  blank one. Package-private so a unit test can pin it. */
+    static IStackFilter matchesRequired(ItemStack target) {
+        return RequiredExtractor.payer(target);
     }
 
     /** Package-private so the board's game test can pin the demand predicate against a live machine
@@ -298,14 +304,17 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
                 && !blueprintBuilder.remainingRequiredItems.isEmpty();
     }
 
-    /** Whether {@code builder}'s blueprint still misses an item {@code stack} would fill (same item, same
-     *  components). Package-private so the board's game test can pin it. */
+    /** Whether {@code builder}'s blueprint still misses an item {@code stack} would pay for. Package-private so the board's game test can pin it. */
     static boolean requires(TileBuilder builder, ItemStack stack) {
-        if (!(builder.getBuilder() instanceof BlueprintBuilder blueprintBuilder)) {
-            return false;
-        }
-        for (ItemStack missing : blueprintBuilder.remainingRequiredItems) {
-            if (StackUtil.canMerge(missing, stack)) {
+        return builder.getBuilder() instanceof BlueprintBuilder blueprintBuilder
+                && requires(blueprintBuilder.remainingRequiredItems, stack);
+    }
+
+    /** Whether {@code stack} pays for one of the {@code missing} prices, by the Builder's own test
+     *  ({@link RequiredExtractor#pays}). Package-private so a unit test can pin it. */
+    static boolean requires(List<ItemStack> missing, ItemStack stack) {
+        for (ItemStack price : missing) {
+            if (RequiredExtractor.pays(price, stack)) {
                 return true;
             }
         }

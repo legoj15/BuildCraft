@@ -23,7 +23,13 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.core.IStackFilter;
+
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackUtil;
+
+import buildcraft.core.item.ItemMapLocation;
+import buildcraft.core.item.ZoneMapPortability;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class RequiredExtractor {
@@ -97,10 +103,15 @@ public abstract class RequiredExtractor {
      * {@code components}), or a BuildCraft {@code ItemHandlerSimple} slot, which wraps that compound under
      * {@code stack} and saves a count the codec cannot carry (over 99) beside it as {@code count}. Reading only the
      * first form priced every BuildCraft inventory at nothing. Empty when neither parses.
+     *
+     * <p>Priced as the build charges it: a zone map location as a blank map ({@link ItemMapLocation#pricedAsBlank}),
+     * loose or inside a stack holding one (a shulker box), whose ref and carried plan no other world could match
+     * ({@link ZoneMapPortability#withZoneMapsBlank(CompoundTag)}); {@link #payer} compares a held container alike.
+     * The placed data keeps the refs and plans.
      */
-    static ItemStack parseItemStack(CompoundTag ct) {
+    public static ItemStack parseItemStack(CompoundTag ct) {
         CompoundTag wrapped = NBTUtilBC.getCompoundOrNull(ct, "stack");
-        CompoundTag payload = wrapped != null ? wrapped : ct;
+        CompoundTag payload = ZoneMapPortability.withZoneMapsBlank(wrapped != null ? wrapped : ct);
         ItemStack stack = ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), payload)
             .resultOrPartial()
             .orElse(ItemStack.EMPTY);
@@ -108,6 +119,54 @@ public abstract class RequiredExtractor {
             stack = stack.copyWithCount(Math.max(1, NBTUtilBC.getInt(ct, "count", stack.getCount())));
         }
         return stack;
+    }
+
+    /** Whether {@code held} pays for {@code required}: {@link #payer}'s test, for one held stack. */
+    public static boolean pays(ItemStack required, ItemStack held) {
+        return payer(required).matches(held);
+    }
+
+    /**
+     * The filter of held stacks that pay for {@code required}, a stack {@link #parseItemStack} priced: the same item
+     * and components, or a container that holds them once the zone maps inside it are blank maps, as the price was
+     * made ({@link ZoneMapPortability#withZoneMapsBlank(ItemStack)}). A zone map held loose pays only as the blank map
+     * it is priced as, so a build never takes a loose written map. A container holding a written zone map is taken
+     * whole, that map and its zone included: priced with the exact map, it could be paid for in no other world.
+     *
+     * <p>The comparison encodes the held stack, so it runs only when the exact match fails, the held stack has the
+     * price's components (blanking a map inside a stack changes what a component holds, never which components the
+     * stack has), and the price holds a map location at all ({@link ZoneMapPortability#holdsMapLocation}, which
+     * remembers its answer per price).
+     */
+    public static IStackFilter payer(ItemStack required) {
+        return new Payer(required);
+    }
+
+    private static final class Payer implements IStackFilter {
+        private final ItemStack required;
+        /** Whether the price holds a map location inside it; null until a held stack first needs it. */
+        @Nullable
+        private Boolean requiredHoldsMap;
+
+        Payer(ItemStack required) {
+            this.required = required;
+        }
+
+        @Override
+        public boolean matches(ItemStack held) {
+            if (StackUtil.canMerge(required, held)) {
+                return true;
+            }
+            if (required.getItem() != held.getItem() || held.getItem() instanceof ItemMapLocation
+                    || held.getComponentsPatch().isEmpty()
+                    || !required.getComponents().keySet().equals(held.getComponents().keySet())) {
+                return false;
+            }
+            if (requiredHoldsMap == null) {
+                requiredHoldsMap = ZoneMapPortability.holdsMapLocation(required);
+            }
+            return requiredHoldsMap && StackUtil.canMerge(required, ZoneMapPortability.withZoneMapsBlank(held));
+        }
     }
 
     /** {@code tag} read as an int, or {@code def} when it is not a number (a path that found nothing); through {@link NBTUtilBC} so it reads alike on every node. */

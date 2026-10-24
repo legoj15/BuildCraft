@@ -44,6 +44,8 @@ import buildcraft.lib.misc.SoundUtil;
 import buildcraft.lib.misc.StackUtil;
 
 import buildcraft.builders.BCBuildersItems;
+import buildcraft.builders.snapshot.RequiredExtractor;
+import buildcraft.builders.snapshot.SchematicBlockDefault;
 import buildcraft.builders.snapshot.SchematicBlockManager;
 import buildcraft.core.PaperAdvancement;
 
@@ -128,6 +130,9 @@ public class ItemSchematicSingle extends Item {
             if (schematicBlock.isAir()) {
                 return InteractionResult.FAIL;
             }
+            if (schematicBlock instanceof SchematicBlockDefault kept) {
+                kept.carryZonePlans();
+            }
             // Build the captured "used" schematic, then consume one clean from the held
             // stack and deliver the used one — without ItemUtils this would void the rest
             // of the stack.
@@ -164,7 +169,7 @@ public class ItemSchematicSingle extends Item {
                             InventoryWrapper itemTransactor = new InventoryWrapper(player.getInventory());
                             if (StackUtil.mergeSameItems(requiredItems).stream().noneMatch(s ->
                                 itemTransactor.extract(
-                                    extracted -> StackUtil.canMerge(s, extracted),
+                                    RequiredExtractor.payer(s),
                                     s.getCount(),
                                     s.getCount(),
                                     true
@@ -173,7 +178,7 @@ public class ItemSchematicSingle extends Item {
                                 if (schematicBlock.build(world, placePos)) {
                                     StackUtil.mergeSameItems(requiredItems).forEach(s ->
                                         itemTransactor.extract(
-                                            extracted -> StackUtil.canMerge(s, extracted),
+                                            RequiredExtractor.payer(s),
                                             s.getCount(),
                                             s.getCount(),
                                             false

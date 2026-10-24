@@ -5,13 +5,23 @@
  */
 package buildcraft.lib.misc;
 
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.storage.LevelResource;
+
+import org.jspecify.annotations.Nullable;
+
+import buildcraft.api.core.BCLog;
 
 //? if >=26.1 {
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -26,9 +36,6 @@ import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.Encoder;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtAccounter;
-import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
@@ -38,15 +45,10 @@ import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.util.datafix.DataFixers;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.saveddata.SavedDataType;
-import net.minecraft.world.level.storage.LevelResource;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-
-import org.jspecify.annotations.Nullable;
-
-import buildcraft.api.core.BCLog;
 //?}
 
 /**
@@ -133,6 +135,43 @@ public final class LegacySavedData {
             }
         }
         return worldRoot.resolve("dimensions").resolve(dimensionNamespace).resolve(dimensionPath).resolve("data");
+    }
+
+    /** The file the overworld's storage keeps the saved data {@code minecraft:<name>} in, on every node: the 26.1+
+     *  layout ({@code <data folder>/minecraft/<name>.dat}) from 26.1, {@code <world root>/data/<name>.dat} before. */
+    public static Path overworldDataFile(MinecraftServer server, String name) {
+        //? if >=26.1 {
+        return dataFolderOf(server.overworld()).resolve("minecraft").resolve(name + ".dat");
+        //?} else {
+        /*return legacyDataFolder(server.getWorldPath(LevelResource.ROOT), "minecraft", "overworld")
+                .resolve(name + ".dat");*/
+        //?}
+    }
+
+    /**
+     * The {@code data} payload of the saved-data file {@code file} as it is on disk, or null when there is none, it
+     * cannot be read, or it holds no payload. Not run through the data fixer: this is for reading back what the
+     * current build just wrote, to see whether a write landed. A missing file is normal (nothing was written yet) and
+     * is not logged. A file that is there but cannot be read (another process holds it open with an exclusive lock,
+     * it is not readable by this one, or it is not valid compressed NBT) reads as no payload and is logged at WARN. It
+     * is WARN, where the loaders below log ERROR, because this runs after saves while a write is unconfirmed and the
+     * caller answers a null by retrying at the next save: a lock that lets go is expected, repeats per save until it
+     * does, and loses nothing, so it is a note and not a failure.
+     */
+    public static @Nullable CompoundTag readPayload(Path file) {
+        if (!Files.isRegularFile(file)) {
+            return null;
+        }
+        try {
+            return NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap()).get("data") instanceof CompoundTag data
+                    ? data : null;
+        } catch (NoSuchFileException e) {
+            // Gone between the check and the read: as good as absent.
+            return null;
+        } catch (Exception e) {
+            BCLog.logger.warn("[saved data] Could not read back " + file + " to see whether a write landed", e);
+            return null;
+        }
     }
 
     //? if >=26.1 {
@@ -382,18 +421,6 @@ public final class LegacySavedData {
                     + "Its data is in {} now: move or delete the old file by hand, or it is read again if that file "
                     + "is ever empty at a launch", layout.legacy(), layout.current());
             CARRIED_OVER.remove(data);
-        }
-    }
-
-    /** The {@code data} payload of the 26.1+ file {@code file} as it is on disk, or null when there is none. */
-    private static @Nullable Tag readPayload(Path file) {
-        if (!Files.isRegularFile(file)) {
-            return null;
-        }
-        try {
-            return NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap()).get("data");
-        } catch (Exception e) {
-            return null;
         }
     }
 

@@ -6,6 +6,7 @@
 
 package buildcraft.robotics;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.bus.api.IEventBus;
@@ -99,6 +100,7 @@ import buildcraft.robotics.boards.BoardRobotShovelman;
 import buildcraft.robotics.boards.BoardRobotShovelmanNBT;
 import buildcraft.robotics.boards.BoardRobotStripes;
 import buildcraft.robotics.boards.BoardRobotStripesNBT;
+import buildcraft.robotics.zone.ZoneMapSavedData;
 
 /**
  * BuildCraft Robotics initializer. No longer a separate @Mod — called from BCCore.
@@ -183,6 +185,13 @@ public class BCRobotics {
         NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, RobotProtection::onEntityJoin);
         NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> RobotProtection.clearChained());
         NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> RobotProtection.clearChained());
+
+        // Zone maps: a legacy map drops its own copy of its zone only once the store's file is seen holding it.
+        NeoForge.EVENT_BUS.addListener((LevelEvent.Save event) -> {
+            if (event.getLevel() instanceof ServerLevel level) {
+                ZoneMapSavedData.onLevelSave(level);
+            }
+        });
 
         LOGGER.info("BuildCraft Robotics initialized");
     }

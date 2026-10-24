@@ -50,6 +50,7 @@ import buildcraft.core.properties.WorldPropertyIsSoft;
 import buildcraft.core.properties.WorldPropertyIsWood;
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
+import buildcraft.robotics.zone.ZoneMapRef;
 
 @Mod(BCCore.MODID)
 @SuppressWarnings("this-escape")
@@ -74,6 +75,13 @@ public class BCCore {
             DATA_COMPONENTS.registerComponentType("brush_uses",
                     builder -> builder.persistent(Codec.INT)
                                       .networkSynchronized(ByteBufCodecs.INT));
+
+    /** The zone a written ZONE map location names (its id plus the store's token); the zone itself lives in
+     *  {@link buildcraft.robotics.zone.ZoneMapSavedData} (vanilla filled-map style). */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ZoneMapRef>> ZONE_MAP_ID =
+            DATA_COMPONENTS.registerComponentType("zone_map_id",
+                    builder -> builder.persistent(ZoneMapRef.CODEC)
+                                      .networkSynchronized(ZoneMapRef.STREAM_CODEC));
 
     public BCCore(IEventBus modEventBus, ModContainer modContainer) {
         INSTANCE = this;

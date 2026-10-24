@@ -7,6 +7,7 @@
 package buildcraft.robotics.tile;
 
 import java.util.List;
+import java.util.Objects;
 
 import javax.annotation.Nullable;
 
@@ -23,12 +24,14 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.core.BCCore;
 import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 
 import buildcraft.robotics.BCRoboticsBlockEntities;
 import buildcraft.robotics.container.ContainerZonePlanner;
 import buildcraft.robotics.container.PaintBudgets;
+import buildcraft.robotics.zone.ZoneMapRef;
 import buildcraft.robotics.zone.ZonePlan;
 
 import buildcraft.lib.gui.IBCMenuProvider;
@@ -207,8 +210,9 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         return null;
     }
 
-    /** The zone stored on a map-location stack (absolute coords), or null if it is not a ZONE map. Parses the
-     *  stack's NBT, so it is overridable only for a test to count the parses. */
+    /** The zone stored on a map-location stack (absolute coords), or null if it is not a ZONE map. Reads the map's
+     *  zone out of the zone-map store (migrating a legacy stack first), so it is overridable only for a test to count
+     *  the reads. */
     @Nullable
     protected ZonePlan decodeZone(ItemStack stack) {
         if (stack.getItem() instanceof ItemMapLocation map && map.getZone(stack) instanceof ZonePlan zone) {
@@ -217,29 +221,35 @@ public class TileZonePlanner extends TileBC_Neptune implements IBCMenuProvider {
         return null;
     }
 
-    /** The data component {@link #inputZone} last parsed, and what it parsed to (null for a map holding no zone). */
+    /** The data components {@link #inputZone} last read, and what they read to (null for a map holding no zone). */
     @Nullable
     private CustomData inputZoneKey;
+    @Nullable
+    private ZoneMapRef inputZoneIdKey;
     @Nullable
     private ZonePlan inputZoneCache;
 
     /**
-     * {@link #decodeZone} for the stack in the input slot, parsed once per distinct map instead of every tick. A
-     * map-location stack carries its type and zone only in its custom-data component, which is replaced (never edited
-     * in place) when the stack is rewritten, so that component's identity is the key: a swapped, rewritten or removed
-     * map misses, and an unchanged one hits. A map with no custom data is a blank one and holds no zone.
+     * {@link #decodeZone} for the stack in the input slot, read once per distinct map instead of every tick. A
+     * map-location stack carries its type in its custom-data component, which is replaced (never edited in place) when
+     * the stack is rewritten, and its zone as a map id whose stored zone never changes (a rewrite takes a new id). So
+     * that component's identity plus the id is the key: a swapped, rewritten or removed map misses, and an unchanged
+     * one hits. The key is taken after the read, which may have migrated a legacy stack to an id. A map with no custom
+     * data is a blank one and holds no zone.
      */
     @Nullable
     private ZonePlan inputZone(ItemStack stack) {
         CustomData data = stack.getItem() instanceof ItemMapLocation ? stack.get(DataComponents.CUSTOM_DATA) : null;
         if (data == null) {
             inputZoneKey = null;
+            inputZoneIdKey = null;
             inputZoneCache = null;
             return null;
         }
-        if (data != inputZoneKey) {
+        if (data != inputZoneKey || !Objects.equals(stack.get(BCCore.ZONE_MAP_ID.get()), inputZoneIdKey)) {
             inputZoneCache = decodeZone(stack);
-            inputZoneKey = data;
+            inputZoneKey = stack.get(DataComponents.CUSTOM_DATA);
+            inputZoneIdKey = stack.get(BCCore.ZONE_MAP_ID.get());
         }
         return inputZoneCache;
     }

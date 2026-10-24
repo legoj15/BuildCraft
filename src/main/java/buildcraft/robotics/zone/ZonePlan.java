@@ -7,6 +7,7 @@
 package buildcraft.robotics.zone;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -134,6 +135,16 @@ public class ZonePlan implements IZone {
             }
         }
         return true;
+    }
+
+    /** A hash of the marked columns that agrees whenever {@link #sameContent} does, however the plans were built
+     *  (independent of the hash map's iteration order and of whether a chunk is flagged full or set bit by bit). */
+    public int contentHash() {
+        int hash = 0;
+        for (Map.Entry<Long, ZoneChunk> e : chunkMapping.entrySet()) {
+            hash += Long.hashCode(e.getKey()) * 31 + Arrays.hashCode(e.getValue().rows());
+        }
+        return hash;
     }
 
     public List<int[]> getAll() {

@@ -401,6 +401,8 @@ public class BuildCraftGameTests {
         // Builder Drops (self + inventory contents)
         reg.accept("buildcraftunofficial:builder_drops_contents_and_self", () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
         reg.accept("buildcraftunofficial:architect_drops_contents_and_self", () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
+        // Architect refuses a scan whose snapshot could not be read back (cell cap), before it starts.
+        reg.accept("buildcraftunofficial:architect_refuses_oversized_scan", () -> buildcraft.builders.ArchitectScanRefusalTester::testOversizedBoxIsRefusedAndASmallOneStillScans);
         // Builder consumed-path NBT round-trip — gates both the client-side path-laser
         // render and the server-side chunk-reload persistence of the route.
         reg.accept("buildcraftunofficial:builder_path_survives_nbt_roundtrip", () -> buildcraft.builders.BuilderDropsTester::testBuilderPathSurvivesNbtRoundTrip);

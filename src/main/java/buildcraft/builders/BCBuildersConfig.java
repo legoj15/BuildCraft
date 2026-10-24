@@ -49,8 +49,13 @@ public class BCBuildersConfig {
                          "(65 x 65 x 65 blocks) with room to spare. Raise it if you raise the marker range or let",
                          "players scan larger volume boxes: a scan costs 16 bytes a block, so a cube 100 blocks on a",
                          "side needs about 16 MB, and the maximum, 128, holds one up to about 200 blocks on a side.",
-                         "128 is also the most a snapshot can be read back at (from the library's store or a",
-                         "preview), so the option cannot go higher, and the library refuses a larger upload.")
+                         "128 is also the most any snapshot is read back at (from the library's store or a",
+                         "preview), so the option cannot go higher, and the library refuses a larger upload.",
+                         "Scans are held to that same 128, not to this option: an Architect Table will not scan an",
+                         "area (a cube about 200 blocks on a side at most) whose snapshot could not be read back,",
+                         "and it refuses a finished blueprint scan that turns out too large for the same reason.",
+                         "A scan between this option and that limit can be made and read back, but it cannot be",
+                         "uploaded to the library.")
                 .defineInRange("libraryMaxUploadMb", LIBRARY_MAX_UPLOAD_MB_DEFAULT, LIBRARY_MAX_UPLOAD_MB_MIN,
                         LIBRARY_MAX_UPLOAD_MB_MAX);
 

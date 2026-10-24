@@ -6,11 +6,16 @@
  */
 package buildcraft.builders.tile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -18,6 +23,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,6 +36,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IAreaProvider;
 import buildcraft.api.enums.EnumSnapshotType;
@@ -44,6 +52,8 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.nbt.NbtSquisher;
 import buildcraft.lib.tile.TileBC_Neptune;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -52,6 +62,7 @@ import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersItems;
 import buildcraft.builders.container.ContainerArchitectTable;
+import buildcraft.builders.container.LibraryUploadBuffer;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
@@ -78,6 +89,11 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     private final List<ISchematicEntity> blueprintScannedEntities = new ArrayList<>();
     private boolean isValid = false;
     private boolean scanning = false;
+    /** The scan was refused (its box is too large, or the finished scan would not read back) and the players have been
+     *  told. Held until the scan could start again (the input is taken out), so the same waiting item does not refuse,
+     *  and tell them, every tick. Saved: a refusal that came after a whole scan must not have the next load run the
+     *  scan again. */
+    private boolean scanRefused = false;
     public String name = "<unnamed>";
 
     // Inline scan position tracking (replaces BoxIterator which is a stub)
@@ -120,6 +136,104 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
     public TileArchitectTable(BlockPos pos, BlockState state) {
         super(BCBuildersBlockEntities.ARCHITECT.get(), pos, state);
+    }
+
+    /**
+     * Room a blueprint scan keeps under the read ceiling's byte budget for what the scan adds to its cells: the
+     * palette (an entry can run to kilobytes) and the entities. A blueprint pays sixteen bytes a cell, which is the
+     * whole budget at the cell limit, so a box at the limit would be stored and then not read back; the box is
+     * refused short of it by this much. It only has to cover a typical scan, not the worst: a scan that still goes
+     * over is caught when it finishes ({@link #readsBack}), at the cost of the scan.
+     */
+    static final long BLUEPRINT_SCAN_RESERVE_BYTES = 1024 * 1024;
+
+    /**
+     * The most cells a scan of {@code type} may cover and be read back under {@code limits}. A template costs next to
+     * nothing past its header, so the cells it claims are its only limit; a blueprint is also held to the byte budget
+     * its cells use ({@link #BLUEPRINT_SCAN_RESERVE_BYTES} short of the limit).
+     */
+    static long maxScanCells(EnumSnapshotType type, LibraryUploadBuffer.Limits limits) {
+        return type == EnumSnapshotType.BLUEPRINT ? limits.maxBlueprintCells(BLUEPRINT_SCAN_RESERVE_BYTES)
+            : limits.maxCells();
+    }
+
+    /** {@link #maxScanCells(EnumSnapshotType, LibraryUploadBuffer.Limits)} at what a stored snapshot is read back at:
+     *  the library's read ceiling, not the server's upload option, which may be lower and which no read follows. */
+    static long maxScanCells(EnumSnapshotType type) {
+        return maxScanCells(type, LibraryUploadBuffer.Limits.readCeiling());
+    }
+
+    /** Whether a box of {@code size} holds more cells than {@link #maxScanCells(EnumSnapshotType)} allows a snapshot
+     *  of {@code type}: such a scan is refused before it starts rather than finished and stored unreadable. */
+    static boolean tooLargeToScan(BlockPos size, EnumSnapshotType type) {
+        return tooLargeToScan(size, type, LibraryUploadBuffer.Limits.readCeiling());
+    }
+
+    static boolean tooLargeToScan(BlockPos size, EnumSnapshotType type, LibraryUploadBuffer.Limits limits) {
+        return (long) size.getX() * size.getY() * size.getZ() > maxScanCells(type, limits);
+    }
+
+    /**
+     * Whether {@code snapshot}, as the store would save it, reads back under {@code limits}. Asked of the finished
+     * scan, since only it knows what its palette and entities add to the cells {@link #tooLargeToScan} counted. It is
+     * the reader's own question, answered by its own count: the cells the snapshot claims within the cell limit, and
+     * the NBT it unpacks to within the byte budget. Leaves the snapshot's key computed, which is what the store files
+     * it under; nothing of the serialised form it builds is kept, so a large scan does not hold two of them at once.
+     */
+    static boolean readsBack(Snapshot snapshot, LibraryUploadBuffer.Limits limits) {
+        CompoundTag stored = snapshot.computeKeyAndSerialize();
+        try {
+            if (Snapshot.checkedDataSize(snapshot.size) > limits.maxCells()) return false;
+            NbtSquisher.requireExpandsWithin(stored, limits.maxExpandedBytes());
+            return true;
+        } catch (IOException e) { // InvalidInputDataException included
+            return false;
+        }
+    }
+
+    /** The box holds more cells than a snapshot of {@code type} could be read back at: refused before the scan
+     *  starts. */
+    private void refuseScanOfLargeBox(BlockPos size, EnumSnapshotType type) {
+        scanRefused = true;
+        setChanged();
+        BCLog.logger.info("[architect] Refused to scan a {} x {} x {} box at {}: it holds more than the {} cells a "
+            + "stored {} can be read back at", size.getX(), size.getY(), size.getZ(), worldPosition,
+            maxScanCells(type), type.name().toLowerCase(Locale.ROOT));
+        tellScanRefused(Component.translatable("chat.architect.scanTooLarge",
+            size.getX(), size.getY(), size.getZ(), String.format(Locale.ROOT, "%,d", maxScanCells(type))));
+    }
+
+    /** The scan finished, but its snapshot (the palette and entities it found, past the cells) is more than a stored
+     *  snapshot can be read back at: nothing is stored, the blank input stays, and the scan is not run again until it
+     *  is taken out. */
+    private void refuseFinishedScan(BlockPos size) {
+        scanRefused = true;
+        resetScanBuffers();
+        setChanged();
+        BCLog.logger.info("[architect] Refused to store the scan of a {} x {} x {} box at {}: its snapshot is more "
+            + "than the {} bytes a stored snapshot can be read back at", size.getX(), size.getY(), size.getZ(),
+            worldPosition, LibraryUploadBuffer.Limits.readCeiling().maxExpandedBytes());
+        tellScanRefused(Component.translatable("chat.architect.scanTooDetailed",
+            size.getX(), size.getY(), size.getZ()));
+    }
+
+    /** Tell whoever is watching the table that the scan was refused, and why: players with its screen open, and the
+     *  owner if they are online. Chat, not the action bar, which the open screen hides. */
+    private void tellScanRefused(Component message) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        Set<UUID> told = new HashSet<>();
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player.containerMenu instanceof ContainerArchitectTable menu && menu.tile == this) {
+                MessageUtil.sendSystemMessage(player, message);
+                told.add(player.getUUID());
+            }
+        }
+        if (getOwner() != null) {
+            ServerPlayer owner = serverLevel.getServer().getPlayerList().getPlayer(GameProfileUtil.getId(getOwner()));
+            if (owner != null && told.add(owner.getUUID())) {
+                MessageUtil.sendSystemMessage(owner, message);
+            }
+        }
     }
 
     // The snapshot in/out slots are real itemManager handlers, so the central addDrops path spills
@@ -201,20 +315,23 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
         ItemStack stackIn = invSnapshotIn.getStackInSlot(0);
         if (!stackIn.isEmpty() && invSnapshotOut.getStackInSlot(0).isEmpty() && isValid) {
-            if (!scanning) {
-                if (stackIn.getItem() instanceof ItemSnapshot snapshotItem) {
-                    snapshotType = snapshotItem.getSnapshotType();
+            if (!scanning && !scanRefused) {
+                EnumSnapshotType type = stackIn.getItem() instanceof ItemSnapshot snapshotItem
+                    ? snapshotItem.getSnapshotType() : EnumSnapshotType.BLUEPRINT;
+                if (tooLargeToScan(box.size(), type)) {
+                    refuseScanOfLargeBox(box.size(), type);
                 } else {
-                    snapshotType = EnumSnapshotType.BLUEPRINT;
+                    snapshotType = type;
+                    scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
+                    scanProgress = 0;
+                    scanning = true;
+                    scanInitialized = false;
+                    dropCountdown = 0;
                 }
-                scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
-                scanProgress = 0;
-                scanning = true;
-                scanInitialized = false;
-                dropCountdown = 0;
             }
         } else {
             scanning = false;
+            scanRefused = false;
             if (dropCountdown == 0) {
                 scanProgress = 0;
                 scanTotal = 0;
@@ -227,8 +344,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 if (snapshotType == EnumSnapshotType.BLUEPRINT) {
                     scanEntities();
                 }
-                finishScanning();
-                dropCountdown = DROP_TICKS;
+                if (finishScanning()) {
+                    dropCountdown = DROP_TICKS;
+                } else {
+                    // Nothing was stored, so there is no finished scan for the bar to drain.
+                    scanProgress = 0;
+                    scanTotal = 0;
+                }
             }
         }
 
@@ -415,10 +537,19 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             .forEach(blueprintScannedEntities::add);
     }
 
-    private void finishScanning() {
+    /** Drop what a scan collected: a finished one is stored (or refused) and the next starts clean. */
+    private void resetScanBuffers() {
+        templateScannedBlocks = null;
+        blueprintScannedData = null;
+        blueprintScannedPalette.clear();
+        blueprintScannedEntities.clear();
+    }
+
+    /** @return whether the scan was stored (false when its snapshot would not read back: see {@link #readsBack}) */
+    private boolean finishScanning() {
         BlockState thisState = level.getBlockState(worldPosition);
         if (thisState.getBlock() != BCBuildersBlocks.ARCHITECT.get()) {
-            return;
+            return true;
         }
 
         Direction facing = thisState.getValue(HorizontalDirectionalBlock.FACING);
@@ -435,7 +566,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             ((Blueprint) snapshot).data = blueprintScannedData;
             ((Blueprint) snapshot).entities.addAll(blueprintScannedEntities);
         }
-        snapshot.computeKey();
+        // The box was within the cell limit when the scan began, but a blueprint's palette and entities come on top of
+        // its cells, and only now are they known. A snapshot the store could not read back is not stored: it would be
+        // skipped as corrupt at the next start, and its preview would fail to decode on the client.
+        if (!readsBack(snapshot, LibraryUploadBuffer.Limits.readCeiling())) {
+            refuseFinishedScan(box.size());
+            return false;
+        }
         GlobalSavedDataSnapshots.get(level).addSnapshot(snapshot);
 
         // Consume one input item
@@ -458,9 +595,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
         // Reset scan state (scanProgress / scanTotal are kept intact so tick()'s drop animation
         // can drain them smoothly over DROP_TICKS ticks before zeroing).
-        templateScannedBlocks = null;
-        blueprintScannedData = null;
-        blueprintScannedEntities.clear();
+        resetScanBuffers();
         if (getOwner() != null) {
             AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT);
             String paperCriterion = (snapshotType == EnumSnapshotType.BLUEPRINT)
@@ -476,6 +611,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         if (level != null && !level.isClientSide()) {
             markForRenderUpdate();
         }
+        return true;
     }
 
     // NBT
@@ -498,6 +634,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         }
         output.putBoolean("markerBox", markerBox);
         output.putBoolean("scanning", scanning);
+        output.putBoolean("scanRefused", scanRefused);
         output.putInt("snapshotType", snapshotType.ordinal());
         output.putBoolean("isValid", isValid);
         output.putString("name", name);
@@ -523,6 +660,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         }
         markerBox = input.getBooleanOr("markerBox", false);
         scanning = input.getBooleanOr("scanning", false);
+        scanRefused = input.getBooleanOr("scanRefused", false);
         int stOrd = input.getIntOr("snapshotType", 0);
         EnumSnapshotType[] stValues = EnumSnapshotType.values();
         snapshotType = (stOrd >= 0 && stOrd < stValues.length) ? stValues[stOrd] : EnumSnapshotType.BLUEPRINT;
@@ -534,8 +672,14 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         // so re-derive it here; otherwise it stays 0 and the progress bar reads empty for the whole
         // re-scan (most visible on the large volumes that are slow enough to be reloaded mid-scan).
         if (scanning && box.isInitialized()) {
-            scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
-            scanProgress = 0;
+            if (tooLargeToScan(box.size(), snapshotType)) {
+                // A scan begun before the cap existed: not resumed, so the next tick refuses it (and says why)
+                // like any other.
+                scanning = false;
+            } else {
+                scanTotal = box.size().getX() * box.size().getY() * box.size().getZ();
+                scanProgress = 0;
+            }
         }
         input.read("items", CompoundTag.CODEC).ifPresent(itemManager::deserializeNBT);
         // Migrate the transient pre-fix plain-ItemStack format: earlier in the 26.1 port the two
@@ -597,6 +741,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
 
     public boolean isScanning() {
         return scanning;
+    }
+
+    /** Whether the scan of the waiting input was refused: its box is more cells than a snapshot can be read back at
+     *  (see {@link #maxScanCells(EnumSnapshotType)}), or the finished scan was (see {@link #readsBack}). It stays
+     *  refused until the input is taken out. */
+    public boolean isScanRefused() {
+        return scanRefused;
     }
 
     public int getScanProgress() {

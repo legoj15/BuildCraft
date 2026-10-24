@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
@@ -54,6 +55,10 @@ public class GlobalSavedDataSnapshots {
     /** A temp file younger than this is never swept: a save writes one for seconds, and a second game instance
      *  sharing the directory (two servers, a server and a client over one game dir) must not lose its live one. */
     static final Duration ORPHANED_TEMP_MIN_AGE = Duration.ofMinutes(5);
+    /** The most passes a re-key makes over a snapshot to find a form that loads back unchanged (see
+     *  {@link #settledCopy}) before it leaves the file under the key it holds. A migration that is idempotent needs
+     *  one; the rest of the budget is for one that takes a few loads to finish. */
+    static final int MAX_REKEY_PASSES = 4;
     /** Bytes of the header hash kept in a named snapshot's file name; enough to tell one build's names apart. */
     private static final int HEADER_DIGEST_BYTES = 8;
     /** How often the background scan looks for files added or removed outside the game. */
@@ -235,7 +240,9 @@ public class GlobalSavedDataSnapshots {
 
     /** The snapshot in {@code snapshotFile} if it answers {@code key}; a content-only lookup gets it without its
      *  header, so anything derived from it (a Replacer copy) carries no stale name. What the file held is recorded in
-     *  the index either way (unless it could not be read at all), so the next lookup that it cannot answer skips it. */
+     *  the index either way, so the next lookup that it cannot answer skips it; not when it could not be read at all,
+     *  nor when the file has gone since it was read (a re-key on the scan thread moved it), since that record would
+     *  list a key nothing holds. */
     @Nullable
     private Pair<Snapshot, File> matching(File snapshotFile, Snapshot.Key key, boolean exact) {
         // Stat before reading: a file replaced between the two is recorded with a stamp it no longer has, so the next
@@ -243,7 +250,10 @@ public class GlobalSavedDataSnapshots {
         FileStamp stamp = FileStamp.of(snapshotFile);
         FileRead read = readSnapshotFile(snapshotFile);
         if (read.unreadable() == null) {
-            index.put(snapshotFile.getName(), listedKey(snapshotFile, read.snapshot(), false), stamp.modified(), stamp.length());
+            // Not if the file has gone since it was read (the scan thread's re-key moved it): a record made now would
+            // outlive it and list a key nothing holds. What was read still answers this lookup.
+            index.putIfPresent(snapshotFile, listedKey(snapshotFile, read.snapshot(), false), stamp.modified(),
+                stamp.length());
         }
         Snapshot snapshot = read.snapshot();
         if (snapshot == null || !answers(snapshot.key, key, exact)) return null;
@@ -265,6 +275,12 @@ public class GlobalSavedDataSnapshots {
         String name = snapshotFile.getName();
         try {
             bytes = Files.readAllBytes(snapshotFile.toPath());
+        } catch (NoSuchFileException e) {
+            // Gone since it was listed (the scan thread moved it to its re-keyed name, or it was deleted): nothing to
+            // warn about and nothing to retry, but not a corrupt file either, so it is not concluded to hold nothing.
+            LOGGER.debug("The snapshot {} is gone", snapshotFile);
+            unreadableWarned.remove(name);
+            return new FileRead(null, e);
         } catch (IOException e) {
             // Retried on every scan (about every 5 s while the library is open) and every lookup, so a file another
             // program keeps open warns once, not each time; it warns again only after it has once been read.
@@ -316,6 +332,10 @@ public class GlobalSavedDataSnapshots {
      * value) this game lacks loads with a default in its place, and its content hashes differently for that reason
      * alone, so it is left as it was rather than overwritten with the poorer copy.
      * <p>
+     * And only to a key it keeps: the copy to store is first written and read back as the store would (see
+     * {@link #settledCopy}), so a migration that needs several loads is finished in memory, and one that never settles
+     * (a migration that is not idempotent) leaves the file where it is instead of moving it again at every start.
+     * <p>
      * The name and the rest of the header are kept. A failed write or delete leaves the file as it was, listed under
      * the key it holds: when the old file cannot be deleted (another program holds it open), the copy just written
      * under the new key is removed again, since a second file whose content answers the new key would keep that key
@@ -341,6 +361,20 @@ public class GlobalSavedDataSnapshots {
             snapshot.key = stored;
             return stored;
         }
+
+        // The key has to be one the file keeps. A load-time migration that is not idempotent (reading what it wrote
+        // changes it again) would otherwise move the file at every start, to a key that is never the one the server
+        // computes for it, so the server would refuse the upload every time.
+        Snapshot settled = settledCopy(snapshotFile, snapshot);
+        if (settled == null) {
+            LOGGER.warn("Leaving the snapshot {} under its key {}: reloading what a re-key would store changes it "
+                + "again (after {} passes at most), so the key it moved to would be stale at the next load",
+                snapshotFile.getName(), stored, MAX_REKEY_PASSES);
+            snapshot.key = stored;
+            return stored;
+        }
+        snapshot = settled;
+        current = settled.key;
 
         // A file already holding the new key (the same item downloaded again) is merged into, never rolled back.
         boolean heldAlready = alreadyStored(current);
@@ -370,6 +404,40 @@ public class GlobalSavedDataSnapshots {
         index.remove(snapshotFile.getName());
         invalidate(stored);
         return current;
+    }
+
+    /**
+     * {@code snapshot} (its key just recomputed) in a form a further load leaves alone, which is the form a re-key may
+     * store: it is written and read back as the store would, and when that changes the content, the changed copy is
+     * tried the same way, at most {@link #MAX_REKEY_PASSES} times. A migration that takes several loads to finish
+     * converges here, in memory, rather than one move per start; one that never does is the null this returns.
+     * <p>
+     * Each pass writes the snapshot, reads it back and hashes it, which costs about what the save that follows costs:
+     * measured, roughly 45 ms and 32 MB of transient allocation per million cells for the one pass an idempotent
+     * migration needs (under a second for a blueprint at the cell limit), at a peak of one NBT tree, which is no more
+     * than the save holds. It runs once per re-keyed file, on the scan thread.
+     *
+     * @return the snapshot to store under its own key (this one when its first reload changed nothing), or null when
+     *         no pass settled, or a reload failed, or lost something this game lacks
+     */
+    @Nullable
+    private Snapshot settledCopy(File snapshotFile, Snapshot snapshot) {
+        int maxCells = buildcraft.builders.container.LibraryUploadBuffer.Limits.readCeiling().maxCells();
+        Snapshot candidate = snapshot;
+        for (int pass = 0; pass < MAX_REKEY_PASSES; pass++) {
+            Snapshot reloaded;
+            try {
+                reloaded = Snapshot.readFromNBT(Snapshot.writeToNBT(candidate), maxCells);
+                reloaded.computeKey();
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("Could not reload the snapshot {} to check that its new key holds", snapshotFile, e);
+                return null;
+            }
+            if (!reloaded.readFully()) return null;
+            if (Arrays.equals(reloaded.key.hash, candidate.key.hash)) return candidate;
+            candidate = reloaded;
+        }
+        return null;
     }
 
     /** The index's reader: {@link #listedKey} of what {@code snapshotFile} holds; a file that cannot be read right now
@@ -491,7 +559,9 @@ public class GlobalSavedDataSnapshots {
         Pair<Snapshot, File> found;
         while ((found = readSnapshot(key, true)) != null) {
             File snapshotFile = found.getRight();
-            if (!snapshotFile.delete()) {
+            // A file the scan thread's re-key moved away since the lookup found it is as deleted as it was asked to
+            // be: its entry still goes, and the next lookup does not find it again.
+            if (!snapshotFile.delete() && snapshotFile.exists()) {
                 BCLog.logger.error("Failed to delete the snapshot file: " + snapshotFile);
                 break;
             }

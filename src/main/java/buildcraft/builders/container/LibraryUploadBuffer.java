@@ -76,6 +76,17 @@ public final class LibraryUploadBuffer {
             return (int) Math.min(Integer.MAX_VALUE, maxExpandedBytes / EXPANDED_BYTES_PER_CELL);
         }
 
+        /**
+         * The most cells a blueprint may claim and still leave {@code reserveBytes} of {@link #maxExpandedBytes} for
+         * everything else it holds: a blueprint pays {@link #EXPANDED_BYTES_PER_CELL} bytes a cell, so at
+         * {@link #maxCells()} its cells alone use up the budget and its palette and entities cannot fit. Never more
+         * than {@link #maxCells()}, and zero when the reserve is the whole budget.
+         */
+        public int maxBlueprintCells(long reserveBytes) {
+            long room = maxExpandedBytes - reserveBytes;
+            return room <= 0 ? 0 : (int) Math.min(maxCells(), room / EXPANDED_BYTES_PER_CELL);
+        }
+
         /** The limits for the config as it is now. */
         public static Limits current() {
             // Not loaded before the common config is (a menu cannot open before then; this guards the tools that

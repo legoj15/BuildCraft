@@ -110,6 +110,20 @@ public final class MainSourceSet {
      * comments, and a string that merely names an API (or a text block holding a code sample) is not a use of it.
      */
     public static String codeOnly(String src) {
+        return scrub(src, true);
+    }
+
+    /**
+     * {@code src} with every comment removed and every string, char and text-block literal left exactly as written,
+     * for a guard that needs the <em>content</em> of a literal (a saved key, a registry name) out of live code only:
+     * Stonecutter's inactive branches are comment blocks, and prose may quote the very literal searched for. Unlike
+     * {@link #codeOnly}, line count and character offsets are not kept (a block comment becomes one space).
+     */
+    public static String withoutComments(String src) {
+        return scrub(src, false);
+    }
+
+    private static String scrub(String src, boolean blankLiterals) {
         StringBuilder out = new StringBuilder(src.length());
         int n = src.length();
         int i = 0;
@@ -122,8 +136,13 @@ public final class MainSourceSet {
                 }
             } else if (c == '/' && next == '*') {
                 i += 2;
+                if (!blankLiterals) {
+                    out.append(' ');
+                }
                 while (i < n && !(src.charAt(i) == '*' && i + 1 < n && src.charAt(i + 1) == '/')) {
-                    blank(out, src.charAt(i));
+                    if (blankLiterals) {
+                        blank(out, src.charAt(i));
+                    }
                     i++;
                 }
                 i += 2;
@@ -131,7 +150,7 @@ public final class MainSourceSet {
                 out.append("\"\"\"");
                 i += 3;
                 while (i < n && !src.startsWith("\"\"\"", i)) {
-                    i = blankEscapeAware(out, src, i);
+                    i = blankLiterals ? blankEscapeAware(out, src, i) : copyEscapeAware(out, src, i);
                 }
                 if (i < n) {
                     out.append("\"\"\"");
@@ -141,7 +160,7 @@ public final class MainSourceSet {
                 out.append(c);
                 i++;
                 while (i < n && src.charAt(i) != c && src.charAt(i) != '\n') {
-                    i = blankEscapeAware(out, src, i);
+                    i = blankLiterals ? blankEscapeAware(out, src, i) : copyEscapeAware(out, src, i);
                 }
                 if (i < n && src.charAt(i) == c) {
                     out.append(c);
@@ -162,6 +181,13 @@ public final class MainSourceSet {
             blank(out, src.charAt(i));
         }
         return i;
+    }
+
+    /** Copies the literal character at {@code i} — both characters of an escape pair — and returns the next index. */
+    private static int copyEscapeAware(StringBuilder out, String src, int i) {
+        int end = Math.min(src.length(), i + (src.charAt(i) == '\\' ? 2 : 1));
+        out.append(src, i, end);
+        return end;
     }
 
     private static void blank(StringBuilder out, char c) {

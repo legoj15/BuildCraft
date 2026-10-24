@@ -23,8 +23,8 @@
             {
                 "type": "item_from_block"
             }, {
-                "type": "items_list",
-                "path": ["items", "snapshot", "items"]
+                "type": "item",
+                "path": ["invSnapshot"]
             }, {
                 "type": "items_list",
                 "path": ["items", "resources", "items"]
@@ -107,25 +107,25 @@
                 "type": "item_from_block"
             }, {
                 "type": "items_list",
-                "path": ["items", "paintbrushes", "items"]
+                "path": ["invPaintbrushes", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "inputPaintbrush", "items"]
+                "path": ["invInputPaintbrush", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "inputMapLocation", "items"]
+                "path": ["invInputMapLocation", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "inputResult", "items"]
+                "path": ["invInputResult", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "outputPaintbrush", "items"]
+                "path": ["invOutputPaintbrush", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "outputMapLocation", "items"]
+                "path": ["invOutputMapLocation", "items"]
             }, {
                 "type": "items_list",
-                "path": ["items", "outputResult", "items"]
+                "path": ["invOutputResult", "items"]
             }
         ]
     },
@@ -151,9 +151,6 @@
                 "type": "item_from_block"
             }, {
                 "type": "items_list",
-                "path": ["items", "blueprint", "items"]
-            }, {
-                "type": "items_list",
                 "path": ["items", "materials", "items"]
             }, {
                 "type": "items_list",
@@ -169,8 +166,9 @@
             {
                 "type": "item_from_block"
             }, {
-                "type": "items_list",
-                "path": ["items", "fuel", "items"]
+                "type": "item",
+                "path": ["fuel"],
+                "countPath": ["fuelCount"]
             }
         ]
     },
@@ -181,9 +179,6 @@
         "requiredExtractors": [
             {
                 "type": "item_from_block"
-            }, {
-                "type": "items_list",
-                "path": ["items", "filter", "items"]
             }, {
                 "type": "items_list",
                 "path": ["items", "main", "items"]

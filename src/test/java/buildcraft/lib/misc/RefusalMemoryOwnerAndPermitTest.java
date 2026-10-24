@@ -47,6 +47,19 @@ public class RefusalMemoryOwnerAndPermitTest {
     }
 
     @Test
+    public void aRobotsRefusalIsAboutBothItsPlayers() {
+        RefusalMemory refusals = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
+        refusals.remember(POS, STONE, 0, ALICE, BOB, null);
+        Assertions.assertTrue(refusals.isRefused(POS, STONE, 1, profile("bc_alice"), profile("bc_bob")),
+                "refused to Alice acting with Bob's leave: the pair is compared by id, not by profile object");
+        Assertions.assertFalse(refusals.isRefused(POS, STONE, 2, ALICE, ALICE),
+                "re-homed onto Alice's own station, the robot asks afresh: the pair's refusal says nothing about her alone");
+        refusals.remember(POS, STONE, 3, ALICE, ALICE, null);
+        Assertions.assertTrue(refusals.isRefused(POS, STONE, 4, ALICE),
+                "a robot whose two players are one has the key a one-owner machine has");
+    }
+
+    @Test
     public void ownersThatActAsBuildCraftShareOneKey() {
         RefusalMemory refusals = new RefusalMemory(RefusalMemory.ROBOT_SEARCH);
         refusals.remember(POS, STONE, 0, null);

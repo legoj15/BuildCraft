@@ -18,9 +18,10 @@
 - {1.21.10/1.21.11/26.1/26.1.1/26.1.2/26.2} Fixed Fragile Fluid Shards showing the wrong color for colored fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
 - The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist since that is easier to translate.
 - In the off chance where you'd have more than 24 robot boards, the programming table can now advance to the next page.
-- Blueprint loading (including Electronic Library uploads) now fully validates the data: a bad blueprint can no longer crash the Builder, place blocks or entities it didn't pay for, or smuggle in loot tables.
-- Blueprints stored on a server can now only be downloaded by a player holding an item that references them.
+- Blueprints now charge for the contents of everything they rebuild (including copper chests, shelves, crafters, lecterns, jukeboxes, decorated pots, and armor stand gear on 1.21.1), and build empty whatever they can't charge for; spawners keep their mob but trial spawners and vaults are rebuilt fresh. Bad blueprint data (including Electronic Library uploads) can no longer crash the Builder, smuggle in loot tables, or place blocks the Architect would never scan.
+- Blueprints stored on a server can now only be downloaded by a player holding an item that references them; a preview the server refused (such as one shown in a storage terminal) tries again instead of staying blank.
+- The Electronic Library's upload size setting now tops out at 128 MB, the most a server can read back (higher settings are lowered to 128).
 - A malicious or hijacked server can no longer freeze or crash clients through oversized values in BuildCraft's network packets.
-- Robots can now only be deployed onto a docking station by that station's owner, so a robot can no longer act (and be logged) as a player who never placed it.
-- Robot pathfinding and kinesis wire networks are no longer performance hogs, and the Flood Gate now fills from a bounded search around itself instead of scanning an entire lake.
+- Robots now remember who deployed them: anyone can still deploy a robot on a free docking station, but it only works where both its deployer and the station's owner are allowed to, and protection mods and logs see it as the player who deployed it.
+- Robot pathfinding and pipe wires are no longer performance hogs, pipe wires now show their state to players who walk into range or rejoin, and the Flood Gate now fills from a bounded search around itself instead of scanning an entire lake.
 - The Filler Planner menu now closes when its box is removed or you walk away, and creative middle-click clones of pipes, filtered buffers and the Zone Planner no longer carry the block's saved data.

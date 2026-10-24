@@ -15,6 +15,7 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -36,6 +37,7 @@ import buildcraft.transport.net.PipeItemMessageQueue;
 import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.StripesRegistry;
 import buildcraft.transport.stripes.*;
+import buildcraft.transport.wire.SavedDataWireSystems;
 
 /**
  * BuildCraft Transport initializer. No longer a separate @Mod — called from BCCore.
@@ -105,6 +107,14 @@ public class BCTransport {
                         buildcraft.transport.wire.SavedDataWireSystems.get(serverLevel).tick();
                     }
                 });
+
+        // A player whose client receives a wire-holding chunk gets every wire system they can see on the next
+        // wire tick (1.12.2 BCTransportEventDist.onChunkWatch). Sent, not Watch: Watch fires when the chunk is
+        // only queued, so a payload sent then could reach the client before the chunk and its power update
+        // would find no pipe to land on. Fires on the server thread once per chunk delivered — thousands at
+        // login — so this stays a cached data lookup plus a map probe.
+        NeoForge.EVENT_BUS.addListener(ChunkWatchEvent.Sent.class,
+                event -> SavedDataWireSystems.get(event.getLevel()).onChunkSent(event.getPlayer(), event.getPos()));
 
         LOGGER.info("BuildCraft Transport initialized");
     }

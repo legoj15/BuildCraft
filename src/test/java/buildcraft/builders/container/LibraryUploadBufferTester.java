@@ -17,6 +17,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.ByteArrayTag;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntArrayTag;
 import net.minecraft.nbt.ListTag;
 
 import buildcraft.builders.BCBuildersConfig;
@@ -248,6 +249,47 @@ public class LibraryUploadBufferTester {
         Assertions.assertThrows(IOException.class, () -> new LibraryUploadBuffer(LIMITS).decode(payload));
     }
 
+    @Test
+    public void anUploadIsMeasuredAsTheStoreWillWriteItNotAsItArrived() throws IOException {
+        // The reader takes a blueprint's cells as an int array too (old files), at a quarter of the cost of the list
+        // of IntTags the store writes them back as. An upload that fits its limit only in the cheap form would be
+        // stored as a file the store's own read (the same limit or less) refuses after a restart.
+        Blueprint blueprint = blueprint(16, i -> 0);
+        CompoundTag cheap = Snapshot.writeToNBT(blueprint);
+        cheap.put("data", new IntArrayTag(new int[blueprint.data.length]));
+        byte[] cheapPayload = squish(cheap);
+        byte[] storedPayload = squish(blueprint);
+        long arrived = accountedBytes(cheapPayload);
+        long stored = accountedBytes(storedPayload);
+        Assertions.assertTrue(stored > arrived, "the stored form costs more: " + stored + " for " + arrived);
+
+        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(cheapPayload, arrived, Integer.MAX_VALUE),
+            "fits as it arrived, not as it would be stored");
+        Assertions.assertDoesNotThrow(() -> LibraryUploadBuffer.decode(cheapPayload, stored, Integer.MAX_VALUE),
+            "the same blueprint with room for its stored form");
+        Assertions.assertDoesNotThrow(() -> LibraryUploadBuffer.decode(storedPayload, stored, Integer.MAX_VALUE),
+            "and an upload in the stored form is accepted right up to the limit");
+    }
+
+    @Test
+    public void aPaletteThatReadsBackLargerIsMeasuredAsStoredToo() throws IOException {
+        // A palette entry naming only its schematic type reads with every field at its default, and is written back
+        // with all of them: a few dozen bytes uploaded, several times that stored.
+        Blueprint blueprint = blueprint(1, i -> 0);
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint);
+        ListTag palette = (ListTag) nbt.get("palette");
+        CompoundTag bare = new CompoundTag();
+        bare.putString("name", "buildcraftunofficial:default");
+        for (int i = 0; i < 2000; i++) palette.add(bare.copy());
+        nbt.put("palette", palette);
+        byte[] payload = squish(nbt);
+        long arrived = accountedBytes(payload);
+        Snapshot read = LibraryUploadBuffer.decode(payload, Long.MAX_VALUE, Integer.MAX_VALUE);
+        Assertions.assertTrue(accountedBytes(squish(read)) > arrived, "the stored form costs more");
+
+        Assertions.assertThrows(IOException.class, () -> LibraryUploadBuffer.decode(payload, arrived, Integer.MAX_VALUE));
+    }
+
     // ── Requests, drops and releases: what the menu tells the tile ──────────
 
     @Test
@@ -417,19 +459,6 @@ public class LibraryUploadBufferTester {
     }
 
     @Test
-    public void aLargerScanFitsOnceTheCapIsRaisedForIt() {
-        // The earlier review's case: a 256-cube blueprint is 16,777,216 cells at 16 accounted bytes each. A marker
-        // reaches markerMaxDistance blocks past itself, so the largest box at the config maximum is 257 on a side.
-        long cells = 257L * 257 * 257;
-        long mb = (cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL >> 20) + 64; // the cells, and room for the rest
-        Assertions.assertTrue(mb <= BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MAX, "the option can be set that high: " + mb);
-        LibraryUploadBuffer.Limits limits = LibraryUploadBuffer.Limits.ofMegabytes((int) mb);
-        Assertions.assertTrue(limits.maxCells() >= cells);
-        Assertions.assertTrue(limits.maxExpandedBytes() >= cells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL);
-        Assertions.assertTrue(limits.maxUploadBytes() >= cells * UPLOAD_BYTES_PER_CELL);
-    }
-
-    @Test
     public void everyCapTheOptionAllowsMakesLimitsThatFitTheirTypes() {
         for (int mb : new int[] {BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MIN,
             BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT, BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MAX}) {
@@ -470,8 +499,12 @@ public class LibraryUploadBufferTester {
     }
 
     private static byte[] squish(Snapshot snapshot) throws IOException {
+        return squish(Snapshot.writeToNBT(snapshot));
+    }
+
+    private static byte[] squish(CompoundTag nbt) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), out);
+        NbtSquisher.squishVanilla(nbt, out);
         return out.toByteArray();
     }
 

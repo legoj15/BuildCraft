@@ -153,8 +153,8 @@ public class RobotPumpProtectionTester {
     }
 
     /**
-     * A refusal is about who asked as well as where: the pump AI asks as the home station's owner, so when the robot
-     * is relinked to a station someone else owns, a block the old owner was refused is a candidate again (the new
+     * A refusal is about who asked as well as where: the pump AI asks as the home station's owner (this robot records
+     * no deployer), so when the robot is relinked to a station someone else owns, a block the old owner was refused is a candidate again (the new
      * owner may well be allowed there). Only an unchanged cell asked by the same owner stays skipped.
      */
     public static void boardAsksAgainForANewOwner(GameTestHelper helper) {

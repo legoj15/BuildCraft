@@ -32,11 +32,14 @@ import buildcraft.builders.snapshot.Snapshot;
  * every chunk ({@link #beginRequest}): a chunk of any other request, however late it lands, is not part of the
  * answer, and a stream that never sends its final chunk cannot spill into the next one.
  * What the bytes unpack to is bounded too, by {@link #decode}: the transfer is compressed, so its size on the wire
- * says little about its size in memory.
+ * says little about its size in memory. That bound holds both for the form the snapshot arrived in and for the form
+ * the library writes it in, which can cost the reader more.
  * <p>
  * One config option, {@link BCBuildersConfig#libraryMaxUploadMb}, sizes all of it ({@link Limits#current}): the bytes
  * on the wire, what they unpack to, and the cells a snapshot of any type may claim. Its default is a small multiple of
- * the largest scan the default config can make; a server that allows larger scans raises it.
+ * the largest scan the default config can make; a server that allows larger scans raises it, up to
+ * {@link BCBuildersConfig#LIBRARY_MAX_UPLOAD_MB_MAX}, which is {@link Limits#readCeiling()}: no upload is accepted
+ * that the game would not read back.
  * <p>
  * Not thread-safe; a menu's messages arrive on the server thread one at a time.
  */
@@ -84,24 +87,22 @@ public final class LibraryUploadBuffer {
 
         /**
          * The read-side ceiling for snapshot bytes this game expands from a wire payload or a store file — NOT the
-         * local upload config. What a decode may unpack is governed by the SENDER's limits, and their config is
-         * unknowable: a server configured above a client's setting must not have its legitimate previews fail the
-         * client's decode (which is a disconnect), and the server's own store files must not turn unreadable
-         * because the operator later lowered the upload cap. A generous constant multiple of the default upload
-         * ceiling covers both while still bounding a hostile compressed payload to this many bytes instead of the
-         * gigabytes unlimited expansion would grant. The upload path keeps its player-config limits.
+         * local upload config, which may be lower. It is the config's own maximum
+         * ({@link BCBuildersConfig#LIBRARY_MAX_UPLOAD_MB_MAX}), so an upload accepted under any setting an operator
+         * can make is readable here: a stored file is not skipped as corrupt after a restart, and a preview does not
+         * fail the client's decode (which is a disconnect). Reads must not follow the local setting, either: the
+         * sender's config is unknowable, and the operator lowering the cap later must not turn the files already
+         * stored unreadable. An upload above the ceiling is refused on the way in (the option cannot be set past it),
+         * and the ceiling bounds a hostile compressed payload to this many bytes instead of the gigabytes unlimited
+         * expansion would grant. The upload path keeps its player-config limits.
          */
         public static Limits readCeiling() {
             return ofMegabytes(READ_CEILING_MB);
         }
     }
 
-    /** The multiple of the default upload ceiling that {@link Limits#readCeiling()} grants reads (see there for why
-     *  it is a constant rather than the config). */
-    public static final int READ_CEILING_MULTIPLE = 4;
-
-    /** {@link Limits#readCeiling()}'s size, in MB. */
-    static final int READ_CEILING_MB = READ_CEILING_MULTIPLE * BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_DEFAULT;
+    /** {@link Limits#readCeiling()}'s size, in MB: the most the upload option allows, so the two cannot drift. */
+    static final int READ_CEILING_MB = BCBuildersConfig.LIBRARY_MAX_UPLOAD_MB_MAX;
 
     private final Limits limits;
     private final List<byte[]> chunks = new ArrayList<>();
@@ -221,8 +222,8 @@ public final class LibraryUploadBuffer {
     }
 
     /**
-     * @throws IOException if the data is not a snapshot, would unpack past {@code maxExpandedBytes}, or claims a size
-     *                     of more than {@code maxCells} cells
+     * @throws IOException if the data is not a snapshot, would unpack past {@code maxExpandedBytes} as it arrived or
+     *                     as the library would store it, or claims a size of more than {@code maxCells} cells
      */
     static Snapshot decode(byte[] assembled, long maxExpandedBytes, int maxCells) throws IOException {
         Snapshot snapshot;
@@ -234,6 +235,11 @@ public final class LibraryUploadBuffer {
             throw new IOException("Not a readable snapshot: " + e, e);
         }
         snapshot.computeKey();
+        // The store and a preview write the snapshot in its own form, which the reader can charge more for than the
+        // form it arrived in: a blueprint's cells read from an int array (four bytes a cell) but are written as a
+        // list of IntTags (sixteen), and a palette entry naming only its type is written with every field. Measured
+        // as written, by the reader's own count, so an accepted upload is one the store and the preview read back.
+        NbtSquisher.requireExpandsWithin(Snapshot.writeToNBT(snapshot), maxExpandedBytes);
         return snapshot;
     }
 }

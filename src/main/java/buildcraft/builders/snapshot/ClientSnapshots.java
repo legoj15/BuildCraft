@@ -18,16 +18,24 @@ public enum ClientSnapshots {
     private static final Logger LOGGER = LogManager.getLogger("BCClientSnapshots");
 
     private final List<Snapshot> snapshots = new ArrayList<>();
-    private final List<Snapshot.Key> pending = new ArrayList<>();
+    private final SnapshotRequestTracker requests = new SnapshotRequestTracker(System::nanoTime,
+            SnapshotRequestTracker.DEFAULT_TIMEOUT_NANOS, SnapshotRequestTracker.DEFAULT_MAX_TIMEOUT_NANOS);
 
     public Snapshot getSnapshot(Snapshot.Key key) {
         Snapshot found = snapshots.stream().filter(snapshot -> snapshot.key.equals(key)).findFirst().orElse(null);
-        if (found == null && !pending.contains(key)) {
-            pending.add(key);
+        SnapshotRequestTracker.Ask ask = found == null ? requests.ask(key) : SnapshotRequestTracker.Ask.WAIT;
+        if (ask != SnapshotRequestTracker.Ask.WAIT) {
             String hashHex = key.hash == null ? "null"
                     : buildcraft.lib.misc.HashUtil.convertHashToString(key.hash);
-            LOGGER.info("Sending SnapshotRequest to server: hash={} hasHeader={}",
-                    hashHex, key.header != null);
+            // INFO once per hash; the timed resends of an unanswered one (a hash the server refuses is retried for
+            // as long as its preview is drawn) are DEBUG, so a hovered tooltip does not fill the log.
+            if (ask == SnapshotRequestTracker.Ask.FIRST) {
+                LOGGER.info("Sending SnapshotRequest to server: hash={} hasHeader={}",
+                        hashHex, key.header != null);
+            } else {
+                LOGGER.debug("Resending unanswered SnapshotRequest to server: hash={} hasHeader={}",
+                        hashHex, key.header != null);
+            }
             //? if >=1.21.10 {
             net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new SnapshotRequestPayload(key));
             //?} else {
@@ -42,7 +50,7 @@ public enum ClientSnapshots {
                 : buildcraft.lib.misc.HashUtil.convertHashToString(snapshot.key.hash);
         LOGGER.info("Received snapshot from server: class={} hash={} size={} pendingRemoved={}",
                 snapshot.getClass().getSimpleName(), hashHex, snapshot.size,
-                pending.remove(snapshot.key));
+                requests.received(snapshot.key));
         // Replace existing if updated
         snapshots.removeIf(s -> s.key.equals(snapshot.key));
         snapshots.add(snapshot);

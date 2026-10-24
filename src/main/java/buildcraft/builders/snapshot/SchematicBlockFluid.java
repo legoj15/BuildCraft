@@ -155,6 +155,14 @@ public class SchematicBlockFluid implements ISchematicBlock {
         return !readWithDefaults;
     }
 
+    /** Whether an Architect scan could have produced this schematic: {@link #predicate} types only a state with a
+     *  fluid as one. A fluid entry naming a dry block (a diamond block) charges no fluid and places that block free,
+     *  so {@link Blueprint#deserializeNBT} reduces it to air. One that read back as air (its mod is gone) passes, as
+     *  in {@link SchematicBlockDefault#capturableByScan()}: it places nothing. */
+    boolean capturableByScan() {
+        return blockState != null && (blockState.isAir() || !blockState.getFluidState().isEmpty());
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

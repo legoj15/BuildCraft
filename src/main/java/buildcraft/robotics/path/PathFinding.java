@@ -31,9 +31,6 @@ import net.minecraft.core.BlockPos;
  *     on EVERY expansion — O(open) work per step, which is what made a wide search collapse the server
  *     tick; the queue selects the same minimum in O(log n) with no copying, in the same order, so
  *     results are unchanged.</li>
- * <li>{@link #iterateForNanos(long)} drives the same expansion loop to a wall-clock deadline rather
- *     than a fixed expansion count, so a caller can bound what one tick spends however expensive the
- *     individual expansions turn out to be.</li>
  * </ul>
  *
  * <p>Cost note: both the movement cost {@code g} and the heuristic {@code h} are squared Euclidean
@@ -126,23 +123,6 @@ public class PathFinding implements IIterableAlgorithm {
                 expansions++;
             }
         }
-    }
-
-    /** Advances until the finder is done or {@code budgetNanos} of wall clock has passed — the same expansion
-     *  loop as {@link #iterate(int)}, budgeted by time rather than by a fixed expansion count, so one tick's
-     *  share of the search is bounded however expensive the individual expansions turn out to be (an expansion
-     *  costs as much as its 27 traversability asks). Always makes at least one step when the finder is not done,
-     *  and never overshoots the budget by more than one step. The clock is read between steps, so the result is
-     *  identical to any other way of driving the same finder.
-     *
-     * @param budgetNanos the wall-clock slice to spend; always positive for meaningful progress. */
-    public void iterateForNanos(long budgetNanos) {
-        long deadline = System.nanoTime() + budgetNanos;
-        // do-while: one step ALWAYS runs (a budget below the clock's read-to-read spacing must not zero out a
-        // caller's round), further steps only while the deadline has not passed.
-        do {
-            iterate(1);
-        } while (nextIteration != null && System.nanoTime() < deadline);
     }
 
     /** Caps the node expansions this finder may run: once spent, it ends done with no path. Unbounded by default. */

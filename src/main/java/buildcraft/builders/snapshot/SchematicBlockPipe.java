@@ -128,13 +128,14 @@ public class SchematicBlockPipe extends SchematicBlockDefault {
     @Override
     public SchematicBlockDefault getRotated(Rotation rotation) {
         SchematicBlockDefault rotated = super.getRotated(rotation);
-        // super shares this.tileNbt by reference. Pipes additionally need their face-indexed
+        // super hands the rotated copy its own copy of tileNbt. Pipes additionally need their face-indexed
         // pluggables rotated, so a facade captured on (say) NORTH lands on the face matching the
         // rotated blueprint instead of staying NORTH — where it would block the wrong pipe
         // connection and cut off flow. Pipe connections themselves recompute on placement, so only
-        // the pluggable mounting faces need remapping here.
-        if (rotated instanceof SchematicBlockPipe pipe && tileNbt != null) {
-            pipe.tileNbt = rotatePluggableFaces(tileNbt, rotation);
+        // the pluggable mounting faces need remapping here. Rotating the copy (never this.tileNbt) keeps
+        // the unrotated schematic's data out of the rotated one's reach, rotation NONE included.
+        if (rotated instanceof SchematicBlockPipe pipe && pipe.tileNbt != null) {
+            pipe.tileNbt = rotatePluggableFaces(pipe.tileNbt, rotation);
         }
         return rotated;
     }

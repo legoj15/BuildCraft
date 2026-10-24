@@ -69,25 +69,32 @@ public class AIRobotUseToolOnBlock extends AIRobot {
         if (useCycles > 40) {
             if (useToBlock != null && robot.level() instanceof ServerLevel serverLevel) {
                 ItemStack held = robot.getHeldItem();
-                boolean used;
-                ItemStack inHand;
-                // As the home station's owner (the generic player when there is none), so a claim mod judges
-                // the owner and an advancement the tool grants reaches them.
-                try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
-                    FakePlayer player = lease.player();
-                    player.setPos(robot.position());
-                    // The tool is in the player's main hand for the use, as it would be for a real player: a claim
-                    // or tool listener reads the hand, not the stack the context carries.
-                    RobotProtection.holdInMainHand(player, held);
-                    // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
-                    BlockHitResult hit =
-                            new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
-                    // The item half of a player's right-click: the right-click-block event first (a claim mod
-                    // refuses through it on every node), then the item's useOn - the block's own use and
-                    // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock).
-                    used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
-                    // Read before the lease closes and takes the hand's contents away.
-                    inHand = player.getMainHandItem();
+                boolean used = false;
+                ItemStack inHand = held;
+                // As the robot's deployer (see RobotProtection), so a claim mod judges the deployer through the
+                // use's own right-click event and an advancement the tool grants reaches them. That event says
+                // nothing for the home station's owner, who is asked first. There is no probe for a till's own asks
+                // (the right-click, the tool modification) that does not till, and posting a real right-click as
+                // the owner would run every other mod's click handler; a till replaces the block it is used on, so
+                // the owner is asked the break question, the one the farmer board already asks every robot about
+                // the block it settles on (and the stripes path asks about the block a hoe tills there).
+                if (RobotProtection.stationOwnerCanBreak(robot, serverLevel, useToBlock)) {
+                    try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
+                        FakePlayer player = lease.player();
+                        player.setPos(robot.position());
+                        // The tool is in the player's main hand for the use, as it would be for a real player: a claim
+                        // or tool listener reads the hand, not the stack the context carries.
+                        RobotProtection.holdInMainHand(player, held);
+                        // A straight-up hit on the block's center, the modern form of 7.1.x's ForgeDirection.UP.
+                        BlockHitResult hit =
+                                new BlockHitResult(Vec3.atCenterOf(useToBlock), Direction.UP, useToBlock, false);
+                        // The item half of a player's right-click: the right-click-block event first (a claim mod
+                        // refuses through it on every node), then the item's useOn - the block's own use and
+                        // Item#onItemUseFirst are not run (see BlockUtil#useItemOnBlock).
+                        used = BlockUtil.useItemOnBlock(serverLevel, player, InteractionHand.MAIN_HAND, held, hit);
+                        // Read before the lease closes and takes the hand's contents away.
+                        inHand = player.getMainHandItem();
+                    }
                 }
                 if (used) {
                     // The modern item damages itself inside useOn (a hoe's till does), so there is no

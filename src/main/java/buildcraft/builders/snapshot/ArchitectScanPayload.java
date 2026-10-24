@@ -7,6 +7,7 @@
 package buildcraft.builders.snapshot;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
@@ -28,9 +29,11 @@ public record ArchitectScanPayload(List<BlockPos> positions) implements CustomPa
             new CustomPacketPayload.Type<>(Identifier.parse("buildcraftunofficial:architect_scan"));
 
     /** The most positions a legitimate batch holds: the Architect Table scans at most one snapshot type's
-     *  {@link EnumSnapshotType#maxPerTick} blocks a tick (a template's 900 is the larger), and drains them into one
-     *  batch. Clamped before the list is sized so a small packet cannot name a huge allocation. */
-    public static final int MAX_POSITIONS = EnumSnapshotType.TEMPLATE.maxPerTick;
+     *  {@link EnumSnapshotType#maxPerTick} blocks a tick and drains them into one batch, so the bound is the largest
+     *  rate over every type (derived, so raising one type's rate keeps its batches valid). Checked before the list is
+     *  sized so a small packet cannot name a huge allocation; a longer batch is refused whole. */
+    public static final int MAX_POSITIONS =
+            Arrays.stream(EnumSnapshotType.values()).mapToInt(type -> type.maxPerTick).max().orElse(0);
 
     public static final StreamCodec<FriendlyByteBuf, ArchitectScanPayload> STREAM_CODEC = StreamCodec.of(
             (buf, payload) -> {
@@ -40,7 +43,7 @@ public record ArchitectScanPayload(List<BlockPos> positions) implements CustomPa
                 }
             },
             buf -> {
-                int count = NetCodecSanity.clampNonNegative(buf.readVarInt(), MAX_POSITIONS);
+                int count = NetCodecSanity.checkedCount(buf.readVarInt(), MAX_POSITIONS, "Architect scan position");
                 List<BlockPos> list = new ArrayList<>(count);
                 for (int i = 0; i < count; i++) {
                     list.add(buf.readBlockPos());

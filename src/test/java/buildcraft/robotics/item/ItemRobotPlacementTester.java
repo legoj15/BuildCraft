@@ -41,6 +41,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.RobotManager;
 
+import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.robotics.BCRoboticsEntities;
@@ -245,6 +246,8 @@ public class ItemRobotPlacementTester {
             helper.assertTrue(robot.getBoard() != null
                             && BoardRobotPickerNBT.ID.equals(robot.getBoard().getNBTHandler().getID()),
                     "the placed robot must run the stack's board");
+            helper.assertTrue(robot.getDeployer() != null && player.getUUID().equals(GameProfileUtil.getId(robot.getDeployer())),
+                    "the placed robot must record the placing player as its deployer, got " + robot.getDeployer());
             helper.assertTrue(player.getItemInHand(InteractionHand.MAIN_HAND).getCount() == 1,
                     "a survival placement must consume exactly one robot, leaving "
                             + player.getItemInHand(InteractionHand.MAIN_HAND).getCount() + " of 2");

@@ -45,7 +45,13 @@ import buildcraft.robotics.ai.AIRobotStripesHandler;
  *  them the board gives the item back: it goes into the robot's cargo and {@link AIRobotDisposeItems} unloads it at
  *  a station or, with none that will take it, drops it. The item is then refused by the fetch filter for the rest of
  *  the session, so a supply chest that took it back does not simply hand it over again. Neither the count nor the
- *  refused items are saved: a reloaded board spends at most one more round of failures to learn it again. */
+ *  refused items are saved: a reloaded board spends at most one more round of failures to learn it again.
+ *
+ *  <p><b>A use a protection mod refused</b> ({@link AIRobotStripesHandler#refused()}, for the robot's deployer or
+ *  its home station's owner) is not a failed use: it says nothing about the item, and counting it would give a good
+ *  item up inside a claim. The cell is remembered in a {@link WorkRefusals}, as the farmer and planter remember
+ *  theirs, so the search leaves it alone while it stays refused, and {@link WorkRefusals#GIVE_UP_AFTER} refusals
+ *  in a row send the robot to sleep for a while. Transient as well. */
 public class BoardRobotStripes extends RedstoneBoardRobot {
 
     /** Failed uses in a row after which the held item is given up on: ten random empty cells, each a flight and a
@@ -60,6 +66,10 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     /** One-item copies of the stacks given up on this session; the fetch filter never equips a match again. */
     private final List<ItemStack> refused = new ArrayList<>();
+
+    /** Cells a protection mod refused this robot, skipped by the search, and the run of refusals that sends it to
+     *  sleep; the farmer's and planter's memory (see the class doc). */
+    private final WorkRefusals refusals = new WorkRefusals(robot);
 
     public BoardRobotStripes(IRobotAccess iRobot) {
         super(iRobot);
@@ -90,7 +100,8 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
         } else {
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, pos ->
                     robot.level().isEmptyBlock(pos)
-                            && !BlockClaims.isClaimed(robot.getRegistry(), pos)));
+                            && !BlockClaims.isClaimed(robot.getRegistry(), pos)
+                            && !refusals.isRefused(robot.level(), pos)));
         }
     }
 
@@ -109,10 +120,18 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
             } else {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
-        } else if (ai instanceof AIRobotStripesHandler) {
+        } else if (ai instanceof AIRobotStripesHandler stripesAI) {
+            BlockPos used = blockFound.job();
             releaseBlockFound();
-            if (ai.success()) {
+            if (stripesAI.success()) {
                 failedUses = 0;
+                refusals.succeeded();
+            } else if (stripesAI.refused()) {
+                // Not the item's fault: the cell is skipped while it stays refused, and a run of refusals sends the
+                // robot to sleep, leaving the count of unusable uses where it was.
+                if (refusals.failed(robot.level(), used)) {
+                    startDelegateAI(new AIRobotGotoSleep(robot));
+                }
             } else if (++failedUses >= GIVE_UP_AFTER_FAILED_USES) {
                 giveUpHeldItem();
             }

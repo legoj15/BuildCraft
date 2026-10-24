@@ -29,7 +29,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ChunkTrackingView;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
@@ -53,8 +53,7 @@ public final class WireSystem {
     private final transient int cachedHashCode;
     private final transient int cachedWiresHashCode;
     /** Distinct chunks of {@link #elements} — several elements share a pipe's chunk. Cached because
-     *  {@link #isPlayerWatching} runs against it for every player, every tick, in
-     *  {@link SavedDataWireSystems#tick()}. */
+     *  {@link #isPlayerWatching} walks it for player×system pairs in {@link SavedDataWireSystems#tick()}. */
     private final transient Set<ChunkPos> cachedChunkPoses;
 
     public boolean hasElement(WireElement element) {
@@ -188,10 +187,6 @@ public final class WireSystem {
             .reduce(Boolean::logicalOr).orElse(false);
     }
 
-    public List<ChunkPos> getChunkPoses() {
-        return new ArrayList<>(this.cachedChunkPoses);
-    }
-
     public Stream<ChunkPos> getChunkPosesAsStream() {
         return this.cachedChunkPoses.stream();
     }
@@ -202,13 +197,14 @@ public final class WireSystem {
             .collect(Collectors.toUnmodifiableSet());
     }
 
+    /** True when any of this system's chunks is inside THIS player's chunk tracking view — the modern
+     *  equivalent of 1.12.2's per-player {@code PlayerChunkMapEntry.containsPlayer} check. The caller passes
+     *  only players of the system's own level. */
     public boolean isPlayerWatching(ServerPlayer player) {
-        Level level = player.level();
-        if (level instanceof ServerLevel serverLevel) {
-            for (ChunkPos chunkPos : this.cachedChunkPoses) {
-                if (serverLevel.isPositionEntityTicking(chunkPos.getWorldPosition())) {
-                    return true;
-                }
+        ChunkTrackingView view = player.getChunkTrackingView();
+        for (ChunkPos chunkPos : this.cachedChunkPoses) {
+            if (view.contains(chunkPos)) {
+                return true;
             }
         }
         return false;

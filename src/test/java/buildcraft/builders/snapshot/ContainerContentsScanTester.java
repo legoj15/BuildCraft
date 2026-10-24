@@ -253,4 +253,120 @@ public class ContainerContentsScanTester {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
         }
     }
+    /**
+     * Deny by default: a block entity whose contents no JSON rule prices is placed EMPTY, whatever its captured
+     * tileNbt holds. A campfire's cooking slots are such contents (no rule charges them; they are transient
+     * anyway), so a schematic carrying a steak must build an empty campfire, or the steak comes for free.
+     */
+    public static void testUnpricedCampfireBuildsEmpty(GameTestHelper helper) {
+        try {
+            ServerLevel level = helper.getLevel();
+            helper.setBlock(new BlockPos(1, 1, 1), Blocks.STONE);
+            BlockPos abs = helper.absolutePos(new BlockPos(1, 2, 1));
+
+            net.minecraft.nbt.CompoundTag steak = new net.minecraft.nbt.CompoundTag();
+            steak.putByte("Slot", (byte) 0);
+            steak.putString("id", "minecraft:cooked_beef");
+            steak.putInt("count", 1);
+            net.minecraft.nbt.ListTag items = new net.minecraft.nbt.ListTag();
+            items.add(steak);
+            net.minecraft.nbt.CompoundTag tileNbt = new net.minecraft.nbt.CompoundTag();
+            tileNbt.put("Items", items);
+
+            SchematicBlockDefault schematic = new SchematicBlockDefault();
+            schematic.blockState = Blocks.CAMPFIRE.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.CampfireBlock.LIT, false);
+            schematic.placeBlock = Blocks.CAMPFIRE;
+            schematic.tileNbt = tileNbt;
+            schematic.canBeReplacedWithBlocks.add(Blocks.CAMPFIRE);
+
+            List<ItemStack> required = schematic.computeRequiredItems();
+            assertTrue(required.size() == 1 && required.get(0).is(Items.CAMPFIRE),
+                    "precondition: the campfire's contents are unpriced; required " + renderList(required));
+
+            assertTrue(schematic.build(level, abs, EnumFluidHandlingMode.NO_REPLACE),
+                    "build() should place the campfire");
+            BlockEntity be = level.getBlockEntity(abs);
+            assertTrue(be instanceof net.minecraft.world.level.block.entity.CampfireBlockEntity,
+                    "expected a campfire block entity; got " + (be == null ? "null" : be.getClass()));
+            for (ItemStack inSlot : ((net.minecraft.world.level.block.entity.CampfireBlockEntity) be).getItems()) {
+                assertTrue(inSlot.isEmpty(), "the unpriced campfire must be built empty; found " + inSlot.getCount()
+                        + "x " + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(inSlot.getItem()));
+            }
+
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    private static int waterMb(List<net.neoforged.neoforge.fluids.FluidStack> fluids) {
+        return fluids.stream()
+                .filter(stack -> stack.getFluid() == net.minecraft.world.level.material.Fluids.WATER)
+                .mapToInt(net.neoforged.neoforge.fluids.FluidStack::getAmount)
+                .sum();
+    }
+
+    private static ISchematicBlock scan(ServerLevel level, BlockPos abs) {
+        BlockState state = level.getBlockState(abs);
+        return SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
+    }
+
+    /**
+     * A BuildCraft machine's rule prices what its tile really saves. build() restores the whole captured tag, and a
+     * block whose rule prices anything keeps it, so a rule path that names a key the tile never writes hands that
+     * content out free. Scans real tiles (never hand-made NBT) so a save-format change fails here: a tank's fluid
+     * (the transfer handler's {@code stacks} list, or {@code fluid0}/{@code amount0} on 1.21.1), an iron engine's
+     * coolant (an id/amount pair), and a distiller's input fluid plus its bucket slots ({@code containerSlots}).
+     */
+    public static void testBuildCraftMachineContentsArePriced(GameTestHelper helper) {
+        try {
+            ServerLevel level = helper.getLevel();
+            net.neoforged.neoforge.fluids.FluidStack water4000 =
+                    new net.neoforged.neoforge.fluids.FluidStack(net.minecraft.world.level.material.Fluids.WATER, 4000);
+
+            BlockPos tankPos = helper.absolutePos(new BlockPos(1, 2, 1));
+            level.setBlock(tankPos, buildcraft.factory.BCFactoryBlocks.TANK.get().defaultBlockState(), 3);
+            BlockEntity tankBe = level.getBlockEntity(tankPos);
+            assertTrue(tankBe instanceof buildcraft.factory.tile.TileTank, "expected a tank; got " + tankBe);
+            ((buildcraft.factory.tile.TileTank) tankBe).tank.setFluidStack(0, water4000.copy());
+            tankBe.setChanged();
+            int tankWater = waterMb(scan(level, tankPos).computeRequiredFluids());
+            assertTrue(tankWater == 4000, "a scanned tank must charge its 4000 mB of water; charged " + tankWater);
+
+            BlockPos enginePos = helper.absolutePos(new BlockPos(3, 2, 1));
+            level.setBlock(enginePos, buildcraft.energy.BCEnergyBlocks.ENGINE_IRON.get().defaultBlockState(), 3);
+            BlockEntity engineBe = level.getBlockEntity(enginePos);
+            assertTrue(engineBe instanceof buildcraft.energy.tile.TileEngineIron_BC8,
+                    "expected an iron engine; got " + engineBe);
+            ((buildcraft.energy.tile.TileEngineIron_BC8) engineBe).tankCoolant.setFluidStack(0, water4000.copy());
+            engineBe.setChanged();
+            int engineWater = waterMb(scan(level, enginePos).computeRequiredFluids());
+            assertTrue(engineWater == 4000,
+                    "a scanned iron engine must charge its 4000 mB of coolant; charged " + engineWater);
+
+            BlockPos distillerPos = helper.absolutePos(new BlockPos(1, 2, 4));
+            level.setBlock(distillerPos, buildcraft.factory.BCFactoryBlocks.DISTILLER.get().defaultBlockState(), 3);
+            BlockEntity distillerBe = level.getBlockEntity(distillerPos);
+            assertTrue(distillerBe instanceof buildcraft.factory.tile.TileDistiller_BC8,
+                    "expected a distiller; got " + distillerBe);
+            buildcraft.factory.tile.TileDistiller_BC8 distiller = (buildcraft.factory.tile.TileDistiller_BC8) distillerBe;
+            distiller.getTankForSide(net.minecraft.core.Direction.NORTH).setFluidStack(0, water4000.copy());
+            distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET, 1));
+            distillerBe.setChanged();
+            ISchematicBlock distillerSchematic = scan(level, distillerPos);
+            int distillerWater = waterMb(distillerSchematic.computeRequiredFluids());
+            assertTrue(distillerWater == 4000,
+                    "a scanned distiller must charge its 4000 mB of input; charged " + distillerWater);
+            List<ItemStack> distillerItems = distillerSchematic.computeRequiredItems();
+            assertTrue(countMatching(distillerItems, Items.BUCKET) == 1,
+                    "a scanned distiller must charge the bucket in its container slot; required "
+                            + renderList(distillerItems));
+
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
 }

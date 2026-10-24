@@ -66,15 +66,19 @@ public class AIRobotPlant extends AIRobot {
         if (delay++ > 40) {
             if (robot.level() instanceof ServerLevel serverLevel) {
                 // The fake player stands where the robot stands; the handler puts the seed in its main
-                // hand itself before the useOn, and closing the lease takes it back out. It is the home
-                // station's owner (the generic player when there is none), so a claim mod judges the owner
-                // and a planting advancement reaches them.
+                // hand itself before the useOn, and closing the lease takes it back out. It is the robot's
+                // deployer (see RobotProtection), so a claim mod judges the deployer through the planting's own
+                // right-click and placement events, and a planting advancement reaches them. Those events say
+                // nothing for the home station's owner, who is asked first with the placement probe for the
+                // crop's cell, the act the planting is.
                 ItemStack held = robot.getHeldItem();
-                boolean planted;
-                try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
-                    FakePlayer player = lease.player();
-                    player.setPos(robot.position());
-                    planted = CropManager.plantCrop(serverLevel, player, held, blockFound);
+                boolean planted = false;
+                if (RobotProtection.stationOwnerCanPlace(robot, serverLevel, blockFound.above())) {
+                    try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
+                        FakePlayer player = lease.player();
+                        player.setPos(robot.position());
+                        planted = CropManager.plantCrop(serverLevel, player, held, blockFound);
+                    }
                 }
                 if (planted) {
                     if (!held.isEmpty()) {
@@ -83,9 +87,9 @@ public class AIRobotPlant extends AIRobot {
                     }
                     robot.setItemInUse(ItemStack.EMPTY);
                 } else {
-                    // Nothing was planted (a claim mod refused the right-click or the placement, or the soil changed
-                    // since the search), so the seed was not used: the robot keeps it, and the board remembers the
-                    // spot instead of fetching a fresh seed to be refused again.
+                    // Nothing was planted (a claim mod refused the right-click or the placement, for the deployer or
+                    // the station's owner, or the soil changed since the search), so the seed was not used: the robot
+                    // keeps it, and the board remembers the spot instead of fetching a fresh seed to be refused again.
                     setSuccess(false);
                 }
             } else {

@@ -5,6 +5,10 @@
  */
 package buildcraft.api.robots;
 
+import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -144,6 +148,16 @@ public interface IRobotAccess {
     IRobotRegistry getRegistry();
 
     long getRobotId();
+
+    /** The player who deployed this robot (placed it on a station from an item), or the generic machine identity
+     *  for a placement with no player behind it; null when unknown - a robot saved before deployers were recorded,
+     *  or an access with no robot behind it, which is the default. A robot asks protection mods, and acts in the
+     *  world, as its deployer, and its home station's owner must be permitted too; an unknown deployer leaves the
+     *  station's owner alone deciding. */
+    @Nullable
+    default GameProfile getDeployer() {
+        return null;
+    }
 
     void releaseResources();
 

@@ -582,7 +582,9 @@ public class GlobalSavedDataSnapshotsTester {
     private static Snapshot receivedByTheServer(Snapshot snapshot) throws IOException {
         ByteArrayOutputStream wire = new ByteArrayOutputStream();
         NbtSquisher.squishVanilla(Snapshot.writeToNBT(snapshot), wire);
-        Snapshot received = Snapshot.readFromNBT(NbtSquisher.expand(new ByteArrayInputStream(wire.toByteArray())));
+        // Unbounded here: the test snapshots are tiny, and the real limits are LibraryUploadBufferTester's business.
+        Snapshot received = Snapshot.readFromNBT(
+            NbtSquisher.expand(new ByteArrayInputStream(wire.toByteArray()), Long.MAX_VALUE));
         received.computeKey();
         return received;
     }

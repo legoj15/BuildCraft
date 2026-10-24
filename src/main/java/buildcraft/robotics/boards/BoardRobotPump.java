@@ -59,8 +59,9 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     private IFluidFilter fluidFilter;
 
     /** Blocks the pump AI was refused (by a protection mod or the block's own pickup), skipped by the search
-     *  while they stay unchanged. Keyed on the home station's owner, whom the AI asks as: a refusal says nothing
-     *  about anyone else. Policy {@link RefusalMemory#DRAIN}. Transient: a reloaded board asks once more. */
+     *  while they stay unchanged. Keyed on the two players the AI asks for (see {@code RobotProtection}): the
+     *  identity the robot acts as and its home station's owner. A refusal says nothing about any other pair.
+     *  Policy {@link RefusalMemory#DRAIN}. Transient: a reloaded board asks once more. */
     private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
 
     public BoardRobotPump(IRobotAccess iRobot) {
@@ -120,7 +121,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 && BuildCraftAPI.getWorldProperty("fluidSource").get(level, pos)
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))
-                && !refusals.isRefused(level, pos, RobotProtection.ownerOf(robot));
+                && !refusals.isRefused(level, pos, RobotProtection.identityOf(robot),
+                        RobotProtection.ownerOf(robot));
     }
 
     @Override
@@ -150,7 +152,8 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             // board's. Without it the robot flew straight back to the same block on every pass.
             Level level = robot.level();
             if (pumpAi.refused() && level != null && pumpAi.blockToPump() != null) {
-                refusals.remember(level, pumpAi.blockToPump(), RobotProtection.ownerOf(robot));
+                refusals.remember(level, pumpAi.blockToPump(), RobotProtection.identityOf(robot),
+                        RobotProtection.ownerOf(robot));
             }
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {

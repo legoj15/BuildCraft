@@ -15,14 +15,16 @@ import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.robotics.RobotProtection;
 
 /**
- * What a farming board (the farmer, the planter) remembers about work that did not take: the blocks a protection mod
- * would not let its robot till or plant, so the search does not fly back to them every cycle, and how many attempts in
- * a row failed, so a robot facing a wall of refusals goes to sleep instead of trying them all.
+ * What a farming board (the farmer, the planter; the stripes board for its refused uses) remembers about work that did
+ * not take: the blocks a protection mod would not let its robot till, plant or use an item on, so the search does not
+ * fly back to them every cycle, and how many attempts in a row failed, so a robot facing a wall of refusals goes to
+ * sleep instead of trying them all.
  *
- * <p>The blocks are an owner-keyed {@link RefusalMemory} with the robot-search policy
- * ({@link RefusalMemory#ROBOT_SEARCH}) - the memory the generic search board keeps for its breaks: a refusal holds
- * while the block is unchanged, up to the policy's window, and says nothing about anyone but the home station's owner,
- * whom the robot asks as. Transient: a reloaded board simply asks again.
+ * <p>The blocks are a {@link RefusalMemory} with the robot-search policy ({@link RefusalMemory#ROBOT_SEARCH}) - the
+ * memory the generic search board keeps for its breaks: a refusal holds while the block is unchanged, up to the
+ * policy's window. It is keyed on the two players whose leave the robot needs (see {@code RobotProtection}): the
+ * identity it acts as and its home station's owner. A refusal says nothing about any other pair, so a robot relinked to
+ * another player's station asks afresh. Transient: a reloaded board simply asks again.
  *
  * <p>Neither is saved or shared between robots; a board owns one.
  */
@@ -44,14 +46,15 @@ final class WorkRefusals {
     /** Whether {@code pos} refused this robot and is unchanged, so the search should leave it alone. A block in an
      *  unloaded chunk is not read, and so not refused. */
     boolean isRefused(@Nullable Level level, BlockPos pos) {
-        return level != null && refused.isRefused(level, pos, RobotProtection.ownerOf(robot));
+        return level != null
+                && refused.isRefused(level, pos, RobotProtection.identityOf(robot), RobotProtection.ownerOf(robot));
     }
 
     /** Records that {@code pos} refused this robot, without counting an attempt: a block refused while the search
      *  settles on it was never worked. */
     void remember(@Nullable Level level, BlockPos pos) {
         if (level != null) {
-            refused.remember(level, pos, RobotProtection.ownerOf(robot));
+            refused.remember(level, pos, RobotProtection.identityOf(robot), RobotProtection.ownerOf(robot));
         }
     }
 

@@ -33,6 +33,7 @@ import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotDisplay;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
+import buildcraft.lib.net.NetCodecSanity;
 import buildcraft.lib.net.PacketBufferBC;
 
 import buildcraft.builders.BCBuildersMenuTypes;
@@ -51,6 +52,15 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
     private static final int DATA_FLUID_MODE = 4;     // ordinal of EnumFluidHandlingMode
     private static final int DATA_CONTENTS_MODE = 5;  // ordinal of EnumContainerContentsMode
     private static final int DATA_COUNT = 6;
+
+    /** The resource panel's display slots, 4 wide x 6 tall. {@link #getDisplay} never reads past them. */
+    private static final int DISPLAY_COLUMNS = 4;
+    private static final int DISPLAY_ROWS = 6;
+    /** The most stacks a {@link #NET_DISPLAY_LIST} message carries: the panel's slot count. The sender
+     *  ({@link #broadcastDisplayList}) drops empty stacks and then cuts the list to this, so the full needed-items
+     *  list (one entry per distinct stack the blueprint still needs, otherwise unbounded) never goes on the wire, and
+     *  the receiver refuses a longer list instead of pre-sizing from a raw VarInt. */
+    static final int MAX_DISPLAY_ENTRIES = DISPLAY_COLUMNS * DISPLAY_ROWS;
 
     /** Container message: server pushes the current remainingDisplayRequired list to the client
      *  whenever it changes. {@link SimpleContainerData} only syncs ints, and the display slots
@@ -144,12 +154,12 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             }
         }
 
-        // 24 display slots (4 wide x 6 tall) in the blueprint side-panel area. Contents come
+        // 24 display slots (DISPLAY_COLUMNS x DISPLAY_ROWS) in the blueprint side-panel area. Contents come
         // from BlueprintBuilder.remainingDisplayRequired via #getDisplay, synced over
         // NET_DISPLAY_LIST.
-        for (int y = 0; y < 6; y++) {
-            for (int x = 0; x < 4; x++) {
-                addSlot(new SlotDisplay(this::getDisplay, x + y * 4, 179 + x * 18, 18 + y * 18));
+        for (int y = 0; y < DISPLAY_ROWS; y++) {
+            for (int x = 0; x < DISPLAY_COLUMNS; x++) {
+                addSlot(new SlotDisplay(this::getDisplay, x + y * DISPLAY_COLUMNS, 179 + x * 18, 18 + y * 18));
             }
         }
 
@@ -190,10 +200,18 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         // Detect changes to remainingDisplayRequired and push a NET_DISPLAY_LIST message only
         // when the list actually differs from what we last sent — otherwise the Builder would
         // send one packet per player per GUI-open tick while nothing visible changed.
-        List<ItemStack> current = tile.snapshotType == EnumSnapshotType.BLUEPRINT
+        List<ItemStack> needed = tile.snapshotType == EnumSnapshotType.BLUEPRINT
             && tile.blueprintBuilder != null
             ? tile.blueprintBuilder.remainingDisplayRequired
             : List.of();
+        // Only the stacks the panel has slots for go on the wire (see MAX_DISPLAY_ENTRIES), and the change check
+        // compares just those, so a change past the visible ones sends nothing. Empty stacks (a fluid requirement
+        // whose fluid has no bucket item) are dropped BEFORE the cut: the client drops them anyway, so cutting first
+        // would let an empty entry take a panel slot and push the last real stack off the panel.
+        List<ItemStack> current = needed.stream()
+            .filter(s -> !s.isEmpty())
+            .limit(MAX_DISPLAY_ENTRIES)
+            .toList();
         if (displayListEquals(current, lastBroadcastDisplay)) return;
 
         List<ItemStack> snap = new ArrayList<>(current.size());
@@ -271,12 +289,8 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
         }
         if (id == NET_DISPLAY_LIST && isClient) {
             RegistryFriendlyByteBuf rbuf = new RegistryFriendlyByteBuf(buffer, ctx.player().level().registryAccess(), ConnectionType.NEOFORGE);
-            int count = rbuf.readVarInt();
-            List<ItemStack> newList = new ArrayList<>(count);
-            for (int i = 0; i < count; i++) {
-                ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(rbuf);
-                if (!stack.isEmpty()) newList.add(stack);
-            }
+            // Decoded in full before the synced list is touched, so a refused message leaves the last good list up.
+            List<ItemStack> newList = readDisplayList(rbuf);
             syncedDisplay.clear();
             syncedDisplay.addAll(newList);
             return;
@@ -295,6 +309,19 @@ public class ContainerBuilder extends ContainerBCTile<TileBuilder> {
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);
+    }
+
+    /** Client side of {@link #NET_DISPLAY_LIST}: the count, then that many optional stacks (empty ones are dropped).
+     *
+     *  @throws io.netty.handler.codec.DecoderException if the count is negative or above {@link #MAX_DISPLAY_ENTRIES} */
+    static List<ItemStack> readDisplayList(RegistryFriendlyByteBuf rbuf) {
+        int count = NetCodecSanity.checkedCount(rbuf.readVarInt(), MAX_DISPLAY_ENTRIES, "Builder display list");
+        List<ItemStack> list = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            ItemStack stack = ItemStack.OPTIONAL_STREAM_CODEC.decode(rbuf);
+            if (!stack.isEmpty()) list.add(stack);
+        }
+        return list;
     }
 
     private static void applyTankState(BCFluidTank handler, String fluidIdStr, int amount) {

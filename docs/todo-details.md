@@ -125,4 +125,21 @@ Written Zone Planner maps embed the full `chunkMapping` in every item stack, so 
 
 ## Snapshot security follow-ups
 
-Three small gaps the post-fix security review (2026-10-24) flagged as non-gating: (1) a refused `SnapshotRequestPayload` stays in the client's `ClientSnapshots` pending list forever, so that hash's tooltip preview is dead for the session even once the player legitimately holds the item — give pending entries a retry timer or don't pend on refusable paths; (2) nothing fails when a `writeData` gains a key the new `removeComponentsFromTag` discard lists (TilePipeHolder / TileFilteredBuffer / TileZonePlanner) don't know about — add a twin-guard test comparing emitted vs discarded keys, like `ClearableTwinGuardTest` does for clear; (3) `SchematicBlockDefault.serializeNbt`/`getRotated` share the live `tileNbt` reference into returned tags, so an in-process serialize→deserialize would mutate the original — harmless today (every deserialize input is freshly parsed), a foot-gun tomorrow.
+Nothing fails when a `writeData` gains a key the `removeComponentsFromTag` discard lists (TilePipeHolder / TileFilteredBuffer / TileZonePlanner) don't know about: add a twin-guard test comparing emitted vs discarded keys, like `ClearableTwinGuardTest` does for clear. (The other two items from the 2026-10-24 review, the never-expiring snapshot request and the shared `tileNbt` reference, were fixed in the follow-up round.)
+
+## Robot bomber and melee protection
+
+Found by the 2026-10-24 robot-deployer review; both predate it. `BoardRobotBomber` primes `PrimedTnt` with a null owner and asks no protection question (its class Javadoc calls the ownerless TNT a deliberate divergence), and `AIRobotAttack` melee goes through `EntityRobotBase.attackTargetEntityWithCurrentItem` as a `MOB_ATTACK` source naming no player, with no probe. Every other robot world action now runs as the deployer's leased fake player and asks both the deployer and the station owner (`RobotProtection`). Decide: TNT owned by the deployer's fake player plus a both-identities probe at the drop cell, and melee routed through the lease (a player attack source) so claim mods' PvE/animal protection sees a player. Check how the common claim mods treat ownerless explosions before choosing.
+
+## Architect scan size cap
+
+`TileArchitectTable.finishScanning` stores a scan with no cell or byte check, but reads refuse more than `LibraryUploadBuffer.Limits.maxCells()` (8,388,608 cells at the 128 MB ceiling, about a 203-block cube) and more than `readCeiling()`. `markerMaxDistance` allows boxes up to 256 per side, so a big enough scan is stored, then skipped as corrupt after a restart, and its preview fails to decode on the client. The `libraryMaxUploadMb` comment says 128 MB is the most a snapshot can be read back at, which is only true for uploads. Fix: refuse the scan at start when the box volume exceeds `maxCells()` (with a player-facing message), or cap the box. From the 2026-10-24 read-ceiling review.
+
+## Blueprint follow-ups
+
+From the 2026-10-24 blueprint-pricing reviews, none a free-item hole:
+- Decorated pot sherds are stripped from every blueprint (`SchematicBlockDefault.sanitizeTileNbt`): a pot drops its sherds when broken and no extractor prices a list of item ids, so a scanned pot is rebuilt plain. Price them with a new extractor if the fidelity matters.
+- Unverified: a rebuilt trial spawner or vault changes its state property as it ticks; if `isBuilt` compares that property, a Builder could break and replace it in a loop. Add the property to the ignored ones if so.
+- `RulesLoader.BLOCK_RULES_CACHE` is keyed by live `CompoundTag`s that callers later mutate (`stripContainerContentsFromNbt` strips the copy it just looked up), leaving stale entries with changed hashes until they expire.
+- The deny-by-default clear reaches only `Clearable` block entities. Every vanilla item holder is `Clearable`, and other mods' blocks are captured only when the mod ships BuildCraft builder rules (`RulesLoader.READ_DOMAINS`), so such a mod must price or clear its own non-`Clearable` inventories.
+- `GuiReplacer.schematicReadable` is unused.

@@ -5,17 +5,25 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.List;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.world.RandomizableContainer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.InvalidInputDataException;
+
+import buildcraft.VanillaSetupBaseTester;
 import buildcraft.lib.misc.NBTUtilBC;
 
 /**
@@ -25,7 +33,7 @@ import buildcraft.lib.misc.NBTUtilBC;
  * blueprint at read time rather than refusing the whole file, so a modpack removing a rule cannot brick every
  * stored blueprint that happens to contain that entity.
  */
-public class SchematicEntityDefaultTester {
+public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
 
     /** A schematic entity's serialized NBT wrapping an entity NBT with the given id — exactly the untrusted shape. */
     private static CompoundTag entitySchematicNbt(String entityId) {
@@ -42,15 +50,36 @@ public class SchematicEntityDefaultTester {
         return nbt;
     }
 
+    /** An empty one-cell blueprint's NBT with {@code entity} spliced into its entity list through the real factory
+     *  envelope, so the read exercises the gate, not the envelope. */
+    private static CompoundTag blueprintHolding(SchematicEntityDefault entity) {
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(1, 1, 1);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.palette.add(new SchematicBlockAir());
+        blueprint.data = new int[] {0};
+        blueprint.computeKey();
+        CompoundTag nbt = Snapshot.writeToNBT(blueprint);
+        nbt.put("entities", NBTUtilBC.writeCompoundList(Stream.of(SchematicEntityManager.writeToNBT(entity))));
+        return nbt;
+    }
+
+    private static CompoundTag stackNbt(String itemId) {
+        CompoundTag stack = new CompoundTag();
+        stack.putString("id", itemId);
+        stack.putInt("count", 1);
+        return stack;
+    }
+
     @Test
-    public void anEntityTheRulesSanctionStillReads() throws InvalidInputDataException {
+    public void anEntityTheRulesSanctionStillReads() {
         // Sanity first: the rules must be loaded in this JVM (the mod's common setup loads them), or the gate
         // below would drop every entity and this test would say nothing about which ones are unsanctioned.
         Assertions.assertFalse(
             RulesLoader.getRules(net.minecraft.resources.Identifier.parse("minecraft:armor_stand"), new CompoundTag()).isEmpty(),
             "no rules for minecraft:armor_stand — is RulesLoader.loadAll() not running in this environment?"
         );
-        new SchematicEntityDefault().deserializeNbt(entitySchematicNbt("minecraft:armor_stand"));
         Assertions.assertTrue(SchematicEntityDefault.isPricedByRules(
             NBTUtilBC.getCompound(entitySchematicNbt("minecraft:armor_stand"), "entityNbt")));
     }
@@ -64,18 +93,47 @@ public class SchematicEntityDefaultTester {
         creeper.deserializeNbt(entitySchematicNbt("minecraft:creeper"));
         Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(creeper.entityNbt));
 
-        Blueprint blueprint = new Blueprint();
-        blueprint.size = new BlockPos(1, 1, 1);
-        blueprint.facing = Direction.NORTH;
-        blueprint.offset = BlockPos.ZERO;
-        blueprint.palette.add(new SchematicBlockAir());
-        blueprint.data = new int[] {0};
-        blueprint.computeKey();
-        CompoundTag nbt = Snapshot.writeToNBT(blueprint);
-        nbt.put("entities", NBTUtilBC.writeCompoundList(java.util.stream.Stream.of(SchematicEntityManager.writeToNBT(creeper))));
-        Snapshot read = Snapshot.readFromNBT(nbt);
+        Snapshot read = Snapshot.readFromNBT(blueprintHolding(creeper));
         Assertions.assertInstanceOf(Blueprint.class, read);
         Assertions.assertTrue(((Blueprint) read).entities.isEmpty(), "the unsanctioned entity must be dropped");
+    }
+
+    @Test
+    public void aSanctionedEntitySurvivesTheBlueprintRead() throws InvalidInputDataException {
+        // The positive half of the gate above: an inverted gate would drop the creeper there and pass.
+        SchematicEntityDefault armorStand = new SchematicEntityDefault();
+        armorStand.deserializeNbt(entitySchematicNbt("minecraft:armor_stand"));
+        Snapshot read = Snapshot.readFromNBT(blueprintHolding(armorStand));
+        Assertions.assertInstanceOf(Blueprint.class, read);
+        Assertions.assertEquals(1, ((Blueprint) read).entities.size(), "the armor stand must stay in the blueprint");
+    }
+
+    @Test
+    public void anArmorStandsListedGearIsChargedAndItsEmptySlotsAreNot() throws InvalidInputDataException {
+        // MC 1.21.1 saves an armor stand's gear as the ArmorItems (feet, legs, chest, head) and HandItems lists, an
+        // empty slot as an empty compound; later lines save an "equipment" map instead. build() spawns the entity
+        // from this NBT, so the lists must be priced wherever they appear.
+        CompoundTag schematic = entitySchematicNbt("minecraft:armor_stand");
+        CompoundTag entityNbt = NBTUtilBC.getCompound(schematic, "entityNbt");
+        ListTag armor = new ListTag();
+        armor.add(new CompoundTag());
+        armor.add(new CompoundTag());
+        armor.add(stackNbt("minecraft:diamond_chestplate"));
+        armor.add(new CompoundTag());
+        entityNbt.put("ArmorItems", armor);
+        ListTag hands = new ListTag();
+        hands.add(stackNbt("minecraft:diamond_sword"));
+        hands.add(new CompoundTag());
+        entityNbt.put("HandItems", hands);
+
+        SchematicEntityDefault armorStand = new SchematicEntityDefault();
+        armorStand.deserializeNbt(schematic);
+        List<ItemStack> required = armorStand.computeRequiredItems();
+
+        Assertions.assertEquals(3, required.size(), "the stand, the chestplate and the sword, nothing for the empty slots: " + required);
+        Assertions.assertTrue(required.stream().anyMatch(stack -> stack.is(Items.ARMOR_STAND)), required.toString());
+        Assertions.assertTrue(required.stream().anyMatch(stack -> stack.is(Items.DIAMOND_CHESTPLATE)), required.toString());
+        Assertions.assertTrue(required.stream().anyMatch(stack -> stack.is(Items.DIAMOND_SWORD)), required.toString());
     }
 
     @Test
@@ -84,17 +142,6 @@ public class SchematicEntityDefaultTester {
             NBTUtilBC.getCompound(entitySchematicNbt(null), "entityNbt")));
         Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(
             NBTUtilBC.getCompound(entitySchematicNbt("not an id!"), "entityNbt")));
-    }
-
-    @Test
-    public void anUnpricedEntityCostsNothingTodayWhichIsWhyTheGateDropsIt() {
-        // Pins the reason for the gate: with no rule, computeRequiredItems is empty (free) while build() would
-        // still spawn the entity from entityNbt.
-        CompoundTag schematic = entitySchematicNbt("minecraft:creeper");
-        CompoundTag entityNbt = NBTUtilBC.getCompound(schematic, "entityNbt");
-        Assertions.assertTrue(RulesLoader.getRules(
-            net.minecraft.resources.Identifier.parse("minecraft:creeper"), entityNbt).isEmpty());
-        Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(entityNbt));
     }
 
     @Test

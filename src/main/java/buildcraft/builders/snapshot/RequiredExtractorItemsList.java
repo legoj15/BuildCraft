@@ -13,10 +13,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import com.mojang.serialization.DataResult;
-
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,9 +23,9 @@ import buildcraft.lib.misc.NBTUtilBC;
 public class RequiredExtractorItemsList extends RequiredExtractor {
     private NbtPath path = null;
 
-    private static ItemStack parseItemStack(CompoundTag ct) {
-        DataResult<ItemStack> result = ItemStack.CODEC.parse(NbtOps.INSTANCE, ct);
-        return result.resultOrPartial().orElse(ItemStack.EMPTY);
+    @Override
+    public boolean pricesTileContents() {
+        return path != null;
     }
 
     @Nonnull
@@ -37,7 +34,7 @@ public class RequiredExtractorItemsList extends RequiredExtractor {
         if (tileNbt == null || path == null) return Collections.emptyList();
         Tag result = path.get(tileNbt);
         return NBTUtilBC.readCompoundList(result)
-            .map(RequiredExtractorItemsList::parseItemStack)
+            .map(RequiredExtractor::parseItemStack)
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
     }
@@ -48,9 +45,14 @@ public class RequiredExtractorItemsList extends RequiredExtractor {
         if (path == null) return Collections.emptyList();
         Tag result = path.get(entityNbt);
         return NBTUtilBC.readCompoundList(result)
-            .map(RequiredExtractorItemsList::parseItemStack)
+            .map(RequiredExtractor::parseItemStack)
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isContainerContents() {
+        return path != null;
     }
 
     @Override

@@ -54,12 +54,18 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RotationUtil;
 
 public class SchematicEntityDefault implements ISchematicEntity {
+    private static final org.apache.logging.log4j.Logger LOGGER =
+        org.apache.logging.log4j.LogManager.getLogger("BCBlueprint");
+
     /** Package-private: the blueprint read loop names the id in its drop warning. */
     CompoundTag entityNbt;
     private Vec3 pos;
     private BlockPos hangingPos;
     private Direction hangingFacing;
     private Rotation entityRotation = Rotation.NONE;
+    /** Set once {@link #build} found that the entity's own loader throws on {@link #entityNbt}: later calls give up
+     *  at once, so a Builder retrying the spawn logs once instead of every tick. Not part of the schematic's value. */
+    private boolean loadFailed;
 
     public static boolean predicate(SchematicEntityContext context) {
         Identifier registryName = BuiltInRegistries.ENTITY_TYPE.getKey(context.entity.getType());
@@ -148,6 +154,9 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Override
     @Nullable
     public Entity build(Level level, BlockPos basePos) {
+        if (loadFailed) {
+            return null;
+        }
         Vec3 placePos = Vec3.atLowerCornerOf(basePos).add(pos);
         BlockPos placeHangingPos = basePos.offset(hangingPos);
         CompoundTag newEntityNbt = entityNbt.copy();
@@ -164,30 +173,19 @@ public class SchematicEntityDefault implements ISchematicEntity {
             newEntityNbt.putByte("Facing", (byte) hangingFacing.get2DDataValue());
             rotate = false;
         }
-        // Load entity from NBT via EntityType.create
-        //? if >=26.2 {
-        Optional<Entity> optEntity = EntityType.create(
-            TagValueInput.create(
-                ProblemReporter.DISCARDING,
-                level.registryAccess(),
-                newEntityNbt
-            ),
-            level,
-            new EntitySpawnRequest(EntitySpawnReason.COMMAND, false)
-        );
-        //?} elif >=1.21.10 {
-        /*Optional<Entity> optEntity = EntityType.create(
-            TagValueInput.create(
-                ProblemReporter.DISCARDING,
-                level.registryAccess(),
-                newEntityNbt
-            ),
-            level,
-            EntitySpawnReason.COMMAND
-        );
-        *///?} else {
-        /*Optional<Entity> optEntity = EntityType.create(newEntityNbt, level);*/
-        //?}
+        // Load entity from NBT via EntityType.create. Vanilla's Entity.load rethrows any loader failure as a
+        // ReportedException rather than skipping the entity, so malformed NBT (an upload, a mod's fragile loader)
+        // would crash the server tick, and again on every restart while the Builder retries the spawn.
+        Optional<Entity> optEntity;
+        try {
+            optEntity = createEntity(level, newEntityNbt);
+        } catch (RuntimeException e) {
+            loadFailed = true;
+            String id = NBTUtilBC.getString(newEntityNbt, "id", "");
+            LOGGER.warn("Not spawning the blueprint entity \"{}\" at {}: it failed to load ({})",
+                Snapshot.logSafe(id, 64), placePos, Snapshot.logSafe(e, 256));
+            return null;
+        }
         if (optEntity.isPresent()) {
             Entity entity = optEntity.get();
             if (rotate && entityRotation != Rotation.NONE) {
@@ -199,6 +197,32 @@ public class SchematicEntityDefault implements ISchematicEntity {
             return entity;
         }
         return null;
+    }
+
+    private static Optional<Entity> createEntity(Level level, CompoundTag newEntityNbt) {
+        //? if >=26.2 {
+        return EntityType.create(
+            TagValueInput.create(
+                ProblemReporter.DISCARDING,
+                level.registryAccess(),
+                newEntityNbt
+            ),
+            level,
+            new EntitySpawnRequest(EntitySpawnReason.COMMAND, false)
+        );
+        //?} elif >=1.21.10 {
+        /*return EntityType.create(
+            TagValueInput.create(
+                ProblemReporter.DISCARDING,
+                level.registryAccess(),
+                newEntityNbt
+            ),
+            level,
+            EntitySpawnReason.COMMAND
+        );
+        *///?} else {
+        /*return EntityType.create(newEntityNbt, level);*/
+        //?}
     }
 
     @Override

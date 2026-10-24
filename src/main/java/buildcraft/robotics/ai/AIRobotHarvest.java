@@ -75,7 +75,7 @@ public class AIRobotHarvest extends AIRobot {
             // posted a break event; the port's handlers break the crop directly, so the robot asks here instead.
             NonNullList<ItemStack> drops = NonNullList.create();
             if (!(level instanceof ServerLevel serverLevel) || !RobotProtection.canBreak(robot, serverLevel, blockFound)
-                    || !harvestAsOwner(serverLevel, drops)) {
+                    || !harvestAsRobot(serverLevel, drops)) {
                 setSuccess(false);
                 terminate();
                 return;
@@ -89,9 +89,10 @@ public class AIRobotHarvest extends AIRobot {
         }
     }
 
-    /** Harvests as the home station owner's leased fake player (the one the permission probe asked as), so the crop's
-     *  drops and its block-destroy event name the owner, not nobody. */
-    private boolean harvestAsOwner(ServerLevel level, NonNullList<ItemStack> drops) {
+    /** Harvests as the leased fake player of the identity the robot acts as (its deployer, or its station's owner
+     *  for a robot with no recorded deployer; one the permission probe asked about), so the crop's drops and its
+     *  block-destroy event name that player, not nobody. */
+    private boolean harvestAsRobot(ServerLevel level, NonNullList<ItemStack> drops) {
         try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, level)) {
             return CropManager.harvestCrop(level, blockFound, drops, lease.player());
         }

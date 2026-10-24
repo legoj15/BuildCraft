@@ -8,7 +8,10 @@ Last audited: 2026-10-23
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 - Aborted pipe inserts can mint fluid — [notes](docs/todo-details.md#fluid-mint-on-aborted-pipe-insert)
 - Written Zone Planner maps each carry the full map data — [notes](docs/todo-details.md#zone-planner-map-clone-bloat)
-- Snapshot security follow-ups from the post-fix review — [notes](docs/todo-details.md#snapshot-security-follow-ups)
+- Guard test for the data creative middle-click clones strip — [notes](docs/todo-details.md#snapshot-security-follow-ups)
+- Bomber robots and robot melee ask no protection mod for permission — [notes](docs/todo-details.md#robot-bomber-and-melee-protection)
+- The Architect can save scans too large for the library to read back — [notes](docs/todo-details.md#architect-scan-size-cap)
+- Blueprint follow-ups: decorated pot sherds, spawner rebuild states, rule cache keys — [notes](docs/todo-details.md#blueprint-follow-ups)
 
 ## 🆕 New Features (version 2026.3)
 

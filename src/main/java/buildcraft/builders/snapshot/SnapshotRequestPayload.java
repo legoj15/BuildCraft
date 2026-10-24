@@ -45,6 +45,10 @@ public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPa
     private static final org.apache.logging.log4j.Logger LOGGER =
             org.apache.logging.log4j.LogManager.getLogger("BCSnapshotRequest");
 
+    /** Which (player, hash) misses the server has already warned about; a few hundred is far more than one session
+     *  of a player with an unfindable blueprint produces. */
+    private static final SnapshotMissWarnings MISSES = new SnapshotMissWarnings(512);
+
     public static void handle(SnapshotRequestPayload payload, net.neoforged.neoforge.network.handling.IPayloadContext context) {
         context.enqueueWork(() -> {
             String hashHex = payload.key().hash == null ? "null"
@@ -57,7 +61,10 @@ public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPa
             // Electronic Library's own rule (it only shows a player their own local files, and its downloads go to
             // the players watching the machine an item was inserted into).
             if (!playerMayRequest(context.player(), payload.key().hash)) {
-                LOGGER.warn("Refusing a snapshot request from {} for hash={}: no snapshot item they hold "
+                // DEBUG, not WARN: a client can trigger this at will, and a legitimate one reaches it too — a
+                // storage-mod terminal shows items that sit in no menu slot, and the client retries the hash (every
+                // 5 s, backing off to 20 s, SnapshotRequestTracker) until the item is somewhere the player holds.
+                LOGGER.debug("Refusing a snapshot request from {} for hash={}: no snapshot item they hold "
                         + "or have open references it", context.player().getName().getString(), hashHex);
                 return;
             }
@@ -68,9 +75,15 @@ public record SnapshotRequestPayload(Snapshot.Key key) implements CustomPacketPa
                         snapshot.getClass().getSimpleName(), hashHex, snapshot.size,
                         level.dimension());
                 context.reply(new SnapshotResponsePayload(snapshot));
-            } else {
+            } else if (MISSES.firstMiss(context.player().getUUID(), hashHex)) {
+                // The client asks again (every 5 s, backing off to 20 s, SnapshotRequestTracker) for as long as the
+                // preview is drawn, so only a player's first miss of a hash is a warning; the repeats are DEBUG.
                 LOGGER.warn("Snapshot NOT FOUND on server: hash={} (player level={}). "
-                        + "Saved data is per-dimension — blueprint may have been created in a different dimension.",
+                        + "Saved data is per-dimension — blueprint may have been created in a different dimension. "
+                        + "Further misses for this hash from this player log at DEBUG.",
+                        hashHex, level.dimension());
+            } else {
+                LOGGER.debug("Snapshot still NOT FOUND on server: hash={} (player level={})",
                         hashHex, level.dimension());
             }
         });

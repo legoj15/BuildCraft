@@ -228,18 +228,11 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
     @Override
     public boolean stillValid(Player player) {
         // Mirror of ContainerBCTile's staleness guard, anchored on the volume box the addon lives on
-        // instead of a block entity: the box must still exist in the level's saved data (client: its
-        // ClientVolumeBoxes copy) with this very addon attached, and the player must still be within
-        // reach. Otherwise a removed or replaced box leaves a live menu that reconfigures it remotely.
+        // instead of a block entity: the box must still exist in the level's saved data with this very
+        // addon attached, and the player must still be within reach. Otherwise a removed or replaced
+        // box leaves a live menu that reconfigures it remotely. Vanilla (and MessageContainerPayload)
+        // only ask the server, so there is no client branch.
         if (addon == null || addon.volumeBox == null) {
-            return false;
-        }
-        if (player.level().isClientSide()) {
-            for (VolumeBox vb : ClientVolumeBoxes.INSTANCE.volumeBoxes) {
-                if (vb.id.equals(addon.volumeBox.id) && vb.addons.containsValue(addon)) {
-                    return isPlayerWithinReach(player);
-                }
-            }
             return false;
         }
         if (!(player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel)) {

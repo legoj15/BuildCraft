@@ -25,6 +25,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -78,7 +79,13 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     public boolean gatesChanged = true;
     public boolean structureChanged = true;
     public final List<WireSystem> changedSystems = new ArrayList<>();
-    public final List<ServerPlayer> changedPlayers = new ArrayList<>();
+    /** Players whose client received a wire-holding chunk since the last tick (fed by {@link #onChunkSent});
+     *  each is sent every system it can see. A Set because chunks arrive in batches — many per player per
+     *  tick at login. */
+    public final Set<ServerPlayer> changedPlayers = new HashSet<>();
+    /** How many systems have an element in each chunk. Lets {@link #onChunkSent} ignore the (vast majority
+     *  of) chunks with no wires in O(1), so terrain streaming never triggers a full wire resend. */
+    private final Map<ChunkPos, Integer> systemsPerChunk = new HashMap<>();
     public final Map<WireSystem.WireElement, IWireEmitter> emittersCache = new HashMap<>();
 
     private final Map<WireSystem.WireElement, List<WireSystem>> elementsToWireSystemsIndex = new HashMap<>();
@@ -132,8 +139,27 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         return this.elementsToWireSystemsIndex.getOrDefault(element, Collections.emptyList());
     }
 
+    /** Called from the {@code ChunkWatchEvent.Sent} listener in {@code BCTransport} — after the chunk packet
+     *  is queued on the player's connection, so the next tick's wire payloads follow it (1.12.2
+     *  {@code BCTransportEventDist.onChunkWatch}). Runs once per chunk delivered; keep it O(1). */
+    public void onChunkSent(ServerPlayer player, ChunkPos pos) {
+        if (systemsPerChunk.containsKey(pos)) {
+            changedPlayers.add(player);
+        }
+    }
+
+    private void indexChunks(WireSystem wireSystem, int delta) {
+        wireSystem.getChunkPosesAsStream().forEach(pos ->
+            systemsPerChunk.compute(pos, (unused, count) -> {
+                int next = (count == null ? 0 : count) + delta;
+                return next <= 0 ? null : next;
+            }));
+    }
+
     public void removeWireSystem(WireSystem wireSystem) {
-        wireSystems.remove(wireSystem);
+        if (wireSystems.remove(wireSystem) != null) {
+            indexChunks(wireSystem, -1);
+        }
         wireSystem.elements.forEach(elementIn -> {
             elementsToWireSystemsIndex.computeIfPresent(elementIn, (element, systems) -> {
                 systems.remove(wireSystem);
@@ -145,6 +171,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
 
     public void addWireSystem(WireSystem wireSystem, boolean powered) {
         if (this.wireSystems.put(wireSystem, powered) == null) {
+            indexChunks(wireSystem, 1);
             wireSystem.elements.forEach(systemElement -> {
                 List<WireSystem> wireSystemsWithElement = this.elementsToWireSystemsIndex.computeIfAbsent(systemElement, unused -> new ArrayList<>());
                 if (wireSystemsWithElement.contains(wireSystem)) {
@@ -231,43 +258,31 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
 
         if (world instanceof ServerLevel serverLevel) {
             // The send loops below only ever emit when structureChanged, a changed system, or a
-            // changed player exists — skip the whole player×system sweep on a quiet tick, where the
-            // old code still ran the per-element isPlayerWatching scan for every pair.
+            // changed player exists — skip the whole player×system sweep on a quiet tick.
             if (structureChanged || !changedSystems.isEmpty() || !changedPlayers.isEmpty()) {
-                List<ServerPlayer> players = serverLevel.getPlayers(p -> true);
-                // Watching-player sets are computed once per system per tick: isPlayerWatching walks
-                // the system's chunks, so calling it per player inside both send loops ran that walk
-                // twice per player×system pair.
-                Map<WireSystem, Set<ServerPlayer>> watching = new HashMap<>();
-                for (WireSystem ws : wireSystems.keySet()) {
-                    Set<ServerPlayer> watchers = new HashSet<>();
-                    for (ServerPlayer player : players) {
-                        if (ws.isPlayerWatching(player)) {
-                            watchers.add(player);
-                        }
-                    }
-                    watching.put(ws, watchers);
-                }
-                for (ServerPlayer player : players) {
-                    // Send structure updates
+                for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
                     Map<Integer, WireSystem> changedWires = new HashMap<>();
-                    for (WireSystem ws : wireSystems.keySet()) {
-                        if (watching.get(ws).contains(player) && (structureChanged || changedPlayers.contains(player))) {
-                            changedWires.put(ws.getWiresHashCode(), ws);
+                    Map<Integer, Boolean> hashesPowered = new HashMap<>();
+                    if (structureChanged || changedPlayers.contains(player)) {
+                        // Structure (and with it power) of every system this player watches.
+                        for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
+                            WireSystem ws = entry.getKey();
+                            if (ws.isPlayerWatching(player)) {
+                                changedWires.put(ws.getWiresHashCode(), ws);
+                                hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
+                            }
+                        }
+                    } else {
+                        // Power of the systems whose state flipped this tick, only.
+                        for (WireSystem ws : changedSystems) {
+                            Boolean powered = wireSystems.get(ws);
+                            if (powered != null && ws.isPlayerWatching(player)) {
+                                hashesPowered.put(ws.getWiresHashCode(), powered);
+                            }
                         }
                     }
                     if (!changedWires.isEmpty()) {
                         PacketDistributor.sendToPlayer(player, new PayloadWireSystems(changedWires));
-                    }
-
-                    // Send power updates
-                    Map<Integer, Boolean> hashesPowered = new HashMap<>();
-                    for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
-                        WireSystem ws = entry.getKey();
-                        if (watching.get(ws).contains(player) &&
-                            (structureChanged || changedSystems.contains(ws) || changedPlayers.contains(player))) {
-                            hashesPowered.put(ws.getWiresHashCode(), entry.getValue());
-                        }
                     }
                     if (!hashesPowered.isEmpty()) {
                         PacketDistributor.sendToPlayer(player, new PayloadWireSystemsPowered(hashesPowered));
@@ -301,6 +316,7 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     public void readFromTag(CompoundTag nbt) {
         wireSystems.clear();
         this.elementsToWireSystemsIndex.clear();
+        systemsPerChunk.clear();
 
         ListTag entriesList = NBTUtilBC.getList(nbt, "entries", Tag.TAG_COMPOUND);
         for (int i = 0; i < entriesList.size(); i++) {

@@ -38,9 +38,11 @@ import net.minecraft.world.level.block.state.BlockState;
  * <tr><td>Stripes pipe</td><td>{@link #STRIPES}</td><td>fixed 200 ticks</td><td>4 (it faces one block at a
  *     time)</td><td>pipe owner</td><td>the block the current break cycle charges</td></tr>
  * <tr><td>Robot search boards (lumberjack, miner, ...)</td><td>{@link #ROBOT_SEARCH}</td><td>fixed 1200 ticks</td>
- *     <td>256, oldest dropped (a claimed forest)</td><td>home-station owner</td><td>-</td></tr>
+ *     <td>256, oldest dropped (a claimed forest)</td><td>robot's acting identity and home-station owner</td>
+ *     <td>-</td></tr>
  * <tr><td>Pump; robot pump board</td><td>{@link #DRAIN}</td><td>spaced: 6000 ticks, stretched by 20 per other
- *     live refusal</td><td>none (see below)</td><td>tile owner; home-station owner</td><td>Pump: the cell the
+ *     live refusal</td><td>none (see below)</td><td>tile owner; robot's acting identity and home-station
+ *     owner</td><td>Pump: the cell the
  *     current bucket charges</td></tr>
  * </table>
  *
@@ -69,9 +71,12 @@ import net.minecraft.world.level.block.state.BlockState;
  *
  * <p><b>The owner key.</b> Every answer is about the identity the machine asked as ({@link MachineIdentity}: its named
  * owner, else "[BuildCraft]"). Every call names the owner; when it is a different identity from the one the memory
- * holds answers for (a robot relinked to another player's station), the memory is emptied first, permit included.
- * The identity is resolved once per owner profile rather than on every call: a search asking about hundreds of
- * candidates for one owner passes the same profile object each time.
+ * holds answers for, the memory is emptied first, permit included. A robot answers to two players, the identity it
+ * acts as and its home station's owner, both of whom must permit it (see {@code RobotProtection}), so its calls name
+ * the pair: relinked to another player's station, or acting as another player, it starts afresh. A single owner is
+ * the pair of that owner with itself, so a robot whose two players are one has the key a one-owner machine has.
+ * Each identity is resolved once per profile rather than on every call: a search asking about hundreds of candidates
+ * for one owner passes the same profile objects each time.
  *
  * <p><b>Clock and lifetime.</b> The clock is the level's game time everywhere; the pure overloads take it as an
  * argument so the logic is testable without a world. The {@link Level} overloads read state and clock from the world
@@ -105,10 +110,16 @@ public final class RefusalMemory {
 
     /** The refused cells, each noted with the state it was refused in. */
     private final PositionMemory<BlockState> refused;
-    /** The identity every answer held was given to; null until the first call names one. */
+    /** The identity the machine acted as for every answer held; null until the first call names one. */
+    @Nullable
+    private UUID actorId;
+    /** The identity that also had to permit every answer held (the same as {@link #actorId} for a machine that answers
+     *  to one owner); null until the first call names one. */
     @Nullable
     private UUID ownerId;
-    /** The profile {@link #ownerId} was last resolved from, or {@link #NO_OWNER_YET}. */
+    /** The profiles {@link #actorId} and {@link #ownerId} were last resolved from, or {@link #NO_OWNER_YET}. */
+    @Nullable
+    private Object actorResolvedFrom = NO_OWNER_YET;
     @Nullable
     private Object ownerResolvedFrom = NO_OWNER_YET;
     @Nullable
@@ -128,15 +139,23 @@ public final class RefusalMemory {
      *  profile object passed last time is the same identity again (a profile's id and name never change), so only a
      *  different object is resolved. */
     private void keyOn(@Nullable GameProfile owner) {
-        if (owner == ownerResolvedFrom) {
+        keyOn(owner, owner);
+    }
+
+    /** {@link #keyOn(GameProfile)} for a machine that acts as {@code actor} and needs {@code owner}'s leave too. */
+    private void keyOn(@Nullable GameProfile actor, @Nullable GameProfile owner) {
+        if (actor == actorResolvedFrom && owner == ownerResolvedFrom) {
             return;
         }
+        actorResolvedFrom = actor;
         ownerResolvedFrom = owner;
-        UUID id = GameProfileUtil.getId(MachineIdentity.of(owner));
-        if (!Objects.equals(id, ownerId)) {
+        UUID actorNow = GameProfileUtil.getId(MachineIdentity.of(actor));
+        UUID ownerNow = actor == owner ? actorNow : GameProfileUtil.getId(MachineIdentity.of(owner));
+        if (!Objects.equals(actorNow, actorId) || !Objects.equals(ownerNow, ownerId)) {
             refused.clear();
             revokePermit();
-            ownerId = id;
+            actorId = actorNow;
+            ownerId = ownerNow;
         }
     }
 
@@ -153,7 +172,14 @@ public final class RefusalMemory {
      *  {@code lookup} as well as by expiry. */
     public void remember(BlockPos pos, BlockState state, long gameTime, @Nullable GameProfile owner,
             @Nullable StateLookup lookup) {
-        keyOn(owner);
+        remember(pos, state, gameTime, owner, owner, lookup);
+    }
+
+    /** {@link #remember(BlockPos, BlockState, long, GameProfile, StateLookup)} for a machine that acted as
+     *  {@code actor} and needed {@code owner}'s leave too (a robot: see the owner key in the class Javadoc). */
+    public void remember(BlockPos pos, BlockState state, long gameTime, @Nullable GameProfile actor,
+            @Nullable GameProfile owner, @Nullable StateLookup lookup) {
+        keyOn(actor, owner);
         long key = pos.asLong();
         if (permitPos != null && permitPos.asLong() == key) {
             revokePermit();
@@ -169,7 +195,14 @@ public final class RefusalMemory {
      * and the window has not ended. A changed state or an ended window forgets the refusal and answers false.
      */
     public boolean isRefused(BlockPos pos, BlockState state, long gameTime, @Nullable GameProfile owner) {
-        keyOn(owner);
+        return isRefused(pos, state, gameTime, owner, owner);
+    }
+
+    /** {@link #isRefused(BlockPos, BlockState, long, GameProfile)} for a machine that acts as {@code actor} and needs
+     *  {@code owner}'s leave too. */
+    public boolean isRefused(BlockPos pos, BlockState state, long gameTime, @Nullable GameProfile actor,
+            @Nullable GameProfile owner) {
+        keyOn(actor, owner);
         long key = pos.asLong();
         BlockState refusedIn = refused.get(key, gameTime);
         if (refusedIn == null) {
@@ -186,10 +219,16 @@ public final class RefusalMemory {
      *  world's clock. A cell in an unloaded chunk is not read (that would load it) and so not remembered: it has not
      *  been seen to refuse. Other remembered cells in unloaded chunks are likewise left unread, only aged out. */
     public void remember(Level level, BlockPos pos, @Nullable GameProfile owner) {
+        remember(level, pos, owner, owner);
+    }
+
+    /** {@link #remember(Level, BlockPos, GameProfile)} for a machine that acted as {@code actor} and needed
+     *  {@code owner}'s leave too. */
+    public void remember(Level level, BlockPos pos, @Nullable GameProfile actor, @Nullable GameProfile owner) {
         if (!level.isLoaded(pos)) {
             return;
         }
-        remember(pos, level.getBlockState(pos), level.getGameTime(), owner,
+        remember(pos, level.getBlockState(pos), level.getGameTime(), actor, owner,
                 cell -> level.isLoaded(cell) ? level.getBlockState(cell) : null);
     }
 
@@ -197,9 +236,15 @@ public final class RefusalMemory {
      *  in an unloaded chunk is not read (that would load it) and is reported as not refused, its entry left as it was
      *  to be judged once the cell is loaded. */
     public boolean isRefused(Level level, BlockPos pos, @Nullable GameProfile owner) {
-        keyOn(owner);
+        return isRefused(level, pos, owner, owner);
+    }
+
+    /** {@link #isRefused(Level, BlockPos, GameProfile)} for a machine that acts as {@code actor} and needs
+     *  {@code owner}'s leave too. */
+    public boolean isRefused(Level level, BlockPos pos, @Nullable GameProfile actor, @Nullable GameProfile owner) {
+        keyOn(actor, owner);
         return !refused.isEmpty() && level.isLoaded(pos)
-                && isRefused(pos, level.getBlockState(pos), level.getGameTime(), owner);
+                && isRefused(pos, level.getBlockState(pos), level.getGameTime(), actor, owner);
     }
 
     /**

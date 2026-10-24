@@ -7,6 +7,7 @@
 package buildcraft.builders.snapshot;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,6 +42,13 @@ public class Blueprint extends Snapshot {
     public final List<ISchematicBlock> palette = new ArrayList<>();
     public int[] data;
     public final List<ISchematicEntity> entities = new ArrayList<>();
+    /** Whether {@link #deserializeNBT} dropped a palette entry or an entity its gates refuse. Such a blueprint is not
+     *  {@linkplain #readFully() read fully}: the store must never write the reduced copy over the file. */
+    private boolean droppedOnRead;
+
+    /** How many of the ids a drop warning names, and how long each may be: the ids come from untrusted bytes. */
+    private static final int MAX_LOGGED_IDS = 5;
+    private static final int MAX_LOGGED_ID_LENGTH = 64;
 
     @Override
     public Blueprint copy() {
@@ -51,6 +59,8 @@ public class Blueprint extends Snapshot {
         blueprint.palette.addAll(palette);
         blueprint.data = data.clone();
         blueprint.entities.addAll(entities);
+        // A copy of a reduced blueprint is just as reduced: whatever it is checked for, it must not pass as full.
+        blueprint.droppedOnRead = droppedOnRead;
         blueprint.computeKey();
         return blueprint;
     }
@@ -165,9 +175,25 @@ public class Blueprint extends Snapshot {
     public void deserializeNBT(CompoundTag nbt) throws InvalidInputDataException {
         super.deserializeNBT(nbt);
         palette.clear();
+        droppedOnRead = false;
+        int replacedBlocks = 0;
+        int droppedEntities = 0;
+        Set<String> droppedIds = new LinkedHashSet<>();
         for (CompoundTag schematicBlockTag :
             NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
-            palette.add(SchematicBlockManager.readFromNBT(schematicBlockTag));
+            // A legacy default-typed pipe is re-read as the pipe schematic (see upgradeLegacyPipe).
+            ISchematicBlock block = SchematicBlockManager.upgradeLegacyPipe(
+                SchematicBlockManager.readFromNBT(schematicBlockTag), schematicBlockTag);
+            // The Architect's capture gate, re-run on the read: an upload's palette can name any block, and one no
+            // scan would capture is reduced to air at the same index, so data[] still resolves. Dropped rather than
+            // refused, like an entity below, so a modpack change cannot brick a stored blueprint.
+            String refusedId = SchematicBlockManager.captureGateRefusal(block);
+            if (refusedId != null) {
+                replacedBlocks++;
+                noteDroppedId(droppedIds, refusedId);
+                block = new SchematicBlockAir();
+            }
+            palette.add(block);
         }
         // Support both ListTag and IntArray for data
         Tag dataTag = nbt.get("data");
@@ -229,14 +255,28 @@ public class Blueprint extends Snapshot {
             // here rather than refused whole-file — one unruled entity (e.g. a modpack removing a rule) must not
             // brick every stored blueprint that happens to contain it. build() can then never see it.
             if (entity instanceof SchematicEntityDefault schematicEntity && !SchematicEntityDefault.isPricedByRules(schematicEntity.entityNbt)) {
-                LOGGER.warn(
-                    "Dropping entity no schematic rule sanctions from a blueprint: \"{}\"",
-                    NBTUtilBC.getString(schematicEntity.entityNbt, "id", "")
-                );
+                droppedEntities++;
+                noteDroppedId(droppedIds, NBTUtilBC.getString(schematicEntity.entityNbt, "id", ""));
                 continue;
             }
             entities.add(entity);
         }
+        if (replacedBlocks > 0 || droppedEntities > 0) {
+            droppedOnRead = true;
+            // One line per blueprint, however many entries it drops: a planted or uploaded file must not flood the log.
+            LOGGER.warn(
+                "Read a blueprint with content no schematic rule sanctions: {} palette entr{} replaced with air, {} "
+                    + "entit{} dropped (ids: {})",
+                replacedBlocks, replacedBlocks == 1 ? "y" : "ies", droppedEntities, droppedEntities == 1 ? "y" : "ies",
+                droppedIds
+            );
+        }
+    }
+
+    /** Remembers {@code id} for the drop warning: distinct, at most {@link #MAX_LOGGED_IDS}, each made log-safe. */
+    private static void noteDroppedId(Set<String> ids, String id) {
+        if (ids.size() >= MAX_LOGGED_IDS) return;
+        ids.add(logSafe(id, MAX_LOGGED_ID_LENGTH));
     }
 
     @Override
@@ -273,9 +313,11 @@ public class Blueprint extends Snapshot {
 
     /** Every palette entry and entity must vouch for its read. BuildCraft's own schematics can: air holds nothing,
      *  the block and fluid schematics check every block they name, and the default entity schematic keeps the
-     *  entity's NBT as it was saved. A schematic an addon registered cannot say, so it counts as not read fully. */
+     *  entity's NBT as it was saved. A schematic an addon registered cannot say, so it counts as not read fully, and
+     *  neither does a blueprint the read gates reduced (a palette entry turned to air, an entity dropped). */
     @Override
     boolean readFully() {
+        if (droppedOnRead) return false;
         for (ISchematicBlock block : palette) {
             boolean full = block instanceof SchematicBlockAir
                 || block instanceof SchematicBlockDefault schematic && schematic.readFully()

@@ -573,6 +573,10 @@ public class BuildCraftGameTests {
         // and build(..., includeContents=false) places the chest with an empty inventory.
         reg.accept("buildcraftunofficial:container_contents_ignore_omits_required", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeOmitsContentsFromRequiredItems);
         reg.accept("buildcraftunofficial:container_contents_ignore_builds_empty", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testIgnoreModeBuildsEmptyChest);
+        // Deny by default: an item holder no rule prices (a campfire) is built empty, not with its captured contents.
+        reg.accept("buildcraftunofficial:container_contents_unpriced_builds_empty", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testUnpricedCampfireBuildsEmpty);
+        // A BuildCraft machine's rule names the keys its tile really saves: a tank's, an engine's, a distiller's contents are charged.
+        reg.accept("buildcraftunofficial:container_contents_bc_machines_priced", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testBuildCraftMachineContentsArePriced);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);
@@ -1309,6 +1313,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
         reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
+        reg.accept("buildcraftunofficial:robot_deployer_break_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::breakNeedsDeployerAndStationOwner);
+        reg.accept("buildcraftunofficial:robot_deployer_plant_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::plantNeedsDeployerAndStationOwner);
+        reg.accept("buildcraftunofficial:robot_deployer_stripes_activator_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesNeedsStationOwnerAtTheActivatorCell);
+        reg.accept("buildcraftunofficial:robot_deployer_stripes_in_air_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesInAirUseNeedsStationOwner);
+        reg.accept("buildcraftunofficial:robot_deployer_save_round_trip", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::deployerSurvivesSaveAndUnknownActsAsOwner);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

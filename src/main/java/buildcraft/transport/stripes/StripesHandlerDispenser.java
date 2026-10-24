@@ -71,7 +71,11 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
             return fromPipe == BlockUtil.ItemUse.USED;
         }
 
-        // Strategy 3: Use in air (right-click with no target block)
+        // Strategy 3: Use in air (right-click with no target block). The activator has a say first: where this use
+        // lands is the item's own aim, which a robot answering to a second player asks that player about.
+        if (!activator.mayUseInAir(player, stack)) {
+            return false;
+        }
         return BlockUtil.useItemInAir(world, player, InteractionHand.MAIN_HAND, stack);
     }
 }

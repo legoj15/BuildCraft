@@ -37,9 +37,9 @@ import buildcraft.robotics.RobotProtection;
  *  port tanks the bucket for real and reports it, per the design doc. One bucket per pass: a partially
  *  full tank (room &lt; 1000) fails the pass, and the board's tank check routes the robot to unload first.
  *
- *  <p>Before the world changes, the pass asks protection mods ({@link RobotProtection}, as the home station's
- *  owner) about the one block it was sent to. A refusal — from a mod, or from a block that reports a source yet
- *  refuses its pickup — is reported through {@link #refused()} so the board can stop sending the robot there. */
+ *  <p>Before the world changes, the pass asks protection mods ({@link RobotProtection#canBreak}, for the robot's
+ *  deployer and its home station's owner alike) about the one block it was sent to. A refusal — from a mod, or
+ *  from a block that reports a source yet refuses its pickup — is reported through {@link #refused()} so the board can stop sending the robot there. */
 public class AIRobotPumpBlock extends AIRobot {
 
     private static final int BUCKET = 1000;
@@ -130,8 +130,8 @@ public class AIRobotPumpBlock extends AIRobot {
 
     /**
      * True when this pass failed because the block would not be given up, not because the robot was full or the
-     * block was already gone: a claim/protection mod refused the pump (asked as the home station's owner, once the
-     * robot has room for the bucket), or the block reports a source yet refused its bucket pickup. The pump board
+     * block was already gone: a claim/protection mod refused the pump (asked for the deployer and the home station's
+     * owner, once the robot has room for the bucket), or the block reports a source yet refused its bucket pickup. The pump board
      * remembers such a block so it does not send the robot straight back to it.
      */
     public boolean refused() {

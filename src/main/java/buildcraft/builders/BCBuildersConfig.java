@@ -28,8 +28,10 @@ public class BCBuildersConfig {
      *  enclose 65^3 = 274,625 cells, about 4.4 MB unpacked) with room for its palette, and not much more. */
     public static final int LIBRARY_MAX_UPLOAD_MB_DEFAULT = 32;
     public static final int LIBRARY_MAX_UPLOAD_MB_MIN = 1;
-    /** Past this the byte counts no longer fit an int. */
-    public static final int LIBRARY_MAX_UPLOAD_MB_MAX = 1024;
+    /** The most the option may be set to, and the most {@code LibraryUploadBuffer.Limits#readCeiling()} lets this game
+     *  expand from a received or stored snapshot: one number, so that no upload can be accepted that is then unreadable
+     *  (a stored file skipped as corrupt, a preview whose decode fails). */
+    public static final int LIBRARY_MAX_UPLOAD_MB_MAX = 4 * LIBRARY_MAX_UPLOAD_MB_DEFAULT;
 
     /** The largest snapshot, in megabytes, the Electronic Library accepts from a client. */
     public static ModConfigSpec.IntValue libraryMaxUploadMb;
@@ -41,11 +43,14 @@ public class BCBuildersConfig {
 
         libraryMaxUploadMb = builder
                 .comment("The largest blueprint or template, in megabytes, that the Electronic Library accepts from a player.",
-                         "It bounds the upload as sent, as unpacked on the server, and the size a snapshot may claim",
-                         "(at 16 bytes a cell). Anything larger is refused, so a modified client cannot make the server",
+                         "It bounds the upload as sent, as unpacked on the server and as the library would store it,",
+                         "and the size a snapshot may claim (at 16 bytes a cell). Anything larger is refused, so a modified client cannot make the server",
                          "allocate without limit. The default covers the largest scan the default marker range can make",
                          "(65 x 65 x 65 blocks) with room to spare. Raise it if you raise the marker range or let",
-                         "players scan larger volume boxes: a 256-block cube needs about 300.")
+                         "players scan larger volume boxes: a scan costs 16 bytes a block, so a cube 100 blocks on a",
+                         "side needs about 16 MB, and the maximum, 128, holds one up to about 200 blocks on a side.",
+                         "128 is also the most a snapshot can be read back at (from the library's store or a",
+                         "preview), so the option cannot go higher, and the library refuses a larger upload.")
                 .defineInRange("libraryMaxUploadMb", LIBRARY_MAX_UPLOAD_MB_DEFAULT, LIBRARY_MAX_UPLOAD_MB_MIN,
                         LIBRARY_MAX_UPLOAD_MB_MAX);
 

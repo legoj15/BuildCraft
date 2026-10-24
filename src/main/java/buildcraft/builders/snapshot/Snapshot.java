@@ -199,6 +199,16 @@ public abstract class Snapshot {
      *  game lacks, or holds a schematic that cannot vouch for its own read. */
     abstract boolean readFully();
 
+    /**
+     * {@code value} made fit for one log line: every control character (a newline would let it forge a line of its
+     * own) becomes {@code ?}, and it is cut to {@code maxLength}. For text read from untrusted snapshot bytes, or a
+     * loader's exception message, which may echo them.
+     */
+    static String logSafe(@Nullable Object value, int maxLength) {
+        String text = String.valueOf(value).replaceAll("\\p{Cntrl}", "?");
+        return text.length() > maxLength ? text.substring(0, maxLength) + "..." : text;
+    }
+
     public void computeKey() {
         CompoundTag nbt = writeToNBT(this);
         if (nbt.contains("key")) {

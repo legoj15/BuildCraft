@@ -34,14 +34,15 @@ import buildcraft.robotics.RobotProtection;
  *  <p>The per-cycle progress is one tick of {@link BlockState#getDestroyProgress} measured for a freshly reset
  *  fake player holding the robot's tool — the fake player is what carries the tool (and its
  *  efficiency enchantment) into vanilla's math, exactly as 7.1.x's {@code getFakePlayerWithTool} did. It is the
- *  home-station owner's fake player (the generic "[BuildCraft]" one for a robot with no owner), so the events that
- *  maths posts - the break-speed and harvest checks a claim mod may listen to - name the owner, as the permission
- *  probe below does.
+ *  fake player of the identity the robot acts as ({@link RobotProtection#identityOf}: its deployer, or its home
+ *  station's owner for a robot with no recorded deployer), so the events that maths posts - the break-speed and
+ *  harvest checks a claim mod may listen to - name that player, one of the two the permission probe below asks
+ *  about.
  *  The 7.1.x crack-particle SFX is dropped; the crack overlay itself is kept through
  *  {@code destroyBlockProgress}.
  *
- *  <p>Before the first swing it asks protection mods, as the robot's home-station owner
- *  ({@link RobotProtection}); a refusal fails the AI without touching the block. */
+ *  <p>Before the first swing it asks protection mods, for the robot's deployer and its home station's owner alike
+ *  ({@link RobotProtection#canBreak}); a refusal fails the AI without touching the block. */
 public class AIRobotBreak extends AIRobot {
 
     private BlockPos blockToBreak;
@@ -95,10 +96,10 @@ public class AIRobotBreak extends AIRobot {
             return;
         }
 
-        // The cached fake player, leased (reset on lease, scrubbed on close) for this cycle, as the home station's
-        // owner (the generic player when there is none) - the same identity the permission probe above asked as, so
-        // a break-speed or harvest listener and a claim mod see one player. The held tool goes in its main hand so
-        // getDestroyProgress sees the tool speed and the efficiency bonus.
+        // The cached fake player, leased (reset on lease, scrubbed on close) for this cycle, as the identity the robot
+        // acts as (its deployer; the station's owner when none is recorded) - one the permission probe above asked
+        // about, so a break-speed or harvest listener and a claim mod see the same player. The held tool goes in its
+        // main hand so getDestroyProgress sees the tool speed and the efficiency bonus.
         try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
             breakCycle(serverLevel, state, hardness, lease.player());
         }
@@ -122,7 +123,7 @@ public class AIRobotBreak extends AIRobot {
         if (blockDamage > 1.0F) {
             blockDamage = 0;
             ItemStack held = robot.getHeldItem();
-            // By the leased player itself (the owner's, or the generic one when the robot has no owner).
+            // By the leased player itself (the acting identity's, or the generic one when that has no name).
             Optional<List<ItemStack>> drops = BlockUtil.breakBlockAndGetDrops(serverLevel, blockToBreak, held, player);
             if (drops.isPresent()) {
                 for (ItemStack stack : drops.get()) {

@@ -214,8 +214,21 @@ public class WireManager implements IWireManager {
     public void readFromNbt(CompoundTag nbt) {
         parts.clear();
         int[] wiresArray = NBTUtilBC.getIntArray(nbt, "parts", new int[0]);
-        for (int i = 0; i < wiresArray.length; i += 2) {
-            parts.put(EnumWirePart.VALUES[wiresArray[i]], DyeColor.byId(wiresArray[i + 1]));
+        // Flat (part ordinal, colour id) pairs. A pipe save or a blueprint's tile NBT is not guaranteed well formed, so
+        // a pair naming an unknown part or colour is dropped, as is an unpaired trailing element, rather than letting
+        // an exception escape the tile's readData.
+        for (int i = 0; i + 1 < wiresArray.length; i += 2) {
+            int partIndex = wiresArray[i];
+            int colourId = wiresArray[i + 1];
+            if (partIndex < 0 || partIndex >= EnumWirePart.VALUES.length) {
+                continue;
+            }
+            DyeColor colour = DyeColor.byId(colourId);
+            // byId maps an unknown id to white instead of failing, so only an id that reads back as itself is real.
+            if (colour.getId() != colourId) {
+                continue;
+            }
+            parts.put(EnumWirePart.VALUES[partIndex], colour);
         }
     }
 

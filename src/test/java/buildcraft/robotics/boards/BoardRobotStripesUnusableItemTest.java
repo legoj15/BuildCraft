@@ -78,6 +78,14 @@ public class BoardRobotStripesUnusableItemTest extends VanillaSetupBaseTester {
         };
     }
 
+    private static AIRobotStripesHandler refusedUse(IRobotAccess robot) {
+        return new AIRobotStripesHandler(robot, BLOCK) {
+            {
+                markRefused();
+            }
+        };
+    }
+
     private static AIRobotStripesHandler workedUse(IRobotAccess robot) {
         return new AIRobotStripesHandler(robot, BLOCK);
     }
@@ -126,6 +134,27 @@ public class BoardRobotStripesUnusableItemTest extends VanillaSetupBaseTester {
         Assertions.assertFalse(robot.getHeldItem().isEmpty(),
                 "failed uses are counted in a row: nine, a success, nine more never reaches the limit");
         Assertions.assertTrue(robot.stashed.isEmpty());
+    }
+
+    @Test
+    public void aProtectionRefusalIsNotAnUnusableItem() {
+        StashRobot robot = robotHolding(new ItemStack(Items.STICK, 3));
+        BoardRobotStripes board = new BoardRobotStripes(robot);
+
+        for (int use = 1; use < BoardRobotStripes.GIVE_UP_AFTER_FAILED_USES; use++) {
+            board.delegateAIEnded(failedUse(robot));
+        }
+        for (int use = 1; use <= 2 * BoardRobotStripes.GIVE_UP_AFTER_FAILED_USES; use++) {
+            board.delegateAIEnded(refusedUse(robot));
+        }
+
+        Assertions.assertTrue(ItemStack.matches(new ItemStack(Items.STICK, 3), robot.getHeldItem()),
+                "a claim refusing the cell says nothing about the item: refused uses never give it up");
+        Assertions.assertTrue(robot.stashed.isEmpty());
+
+        board.delegateAIEnded(failedUse(robot));
+        Assertions.assertTrue(robot.getHeldItem().isEmpty(),
+                "nor do they break the run of failed uses: the tenth unusable use still gives the item up");
     }
 
     @Test

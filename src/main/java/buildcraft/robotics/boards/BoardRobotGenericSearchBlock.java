@@ -59,8 +59,9 @@ public abstract class BoardRobotGenericSearchBlock extends RedstoneBoardRobot {
 
     /** Blocks that refused this robot - protection mods said no, or the work on them failed anyway (a break or a
      *  harvest that did not take, {@link #finishAttempt}) - so a refused block is not chosen again (and not asked
-     *  about again) every search, and the run of failed attempts that sends the board to sleep. Keyed on the home
-     *  station's owner, whom the robot asks as: a refusal says nothing about anyone else. Policy
+     *  about again) every search, and the run of failed attempts that sends the board to sleep. Keyed on the two
+     *  players the robot asks for, its acting identity and its home station's owner: a refusal says nothing about
+     *  any other pair. Policy
      *  {@link RefusalMemory#ROBOT_SEARCH}, the same memory the farmer and planter keep. Transient: a reloaded board
      *  simply asks again. */
     private final WorkRefusals refusals = new WorkRefusals(robot);

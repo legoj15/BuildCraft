@@ -43,7 +43,8 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.entity.EntityRobot;
 
 /**
- * A robot acts for the owner of its home station, so protection mods judge that player, not the generic
+ * A robot with no recorded deployer (these never had one: see {@code RobotDeployerProtectionTester} for one that
+ * does) acts for the owner of its home station, so protection mods judge that player, not the generic
  * "[BuildCraft]" identity: the robot's planting, tool use and block breaking must run as the station owner's fake
  * player, the way the break AI's permission probe and the Stripes board already do. The observers are the events a
  * claim mod would cancel: the block-placement event for a planted seed, the right-click-block event a hoe's till

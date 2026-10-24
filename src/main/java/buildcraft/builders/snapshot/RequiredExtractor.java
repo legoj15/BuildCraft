@@ -17,10 +17,13 @@ import javax.annotation.Nullable;
 import com.google.gson.JsonDeserializer;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
+
+import buildcraft.lib.misc.NBTUtilBC;
 
 @SuppressWarnings("WeakerAccess")
 public abstract class RequiredExtractor {
@@ -49,10 +52,63 @@ public abstract class RequiredExtractor {
      * Builder's IGNORE container-contents mode: every extractor that declares an item-bearing
      * NBT path also knows where it lives, so callers can route a single
      * {@code rules → extractors → clearItemsFromBlock} pass over the tileNbt copy and have all
-     * items_list paths stripped uniformly. Default is a no-op so non-list extractors
-     * (item_from_block, constant, …) don't accidentally mutate the tag.
+     * item-bearing paths stripped uniformly. Default is a no-op so the extractors that price no
+     * contents (item_from_block, constant, …) don't accidentally mutate the tag.
      */
     public void clearItemsFromBlock(@Nonnull CompoundTag tileNbt) {
+    }
+
+    /**
+     * Whether this extractor prices items the block entity holds (an inventory list, or one stored item such as a
+     * lectern's book), which the Builder's IGNORE container-contents mode neither places nor charges: such an
+     * extractor's {@link #clearItemsFromBlock} strips them from the placed copy. Tanks are not contents here.
+     */
+    public boolean isContainerContents() {
+        return false;
+    }
+
+    /**
+     * Whether this extractor prices something the block entity's NBT holds (an inventory list, a single stored item,
+     * a tank). A schematic none of whose rules has such an extractor places its block entity empty (see
+     * {@code SchematicBlockDefault#build}): whatever the captured NBT carries was never charged. False for the
+     * extractors that price only the block (item_from_block) or a fixed list (constant).
+     */
+    public boolean pricesTileContents() {
+        return false;
+    }
+
+    /**
+     * One stack as an extractor's path finds it: vanilla's {@code ItemStack.CODEC} compound ({@code id}, {@code count},
+     * {@code components}), or a BuildCraft {@code ItemHandlerSimple} slot, which wraps that compound under
+     * {@code stack} and saves a count the codec cannot carry (over 99) beside it as {@code count}. Reading only the
+     * first form priced every BuildCraft inventory at nothing. Empty when neither parses.
+     */
+    static ItemStack parseItemStack(CompoundTag ct) {
+        CompoundTag wrapped = NBTUtilBC.getCompoundOrNull(ct, "stack");
+        CompoundTag payload = wrapped != null ? wrapped : ct;
+        ItemStack stack = ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), payload)
+            .resultOrPartial()
+            .orElse(ItemStack.EMPTY);
+        if (wrapped != null && !stack.isEmpty() && ct.contains("count")) {
+            stack = stack.copyWithCount(Math.max(1, NBTUtilBC.getInt(ct, "count", stack.getCount())));
+        }
+        return stack;
+    }
+
+    /** {@code tag} read as an int, or {@code def} when it is not a number (a path that found nothing); through {@link NBTUtilBC} so it reads alike on every node. */
+    static int readInt(@Nullable Tag tag, int def) {
+        if (tag == null || tag.getId() < Tag.TAG_BYTE || tag.getId() > Tag.TAG_DOUBLE) return def;
+        CompoundTag holder = new CompoundTag();
+        holder.put("v", tag);
+        return NBTUtilBC.getInt(holder, "v", def);
+    }
+
+    /** {@code tag} read as a string, or the empty string. */
+    static String readString(@Nullable Tag tag) {
+        if (tag == null || tag.getId() != Tag.TAG_STRING) return "";
+        CompoundTag holder = new CompoundTag();
+        holder.put("v", tag);
+        return NBTUtilBC.getString(holder, "v", "");
     }
 
     public enum EnumType {

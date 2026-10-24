@@ -7,14 +7,21 @@
 package buildcraft.builders.snapshot;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.api.schematics.SchematicBlockFactoryRegistry;
+
+import buildcraft.lib.misc.NBTUtilBC;
+
+import buildcraft.transport.block.BlockPipeHolder;
 
 /** Block-scoped facade over the shared {@link SchematicManager}. Block scans MUST resolve a
  *  schematic, so this manager throws on miss (unlike the entity twin, which returns null). */
@@ -45,6 +52,61 @@ public class SchematicBlockManager {
     @Nonnull
     public static ISchematicBlock readFromNBT(CompoundTag schematicBlockTag) throws InvalidInputDataException {
         return MANAGER.readFromNBT(schematicBlockTag);
+    }
+
+    /**
+     * {@link #readFromNBT}, then the read gates of an uploaded or hand-made schematic ({@link #upgradeLegacyPipe},
+     * {@link #captureGateRefusal}), for a schematic read on its own: a single-schematic item, which the Replacer also
+     * reads its from/to pair from. One that fails the capture gate is refused, since there is no stored file to keep
+     * readable around it.
+     */
+    @Nonnull
+    public static ISchematicBlock readCapturableFromNBT(CompoundTag schematicBlockTag)
+        throws InvalidInputDataException {
+        ISchematicBlock block = upgradeLegacyPipe(readFromNBT(schematicBlockTag), schematicBlockTag);
+        String refusedId = captureGateRefusal(block);
+        if (refusedId != null) {
+            throw new InvalidInputDataException("No Architect scan captures the schematic of " + refusedId);
+        }
+        return block;
+    }
+
+    /**
+     * A schematic saved before the pipe schematic existed (2026-06) typed its pipes as default, which prices no
+     * pluggable. The same data is re-read as the pipe schematic a scan picks today, so the pipe keeps its place and its
+     * facades, gates and lenses are charged. Anything else is returned as it is.
+     */
+    @Nonnull
+    static ISchematicBlock upgradeLegacyPipe(ISchematicBlock block, CompoundTag schematicBlockTag)
+        throws InvalidInputDataException {
+        if (block.getClass() == SchematicBlockDefault.class
+            && ((SchematicBlockDefault) block).blockState != null
+            && ((SchematicBlockDefault) block).blockState.getBlock() instanceof BlockPipeHolder) {
+            SchematicBlockPipe pipe = new SchematicBlockPipe();
+            pipe.deserializeNbt(NBTUtilBC.getCompound(schematicBlockTag, "data"));
+            return pipe;
+        }
+        return block;
+    }
+
+    /**
+     * The Architect's capture gate, re-run on a read: the registry id of the block {@code block} names when no scan
+     * would have captured it (an ignored ender chest, a block of a mod that ships no rules, a block priced as another,
+     * a schematic class the scan would not pick for it), else null. The id is a registry key, so it is log-safe.
+     */
+    @Nullable
+    static String captureGateRefusal(ISchematicBlock block) {
+        if (block instanceof SchematicBlockDefault schematic && !schematic.capturableByScan()) {
+            return blockId(schematic.blockState);
+        }
+        if (block instanceof SchematicBlockFluid fluid && !fluid.capturableByScan()) {
+            return blockId(fluid.getBlockStateForRender());
+        }
+        return null;
+    }
+
+    private static String blockId(@Nullable BlockState state) {
+        return state == null ? "?" : String.valueOf(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
     /** Check if the given schematic type name is registered. */

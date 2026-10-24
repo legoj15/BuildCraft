@@ -68,7 +68,8 @@ public abstract class DockingStation {
     }
 
     /** The player this station acts for (e.g. whoever placed the pipe it sits on), or null when there is none.
-     *  Robots homed here ask protection mods for permission as this player. */
+     *  A robot homed here acts as the player who deployed it, and protection mods must permit this player as well
+     *  for anything it does; a robot with no recorded deployer acts and asks as this player alone. */
     @Nullable
     public GameProfile getOwner() {
         return null;

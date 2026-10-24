@@ -20,29 +20,43 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 //? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
 //?}
+import net.minecraft.world.Clearable;
 import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BaseSpawner;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.BrushableBlock;
+import net.minecraft.world.level.block.DecoratedPotBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.LiquidBlockContainer;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.SpawnerBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrialSpawnerBlock;
+import net.minecraft.world.level.block.VaultBlock;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -65,7 +79,13 @@ import buildcraft.api.schematics.SchematicBlockContext;
 import buildcraft.lib.misc.BlockStateNbt;
 import buildcraft.lib.misc.NBTUtilBC;
 
+import buildcraft.builders.block.BlockBuilder;
+import buildcraft.builders.block.BlockFiller;
+import buildcraft.transport.block.BlockPipeHolder;
+
 public class SchematicBlockDefault implements ISchematicBlock {
+    private static final Logger LOGGER = LogManager.getLogger("BCBlueprint");
+
     /** Directions a fluid can flow from to reach this position: the four horizontals plus the
      *  block above (water at the same Y level flows horizontally, water above flows down). The
      *  block below is irrelevant — fluids don't flow upwards into a destination. Used by the
@@ -315,7 +335,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
             // Sanitized at capture as well as at deserialization: a chest scanned in a generated structure carries
             // the loot-table keys verbatim, and blueprint safety must not depend on the store's file round-trip
             // re-running the deserialize gate (a cached capture object would bypass it).
-            tileNbt = sanitizeTileNbt(tileEntity.saveWithoutMetadata(context.world.registryAccess()));
+            tileNbt = sanitizeTileNbt(tileEntity.saveWithoutMetadata(context.world.registryAccess()), context.blockState);
         }
     }
 
@@ -394,9 +414,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * Mode-aware variant used by the Builder. When {@code includeContainerContents} is false the
      * Builder is in {@link EnumContainerContentsMode#IGNORE IGNORE} mode, so the chest will be
      * placed empty and the player shouldn't have to source its captured inventory — filter out
-     * every {@link RequiredExtractorItemsList} contribution (chest contents, hopper contents,
-     * etc.) while keeping {@link RequiredExtractorItemFromBlock} (the chest item itself) and any
-     * constant/tank extractors.
+     * every container-contents contribution ({@link RequiredExtractor#isContainerContents}: chest
+     * and hopper lists, a lectern's book, a jukebox's record) while keeping
+     * {@link RequiredExtractorItemFromBlock} (the chest item itself) and any constant/tank extractors.
      */
     @Nonnull
     public List<ItemStack> computeRequiredItems(boolean includeContainerContents) {
@@ -436,7 +456,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 ? Stream.of(new RequiredExtractorItemFromBlock())
                 : extractorLists.stream().flatMap(Collection::stream)
         )
-            .filter(extractor -> includeContainerContents || !(extractor instanceof RequiredExtractorItemsList))
+            .filter(extractor -> includeContainerContents || !extractor.isContainerContents())
             .flatMap(extractor -> extractor.extractItemsFromBlock(blockState, tileNbt).stream())
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
@@ -478,7 +498,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
         BlockState rotated = blockState.rotate(rotation);
         schematicBlock.blockState = rotated;
         schematicBlock.ignoredProperties.addAll(ignoredProperties);
-        schematicBlock.tileNbt = tileNbt;
+        // A copy, like every other field: the rotated schematic is handed to builders that may adjust it.
+        schematicBlock.tileNbt = tileNbt == null ? null : tileNbt.copy();
         schematicBlock.tileRotation = tileRotation.getRotated(rotation);
         schematicBlock.placeBlock = placeBlock;
         updateBlockOffsets.stream()
@@ -746,27 +767,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 .forEach(updatePos -> level.neighborChanged(updatePos, placeBlock, blockPos));*/
                 //?}
             if (tileNbt != null) {
-                BlockEntity tileEntity = level.getBlockEntity(blockPos);
-                if (tileEntity != null) {
-                    CompoundTag newTileNbt = tileNbt.copy();
-                    if (!includeContainerContents) {
-                        stripContainerContentsFromNbt(newTileNbt);
-                    }
-                    newTileNbt.putInt("x", blockPos.getX());
-                    newTileNbt.putInt("y", blockPos.getY());
-                    newTileNbt.putInt("z", blockPos.getZ());
-                    //? if >=1.21.10 {
-                    tileEntity.loadWithComponents(
-                        TagValueInput.create(
-                            ProblemReporter.DISCARDING,
-                            level.registryAccess(),
-                            newTileNbt
-                        )
-                    );
-                    //?} else {
-                    /*tileEntity.loadWithComponents(newTileNbt, level.registryAccess());*/
-                    //?}
+                CompoundTag newTileNbt = tileNbt.copy();
+                if (!includeContainerContents) {
+                    stripContainerContentsFromNbt(newTileNbt);
                 }
+                loadTileData(level, blockPos, newTileNbt);
             }
             return true;
         }
@@ -774,7 +779,80 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /**
-     * Walk the JSON rules for this schematic and strip every items_list path from the supplied
+     * Whether a rule matching this schematic prices its block entity's contents: some extractor reads them out of
+     * {@link #tileNbt} ({@link RequiredExtractor#pricesTileContents()}). A chest, a BuildCraft machine or tank with
+     * its rule; not a campfire, nor any modded item holder no rule names.
+     */
+    boolean contentsArePriced() {
+        return RulesLoader.getRules(blockState, tileNbt).stream()
+            .map(rule -> rule.requiredExtractors)
+            .filter(Objects::nonNull)
+            .flatMap(Collection::stream)
+            .anyMatch(RequiredExtractor::pricesTileContents);
+    }
+
+    /**
+     * Writes {@code data} (a copy of {@link #tileNbt}, already stripped as the caller's mode requires) into the block
+     * entity just placed at {@code blockPos}. Two guards, shared by both build paths:
+     * <ul>
+     *   <li>Deny by default: when no rule prices the contents ({@link #contentsArePriced()}), the block entity is
+     *       emptied after the load through {@link Clearable}, which every vanilla item holder and every BuildCraft
+     *       tile implements over exactly its contents (a BuildCraft tile's {@code clearContent} wipes what it would
+     *       spill, never its configuration). Otherwise a legitimately scanned item holder no rule names would be
+     *       rebuilt full for the price of the empty block.</li>
+     *   <li>A loader that throws on the NBT (any mod's, on malformed or hand-made data) must not crash the server
+     *       tick, which would recur on every restart while the Builder retries the cell. The half-loaded block entity
+     *       is replaced with a fresh default one and the placement still counts, so the cell is not retried.</li>
+     * </ul>
+     */
+    private void loadTileData(Level level, BlockPos blockPos, CompoundTag data) {
+        BlockEntity tileEntity = level.getBlockEntity(blockPos);
+        if (tileEntity == null) {
+            return;
+        }
+        data.putInt("x", blockPos.getX());
+        data.putInt("y", blockPos.getY());
+        data.putInt("z", blockPos.getZ());
+        try {
+            //? if >=1.21.10 {
+            tileEntity.loadWithComponents(
+                TagValueInput.create(
+                    ProblemReporter.DISCARDING,
+                    level.registryAccess(),
+                    data
+                )
+            );
+            //?} else {
+            /*tileEntity.loadWithComponents(data, level.registryAccess());*/
+            //?}
+            // Inside the guard: a mod's clearContent can throw on the state its loader just built, as fatally.
+            if (tileEntity instanceof Clearable clearable && !contentsArePriced()) {
+                clearable.clearContent();
+                tileEntity.setChanged();
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warn("Discarding the blueprint data of {} at {}: its block entity failed to load it ({})",
+                BuiltInRegistries.BLOCK.getKey(level.getBlockState(blockPos).getBlock()), blockPos,
+                Snapshot.logSafe(e, 256));
+            resetBlockEntity(level, blockPos);
+        }
+    }
+
+    /** Replaces the block entity at {@code blockPos} with the fresh default one its block creates. */
+    private static void resetBlockEntity(Level level, BlockPos blockPos) {
+        BlockState state = level.getBlockState(blockPos);
+        BlockEntity fresh = state.getBlock() instanceof EntityBlock entityBlock
+            ? entityBlock.newBlockEntity(blockPos, state)
+            : null;
+        if (fresh != null) {
+            level.setBlockEntity(fresh);
+        } else {
+            level.removeBlockEntity(blockPos);
+        }
+    }
+
+    /**
+     * Walk the JSON rules for this schematic and strip every container-contents path from the supplied
      * tileNbt. Mutates {@code tileNbt} in place — callers pass a copy, never the canonical
      * {@link #tileNbt} field (which is shared across rebuilds and rotations).
      */
@@ -793,24 +871,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
     public boolean buildWithoutChecks(Level level, BlockPos blockPos) {
         if (level.setBlock(blockPos, blockState, 0)) {
             if (tileNbt != null) {
-                BlockEntity tileEntity = level.getBlockEntity(blockPos);
-                if (tileEntity != null) {
-                    CompoundTag newTileNbt = tileNbt.copy();
-                    newTileNbt.putInt("x", blockPos.getX());
-                    newTileNbt.putInt("y", blockPos.getY());
-                    newTileNbt.putInt("z", blockPos.getZ());
-                    //? if >=1.21.10 {
-                    tileEntity.loadWithComponents(
-                        TagValueInput.create(
-                            ProblemReporter.DISCARDING,
-                            level.registryAccess(),
-                            newTileNbt
-                        )
-                    );
-                    //?} else {
-                    /*tileEntity.loadWithComponents(newTileNbt, level.registryAccess());*/
-                    //?}
-                }
+                // The same pricing and crash guards as build(): skipping the checks must not skip those.
+                loadTileData(level, blockPos, tileNbt.copy());
             }
             return true;
         }
@@ -870,7 +932,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
             )
         );
         if (tileNbt != null) {
-            nbt.put("tileNbt", tileNbt);
+            // A copy: a caller that edits or re-reads the returned tag must not reach this schematic's own data.
+            nbt.put("tileNbt", tileNbt.copy());
         }
         nbt.put("tileRotation", NBTUtilBC.writeEnum(tileRotation));
         nbt.putString("placeBlock", BuiltInRegistries.BLOCK.getKey(placeBlock).toString());
@@ -916,7 +979,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 }
             });
         if (nbt.contains("tileNbt")) {
-            tileNbt = sanitizeTileNbt(NBTUtilBC.getCompound(nbt, "tileNbt"));
+            tileNbt = sanitizeTileNbt(NBTUtilBC.getCompound(nbt, "tileNbt"), blockState);
         }
         tileRotation = NBTUtilBC.readEnum(nbt.get("tileRotation"), Rotation.class);
         if (tileRotation == null) tileRotation = Rotation.NONE;
@@ -1049,6 +1112,132 @@ public class SchematicBlockDefault implements ISchematicBlock {
             }
         }
         return tileNbt;
+    }
+
+    /**
+     * {@link #sanitizeTileNbt(CompoundTag)}, plus the keys of {@code state}'s block entity that hold something no rule
+     * can price and building it would therefore mint: a beehive's or bee nest's occupants (entities, under
+     * {@code bees} on every node) and a decorated pot's sherds ({@code sherds}, which the pot drops when broken).
+     * Both blocks are rebuilt as their plain selves. The decorated pot's stored item is priced by its rule instead.
+     * <p>
+     * Also the item holders that are not {@link Clearable}, which the deny-by-default clear in {@link #build} cannot
+     * reach: a brushed suspicious block's {@code item} (what brushing it yields, the same key on every node). And a
+     * Builder's or Filler's {@code builderState}: its queued place tasks carry the items already taken from its
+     * inventory for them, which a rebuilt machine would place or hand back for nothing. The rebuilt machine starts its
+     * task afresh.
+     * <p>
+     * A vault and a trial spawner keep nothing at all: every part of their data mints something nothing prices. A
+     * vault's {@code config} names its reward loot table and its key item (one stick for any table) and its server
+     * data queues rewards; a trial spawner's data registers the players owed a reward and the table it ejects, and its
+     * configs (inline on any node) name the loot tables and the entities, with any NBT, it spawns. The layouts differ
+     * between nodes, so the whole tag goes: each is rebuilt as the default block entity its block creates, and the
+     * returned tag is a new, empty one rather than {@code tileNbt}.
+     * <p>
+     * A mob spawner keeps its mob types and its timings, which are what a scanned spawner is for, and loses the rest of
+     * every spawn entry ({@link #reduceSpawnEntry}): the entity's own data can be anything (an item entity holding
+     * anything, a mob in any gear) and an entry's {@code equipment} names a loot table. {@code SpawnData} and
+     * {@code SpawnPotentials} are laid out alike on every node.
+     */
+    static CompoundTag sanitizeTileNbt(CompoundTag tileNbt, @Nullable BlockState state) {
+        sanitizeTileNbt(tileNbt);
+        if (tileNbt == null || state == null) return tileNbt;
+        Block block = state.getBlock();
+        CompoundTag components = NBTUtilBC.getCompoundOrNull(tileNbt, "components");
+        if (block instanceof BeehiveBlock) {
+            tileNbt.remove("bees");
+            if (components != null) {
+                removeComponent(components, DataComponents.BEES);
+            }
+        } else if (block instanceof DecoratedPotBlock) {
+            tileNbt.remove("sherds");
+            if (components != null) {
+                removeComponent(components, DataComponents.POT_DECORATIONS);
+            }
+        } else if (block instanceof BrushableBlock) {
+            tileNbt.remove("item");
+        } else if (block instanceof VaultBlock || block instanceof TrialSpawnerBlock) {
+            return new CompoundTag();
+        } else if (block instanceof SpawnerBlock) {
+            CompoundTag next = NBTUtilBC.getCompoundOrNull(tileNbt, BaseSpawner.SPAWN_DATA_TAG);
+            if (next != null) {
+                tileNbt.put(BaseSpawner.SPAWN_DATA_TAG, reduceSpawnEntry(next));
+            }
+            ListTag potentials = NBTUtilBC.getListOrNull(tileNbt, "SpawnPotentials", Tag.TAG_COMPOUND);
+            if (potentials != null) {
+                ListTag kept = new ListTag();
+                for (int i = 0; i < potentials.size(); i++) {
+                    CompoundTag weighted = NBTUtilBC.getCompoundOrNull(potentials, i);
+                    CompoundTag data = weighted == null ? null : NBTUtilBC.getCompoundOrNull(weighted, "data");
+                    if (data != null) {
+                        weighted.put("data", reduceSpawnEntry(data));
+                        kept.add(weighted);
+                    }
+                }
+                tileNbt.put("SpawnPotentials", kept);
+            }
+        } else if (block instanceof BlockBuilder || block instanceof BlockFiller) {
+            tileNbt.remove("builderState");
+            tileNbt.remove("builderClientData");
+        }
+        return tileNbt;
+    }
+
+    /** One {@code SpawnData} entry reduced to its mob type and its spawn rules (light and block-light ranges): the
+     *  entity keeps only its {@code id}, and the {@code equipment} loot table goes. */
+    private static CompoundTag reduceSpawnEntry(CompoundTag spawnData) {
+        CompoundTag reduced = new CompoundTag();
+        CompoundTag entity = NBTUtilBC.getCompoundOrNull(spawnData, "entity");
+        CompoundTag keptEntity = new CompoundTag();
+        String id = entity == null ? "" : NBTUtilBC.getString(entity, "id", "");
+        if (!id.isEmpty()) {
+            keptEntity.putString("id", id);
+        }
+        reduced.put("entity", keptEntity);
+        CompoundTag rules = NBTUtilBC.getCompoundOrNull(spawnData, "custom_spawn_rules");
+        if (rules != null) {
+            reduced.put("custom_spawn_rules", rules);
+        }
+        return reduced;
+    }
+
+    private static void removeComponent(CompoundTag components, net.minecraft.core.component.DataComponentType<?> type) {
+        Identifier id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type);
+        if (id != null) {
+            components.remove(id.toString());
+        }
+    }
+
+    /**
+     * Whether an Architect scan could have produced this schematic: {@link #predicate}'s namespace and ignore tests on
+     * the captured block, minus the live-world parts, and a {@link #placeBlock} that is the one a scan writes (the
+     * rule's, or the block itself). A blueprint read from an upload is reduced to air wherever this is false (see
+     * {@link Blueprint#deserializeNBT}): it would otherwise place an ignored block (an ender chest), a block of a mod
+     * that ships no rules, or one block priced as another. A block that read back as air because its mod is missing
+     * passes: it places nothing, and the file keeps naming it.
+     * <p>
+     * The schematic class is part of the test: a scan types every state with a fluid as {@link SchematicBlockFluid}
+     * (which charges the fluid) and every pipe holder as {@link SchematicBlockPipe} (which charges its pluggables),
+     * so a default entry naming lava, or a default pipe carrying facades, would build them for free. Scans have typed
+     * fluids that way since the port began, but the pipe schematic is younger (2026-06): an older blueprint's
+     * default-typed pipe is re-read as a pipe by {@link Blueprint#deserializeNBT} instead of being dropped.
+     */
+    boolean capturableByScan() {
+        if (blockState == null || placeBlock == null) return false;
+        if (!blockState.getFluidState().isEmpty()) return false;
+        if ((blockState.getBlock() instanceof BlockPipeHolder) != (this instanceof SchematicBlockPipe)) return false;
+        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+        Block expectedPlaceBlock = rules.stream()
+            .map(rule -> rule.placeBlock)
+            .filter(Objects::nonNull)
+            .findFirst()
+            .map(Identifier::parse)
+            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
+            .orElse(blockState.getBlock());
+        if (placeBlock != expectedPlaceBlock) return false;
+        if (blockState.isAir()) return true;
+        Identifier registryName = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());
+        if (registryName == null || !RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;
+        return rules.stream().noneMatch(rule -> rule.ignore);
     }
 
     @Override

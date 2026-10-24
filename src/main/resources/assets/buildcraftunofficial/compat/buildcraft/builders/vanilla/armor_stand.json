@@ -9,7 +9,9 @@
             { "type": "item", "path": ["equipment", "head"] },
             { "type": "item", "path": ["equipment", "chest"] },
             { "type": "item", "path": ["equipment", "legs"] },
-            { "type": "item", "path": ["equipment", "feet"] }
+            { "type": "item", "path": ["equipment", "feet"] },
+            { "type": "items_list", "path": ["ArmorItems"] },
+            { "type": "items_list", "path": ["HandItems"] }
         ]
     }
 ]

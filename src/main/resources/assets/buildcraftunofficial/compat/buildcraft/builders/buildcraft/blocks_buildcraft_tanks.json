@@ -1,14 +1,20 @@
 [
     {
         "selectors": [
-            "buildcraftunofficial:tank"
+            "buildcraftunofficial:tank",
+            "buildcraftunofficial:flood_gate",
+            "buildcraftunofficial:pump"
         ],
         "requiredExtractors": [
             {
                 "type": "item_from_block"
             }, {
                 "type": "tank",
-                "path": ["tanks", "tank"]
+                "path": ["stacks"]
+            }, {
+                "type": "tank",
+                "path": ["fluid0"],
+                "amountPath": ["amount0"]
             }
         ]
     },
@@ -21,26 +27,16 @@
                 "type": "item_from_block"
             }, {
                 "type": "tank",
-                "path": ["tanks", "in"]
+                "path": ["fluidIn"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "gasOut"]
+                "path": ["fluidGasOut"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "liquidOut"]
-            }
-        ]
-    },
-    {
-        "selectors": [
-            "buildcraftunofficial:flood_gate"
-        ],
-        "requiredExtractors": [
-            {
-                "type": "item_from_block"
+                "path": ["fluidLiquidOut"]
             }, {
-                "type": "tank",
-                "path": ["tanks", "tank"]
+                "type": "items_list",
+                "path": ["containerSlots", "items"]
             }
         ]
     },
@@ -53,29 +49,13 @@
                 "type": "item_from_block"
             }, {
                 "type": "tank",
-                "path": ["tanks", "heatableIn"]
+                "path": ["sectionInput"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "coolableOut"]
+                "path": ["sectionOutput"]
             }, {
-                "type": "tank",
-                "path": ["tanks", "heatableOut"]
-            }, {
-                "type": "tank",
-                "path": ["tanks", "coolableIn"]
-            }
-        ]
-    },
-    {
-        "selectors": [
-            "buildcraftunofficial:pump"
-        ],
-        "requiredExtractors": [
-            {
-                "type": "item_from_block"
-            }, {
-                "type": "tank",
-                "path": ["tanks", "tank"]
+                "type": "items_list",
+                "path": ["containerSlots", "items"]
             }
         ]
     },
@@ -88,13 +68,16 @@
                 "type": "item_from_block"
             }, {
                 "type": "tank",
-                "path": ["tanks", "fuel"]
+                "path": ["fuelFluid"],
+                "amountPath": ["fuelAmount"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "coolant"]
+                "path": ["coolantFluid"],
+                "amountPath": ["coolantAmount"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "residue"]
+                "path": ["residueFluid"],
+                "amountPath": ["residueAmountTank"]
             }
         ]
     },
@@ -104,19 +87,21 @@
         ],
         "requiredExtractors": [
             {
-                "type": "item_from_block"
+                "type": "tank",
+                "path": ["tank_0_fluid"],
+                "amountPath": ["tank_0_amount"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "tank1"]
+                "path": ["tank_1_fluid"],
+                "amountPath": ["tank_1_amount"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "tank2"]
+                "path": ["tank_2_fluid"],
+                "amountPath": ["tank_2_amount"]
             }, {
                 "type": "tank",
-                "path": ["tanks", "tank3"]
-            }, {
-                "type": "tank",
-                "path": ["tanks", "tank4"]
+                "path": ["tank_3_fluid"],
+                "amountPath": ["tank_3_amount"]
             }
         ]
     }

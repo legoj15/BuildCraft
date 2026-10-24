@@ -227,7 +227,9 @@ public class ItemSchematicSingle extends Item {
         if (stack.getItem() instanceof ItemSchematicSingle) {
             CompoundTag itemData = NBTUtilBC.getItemData(stack);
             if (itemData.contains(NBT_KEY)) {
-                return SchematicBlockManager.readFromNBT(NBTUtilBC.getCompound(itemData, NBT_KEY));
+                // The item's NBT is as untrusted as an upload's palette (a forged item names any block), and the
+                // Replacer writes its from/to pair into stored blueprints: the same read gates as a blueprint palette.
+                return SchematicBlockManager.readCapturableFromNBT(NBTUtilBC.getCompound(itemData, NBT_KEY));
             }
         }
         return null;

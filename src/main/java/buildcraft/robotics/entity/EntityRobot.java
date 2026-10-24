@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.mojang.authlib.GameProfile;
 
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -92,6 +95,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
+import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.robotics.BCRoboticsEntities;
@@ -259,6 +263,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     private RedstoneBoardRobot board;
 
     private long robotId = NULL_ROBOT_ID;
+    /** Who deployed this robot; see {@link #getDeployer}. */
+    @Nullable
+    private GameProfile deployer;
     private DockingStation dockingStation;
     private DockingStation mainStation;
 
@@ -353,6 +360,10 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     protected void writeData(BCValueOutput out) {
         out.store("battery", CompoundTag.CODEC, battery.serializeNbt());
         out.putLong("robotId", robotId);
+        if (deployer != null) {
+            // OwnerData's ownerUUID/ownerName pair, nested: the format every BuildCraft owner is saved in.
+            OwnerData.writeOwner(out.child("deployer"), deployer);
+        }
 
         writeStation(out, "linkedStation", mainStation, linkedStationPos, linkedStationSide);
         writeStation(out, "currentStation", dockingStation, currentStationPos, currentStationSide);
@@ -410,6 +421,9 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     protected void readData(BCValueInput in) {
         in.read("battery", CompoundTag.CODEC).ifPresent(battery::deserializeNbt);
         robotId = in.getLongOr("robotId", NULL_ROBOT_ID);
+        // Absent from a robot saved before deployers were recorded: it stays unknown, and the robot keeps acting as
+        // its station's owner alone (see getDeployer).
+        deployer = in.child("deployer").map(OwnerData::readOwner).orElse(null);
 
         readStation(in, "linkedStation", (pos, side) -> {
             linkedStationPos = pos;
@@ -1596,6 +1610,21 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     @Override
     public void setUniqueRobotId(long robotId) {
         this.robotId = robotId;
+    }
+
+    /** The player who placed this robot on its station from an item ({@code ItemRobot#useOn}), or the generic
+     *  "[BuildCraft]" identity for a placement with no player behind it. Null when unknown: a robot saved before
+     *  deployers were recorded keeps acting and asking as its home station's owner alone, as it always did (see
+     *  {@code RobotProtection}). Re-homing never changes it; only a fresh placement does, and that is a new robot. */
+    @Override
+    @Nullable
+    public GameProfile getDeployer() {
+        return deployer;
+    }
+
+    /** Records who deployed this robot; see {@link #getDeployer}. */
+    public void setDeployer(@Nullable GameProfile deployer) {
+        this.deployer = deployer;
     }
 
     /** Null on the client and before the entity has a level: the {@code RobotRegistry} is server-side

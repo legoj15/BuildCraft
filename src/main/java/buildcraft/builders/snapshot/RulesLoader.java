@@ -130,6 +130,12 @@ public class RulesLoader {
                                         ? base.substring(0, base.indexOf("["))
                                         : base
                                 );
+                                // A selector may name a block this node lacks (copper chests and shelves are
+                                // 1.21.9+): it matches nothing, quietly. The registry would answer such an id with
+                                // air, which made the rule apply to every air schematic.
+                                if (!BuiltInRegistries.BLOCK.containsKey(blockId)) {
+                                    return false;
+                                }
                                 Block block = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, blockId);
                                 return block == blockState.getBlock() &&
                                     (!complex ||

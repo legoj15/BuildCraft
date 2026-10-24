@@ -5,16 +5,29 @@
  */
 package buildcraft.lib.net;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderException;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import buildcraft.api.enums.EnumSnapshotType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+
+import net.neoforged.neoforge.network.connection.ConnectionType;
+
 import buildcraft.builders.snapshot.ArchitectScanPayload;
 
 /**
- * The decoders that pre-size a list (or hand a tick count to {@code DelayedList}) from a wire VarInt clamp it through
- * {@link NetCodecSanity#clampNonNegative} first. This pins the clamp itself: a few bytes on the wire must never name
- * an allocation of gigabytes, and every bound used at a call site behaves as its documentation claims.
+ * The decoders that pre-size or loop over a list from a wire VarInt check it first: a few bytes on the wire must never
+ * name an allocation of gigabytes, and an over-bound count must fail with a clear {@link DecoderException} rather than
+ * decode a prefix and leave the rest unread. The scalar clamp ({@link NetCodecSanity#clampNonNegative}, for values such
+ * as a pipe item's time-to-destination) is pinned here too.
  */
 public class NetCodecSanityTester {
 
@@ -51,30 +64,90 @@ public class NetCodecSanityTester {
     }
 
     @Test
-    public void zeroBoundCollapsesEverything() {
-        assertClamp(0, 0, 0);
-        assertClamp(1, 0, 0);
-        assertClamp(Integer.MAX_VALUE, 0, 0);
-        assertClamp(-1, 0, 0);
+    public void countsOutOfRangeAreRefusedNotClamped() {
+        Assertions.assertThrows(DecoderException.class, () -> NetCodecSanity.checkedCount(11, 10, "Widget"));
+        Assertions.assertThrows(DecoderException.class, () -> NetCodecSanity.checkedCount(-1, 10, "Widget"));
+        Assertions.assertThrows(DecoderException.class, () -> NetCodecSanity.checkedCount(Integer.MIN_VALUE, 10, "Widget"));
+        Assertions.assertThrows(DecoderException.class, () -> NetCodecSanity.checkedCount(Integer.MAX_VALUE, 10, "Widget"));
+    }
+
+    private static FriendlyByteBuf scanBuffer(int claimedCount, int actualPositions) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        buf.writeVarInt(claimedCount);
+        for (int i = 0; i < actualPositions; i++) {
+            buf.writeBlockPos(new BlockPos(i, 64, -i));
+        }
+        return buf;
     }
 
     @Test
-    public void negativeBoundIsRejected() {
-        Assertions.assertThrows(IllegalArgumentException.class,
-            () -> NetCodecSanity.clampNonNegative(0, -1));
+    public void scanPayloadAtTheBoundRoundTrips() {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int i = 0; i < ArchitectScanPayload.MAX_POSITIONS; i++) {
+            positions.add(new BlockPos(i, 64, -i));
+        }
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        ArchitectScanPayload.STREAM_CODEC.encode(buf, new ArchitectScanPayload(positions));
+
+        ArchitectScanPayload decoded = ArchitectScanPayload.STREAM_CODEC.decode(buf);
+        Assertions.assertEquals(positions, decoded.positions());
+        Assertions.assertEquals(0, buf.readableBytes(), "a full batch is read to the last byte");
     }
 
     @Test
-    public void scanPositionBoundIsTheLargestScanRate() {
-        // ArchitectScanPayload clamps its position count to the largest batch a legitimate Architect Table drains in
-        // one tick: the fastest snapshot type's maxPerTick (a template's).
-        Assertions.assertEquals(EnumSnapshotType.TEMPLATE.maxPerTick, ArchitectScanPayload.MAX_POSITIONS);
-        Assertions.assertTrue(ArchitectScanPayload.MAX_POSITIONS >= EnumSnapshotType.BLUEPRINT.maxPerTick);
-        Assertions.assertTrue(ArchitectScanPayload.MAX_POSITIONS > 0);
+    public void scanPayloadOverTheBoundIsRefusedWhole() {
+        // The bytes are all there, so a decoder that clamps the count would return MAX_POSITIONS entries and leave one
+        // position unread (which the connection reports as a confusing "extra bytes" failure).
+        FriendlyByteBuf buf = scanBuffer(ArchitectScanPayload.MAX_POSITIONS + 1, ArchitectScanPayload.MAX_POSITIONS + 1);
+        Assertions.assertThrows(DecoderException.class, () -> ArchitectScanPayload.STREAM_CODEC.decode(buf));
     }
 
     @Test
-    public void debugLineBoundIsPositive() {
-        Assertions.assertTrue(MessageDebugResponse.MAX_LINES_PER_SIDE > 0);
+    public void scanPayloadWithHugeOrNegativeCountIsRefusedBeforeSizing() {
+        Assertions.assertThrows(DecoderException.class,
+            () -> ArchitectScanPayload.STREAM_CODEC.decode(scanBuffer(Integer.MAX_VALUE, 0)));
+        Assertions.assertThrows(DecoderException.class,
+            () -> ArchitectScanPayload.STREAM_CODEC.decode(scanBuffer(-1, 0)));
+    }
+
+    private static RegistryFriendlyByteBuf debugBuffer(int leftClaimed, int leftActual, int rightClaimed, int rightActual) {
+        RegistryFriendlyByteBuf buf =
+            new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY, ConnectionType.NEOFORGE);
+        buf.writeVarInt(leftClaimed);
+        for (int i = 0; i < leftActual; i++) {
+            buf.writeUtf("l" + i);
+        }
+        buf.writeVarInt(rightClaimed);
+        for (int i = 0; i < rightActual; i++) {
+            buf.writeUtf("r" + i);
+        }
+        return buf;
+    }
+
+    @Test
+    public void debugResponseAtTheBoundRoundTrips() {
+        int max = MessageDebugResponse.MAX_LINES_PER_SIDE;
+        RegistryFriendlyByteBuf buf = debugBuffer(max, max, max, max);
+
+        MessageDebugResponse decoded = MessageDebugResponse.STREAM_CODEC.decode(buf);
+        Assertions.assertEquals(max, decoded.left().size());
+        Assertions.assertEquals(max, decoded.right().size());
+        Assertions.assertEquals("l" + (max - 1), decoded.left().get(max - 1));
+        Assertions.assertEquals("r" + (max - 1), decoded.right().get(max - 1));
+        Assertions.assertEquals(0, buf.readableBytes());
+    }
+
+    @Test
+    public void debugResponseOverTheBoundOnEitherSideIsRefusedWhole() {
+        int max = MessageDebugResponse.MAX_LINES_PER_SIDE;
+        Assertions.assertThrows(DecoderException.class,
+            () -> MessageDebugResponse.STREAM_CODEC.decode(debugBuffer(max + 1, max + 1, 0, 0)),
+            "left side");
+        Assertions.assertThrows(DecoderException.class,
+            () -> MessageDebugResponse.STREAM_CODEC.decode(debugBuffer(0, 0, max + 1, max + 1)),
+            "right side");
+        Assertions.assertThrows(DecoderException.class,
+            () -> MessageDebugResponse.STREAM_CODEC.decode(debugBuffer(-1, 0, 0, 0)),
+            "negative count");
     }
 }

@@ -18,11 +18,15 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ExperienceOrb;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -30,11 +34,18 @@ import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -62,10 +73,11 @@ import buildcraft.transport.tile.TilePipeHolder;
  * there, and a robot whose station's owner is refused is refused although its deployer is trusted. Pinned on a break
  * (the shared break probe) and on a planting (an action that asks through the leased player's own events, guarded
  * for the station's owner by a placement probe), on a stripes use reaching past its reserved cell, on the bomber's
- * drop (asked at the block the TNT lands on, which is then the deployer's) and on a melee swing (asked as a player's
- * attack, and landed naming the deployer). A robot saved before deployers were recorded has none and acts as its
- * station's owner alone, as before. A station remembers its owner while its pipe cannot be resolved, and one that
- * cannot name its owner at all refuses everything.
+ * drop (asked at the block the TNT lands on, which is then the deployer's) and on its blast (every block and entity
+ * it takes, and the blast of any TNT it sets off), and on a melee swing (asked as a player's attack, landed naming the
+ * deployer, and holding the weapon so a kill gets its Looting). A robot saved before deployers were recorded has none
+ * and acts as its station's owner alone, as before. A station remembers its owner while its pipe cannot be resolved,
+ * and one that cannot name its owner at all refuses everything.
  *
  * <p>Like {@link RobotPumpProtectionTester}, the AIs are cycled by hand on a robot that is never added to the level.
  */
@@ -524,9 +536,20 @@ public class RobotDeployerProtectionTester {
         return primed[0];
     }
 
+    /** A half-power explosion of {@code bomb} (which stays out of the world) centred in the arena cell {@code rel}, or
+     *  at {@code center} when given, then its drops cleared away. */
+    private static void blowUp(GameTestHelper helper, PrimedTnt bomb, BlockPos rel, @Nullable Vec3 center) {
+        Vec3 at = center != null ? center : Vec3.atCenterOf(helper.absolutePos(rel));
+        helper.getLevel().explode(bomb, at.x, at.y, at.z, 0.5F, Level.ExplosionInteraction.TNT);
+        for (ItemEntity drop : EntityArenaUtil.droppedItems(helper, rel, 1.5)) {
+            drop.discard();
+        }
+    }
+
     /** The bomber's TNT lands on the block under it: both the deployer and the station's owner must be allowed to
      *  break that block, or no TNT is dropped; a dropped one is the deployer's (its owner is the deployer's player),
-     *  so claim mods and kill credit see who sent the robot. */
+     *  so claim mods and kill credit see who sent the robot. Its blast then spares every block and entity either
+     *  player may not touch. */
     public static void bomberNeedsBothAndTntIsTheDeployers(GameTestHelper helper) {
         requireProtectionChecksOn();
         GameProfile deployer = profile("bc_deployer_bomb_deployer");
@@ -548,11 +571,79 @@ public class RobotDeployerProtectionTester {
             }
         }
 
+        PrimedTnt bomb;
         try (PlayerClaim claim = new PlayerClaim(ground, null)) {
-            PrimedTnt tnt = bombWith(helper, robot(helper, robotRel, deployer, owner));
-            check(tnt != null, "a bomber over a block both its players may break drops TNT");
-            check(tnt.getOwner() != null && GameProfileUtil.getId(deployer).equals(tnt.getOwner().getUUID()),
-                    "the dropped TNT is the deployer's, got owner " + tnt.getOwner());
+            bomb = bombWith(helper, robot(helper, robotRel, deployer, owner));
+            check(bomb != null, "a bomber over a block both its players may break drops TNT");
+            check(bomb.getOwner() != null && GameProfileUtil.getId(deployer).equals(bomb.getOwner().getUUID()),
+                    "the dropped TNT is the deployer's, got owner " + bomb.getOwner());
+        }
+
+        // The blast reaches past the landing block, so every block and entity it takes is asked about for both
+        // players. A half-power blast centred in a slime block (no blast resistance) always takes that block.
+        BlockPos blastRel = new BlockPos(4, 1, 5);
+        for (GameProfile refused : List.of(owner, deployer)) {
+            helper.setBlock(blastRel, Blocks.SLIME_BLOCK);
+            try (PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), refused)) {
+                blowUp(helper, bomb, blastRel, null);
+                check(!helper.getLevel().getBlockState(helper.absolutePos(blastRel)).isAir(), "a robot's blast must "
+                        + "spare a block " + GameProfileUtil.getName(refused) + " may not break");
+                check(claim.breakAsks.contains(GameProfileUtil.getId(refused)), "the refused player was asked about");
+            }
+        }
+        try (PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), null)) {
+            blowUp(helper, bomb, blastRel, null);
+            check(helper.getLevel().getBlockState(helper.absolutePos(blastRel)).isAir(),
+                    "a robot's blast takes a block both its players may break");
+        }
+        // A TNT block the blast takes primes TNT of its own, owned by the deployer: it inherits the robot's mark, so
+        // its blast spares the station owner's claim too. The primed TNT is caught last and kept out of the world.
+        helper.setBlock(blastRel, Blocks.TNT);
+        PrimedTnt[] chained = new PrimedTnt[1];
+        Consumer<EntityJoinLevelEvent> chainCatcher = event -> {
+            if (event.getEntity() instanceof PrimedTnt tnt && event.getLevel() == helper.getLevel()) {
+                chained[0] = tnt;
+                event.setCanceled(true);
+            }
+        };
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, EntityJoinLevelEvent.class, chainCatcher);
+        try (PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), null)) {
+            blowUp(helper, bomb, blastRel, null);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(chainCatcher);
+        }
+        check(chained[0] != null, "a robot's blast sets off the TNT block it takes");
+        helper.setBlock(blastRel, Blocks.SLIME_BLOCK);
+        try (PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), owner)) {
+            blowUp(helper, chained[0], blastRel, null);
+            check(!helper.getLevel().getBlockState(helper.absolutePos(blastRel)).isAir(), "TNT a robot's blast set "
+                    + "off must spare a block the station's owner may not break");
+            check(claim.breakAsks.contains(GameProfileUtil.getId(owner)), "the station's owner was asked about");
+        }
+        helper.setBlock(blastRel, Blocks.AIR);
+        BlockPos cowRel = new BlockPos(1, 2, 5);
+        //? if >=26.2 {
+        Mob cow = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, cowRel);
+        //?} else {
+        /*Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, cowRel);*/
+        //?}
+        cow.setNoAi(true);
+        cow.setNoGravity(true);
+        try {
+            for (GameProfile refused : List.of(owner, deployer)) {
+                try (AttackClaim claim = new AttackClaim(cow, refused)) {
+                    blowUp(helper, bomb, cowRel, cow.position());
+                    check(cow.getHealth() == cow.getMaxHealth(), "a robot's blast must not hurt a target "
+                            + GameProfileUtil.getName(refused) + " may not attack, got health " + cow.getHealth());
+                    check(claim.asks.contains(GameProfileUtil.getId(refused)), "the refused player was asked about");
+                }
+            }
+            try (AttackClaim claim = new AttackClaim(cow, null)) {
+                blowUp(helper, bomb, cowRel, cow.position());
+                check(cow.getHealth() < cow.getMaxHealth(), "a robot's blast hurts a target both players may attack");
+            }
+        } finally {
+            cow.discard();
         }
 
         // The robot hovers off the centre of the column its search picked, so its TNT falls on the next column's
@@ -585,7 +676,12 @@ public class RobotDeployerProtectionTester {
 
     /** Cycles a fresh attack AI at {@code target}; the AI, for its outcome. */
     private static AIRobotAttack attackWith(EntityRobot robot, Entity target) {
-        robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
+        return attackWith(robot, target, new ItemStack(Items.DIAMOND_SWORD));
+    }
+
+    /** {@link #attackWith(EntityRobot, Entity)} swinging {@code weapon}. */
+    private static AIRobotAttack attackWith(EntityRobot robot, Entity target, ItemStack weapon) {
+        robot.setItemInUse(weapon);
         AIRobotAttack attack = new AIRobotAttack(robot, target);
         for (int cycles = 0; cycles < ATTACK_CYCLES; cycles++) {
             attack.cycle();
@@ -607,8 +703,16 @@ public class RobotDeployerProtectionTester {
         //?} else {
         /*Mob cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, 2, 2, 2);*/
         //?}
-        cow.setNoAi(true);
-        cow.setNoGravity(true);
+        // A second cow for the kill: the first is still inside its hurt cooldown when the kill swing comes
+        //? if >=26.2 {
+        Mob victim = helper.spawn(net.minecraft.world.entity.EntityTypes.COW, 3, 2, 3);
+        //?} else {
+        /*Mob victim = helper.spawn(net.minecraft.world.entity.EntityType.COW, 3, 2, 3);*/
+        //?}
+        for (Mob mob : List.of(cow, victim)) {
+            mob.setNoAi(true);
+            mob.setNoGravity(true);
+        }
         try {
             for (GameProfile refused : List.of(owner, deployer)) {
                 try (AttackClaim claim = new AttackClaim(cow, refused)) {
@@ -641,9 +745,40 @@ public class RobotDeployerProtectionTester {
                                 + (source == null ? null : source.getEntity()));
                 check(source.getDirectEntity() == robot, "the robot itself still lands the blow");
                 check(!isPlayer(cow.getLastHurtByMob(), deployer), "the stand-in player is not the target's attacker");
+
+                // Looting is read off the killer's hand when the kill's loot is rolled (vanilla's loot functions
+                // and equipment drop chances alike), so the stand-in player must hold the weapon through the hit.
+                Holder<Enchantment> looting = helper.getLevel().registryAccess()
+                        .lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.LOOTING);
+                ItemStack sword = new ItemStack(Items.DIAMOND_SWORD);
+                sword.enchant(looting, 3);
+                int[] lootingAtDeath = {-1};
+                Consumer<LivingDropsEvent> drops = event -> {
+                    if (event.getEntity() == victim && event.getSource().getEntity() instanceof LivingEntity killer) {
+                        lootingAtDeath[0] = EnchantmentHelper.getEnchantmentLevel(looting, killer);
+                    }
+                };
+                NeoForge.EVENT_BUS.addListener(LivingDropsEvent.class, drops);
+                try {
+                    victim.setHealth(1.0F);
+                    attackWith(robot, victim, sword);
+                } finally {
+                    NeoForge.EVENT_BUS.unregister(drops);
+                }
+                check(victim.isDeadOrDying(), "a one-health cow dies to the robot's sword");
+                check(lootingAtDeath[0] == 3, "a robot's kill rolls its loot with the weapon's Looting III, got "
+                        + lootingAtDeath[0]);
             }
         } finally {
             cow.discard();
+            victim.discard();
+            for (ItemEntity drop : EntityArenaUtil.droppedItems(helper, new BlockPos(3, 2, 3), 2.0)) {
+                drop.discard();
+            }
+            for (ExperienceOrb orb : helper.getLevel().getEntitiesOfClass(ExperienceOrb.class,
+                    new AABB(helper.absolutePos(new BlockPos(3, 2, 3))).inflate(2.0))) {
+                orb.discard();
+            }
         }
 
         // The stand-in player is not in the world, so a mob the hit would turn on it must not. A warden takes its

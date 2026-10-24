@@ -7,24 +7,33 @@
 package buildcraft.robotics;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 import javax.annotation.Nullable;
 
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
@@ -33,6 +42,8 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MachineIdentity;
+import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.OwnerData;
 
 /**
  * Who a robot is when protection mods are asked. A robot answers to two players: whoever deployed it (placed it on a
@@ -59,7 +70,8 @@ import buildcraft.lib.misc.MachineIdentity;
  * deployer's say from those events, and asks the closest probe for the station's owner first
  * ({@link #stationOwnerCanPlace}, {@link #stationOwnerCanBreak}, {@link #stationOwnerShortcut}). A melee swing
  * ({@link #attack}) is asked as a player's attack, for both, and lands as the deployer's; the bomber's TNT is the
- * deployer's, dropped only where {@link #canBreak} allows at the block it will land on.
+ * deployer's, dropped only where {@link #canBreak} allows at the block it will land on, and carries both players
+ * ({@link #markBomb}) so its blast takes only what both may break or attack ({@link #onExplosionDetonate}).
  *
  * <p>Two robot actions ask nobody, as in 7.1.x, because a player doing the same asks nobody either: a picker
  * ({@code AIRobotFetchItem}) picking up an item lying loose in the world, and a builder robot
@@ -74,6 +86,14 @@ public final class RobotProtection {
     private static final GameProfile UNKNOWN_OWNER_KEY = new GameProfile(
             UUID.nameUUIDFromBytes("BuildCraft robot station owner unknown".getBytes(StandardCharsets.UTF_8)),
             "[BuildCraft: station owner unknown]");
+
+    /** Where a robot's TNT keeps the two players it answers to, in its persistent data: saved with the entity, so a
+     *  blast whose fuse outlives a chunk unload still knows them. */
+    private static final String BOMB_TAG = "buildcraftunofficial:robot_bomb";
+
+    /** TNT blocks a robot's blast is taking this tick, with that blast's players, for the TNT each primes (inside the
+     *  blast, before the tick ends); cleared every server tick. */
+    private static final Map<ServerLevel, Map<BlockPos, CompoundTag>> CHAINED = new WeakHashMap<>();
 
     /** The robot's home station owner, or null when it has no home station, the station has no owner, or it cannot
      *  name its owner ({@link #stationOwnerUnknown}). */
@@ -193,8 +213,9 @@ public final class RobotProtection {
      * posted for the deployer's fake player and, when a different player, for the station owner's, each standing where
      * the robot is and holding its weapon ({@link #holdInMainHand}: listeners read the hand); nothing is hit unless
      * neither is cancelled. The hit is then {@link IRobotAccess#attackTargetEntityWithCurrentItem(Entity, Player)}
-     * naming the deployer's player as the attacker, its hand emptied again first: the hit reads the robot's own stack,
-     * and an empty hand keeps the weapon's Looting out of the kill's loot, which the robot's melee never applied. The
+     * naming the deployer's player as the attacker, still holding the weapon: the hit's damage reads the robot's own
+     * stack, but a kill's loot reads Looting off the killer's hand (the loot functions and the equipment drop chance
+     * alike), so a robot's kill gets its weapon's Looting, as a player's would (7.1.x's robots never applied it). The
      * event is posted directly rather than through {@code CommonHooks.onPlayerAttackTarget} (the same event, under that
      * name on every node), whose second half would run the held weapon's own left-click hook, which a robot's hit never
      * did. While {@link BCCoreConfig#minePlayerProtected} is on nobody is asked, as for breaks.
@@ -225,9 +246,102 @@ public final class RobotProtection {
                     }
                 }
             }
-            holdInMainHand(attacker, ItemStack.EMPTY);
             robot.attackTargetEntityWithCurrentItem(target, attacker);
             return true;
+        }
+    }
+
+    // ── The bomber's blast ──────────────────────────────────────────────────
+
+    /** Records on {@code tnt} the two players {@code robot} answers to ({@link #identityOf},
+     *  {@link #stationIdentityOf}) so that {@link #onExplosionDetonate} can ask both about its blast. */
+    public static void markBomb(IRobotAccess robot, PrimedTnt tnt) {
+        CompoundTag deployer = new CompoundTag();
+        OwnerData.writeOwner(deployer, identityOf(robot));
+        CompoundTag stationOwner = new CompoundTag();
+        OwnerData.writeOwner(stationOwner, stationIdentityOf(robot));
+        CompoundTag players = new CompoundTag();
+        players.put("deployer", deployer);
+        players.put("stationOwner", stationOwner);
+        tnt.getPersistentData().put(BOMB_TAG, players);
+    }
+
+    /**
+     * Narrows the blast of a robot's TNT ({@link #markBomb}) to what both its players may touch: every block it would
+     * destroy must be one each may break ({@link BlockUtil#canMachineBreakAs}), and every entity it would hurt one each
+     * may attack (the attack-entity event a melee swing posts), or it is left out of the blast. Claim mods that judge
+     * explosions by their igniter see only the deployer (the TNT's owner); without this the station's owner was asked
+     * about the landing block alone. Entities the blast would not hurt anyway (out of its reach, or ignoring
+     * explosions) are not asked about. A TNT block the blast still takes primes TNT that inherits the mark
+     * ({@link #onEntityJoin}), so a chain of blasts is asked about link by link. Nobody is asked while
+     * {@link BCCoreConfig#minePlayerProtected} is on.
+     */
+    public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || BCCoreConfig.minePlayerProtected.get()) {
+            return;
+        }
+        Explosion explosion = event.getExplosion();
+        // Only TNT carries the mark; asking any other source would give it an empty persistent tag that then saves
+        if (!(explosion.getDirectSourceEntity() instanceof PrimedTnt source)) {
+            return;
+        }
+        CompoundTag players = NBTUtilBC.getCompoundOrNull(source.getPersistentData(), BOMB_TAG);
+        if (players == null) {
+            return;
+        }
+        GameProfile deployer = markedPlayer(players, "deployer");
+        GameProfile stationOwner = markedPlayer(players, "stationOwner");
+        keepPermitted(level, event, explosion, deployer);
+        if (!Objects.equals(GameProfileUtil.getId(deployer), GameProfileUtil.getId(stationOwner))) {
+            keepPermitted(level, event, explosion, stationOwner);
+        }
+        for (BlockPos pos : event.getAffectedBlocks()) {
+            if (level.getBlockState(pos).getBlock() instanceof TntBlock) {
+                CHAINED.computeIfAbsent(level, l -> new HashMap<>()).put(pos.immutable(), players.copy());
+            }
+        }
+    }
+
+    /** Marks TNT that a robot's blast primed out of a TNT block ({@link #CHAINED}) with the players of that blast. */
+    public static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (CHAINED.isEmpty() || !(event.getEntity() instanceof PrimedTnt tnt)
+                || !(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        Map<BlockPos, CompoundTag> primed = CHAINED.get(level);
+        CompoundTag players = primed == null ? null : primed.remove(BlockPos.containing(tnt.position()));
+        // Vanilla primes it owned by the blast's igniter, the deployer's player: TNT someone else lit in that cell in
+        // the same tick is not the robot's
+        if (players != null && tnt.getOwner() != null
+                && tnt.getOwner().getUUID().equals(GameProfileUtil.getId(markedPlayer(players, "deployer")))) {
+            tnt.getPersistentData().put(BOMB_TAG, players);
+        }
+    }
+
+    /** One of the two players a {@link #markBomb} mark names ({@code "deployer"} or {@code "stationOwner"}). */
+    private static GameProfile markedPlayer(CompoundTag players, String key) {
+        return MachineIdentity.of(OwnerData.readOwner(NBTUtilBC.getCompound(players, key)));
+    }
+
+    /** Forgets the TNT blocks of this tick's robot blasts: vanilla primes them inside the blast itself. */
+    public static void clearChained() {
+        CHAINED.clear();
+    }
+
+    /** Drops from the blast every block {@code profile} may not break and every entity it would hurt that
+     *  {@code profile} may not attack. */
+    private static void keepPermitted(ServerLevel level, ExplosionEvent.Detonate event, Explosion explosion,
+            GameProfile profile) {
+        Vec3 center = explosion.center();
+        // Vanilla hurts an entity only within twice the radius; the event's list is the whole box around that
+        double reach = explosion.radius() * 2.0;
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, profile, null)) {
+            FakePlayer player = lease.player();
+            event.getAffectedBlocks().removeIf(pos -> !BlockUtil.canMachineBreakAs(level, pos, player));
+            FakePlayerUtil.pose(player, center, 0, 0);
+            event.getAffectedEntities().removeIf(entity -> !entity.ignoreExplosion(explosion)
+                    && entity.distanceToSqr(center) <= reach * reach
+                    && NeoForge.EVENT_BUS.post(new AttackEntityEvent(player, entity)).isCanceled());
         }
     }
 }

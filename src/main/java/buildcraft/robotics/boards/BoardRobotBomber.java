@@ -47,10 +47,10 @@ import buildcraft.robotics.ai.AIRobotSearchRandomGroundBlock;
  *  or something built in the way since), so the random search picks neither again for a while; three refusals in a
  *  row send the robot to sleep.
  *
- *  <p>Only the landing block is asked about, not the blast around it: the TNT goes off about where it lands, and the
- *  blocks it destroys are judged by protection mods' explosion handling, which sees the deployer's player as the
- *  igniter. The home station's owner is not asked about those blocks, so a claim of the station owner's that adjoins
- *  a permitted landing block can still be damaged by the blast. */
+ *  <p>The blast is asked about too: the TNT carries both players ({@link RobotProtection#markBomb}), and its blast
+ *  leaves out every block and entity either may not touch ({@link RobotProtection#onExplosionDetonate}), so a claim
+ *  that adjoins a permitted landing block is spared. The landing check stays: a refused landing block costs no TNT
+ *  and is remembered, so the robot looks for ground elsewhere instead of bombing around a claim. */
 public class BoardRobotBomber extends RedstoneBoardRobot {
 
     private static final IStackFilter TNT_FILTER = stack -> stack.is(Items.TNT);
@@ -124,8 +124,9 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
         }
     }
 
-    /** Drops one primed TNT from where the robot hovers, owned by the robot's deployer, if both its players may break
-     *  the block it will land on; a refusal drops nothing (the TNT stays in the robot) and is remembered, for the
+    /** Drops one primed TNT from where the robot hovers, owned by the robot's deployer and marked with both its
+     *  players for the blast, if both may break the block it will land on; a refusal drops nothing (the TNT stays
+     *  in the robot) and is remembered, for the
      *  landing block and for the ground the search picked. */
     private void dropBomb() {
         if (!(robot.level() instanceof ServerLevel level)) {
@@ -158,6 +159,7 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
             // The TNT keeps the player as its owner after the lease closes: it only names who sent it.
             tnt = new PrimedTnt(level, drop.x, drop.y, drop.z, lease.player());
         }
+        RobotProtection.markBomb(robot, tnt);
         tnt.setFuse(37);
         level.addFreshEntity(tnt);
         level.playSound(null, tnt.getX(), tnt.getY(), tnt.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);

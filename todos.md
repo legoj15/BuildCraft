@@ -5,6 +5,7 @@ Last audited: 2026-10-23
 ## 🔧 Outstanding work (version 2026.2.1)
 
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
+- Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
 - Aborted pipe inserts can mint fluid — [notes](docs/todo-details.md#fluid-mint-on-aborted-pipe-insert)
 - Written Zone Planner maps each carry the full map data — [notes](docs/todo-details.md#zone-planner-map-clone-bloat)
@@ -16,7 +17,6 @@ Last audited: 2026-10-23
 ## 🆕 New Features (version 2026.3)
 
 - Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length
-- Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)

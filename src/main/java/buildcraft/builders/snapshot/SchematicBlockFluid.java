@@ -21,8 +21,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
@@ -42,8 +44,30 @@ public class SchematicBlockFluid implements ISchematicBlock {
 
     @SuppressWarnings("unused")
     public static boolean predicate(SchematicBlockContext context) {
-        // Check if the block state has a non-empty fluid
-        return !context.blockState.getFluidState().isEmpty();
+        return isFluidBlock(context.blockState);
+    }
+
+    /**
+     * Whether {@code state} is a fluid's own block (water, lava, oil: a {@link LiquidBlock}, any block that is the
+     * legacy block of the fluid it holds, or a bubble column: water with no item to charge, which
+     * {@link SnapshotBuilder#isFluidOnly} counts as fluid too), as opposed to a block that merely holds a fluid: a
+     * waterlogged slab, a wet pipe, kelp. Those are priced and rebuilt as themselves. Typed as fluid they would
+     * charge 1000 mB of water and no item, and lose their tile data (a pipe its pipe definition and pluggables).
+     */
+    static boolean isFluidBlock(BlockState state) {
+        FluidState fluid = state.getFluidState();
+        if (fluid.isEmpty()) {
+            return false;
+        }
+        return SnapshotBuilder.isFluidOnly(state) || state.getBlock() == fluid.createLegacyBlock().getBlock();
+    }
+
+    /** Whether this entry names a block that only holds a fluid (see {@link #isFluidBlock}), as a blueprint saved
+     *  while every state with a fluid was typed as one does. {@link SchematicBlockManager#upgradeLegacyFluid} re-reads
+     *  it as the schematic of that block. A dry block typed as fluid (a diamond block) does not count: nothing is
+     *  held, and the capture gate drops it. */
+    boolean namesFluidHoldingBlock() {
+        return blockState != null && !blockState.getFluidState().isEmpty() && !isFluidBlock(blockState);
     }
 
     @Override
@@ -155,12 +179,14 @@ public class SchematicBlockFluid implements ISchematicBlock {
         return !readWithDefaults;
     }
 
-    /** Whether an Architect scan could have produced this schematic: {@link #predicate} types only a state with a
-     *  fluid as one. A fluid entry naming a dry block (a diamond block) charges no fluid and places that block free,
-     *  so {@link Blueprint#deserializeNBT} reduces it to air. One that read back as air (its mod is gone) passes, as
-     *  in {@link SchematicBlockDefault#capturableByScan()}: it places nothing. */
+    /** Whether an Architect scan could have produced this schematic: {@link #predicate} types only a fluid's own
+     *  block (see {@link #isFluidBlock}) as one. A fluid entry naming a dry block (a diamond block) charges no fluid
+     *  and places that block free, and one naming a block that merely holds a fluid (a waterlogged slab) charges
+     *  water and no item, so {@link Blueprint#deserializeNBT} reduces them to air (after
+     *  {@link SchematicBlockManager#upgradeLegacyFluid} has re-read a holder it can). One that read back as air (its
+     *  mod is gone) passes, as in {@link SchematicBlockDefault#capturableByScan()}: it places nothing. */
     boolean capturableByScan() {
-        return blockState != null && (blockState.isAir() || !blockState.getFluidState().isEmpty());
+        return blockState != null && (blockState.isAir() || isFluidBlock(blockState));
     }
 
     @Override

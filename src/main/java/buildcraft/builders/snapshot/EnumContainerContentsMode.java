@@ -12,7 +12,9 @@ package buildcraft.builders.snapshot;
  * the Architect captured into the blueprint.
  *
  * <p>The Architect always captures contents; this toggle is purely a build-time decision so the
- * same blueprint can be built either way.
+ * same blueprint can be built either way. It covers the entities a blueprint holds as it does
+ * blocks: an armor stand's gear, an item frame's item and a storage minecart's inventory are
+ * placed and charged only under {@link #INCLUDE}.
  *
  * <ul>
  *   <li>{@link #INCLUDE} (default) — the placed container is filled with the captured items, and

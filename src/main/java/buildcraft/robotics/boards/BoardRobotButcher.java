@@ -43,8 +43,14 @@ import buildcraft.robotics.ai.AIRobotSearchEntity;
  *  {@link #isExpectedTarget} spares those (docs/robotics-resurrection.md, Post-completion amendments). */
 public class BoardRobotButcher extends RedstoneBoardRobot {
 
+    /** Counts swings protection mods refused in a row (the attack notes a refused target unreachable, so the search
+     *  passes it over, unless the refusal was only the home station's unknown owner), so a robot facing a claim full
+     *  of protected mobs goes to sleep. */
+    private final WorkRefusals refusals;
+
     public BoardRobotButcher(IRobotAccess iRobot) {
         super(iRobot);
+        refusals = new WorkRefusals(iRobot);
     }
 
     @Override
@@ -113,6 +119,12 @@ public class BoardRobotButcher extends RedstoneBoardRobot {
             if (search.success()) {
                 startDelegateAI(new AIRobotAttack(robot, search.target));
             } else {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotAttack attack) {
+            if (!attack.refused()) {
+                refusals.succeeded();
+            } else if (refusals.failed(null, null)) {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         }

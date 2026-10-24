@@ -40,8 +40,14 @@ import buildcraft.robotics.ai.AIRobotSearchEntity;
  *  undamageable item in the hand — 0 &gt;= 0 — would unload every cycle). */
 public class BoardRobotKnight extends RedstoneBoardRobot {
 
+    /** Counts swings protection mods refused in a row (the attack notes a refused target unreachable, so the search
+     *  passes it over, unless the refusal was only the home station's unknown owner), so a robot facing a claim full
+     *  of protected mobs goes to sleep. */
+    private final WorkRefusals refusals;
+
     public BoardRobotKnight(IRobotAccess iRobot) {
         super(iRobot);
+        refusals = new WorkRefusals(iRobot);
     }
 
     @Override
@@ -93,6 +99,12 @@ public class BoardRobotKnight extends RedstoneBoardRobot {
             if (search.success()) {
                 startDelegateAI(new AIRobotAttack(robot, search.target));
             } else {
+                startDelegateAI(new AIRobotGotoSleep(robot));
+            }
+        } else if (ai instanceof AIRobotAttack attack) {
+            if (!attack.refused()) {
+                refusals.succeeded();
+            } else if (refusals.failed(null, null)) {
                 startDelegateAI(new AIRobotGotoSleep(robot));
             }
         }

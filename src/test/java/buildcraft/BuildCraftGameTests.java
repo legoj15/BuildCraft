@@ -592,6 +592,9 @@ public class BuildCraftGameTests {
         // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
         // instead of being restored for free; the pipe and its priced pluggables still build.
         reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);
+        // A waterlogged slab or pipe scans as itself (default / pipe schematic: item + pluggables charged, no water), not as the
+        // fluid schematic; a water source still scans as fluid.
+        reg.accept("buildcraftunofficial:wet_blocks_scan_as_themselves", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::wetBlocksScanAsThemselves);
 
         // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
         // The 1.21.1 branches stand on the version-neutral BCFluidTank / tile-tank surface —
@@ -933,6 +936,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_system_spanning_two_chunks_seen_from_either", () -> buildcraft.transport.WireSystemTester::testWireSystemSpanningTwoChunksIsSeenFromEither);
         reg.accept("buildcraftunofficial:wire_chunk_delivery_queues_only_wire_chunks", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires);
         reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
+        reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
         // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an
@@ -1331,6 +1335,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_deployer_stripes_activator_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesNeedsStationOwnerAtTheActivatorCell);
         reg.accept("buildcraftunofficial:robot_deployer_stripes_in_air_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesInAirUseNeedsStationOwner);
         reg.accept("buildcraftunofficial:robot_deployer_save_round_trip", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::deployerSurvivesSaveAndUnknownActsAsOwner);
+        reg.accept("buildcraftunofficial:robot_deployer_station_owner_remembered", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stationRemembersItsOwnerAndUnknownFailsClosed);
+        reg.accept("buildcraftunofficial:robot_deployer_bomber_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::bomberNeedsBothAndTntIsTheDeployers);
+        reg.accept("buildcraftunofficial:robot_deployer_melee_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::meleeNeedsBothAndNamesTheDeployer);
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

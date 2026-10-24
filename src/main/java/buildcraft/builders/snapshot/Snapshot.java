@@ -210,11 +210,21 @@ public abstract class Snapshot {
     }
 
     public void computeKey() {
+        computeKeyAndSerialize();
+    }
+
+    /**
+     * {@link #computeKey} that also hands back what it serialized: the snapshot's NBT as {@link #writeToNBT} writes it
+     * once the new key is set, built once. For a caller that goes on to measure or store that form of a large snapshot
+     * (an upload checking it against its size limit), which should not pay to build it a second time.
+     */
+    public CompoundTag computeKeyAndSerialize() {
         CompoundTag nbt = writeToNBT(this);
-        if (nbt.contains("key")) {
-            nbt.remove("key");
-        }
+        // The hash covers the content, not the key it replaces.
+        nbt.remove("key");
         key = new Key(key, HashUtil.computeHash(nbt));
+        nbt.put("key", key.serializeNBT());
+        return nbt;
     }
 
     @Override

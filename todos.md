@@ -9,9 +9,9 @@ Last audited: 2026-10-23
 - Aborted pipe inserts can mint fluid — [notes](docs/todo-details.md#fluid-mint-on-aborted-pipe-insert)
 - Written Zone Planner maps each carry the full map data — [notes](docs/todo-details.md#zone-planner-map-clone-bloat)
 - Guard test for the data creative middle-click clones strip — [notes](docs/todo-details.md#snapshot-security-follow-ups)
-- Bomber robots and robot melee ask no protection mod for permission — [notes](docs/todo-details.md#robot-bomber-and-melee-protection)
 - The Architect can save scans too large for the library to read back — [notes](docs/todo-details.md#architect-scan-size-cap)
-- Blueprint follow-ups: decorated pot sherds, rule cache keys, modded inventories — [notes](docs/todo-details.md#blueprint-follow-ups)
+- Blueprint follow-ups: decorated pot sherds, rule cache keys, modded inventories, free modded entities, wet blocks in keep-fluid mode — [notes](docs/todo-details.md#blueprint-follow-ups)
+- A bomber robot asks the station owner only about its landing block, not the whole blast — [notes](docs/todo-details.md#robot-bomber-blast)
 
 ## 🆕 New Features (version 2026.3)
 

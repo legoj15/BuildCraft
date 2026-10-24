@@ -112,6 +112,22 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Nonnull
     @Override
     public List<ItemStack> computeRequiredItems() {
+        return computeRequiredItems(true);
+    }
+
+    /**
+     * Mode-aware pricing, the entity twin of {@link SchematicBlockDefault#computeRequiredItems(boolean)}. When
+     * {@code includeContainerContents} is false the Builder is in {@link EnumContainerContentsMode#IGNORE IGNORE}
+     * mode: the extractors that price what the entity holds ({@link RequiredExtractor#isContainerContents}: an armor
+     * stand's gear, an item frame's item, a chest or hopper minecart's inventory) are skipped, while the constant
+     * extractor that prices the entity itself (the stand, the frame, the cart) is never contents and always counts.
+     * Only the rule data guarantees such an extractor exists: every shipped entity rule carries one (a test pins
+     * it), but a rule without one, including a bare {@code capture} whitelist, prices nothing for the entity itself
+     * in either mode. Unlike blocks, entities have no {@code item_from_block} fallback to price them instead.
+     */
+    @Nonnull
+    @Override
+    public List<ItemStack> computeRequiredItems(boolean includeContainerContents) {
         Identifier entityId = Identifier.parse(NBTUtilBC.getString(entityNbt, "id", ""));
         Set<JsonRule> rules = RulesLoader.getRules(entityId, entityNbt);
         if (rules.isEmpty()) {
@@ -121,6 +137,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
             .map(rule -> rule.requiredExtractors)
             .filter(Objects::nonNull)
             .flatMap(Collection::stream)
+            .filter(extractor -> includeContainerContents || !extractor.isContainerContents())
             .flatMap(extractor -> extractor.extractItemsFromEntity(entityNbt).stream())
             .filter(stack -> !stack.isEmpty())
             .collect(Collectors.toList());
@@ -154,29 +171,22 @@ public class SchematicEntityDefault implements ISchematicEntity {
     @Override
     @Nullable
     public Entity build(Level level, BlockPos basePos) {
+        return build(level, basePos, true);
+    }
+
+    /**
+     * Mode-aware build: with {@code includeContainerContents} false ({@link EnumContainerContentsMode#IGNORE IGNORE}
+     * mode) the entity spawns without what it holds, as {@link #computeRequiredItems(boolean)} did not charge for it.
+     */
+    @Override
+    @Nullable
+    public Entity build(Level level, BlockPos basePos, boolean includeContainerContents) {
         if (loadFailed) {
             return null;
         }
         Vec3 placePos = Vec3.atLowerCornerOf(basePos).add(pos);
-        BlockPos placeHangingPos = basePos.offset(hangingPos);
-        CompoundTag newEntityNbt = entityNbt.copy();
-        newEntityNbt.put("Pos", NBTUtilBC.writeVec3(placePos));
-        NBTUtilBC.putUUID(newEntityNbt, "UUID", UUID.randomUUID());
-        boolean rotate = true;
-        if (newEntityNbt.contains("TileX") &&
-            newEntityNbt.contains("TileY") &&
-            newEntityNbt.contains("TileZ") &&
-            newEntityNbt.contains("Facing")) {
-            newEntityNbt.putInt("TileX", placeHangingPos.getX());
-            newEntityNbt.putInt("TileY", placeHangingPos.getY());
-            newEntityNbt.putInt("TileZ", placeHangingPos.getZ());
-            newEntityNbt.putByte("Facing", (byte) hangingFacing.get2DDataValue());
-            rotate = false;
-        }
-        // 1.12.2's replaceNbt: the matching rules' overrides, merged over the data about to be loaded. Matched on the
-        // captured NBT, as the selectors saw it at scan time.
-        newEntityNbt = JsonRule.applyReplaceNbt(newEntityNbt,
-            RulesLoader.getRules(Identifier.parse(NBTUtilBC.getString(entityNbt, "id", "")), entityNbt));
+        CompoundTag newEntityNbt = entityNbtToPlace(basePos, includeContainerContents);
+        boolean rotate = !isHanging(entityNbt);
         // Load entity from NBT via EntityType.create. Vanilla's Entity.load rethrows any loader failure as a
         // ReportedException rather than skipping the entity, so malformed NBT (an upload, a mod's fragile loader)
         // would crash the server tick, and again on every restart while the Builder retries the spawn.
@@ -201,6 +211,41 @@ public class SchematicEntityDefault implements ISchematicEntity {
             return entity;
         }
         return null;
+    }
+
+    /** Whether the captured NBT is a hanging entity's, which {@link #entityNbtToPlace} re-anchors to the build site
+     *  and whose facing is therefore not rotated again after the spawn. */
+    private static boolean isHanging(CompoundTag nbt) {
+        return nbt.contains("TileX") && nbt.contains("TileY") && nbt.contains("TileZ") && nbt.contains("Facing");
+    }
+
+    /**
+     * The entity data {@link #build} loads: a fresh copy of {@link #entityNbt} (never the field, which is shared
+     * across rebuilds and rotations) moved to the build site, with what the entity holds stripped when
+     * {@code includeContainerContents} is false ({@link EnumContainerContentsMode#IGNORE IGNORE} mode), and every
+     * matching rule's {@link JsonRule#replaceNbt} merged over it, in that order (the block twin is
+     * {@link SchematicBlockDefault#tileNbtToPlace}). The rules are matched against the captured {@link #entityNbt},
+     * so a selector sees what the Architect saw, not what the strip left.
+     */
+    CompoundTag entityNbtToPlace(BlockPos basePos, boolean includeContainerContents) {
+        Vec3 placePos = Vec3.atLowerCornerOf(basePos).add(pos);
+        BlockPos placeHangingPos = basePos.offset(hangingPos);
+        CompoundTag newEntityNbt = entityNbt.copy();
+        newEntityNbt.put("Pos", NBTUtilBC.writeVec3(placePos));
+        NBTUtilBC.putUUID(newEntityNbt, "UUID", UUID.randomUUID());
+        if (isHanging(newEntityNbt)) {
+            newEntityNbt.putInt("TileX", placeHangingPos.getX());
+            newEntityNbt.putInt("TileY", placeHangingPos.getY());
+            newEntityNbt.putInt("TileZ", placeHangingPos.getZ());
+            newEntityNbt.putByte("Facing", (byte) hangingFacing.get2DDataValue());
+        }
+        Set<JsonRule> rules = RulesLoader.getRules(Identifier.parse(NBTUtilBC.getString(entityNbt, "id", "")), entityNbt);
+        if (!includeContainerContents) {
+            // The block twin's strip: every extractor knows where its items live in the NBT.
+            SchematicBlockDefault.stripContainerContentsFromNbt(rules, newEntityNbt);
+        }
+        // 1.12.2's replaceNbt: the matching rules' overrides, merged over the data about to be loaded.
+        return JsonRule.applyReplaceNbt(newEntityNbt, rules);
     }
 
     private static Optional<Entity> createEntity(Level level, CompoundTag newEntityNbt) {

@@ -5,7 +5,9 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -13,15 +15,19 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.RandomizableContainer;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.schematics.ISchematicEntity;
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -158,5 +164,153 @@ public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
 
         Assertions.assertFalse(read.entityNbt.contains(RandomizableContainer.LOOT_TABLE_TAG));
         Assertions.assertFalse(read.entityNbt.contains(RandomizableContainer.LOOT_TABLE_SEED_TAG));
+    }
+
+    /** A schematic of the entity with the given id, its captured NBT filled in by {@code fill}. */
+    private static SchematicEntityDefault schematicOf(String entityId, Consumer<CompoundTag> fill)
+            throws InvalidInputDataException {
+        CompoundTag schematic = entitySchematicNbt(entityId);
+        fill.accept(NBTUtilBC.getCompound(schematic, "entityNbt"));
+        SchematicEntityDefault entity = new SchematicEntityDefault();
+        entity.deserializeNbt(schematic);
+        return entity;
+    }
+
+    private static boolean charges(List<ItemStack> required, Item item) {
+        return required.stream().anyMatch(stack -> stack.is(item));
+    }
+
+    @Test
+    public void anItemFramesItemIsChargedAndPlacedOnlyWhenContentsAreIncluded() throws InvalidInputDataException {
+        SchematicEntityDefault frame = schematicOf("minecraft:item_frame",
+            nbt -> nbt.put("Item", stackNbt("minecraft:diamond")));
+
+        // The plain pricing is the include-contents one.
+        Assertions.assertEquals(2, frame.computeRequiredItems().size(), frame.computeRequiredItems().toString());
+        List<ItemStack> included = frame.computeRequiredItems(true);
+        Assertions.assertTrue(charges(included, Items.ITEM_FRAME), included.toString());
+        Assertions.assertTrue(charges(included, Items.DIAMOND), included.toString());
+        Assertions.assertTrue(frame.entityNbtToPlace(BlockPos.ZERO, true).contains("Item"),
+            "the included frame must spawn holding its item");
+
+        // IGNORE: the frame itself is still owed (it is the entity, never contents); its item is neither charged
+        // nor placed.
+        List<ItemStack> ignored = frame.computeRequiredItems(false);
+        Assertions.assertEquals(1, ignored.size(), "only the frame: " + ignored);
+        Assertions.assertTrue(charges(ignored, Items.ITEM_FRAME), ignored.toString());
+        Assertions.assertFalse(frame.entityNbtToPlace(BlockPos.ZERO, false).contains("Item"),
+            "the ignored frame must spawn empty");
+        Assertions.assertTrue(frame.entityNbt.contains("Item"),
+            "the captured NBT is shared across rebuilds and must keep the item");
+    }
+
+    @Test
+    public void anArmorStandsGearIsNeitherChargedNorPlacedWhenContentsAreIgnored() throws InvalidInputDataException {
+        // Both saved shapes at once: the ArmorItems/HandItems lists of MC 1.21.1 and the equipment map of later lines.
+        SchematicEntityDefault stand = schematicOf("minecraft:armor_stand", nbt -> {
+            ListTag armor = new ListTag();
+            armor.add(new CompoundTag());
+            armor.add(new CompoundTag());
+            armor.add(stackNbt("minecraft:diamond_chestplate"));
+            armor.add(new CompoundTag());
+            nbt.put("ArmorItems", armor);
+            ListTag hands = new ListTag();
+            hands.add(stackNbt("minecraft:diamond_sword"));
+            hands.add(new CompoundTag());
+            nbt.put("HandItems", hands);
+            CompoundTag equipment = new CompoundTag();
+            equipment.put("head", stackNbt("minecraft:diamond_helmet"));
+            nbt.put("equipment", equipment);
+            nbt.putByte("ShowArms", (byte) 1);
+        });
+
+        List<ItemStack> included = stand.computeRequiredItems(true);
+        Assertions.assertEquals(4, included.size(), "the stand, the chestplate, the sword, the helmet: " + included);
+        CompoundTag filled = stand.entityNbtToPlace(BlockPos.ZERO, true);
+        Assertions.assertTrue(filled.contains("ArmorItems") && filled.contains("HandItems") && filled.contains("equipment"));
+
+        List<ItemStack> ignored = stand.computeRequiredItems(false);
+        Assertions.assertEquals(1, ignored.size(), "only the stand: " + ignored);
+        Assertions.assertTrue(charges(ignored, Items.ARMOR_STAND), ignored.toString());
+        CompoundTag placed = stand.entityNbtToPlace(BlockPos.ZERO, false);
+        Assertions.assertFalse(placed.contains("ArmorItems"), "worn gear must not be placed: " + placed);
+        Assertions.assertFalse(placed.contains("HandItems"), "held items must not be placed: " + placed);
+        Assertions.assertFalse(NBTUtilBC.getCompound(placed, "equipment").contains("head"),
+            "equipment must not be placed: " + placed);
+        Assertions.assertTrue(placed.contains("ShowArms"), "the stand's own settings stay: " + placed);
+    }
+
+    @Test
+    public void aStorageMinecartsInventoryFollowsTheContentsMode() throws InvalidInputDataException {
+        for (String cart : new String[] {"minecraft:chest_minecart", "minecraft:hopper_minecart"}) {
+            SchematicEntityDefault minecart = schematicOf(cart, nbt -> {
+                ListTag items = new ListTag();
+                CompoundTag slot = stackNbt("minecraft:gold_ingot");
+                slot.putByte("Slot", (byte) 0);
+                items.add(slot);
+                nbt.put("Items", items);
+                nbt.putByte("Invulnerable", (byte) 1);
+            });
+            Assertions.assertTrue(charges(minecart.computeRequiredItems(true), Items.GOLD_INGOT), cart);
+            Assertions.assertTrue(minecart.entityNbtToPlace(BlockPos.ZERO, true).contains("Items"), cart);
+
+            List<ItemStack> ignored = minecart.computeRequiredItems(false);
+            Assertions.assertEquals(1, ignored.size(), cart + " owes only the cart: " + ignored);
+            Assertions.assertFalse(charges(ignored, Items.GOLD_INGOT), cart);
+            CompoundTag placed = minecart.entityNbtToPlace(BlockPos.ZERO, false);
+            Assertions.assertFalse(placed.contains("Items"), cart + " must spawn empty: " + placed);
+            Assertions.assertTrue(placed.contains("Invulnerable"), cart + " keeps its other data: " + placed);
+        }
+    }
+
+    @Test
+    public void everyCapturableEntityStillOwesItselfWhenContentsAreIgnored() throws InvalidInputDataException {
+        // IGNORE skips only the extractors that price what an entity holds; the entity itself is priced by a
+        // constant extractor in each rule. A rule that lost its constant (or never had one: capture alone whitelists
+        // an entity but prices nothing, and entities have no item_from_block fallback) would build that entity for
+        // free in either mode, so the shipped rules must all carry one.
+        List<String> capturable = new ArrayList<>();
+        for (Identifier id : BuiltInRegistries.ENTITY_TYPE.keySet()) {
+            if (!RulesLoader.READ_DOMAINS.contains(id.getNamespace())) continue;
+            CompoundTag idOnly = new CompoundTag();
+            idOnly.putString("id", id.toString());
+            if (RulesLoader.getRules(id, idOnly).stream().noneMatch(rule -> rule.capture)) continue;
+            capturable.add(id.toString());
+            SchematicEntityDefault entity = new SchematicEntityDefault();
+            entity.deserializeNbt(entitySchematicNbt(id.toString()));
+            Assertions.assertFalse(entity.computeRequiredItems(false).isEmpty(),
+                id + " is captured by a rule but owes nothing for itself once contents are ignored");
+        }
+        // Liveness: the loop must have met the entities the other tests lean on, or it checked nothing.
+        Assertions.assertTrue(capturable.containsAll(List.of("minecraft:armor_stand", "minecraft:item_frame",
+            "minecraft:chest_minecart")), "captured entities seen: " + capturable);
+    }
+
+    @Test
+    public void aBlueprintsEntityCostIsRebakedWhenTheContentsModeChanges() throws InvalidInputDataException {
+        SchematicEntityDefault frame = schematicOf("minecraft:item_frame",
+            nbt -> nbt.put("Item", stackNbt("minecraft:diamond")));
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(1, 1, 1);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.palette.add(new SchematicBlockAir());
+        blueprint.data = new int[] {0};
+        blueprint.entities.add(frame);
+        blueprint.computeKey();
+
+        Blueprint.BuildingInfo info = blueprint.new BuildingInfo(BlockPos.ZERO, Rotation.NONE);
+        ISchematicEntity placed = info.entities.iterator().next();
+        // A fresh building info prices everything (the Builder re-bakes it for IGNORE on load).
+        Assertions.assertTrue(charges(info.entitiesRequiredItems.get(placed), Items.DIAMOND));
+
+        info.refreshRequiredItemsForContentsMode(EnumContainerContentsMode.IGNORE);
+        List<ItemStack> ignored = info.entitiesRequiredItems.get(placed);
+        Assertions.assertEquals(1, ignored.size(), "only the frame once contents are ignored: " + ignored);
+        Assertions.assertTrue(charges(ignored, Items.ITEM_FRAME));
+
+        info.refreshRequiredItemsForContentsMode(EnumContainerContentsMode.INCLUDE);
+        Assertions.assertTrue(charges(info.entitiesRequiredItems.get(placed), Items.DIAMOND),
+            "toggling back must price the item again");
     }
 }

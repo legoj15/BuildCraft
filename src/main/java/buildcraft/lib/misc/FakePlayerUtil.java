@@ -160,6 +160,7 @@ public final class FakePlayerUtil {
     private static final class CachedFakePlayer extends FakePlayer {
         CachedFakePlayer(ServerLevel level, GameProfile profile) {
             super(level, profile);
+            untargetable(this);
         }
 
         /** Puts the in-use state back to a fresh player's without running any hook or emitting any event. */
@@ -361,10 +362,23 @@ public final class FakePlayerUtil {
     }
 
     private static FakePlayer detached(ServerLevel level, @Nullable GameProfile profile, @Nullable BlockPos pos) {
-        FakePlayer player = new FakePlayer(level, resolveProfile(profile));
+        FakePlayer player = untargetable(new FakePlayer(level, resolveProfile(profile)));
         if (pos != null) {
             placeAt(player, new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
         }
+        return player;
+    }
+
+    /**
+     * Makes {@code player} one no mob can take as a target, as NeoForge's own fake player is from 1.21.10 on: mobs that
+     * retaliate first ask whether the attacker can be seen as an enemy, which an invulnerable entity cannot. The
+     * player is not in the world, so a mob that took it would chase a spot where nobody stands. Damage to it is
+     * already refused on every node.
+     */
+    private static <P extends FakePlayer> P untargetable(P player) {
+        //? if <1.21.10 {
+        /*player.setInvulnerable(true);
+        *///?}
         return player;
     }
 

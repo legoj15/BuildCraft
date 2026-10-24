@@ -11,6 +11,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -200,8 +201,17 @@ public interface IRobotAccess {
      *  hurt — the robot has no player-grade hit pipeline of its own). 7.1.x reached the same through the
      *  entity's {@code attackEntityFrom}; the modern damage formula (base + held item's ATTACK_DAMAGE
      *  modifier + sharpness, with knockback/fire and durability) lives in
-     *  {@link EntityRobotBase#attackTargetEntityWithCurrentItem}. */
+     *  {@link EntityRobotBase#attackTargetEntityWithCurrentItem}. The blow names nobody but the robot; a protected
+     *  swing goes through {@code RobotProtection.attack}, which asks first and then calls the overload below. */
     void attackTargetEntityWithCurrentItem(Entity target);
+
+    /** {@link #attackTargetEntityWithCurrentItem(Entity)}, with {@code attacker} named as the player who attacks
+     *  (the damage source's causing entity; the robot is still the one landing it), so kill credit, death messages
+     *  and protection mods see that player. Damage, knockback and wear are the same either way. A robot that cannot
+     *  name an attacker ignores it, which is the default. */
+    default void attackTargetEntityWithCurrentItem(Entity target, @Nullable Player attacker) {
+        attackTargetEntityWithCurrentItem(target);
+    }
 
     // ── Pathing hints ──
 

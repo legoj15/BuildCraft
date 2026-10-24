@@ -15,9 +15,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
@@ -238,6 +240,61 @@ public class SchematicBlockPipeTester {
         helper.assertFalse(NBTUtilBC.getCompound(plugsOf(schematic), "north").isEmpty(),
                 "Building must not edit the stored schematic");
         helper.succeed();
+    }
+
+    /**
+     * A waterlogged block is scanned as itself, through the real factory chain: the fluid schematic (highest priority)
+     * once took every state with a fluid, so a wet slab was charged 1000 mB of water and no item, and a wet pipe lost
+     * its pipe definition and pluggables. A water source is still the fluid schematic.
+     */
+    public static void wetBlocksScanAsThemselves(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pipePos = new BlockPos(1, 2, 1);
+        BlockPos slabPos = new BlockPos(3, 2, 1);
+        BlockPos waterPos = new BlockPos(1, 2, 4);
+        helper.setBlock(pipePos, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState()
+                .setValue(BlockStateProperties.WATERLOGGED, true));
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
+        Item pipeItem = BCTransportItems.PIPE_COBBLE_ITEM.get();
+        tile.onPlacedBy(null, new ItemStack(pipeItem));
+        tile.replacePluggable(Direction.UP, new PluggableBlocker(BCTransportPlugs.blocker, tile, Direction.UP));
+        helper.setBlock(slabPos, Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true));
+        helper.setBlock(waterPos, Blocks.WATER);
+
+        ISchematicBlock pipe = scan(level, helper.absolutePos(pipePos));
+        helper.assertTrue(pipe instanceof SchematicBlockPipe,
+                "A wet pipe must still scan as the pipe schematic, got " + pipe.getClass().getSimpleName());
+        List<ItemStack> pipeRequired = pipe.computeRequiredItems();
+        helper.assertTrue(pipeRequired.stream().anyMatch(s -> s.is(pipeItem))
+                        && pipeRequired.stream().anyMatch(s -> s.is(BCTransportItems.PLUG_BLOCKER.get())),
+                "A wet pipe must be charged for its pipe and pluggable, got " + itemNames(pipeRequired));
+        helper.assertTrue(pipe.computeRequiredFluids().isEmpty(), "A wet pipe must not be charged water");
+        helper.assertTrue(pipe.getBlockStateForRender().getValue(BlockStateProperties.WATERLOGGED),
+                "A wet pipe must stay waterlogged");
+
+        ISchematicBlock slab = scan(level, helper.absolutePos(slabPos));
+        helper.assertTrue(slab instanceof SchematicBlockDefault,
+                "A wet slab must scan as the default schematic, got " + slab.getClass().getSimpleName());
+        List<ItemStack> slabRequired = slab.computeRequiredItems();
+        helper.assertTrue(slabRequired.size() == 1 && slabRequired.get(0).is(Items.OAK_SLAB),
+                "A wet slab must be charged for the slab, got " + itemNames(slabRequired));
+        helper.assertTrue(slab.computeRequiredFluids().isEmpty(), "A wet slab must not be charged water");
+
+        ISchematicBlock water = scan(level, helper.absolutePos(waterPos));
+        helper.assertTrue(water instanceof SchematicBlockFluid,
+                "A water source must still scan as the fluid schematic, got " + water.getClass().getSimpleName());
+        helper.assertTrue(water.computeRequiredFluids().size() == 1, "A water source is charged its water");
+        helper.succeed();
+    }
+
+    private static ISchematicBlock scan(ServerLevel level, BlockPos abs) {
+        BlockState state = level.getBlockState(abs);
+        return SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
     }
 
     private static CompoundTag plugsOf(ISchematicBlock schematic) {

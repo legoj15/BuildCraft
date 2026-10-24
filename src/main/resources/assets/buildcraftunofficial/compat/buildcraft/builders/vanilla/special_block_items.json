@@ -70,5 +70,17 @@
         "requiredExtractors": [
             { "type": "constant", "items": [{ "item": "minecraft:cauldron" }] }
         ]
+    },
+    {
+        "selectors": ["minecraft:kelp_plant"],
+        "requiredExtractors": [
+            { "type": "constant", "items": [{ "item": "minecraft:kelp" }] }
+        ]
+    },
+    {
+        "selectors": ["minecraft:tall_seagrass[half=lower]"],
+        "requiredExtractors": [
+            { "type": "constant", "items": [{ "item": "minecraft:seagrass" }] }
+        ]
     }
 ]

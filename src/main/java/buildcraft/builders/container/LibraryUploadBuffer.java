@@ -234,12 +234,12 @@ public final class LibraryUploadBuffer {
             // A hand-built payload can be well-formed NBT that is not a snapshot; reading it can fail any way it likes.
             throw new IOException("Not a readable snapshot: " + e, e);
         }
-        snapshot.computeKey();
         // The store and a preview write the snapshot in its own form, which the reader can charge more for than the
         // form it arrived in: a blueprint's cells read from an int array (four bytes a cell) but are written as a
         // list of IntTags (sixteen), and a palette entry naming only its type is written with every field. Measured
         // as written, by the reader's own count, so an accepted upload is one the store and the preview read back.
-        NbtSquisher.requireExpandsWithin(Snapshot.writeToNBT(snapshot), maxExpandedBytes);
+        // The key computation has just built that form, with the new key in it: measuring it costs no second build.
+        NbtSquisher.requireExpandsWithin(snapshot.computeKeyAndSerialize(), maxExpandedBytes);
         return snapshot;
     }
 }

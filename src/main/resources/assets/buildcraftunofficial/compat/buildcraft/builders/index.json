@@ -25,5 +25,6 @@
     "vanilla/minecarts",
     "buildcraft/blocks_buildcraft_inventories",
     "buildcraft/blocks_buildcraft_tanks",
-    "buildcraft/blocks_batteries"
+    "buildcraft/blocks_batteries",
+    "buildcraft/ignored"
 ]

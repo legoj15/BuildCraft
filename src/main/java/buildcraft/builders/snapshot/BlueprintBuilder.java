@@ -776,6 +776,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                     return false;
                 } else {
                     // ⚡ Bolt: Use standard for loop for entity spawning
+                    boolean includeContents = tile.getContainerContentsMode() != EnumContainerContentsMode.IGNORE;
                     for (ISchematicEntity schematicEntity : toSpawn) {
                         if (!tryExtractRequired(
                                 getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
@@ -789,7 +790,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                             entityRefused = true;
                             continue;
                         }
-                        if (schematicEntity.build(tile.getWorldBC(), getBuildingInfo().offsetPos) != null) {
+                        if (schematicEntity.build(tile.getWorldBC(), getBuildingInfo().offsetPos, includeContents) != null) {
                             tryExtractRequired(
                                 getBuildingInfo().entitiesRequiredItems.get(schematicEntity),
                                 getBuildingInfo().entitiesRequiredFluids.get(schematicEntity),

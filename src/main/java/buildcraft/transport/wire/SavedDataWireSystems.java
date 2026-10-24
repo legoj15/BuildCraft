@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,10 +78,15 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     public boolean gatesChanged = true;
     public boolean structureChanged = true;
     public final List<WireSystem> changedSystems = new ArrayList<>();
-    /** Players whose client received a wire-holding chunk since the last tick (fed by {@link #onChunkSent});
-     *  each is sent every system it can see. A Set because chunks arrive in batches — many per player per
-     *  tick at login. */
-    public final Set<ServerPlayer> changedPlayers = new HashSet<>();
+    /** Ticks a player waits between full wire resends triggered by chunk deliveries (one second). */
+    public static final int RESEND_INTERVAL_TICKS = 20;
+    /** Players whose client received a wire-holding chunk (fed by {@link #onChunkSent}) and the pacing of the full
+     *  resend each is owed: every system it can see. Chunks are delivered over many ticks (login, a teleport, a walk
+     *  along a wire run), so a player is sent at once and then at most once per {@link #RESEND_INTERVAL_TICKS}, with
+     *  a trailing send for whatever landed in between: the state sent last always follows the last chunk. */
+    private final ResendThrottle<ServerPlayer> resends = new ResendThrottle<>(RESEND_INTERVAL_TICKS);
+    /** The throttle's clock: one per {@link #tick}. */
+    private long resendClock;
     /** How many systems have an element in each chunk. Lets {@link #onChunkSent} ignore the (vast majority
      *  of) chunks with no wires in O(1), so terrain streaming never triggers a full wire resend. */
     private final Map<ChunkPos, Integer> systemsPerChunk = new HashMap<>();
@@ -140,12 +144,24 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
     }
 
     /** Called from the {@code ChunkWatchEvent.Sent} listener in {@code BCTransport} — after the chunk packet
-     *  is queued on the player's connection, so the next tick's wire payloads follow it (1.12.2
-     *  {@code BCTransportEventDist.onChunkWatch}). Runs once per chunk delivered; keep it O(1). */
+     *  is queued on the player's connection, so the wire payloads that follow it are sent behind the chunk (1.12.2
+     *  {@code BCTransportEventDist.onChunkWatch}). That send is paced: at the next {@link #tick} when the player
+     *  has had none within {@link #RESEND_INTERVAL_TICKS}, otherwise when the interval is up (see
+     *  {@link ResendThrottle}). Runs once per chunk delivered; keep it O(1). */
     public void onChunkSent(ServerPlayer player, ChunkPos pos) {
         if (systemsPerChunk.containsKey(pos)) {
-            changedPlayers.add(player);
+            resends.request(player);
         }
+    }
+
+    /** Whether a chunk delivered to {@code player} has asked for a full wire resend that has not gone out yet. */
+    public boolean isResendQueued(ServerPlayer player) {
+        return resends.isPending(player);
+    }
+
+    /** Drop the queued resend and the pacing history of {@code player} (they left, or a test is cleaning up). */
+    public void forgetResends(ServerPlayer player) {
+        resends.forget(player);
     }
 
     private void indexChunks(WireSystem wireSystem, int delta) {
@@ -256,14 +272,21 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
             });
         }
 
+        long now = ++resendClock;
         if (world instanceof ServerLevel serverLevel) {
+            // Players whose chunk-delivery resend is due this tick (a flagged player still inside the interval of
+            // its last send waits, and is returned by a later tick).
+            Set<ServerPlayer> resendDue = resends.takeDue(now);
             // The send loops below only ever emit when structureChanged, a changed system, or a
-            // changed player exists — skip the whole player×system sweep on a quiet tick.
-            if (structureChanged || !changedSystems.isEmpty() || !changedPlayers.isEmpty()) {
+            // due player exists — skip the whole player×system sweep on a quiet tick.
+            if (structureChanged || !changedSystems.isEmpty() || !resendDue.isEmpty()) {
                 for (ServerPlayer player : serverLevel.getPlayers(p -> true)) {
                     Map<Integer, WireSystem> changedWires = new HashMap<>();
                     Map<Integer, Boolean> hashesPowered = new HashMap<>();
-                    if (structureChanged || changedPlayers.contains(player)) {
+                    if (structureChanged || resendDue.contains(player)) {
+                        // This is the whole structure, so whatever chunk deliveries asked for is answered by it
+                        // and the pacing interval restarts from here.
+                        resends.markSent(player, now);
                         // Structure (and with it power) of every system this player watches.
                         for (Map.Entry<WireSystem, Boolean> entry : wireSystems.entrySet()) {
                             WireSystem ws = entry.getKey();
@@ -297,7 +320,6 @@ public class SavedDataWireSystems extends SavedData implements LegacySavedData.R
         gatesChanged = false;
         structureChanged = false;
         changedSystems.clear();
-        changedPlayers.clear();
     }
 
     public CompoundTag writeToTag() {

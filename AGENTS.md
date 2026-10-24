@@ -62,7 +62,7 @@ Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSe
 
 **Statements/Logic (Gates)** — `IStatement`/`ITrigger`/`IAction` with `StatementManager` as the central registry. Statements do **not** use `DeferredRegister` — `StatementManager` is hand-rolled static and each `BCStatement` self-registers in its constructor (do not add redundant `registerStatement` calls). This is correct: statements aren't registry content.
 
-**Snapshots/Blueprints** — `buildcraft.builders.snapshot`; `ISchematicBlock`/`ISchematicEntity` define save/place, the factory registries map types to schematic factories, `GlobalSavedDataSnapshots` persists server-side.
+**Snapshots/Blueprints** — `buildcraft.builders.snapshot`; `ISchematicBlock`/`ISchematicEntity` define save/place, the factory registries map types to schematic factories, `GlobalSavedDataSnapshots` persists server-side. Every inventory and tank key of a tile that some rule prices must be named in the rules under `assets/buildcraftunofficial/compat/buildcraft/builders/buildcraft/`: once any rule prices a block's contents the deny-by-default `clearContent` never runs for it. A tile no rule prices relies on its `clearContent` emptying its contents instead. `TileContentsPricingGuardTester` fills every BC tile and fails naming the unpriced key.
 
 **Networking** — custom payloads via `RegisterPayloadHandlersEvent`; `StreamCodec<RegistryFriendlyByteBuf, T>` serialization; handlers call `ctx.enqueueWork()`.
 

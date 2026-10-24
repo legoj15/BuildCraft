@@ -122,7 +122,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
                 && !BlockClaims.isClaimed(robot.getRegistry(), pos)
                 && matchesGateFilter(level.getBlockState(pos))
                 && !refusals.isRefused(level, pos, RobotProtection.identityOf(robot),
-                        RobotProtection.ownerOf(robot));
+                        RobotProtection.refusalKeyOf(robot));
     }
 
     @Override
@@ -153,7 +153,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
             Level level = robot.level();
             if (pumpAi.refused() && level != null && pumpAi.blockToPump() != null) {
                 refusals.remember(level, pumpAi.blockToPump(), RobotProtection.identityOf(robot),
-                        RobotProtection.ownerOf(robot));
+                        RobotProtection.refusalKeyOf(robot));
             }
             releaseBlockFound();
         } else if (ai instanceof AIRobotGotoStationAndUnloadFluids) {

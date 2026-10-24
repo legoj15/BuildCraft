@@ -9,11 +9,13 @@ package buildcraft.robotics;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
@@ -44,6 +46,9 @@ import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.tile.OwnerData;
 import buildcraft.robotics.statements.ActionRobotFilter;
 import buildcraft.robotics.statements.ActionRobotFilterTool;
 import buildcraft.robotics.statements.ActionStationAcceptFluids;
@@ -72,6 +77,10 @@ import org.jspecify.annotations.Nullable;
 public class DockingStationPipe extends DockingStation implements IRequestProvider {
 
     private @Nullable IPipeHolder holder;
+    /** The pipe's owner as last read ({@link #getOwner}); meaningful only when {@link #ownerKnown}. */
+    private @Nullable GameProfile cachedOwner;
+    /** Whether the pipe's owner has been read at least once, now or before the save this station came from. */
+    private boolean ownerKnown;
 
     public DockingStationPipe() {
         // Loading later from NBT — DO NOT TOUCH.
@@ -129,12 +138,76 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return holder;
     }
 
-    /** Whoever placed the pipe this station sits on. */
+    /** Whoever placed the pipe this station sits on: read off the pipe when it can be resolved, else the owner it was
+     *  read as last ({@link #isOwnerKnown}). The pipe is not there to ask for a station read back from the save whose
+     *  chunk has not loaded yet, which is exactly when a robot homed here is out working away from it after a
+     *  restart; answering null then made the robot's station side the generic "[BuildCraft]" identity, which operators
+     *  whitelist, so the owner's say vanished. */
     @Override
     @Nullable
     public GameProfile getOwner() {
         IPipeHolder h = getHolder();
-        return h == null ? null : h.getOwner();
+        if (h != null) {
+            rememberOwner(h.getOwner());
+        }
+        return cachedOwner;
+    }
+
+    /** False only for a station that has never read its pipe's owner and cannot now: one saved before stations
+     *  remembered their owner, whose pipe has not loaded since. {@link RobotStationPluggable} reads it the first
+     *  tick its pipe ticks, so a station stays unknown no longer than its chunk stays unloaded. */
+    @Override
+    public boolean isOwnerKnown() {
+        IPipeHolder h = getHolder();
+        if (h != null) {
+            rememberOwner(h.getOwner());
+            return true;
+        }
+        return ownerKnown;
+    }
+
+    /** Keeps {@code owner} as the station's owner. The profile object is replaced only when it names someone else,
+     *  so callers that key on the object (the robots' refusal memories) keep seeing the same one; a change marks the
+     *  registry dirty, since the owner is saved with the station. */
+    private void rememberOwner(@Nullable GameProfile owner) {
+        if (ownerKnown && sameProfile(cachedOwner, owner)) {
+            return;
+        }
+        cachedOwner = owner;
+        ownerKnown = true;
+        if (world != null && !world.isClientSide()) {
+            RobotManager.registryProvider.getRegistry(world).registryMarkDirty();
+        }
+    }
+
+    private static boolean sameProfile(@Nullable GameProfile a, @Nullable GameProfile b) {
+        if (a == null || b == null) {
+            return a == b;
+        }
+        return Objects.equals(GameProfileUtil.getId(a), GameProfileUtil.getId(b))
+                && Objects.equals(GameProfileUtil.getName(a), GameProfileUtil.getName(b));
+    }
+
+    /** The base record plus the owner last read off the pipe: {@code ownerKnown}, and under {@code owner} the
+     *  standard {@link OwnerData} pair (absent for a pipe with no owner). */
+    @Override
+    public void writeToNbt(CompoundTag nbt) {
+        super.writeToNbt(nbt);
+        if (ownerKnown) {
+            nbt.putBoolean("ownerKnown", true);
+            CompoundTag ownerTag = new CompoundTag();
+            OwnerData.writeOwner(ownerTag, cachedOwner);
+            nbt.put("owner", ownerTag);
+        }
+    }
+
+    /** A record saved before stations remembered their owner has no {@code ownerKnown} and reads as unknown until
+     *  the pipe is resolved. */
+    @Override
+    public void readFromNbt(CompoundTag nbt) {
+        super.readFromNbt(nbt);
+        ownerKnown = NBTUtilBC.getBoolean(nbt, "ownerKnown", false);
+        cachedOwner = ownerKnown ? OwnerData.readOwner(NBTUtilBC.getCompound(nbt, "owner")) : null;
     }
 
     @Override

@@ -313,7 +313,9 @@ public class BCCore {
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToClient(
+        // Version 2: the marker count is a VarInt now (it was a short). NeoForge compares versions per payload at
+        // login, so an older client or server is refused with a version message instead of misreading marker syncs.
+        registrar.versioned("2").playToClient(
                 MessageMarker.TYPE,
                 MessageMarker.STREAM_CODEC,
                 MessageMarker::handle

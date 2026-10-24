@@ -4,6 +4,10 @@
  * should be located as "LICENSE.API" in the BuildCraft source code distribution. */
 package buildcraft.api.robots;
 
+import java.util.Optional;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -13,7 +17,11 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -134,14 +142,15 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         return this;
     }
 
-    /** Melee with the held item (the knight/butcher's only way to hurt). Ported from 7.1.x
-     *  {@code EntityRobot.attackEntityWithCurrentItem}: base damage plus the held item's MAINHAND
-     *  {@code ATTACK_DAMAGE} modifier (its three operations applied in order), plus sharpness
-     *  ({@code 0.5 * level + 0.5}), fire aspect ignites the target for {@code 4 * level} seconds, the
-     *  damage source is {@code MOB_ATTACK} attributed to the robot, knockback applies only with the
-     *  enchantment (a manual delta-movement push plus recoil, 7.1.x's arithmetic run along the AIM (7.1.x's server yaw never left 0, so its push always ran +Z) — the vanilla
-     *  {@code knockback} overloads changed arity across the version cliff, so the push is done by hand),
-     *  and the held item takes one point of durability.
+    /** Melee with the held item (the knight/butcher's only way to hurt). Ported from 7.1.x {@code
+     *  EntityRobot.attackEntityWithCurrentItem}: base damage plus the held item's MAINHAND {@code ATTACK_DAMAGE}
+     *  modifier (its three operations applied in order), plus sharpness ({@code 0.5 * level + 0.5}), fire aspect
+     *  ignites the target for {@code 4 * level} seconds, the damage source is {@code MOB_ATTACK} attributed to the
+     *  robot (or, when an attacker is named, see the two-argument overload, {@code PLAYER_ATTACK} landed by the robot
+     *  and caused by that player), knockback applies only with the enchantment (a manual delta-movement push plus
+     *  recoil, 7.1.x's arithmetic run along the AIM (7.1.x's server yaw never left 0, so its push always ran +Z) — the
+     *  vanilla {@code knockback} overloads changed arity across the version cliff, so the push is done by hand), and
+     *  the held item takes one point of durability.
      *
      *  <p>Two deliberate non-ports: the base is 1.0, not 7.1.x's 2.0 — modern item components already
      *  carry the weapon's full damage as the attribute modifier, and 7.1.x's 2.0 would sit on top of it;
@@ -152,6 +161,22 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
      *  {@code hurt} at 1.21.10. */
     @Override
     public void attackTargetEntityWithCurrentItem(Entity target) {
+        attackTargetEntityWithCurrentItem(target, null);
+    }
+
+    /** The melee above with {@code attacker} named as the player who attacks: a {@code PLAYER_ATTACK} source whose
+     *  direct entity is still the robot (so vanilla's own knockback still pushes away from the robot) and whose
+     *  causing entity is {@code attacker}, so kill credit, death messages and protection mods see that player. Kill
+     *  credit includes what a player's kill drops: experience and the loot only a player's kill yields.
+     *
+     *  <p>The attacker is a stand-in player that is not in the world, so the target must not turn on it. Vanilla makes
+     *  the causing entity the target's last attacker (what goal-driven mobs retaliate against) and some brain-driven
+     *  mobs take it as their attack target straight from the hurt hook (a warden, unchecked); both are put back as
+     *  they were before the hit. Retaliation that first asks whether the attacker can be targeted (hoglins, piglins,
+     *  zoglins, a warden's anger) never takes a fake player, which is invulnerable. What remains is what any hit
+     *  does: the target is hurt, may panic, and a hoglin forgets it was pacified. */
+    @Override
+    public void attackTargetEntityWithCurrentItem(Entity target, @Nullable Player attacker) {
         if (target == null || target.isRemoved() || !target.isAttackable()
                 || target.skipAttackInteraction(this)) {
             return;
@@ -202,7 +227,11 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
             target.igniteForSeconds(4.0F * fireAspect);
         }
 
-        DamageSource source = serverLevel.damageSources().source(DamageTypes.MOB_ATTACK, this);
+        DamageSource source = attacker == null
+                ? serverLevel.damageSources().source(DamageTypes.MOB_ATTACK, this)
+                : serverLevel.damageSources().source(DamageTypes.PLAYER_ATTACK, this, attacker);
+        LivingEntity angeredBefore = target instanceof LivingEntity living ? living.getLastHurtByMob() : null;
+        LivingEntity targetingBefore = attackTargetMemory(target);
         //? if >=1.21.10 {
         // hurtServer, not the deprecated hurtOrSimulate: this runs server-side only (serverLevel is in hand), which
         // is exactly the branch hurtOrSimulate would have dispatched to.
@@ -210,6 +239,15 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         //?} else {
         /*target.hurt(source, attackDamage);*/
         //?}
+        if (attacker != null && target instanceof LivingEntity living) {
+            if (living.getLastHurtByMob() == attacker) {
+                living.setLastHurtByMob(angeredBefore);
+            }
+            if (attackTargetMemory(living) == attacker) {
+                // Back as it was: erased when it held nothing (its expiry, if it had one, is not kept)
+                living.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, Optional.ofNullable(targetingBefore));
+            }
+        }
 
         if (knockback > 0) {
             // The robot's yRot is the AIM yaw, atan2(dz, dx) + 180 — a quarter turn off vanilla's yaw (0 =
@@ -225,6 +263,16 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
         }
 
         held.hurtAndBreak(1, serverLevel, null, item -> {});
+    }
+
+    /** What a brain-driven mob's attack-target memory holds; null for none, or for an entity without one. */
+    @Nullable
+    private static LivingEntity attackTargetMemory(Entity entity) {
+        if (entity instanceof LivingEntity living
+                && living.getBrain().checkMemory(MemoryModuleType.ATTACK_TARGET, MemoryStatus.REGISTERED)) {
+            return living.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+        }
+        return null;
     }
 
     public abstract void releaseResources();

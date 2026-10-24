@@ -55,7 +55,7 @@ public class SchematicBlockManager {
     }
 
     /**
-     * {@link #readFromNBT}, then the read gates of an uploaded or hand-made schematic ({@link #upgradeLegacyPipe},
+     * {@link #readFromNBT}, then the read gates of an uploaded or hand-made schematic ({@link #upgradeLegacy},
      * {@link #captureGateRefusal}), for a schematic read on its own: a single-schematic item, which the Replacer also
      * reads its from/to pair from. One that fails the capture gate is refused, since there is no stored file to keep
      * readable around it.
@@ -63,12 +63,23 @@ public class SchematicBlockManager {
     @Nonnull
     public static ISchematicBlock readCapturableFromNBT(CompoundTag schematicBlockTag)
         throws InvalidInputDataException {
-        ISchematicBlock block = upgradeLegacyPipe(readFromNBT(schematicBlockTag), schematicBlockTag);
+        ISchematicBlock block = upgradeLegacy(readFromNBT(schematicBlockTag), schematicBlockTag);
         String refusedId = captureGateRefusal(block);
         if (refusedId != null) {
             throw new InvalidInputDataException("No Architect scan captures the schematic of " + refusedId);
         }
         return block;
+    }
+
+    /**
+     * The read-time repairs of a schematic saved by an older version, in one call: {@link #upgradeLegacyPipe} and
+     * {@link #upgradeLegacyFluid}. They never apply to the same schematic: one reads default entries, the other fluid
+     * ones.
+     */
+    @Nonnull
+    static ISchematicBlock upgradeLegacy(ISchematicBlock block, CompoundTag schematicBlockTag)
+        throws InvalidInputDataException {
+        return upgradeLegacyFluid(upgradeLegacyPipe(block, schematicBlockTag));
     }
 
     /**
@@ -85,6 +96,22 @@ public class SchematicBlockManager {
             SchematicBlockPipe pipe = new SchematicBlockPipe();
             pipe.deserializeNbt(NBTUtilBC.getCompound(schematicBlockTag, "data"));
             return pipe;
+        }
+        return block;
+    }
+
+    /**
+     * A schematic saved while the fluid schematic took every state with a fluid typed a waterlogged slab, wall or pipe
+     * as fluid: it charged 1000 mB of water and no item, and kept no tile data. That entry is re-read as the default
+     * schematic a scan picks for the same state now, so the block is charged and rebuilt as itself, still waterlogged.
+     * The tile data was never saved, so there is none to restore (a chest comes back empty). A pipe holder is the case
+     * that cannot do without it: the default schematic of one fails {@link #captureGateRefusal}, so the entry reads as
+     * air, like any other the gate refuses. Anything else is returned as it is.
+     */
+    @Nonnull
+    static ISchematicBlock upgradeLegacyFluid(ISchematicBlock block) {
+        if (block instanceof SchematicBlockFluid fluid && fluid.namesFluidHoldingBlock()) {
+            return SchematicBlockDefault.ofBareState(fluid.getBlockStateForRender(), fluid.readFully());
         }
         return block;
     }

@@ -134,8 +134,9 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
 
     /**
      * The home station's owner's say on a use aimed at {@code target}, dispatched from {@code activator} (the cell
-     * behind it): true when the owner is the player the robot acts as (that player's own events judge the use), else
-     * the closest probe for every cell a handler can touch, read off the handlers' geometry (they act on
+     * behind it): false when the station cannot name its owner ({@link RobotProtection#stationOwnerShortcut}), true
+     * when the owner is the player the robot acts as (that player's own events judge the use), else the closest probe
+     * for every cell a handler can touch, read off the handlers' geometry (they act on
      * {@code activator.relative(direction)}, which is {@code target}):
      * <ul>
      * <li>Something may be set down in {@code target} (the dispenser's block or fire, a planted crop, a spawned
@@ -158,8 +159,9 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
      * use, not per searched block.
      */
     private boolean stationOwnerPermits(ServerLevel level, BlockPos target, BlockPos activator) {
-        if (!RobotProtection.stationOwnerAsksSeparately(robot)) {
-            return true;
+        Boolean shortcut = RobotProtection.stationOwnerShortcut(robot);
+        if (shortcut != null) {
+            return shortcut;
         }
         GameProfile owner = RobotProtection.stationIdentityOf(robot);
         List<BlockPos> placed = new ArrayList<>(3);
@@ -191,11 +193,17 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
      * the placement probe (a bucket pours into either, a boat or an egg is put down in front); a fluid met gets the
      * break probe (a bucket takes it) and the cell above it the placement probe (a lily pad goes on top). A ray that
      * meets nothing within reach touches no block, and a thrown item is the deployer's own projectile, judged by its
-     * impact events. True at once when the owner is the player the robot acts as.
+     * impact events. True at once when the owner is the player the robot acts as; false at once when the station
+     * cannot name its owner ({@link RobotProtection#stationOwnerShortcut}).
      */
     @Override
     public boolean mayUseInAir(Player player, ItemStack stack) {
-        if (!RobotProtection.stationOwnerAsksSeparately(robot) || !(player.level() instanceof ServerLevel level)) {
+        Boolean shortcut = RobotProtection.stationOwnerShortcut(robot);
+        if (shortcut != null && !shortcut) {
+            markRefused();
+            return false;
+        }
+        if (shortcut != null || !(player.level() instanceof ServerLevel level)) {
             return true;
         }
         Set<BlockPos> placed = new LinkedHashSet<>();

@@ -540,6 +540,20 @@ public class LibraryUploadBufferTester {
     }
 
     @Test
+    public void theKeyComputedWhileSerializingIsTheKeyAndTheStoredForm() {
+        // decode measures the form the store writes, and gets it from the key computation instead of building it a
+        // second time: the key must be the same one computeKey sets, and the tag the one writeToNBT now writes.
+        Blueprint reference = blueprint(4, i -> i % 3);
+        Blueprint fresh = (Blueprint) reference.copy();
+        fresh.key = new Snapshot.Key();
+
+        CompoundTag stored = fresh.computeKeyAndSerialize();
+
+        Assertions.assertEquals(reference.key, fresh.key, "the same key computeKey gives");
+        Assertions.assertEquals(Snapshot.writeToNBT(fresh), stored, "the stored form, with the new key in it");
+    }
+
+    @Test
     public void aCellNeverCostsMoreOnTheWireThanItsFourBytes() throws IOException {
         // The worst case: cells that do not compress at all.
         java.util.Random random = new java.util.Random(42);

@@ -174,6 +174,9 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
             } else {
                 station = existing;
             }
+            // Read the pipe's owner now, while the pipe is certainly there: a station saved before stations
+            // remembered their owner is "owner unknown" (its robots refused everything) until it is read.
+            station.getOwner();
             isValid = true;
         }
         // Push the indicator colour on transition only. Cheap (one enum compare per tick) and the

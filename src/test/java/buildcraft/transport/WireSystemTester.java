@@ -72,7 +72,8 @@ import buildcraft.transport.wire.WireSystem;
  * A second group pins who receives wire-system state: only players whose chunk tracking view includes a chunk of
  * the system ({@link WireSystem#isPlayerWatching}), and a chunk delivered to a player queues that player for a full
  * resend only when it holds a system ({@link SavedDataWireSystems#onChunkSent}, fed by the {@code ChunkWatchEvent.Sent}
- * listener in {@code BCTransport}). Both used to go to every player of the level.
+ * listener in {@code BCTransport}). Both used to go to every player of the level. Deliveries come in bursts, so the
+ * resend itself is paced: one at once, then at most one per {@link SavedDataWireSystems#RESEND_INTERVAL_TICKS}.
  */
 public class WireSystemTester {
 
@@ -363,22 +364,23 @@ public class WireSystemTester {
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, WATCHER, null)) {
             ServerPlayer player = lease.player();
             try {
-                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                wireSystems.forgetResends(player); // the cached fake player may carry another test's pacing history
+                helper.assertFalse(wireSystems.isResendQueued(player),
                     "Precondition: the player is not queued before any chunk is delivered");
 
                 wireSystems.onChunkSent(player, empty);
-                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                helper.assertFalse(wireSystems.isResendQueued(player),
                     "A chunk with no wires must not queue the player for a full resend");
 
                 wireSystems.onChunkSent(player, holding);
-                helper.assertTrue(wireSystems.changedPlayers.contains(player),
+                helper.assertTrue(wireSystems.isResendQueued(player),
                     "A chunk holding a wire system must queue the player for a full resend");
 
                 wireSystems.tick();
-                helper.assertFalse(wireSystems.changedPlayers.contains(player),
-                    "The wire tick must consume the queue, or the player is resent every tick");
+                helper.assertFalse(wireSystems.isResendQueued(player),
+                    "The wire tick must consume the queue of a player not sent anything lately, or it is never resent");
             } finally {
-                wireSystems.changedPlayers.remove(player);
+                wireSystems.forgetResends(player);
             }
         }
         helper.succeed();
@@ -399,15 +401,68 @@ public class WireSystemTester {
         try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, WATCHER, null)) {
             ServerPlayer player = lease.player();
             try {
-                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                wireSystems.forgetResends(player);
+                helper.assertFalse(wireSystems.isResendQueued(player),
                     "Precondition: the player is not queued before the chunk is sent");
 
                 NeoForge.EVENT_BUS.post(new ChunkWatchEvent.Sent(player, chunk, level));
 
-                helper.assertTrue(wireSystems.changedPlayers.contains(player),
+                helper.assertTrue(wireSystems.isResendQueued(player),
                     "ChunkWatchEvent.Sent for a wire-holding chunk must queue the player through the BCTransport listener");
             } finally {
-                wireSystems.changedPlayers.remove(player);
+                wireSystems.forgetResends(player);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Chunks are delivered over many ticks, and each delivery used to queue a full resend for the next tick: a player
+     * logging in or walking along a wire run was sent the whole structure on tick after tick. Now the first delivery
+     * is answered on the next wire tick, a burst of deliveries on the ticks after it waits, and the interval's end
+     * answers the burst once (the trailing resend that carries the last chunk's state), not once per tick.
+     * <p>
+     * Counted as the transitions of the player's queue, which only the wire tick's resend clears: over the first
+     * delivery and the {@code RESEND_INTERVAL_TICKS} deliveries after it the queue must clear exactly twice, and
+     * hold the player in between.
+     */
+    public static void testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TilePipeHolder tile = placeStructurePipe(helper, new BlockPos(1, 2, 1));
+        tile.getWireManager().addPart(EnumWirePart.WEST_UP_NORTH, DyeColor.RED);
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+        ChunkPos holding = chunkOf(tile.getBlockPos());
+
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, WATCHER, null)) {
+            ServerPlayer player = lease.player();
+            try {
+                wireSystems.forgetResends(player);
+
+                wireSystems.onChunkSent(player, holding);
+                wireSystems.tick();
+                helper.assertFalse(wireSystems.isResendQueued(player),
+                    "The first delivery is answered on the very next wire tick");
+                int resends = 1;
+
+                // One delivery on each of the next ticks of the interval: none may be sent on its own tick.
+                for (int tick = 1; tick <= SavedDataWireSystems.RESEND_INTERVAL_TICKS; tick++) {
+                    wireSystems.onChunkSent(player, holding);
+                    wireSystems.tick();
+                    boolean sent = !wireSystems.isResendQueued(player);
+                    if (tick < SavedDataWireSystems.RESEND_INTERVAL_TICKS) {
+                        helper.assertFalse(sent, "Delivery " + tick + " inside the interval must wait for the trailing resend");
+                    }
+                    if (sent) {
+                        resends++;
+                    }
+                }
+                helper.assertTrue(resends == 2, "A burst of deliveries must cost one immediate and one trailing resend, got "
+                    + resends);
+
+                wireSystems.tick();
+                helper.assertFalse(wireSystems.isResendQueued(player), "Nothing was delivered since the trailing resend");
+            } finally {
+                wireSystems.forgetResends(player);
             }
         }
         helper.succeed();

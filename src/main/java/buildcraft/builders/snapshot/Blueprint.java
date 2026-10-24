@@ -181,8 +181,9 @@ public class Blueprint extends Snapshot {
         Set<String> droppedIds = new LinkedHashSet<>();
         for (CompoundTag schematicBlockTag :
             NBTUtilBC.readCompoundList(nbt.get("palette")).collect(Collectors.toList())) {
-            // A legacy default-typed pipe is re-read as the pipe schematic (see upgradeLegacyPipe).
-            ISchematicBlock block = SchematicBlockManager.upgradeLegacyPipe(
+            // A legacy default-typed pipe is re-read as the pipe schematic, and a waterlogged block typed as fluid as
+            // the block itself (see upgradeLegacy).
+            ISchematicBlock block = SchematicBlockManager.upgradeLegacy(
                 SchematicBlockManager.readFromNBT(schematicBlockTag), schematicBlockTag);
             // The Architect's capture gate, re-run on the read: an upload's palette can name any block, and one no
             // scan would capture is reduced to air at the same index, so data[] still resolves. Dropped rather than
@@ -336,7 +337,8 @@ public class Blueprint extends Snapshot {
         public final List<FluidStack>[] toPlaceRequiredFluids;
         public final List<ISchematicBlock> rotatedPalette;
         public final Set<ISchematicEntity> entities;
-        public final Map<ISchematicEntity, List<ItemStack>> entitiesRequiredItems;
+        /** Re-baked as a whole by {@link #refreshRequiredItemsForContentsMode}, hence not final. */
+        public Map<ISchematicEntity, List<ItemStack>> entitiesRequiredItems;
         public final Map<ISchematicEntity, List<FluidStack>> entitiesRequiredFluids;
 
         @SuppressWarnings("unchecked")
@@ -388,10 +390,17 @@ public class Blueprint extends Snapshot {
          * reflect the new cost immediately rather than waiting for a snapshot reload. Fluids are
          * unaffected, so only the items array is rewritten. Non-{@link SchematicBlockDefault}
          * schematics fall through to the parameterless {@code computeRequiredItems()} — their
-         * required-items contract doesn't expose the contents-mode hook.
+         * required-items contract doesn't expose the contents-mode hook. The entities' costs are
+         * re-baked through {@link ISchematicEntity#computeRequiredItems(boolean)}, which every
+         * schematic entity answers (the default ignores the mode).
          */
         public void refreshRequiredItemsForContentsMode(EnumContainerContentsMode mode) {
             boolean include = mode != EnumContainerContentsMode.IGNORE;
+            ImmutableMap.Builder<ISchematicEntity, List<ItemStack>> entityItems = ImmutableMap.builder();
+            for (ISchematicEntity schematicEntity : entities) {
+                entityItems.put(schematicEntity, schematicEntity.computeRequiredItems(include));
+            }
+            entitiesRequiredItems = entityItems.build();
             for (int z = 0; z < getSnapshot().size.getZ(); z++) {
                 for (int y = 0; y < getSnapshot().size.getY(); y++) {
                     for (int x = 0; x < getSnapshot().size.getX(); x++) {

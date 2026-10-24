@@ -5,9 +5,11 @@
  */
 package buildcraft.lib.misc;
 
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -19,15 +21,20 @@ public class HashUtil {
     /** Length in bytes of every hash {@link #computeHash} returns (SHA-256). */
     public static final int HASH_BYTES = 32;
 
-    /** Compute a SHA-256 hash of the given CompoundTag's serialized bytes. */
+    /**
+     * Compute a SHA-256 hash of the given CompoundTag's serialized bytes. The bytes are fed to the digest as they are
+     * written and never held, so hashing a large snapshot (up to the library's upload ceiling) costs a buffer, not a
+     * second copy of it.
+     */
     public static byte[] computeHash(CompoundTag nbt) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream dos = new DataOutputStream(baos);
-            NbtIo.write(nbt, dos);
-            dos.flush();
-            return digest.digest(baos.toByteArray());
+            // The buffer batches the many small primitive writes into few digest updates.
+            try (DataOutputStream dos = new DataOutputStream(
+                    new BufferedOutputStream(new DigestOutputStream(OutputStream.nullOutputStream(), digest), 8192))) {
+                NbtIo.write(nbt, dos);
+            }
+            return digest.digest();
         } catch (NoSuchAlgorithmException | IOException e) {
             throw new RuntimeException("Failed to compute hash", e);
         }

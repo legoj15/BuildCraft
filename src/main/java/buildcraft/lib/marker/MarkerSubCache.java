@@ -90,8 +90,8 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
 
     /**
      * The messages that bring a client cache from empty to this cache's state: one carrying every marker (loaded
-     * or not), then one per connection. Empty for a client cache. Kept apart from the sending so the content
-     * can be checked without a network connection.
+     * or not; several when there are more than {@link MessageMarker#MAX_POSITIONS}), then one per connection. Empty
+     * for a client cache. Kept apart from the sending so the content can be checked without a network connection.
      */
     public List<MessageMarker> createJoinSyncMessages() {
         List<MessageMarker> messages = new ArrayList<>();
@@ -99,12 +99,13 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
             // ALL markers
             if (!tileCache.isEmpty()) {
                 List<BlockPos> positions = new ArrayList<>(tileCache.keySet());
-                messages.add(new MessageMarker(true, false, cacheId, positions));
+                // A dimension can hold more markers than one message carries.
+                messages.addAll(MessageMarker.split(true, false, cacheId, positions));
             }
             // ALL connections.
             for (C connection : connectionToPos.keySet()) {
                 List<BlockPos> positions = new ArrayList<>(connection.getMarkerPositions());
-                messages.add(new MessageMarker(true, true, cacheId, positions));
+                messages.addAll(MessageMarker.split(true, true, cacheId, positions));
             }
         }
         return messages;
@@ -280,8 +281,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         }
         if (isServer && set.size() > 0) {
             List<BlockPos> positions = new ArrayList<>(set);
-            MessageMarker message = new MessageMarker(false, true, cacheId, positions);
-            sendToDimension(message);
+            for (MessageMarker message : MessageMarker.split(false, true, cacheId, positions)) {
+                sendToDimension(message);
+            }
         }
     }
 
@@ -303,8 +305,9 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
         }
         if (isServer && lastSeen.size() > 0) {
             List<BlockPos> positions = new ArrayList<>(connection.getMarkerPositions());
-            MessageMarker message = new MessageMarker(true, true, cacheId, positions);
-            sendToDimension(message);
+            for (MessageMarker message : MessageMarker.split(true, true, cacheId, positions)) {
+                sendToDimension(message);
+            }
         }
     }
 

@@ -47,14 +47,14 @@ final class WorkRefusals {
      *  unloaded chunk is not read, and so not refused. */
     boolean isRefused(@Nullable Level level, BlockPos pos) {
         return level != null
-                && refused.isRefused(level, pos, RobotProtection.identityOf(robot), RobotProtection.ownerOf(robot));
+                && refused.isRefused(level, pos, RobotProtection.identityOf(robot), RobotProtection.refusalKeyOf(robot));
     }
 
     /** Records that {@code pos} refused this robot, without counting an attempt: a block refused while the search
      *  settles on it was never worked. */
     void remember(@Nullable Level level, BlockPos pos) {
         if (level != null) {
-            refused.remember(level, pos, RobotProtection.identityOf(robot), RobotProtection.ownerOf(robot));
+            refused.remember(level, pos, RobotProtection.identityOf(robot), RobotProtection.refusalKeyOf(robot));
         }
     }
 

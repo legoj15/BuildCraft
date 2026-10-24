@@ -108,11 +108,12 @@ public class BCTransport {
                     }
                 });
 
-        // A player whose client receives a wire-holding chunk gets every wire system they can see on the next
-        // wire tick (1.12.2 BCTransportEventDist.onChunkWatch). Sent, not Watch: Watch fires when the chunk is
-        // only queued, so a payload sent then could reach the client before the chunk and its power update
-        // would find no pipe to land on. Fires on the server thread once per chunk delivered — thousands at
-        // login — so this stays a cached data lookup plus a map probe.
+        // A player whose client receives a wire-holding chunk gets every wire system they can see on a following
+        // wire tick: the next one, or when the pacing interval since their last such send is up, so a stream of
+        // chunks costs one send and a trailing one, not one per tick (1.12.2 BCTransportEventDist.onChunkWatch).
+        // Sent, not Watch: Watch fires when the chunk is only queued, so a payload sent then could reach the
+        // client before the chunk and its power update would find no pipe to land on. Fires on the server thread
+        // once per chunk delivered — thousands at login — so this stays a cached data lookup plus a map probe.
         NeoForge.EVENT_BUS.addListener(ChunkWatchEvent.Sent.class,
                 event -> SavedDataWireSystems.get(event.getLevel()).onChunkSent(event.getPlayer(), event.getPos()));
 

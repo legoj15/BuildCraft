@@ -54,8 +54,9 @@ import buildcraft.transport.pipe.PipeRegistry;
  * stored blueprint is never edited. Everything else — block-state capture, NBT capture, placement,
  * {@code isBuilt} — is inherited unchanged.
  *
- * <p>Registered just above {@code default} (and below {@code fluid}, which pipes never match —
- * the holder block is not waterloggable); see {@code BCBuildersSchematics}.
+ * <p>Registered just above {@code default} (and below {@code fluid}, which a pipe never matches even when it
+ * is waterlogged: the holder is a {@code SimpleWaterloggedBlock}, but the fluid schematic types only a fluid's own
+ * block, so a wet pipe is still a pipe); see {@code BCBuildersSchematics}.
  */
 public class SchematicBlockPipe extends SchematicBlockDefault {
     private static final Logger LOGGER = LogManager.getLogger("BCBlueprint");

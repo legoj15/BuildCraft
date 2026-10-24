@@ -176,6 +176,30 @@ public class SchematicBlockDefault implements ISchematicBlock {
             .noneMatch(rule -> rule.ignore);
     }
 
+    /**
+     * The schematic a scan picks for {@code state} when the state is all that is known: no world, so no block entity
+     * and no tile data. It runs every capture step of {@link #init} but the tile data one, so what the rules say of the
+     * block (placement block, ignored properties, required and update offsets) is the same. For
+     * {@link SchematicBlockManager#upgradeLegacyFluid}, which re-reads an entry whose tile data was never kept.
+     *
+     * @param readFully whether the entry this stands in for was read fully (see {@link #readFully()})
+     */
+    static SchematicBlockDefault ofBareState(BlockState state, boolean readFully) {
+        SchematicBlockDefault schematic = new SchematicBlockDefault();
+        // No level: the steps below read only the state and the block, and the one that reads the world is skipped.
+        SchematicBlockContext context = new SchematicBlockContext(null, BlockPos.ZERO, BlockPos.ZERO, state,
+            state.getBlock());
+        Set<JsonRule> rules = RulesLoader.getRules(state, null);
+        schematic.setRequiredBlockOffsets(context, rules);
+        schematic.setBlockState(context, rules);
+        schematic.setIgnoredProperties(context, rules);
+        schematic.setPlaceBlock(context, rules);
+        schematic.setUpdateBlockOffsets(context, rules);
+        schematic.setCanBeReplacedWithBlocks(context, rules);
+        schematic.readWithDefaults = !readFully;
+        return schematic;
+    }
+
     @SuppressWarnings({"unused", "WeakerAccess"})
     protected void setRequiredBlockOffsets(SchematicBlockContext context, Set<JsonRule> rules) {
         requiredBlockOffsets.clear();
@@ -876,9 +900,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * supplied tileNbt. Mutates {@code tileNbt} in place — callers pass a copy, never the canonical
      * {@link #tileNbt} field (which is shared across rebuilds and rotations). The rules are looked up by the caller
      * from the canonical field: {@link RulesLoader#getRules} keeps its argument as a cache key, which a tag about to
-     * be mutated must not be.
+     * be mutated must not be. Package-private: {@link SchematicEntityDefault} strips an entity's NBT the same way.
      */
-    private static void stripContainerContentsFromNbt(Set<JsonRule> rules, CompoundTag tileNbt) {
+    static void stripContainerContentsFromNbt(Set<JsonRule> rules, CompoundTag tileNbt) {
         for (JsonRule rule : rules) {
             if (rule.requiredExtractors == null) continue;
             for (RequiredExtractor extractor : rule.requiredExtractors) {
@@ -1237,15 +1261,17 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * that ships no rules, or one block priced as another. A block that read back as air because its mod is missing
      * passes: it places nothing, and the file keeps naming it.
      * <p>
-     * The schematic class is part of the test: a scan types every state with a fluid as {@link SchematicBlockFluid}
-     * (which charges the fluid) and every pipe holder as {@link SchematicBlockPipe} (which charges its pluggables),
-     * so a default entry naming lava, or a default pipe carrying facades, would build them for free. Scans have typed
-     * fluids that way since the port began, but the pipe schematic is younger (2026-06): an older blueprint's
-     * default-typed pipe is re-read as a pipe by {@link Blueprint#deserializeNBT} instead of being dropped.
+     * The schematic class is part of the test: a scan types every fluid block (water, lava, oil: see
+     * {@link SchematicBlockFluid#isFluidBlock}) as {@link SchematicBlockFluid} (which charges the fluid) and every
+     * pipe holder as {@link SchematicBlockPipe} (which charges its pluggables), so a default entry naming lava, or a
+     * default pipe carrying facades, would build them for free. A block that merely holds a fluid (a waterlogged
+     * slab) is a default entry, wet or dry. Scans have typed fluid blocks that way since the port began, but the pipe
+     * schematic is younger (2026-06): an older blueprint's default-typed pipe is re-read as a pipe by
+     * {@link Blueprint#deserializeNBT} instead of being dropped.
      */
     boolean capturableByScan() {
         if (blockState == null || placeBlock == null) return false;
-        if (!blockState.getFluidState().isEmpty()) return false;
+        if (SchematicBlockFluid.isFluidBlock(blockState)) return false;
         if ((blockState.getBlock() instanceof BlockPipeHolder) != (this instanceof SchematicBlockPipe)) return false;
         Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
         Block expectedPlaceBlock = rules.stream()

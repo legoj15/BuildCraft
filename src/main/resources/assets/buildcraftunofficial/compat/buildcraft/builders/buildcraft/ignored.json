@@ -1,0 +1,8 @@
+[
+    {
+        "selectors": [
+            "buildcraftunofficial:tube"
+        ],
+        "ignore": true
+    }
+]

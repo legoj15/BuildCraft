@@ -75,6 +75,14 @@ public abstract class DockingStation {
         return null;
     }
 
+    /** Whether {@link #getOwner} is an answer: false only while the station cannot tell who owns it (a pipe station
+     *  read back from a save made before stations remembered their owner, whose pipe is not loaded yet). A null
+     *  owner from a station whose owner IS known means it genuinely has none. While this is false, a robot homed here
+     *  is refused everything a protection mod would be asked about, rather than asking as nobody in particular. */
+    public boolean isOwnerKnown() {
+        return true;
+    }
+
     public EntityRobotBase robotTaking() {
         if (robotTakingId == EntityRobotBase.NULL_ROBOT_ID) {
             return null;

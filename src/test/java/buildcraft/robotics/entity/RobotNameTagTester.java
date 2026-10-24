@@ -155,10 +155,9 @@ public class RobotNameTagTester {
         helper.succeed();
     }
 
-    /** Ticks the cell gets to become entity-ticking: the item the pickup drops is invisible to a scan until its
-     *  chunk is, and the 6x7 cell crosses a chunk border in about 57% of runs. The item then gets
-     *  {@link #PICKUP_WORK_TICKS} to show up. */
-    private static final int PICKUP_READY_TICKS = 300;
+    /** Ticks the item the pickup drops gets to show up once the cell is entity-ticking (it is invisible to a scan
+     *  until its chunk is, and the 6x7 cell crosses a chunk border in about 57% of runs; the wait for that is
+     *  {@link EntityArenaUtil#CELL_READY_TICKS}). */
     private static final int PICKUP_WORK_TICKS = 20;
 
     /** The robot items lying in this test's own cell. */
@@ -177,8 +176,8 @@ public class RobotNameTagTester {
         Player player = helper.makeMockPlayer(GameType.CREATIVE);
         EntityRobot[] robot = { null };
         boolean[] pickedUp = { false };
-        EntityArenaUtil.tickUntil(helper, PICKUP_READY_TICKS + PICKUP_WORK_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, PICKUP_READY_TICKS, PICKUP_WORK_TICKS, () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + PICKUP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PICKUP_WORK_TICKS, () -> {
                     if (!pickedUp[0]) {
                         pickedUp[0] = true;
                         robot[0] = spawnRobot(helper);

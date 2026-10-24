@@ -81,13 +81,13 @@ public class PickerCarrierTester {
      *  sends it recharging mid-task. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
-    /** The picker test's poll, in two budgets that must not share a clock: {@link #PICKER_READY_TICKS} for the arena
-     *  cell's chunks to start ticking (asynchronous, so the machine's, not the picker's), {@link #PICKER_WORK_TICKS}
-     *  for the pick-up after that (~35 ticks when it runs). {@link #PICKER_POLL_TICKS} is their sum, the poll's budget
-     *  (a literal, so the poll-budget guard can read it); the manifest's {@code max_ticks} stays above it. */
-    private static final int PICKER_READY_TICKS = 300;
+    /** The picker test's poll, in two budgets that must not share a clock: {@link EntityArenaUtil#CELL_READY_TICKS}
+     *  for the arena cell's chunks to start ticking (asynchronous, so the machine's, not the picker's),
+     *  {@link #PICKER_WORK_TICKS} for the pick-up after that (~35 ticks when it runs). {@link #PICKER_POLL_TICKS} is
+     *  their sum, the poll's budget (a sum of constants, which the poll-budget guard resolves); the manifest's
+     *  {@code max_ticks} stays above it. */
     private static final int PICKER_WORK_TICKS = 150;
-    private static final int PICKER_POLL_TICKS = 450;
+    private static final int PICKER_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + PICKER_WORK_TICKS;
 
     // ---------- fixtures ----------
 
@@ -233,10 +233,10 @@ public class PickerCarrierTester {
         item.setNoGravity(true);
         level.addFreshEntity(item);
 
-        // The work budget starts once the cell is entity-ticking (PICKER_READY_TICKS is the wait for that, a matter of
+        // The work budget starts once the cell is entity-ticking (CELL_READY_TICKS is the wait for that, a matter of
         // the machine's load): the pick-up takes ~35 ticks from there.
         EntityArenaUtil.tickUntil(helper, PICKER_POLL_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, PICKER_READY_TICKS, PICKER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PICKER_WORK_TICKS,
                         () -> robot.containsItems()), () -> {
             helper.assertTrue(ItemStack.matches(robot.getInventoryStack(0), new ItemStack(Items.DIAMOND, 1)),
                     "the picker must pick up the dropped diamond into a transfer slot");

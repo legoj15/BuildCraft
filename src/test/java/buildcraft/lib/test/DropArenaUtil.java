@@ -47,9 +47,6 @@ public final class DropArenaUtil {
 
     private DropArenaUtil() {}
 
-    /** Ticks the cell gets to become entity-ticking. It is the machine's clock, not the code under test's, so it is
-     *  generous: it costs nothing unless the cell never ticks. */
-    private static final int READY_TICKS = 300;
     /** Ticks, once the act has run, for every expected drop to be in its scan. The act spawns them all at once, so
      *  the first poll normally sees them; the margin is for a slow tick, not a settling time. */
     private static final int WORK_TICKS = 10;
@@ -60,8 +57,10 @@ public final class DropArenaUtil {
      *  sees everything, asserts about six ticks after the pop. */
     private static final int SETTLE_TICKS = 5;
     /** The whole poll: the budget {@code GameTestPollBudgetTester} compares a manifest's {@code max_ticks} with.
-     *  A sum of the constants above, which that guard resolves. */
-    public static final int POLL_TICKS = READY_TICKS + WORK_TICKS + SETTLE_TICKS;
+     *  {@link EntityArenaUtil#CELL_READY_TICKS} (the cell's wait to become entity-ticking, the machine's clock and
+     *  not the code under test's, so generous: it costs nothing unless the cell never ticks) plus the constants
+     *  above, a sum which that guard resolves. */
+    public static final int POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + WORK_TICKS + SETTLE_TICKS;
 
     /**
      * Runs {@code act} once the test's cell is entity-ticking, waits for every drop {@code expected} names to appear,
@@ -77,7 +76,7 @@ public final class DropArenaUtil {
         // tick yet would be invisible), every later call asks whether the drops are all there.
         boolean[] acted = { false };
         EntityArenaUtil.tickUntilThen(gth, POLL_TICKS,
-                EntityArenaUtil.whenCellTicking(gth, READY_TICKS, WORK_TICKS, () -> {
+                EntityArenaUtil.whenCellTicking(gth, EntityArenaUtil.CELL_READY_TICKS, WORK_TICKS, () -> {
                     if (!acted[0]) {
                         acted[0] = true;
                         act.run();

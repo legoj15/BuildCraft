@@ -1,13 +1,20 @@
 ###### Changes since 2026.2.0:
 
 - Added Minecraft 26.3 support. Minimum required NeoForge version is 26.3.0.38.
-- Robots now glide smoothly on clients instead of stepping.
-- Robots, Stripes pipes, Builders, Fillers, Quarries, Mining Wells and Pumps now respect land-claim and protection mods the way players do; a refused spot is skipped and retried later.
-- Stripes pipes now use buckets, bottles and thrown items on the block in front, extend their line when fed item pipes, and break minecarts in front of them, like 1.7.10. Robots and Stripes pipes keep the container after using up its fluid.
-- Builders and Fillers no longer get stuck next to fluid they can't remove, and builds with fluid in their empty cells now finish.
-- Quarries repair a frame gap once whatever blocked it is gone. Mining Wells and Pumps no longer replace waterlogged blocks with their tube or destroy ones that can't stay dry, and idle Pumps over huge pools and the Zone Planner map use far less work.
-- Machines keep or drop their contents correctly when blown up or replaced by commands: engine fuel and gear upgrades now drop, and a command replace clears them instead of spilling. On Minecraft 1.21.1, /setblock, /fill and /clone no longer spill contents, and breaking a Distiller now drops the items in its container slots.
-- The Electronic Library no longer rejects blueprints holding pistons or blocks with replaceable variants; older saved blueprints are repaired automatically.
-- Guide book: no more text over page numbers, and links that wrap onto the next page are clickable on both pages.
-- Fixed Fragile Fluid Shards showing the wrong colour for coloured fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
-- The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist; the Programming Table pages through more than 24 boards.
+- Robots are now interpolated like everything else (i.e. they move smoothly).
+- Robots and blocks that can modify the world now call the exact same functions players do, which allows land claiming/property protection server plugins/mods to stay enforced.
+- Stripes pipes and robots now use fluid containers and thrown items on the block in front (1.7.10 feature).
+- Stripes pipes and robots also now keep the fluid container after using up contents.
+- Stripes pipes now extend their line when fed item pipes, and break minecarts in front of them (1.7.10 feature).
+- Builders and Fillers no longer get stuck next to fluids they can't remove, and builds with fluid blocks where there is empty space now complete successfully.
+- Quarries now repair a frame gap once whatever blocked it is gone (such as a protected area being unclaimed).
+- Mining Wells and Pumps no longer delete waterlogged blocks.
+- Idle Pumps over huge pools and the Zone Planner map aren't performance hogs any more.
+- Machines keep or drop their contents correctly when blown up or replaced by commands.
+- {1.21.1} /setblock, /fill and /clone no longer spill contents when breaking machines (matches the newer MC versions).
+- Fixed the Distiller so that it now drops the items in its container slots.
+- The Electronic Library no longer rejects blueprints holding pistons or blocks with replaceable variants. Older saved blueprints will be repaired automatically.
+- Fixed an edge case in the Guide Book where text would render over page numbers, and links that wrap onto the next page are now clickable on both pages.
+- {1.21.10/1.21.11/26.1/26.1.1/26.1.2/26.2} Fixed Fragile Fluid Shards showing the wrong color for colored fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
+- The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist since that is easier to translate.
+- In the off chance where you'd have more than 24 robot boards, the programming table can now advance to the next page.

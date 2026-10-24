@@ -9,6 +9,7 @@ package buildcraft.builders.snapshot;
 import java.util.BitSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 import com.mojang.authlib.GameProfile;
 
@@ -50,6 +51,15 @@ public class BuilderClaimTester {
      *  building. A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it;
      *  {@code RefusalWindowBudgetTest} fails when the window outgrows it. */
     public static final int RETRY_BUDGET = 400;
+
+    /** What the two Builder poll tests get once the arena cell is entity-ticking: the retry wait, the free cells'
+     *  building and the 40-tick hold before the claim is lifted. A Builder is a block entity, so it runs only once its
+     *  chunk does: the poll waits {@link EntityArenaUtil#CELL_READY_TICKS} for the cell first, and
+     *  {@link #BUILDER_POLL_TICKS} is the sum of the two (a sum of constants, which {@code GameTestPollBudgetTester}
+     *  resolves); the manifests' {@code max_ticks} stay above it. The Filler test does not wait: it drives its
+     *  builder directly, so no chunk's ticking matters to it. */
+    private static final int BUILDER_WORK_TICKS = RETRY_BUDGET + 300;
+    private static final int BUILDER_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + BUILDER_WORK_TICKS;
 
     private static void check(boolean condition, String message) {
         if (!condition) {
@@ -225,7 +235,7 @@ public class BuilderClaimTester {
 
         int[] heldSince = { -1 };
         int[] tick = { 0 };
-        EntityArenaUtil.tickUntil(helper, RETRY_BUDGET + 300, () -> {
+        BooleanSupplier built = () -> {
             tick[0]++;
             WorkClaimMod asked = claim[0];
             if (asked != null) {
@@ -254,7 +264,14 @@ public class BuilderClaimTester {
                 return false;
             }
             return level.getBlockState(claimed).is(Blocks.STONE);
-        }, helper::succeed, "the claimed cell is held, then built once the claim is lifted", lift);
+        };
+        // The Builder ticks only once the cell does, so the work budget starts there (the poll's first tick).
+        EntityArenaUtil.tickUntil(helper, BUILDER_POLL_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BUILDER_WORK_TICKS, built,
+                        () -> "the claimed cell is held, then built once the claim is lifted: the claim is "
+                                + (claim[0] == null ? "lifted" : "held") + " and the claimed cell is "
+                                + level.getBlockState(claimed)),
+                helper::succeed, "the claimed cell is held, then built once the claim is lifted", lift);
     }
 
     /**
@@ -293,7 +310,7 @@ public class BuilderClaimTester {
 
         int[] heldSince = { -1 };
         int[] tick = { 0 };
-        EntityArenaUtil.tickUntil(helper, RETRY_BUDGET + 300, () -> {
+        BooleanSupplier spawned = () -> {
             tick[0]++;
             // Spawning waits on a full battery: keep it topped up, so only the claim can hold the stand back.
             tile.getBattery().addPower(tile.getBattery().getCapacity() - tile.getBattery().getStored(), false);
@@ -321,7 +338,14 @@ public class BuilderClaimTester {
                 return false;
             }
             return standSpawned && tile.isDone();
-        }, helper::succeed, "the refused stand is held with the build unfinished, then spawned once the claim is "
-                + "lifted", cleanup);
+        };
+        // The Builder ticks only once the cell does, so the work budget starts there (the poll's first tick).
+        EntityArenaUtil.tickUntil(helper, BUILDER_POLL_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BUILDER_WORK_TICKS, spawned,
+                        () -> "the refused stand is held with the build unfinished, then spawned once the claim is "
+                                + "lifted: the claim is " + (claim[0] == null ? "lifted" : "held")
+                                + ", the base position is " + (tile.isDone() ? "done" : "unfinished")),
+                helper::succeed, "the refused stand is held with the build unfinished, then spawned once the claim is "
+                        + "lifted", cleanup);
     }
 }

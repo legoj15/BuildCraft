@@ -136,13 +136,12 @@ public class RobotBreakBlockUpdateTester {
     /** The canopy test's poll, in two budgets that must not share a clock. The arena cell's chunks are promoted to
      *  entity-ticking asynchronously, so how long that takes is the machine's (a straddling cell's far half came up
      *  20 ticks late on an idle 26.3, and later under {@code fullTestSuite}'s six servers), while the robot's own
-     *  work takes ~90 ticks once the cell ticks. {@link #CANOPY_READY_TICKS} is the wait for the cell,
+     *  work takes ~90 ticks once the cell ticks. {@link EntityArenaUtil#CELL_READY_TICKS} is the wait for the cell,
      *  {@link #CANOPY_WORK_TICKS} what the chop-and-decay lifecycle gets after that; {@link #CANOPY_POLL_TICKS} is
-     *  their sum (the poll's budget, kept a literal so the poll-budget guard can read it) and stays under the
+     *  their sum (the poll's budget, a sum of constants the poll-budget guard resolves) and stays under the
      *  manifest's {@code max_ticks}. */
-    private static final int CANOPY_READY_TICKS = 300;
     private static final int CANOPY_WORK_TICKS = 450;
-    private static final int CANOPY_POLL_TICKS = 750;
+    private static final int CANOPY_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + CANOPY_WORK_TICKS;
 
     /**
      * The user report end to end: a REAL lumberjack robot (live {@code AIRobotMain} tree — search,
@@ -309,7 +308,7 @@ public class RobotBreakBlockUpdateTester {
         BlockPos regionMin = helper.absolutePos(new BlockPos(0, 0, 0));
         BlockPos regionMax = helper.absolutePos(new BlockPos(5, 6, 4));
         EntityArenaUtil.tickUntil(helper, CANOPY_POLL_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, CANOPY_READY_TICKS, CANOPY_WORK_TICKS, () -> {
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CANOPY_WORK_TICKS, () -> {
                     boolean chopped = level.getBlockState(logBottom).isAir()
                             && level.getBlockState(logMid).isAir()
                             && level.getBlockState(logTop).isAir();

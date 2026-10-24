@@ -105,7 +105,7 @@ public abstract class BlockBCTile_Neptune<T extends AbstractBCBlockEntity> exten
         return BlockBCTileSupport.comparatorLevel(level, pos);
     }
 
-    // --- Non-player removal drop catch-all (pre-1.21.10 API; >=1.21.10 uses TileBC_Neptune#preRemoveSideEffects) ---
+    // --- Non-player removal drop catch-all (pre-1.21.10 API; >=1.21.10 uses AbstractBCSyncedBlockEntity#preRemoveSideEffects) ---
     //? if <1.21.10 {
     /*@Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {

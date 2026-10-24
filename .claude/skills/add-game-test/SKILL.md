@@ -51,9 +51,11 @@ the safety net — this skill is the manual.
    that throw or succeed immediately can use `20`. **Any test's `max_ticks` must be strictly
    greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen`/marker
    `await`/`awaitThen` budget in the test, or than `DropArenaUtil.POLL_TICKS` for one that calls
-   `awaitDrops`** (see "Entity and robot tests" below) —
+   `awaitDrops`, or than `BuilderRefloodTester.DRIVE_POLL_TICKS` for one that calls `drive`** (see
+   "Entity and robot tests" below) —
    `GameTestPollBudgetTester` fails the unit run otherwise, so give the poll a literal, a named
-   `static final int`, or a `+` sum of those; a budget computed from production code is unreadable to it.
+   `static final int`, the shared `EntityArenaUtil.CELL_READY_TICKS` (written qualified), or a `+` sum of
+   those; a budget computed from production code is unreadable to it.
 
 ## The 1.21.1 node is different (but the manifest still matters)
 
@@ -74,6 +76,17 @@ Even force-loaded chunks take a variable 1–3+ ticks to become block/entity-tic
 random world position every run, so the same test passes or flakes run to run. Gate on observed
 state (`EntityArenaUtil.tickUntil`/`tickUntilThen`, or poll for your own registration) instead
 of `runAfterDelay(N)`.
+
+The same goes for a poll's BUDGET: anything that needs a chunk to tick (a block entity, a robot, a Builder, a
+fluid's scheduled tick after `BlockWaterloggingTester.placeSource`) must not start counting at the test's first
+tick, because the framework forces only the structure's chunk and a 6x7 cell straddles a chunk border in about
+57% of runs. Call `EntityArenaUtil.forceLoadCell(helper)` first, then poll with
+`tickUntil(helper, READY + WORK, whenCellTicking(helper, READY, WORK, condition), ...)` (`READY` is the shared
+`EntityArenaUtil.CELL_READY_TICKS` = 300, written qualified so the guard reads it, and `WORK` a named
+`static final int` of the test's own file) and keep the manifest's `max_ticks` above `READY + WORK` (the repo's
+convention is 10 above). A helper that polls through `helper.succeedWhen` or its own `runAfterDelay` loop is the
+same trap: the phased Builder tests go through `BuilderRefloodTester.drive`, whose step argument counts from the cell
+ticking and whose whole budget, `DRIVE_POLL_TICKS`, the guard reads for every test that calls it.
 
 **Never schedule from inside a scheduled runnable** (a `runAfterDelay`/`tickUntil` call written
 inside the lambda of another one): `GameTestInfo.tickInternal` runs those runnables while iterating
@@ -153,8 +166,8 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   `WORK` polls, and fails a cell that never ticks as the machine's fault, not the robot's. A fifth
   argument, a `Supplier<String>`, is asked only when `WORK` runs out and its text joins the failure:
   use it to name the side, source or item that never came. Write
-  `READY + WORK` as a literal (or constant) so `GameTestPollBudgetTester` can read it, and keep
-  `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic. Put the spawn of the robot AND of
+  `READY + WORK` as `EntityArenaUtil.CELL_READY_TICKS + WORK` (WORK a literal or constant) so
+  `GameTestPollBudgetTester` can read it, and keep `max_ticks` above it. `EntityArenaReadinessGateTest` pins the budget arithmetic. Put the spawn of the robot AND of
   everything it must see inside the gated condition: a drop added to a chunk that does not tick yet is invisible to
   the picker's first scan, which then sleeps for 60 seconds (`robot_station_unloaded_home_keeps_robot_working` failed
   about one solo run in eight that way, reading as "froze"). A fluid test needs the same: a scheduled fluid tick runs

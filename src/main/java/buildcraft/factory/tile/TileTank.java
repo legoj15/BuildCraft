@@ -65,23 +65,19 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
         super(BCFactoryBlockEntities.TANK.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
-    // TileTank sits beside TileBC_Neptune on the synced base (no itemManager, one bespoke tank), so it
-    // carries its own copy of the drop hook. Spills the tank as fragile fluid shards, mirroring
-    // BlockTank#playerWillDestroy. A command REPLACE wipes the tank instead (clearContent below).
+    // --- Removal drops (every removal: player break, explosion, piston, /setblock ... destroy) ---
+    // The removal hook is AbstractBCSyncedBlockEntity's; this is just what this tile holds. Spills the tank as
+    // fragile fluid shards, then empties it, which keeps a second call from dropping the shards again (BlockTank
+    // drops nothing in playerWillDestroy: a player break reaches the hook too). A command REPLACE wipes the tank
+    // instead (clearContent below).
 
-    private boolean dropsHandled = false;
-
-    public void markDropsHandled() {
-        dropsHandled = true;
-    }
-
+    @Override
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
-        if (dropsHandled || level.isClientSide()) {
+        if (level.isClientSide()) {
             return;
         }
-        dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+        clearContent();
     }
 
     /** Wipes this tank's own fluid (not the rest of the column), exactly what {@link #dropContentsOnRemoval}
@@ -90,16 +86,6 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
     public void clearContent() {
         tank.setFluidStack(0, FluidStack.EMPTY);
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // --- Comparator ---
 

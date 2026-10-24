@@ -25,6 +25,7 @@ import buildcraft.api.robots.ResourceId;
 import buildcraft.api.robots.ResourceIdRequest;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackNbt;
 
 /** One open order on the request network: a provider (the Requester block, or a station whose gates hold
  *  request-items actions), a slot in that provider, and the stack still owed. The station link is kept by
@@ -91,11 +92,8 @@ public class StackRequest {
     public void writeToNBT(CompoundTag nbt) {
         nbt.putInt("slot", slot);
 
-        if (!stack.isEmpty()) {
-            ItemStack.CODEC.encodeStart(NbtApiUtil.registryAwareOps(), stack)
-                    .resultOrPartial()
-                    .ifPresent(payload -> nbt.put("stack", payload));
-        }
+        // The order's whole stack: a count past the codec's bound (a mod-raised stack limit) rides beside it.
+        StackNbt.write(nbt, "stack", "stackCount", stack);
 
         // The by-value link, not the resolved object: a request loaded from NBT holds only pos+side until something
         // asks for its station, and a save in between must not drop the order.
@@ -115,12 +113,7 @@ public class StackRequest {
         }
         int slot = NbtApiUtil.getInt(nbt, "slot", 0);
 
-        ItemStack stack = ItemStack.EMPTY;
-        if (nbt.contains("stack")) {
-            stack = ItemStack.CODEC.parse(NbtApiUtil.registryAwareOps(), nbt.get("stack"))
-                    .resultOrPartial()
-                    .orElse(ItemStack.EMPTY);
-        }
+        ItemStack stack = StackNbt.read(nbt, "stack", "stackCount");
 
         CompoundTag indexNBT = NbtApiUtil.getCompound(nbt, "stationIndex");
         BlockPos stationIndex = new BlockPos(

@@ -34,7 +34,10 @@ import buildcraft.lib.test.EntityArenaUtil;
  */
 public class FillerFluidTester {
 
-    /** Real ticks the fillers get to finish: a few place tasks and a break, far more than they need. */
+    /** Real ticks the fillers get to finish once the arena cell is ticking: a few place tasks and a break, far more
+     *  than they need. The poll waits {@link EntityArenaUtil#CELL_READY_TICKS} for the cell first (the pockets' water
+     *  sources tick, and the pockets' blocks update, only once their chunks do), so its budget is the sum of the two,
+     *  read as such by {@code GameTestPollBudgetTester}; the manifest's {@code max_ticks} stays above it. */
     private static final int BUDGET = 100;
 
     private static void check(boolean condition, String message) {
@@ -68,7 +71,7 @@ public class FillerFluidTester {
      */
     public static void fillerRestsWithFluidInAnUnsetCell(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        EntityArenaUtil.forceLoadCell(helper);
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 4; z++) {
                 helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
@@ -88,27 +91,29 @@ public class FillerFluidTester {
 
         BuilderClaimTester.TestFiller waterFiller = columnFiller(level, waterAbs);
         BuilderClaimTester.TestFiller fenceFiller = columnFiller(level, fenceAbs);
-        int[] polls = { 0 };
-        EntityArenaUtil.tickUntil(helper, BUDGET, () -> {
-            boolean waterDone = waterFiller.run(1);
-            boolean fenceDone = fenceFiller.run(1);
-            if (++polls[0] == BUDGET - 1 && !(waterDone && fenceDone)) {
-                throw new IllegalStateException("Assertion failed: a Filler never finished: water pocket done="
-                        + waterDone + " (leftToBreak=" + waterFiller.builder.leftToBreak + ", leftToPlace="
-                        + waterFiller.builder.leftToPlace + "), fence pocket done=" + fenceDone + " (leftToBreak="
-                        + fenceFiller.builder.leftToBreak + ", leftToPlace=" + fenceFiller.builder.leftToPlace
-                        + "), fence cell=" + level.getBlockState(fenceAbs));
-            }
-            return waterDone && fenceDone;
-        }, () -> {
-            check(level.getBlockState(waterAbs.above()).is(Blocks.STONE), "the water pocket's template cell is filled");
-            check(level.getFluidState(waterAbs).isSource(), "the Filler must leave the water source in the unset "
-                    + "cell alone, it is " + level.getBlockState(waterAbs));
-            check(level.getBlockState(fenceAbs.above()).is(Blocks.STONE), "the fence pocket's template cell is filled");
-            check(!level.getBlockState(fenceAbs).is(Blocks.OAK_FENCE), "the waterlogged fence in an unset cell is "
-                    + "excavated");
-            check(level.getFluidState(fenceAbs).isSource(), "the fence's water stays once the fence is gone");
-            helper.succeed();
-        }, "a Filler with fluid in an unset template cell never finished");
+        boolean[] done = { false, false };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, BUDGET, () -> {
+                    done[0] = waterFiller.run(1);
+                    done[1] = fenceFiller.run(1);
+                    return done[0] && done[1];
+                }, () -> "a Filler never finished: water pocket done=" + done[0] + " (leftToBreak="
+                        + waterFiller.builder.leftToBreak + ", leftToPlace=" + waterFiller.builder.leftToPlace
+                        + "), fence pocket done=" + done[1] + " (leftToBreak=" + fenceFiller.builder.leftToBreak
+                        + ", leftToPlace=" + fenceFiller.builder.leftToPlace + "), fence cell="
+                        + level.getBlockState(fenceAbs)),
+                () -> {
+                    check(level.getBlockState(waterAbs.above()).is(Blocks.STONE),
+                            "the water pocket's template cell is filled");
+                    check(level.getFluidState(waterAbs).isSource(), "the Filler must leave the water source in the "
+                            + "unset cell alone, it is " + level.getBlockState(waterAbs));
+                    check(level.getBlockState(fenceAbs.above()).is(Blocks.STONE),
+                            "the fence pocket's template cell is filled");
+                    check(!level.getBlockState(fenceAbs).is(Blocks.OAK_FENCE), "the waterlogged fence in an unset "
+                            + "cell is excavated");
+                    check(level.getFluidState(fenceAbs).isSource(), "the fence's water stays once the fence is gone");
+                    helper.succeed();
+                },
+                "a Filler with fluid in an unset template cell never finished");
     }
 }

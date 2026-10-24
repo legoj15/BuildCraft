@@ -469,6 +469,17 @@ public class LibraryUploadBufferTester {
                 (long) limits.maxChunks() * LibraryUploadBuffer.CHUNK_BYTES >= limits.maxUploadBytes(),
                 "the chunk count admits a full upload at the sender's chunk size, at " + mb);
             Assertions.assertTrue(limits.maxCells() > 0, "cells at " + mb);
+
+            // A blueprint's cells pay the unpacked budget sixteen bytes each: the most it may claim with a reserve
+            // left over is the most whose cells and reserve still fit.
+            long reserve = 1024 * 1024;
+            long blueprintCells = limits.maxBlueprintCells(reserve);
+            Assertions.assertEquals(limits.maxCells(), limits.maxBlueprintCells(0), "no reserve, no difference at " + mb);
+            Assertions.assertEquals(0, limits.maxBlueprintCells(limits.maxExpandedBytes()), "a reserve of it all at " + mb);
+            Assertions.assertTrue(blueprintCells * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL + reserve
+                <= limits.maxExpandedBytes(), "the cells and the reserve fit at " + mb);
+            Assertions.assertTrue((blueprintCells + 1) * LibraryUploadBuffer.EXPANDED_BYTES_PER_CELL + reserve
+                > limits.maxExpandedBytes() || blueprintCells == 0, "and one more cell would not at " + mb);
         }
     }
 

@@ -19,6 +19,8 @@ import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TileEngineCreative;
 import buildcraft.core.tile.TilePowerConsumerTester;
 
+import buildcraft.lib.test.EntityArenaUtil;
+
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
@@ -40,9 +42,16 @@ import buildcraft.transport.tile.TilePipeHolder;
  *  to pipe tick ordering. */
 public class PipeFlowPowerTester {
 
+    /** Both chain polls' two budgets, which must not share a clock: {@code EntityArenaUtil.CELL_READY_TICKS} for the
+     *  arena cell's chunks to start ticking (asynchronous, so the machine's, not the engine's), then
+     *  {@code CHAIN_WORK_TICKS} for the redstone poll, the engine's warm-up and the chain's hand-offs after that. A
+     *  poll's budget is the sum of the two, read as such by {@code GameTestPollBudgetTester}; the manifest's
+     *  {@code max_ticks} stays above it. */
+    private static final int CHAIN_WORK_TICKS = 140;
+
     /** Creative engine at max output → wood diamond power pipe → diamond power pipe
-     *  → power tester. Verifies that after enough ticks for the redstone poll +
-     *  engine warm-up + 2-tick query-chain propagation, the tester has received
+     *  → power tester. Verifies that, within {@code CHAIN_WORK_TICKS} of the cell ticking (the redstone poll +
+     *  engine warm-up + 2-tick query-chain propagation), the tester has received
      *  at least one tick of power. */
     public static void testEngineThroughDiamondPipesPowersTester(GameTestHelper helper) {
         BlockPos redstonePos    = new BlockPos(2, 1, 2);
@@ -51,6 +60,9 @@ public class PipeFlowPowerTester {
         BlockPos diamondPipePos = new BlockPos(2, 4, 2);
         BlockPos testerPos      = new BlockPos(2, 5, 2);
 
+        // The chain is a single column, but the framework forces only the structure's chunk and the column can sit in
+        // the neighbouring one: nothing in it (the engine, the pipes, the tester) ticks until that chunk does.
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
         TilePipeHolder diamondPipe = placePowerPipe(helper, diamondPipePos, BCTransportItems.PIPE_DIAMOND_POWER.get());
         TilePipeHolder woodPipe    = placePowerPipe(helper, woodPipePos,    BCTransportItems.PIPE_DIAMOND_WOOD_POWER.get());
@@ -74,21 +86,22 @@ public class PipeFlowPowerTester {
         woodPipe.getPipe().markForUpdate();
         diamondPipe.getPipe().markForUpdate();
 
-        // Poll every tick until the tester has received SOME power. This is intentionally
-        // tolerant of game-test arena startup jitter — pipe BE ticking can take a variable
-        // number of ticks to start in the test sandbox, so a single-shot delayed assertion
-        // is flaky. succeedWhen retries until either the assertion passes or max_ticks
-        // expires (set generously high in the JSON manifest). helper.assertTrue throws
-        // the GameTestAssertException variant that succeedWhen treats as retry-now.
-        helper.succeedWhen(() -> {
-            //? if >=1.21.10 {
-            TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
-            //?} else {
-            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
-            //?}
-            helper.assertTrue(readTesterTotal(tester) > 0,
-                    "Power tester has not yet received MJ through the engine→pipe chain");
-        });
+        // Poll every tick until the tester has received SOME power, on observed state and never a tick count: pipe BE
+        // ticking starts a variable number of ticks in, so a single-shot delayed assertion is flaky. The work budget
+        // starts only once the cell is ticking, so a slow chunk promotion is not charged to the engine, and a cell
+        // that never ticks fails as the machine's.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CHAIN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CHAIN_WORK_TICKS, () -> {
+                    //? if >=1.21.10 {
+                    TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+                    //?} else {
+                    /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+                    //?}
+                    return readTesterTotal(tester) > 0;
+                }, () -> "the power tester has not received MJ through the engine→pipe chain, the diamond pipe reads "
+                        + describeFlow("diamond", (PipeFlowPower) diamondPipe.getPipe().getFlow(), diamondPipe)),
+                helper::succeed,
+                "power never flowed through the engine→pipe chain into the tester");
     }
 
     /** Regression guard for the "MJ flow invisible in straight kinesis runs" bug
@@ -112,6 +125,9 @@ public class PipeFlowPowerTester {
         BlockPos stonePos    = new BlockPos(2, 4, 2);
         BlockPos testerPos   = new BlockPos(2, 5, 2);
 
+        // The chain is a single column, but the framework forces only the structure's chunk and the column can sit in
+        // the neighbouring one: nothing in it (the engine, the pipes, the tester) ticks until that chunk does.
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(testerPos, BCCoreBlocks.POWER_TESTER.get());
         TilePipeHolder stone = placePowerPipe(helper, stonePos, BCTransportItems.PIPE_STONE_POWER.get());
         TilePipeHolder wood  = placePowerPipe(helper, woodPos,  BCTransportItems.PIPE_WOOD_POWER.get());
@@ -131,30 +147,36 @@ public class PipeFlowPowerTester {
         wood.getPipe().markForUpdate();
         stone.getPipe().markForUpdate();
 
-        helper.succeedWhen(() -> {
-            //? if >=1.21.10 {
-            TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
-            //?} else {
-            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
-            //?}
-            helper.assertTrue(readTesterTotal(tester) > 0,
-                    "power not yet flowing through the engine→wood→stone→tester chain");
+        // Two phases on observed state, never a tick count: wait until the chain is carrying power (the work budget
+        // starts only once the cell is ticking, so a slow chunk promotion is not charged to the engine), then check
+        // the property once. The check used to sit inside the wait, where a failure just retried until the watchdog.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CHAIN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CHAIN_WORK_TICKS, () -> {
+                    //? if >=1.21.10 {
+                    TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+                    //?} else {
+                    /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+                    //?}
+                    PipeFlowPower stoneFlow = (PipeFlowPower) stone.getPipe().getFlow();
+                    return readTesterTotal(tester) > 0 && stoneFlow.getSection(Direction.UP).displayPower > 0;
+                }, () -> "power not flowing through the engine→wood→stone→tester chain, the stone pipe reads "
+                        + describeFlow("stone", (PipeFlowPower) stone.getPipe().getFlow(), stone)),
+                () -> {
+                    PipeFlowPower stoneFlow = (PipeFlowPower) stone.getPipe().getFlow();
+                    int serverDp = stoneFlow.getSection(Direction.UP).displayPower;
 
-            PipeFlowPower stoneFlow = (PipeFlowPower) stone.getPipe().getFlow();
-            int serverDp = stoneFlow.getSection(Direction.UP).displayPower;
-            helper.assertTrue(serverDp > 0,
-                    "server stone-pipe displayPower should be non-zero while power flows");
+                    // Reproduce the client first-sync/relog rebuild: writeToNbt (as the update tag does),
+                    // then reconstruct through the constructor (new Pipe → loadFlow → PipeFlowPower::new).
+                    net.minecraft.nbt.CompoundTag flowNbt = stoneFlow.writeToNbt();
+                    PipeFlowPower rebuilt = new PipeFlowPower(stone.getPipe(), flowNbt);
+                    int clientDp = rebuilt.getSection(Direction.UP).displayPower;
 
-            // Reproduce the client first-sync/relog rebuild: writeToNbt (as the update tag does),
-            // then reconstruct through the constructor (new Pipe → loadFlow → PipeFlowPower::new).
-            net.minecraft.nbt.CompoundTag flowNbt = stoneFlow.writeToNbt();
-            PipeFlowPower rebuilt = new PipeFlowPower(stone.getPipe(), flowNbt);
-            int clientDp = rebuilt.getSection(Direction.UP).displayPower;
-
-            helper.assertTrue(clientDp == serverDp,
-                    "client first-sync must preserve displayPower (else steady straight pipes render"
-                    + " invisibly): serverDp=" + serverDp + " clientDp=" + clientDp);
-        });
+                    helper.assertTrue(clientDp == serverDp,
+                            "client first-sync must preserve displayPower (else steady straight pipes render"
+                            + " invisibly): serverDp=" + serverDp + " clientDp=" + clientDp);
+                    helper.succeed();
+                },
+                "power never flowed through the engine→wood→stone→tester chain");
     }
 
     private static TilePipeHolder placePowerPipe(GameTestHelper helper, BlockPos pos, Item pipeItem) {

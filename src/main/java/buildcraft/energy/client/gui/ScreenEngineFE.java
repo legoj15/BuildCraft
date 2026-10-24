@@ -59,10 +59,10 @@ public class ScreenEngineFE extends GuiBC8<ContainerEngineFE> {
                     if (contains(mainGui.mouse)) {
                         java.util.List<String> lines = new java.util.ArrayList<>();
                         lines.add(LocaleUtil.localize("buildcraft.gui.rf_engine.upgrade_types"));
-                        buildcraft.energy.tile.TileEngineFE.initUpgrades();
+                        buildcraft.energy.tile.TileEngineGearBase.initUpgrades();
                         String unitLabel = LocaleUtil.localize(
                             BCEnergyConfig.rfNamedKey("buildcraft.gui.rf_engine.upgrade_rate_unit"));
-                        for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineFE.UPGRADE_VALUES.entrySet()) {
+                        for (java.util.Map.Entry<net.minecraft.world.item.Item, Long> entry : buildcraft.energy.tile.TileEngineGearBase.UPGRADE_VALUES.entrySet()) {
                             String itemName = new net.minecraft.world.item.ItemStack(entry.getKey()).getHoverName().getString();
                             long mj = entry.getValue();
                             int rfPerTick = (int) (mj / 100000L); // 100,000 microMJ = 1 RF fallback

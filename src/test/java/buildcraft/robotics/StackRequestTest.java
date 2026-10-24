@@ -98,6 +98,22 @@ public class StackRequestTest extends VanillaSetupBaseTester {
         }
     }
 
+    /** {@code ItemStack.CODEC} bounds a count to 1..99 and never checks the item's own stack limit, which a mod can
+     *  raise: an order for more used to fail to encode and reload as an empty order. */
+    @Test
+    public void anOwedCountAboveWhatTheItemCodecCarriesSurvives() {
+        StackRequest original = new StackRequest(null, 1, new ItemStack(Items.ENDER_PEARL, 128));
+        original.setStation(stationDouble(new BlockPos(2, 64, 2), Direction.UP));
+        CompoundTag nbt = new CompoundTag();
+        original.writeToNBT(nbt);
+
+        StackRequest loaded = StackRequest.loadFromNBT(nbt);
+
+        Assertions.assertNotNull(loaded);
+        Assertions.assertTrue(ItemStack.matches(original.getStack(), loaded.getStack()),
+                "the owed stack, count above 99 included, round-trips: " + loaded.getStack());
+    }
+
     /** A robot that reloads and saves again before anything resolves its order's station (an unload right after a
      *  load) must not lose the order: the request still knows the station by value, so it writes it back. */
     @Test

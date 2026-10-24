@@ -1,21 +1,14 @@
 package buildcraft.energy.tile;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
@@ -29,43 +22,20 @@ import buildcraft.lib.mj.BCFeStorage;
 
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.MjAPI;
-import buildcraft.core.BCCoreItems;
 import buildcraft.energy.BCEnergyBlockEntities;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.lib.engine.EngineConnector;
-import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
-import buildcraft.lib.misc.BlockDropsUtil;
 
 @SuppressWarnings("this-escape")
-public class TileEngineFE extends TileEngineBase_BC8 {
+public class TileEngineFE extends TileEngineGearBase {
     public static final int MAX_FE = 10_000;
     public static final float HEAT_RATE = 0.06f;
     public static final float COOLDOWN_RATE = 0.01f;
 
-    public static final Map<Item, Long> UPGRADE_VALUES = new LinkedHashMap<>();
-
-    // Map gears to increased MJ/t output
-    public static void initUpgrades() {
-        if (UPGRADE_VALUES.isEmpty()) {
-            UPGRADE_VALUES.put(BCCoreItems.GEAR_IRON.get(), MjAPI.MJ * 2);
-            UPGRADE_VALUES.put(BCCoreItems.GEAR_GOLD.get(), MjAPI.MJ * 3);
-        }
-    }
-
-
-    public final buildcraft.lib.tile.item.ItemHandlerSimple upgrades = 
-        new buildcraft.lib.tile.item.ItemHandlerSimple(4, (handler, slot, bef, aft) -> setChanged());
-
-    {
-        upgrades.setChecker((slot, stack) -> {
-            initUpgrades();
-            return UPGRADE_VALUES.containsKey(stack.getItem());
-        });
-        upgrades.setLimitedInsertor(1);
-    }
+    // The gear upgrade slots, their MJ-per-tick table and what they spill on removal are TileEngineGearBase's.
 
     public final BCFeStorage energyStorage = new BCFeStorage(MAX_FE, MAX_FE, 0) {
         @Override
@@ -76,27 +46,6 @@ public class TileEngineFE extends TileEngineBase_BC8 {
 
     public TileEngineFE(BlockPos pos, BlockState state) {
         super(BCEnergyBlockEntities.ENGINE_FE.get(), pos, state);
-    }
-
-    // --- Removal drops (the hook is TileEngineBase_BC8's; this is just what this engine holds) ---
-    // The upgrade slots are a raw ItemHandlerSimple outside any ItemHandlerManager. They empty as they spill,
-    // which keeps a second call from dropping the gears again. A command REPLACE wipes the same slots
-    // (clearContent below).
-
-    @Override
-    public void dropContentsOnRemoval(Level level, BlockPos pos) {
-        if (level.isClientSide()) {
-            return;
-        }
-        BlockDropsUtil.dropItems(level, pos, upgrades);
-        clearContent();
-    }
-
-    /** Wipes the upgrade slots {@link #dropContentsOnRemoval} would spill; see
-     *  {@code AbstractBCBlockEntity#clearContent}. */
-    @Override
-    public void clearContent() {
-        upgrades.clearStacks();
     }
 
     public int getCurrentFe() {
@@ -110,20 +59,6 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     @Override
     public boolean isBurning() {
         return getCurrentFe() > 0 && isRedstonePowered;
-    }
-
-    public long getMjPerTick() {
-        initUpgrades();
-        long value = MjAPI.MJ * 4;
-        for (int slot = 0; slot < upgrades.getSlots(); slot++) {
-            ItemStack stack = upgrades.getStackInSlot(slot);
-            if (stack.isEmpty()) continue;
-            Long add = UPGRADE_VALUES.get(stack.getItem());
-            if (add != null) {
-                value += add;
-            }
-        }
-        return value;
     }
 
     public int getFeConsumptionRate() {
@@ -259,14 +194,12 @@ public class TileEngineFE extends TileEngineBase_BC8 {
     protected void writeData(BCValueOutput output) {
         super.writeData(output);
         output.putInt("currentFe", getCurrentFe());
-        output.store("upgrades", net.minecraft.nbt.CompoundTag.CODEC, upgrades.serializeNBT());
     }
 
     @Override
     protected void readData(BCValueInput input) {
         super.readData(input);
         setCurrentFe(input.getIntOr("currentFe", 0));
-        upgrades.deserializeNBT(input.read("upgrades", net.minecraft.nbt.CompoundTag.CODEC).orElseGet(net.minecraft.nbt.CompoundTag::new));
     }
 
     // --- IBCMenuProvider (GUI) ---

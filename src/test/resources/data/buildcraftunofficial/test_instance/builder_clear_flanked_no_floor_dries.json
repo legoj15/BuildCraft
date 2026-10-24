@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:builder_clear_flanked_no_floor_dries",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 1050,
+    "max_ticks": 1360,
     "setup_ticks": 0,
     "required": true
 }

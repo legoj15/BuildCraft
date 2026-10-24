@@ -98,7 +98,11 @@ public class RobotStationRigTester {
     /** Charge above {@code SAFETY_POWER} so the robot neither shuts down nor goes recharging mid-task. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
-    /** Fetch (a 40-cycle wait at the station), then the search, the flight and the cut. */
+    /** Fetch (a 40-cycle wait at the station), then the search, the flight and the cut. This and the budgets below
+     *  (and {@link #FILLED_AWAY_BUDGET}, {@link #UNLOADED_HOME_WORK_TICKS}) are WORK budgets: each poll waits
+     *  {@link EntityArenaUtil#CELL_READY_TICKS} for the arena cell's chunks to start ticking first (see
+     *  {@link EntityArenaUtil#whenCellTicking}), so its whole budget is that plus the work budget (a sum the
+     *  poll-budget guard reads as such); the manifest's {@code max_ticks} stays above it. */
     private static final int LUMBERJACK_BUDGET = 600;
     /** An empty fetch scan, then the 40-cycle unload at the home station. */
     private static final int PICKER_BUDGET = 400;
@@ -155,14 +159,13 @@ public class RobotStationRigTester {
 
     /** Far enough from the arena grid that its chunk is never loaded during the run. */
     private static final int UNLOADED_OFFSET = 4096;
-    /** The unloaded-home test's poll, in two budgets that must not share a clock: {@link #UNLOADED_HOME_READY_TICKS} for
-     *  the arena cell's chunks to start ticking (asynchronous, so the machine's, not the robot's),
-     *  {@link #UNLOADED_HOME_WORK_TICKS} for the fetch after that (~40 ticks when it runs).
-     *  {@link #UNLOADED_HOME_POLL_TICKS} is their sum, the poll's budget (a literal, so the poll-budget guard can read
-     *  it); the manifest's {@code max_ticks} stays above it. */
-    private static final int UNLOADED_HOME_READY_TICKS = 300;
+    /** The unloaded-home test's poll, in two budgets that must not share a clock:
+     *  {@link EntityArenaUtil#CELL_READY_TICKS} for the arena cell's chunks to start ticking (asynchronous, so the
+     *  machine's, not the robot's), {@link #UNLOADED_HOME_WORK_TICKS} for the fetch after that (~40 ticks when it
+     *  runs). {@link #UNLOADED_HOME_POLL_TICKS} is their sum, the poll's budget (a sum of constants, which the
+     *  poll-budget guard resolves); the manifest's {@code max_ticks} stays above it. */
     private static final int UNLOADED_HOME_WORK_TICKS = 240;
-    private static final int UNLOADED_HOME_POLL_TICKS = 540;
+    private static final int UNLOADED_HOME_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + UNLOADED_HOME_WORK_TICKS;
     private static final int FILLED_AWAY_BUDGET = 200;
 
     /** A robot working in its cell while its home station's chunk is unloaded, which is ordinary on a server: the
@@ -228,7 +231,8 @@ public class RobotStationRigTester {
         EntityRobot[] robot = { null };
         ItemEntity[] diamond = { null };
         EntityArenaUtil.tickUntil(helper, UNLOADED_HOME_POLL_TICKS,
-                EntityArenaUtil.whenCellTicking(helper, UNLOADED_HOME_READY_TICKS, UNLOADED_HOME_WORK_TICKS, () -> {
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS,
+                        UNLOADED_HOME_WORK_TICKS, () -> {
                     if (robot[0] == null) {
                         helper.assertTrue(neverResolved.isInitialized(),
                                 "a station in an unloaded chunk must not read as uninitialized");
@@ -438,15 +442,16 @@ public class RobotStationRigTester {
      *  instead of freezing silently. */
     public static void pipeFilledAwayDeregistersItsStation(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder tile = placePipe(helper, pipeRel);
         tile.replacePluggable(STATION_FACE,
                 new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
 
         EntityRobot[] robot = { null };
         DockingStationPipe[] station = { null };
-        EntityArenaUtil.tickUntil(helper, FILLED_AWAY_BUDGET,
-                () -> {
+        String stalled = "a station whose pipe is gone stayed registered, or its robot never shut down";
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FILLED_AWAY_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FILLED_AWAY_BUDGET, () -> {
                     if (robot[0] == null) {
                         station[0] = stationAt(helper, pipeRel);
                         if (station[0] == null) {
@@ -464,9 +469,9 @@ public class RobotStationRigTester {
                     }
                     return stationAt(helper, pipeRel) == null
                             && robot[0].mainAI.getDelegateAI() instanceof buildcraft.robotics.ai.AIRobotShutdown;
-                },
+                }, () -> stalled),
                 helper::succeed,
-                "a station whose pipe is gone stayed registered, or its robot never shut down",
+                stalled,
                 () -> cleanUp(helper, robot[0]));
     }
 
@@ -478,7 +483,7 @@ public class RobotStationRigTester {
      *  afterwards registers a fresh station (a rebuild split across ticks heals). */
     public static void pipeReplacedWithoutAStationDeregistersIt(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(1, 3, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        EntityArenaUtil.forceLoadCell(helper);
         TilePipeHolder tile = placePipe(helper, pipeRel);
         tile.replacePluggable(STATION_FACE,
                 new RobotStationPluggable(BCRoboticsPlugs.robotStation, tile, STATION_FACE));
@@ -486,8 +491,10 @@ public class RobotStationRigTester {
         EntityRobot[] robot = { null };
         DockingStationPipe[] station = { null };
         TilePipeHolder[] replacement = { null };
-        EntityArenaUtil.tickUntil(helper, FILLED_AWAY_BUDGET,
-                () -> {
+        String stalled = "a station whose pipe was replaced by a plugless pipe stayed registered (or its robot never "
+                + "shut down), or a station plug on the new pipe never registered a fresh station";
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FILLED_AWAY_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FILLED_AWAY_BUDGET, () -> {
                     if (robot[0] == null) {
                         station[0] = stationAt(helper, pipeRel);
                         if (station[0] == null) {
@@ -517,10 +524,9 @@ public class RobotStationRigTester {
                     }
                     DockingStationPipe fresh = stationAt(helper, pipeRel);
                     return fresh != null && fresh != station[0];
-                },
+                }, () -> stalled),
                 helper::succeed,
-                "a station whose pipe was replaced by a plugless pipe stayed registered (or its robot never shut "
-                        + "down), or a station plug on the new pipe never registered a fresh station",
+                stalled,
                 () -> cleanUp(helper, robot[0]));
     }
 
@@ -534,7 +540,9 @@ public class RobotStationRigTester {
         BlockPos chestRel = new BlockPos(1, 2, 1);
         BlockPos pipeRel = new BlockPos(1, 3, 1);
         BlockPos logRel = new BlockPos(4, 3, 5);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        // The whole cell, not the chunk of one block in it: the station is near one corner and the log near the far
+        // one, and the robot flies between them.
+        EntityArenaUtil.forceLoadCell(helper);
 
         ChestBlockEntity chest = placeChest(helper, chestRel);
         chest.setItem(0, new ItemStack(Items.IRON_AXE));
@@ -543,8 +551,9 @@ public class RobotStationRigTester {
 
         Rigging rigging = new Rigging(helper, pipeRel, rig, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, LUMBERJACK_BUDGET,
-                () -> {
+        String stalled = "the lumberjack never equipped an axe from its gated station and cut the log";
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LUMBERJACK_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LUMBERJACK_BUDGET, () -> {
                     if (robot[0] == null) {
                         DockingStationPipe station = rigging.ready();
                         if (station == null) {
@@ -557,7 +566,7 @@ public class RobotStationRigTester {
                         return false;
                     }
                     return !helper.getLevel().getBlockState(helper.absolutePos(logRel)).is(Blocks.OAK_LOG);
-                },
+                }, () -> stalled),
                 () -> {
                     helper.assertTrue(robot[0].getHeldItem().is(Items.IRON_AXE),
                             "the lumberjack cut the log with an axe from its station, holding "
@@ -566,20 +575,21 @@ public class RobotStationRigTester {
                             "exactly one axe left the chest");
                     helper.succeed();
                 },
-                "the lumberjack never equipped an axe from its gated station and cut the log",
+                stalled,
                 () -> cleanUp(helper, robot[0]));
     }
 
     private static void picker(GameTestHelper helper, Rig rig) {
         BlockPos chestRel = new BlockPos(1, 2, 1);
         BlockPos pipeRel = new BlockPos(1, 3, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        EntityArenaUtil.forceLoadCell(helper);
 
         placeChest(helper, chestRel);
         Rigging rigging = new Rigging(helper, pipeRel, rig, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS);
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, PICKER_BUDGET,
-                () -> {
+        String stalled = "the picker never unloaded its cargo at its Accept Items station";
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + PICKER_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PICKER_BUDGET, () -> {
                     if (robot[0] == null) {
                         DockingStationPipe station = rigging.ready();
                         if (station == null) {
@@ -593,9 +603,9 @@ public class RobotStationRigTester {
                         return false;
                     }
                     return !robot[0].containsItems();
-                },
+                }, () -> stalled),
                 helper::succeed,
-                "the picker never unloaded its cargo at its Accept Items station",
+                stalled,
                 () -> cleanUp(helper, robot[0]));
     }
 
@@ -607,7 +617,8 @@ public class RobotStationRigTester {
     private static void planter(GameTestHelper helper) {
         BlockPos chestRel = new BlockPos(1, 2, 1);
         BlockPos pipeRel = new BlockPos(1, 3, 1);
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(2, 3, 3));
+        // The whole cell: the farmland row runs along its far side, and the robot plants it from the station.
+        EntityArenaUtil.forceLoadCell(helper);
 
         ChestBlockEntity chest = placeChest(helper, chestRel);
         chest.setItem(0, new ItemStack(Items.WHEAT_SEEDS, 32));
@@ -621,8 +632,9 @@ public class RobotStationRigTester {
 
         Rigging rigging = new Rigging(helper, pipeRel, Rig.API, BCRoboticsStatements.ACTION_STATION_PROVIDE_ITEMS);
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, PLANTER_BUDGET,
-                () -> {
+        String stalled = "the planter did not plant all six farmland cells in its zone";
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + PLANTER_BUDGET,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, PLANTER_BUDGET, () -> {
                     if (robot[0] == null) {
                         DockingStationPipe station = rigging.ready();
                         if (station == null) {
@@ -632,13 +644,13 @@ public class RobotStationRigTester {
                         return false;
                     }
                     return planted(helper, crops) == crops.size();
-                },
+                }, () -> stalled + " (planted " + planted(helper, crops) + ")"),
                 () -> {
                     helper.assertTrue(chest.getItem(0).getCount() == 32 - crops.size(),
                             "one seed left the chest per planting, chest holds " + chest.getItem(0));
                     helper.succeed();
                 },
-                "the planter did not plant all six farmland cells in its zone",
+                stalled,
                 () -> cleanUp(helper, robot[0]));
     }
 

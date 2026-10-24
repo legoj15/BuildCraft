@@ -287,8 +287,31 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // Without this short-circuit the stock schematic.canBuild check would see
             // level.isEmptyBlock == false and refuse, leaving the fluid position untouched.
             if (mode == EnumFluidHandlingMode.REPLACE) return true;
+            // NO_REPLACE: a block that holds this very fluid itself (one the blueprint wants waterlogged) keeps it,
+            // so placing it replaces nothing (see placesIntoOwnFluid).
+            if (placesIntoOwnFluid(blockPos)) return true;
         }
         return getSchematicBlock(blockPos).canBuild(tile.getWorldBC(), blockPos);
+    }
+
+    /**
+     * NO_REPLACE: does the schematic block at {@code blockPos} hold a source of fluid itself (a block the blueprint
+     * wants waterlogged), and does the cell hold nothing but a source of that same fluid? Placing it then keeps the
+     * fluid, as the block's own, so the mode's "never replace fluid" rule does not stand in its way: both
+     * {@link #canPlace} and {@link #isBlockCorrect} let it through. A dry block over fluid is still skipped, and so is
+     * a wet one over flowing fluid (placing it would make a new source there).
+     */
+    private boolean placesIntoOwnFluid(BlockPos blockPos) {
+        if (tile.getFluidMode() != EnumFluidHandlingMode.NO_REPLACE) return false;
+        if (!(getSchematicBlock(blockPos) instanceof SchematicBlockDefault def)
+                || def.blockState == null || def.placeBlock == null) {
+            return false;
+        }
+        FluidState own = def.placedState().getFluidState();
+        if (own.isEmpty() || !own.isSource()) return false;
+        BlockState world = tile.getWorldBC().getBlockState(blockPos);
+        FluidState there = world.getFluidState();
+        return isFluidOnly(world) && there.isSource() && there.getType().isSame(own.getType());
     }
 
     @Override
@@ -428,9 +451,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // NO_REPLACE never replaces fluid: a cell holding nothing but fluid cannot be built in that mode (canPlace
         // refuses it, and the break queue refuses fluid outside CLEAR), so it is as built as this mode makes it.
         // Otherwise it stayed "to break" for ever and the build never finished. The next check sweep after the fluid
-        // goes sends it to TO_PLACE and the block is built. A schematic that wants fluid itself still compares.
+        // goes sends it to TO_PLACE and the block is built. A schematic that wants fluid itself still compares, and
+        // so does a block that keeps the source in the cell as its own (placesIntoOwnFluid): placing it is no
+        // replacement, so it is built rather than skipped.
         if (tile.getFluidMode() == EnumFluidHandlingMode.NO_REPLACE && !(schematic instanceof SchematicBlockFluid)
-                && isFluidOnly(tile.getWorldBC().getBlockState(blockPos))) {
+                && isFluidOnly(tile.getWorldBC().getBlockState(blockPos)) && !placesIntoOwnFluid(blockPos)) {
             return true;
         }
         // Pass fluidMode through to the SchematicBlockDefault overload so CLEAR mode reports
@@ -445,8 +470,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // where the schematic is dry, and vanilla will flood the cell again no matter how often the
             // Builder dries it, tolerate the water: the lenient (NO_REPLACE) comparison isolates exactly
             // that waterlogging difference.
-            if (mode == EnumFluidHandlingMode.REPLACE) return isFragileUnbuildableAt(blockPos, def);
-            if (mode != EnumFluidHandlingMode.CLEAR) return false;
+            if (mode != EnumFluidHandlingMode.CLEAR) return isFragileUnbuildableAt(blockPos, def);
             if (def.isBuilt(tile.getWorldBC(), blockPos, EnumFluidHandlingMode.NO_REPLACE)
                 && isResourcedByUnmoppableFluid(blockPos, tile.getWorldBC().getFluidState(blockPos).getType())) {
                 return true;
@@ -457,15 +481,18 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     /**
-     * CLEAR and REPLACE: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand,
+     * Every mode: can the fragile block the schematic wants here (snow layer, torch, flower, …) never stand,
      * because fluid the Builder will never remove is beside or above the cell and washes it away the moment it is
      * placed? Such a cell is accepted as done, left empty (or holding the fluid that flows in), so the build can
      * finish: the place gate (and {@code SchematicBlockDefault#build}'s fragile defer) would otherwise defer it for
      * ever while the cell still counts as unbuilt, and the Builder would report busy without end.
      *
-     * <p>REPLACE never removes fluid, so any fluid in the cell may stay, and a washing neighbour is permanent unless
-     * the Builder is still to build a block into it that displaces its fluid ({@link #isStayingUnderReplace}). The
-     * rest of this comment is about CLEAR, which mops.
+     * <p>REPLACE and NO_REPLACE never remove fluid, so any fluid in the cell may stay, and a washing neighbour is
+     * permanent unless the Builder is still to build a block into it that displaces its fluid
+     * ({@link #isStayingWhereFluidIsKept}). (NO_REPLACE counts a cell holding nothing but fluid as built before it
+     * gets here, unless the schematic block keeps that fluid as its own ({@link #placesIntoOwnFluid}), so for it this
+     * accepts an air cell, or the source cell of a waterlogged block the fluid also washes away, if any block is
+     * both.) The rest of this comment is about CLEAR, which mops.
      *
      * <p>Any fluid counts (water, lava, oil, a modded fluid): every washing neighbour must be
      * {@link #isUnmoppable permanent fluid}, and the cell itself must hold nothing to break, which is air or
@@ -482,15 +509,17 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      */
     private boolean isFragileUnbuildableAt(BlockPos blockPos, SchematicBlockDefault def) {
         if (def.blockState == null || !SchematicBlockDefault.isWashedAwayByFluid(def.blockState)) return false;
-        boolean replace = tile.getFluidMode() == EnumFluidHandlingMode.REPLACE;
+        boolean keepsFluid = tile.getFluidMode() != EnumFluidHandlingMode.CLEAR;
         BlockState world = tile.getWorldBC().getBlockState(blockPos);
         if (!world.isAir()) {
             if (!isFluidOnly(world)) return false;
             FluidState fluid = world.getFluidState();
             if (fluid.isEmpty()) return false;
-            if (!replace && fluid.isSource() && !isResourcedByUnmoppableFluid(blockPos, fluid.getType())) return false;
+            if (!keepsFluid && fluid.isSource() && !isResourcedByUnmoppableFluid(blockPos, fluid.getType())) {
+                return false;
+            }
         }
-        Predicate<BlockPos> permanent = replace ? this::isStayingUnderReplace : this::isUnmoppable;
+        Predicate<BlockPos> permanent = keepsFluid ? this::isStayingWhereFluidIsKept : this::isUnmoppable;
         Level level = tile.getWorldBC();
         return SchematicBlockDefault.hasWashingFluidNeighbour(level, blockPos, def.blockState)
             && !SchematicBlockDefault.hasWashingFluidNeighbour(level, blockPos, def.blockState,
@@ -498,11 +527,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     }
 
     /**
-     * REPLACE: will the fluid at {@code blockPos} stay where it is as far as this Builder is concerned? REPLACE never
-     * breaks fluid, and displaces it only by building a block into its cell. So it stays when the cell is outside the
-     * box, accepted ({@code CORRECT}: a schematic-air cell holding fluid, a block the schematic wants wet, a fragile
-     * cell accepted here), or still to receive a FRAGILE block, which cannot be placed into fluid that washes it
-     * either. Counting that last case is what lets two flooded fragile cells beside each other be accepted at all:
+     * REPLACE and NO_REPLACE: will the fluid at {@code blockPos} stay where it is as far as this Builder is concerned?
+     * Neither mode breaks fluid, and REPLACE displaces it only by building a block into its cell. So it stays when the
+     * cell is outside the box, accepted ({@code CORRECT}: a schematic-air cell holding fluid, a block the schematic
+     * wants wet, a fragile cell accepted here), or still to receive a FRAGILE block, which cannot be placed into fluid
+     * that washes it either. Counting that last case is what lets two flooded fragile cells beside each other be accepted at all:
      * each washes the other, and neither would ever be accepted first. Any other cell still to build or break (a solid
      * block going into a source) may take the fluid away, so the fragile cell beside it waits for that.
      *
@@ -510,7 +539,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
      * fragile neighbour was built into a source after all), the next check sweep sends the cell back to
      * {@code TO_PLACE} and the block is built.
      */
-    private boolean isStayingUnderReplace(BlockPos blockPos) {
+    private boolean isStayingWhereFluidIsKept(BlockPos blockPos) {
         if (isUnmoppable(blockPos)) return true;
         return checkResults[posToIndex(blockPos)] == CHECK_RESULT_TO_PLACE && isFragileSchematicAt(blockPos);
     }

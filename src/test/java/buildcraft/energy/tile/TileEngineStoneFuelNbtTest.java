@@ -18,6 +18,7 @@ import net.minecraft.world.item.component.CustomData;
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.energy.BCEnergyBlocks;
+import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.test.ValueIoTestUtil;
 
 /**
@@ -85,6 +86,25 @@ public class TileEngineStoneFuelNbtTest extends VanillaSetupBaseTester {
         ItemStack fuel = new ItemStack(Items.COAL, 128);
 
         assertSameStack(fuel, roundTrip(fuel), "128 coal");
+    }
+
+    @Test
+    public void aSaveStillReadsOnTheReleasedBuild() {
+        // 2026.2.0 took the fuel's count from "fuelCount" alone (the stack beside it was read at whatever count it
+        // carried, then overwritten), so a save that drops that key reloads there as a single item. Read the save the
+        // way that build does.
+        for (int count : new int[] {64, 128}) {
+            TileEngineStone_BC8 engine = newEngine();
+            engine.setFuelStack(new ItemStack(Items.COAL, count));
+            CompoundTag saved = save(engine);
+
+            ItemStack stack = ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), saved.get("fuel"))
+                    .result().orElseThrow();
+            int releasedCount = NBTUtilBC.getInt(saved, "fuelCount", 1);
+
+            Assertions.assertEquals(count, stack.copyWithCount(releasedCount).getCount(),
+                    count + " coal read the way 2026.2.0 reads it: " + saved);
+        }
     }
 
     @Test

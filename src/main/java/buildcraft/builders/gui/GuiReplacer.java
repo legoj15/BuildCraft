@@ -5,7 +5,6 @@
  */
 package buildcraft.builders.gui;
 
-import net.minecraft.ChatFormatting;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -20,7 +19,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
-import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.schematics.ISchematicBlock;
 
 import buildcraft.lib.gui.GuiBC8;
@@ -413,28 +411,4 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         return super.mouseClicked(mouseXd, mouseYd, button);
     }*/
     //?}
-
-
-    /**
-     * Placeholder used by {@link #schematicDisplayName} when we can't coerce a schematic into
-     * a SchematicBlockDefault. The grey-out is cosmetic and mirrors how the Electronic Library
-     * muters its status strings.
-     */
-    @SuppressWarnings("unused")
-    private static String grey(String s) {
-        return ChatFormatting.GRAY + s + ChatFormatting.RESET;
-    }
-
-    /**
-     * Not used yet — left in so a future "strict match" checkbox can surface {@code from}'s
-     * schematic diff against the palette without duplicating logic in this class.
-     */
-    @SuppressWarnings("unused")
-    private static boolean schematicReadable(ItemStack stack) {
-        try {
-            return ItemSchematicSingle.getSchematic(stack) != null;
-        } catch (InvalidInputDataException e) {
-            return false;
-        }
-    }
 }

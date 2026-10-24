@@ -25,7 +25,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.Fluid;
@@ -106,24 +105,17 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
         return tank;
     }
 
-    private boolean dropsHandled = false;
-
-    /** Flags that the player-break path has already dropped this gate's tank, so the non-player
-     *  {@link #dropContentsOnRemoval} fallback stays quiet (no double drop). */
-    public void markDropsHandled() {
-        dropsHandled = true;
-    }
-
-    /** Spills the tank as fragile fluid-shard items when the gate is removed by non-player means
-     *  (explosion, piston, /setblock ... destroy, mod tools). No-op on the client and once drops are handled.
-     *  TileFloodGate sits on the synced base beside TileBC_Neptune (one bespoke tank, no itemManager), so it
-     *  carries its own copy of this hook rather than inheriting the shared one. */
+    /** Spills the tank as fragile fluid-shard items when the gate is removed by any means (player break, explosion,
+     *  piston, /setblock ... destroy, mod tools), then empties it, which keeps a second call from dropping the
+     *  shards again (BlockFloodGate drops nothing in playerWillDestroy: a player break reaches the removal hook
+     *  too). No-op on the client. The removal hook itself is AbstractBCSyncedBlockEntity's. */
+    @Override
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
-        if (dropsHandled || level.isClientSide()) {
+        if (level.isClientSide()) {
             return;
         }
-        dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, tank);
+        clearContent();
     }
 
     /** Wipes the tank {@link #dropContentsOnRemoval} would spill, so a command replace leaves nothing to
@@ -132,17 +124,6 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     public void clearContent() {
         tank.setFluidStack(0, FluidStack.EMPTY);
     }
-
-    // Non-player removal catch-all on the >=1.21.10 API — the BlockEntity is still alive here.
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // Owner tracking (field, getOwner, onPlacedBy) lives on AbstractBCBlockEntity; the placing player
     // is granted the "Flooding the world" advancement whenever this gate floods a block.

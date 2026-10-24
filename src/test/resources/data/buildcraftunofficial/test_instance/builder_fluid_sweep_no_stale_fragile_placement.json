@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:builder_fluid_sweep_no_stale_fragile_placement",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 600,
+    "max_ticks": 1360,
     "setup_ticks": 0,
     "required": true
 }

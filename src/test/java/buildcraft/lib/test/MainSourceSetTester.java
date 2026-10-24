@@ -8,8 +8,24 @@ package buildcraft.lib.test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-/** Pins {@link MainSourceSet#codeOnly}, which the code-inspecting guards trust to show only live code. */
+/** Pins {@link MainSourceSet#codeOnly} and {@link MainSourceSet#withoutComments}, which the code-inspecting guards
+ *  trust to show only live code. */
 public class MainSourceSetTester {
+
+    @Test
+    public void withoutCommentsDropsCommentsButKeepsLiteralsAsWritten() {
+        String src = String.join("\n",
+            "a(\"kept\"); // \"prose\" b(\"gone\");",
+            "/* c(\"gone\"); */ d(\"url://kept\", '\"', \"esc\\\"aped\");",
+            "e(\"\"\"",
+            "    text // block\"\"\");");
+        String code = MainSourceSet.withoutComments(src);
+
+        for (String live : new String[] { "a(\"kept\");", "d(\"url://kept\", '\"', \"esc\\\"aped\");", "text // block" }) {
+            Assertions.assertTrue(code.contains(live), "live text lost: " + live + "\n" + code);
+        }
+        Assertions.assertFalse(code.contains("gone") || code.contains("prose"), "comments must go:\n" + code);
+    }
 
     @Test
     public void commentsAndLiteralInteriorsAreBlankedButCodeAndLinesSurvive() {

@@ -70,9 +70,12 @@ public class BuilderRefloodTester {
     public static final int AIR = 2;
     /** A fragile block (any fluid washes it away), to check tolerated water does not hold every one back. */
     public static final int SNOW = 3;
+    /** A bottom oak slab the blueprint itself wants waterlogged. */
+    public static final int WET_SLAB = 4;
     private static final BlockState[] KIND_STATES = {
         Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
-        Blocks.SNOW.defaultBlockState() };
+        Blocks.SNOW.defaultBlockState(),
+        Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true) };
 
     public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
@@ -80,11 +83,18 @@ public class BuilderRefloodTester {
      *  within ~5 ticks, so any live cycle breaks the streak many times over in this window. */
     public static final int QUIET_TICKS = 40;
 
-    /** How many ticks {@link #drive} polls: the {@code max_ticks} of every manifest whose phase windows can add up to
-     *  that long (all {@code builder_clear_*} ones and the replace-mode and waterlogged sweep ones), so the
-     *  watchdog, not an exhausted poll budget, ends a test whose phase windows run long (an un-polled test would
-     *  time out without saying which phase it was stuck in). Polls past the watchdog are harmless. */
+    /** How many work ticks (those counted from the cell ticking, see {@link EntityArenaUtil#CELL_READY_TICKS} for the
+     *  wait before them) {@link #drive} polls: the longest any phase windows add up to (the {@code builder_clear_*}
+     *  tests and the replace-mode and waterlogged sweep ones), so the poll, not an unexplained framework timeout, ends
+     *  a test whose phase windows run long (an un-polled test would time out without saying which phase it was stuck
+     *  in). A cell that never ticks fails as such, naming the machine's load, instead of spending a phase window on
+     *  it: the framework forces only the structure's chunk, and a 6x7 cell straddling a chunk border waits on its
+     *  neighbour, whose Builder, fluids and block updates stand still until it ticks (about 57% of runs cross one). */
     private static final int DRIVE_TICKS = 1050;
+
+    /** {@link #drive}'s whole poll budget, the sum {@code GameTestPollBudgetTester} reads for every test that calls
+     *  it: the manifest's {@code max_ticks} of each such test must stay above it. */
+    public static final int DRIVE_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + DRIVE_TICKS;
 
     public static void expect(boolean cond, String msg) {
         if (!cond) throw new IllegalStateException(msg);
@@ -95,7 +105,7 @@ public class BuilderRefloodTester {
     }
 
     /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
-     *  {@link #AIR} or {@link #SNOW} (one snow layer). */
+     *  {@link #AIR}, {@link #SNOW} (one snow layer) or {@link #WET_SLAB}. */
     private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column,
             List<ISchematicEntity> entities) {
         Blueprint blueprint = new Blueprint();
@@ -134,13 +144,14 @@ public class BuilderRefloodTester {
         return state.is(Blocks.WATER) && state.getFluidState().isSource();
     }
 
-    /** Is {@code state} the dry, finished block the blueprint wants for {@code kind}? */
+    /** Is {@code state} the finished block the blueprint wants for {@code kind} (dry, except {@link #WET_SLAB})? */
     public static boolean isBuilt(int kind, BlockState state) {
         return switch (kind) {
             case SLAB -> isDrySlab(state);
             case STONE -> state.is(Blocks.STONE);
             case AIR -> state.isAir();
             case SNOW -> state.is(Blocks.SNOW);
+            case WET_SLAB -> isWetSlab(state);
             default -> throw new IllegalArgumentException("bad kind " + kind);
         };
     }
@@ -161,7 +172,10 @@ public class BuilderRefloodTester {
      *  positions relative to the column's first cell). Their items are the caller's to load. */
     public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls,
             List<ISchematicEntity> entities) {
-        EntityArenaUtil.forceLoadEntityArena(helper);
+        // The whole cell: the Builder, its column and the outside water sources can sit in different chunks, and
+        // each ticks (and flows) only once its own chunk does. A test that waits on any of it goes through drive,
+        // which starts counting only when the cell ticks.
+        EntityArenaUtil.forceLoadCell(helper);
         for (int x = 0; x <= 4; x++) {
             for (int z = 0; z <= 5; z++) {
                 helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
@@ -191,25 +205,36 @@ public class BuilderRefloodTester {
         return tile;
     }
 
-    /** Schedules {@code step} once per tick up front (see {@link EntityArenaUtil#tickUntil} for why) and turns a
-     *  thrown {@link IllegalStateException} into a test failure. {@code step} calls {@code finish} to succeed. */
+    /** Schedules {@code step} once per tick up front (see {@link EntityArenaUtil#tickUntil} for why) and ends the test
+     *  on a thrown exception: it is rethrown (stack trace and all) once the cleanup has run, and the framework reports
+     *  it as the failure. {@code step} calls {@code finish} to succeed.
+     *
+     *  <p>{@code step}'s argument is the WORK tick: 1 on the first tick the whole arena cell is entity-ticking (see
+     *  {@link EntityArenaUtil#whenCellTicking}), not the test's own tick, so no phase window is spent waiting for a
+     *  chunk to promote. A cell that has not started ticking within {@link EntityArenaUtil#CELL_READY_TICKS} fails the
+     *  test. */
     public static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step) {
         drive(helper, finished, step, () -> {});
     }
 
     /** As {@link #drive(GameTestHelper, boolean[], IntConsumer)}, running {@code cleanup} before a thrown failure
-     *  is reported (a step that succeeds runs its own cleanup first). */
+     *  is rethrown (a step that succeeds runs its own cleanup first). */
     private static void drive(GameTestHelper helper, boolean[] finished, IntConsumer step, Runnable cleanup) {
-        for (int t = 1; t <= DRIVE_TICKS; t++) {
-            final int tick = t;
-            helper.runAfterDelay(tick, () -> {
+        int[] workTick = { 0 };
+        BooleanSupplier gated = EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DRIVE_TICKS,
+                () -> {
+                    step.accept(++workTick[0]);
+                    return finished[0];
+                });
+        for (int t = 1; t <= DRIVE_POLL_TICKS; t++) {
+            helper.runAfterDelay(t, () -> {
                 if (finished[0]) return;
                 try {
-                    step.accept(tick);
+                    gated.getAsBoolean();
                 } catch (RuntimeException e) {
                     finished[0] = true;
                     cleanup.run();
-                    helper.fail(String.valueOf(e.getMessage()));
+                    throw e;
                 }
             });
         }

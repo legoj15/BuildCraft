@@ -147,5 +147,5 @@ public class BlockLaserTable extends BlockBCTile_Neptune<TileLaserTableBase> imp
     }
 
     // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
-    // (>=1.21.10 uses TileBC_Neptune#preRemoveSideEffects).
+    // (>=1.21.10 uses AbstractBCSyncedBlockEntity#preRemoveSideEffects).
 }

@@ -35,6 +35,7 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.recipe.AssemblyRecipeRegistry;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.lib.tile.item.ItemHandlerManager;
@@ -232,9 +233,9 @@ public class TileAssemblyTable extends TileLaserTableBase {
             entryTag.putString("recipe", instruction.recipe.getRegistryName());
             entryTag.putInt("state", state.ordinal());
             // Persist the full output ItemStack (all components, incl. the facade blockstate held in
-            // custom_data) via codec — supersedes the old id+count helper + manual customData patch.
-            ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), instruction.output)
-                .result().ifPresent(t -> entryTag.put("output", t));
+            // custom_data) via codec — supersedes the old id+count helper + manual customData patch. A count
+            // past the codec's bound (a recipe outputting a mod-raised stack) rides beside it.
+            StackNbt.write(entryTag, "output", "outputCount", instruction.output);
             recipesStatesTag.add(entryTag);
         });
         wrapper.put("entries", recipesStatesTag);
@@ -267,8 +268,7 @@ public class TileAssemblyTable extends TileLaserTableBase {
                                     ItemStack outputStack = ItemStack.EMPTY;
                                     CompoundTag outputTag = NBTUtilBC.getCompoundOrNull(entryTag, "output");
                                     if (outputTag != null) {
-                                        outputStack = ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), outputTag)
-                                            .result().orElse(ItemStack.EMPTY);
+                                        outputStack = StackNbt.read(entryTag, "output", "outputCount");
                                         CompoundTag cd = NBTUtilBC.getCompoundOrNull(outputTag, "customData");
                                         if (cd != null && !cd.isEmpty()) {
                                             NBTUtilBC.setItemData(outputStack, cd);

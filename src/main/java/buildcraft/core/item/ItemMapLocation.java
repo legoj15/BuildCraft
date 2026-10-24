@@ -22,6 +22,11 @@ import net.minecraft.world.item.component.CustomModelData;
 //? if >=1.21.10 {
 import net.minecraft.world.item.component.TooltipDisplay;
 //?}
+import net.minecraft.world.entity.Entity;
+//? if >=1.21.10 {
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EquipmentSlot;
+//?}
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -42,14 +47,21 @@ import buildcraft.api.core.IPathProvider;
 import buildcraft.api.core.IZone;
 import buildcraft.api.items.IMapLocation;
 
+import buildcraft.core.BCCore;
+
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
+import buildcraft.robotics.zone.ZoneMapRef;
+import buildcraft.robotics.zone.ZoneMapSavedData;
 import buildcraft.robotics.zone.ZonePlan;
 
 public class ItemMapLocation extends Item implements IMapLocation {
     private static final String[] STORAGE_TAGS = "x,y,z,side,xMin,xMax,yMin,yMax,zMin,zMax,path,chunkMapping,name".split(",");
     private static final String TAG_MAP_TYPE = "mapType";
+    /** Where builds before the map-id model kept a ZONE map's whole plan, inside the stack's custom data. Read only to
+     *  migrate such a stack ({@link #migrateLegacyZone}). */
+    private static final String TAG_LEGACY_ZONE = "chunkMapping";
 
     public ItemMapLocation(Item.Properties properties) {
         super(properties);
@@ -231,6 +243,7 @@ public class ItemMapLocation extends Item implements IMapLocation {
             nbt.remove(key);
         }
         nbt.putString(TAG_MAP_TYPE, MapLocationType.CLEAN.name());
+        stack.remove(BCCore.ZONE_MAP_ID.get());
         if (nbt.size() <= 1) {
             // Only the mapType tag remains; clear entirely
             stack.remove(DataComponents.CUSTOM_DATA);
@@ -407,14 +420,8 @@ public class ItemMapLocation extends Item implements IMapLocation {
     public IZone getZone(@Nonnull ItemStack item) {
         MapLocationType type = getTypeFromStack(item);
         switch (type) {
-            case ZONE: {
-                ZonePlan plan = new ZonePlan();
-                plan.readFromNBT(getCustomTag(item));
-                // A plan marking nothing (no chunkMapping: crafted or legacy data) stays a zone that contains nothing.
-                // It must not read as "no zone": a robot with no work zone works anywhere, an empty zone keeps it idle.
-                // The zone samplers read the empty plan's null sample as "nothing to find".
-                return plan;
-            }
+            case ZONE:
+                return readZone(item);
             case AREA:
                 return getBox(item);
             case PATH:
@@ -426,17 +433,113 @@ public class ItemMapLocation extends Item implements IMapLocation {
     }
 
     /**
-     * Stamps a {@link ZonePlan} onto a map-location stack: writes the plan's {@code "chunkMapping"} into the
-     * CUSTOM_DATA tag, flips the map type to {@link MapLocationType#ZONE}, and updates the model selector. The
-     * inverse of {@link #getZone}'s ZONE branch; used by the Zone Planner's output slot.
+     * The zone a ZONE map names, as a copy the caller may keep or edit. The map carries a {@link ZoneMapRef}
+     * ({@link BCCore#ZONE_MAP_ID}) and the zone lives in {@link ZoneMapSavedData}; a stack written by an earlier build
+     * still carries the whole plan and is migrated here first ({@link #migrateLegacyZone}).
+     *
+     * <p>A map naming nothing (no ref and no plan: crafted data or a ZONE map an earlier build wrote empty), or a ref
+     * the store does not hold (another world's map), is a zone that contains nothing. It must not read as "no zone": a
+     * robot with no work zone works anywhere, an empty zone keeps it idle. The zone samplers read the empty plan's null
+     * sample as "nothing to find". The store is the server's, so this is a server-thread read; off it (a client thread
+     * beside an integrated server) a migrated map reads as an empty zone and a legacy one as the plan it carries.
+     */
+    private static ZonePlan readZone(@Nonnull ItemStack stack) {
+        ZonePlan legacy = migrateLegacyZone(stack);
+        if (legacy != null) {
+            return legacy;
+        }
+        ZoneMapRef ref = stack.get(BCCore.ZONE_MAP_ID.get());
+        ZoneMapSavedData store = ref == null ? null : ZoneMapSavedData.forThisThread();
+        ZonePlan plan = store == null ? null : store.get(ref);
+        return plan != null ? plan : new ZonePlan();
+    }
+
+    /** {@link #migrateLegacyZone(ItemStack, ZoneMapSavedData)} against the store this thread may use. */
+    @Nullable
+    static ZonePlan migrateLegacyZone(@Nonnull ItemStack stack) {
+        return migrateLegacyZone(stack, ZoneMapSavedData.forThisThread());
+    }
+
+    /**
+     * Moves the plan a legacy ZONE map carries in its custom data into {@code store} and points the stack at it,
+     * keeping everything else the stack carries. Returns the plan it found when the stack's zone is that plan (null for
+     * a stack with no plan, which is left alone, or one whose ref the store already holds, which reads by ref).
+     *
+     * <p>The stack keeps its own copy of the plan until the store's entry is {@linkplain ZoneMapSavedData#isDurable
+     * durable} (encoded for a level save): player data is saved before level data, so dropping it sooner could leave a
+     * crash with a map whose zone is in neither file. A later read or inventory tick drops it. A stack whose ref the
+     * store does not hold (from another world) takes a ref to its plan here. With no store (off the server thread) the
+     * stack is not touched, and the plan it carries is returned.
+     */
+    @Nullable
+    static ZonePlan migrateLegacyZone(@Nonnull ItemStack stack, @Nullable ZoneMapSavedData store) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null || !data.contains(TAG_LEGACY_ZONE)) {
+            return null;
+        }
+        CompoundTag cpt = data.copyTag();
+        ZoneMapRef ref = stack.get(BCCore.ZONE_MAP_ID.get());
+        ZonePlan found = null;
+        if (store == null || ref == null || !store.holds(ref)) {
+            found = new ZonePlan();
+            found.readFromNBT(cpt);
+            if (store == null) {
+                return found;
+            }
+            ref = store.intern(found);
+            stack.set(BCCore.ZONE_MAP_ID.get(), ref);
+        }
+        if (store.isDurable(ref)) {
+            cpt.remove(TAG_LEGACY_ZONE);
+            setCustomTag(stack, cpt);
+        }
+        return found;
+    }
+
+    /**
+     * Stamps a {@link ZonePlan} onto a map-location stack: stores a copy of the plan in {@link ZoneMapSavedData},
+     * points the stack at it ({@link BCCore#ZONE_MAP_ID}), flips the map type to {@link MapLocationType#ZONE}, and
+     * updates the model selector. The inverse of {@link #getZone}'s ZONE branch; used by the Zone Planner's output
+     * slot. A stack that already named a zone is pointed at the new one, so copies of it keep theirs (vanilla's
+     * re-write fork).
+     *
+     * <p>A server-thread write. Off it, where the store is not reachable, the plan is written into the stack the way
+     * earlier builds did, to be migrated on the first server-side read.
      */
     public static void setZone(@Nonnull ItemStack stack, ZonePlan plan) {
         CompoundTag cpt = getCustomTag(stack);
-        plan.writeToNBT(cpt);
+        ZoneMapSavedData store = ZoneMapSavedData.forThisThread();
+        if (store == null) {
+            plan.writeToNBT(cpt);
+            stack.remove(BCCore.ZONE_MAP_ID.get());
+        } else {
+            cpt.remove(TAG_LEGACY_ZONE);
+            stack.set(BCCore.ZONE_MAP_ID.get(), store.intern(plan));
+        }
         cpt.putString(TAG_MAP_TYPE, MapLocationType.ZONE.name());
         setCustomTag(stack, cpt);
         updateModelData(stack, MapLocationType.ZONE);
     }
+
+    // --- Legacy migration of carried items ---
+
+    // Moves a legacy ZONE map's plan off the stack as soon as it sits in an inventory on the server, so the stack
+    // stops carrying (and a creative clone stops copying) the whole plan before anything reads its zone.
+    @Override
+    //? if >=1.21.10 {
+    public void inventoryTick(ItemStack stack, ServerLevel level, Entity owner, @Nullable EquipmentSlot slot) {
+        super.inventoryTick(stack, level, owner, slot);
+        migrateLegacyZone(stack);
+    }
+    //?} else {
+    /*// 1.21.1: inventoryTick runs on both sides and takes a Level, a slot index and a selected flag.
+    public void inventoryTick(ItemStack stack, Level level, Entity owner, int slot, boolean selected) {
+        super.inventoryTick(stack, level, owner, slot, selected);
+        if (!level.isClientSide()) {
+            migrateLegacyZone(stack);
+        }
+    }*/
+    //?}
 
     @Override
     public List<BlockPos> getPath(@Nonnull ItemStack item) {

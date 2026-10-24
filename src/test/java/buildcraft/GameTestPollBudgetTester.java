@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +24,9 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import buildcraft.builders.BuilderRefloodTester;
 import buildcraft.lib.test.DropArenaUtil;
+import buildcraft.lib.test.EntityArenaUtil;
 
 /**
  * Pins that a game test's framework watchdog ({@code max_ticks} in its {@code test_instance} manifest) outlasts
@@ -40,15 +43,18 @@ import buildcraft.lib.test.DropArenaUtil;
  * caused it and surfaces as a flake in a later one, which is exactly why it is pinned here and not left to review.
  *
  * <p>The poll budget IS computable from source: every poll takes its {@code maxTicks} as the second argument, and
- * in practice that is an integer literal, a {@code static final int} of the same file or a {@code +} sum of those
- * ({@code READY + WORK}). The scan follows the registered method's body plus every same-file method it calls (a
- * poll hidden in a fixture helper still counts), ignores comments and string contents (the inactive branch of a
- * Stonecutter directive is a comment), and resolves the budget of each poll it finds. A budget it cannot resolve
- * to a number (a parameter, a computed value) FAILS the guard instead of being skipped: skipping would let a new
- * poll slip through unchecked, so use a literal or a named {@code static final int}. The one exception is
- * {@code DropArenaUtil.awaitDrops}, whose budget is fixed by the harness: it counts as the harness's
- * {@code POLL_TICKS}, read from its source. The guard needs {@code max_ticks > budget}, one tick of margin beyond
- * the poll's last tick, which is the only tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
+ * in practice that is an integer literal, a {@code static final int} of the same file (itself a literal or a sum of
+ * constants), a shared {@code EntityArenaUtil.NAME} constant ({@code EntityArenaUtil.CELL_READY_TICKS}, written
+ * qualified) or a {@code +} sum of those ({@code EntityArenaUtil.CELL_READY_TICKS + WORK}). The scan follows the
+ * registered method's body plus every same-file method it calls (a poll hidden in a fixture helper still counts),
+ * ignores comments and string contents (the inactive branch of a Stonecutter directive is a comment), and resolves
+ * the budget of each poll it finds. A budget it cannot resolve to a number (a parameter, a computed value) FAILS the
+ * guard instead of being skipped: skipping would let a new poll slip through unchecked, so use a literal or a named
+ * {@code static final int}. The exceptions are the harnesses whose loop is the poll, whose budget the harness
+ * fixes: a call of {@code DropArenaUtil.awaitDrops} counts as that harness's {@code POLL_TICKS}, and a call of the
+ * Builder tests' {@code BuilderRefloodTester.drive} as its {@code DRIVE_POLL_TICKS}, both read from their source.
+ * The guard needs {@code max_ticks > budget}, one tick of margin beyond the poll's last tick, which is the only
+ * tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
  *
  * <p>The scan reads the raw source tree ({@code src/test/java}), not the Stonecutter-processed copy, so it sees the
  * active node's view: only the active node's arm of a Stonecutter directive is live there, and the other arms are
@@ -173,8 +179,9 @@ public class GameTestPollBudgetTester {
         Assertions.assertTrue(missing.isEmpty(), "game test(s) this guard could not read:\n    "
             + String.join("\n    ", missing));
         Assertions.assertTrue(uncomputable.isEmpty(),
-            "game test(s) with a poll whose tick budget is not an integer literal or a static final int of the"
-                + " same file, so the watchdog cannot be checked against it. Use a literal or a named constant:\n    "
+            "game test(s) with a poll whose tick budget is not an integer literal, a static final int of the"
+                + " same file, a shared EntityArenaUtil.NAME constant or a + sum of those, so the watchdog cannot be"
+                + " checked against it. Use a literal or a named constant:\n    "
                 + String.join("\n    ", uncomputable));
         Assertions.assertTrue(tooShort.isEmpty(),
             "game test(s) whose test_instance max_ticks does not outlast their tickUntil/tickUntilThen/"
@@ -237,6 +244,56 @@ public class GameTestPollBudgetTester {
         Assertions.assertEquals(DropArenaUtil.POLL_TICKS, b.max(),
             "the harness's poll counts as its POLL_TICKS, read from its source");
         Assertions.assertTrue(b.unresolved.isEmpty());
+    }
+
+    @Test
+    public void scannerCountsTheBuilderDriveHarnessAtItsFixedBudget() {
+        PollBudgets b = scan("""
+            public static void test(GameTestHelper helper) {
+                boolean[] finished = { false };
+                drive(helper, finished, t -> { });
+            }""");
+        Assertions.assertEquals(1, b.polls.size());
+        Assertions.assertEquals(BuilderRefloodTester.DRIVE_POLL_TICKS, b.max(),
+            "a call of the Builder tests' drive counts as its DRIVE_POLL_TICKS, read from its source");
+        Assertions.assertTrue(b.unresolved.isEmpty(), "the harness budget resolves: " + b.unresolved);
+    }
+
+    @Test
+    public void scannerLeavesAnUnrelatedDriveAlone() {
+        PollBudgets b = scan("""
+            public static void test(GameTestHelper helper) {
+                drive(tile);
+            }
+            private static void drive(Tile tile) { }""");
+        Assertions.assertTrue(b.polls.isEmpty(), "a one-argument drive fixture is not the Builder harness: " + b.polls);
+    }
+
+    @Test
+    public void scannerResolvesTheSharedCellReadyConstant() {
+        PollBudgets b = scan("""
+            private static final int WORK = 120;
+            public static void test(GameTestHelper helper) {
+                EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WORK, () -> true,
+                    helper::succeed, "a");
+            }""");
+        Assertions.assertEquals(EntityArenaUtil.CELL_READY_TICKS + 120, b.max(),
+            "a qualified EntityArenaUtil constant is read from that class's source");
+        Assertions.assertTrue(b.unresolved.isEmpty(), "the shared constant resolves: " + b.unresolved);
+    }
+
+    @Test
+    public void scannerResolvesAConstantBuiltFromOtherConstants() {
+        PollBudgets b = scan("""
+            private static final int TOTAL = READY + WORK + 5;
+            private static final int READY = EntityArenaUtil.CELL_READY_TICKS;
+            private static final int WORK = 100;
+            public static void test(GameTestHelper helper) {
+                EntityArenaUtil.tickUntil(helper, TOTAL, () -> true, helper::succeed, "a");
+            }""");
+        Assertions.assertEquals(EntityArenaUtil.CELL_READY_TICKS + 105, b.max(),
+            "a constant defined as a sum of constants resolves, whatever the declaration order");
+        Assertions.assertTrue(b.unresolved.isEmpty(), "sums of constants resolve: " + b.unresolved);
     }
 
     @Test
@@ -350,32 +407,83 @@ public class GameTestPollBudgetTester {
         private static final Pattern AWAIT_POLL = Pattern.compile(
             "\\b(awaitThen|await)\\s*\\(\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
 
-        /** The drop-test harness ({@code DropArenaUtil.awaitDrops}): one poll whose budget the harness fixes. */
-        private static final Pattern DROP_POLL = Pattern.compile("\\bawaitDrops\\s*\\(");
+        /** A harness whose own loop is the poll: a call of it counts as one poll of the budget the harness's source
+         *  fixes in a named constant ({@code DropArenaUtil.awaitDrops}, the Builder tests' {@code drive}), so a test
+         *  never has to repeat that number. {@code call} must match a call and nothing that merely shares the name. */
+        private record Harness(String name, Pattern call, String source, String constant) {}
 
-        private static final String DROP_HARNESS = "src/test/java/buildcraft/lib/test/DropArenaUtil.java";
+        private static final List<Harness> HARNESSES = List.of(
+            new Harness("awaitDrops", Pattern.compile("\\bawaitDrops\\s*\\("),
+                "src/test/java/buildcraft/lib/test/DropArenaUtil.java", "POLL_TICKS"),
+            new Harness("drive", Pattern.compile("\\bdrive\\s*\\(\\s*\\w+\\s*,\\s*\\w+\\s*,"),
+                "src/test/java/buildcraft/builders/BuilderRefloodTester.java", "DRIVE_POLL_TICKS"));
 
+        private static final Map<String, Integer> HARNESS_BUDGETS = new HashMap<>();
+
+        /** The harness's budget constant, resolved like any other budget (a {@code +} sum of its own constants and the
+         *  shared {@code EntityArenaUtil} ones). */
+        private static synchronized int harnessBudget(Harness harness) {
+            return HARNESS_BUDGETS.computeIfAbsent(harness.name(), name -> {
+                String source = strip(read(TestHelper.repoRoot().resolve(harness.source())));
+                Integer value = constantsOf(source).get(harness.constant());
+                Assertions.assertNotNull(value, harness.constant() + " in " + harness.source() + " is not a literal,"
+                    + " a constant of that file, a shared EntityArenaUtil constant or a sum of those: the guard cannot"
+                    + " read the budget of " + harness.name());
+                return value;
+            });
+        }
+
+        /** {@code static final int/long NAME = <expression>;}, the expression resolved by {@link #resolve}. */
         private static final Pattern CONSTANT =
-            Pattern.compile("\\bstatic\\s+final\\s+(?:int|long)\\s+(\\w+)\\s*=\\s*(\\d+)L?\\s*;");
+            Pattern.compile("\\bstatic\\s+final\\s+(?:int|long)\\s+(\\w+)\\s*=\\s*([^;]+);");
 
-        private static final Pattern POLL_TICKS =
-            Pattern.compile("\\bstatic\\s+final\\s+int\\s+POLL_TICKS\\s*=\\s*([^;]+);");
+        private static final String ARENA_UTIL = "src/test/java/buildcraft/lib/test/EntityArenaUtil.java";
 
-        /** The harness's {@code POLL_TICKS}: a {@code +} sum of its own constants, resolved like any other budget. */
-        private static int dropPollBudget() {
-            String harness = strip(read(TestHelper.repoRoot().resolve(DROP_HARNESS)));
-            Map<String, Integer> constants = new HashMap<>();
-            Matcher c = CONSTANT.matcher(harness);
-            while (c.find()) {
-                constants.put(c.group(1), Integer.parseInt(c.group(2)));
+        private static Map<String, Integer> sharedConstants;
+
+        /** The numeric constants of {@code EntityArenaUtil}, keyed as a test writes them
+         *  ({@code EntityArenaUtil.CELL_READY_TICKS}): the one place a ready wait shared by many tests is defined. */
+        private static synchronized Map<String, Integer> sharedConstants() {
+            if (sharedConstants == null) {
+                Map<String, Integer> shared = new HashMap<>();
+                constantsOf(strip(read(TestHelper.repoRoot().resolve(ARENA_UTIL))), Map.of())
+                    .forEach((name, value) -> shared.put("EntityArenaUtil." + name, value));
+                sharedConstants = shared;
             }
-            Matcher budget = POLL_TICKS.matcher(harness);
-            Assertions.assertTrue(budget.find(), "no POLL_TICKS constant in " + DROP_HARNESS
-                + ": the guard cannot read the budget of awaitDrops");
-            Integer value = resolve(budget.group(1).trim(), constants);
-            Assertions.assertNotNull(value, "POLL_TICKS in " + DROP_HARNESS + " is `" + budget.group(1).trim()
-                + "`, not a literal, a constant of that file or a sum of those");
-            return value;
+            return sharedConstants;
+        }
+
+        /** The numeric constants of {@code source} (comments already stripped), the shared {@code EntityArenaUtil}
+         *  ones included. */
+        private static Map<String, Integer> constantsOf(String source) {
+            return constantsOf(source, sharedConstants());
+        }
+
+        /** Every {@code static final int/long} of {@code source} whose value resolves to a number, on top of the
+         *  already-known {@code seed}: an integer literal, an already-known constant, or a {@code +} sum of those, in
+         *  any declaration order (a constant defined from another declared below it resolves on a later pass). */
+        private static Map<String, Integer> constantsOf(String source, Map<String, Integer> seed) {
+            Map<String, String> declared = new LinkedHashMap<>();
+            Matcher c = CONSTANT.matcher(source);
+            while (c.find()) {
+                declared.put(c.group(1), c.group(2).trim());
+            }
+            Map<String, Integer> known = new HashMap<>(seed);
+            boolean progress = true;
+            while (progress) {
+                progress = false;
+                for (Map.Entry<String, String> constant : declared.entrySet()) {
+                    if (known.containsKey(constant.getKey())) {
+                        continue;
+                    }
+                    Integer value = resolve(constant.getValue(), known);
+                    if (value != null) {
+                        known.put(constant.getKey(), value);
+                        progress = true;
+                    }
+                }
+            }
+            return known;
         }
 
         private static final Pattern CALL = Pattern.compile("(?<![.\\w])([A-Za-z_]\\w*)\\s*\\(");
@@ -386,11 +494,7 @@ public class GameTestPollBudgetTester {
         static PollBudgets of(String rawSource, String method) {
             String source = strip(rawSource);
             PollBudgets result = new PollBudgets();
-            Map<String, Integer> constants = new HashMap<>();
-            Matcher c = CONSTANT.matcher(source);
-            while (c.find()) {
-                constants.put(c.group(1), Integer.parseInt(c.group(2)));
-            }
+            Map<String, Integer> constants = constantsOf(source);
             List<String> roots = bodiesOf(source, method);
             if (roots.isEmpty()) {
                 result.methodNotFound = true;
@@ -404,14 +508,16 @@ public class GameTestPollBudgetTester {
             return result;
         }
 
-        /** The value of a budget written as an integer literal, a same-file {@code static final int} or a {@code +}
-         *  sum of those ({@code RETRY_BUDGET + 300}); {@code null} for anything else (a parameter, a call, a cast). */
+        /** The value of a budget written as an integer literal, a same-file {@code static final int}, a shared
+         *  {@code EntityArenaUtil.NAME} constant or a {@code +} sum of those ({@code RETRY_BUDGET + 300},
+         *  {@code EntityArenaUtil.CELL_READY_TICKS + WORK}); {@code null} for anything else (a parameter, a call, a
+         *  cast). */
         private static Integer resolve(String budget, Map<String, Integer> constants) {
             int sum = 0;
             for (String term : budget.split("\\+")) {
                 String t = term.trim();
-                if (t.matches("\\d+")) {
-                    sum += Integer.parseInt(t);
+                if (t.matches("\\d+L?")) {
+                    sum += Integer.parseInt(t.endsWith("L") ? t.substring(0, t.length() - 1) : t);
                 } else if (constants.containsKey(t)) {
                     sum += constants.get(t);
                 } else {
@@ -436,11 +542,13 @@ public class GameTestPollBudgetTester {
                     }
                 }
             }
-            Matcher drops = DROP_POLL.matcher(body);
-            while (drops.find()) {
-                int value = dropPollBudget();
-                polls.add("awaitDrops " + value);
-                max = Math.max(max, value);
+            for (Harness harness : HARNESSES) {
+                Matcher calls = harness.call().matcher(body);
+                while (calls.find()) {
+                    int value = harnessBudget(harness);
+                    polls.add(harness.name() + " " + value);
+                    max = Math.max(max, value);
+                }
             }
             Matcher call = CALL.matcher(body);
             while (call.find()) {

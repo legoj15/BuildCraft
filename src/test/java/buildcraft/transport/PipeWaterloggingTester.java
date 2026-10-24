@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.lib.block.BlockWaterloggingTester;
+import buildcraft.lib.test.EntityArenaUtil;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -46,6 +47,13 @@ import buildcraft.transport.tile.TilePipeHolder;
  * </ol>
  */
 public class PipeWaterloggingTester {
+
+    /** The end-to-end poll below, in two budgets that must not share a clock: {@code EntityArenaUtil.CELL_READY_TICKS}
+     *  for the arena cell's chunks to start ticking (asynchronous, so the machine's, not the water's), then
+     *  {@code FLOW_WORK_TICKS} for the spread and the control flow after that (water's own tick is due 5 ticks after
+     *  the source is placed). The poll's budget is the sum of the two, read as such by
+     *  {@code GameTestPollBudgetTester}; the manifest's {@code max_ticks} stays above it. */
+    private static final int FLOW_WORK_TICKS = 60;
 
     /** Place a wood-item pipe at the given relative position and return the tile, the same way
      *  {@code PipeDropsTester} does — TilePipeHolder.onPlacedBy attaches a real Pipe so the BE is live. */
@@ -104,27 +112,36 @@ public class PipeWaterloggingTester {
         placeWoodPipe(helper, pipePos);
         BlockWaterloggingTester.placeSource(helper, BlockWaterloggingTester.WEST_SOURCE, Blocks.WATER, Fluids.WATER);
 
+        // A fluid tick runs only in a chunk that is ticking, and buildBasin force-loaded the whole cell, so the work
+        // budget starts once the cell is ticking (not at the test's first tick, which a cell waiting on a
+        // neighbouring chunk would spend before the source ever ticked).
         boolean[] pipeRemoved = { false };
-        helper.succeedWhen(() -> {
-            if (!pipeRemoved[0]) {
-                // Gate on observed state: the source has run its spread tick, and spreading is synchronous, so
-                // the flowing water has already tried to enter the pipe's cell. Pre-fix the pipe was replaced
-                // (and deleted with no drop) right here.
-                helper.assertTrue(BlockWaterloggingTester.hasSpread(helper, BlockWaterloggingTester.WEST_SOURCE, Fluids.WATER),
-                    "the water source has not spread yet");
-                helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
-                // Flowing water is not a source, so it neither waterlogs the pipe nor passes through it.
-                helper.assertFalse(helper.getBlockState(pipePos).getValue(BlockStateProperties.WATERLOGGED),
-                    "flowing water must not waterlog the pipe (only a source can)");
-                helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(BlockWaterloggingTester.EAST_SOURCE)).isEmpty(),
-                    "the pipe must hold the flowing water back, not let it through to the far side");
-                // Control: take the pipe away. The same source must now flow into the cell — positive proof the
-                // water really was pressing on the pipe, so the survival above is not vacuous.
-                helper.setBlock(pipePos, Blocks.AIR);
-                pipeRemoved[0] = true;
-            }
-            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(pipePos)).getType().isSame(Fluids.WATER),
-                "with the pipe gone, the source must flow into its cell (control for the hold-back check)");
-        });
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FLOW_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FLOW_WORK_TICKS, () -> {
+                if (!pipeRemoved[0]) {
+                    // Gate on observed state: the source has run its spread tick, and spreading is synchronous, so
+                    // the flowing water has already tried to enter the pipe's cell. Pre-fix the pipe was replaced
+                    // (and deleted with no drop) right here.
+                    if (!BlockWaterloggingTester.hasSpread(helper, BlockWaterloggingTester.WEST_SOURCE, Fluids.WATER)) {
+                        return false;
+                    }
+                    helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), pipePos);
+                    // Flowing water is not a source, so it neither waterlogs the pipe nor passes through it.
+                    helper.assertFalse(helper.getBlockState(pipePos).getValue(BlockStateProperties.WATERLOGGED),
+                        "flowing water must not waterlog the pipe (only a source can)");
+                    helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(BlockWaterloggingTester.EAST_SOURCE)).isEmpty(),
+                        "the pipe must hold the flowing water back, not let it through to the far side");
+                    // Control: take the pipe away. The same source must now flow into the cell — positive proof the
+                    // water really was pressing on the pipe, so the survival above is not vacuous.
+                    helper.setBlock(pipePos, Blocks.AIR);
+                    pipeRemoved[0] = true;
+                    return false;
+                }
+                return helper.getLevel().getFluidState(helper.absolutePos(pipePos)).getType().isSame(Fluids.WATER);
+            }, () -> pipeRemoved[0]
+                ? "with the pipe gone, the source never flowed into its cell (control for the hold-back check)"
+                : "the water source never ran its spread tick"),
+            helper::succeed,
+            "the water source never spread, or never flowed into the cell once the pipe was gone");
     }
 }

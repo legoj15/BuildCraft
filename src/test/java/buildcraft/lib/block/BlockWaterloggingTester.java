@@ -8,6 +8,7 @@ package buildcraft.lib.block;
 
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.BooleanSupplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -94,14 +95,15 @@ public class BlockWaterloggingTester {
     public static final BlockPos SUBJECT = new BlockPos(2, 2, 1);
     public static final BlockPos EAST_SOURCE = new BlockPos(3, 2, 1);
 
-    /** The fluid polls below (lava, waterlogging), each in two budgets that must not share a clock:
-     *  {@link #CELL_READY_TICKS} for the arena cell's chunks to start ticking (asynchronous, so the machine's, not
-     *  the fluid's), then a work budget for the spread after that (lava's own tick is due 30 ticks after the sources
-     *  are placed, water's 5). A poll's budget is the sum of the two, read as such by {@code GameTestPollBudgetTester};
-     *  the manifest's {@code max_ticks} stays above it. */
-    private static final int CELL_READY_TICKS = 300;
+    /** The fluid polls below (lava, waterlogging, dense oil), each in two budgets that must not share a clock:
+     *  {@link EntityArenaUtil#CELL_READY_TICKS} for the arena cell's chunks to start ticking (asynchronous, so the
+     *  machine's, not the fluid's), then a work budget for the spread after that (lava's own tick is due 30 ticks
+     *  after the sources are placed, water's 5, a heavy oil's about 20: its viscosity over 200). A poll's budget is
+     *  the sum of the two, read as such by {@code GameTestPollBudgetTester}; the manifest's {@code max_ticks} stays
+     *  above it. */
     private static final int LAVA_WORK_TICKS = 90;
     private static final int WATERLOG_WORK_TICKS = 60;
+    private static final int DENSE_OIL_WORK_TICKS = 120;
 
     /** Whether flowing water (or an emptied water bucket) would destroy this state instead of
      *  coexisting with it. Mirrors the vanilla rule without the deprecated {@code blocksMotion()}:
@@ -222,8 +224,8 @@ public class BlockWaterloggingTester {
 
         // Gate on observed state: the cell is ticking (the work budget starts there) and both lava sources have run
         // their spread tick, so the lava has already had its one chance to flow into the marker's cell.
-        EntityArenaUtil.tickUntil(helper, CELL_READY_TICKS + LAVA_WORK_TICKS,
-            EntityArenaUtil.whenCellTicking(helper, CELL_READY_TICKS, LAVA_WORK_TICKS,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LAVA_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LAVA_WORK_TICKS,
                 () -> hasSpread(helper, WEST_SOURCE, Fluids.LAVA) && hasSpread(helper, EAST_SOURCE, Fluids.LAVA),
                 () -> unspreadSources(helper, "lava", Fluids.LAVA)),
             () -> {
@@ -266,18 +268,26 @@ public class BlockWaterloggingTester {
             .filter(e -> e.baseName().equals("oil_heavy") && e.heat() == 0).findFirst().orElseThrow();
         placeSource(helper, oilPos, heavy.block().get(), heavy.source().get());
 
-        helper.succeedWhen(() -> {
-            // Survival first, so a deleted pipe reports as such (once displaced, the oil keeps flowing and
-            // re-ticking, so the gate below would otherwise be the last failure message).
-            helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), SUBJECT);
-            helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(SUBJECT)) == tile,
-                "the waterlogged pipe's block entity must survive the oil above it");
-            helper.assertTrue(helper.getBlockState(SUBJECT).getValue(BlockStateProperties.WATERLOGGED),
-                "the pipe must stay waterlogged");
-            // Gate: the oil has run its tick (the one that used to delete the pipe) and settled on top.
-            helper.assertTrue(hasSpread(helper, oilPos, heavy.source().get()), "heavy oil has not ticked yet");
-            helper.assertBlockPresent(heavy.block().get(), oilPos);
-        });
+        // The oil's tick runs only once the cell is ticking (buildBasin force-loaded it), so the work budget starts
+        // there, not at the test's first tick.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DENSE_OIL_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DENSE_OIL_WORK_TICKS, () -> {
+                // Survival first, so a deleted pipe reports as such (once displaced, the oil keeps flowing and
+                // re-ticking, so the gate below would otherwise be the last failure message).
+                helper.assertBlockPresent(BCTransportBlocks.PIPE_HOLDER.get(), SUBJECT);
+                helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(SUBJECT)) == tile,
+                    "the waterlogged pipe's block entity must survive the oil above it");
+                helper.assertTrue(helper.getBlockState(SUBJECT).getValue(BlockStateProperties.WATERLOGGED),
+                    "the pipe must stay waterlogged");
+                // Gate: the oil has run its tick (the one that used to delete the pipe).
+                return hasSpread(helper, oilPos, heavy.source().get());
+            }, () -> "heavy oil never ran its tick"),
+            () -> {
+                // ...and settled on top.
+                helper.assertBlockPresent(heavy.block().get(), oilPos);
+                helper.succeed();
+            },
+            "heavy oil never ran its tick");
     }
 
     /** The other half of the dense-oil rule: a PLAIN water block is still displaced, so heavy oil keeps
@@ -309,11 +319,14 @@ public class BlockWaterloggingTester {
                 + "or this test cannot tell whether displaceWaterBelow works");
         placeSource(helper, oilPos, heavy.block().get(), heavy.source().get());
 
-        helper.succeedWhen(() -> {
-            helper.assertBlockPresent(heavy.block().get(), SUBJECT);
-            helper.assertTrue(helper.getLevel().getFluidState(helper.absolutePos(SUBJECT)).getType().isSame(heavy.source().get()),
-                "heavy oil must have sunk into the plain water's cell");
-        });
+        // Same two budgets as above: the oil sinks on its own tick, which waits for the cell to tick.
+        BooleanSupplier sunk = () -> helper.getBlockState(SUBJECT).is(heavy.block().get())
+            && helper.getLevel().getFluidState(subjectAbs).getType().isSame(heavy.source().get());
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DENSE_OIL_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DENSE_OIL_WORK_TICKS, sunk,
+                () -> "heavy oil never sank into the plain water's cell, which holds " + helper.getBlockState(SUBJECT)),
+            helper::succeed,
+            "heavy oil must have sunk into the plain water's cell");
     }
 
     // ---------- Draining: pumps and robots take the water, never the block ----------
@@ -591,8 +604,8 @@ public class BlockWaterloggingTester {
         placeSource(helper, WEST_SOURCE, Blocks.WATER, Fluids.WATER);
         placeSource(helper, EAST_SOURCE, Blocks.WATER, Fluids.WATER);
 
-        EntityArenaUtil.tickUntil(helper, CELL_READY_TICKS + WATERLOG_WORK_TICKS,
-            EntityArenaUtil.whenCellTicking(helper, CELL_READY_TICKS, WATERLOG_WORK_TICKS,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + WATERLOG_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, WATERLOG_WORK_TICKS,
                 () -> hasSpread(helper, WEST_SOURCE, Fluids.WATER) && hasSpread(helper, EAST_SOURCE, Fluids.WATER),
                 () -> unspreadSources(helper, "water", Fluids.WATER)),
             () -> {

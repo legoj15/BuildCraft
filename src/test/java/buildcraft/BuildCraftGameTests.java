@@ -401,6 +401,8 @@ public class BuildCraftGameTests {
         // Builder Drops (self + inventory contents)
         reg.accept("buildcraftunofficial:builder_drops_contents_and_self", () -> buildcraft.builders.BuilderDropsTester::testBuilderDropsContentsAndSelf);
         reg.accept("buildcraftunofficial:architect_drops_contents_and_self", () -> buildcraft.builders.BuilderDropsTester::testArchitectDropsContentsAndSelf);
+        // Architect refuses a scan whose snapshot could not be read back (cell cap), before it starts.
+        reg.accept("buildcraftunofficial:architect_refuses_oversized_scan", () -> buildcraft.builders.ArchitectScanRefusalTester::testOversizedBoxIsRefusedAndASmallOneStillScans);
         // Builder consumed-path NBT round-trip — gates both the client-side path-laser
         // render and the server-side chunk-reload persistence of the route.
         reg.accept("buildcraftunofficial:builder_path_survives_nbt_roundtrip", () -> buildcraft.builders.BuilderDropsTester::testBuilderPathSurvivesNbtRoundTrip);
@@ -505,7 +507,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_solid_placed_despite_adjacent_fluid", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testSolidBlockPlacedDespiteAdjacentFluid);
         reg.accept("buildcraftunofficial:fluidmode_fragile_deferred_for_fluid_above", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFragileBlockDeferredForFluidAbove);
         reg.accept("buildcraftunofficial:fluidmode_waterloggable_not_deferred", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterloggableBlockNotDeferredNearWater);
-        reg.accept("buildcraftunofficial:fluidmode_no_replace_skips_fragile_check", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeSkipsFragileCheck);
+        reg.accept("buildcraftunofficial:fluidmode_no_replace_defers_fragile", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDefersFragileButHandPlacementDoesNot);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);
@@ -545,6 +547,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_replace_settled_flowing_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledFlowingWaterDoesNotHoldBackADistantFragileBlock);
         reg.accept("buildcraftunofficial:builder_replace_fragile_in_settled_water_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceRestsWithFragileCellsInSettledWater);
         reg.accept("buildcraftunofficial:builder_no_replace_fluid_in_solid_cell_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceRestsWithFluidInASolidCell);
+        reg.accept("buildcraftunofficial:builder_no_replace_fragile_waits_for_reaching_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceFragilePlacementWaitsForWaterThatCanReachIt);
+        reg.accept("buildcraftunofficial:builder_no_replace_settled_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceSettledWaterDoesNotHoldBackADistantFragileBlock);
+        reg.accept("buildcraftunofficial:builder_no_replace_places_waterlogged_into_own_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplacePlacesWaterloggedBlockIntoItsOwnWater);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceBreaksWaterloggedBlockInAirCell);
         reg.accept("buildcraftunofficial:builder_no_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceBreaksWaterloggedBlockInAirCell);
         reg.accept("buildcraftunofficial:filler_rests_with_fluid_in_unset_cell", () -> buildcraft.builders.snapshot.FillerFluidTester::fillerRestsWithFluidInAnUnsetCell);
@@ -685,6 +690,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_idle_finds_column_pool_promptly", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsAColumnPoolPromptly);
         reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
+        // The pump never loads a chunk: not its flood fill, not a drain on a chunk border; an idle pump finds fluid once it loads
+        reg.accept("buildcraftunofficial:pump_fill_skips_unloaded_chunk", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::fillStopsAtAnUnloadedChunkWithoutLoadingIt);
+        reg.accept("buildcraftunofficial:pump_idle_finds_fluid_when_chunk_loads", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::idlePumpFindsFluidOnceTheChunkBesideItLoads);
+
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
         reg.accept("buildcraftunofficial:pump_probe_dry_spring_under_water", () -> buildcraft.factory.PumpSpringProbeTester::testDrySpringUnderWaterReportsNoOil);
@@ -747,7 +756,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:drops_filtered_buffer_skips_filter", () -> BlockDropsTester::testFilteredBufferSkipsFilterSlots);
         reg.accept("buildcraftunofficial:drops_marker_hand", () -> BlockDropsTester::testMarkerHandBreakDropsSelf);
         // Non-player removal (explosion / piston / /setblock ... destroy) spills machine contents — regression guard
-        // for the central TileBC_Neptune.dropContentsOnRemoval path (and Flood Gate's standalone copy).
+        // for the shared removal hook (AbstractBCSyncedBlockEntity) and the tiles' dropContentsOnRemoval.
         reg.accept("buildcraftunofficial:drops_chute_nonplayer", () -> BlockDropsTester::testChuteNonPlayerRemovalDropsContents);
         reg.accept("buildcraftunofficial:drops_pump_nonplayer", () -> BlockDropsTester::testPumpNonPlayerRemovalDropsFluid);
         reg.accept("buildcraftunofficial:drops_floodgate_nonplayer", () -> BlockDropsTester::testFloodGateNonPlayerRemovalDropsFluid);
@@ -756,6 +765,9 @@ public class BuildCraftGameTests {
         // The distiller's bucket / bottle slots drop with the machine, on a player break and a non-player removal.
         reg.accept("buildcraftunofficial:drops_distiller_hand", () -> BlockDropsTester::testDistillerHandBreakDropsContainerSlots);
         reg.accept("buildcraftunofficial:drops_distiller_nonplayer", () -> BlockDropsTester::testDistillerNonPlayerRemovalDropsContainerSlots);
+        // A player break of the Tank, Flood Gate, Distiller and Heat Exchanger reaches the same removal hook (no
+        // block-side drop of their own): each machine's contents arrive exactly once.
+        reg.accept("buildcraftunofficial:drops_fluid_machines_once", () -> BlockDropsTester::testFluidMachinesPlayerBreakDropsContentsOnce);
         // A replace-mode /setblock (and /fill, /clone, structure placement) wipes the old tile instead of spilling
         // it (Clearable on 1.21.1, the skip-side-effects flag on the newer nodes); destroy mode keeps spilling.
         reg.accept("buildcraftunofficial:setblock_replace_spills_nothing", () -> CommandReplaceTester::testSetblockReplaceSpillsNothing);

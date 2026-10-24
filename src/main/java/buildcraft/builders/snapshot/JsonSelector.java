@@ -34,6 +34,11 @@ public class JsonSelector {
         this.expressions = expressions;
     }
 
+    /** The block or entity id this selector names (for a log line); its NBT conditions are not part of it. */
+    String base() {
+        return base;
+    }
+
     public boolean matches(Predicate<String> basePredicate, CompoundTag nbt) {
         return basePredicate.test(base) &&
             expressions.stream()

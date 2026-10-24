@@ -28,6 +28,11 @@ public class RequiredExtractorConstant extends RequiredExtractor {
     @SerializedName("fluids")
     private List<FluidStackRef> fluidRefs = Collections.emptyList();
 
+    @Override
+    public boolean pricesEntityItself() {
+        return (itemRefs != null && !itemRefs.isEmpty()) || (fluidRefs != null && !fluidRefs.isEmpty());
+    }
+
     @Nonnull
     @Override
     public List<ItemStack> extractItemsFromBlock(@Nonnull BlockState blockState, @Nullable CompoundTag tileNbt) {

@@ -130,25 +130,21 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         super(BCFactoryBlockEntities.DISTILLER.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
-    // Sits on the synced base beside TileBC_Neptune (three bespoke tanks, no itemManager): carries its own
-    // drop hook. Spills the three tanks as fragile fluid shards plus the three bucket / bottle container
-    // slots, mirroring BlockDistiller#playerWillDestroy.
+    // --- Removal drops (every removal: player break, explosion, piston, /setblock ... destroy) ---
+    // The removal hook is AbstractBCSyncedBlockEntity's; this is just what this tile holds. Spills the three tanks
+    // as fragile fluid shards plus the three bucket / bottle container slots, then empties them, which keeps a
+    // second call from dropping them again (BlockDistiller drops nothing in playerWillDestroy: a player break
+    // reaches the hook too).
 
-    private boolean dropsHandled = false;
-
-    public void markDropsHandled() {
-        dropsHandled = true;
-    }
-
+    @Override
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
-        if (dropsHandled || level.isClientSide()) {
+        if (level.isClientSide()) {
             return;
         }
-        dropsHandled = true;
         buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos,
                 getTankIn(), getTankGasOut(), getTankLiquidOut());
         buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, containerSlots);
+        clearContent();
     }
 
     // Wipes the same set dropContentsOnRemoval spills, so a command REPLACE spills nothing: vanilla's
@@ -162,16 +158,6 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         tankLiquidOut.setFluidStack(0, FluidStack.EMPTY);
         containerSlots.clearStacks();
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // --- Accessors ---
 

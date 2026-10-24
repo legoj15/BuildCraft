@@ -92,6 +92,21 @@ public final class SnapshotIndex {
         publish();
     }
 
+    /**
+     * {@link #put} for what a lookup just read from {@code file}, unless the file is no longer there, in which case
+     * nothing is recorded. The check is made under the index's lock, which is what makes it hold: a re-key on the scan
+     * thread deletes the file it moves and only then calls {@link #remove}, so a lookup that read the file before it
+     * went either sees it missing here, or records first and has its entry removed right after. Without it the
+     * lookup's entry could land after the removal and list a key whose file is gone until the next scan.
+     *
+     * @return whether it was recorded
+     */
+    public synchronized boolean putIfPresent(File file, @Nullable Snapshot.Key key, long modified, long length) {
+        if (!file.isFile()) return false;
+        put(file.getName(), key, modified, length);
+        return true;
+    }
+
     /** Forget {@code fileName} (the game just deleted it). */
     public synchronized void remove(String fileName) {
         entries.remove(fileName);

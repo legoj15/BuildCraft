@@ -5,13 +5,16 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -33,8 +36,8 @@ import buildcraft.VanillaSetupBaseTester;
 import buildcraft.lib.misc.NBTUtilBC;
 
 /**
- * An entity in a blueprint must be one the shipped JSON rules sanction (capture whitelist or a price) and must
- * never carry loot-table keys — an unsanctioned entity would {@code build()} from its NBT verbatim while costing
+ * An entity in a blueprint must be one the JSON rules charge for (an extractor that prices the entity itself; a
+ * capture whitelist alone is not enough) and must never carry loot-table keys — an unsanctioned entity would {@code build()} from its NBT verbatim while costing
  * nothing, and a structure chest minecart's loot pair would mint loot. Unsanctioned entities DROP out of the
  * blueprint at read time rather than refusing the whole file, so a modpack removing a rule cannot brick every
  * stored blueprint that happens to contain that entity.
@@ -148,6 +151,74 @@ public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
             NBTUtilBC.getCompound(entitySchematicNbt(null), "entityNbt")));
         Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(
             NBTUtilBC.getCompound(entitySchematicNbt("not an id!"), "entityNbt")));
+    }
+
+    /**
+     * Runs {@code body} with the shipped rule for {@code entityId} holding {@code extractors} instead of its own, the
+     * shape a mod's rule file can have (a bare {@code capture} whitelist, contents extractors alone, a tank alone), and puts the
+     * shipped extractors back. The rules are the live objects {@link RulesLoader#getRules} hands out, so the gate and
+     * the Architect's predicate see the change.
+     */
+    private static void withExtractors(String entityId, UnaryOperator<List<RequiredExtractor>> extractors,
+                                       Executable body) throws Throwable {
+        CompoundTag idOnly = new CompoundTag();
+        idOnly.putString("id", entityId);
+        JsonRule rule = RulesLoader.getRules(Identifier.parse(entityId), idOnly).iterator().next();
+        Assertions.assertTrue(rule.capture, entityId + " must be a capture rule for this to mean anything");
+        List<RequiredExtractor> shipped = rule.requiredExtractors;
+        try {
+            rule.requiredExtractors = extractors.apply(shipped);
+            body.execute();
+        } finally {
+            rule.requiredExtractors = shipped;
+        }
+    }
+
+    @Test
+    public void anEntityRuleThatDoesNotPriceTheEntityItselfNeitherCapturesNorReadsItBack() throws Throwable {
+        // A capture whitelist alone, or contents extractors alone, would let the entity itself be built for free
+        // (IGNORE skips the contents, and entities have no item_from_block fallback): such a rule neither lets the
+        // Architect capture the entity nor lets a blueprint holding one read it back.
+        CompoundTag painting = NBTUtilBC.getCompound(entitySchematicNbt("minecraft:painting"), "entityNbt");
+        Identifier paintingId = Identifier.parse("minecraft:painting");
+        Assertions.assertTrue(SchematicEntityDefault.isPricedByRules(painting), "control: the shipped rule prices it");
+        Assertions.assertTrue(SchematicEntityDefault.capturableByRules(paintingId, painting), "control: and captures it");
+
+        withExtractors("minecraft:painting", shipped -> null, () -> {
+            Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(painting),
+                "a capture-only rule prices nothing, so reading the painting back would build it for free");
+            Assertions.assertFalse(SchematicEntityDefault.capturableByRules(paintingId, painting),
+                "a capture-only rule must not let the Architect capture the painting");
+            SchematicEntityDefault schematic = new SchematicEntityDefault();
+            schematic.deserializeNbt(entitySchematicNbt("minecraft:painting"));
+            Snapshot read = Snapshot.readFromNBT(blueprintHolding(schematic));
+            Assertions.assertTrue(((Blueprint) read).entities.isEmpty(),
+                "a blueprint must not read back an entity its rule never prices");
+        });
+
+        // The same for a cart whose rule keeps only the extractors that price what it holds.
+        CompoundTag cart = NBTUtilBC.getCompound(entitySchematicNbt("minecraft:chest_minecart"), "entityNbt");
+        withExtractors("minecraft:chest_minecart",
+            shipped -> shipped.stream().filter(RequiredExtractor::isContainerContents).toList(), () -> {
+                Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(cart),
+                    "contents extractors alone leave the cart itself free once contents are ignored");
+                Assertions.assertFalse(SchematicEntityDefault.capturableByRules(Identifier.parse("minecraft:chest_minecart"), cart));
+            });
+
+        // And for one that prices only through a tank: its fluid is charged even when contents are ignored, but an
+        // entity holding none costs nothing, so a tank does not price the entity itself either.
+        withExtractors("minecraft:chest_minecart",
+            shipped -> RulesLoader.parseRules(new StringReader("""
+                [{ "requiredExtractors": [{ "type": "tank", "path": ["Fluid"] }] }]
+                """)).get(0).requiredExtractors, () -> {
+                Assertions.assertFalse(SchematicEntityDefault.isPricedByRules(cart),
+                    "a tank extractor alone leaves an empty-tanked entity free");
+                Assertions.assertFalse(SchematicEntityDefault.capturableByRules(Identifier.parse("minecraft:chest_minecart"), cart));
+            });
+
+        // The shipped rules are back in place.
+        Assertions.assertTrue(SchematicEntityDefault.isPricedByRules(painting));
+        Assertions.assertTrue(SchematicEntityDefault.isPricedByRules(cart));
     }
 
     @Test
@@ -266,9 +337,10 @@ public class SchematicEntityDefaultTester extends VanillaSetupBaseTester {
     @Test
     public void everyCapturableEntityStillOwesItselfWhenContentsAreIgnored() throws InvalidInputDataException {
         // IGNORE skips only the extractors that price what an entity holds; the entity itself is priced by a
-        // constant extractor in each rule. A rule that lost its constant (or never had one: capture alone whitelists
-        // an entity but prices nothing, and entities have no item_from_block fallback) would build that entity for
-        // free in either mode, so the shipped rules must all carry one.
+        // constant extractor in each rule. A rule that lost its constant would build that entity for free in either
+        // mode (entities have no item_from_block fallback), so the shipped rules must all carry one. Such a rule is
+        // refused by the capture predicate and the read gate anyway (see the withExtractors test above); this pins
+        // the shipped data so the entity is not silently lost to that refusal.
         List<String> capturable = new ArrayList<>();
         for (Identifier id : BuiltInRegistries.ENTITY_TYPE.keySet()) {
             if (!RulesLoader.READ_DOMAINS.contains(id.getNamespace())) continue;

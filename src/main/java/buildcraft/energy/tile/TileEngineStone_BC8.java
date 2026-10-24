@@ -4,8 +4,6 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.energy.tile;
 
-import java.util.Optional;
-
 import javax.annotation.Nonnull;
 
 import net.minecraft.core.BlockPos;
@@ -21,6 +19,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=26.3 {
+import java.util.Optional;
+
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.component.CookingFuel;
@@ -51,6 +51,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.BlockDropsUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.RegistryUtilBC;
+import buildcraft.lib.misc.StackNbt;
 
 public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_POWERING_UP
@@ -393,11 +394,14 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         output.putLong("esum", esum);
         if (!fuelStack.isEmpty()) {
             // The full stack, data components included: a named or otherwise tagged fuel (and the container item its
-            // stack-sensitive crafting remainder hands back) must come out of a reload as it went in. The stack goes
-            // in at count 1 with the real count beside it: ItemStack.CODEC bounds a count to 1..99 (it never checks
-            // the item's own stack limit), so a larger stack would fail to encode and the slot would save empty.
-            output.store(FUEL_KEY, ItemStack.CODEC, fuelStack.copyWithCount(1));
-            output.putInt(FUEL_COUNT_KEY, fuelStack.getCount());
+            // stack-sensitive crafting remainder hands back) must come out of a reload as it went in. A count past
+            // what ItemStack.CODEC carries (an item whose stack limit a mod raised) rides beside the stack.
+            StackNbt.write(output, FUEL_KEY, FUEL_COUNT_KEY, fuelStack);
+            if (fuelStack.getCount() <= StackNbt.CODEC_MAX_COUNT) {
+                // The helper adds a count only past the codec's bound, but 2026.2.0 reads the fuel's count from this
+                // key alone (a save without it reloads there as one item), so a smaller stack keeps writing it.
+                output.putInt(FUEL_COUNT_KEY, fuelStack.getCount());
+            }
         }
     }
 
@@ -411,15 +415,15 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     }
 
     private static ItemStack readFuel(BCValueInput input) {
+        ItemStack stack = StackNbt.read(input, FUEL_KEY, FUEL_COUNT_KEY);
+        if (!stack.isEmpty()) {
+            return stack;
+        }
+        // Saved before the fuel went through the codec: item id and count only (components were already lost).
         int count = input.getIntOr(FUEL_COUNT_KEY, 1);
         if (count <= 0) {
             return ItemStack.EMPTY;
         }
-        Optional<ItemStack> stack = input.read(FUEL_KEY, ItemStack.CODEC);
-        if (stack.isPresent()) {
-            return stack.get().isEmpty() ? ItemStack.EMPTY : stack.get().copyWithCount(count);
-        }
-        // Saved before the fuel went through the codec: item id and count only (components were already lost).
         Identifier id = Identifier.tryParse(input.getStringOr(LEGACY_FUEL_ID_KEY, ""));
         Item item = id == null ? null : RegistryUtilBC.getValue(BuiltInRegistries.ITEM, id);
         return item == null || item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item, count);

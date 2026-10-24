@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_station_rig_lumberjack_api",
     "environment": "buildcraftunofficial:robot_station_rig",
     "structure": "minecraft:empty",
-    "max_ticks": 700,
+    "max_ticks": 1000,
     "setup_ticks": 0,
     "required": true
 }

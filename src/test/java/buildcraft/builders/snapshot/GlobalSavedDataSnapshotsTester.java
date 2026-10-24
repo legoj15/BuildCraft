@@ -33,6 +33,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Blocks;
 
+import buildcraft.api.core.InvalidInputDataException;
+import buildcraft.api.schematics.SchematicBlockFactoryRegistry;
 import buildcraft.builders.tile.TileElectronicLibrary;
 import buildcraft.lib.misc.HashUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -741,5 +743,97 @@ public class GlobalSavedDataSnapshotsTester {
         // An ignored property is looked up on the block; one the block does not have is dropped on read.
         assertLeftAsItWas(pistonData(data -> data.put("ignoredProperties",
             NBTUtilBC.writeStringList(Stream.of("bogus_prop")))));
+    }
+
+    /**
+     * A schematic whose load-time migration advances one step each time it is read, until it reaches
+     * {@link #target()}: the stand-in for a migration that is not idempotent (reading what it wrote changes it
+     * again). A re-key to the key of one load would then move the file again at every start, to a key the server
+     * does not compute either.
+     */
+    abstract static class SteppedSchematic extends SchematicBlockDefault {
+        int stage;
+
+        abstract int target();
+
+        @Override
+        public CompoundTag serializeNbt() {
+            CompoundTag nbt = super.serializeNbt();
+            nbt.putInt("stage", stage);
+            return nbt;
+        }
+
+        @Override
+        public void deserializeNbt(CompoundTag nbt) throws InvalidInputDataException {
+            super.deserializeNbt(nbt);
+            stage = Math.min(target(), NBTUtilBC.getInt(nbt, "stage", 0) + 1);
+        }
+    }
+
+    /** Settles two loads in: within the passes a re-key makes before it gives up. */
+    static final class SettlingSchematic extends SteppedSchematic {
+        @Override
+        int target() {
+            return 2;
+        }
+    }
+
+    /** Never settles. */
+    static final class DriftingSchematic extends SteppedSchematic {
+        @Override
+        int target() {
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    static {
+        // Registered for the JVM's lifetime, which the registry has no way to undo; a predicate that is never true
+        // keeps these out of every scan, and the names are theirs alone.
+        SchematicBlockFactoryRegistry.registerFactory("buildcraftunofficial:test_settling_schematic",
+            Integer.MIN_VALUE, context -> false, SettlingSchematic::new);
+        SchematicBlockFactoryRegistry.registerFactory("buildcraftunofficial:test_drifting_schematic",
+            Integer.MIN_VALUE, context -> false, DriftingSchematic::new);
+    }
+
+    private static Blueprint steppedBlueprint(SteppedSchematic schematic) {
+        Blueprint blueprint = new Blueprint();
+        blueprint.size = new BlockPos(2, 1, 1);
+        blueprint.facing = Direction.NORTH;
+        blueprint.offset = BlockPos.ZERO;
+        blueprint.data = new int[] {0, 0};
+        schematic.blockState = Blocks.STONE.defaultBlockState();
+        schematic.placeBlock = Blocks.STONE;
+        blueprint.palette.add(schematic);
+        return blueprint;
+    }
+
+    @Test
+    public void aClientFileWhoseMigrationTakesSeveralLoadsIsRekeyedToTheFormThatSettles() throws IOException {
+        Snapshot.Key stale = writeOlderFile(steppedBlueprint(new SettlingSchematic()), "stepped", nbt -> {});
+
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Snapshot.Key offered = listedKey(client);
+
+        Assertions.assertTrue(serverAgreesOn(client, offered),
+            "an upload of the offered key is not refused: the file holds the form that further loads leave alone");
+        Assertions.assertFalse(fileOf(stale).exists(), "the file under the stale key is gone");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(offered)), snapshotFileNames(),
+            "moved once, not left behind a half-migrated copy");
+    }
+
+    @Test
+    public void aClientFileWhoseMigrationNeverSettlesIsLeftUnderTheKeyItHolds() throws IOException {
+        Snapshot.Key stale = writeOlderFile(steppedBlueprint(new DriftingSchematic()), "drifting", nbt -> {});
+        byte[] before = Files.readAllBytes(fileOf(stale).toPath());
+
+        GlobalSavedDataSnapshots client = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Assertions.assertEquals(stale, listedKey(client), "listed under the key the file holds");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(stale)), snapshotFileNames(),
+            "not moved to a key the next load would change again");
+        Assertions.assertArrayEquals(before, Files.readAllBytes(fileOf(stale).toPath()), "the file is untouched");
+
+        GlobalSavedDataSnapshots restarted = new GlobalSavedDataSnapshots(dir.toFile(), true);
+        Assertions.assertEquals(stale, listedKey(restarted), "and the next start does not move it either");
+        Assertions.assertEquals(List.of(GlobalSavedDataSnapshots.fileName(stale)), snapshotFileNames());
     }
 }

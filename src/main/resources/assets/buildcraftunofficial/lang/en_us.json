@@ -189,6 +189,8 @@
     "chat.schematicSingle.neededEntry": "%s × %s",
     "chat.schematicSingle.requiresFluids": "Schematic requires fluids",
     "chat.schematicSingle.invalid": "Invalid schematic: %s",
+    "chat.architect.scanTooLarge": "This area is too big for an Architect Table to scan (%s × %s × %s blocks). It can save at most %s blocks in total, so mark out a smaller area.",
+    "chat.architect.scanTooDetailed": "This area (%s × %s × %s blocks) has too much in it for an Architect Table to save. Mark out a smaller area.",
     "item.buildcraftunofficial.gear_wood": "Wood Gear",
     "item.buildcraftunofficial.gear_stone": "Stone Gear",
     "item.buildcraftunofficial.gear_iron": "Iron Gear",

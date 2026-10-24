@@ -217,6 +217,29 @@ public class SnapshotIndexTester {
     }
 
     @Test
+    public void aLookupsRecordOfAFileThatIsGoneIsRefused() throws IOException {
+        // A lookup reads a file; the scan thread then moves it to its re-keyed name (deletes it, then removes its
+        // entry); only then does the lookup record what it read. Taken as it was, that record outlives the file and
+        // lists a key nothing holds until the next scan notices.
+        Snapshot.Key moved = key(1, "moved", 1);
+        File gone = dir.resolve(write(moved)).toFile();
+        Files.delete(gone.toPath());
+        SnapshotIndex index = new SnapshotIndex();
+
+        Assertions.assertFalse(index.putIfPresent(gone, moved, 0, 0), "the file is gone: nothing to record");
+        Assertions.assertFalse(index.contains(moved), "so no phantom entry is listed");
+        Assertions.assertTrue(index.list().isEmpty());
+
+        Snapshot.Key kept = key(2, "kept", 2);
+        Assertions.assertTrue(index.putIfPresent(dir.resolve(write(kept)).toFile(), kept, 0, 0),
+            "a file that is there is recorded as ever");
+        Assertions.assertEquals(List.of("kept@2"), names(index.list()));
+
+        File folder = Files.createDirectory(dir.resolve("folder" + EXT)).toFile();
+        Assertions.assertFalse(index.putIfPresent(folder, kept, 0, 0), "anything but a regular file is never listed");
+    }
+
+    @Test
     public void aMissingDirectoryLeavesTheListAlone() throws IOException {
         write(key(1, "a", 1));
         SnapshotIndex index = new SnapshotIndex();

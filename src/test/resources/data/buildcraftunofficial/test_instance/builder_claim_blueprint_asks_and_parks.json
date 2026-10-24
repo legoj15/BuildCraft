@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:builder_claim_blueprint_asks_and_parks",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 800,
+    "max_ticks": 1010,
     "setup_ticks": 0,
     "required": true
 }

@@ -18,6 +18,7 @@ import buildcraft.core.marker.PathSavedData;
 import buildcraft.core.marker.VolumeSavedData;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.robotics.RobotRegistry;
+import buildcraft.robotics.zone.ZoneMapSavedData;
 import buildcraft.transport.wire.SavedDataWireSystems;
 //?}
 
@@ -49,8 +50,8 @@ public class LegacySavedDataGuardTester {
         Assertions.assertTrue(offenders.isEmpty(),
                 "These files build a SavedDataType directly " + offenders + " - go through LegacySavedData.type so"
                         + " a world upgraded from 1.21.x keeps the data (see LegacySavedData).");
-        // Liveness: the five existing types, or "no offenders" is vacuous.
-        Assertions.assertTrue(builders >= 5, "the scan lost the types built through LegacySavedData.type (saw "
+        // Liveness: the existing types, or "no offenders" is vacuous.
+        Assertions.assertTrue(builders >= 6, "the scan lost the types built through LegacySavedData.type (saw "
                 + builders + ")");
     }
 
@@ -64,6 +65,7 @@ public class LegacySavedDataGuardTester {
         Assertions.assertEquals("minecraft:buildcraft_marker_path", PathSavedData.TYPE.id().toString());
         Assertions.assertEquals("minecraft:buildcraft_volume_boxes",
                 LevelSavedDataVolumeBoxes.createType(null).id().toString());
+        Assertions.assertEquals("minecraft:buildcraft_zone_maps", ZoneMapSavedData.TYPE.id().toString());
     }
     //?}
 }

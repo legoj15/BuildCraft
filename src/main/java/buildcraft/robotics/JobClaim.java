@@ -202,11 +202,36 @@ public final class JobClaim<J> {
     }
 
     /** Claims {@code job} now (owner-checked) and holds it: for an owner that picks its own job rather than taking
-     *  over a search's. False, with the latch left as it was, when the claim is refused. Without a registry nothing
-     *  can be lost to anyone, and the job is taken as held. */
+     *  over a search's. False when the claim is refused. Without a registry nothing can be lost to anyone, and the
+     *  job is taken as held.
+     *
+     *  <p>A job this latch already holds is never overwritten with its claim still out: claiming it again changes
+     *  nothing (a second take would, for a station visit, read the first as the robot's own and stop giving it
+     *  back), and claiming another job gives the held one back <em>first</em> - before the new take, since a claimer
+     *  that remembers what it took ({@link #station}) would lose the old one when the new take overwrites its
+     *  record. So a refusal has already cost the held job its claim: it is taken straight back, and the latch is
+     *  left as it was. Only if that fails too (another robot got in between) is the job left remembered, unheld,
+     *  for {@link #preempt} to resolve like any other. */
     public boolean claim(J job) {
         IRobotRegistry registry = robot.getRegistry();
-        if (registry != null && !claimer.reclaim(robot, registry, job)) {
+        if (registry == null) {
+            adopt(job, true);
+            return true;
+        }
+        J previous = this.job;
+        boolean releasedPrevious = false;
+        if (previous != null && held) {
+            if (previous.equals(job)) {
+                return true;
+            }
+            claimer.release(robot, registry, previous);
+            held = false;
+            releasedPrevious = true;
+        }
+        if (!claimer.reclaim(robot, registry, job)) {
+            if (releasedPrevious) {
+                held = claimer.reclaim(robot, registry, previous);
+            }
             return false;
         }
         adopt(job, true);

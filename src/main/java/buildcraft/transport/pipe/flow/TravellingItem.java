@@ -14,12 +14,12 @@ import javax.annotation.Nonnull;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.misc.VecUtil;
 
@@ -57,11 +57,9 @@ public class TravellingItem {
         clientItemLink = () -> ItemStack.EMPTY;
         // Full-fidelity ItemStack round-trip via codec — preserves components (enchantments, custom
         // name, damage, …). The previous id+count helper silently dropped every component, so an
-        // enchanted item in transit came back vanilla after a chunk save/reload.
-        Tag stackTag = nbt.get("stack");
-        stack = stackTag == null
-            ? StackUtil.EMPTY
-            : ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), stackTag).result().orElse(StackUtil.EMPTY);
+        // enchanted item in transit came back vanilla after a chunk save/reload. A count past the
+        // codec's bound (a mod-raised stack limit) rides beside the stack.
+        stack = StackNbt.read(nbt, "stack", "count");
         int c = NBTUtilBC.getByte(nbt, "colour", (byte) 0);
         this.colour = c == 0 ? null : DyeColor.byId(c - 1);
         this.toCenter = NBTUtilBC.getBoolean(nbt, "toCenter", false);
@@ -83,11 +81,8 @@ public class TravellingItem {
 
     public CompoundTag writeToNbt(long tickNow) {
         CompoundTag nbt = new CompoundTag();
-        // Codec write preserves all components (see ctor). Guard empty — ItemStack.CODEC rejects it.
-        if (!stack.isEmpty()) {
-            ItemStack.CODEC.encodeStart(NBTUtilBC.registryAwareOps(), stack)
-                .result().ifPresent(t -> nbt.put("stack", t));
-        }
+        // Codec write preserves all components (see ctor).
+        StackNbt.write(nbt, "stack", "count", stack);
         nbt.putByte("colour", (byte) (colour == null ? 0 : colour.getId() + 1));
         nbt.putBoolean("toCenter", toCenter);
         nbt.putDouble("speed", speed);

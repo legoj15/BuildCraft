@@ -261,6 +261,13 @@ public final class EntityArenaUtil {
         forceLoadEntityArena(gth, new BlockPos(CELL_SIZE_X - 1, 0, CELL_SIZE_Z - 1));
     }
 
+    /** How many ticks a cell-gated poll waits for its arena cell to start ticking before it fails the test as the
+     *  machine's load (the {@code readyTicks} of {@link #whenCellTicking}): the first half of such a poll's budget,
+     *  {@code EntityArenaUtil.CELL_READY_TICKS + <the test's own work budget>}. One shared value, because the wait is
+     *  the chunk promotion's, never the test's. Write it qualified in a budget sum: {@code GameTestPollBudgetTester}
+     *  reads it from this file by that spelling (a static import is not read), as a literal. */
+    public static final int CELL_READY_TICKS = 300;
+
     /** A {@link #tickUntil} condition that starts the clock only once the cell is entity-ticking
      *  ({@link #isCellEntityTicking}): it answers {@code false} until then, never asking {@code condition}, and then
      *  gives {@code condition} {@code workTicks} polls to come true. Pass {@code readyTicks + workTicks} as the

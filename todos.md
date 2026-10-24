@@ -1,4 +1,4 @@
-Last audited: 2026-10-23
+Last audited: 2026-10-24
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
@@ -7,11 +7,7 @@ Last audited: 2026-10-23
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
-- Aborted pipe inserts can mint fluid — [notes](docs/todo-details.md#fluid-mint-on-aborted-pipe-insert)
-- Written Zone Planner maps each carry the full map data — [notes](docs/todo-details.md#zone-planner-map-clone-bloat)
-- Guard test for the data creative middle-click clones strip — [notes](docs/todo-details.md#snapshot-security-follow-ups)
-- The Architect can save scans too large for the library to read back — [notes](docs/todo-details.md#architect-scan-size-cap)
-- Blueprint follow-ups: decorated pot sherds, rule cache keys, modded inventories, free modded entities, wet blocks in keep-fluid mode — [notes](docs/todo-details.md#blueprint-follow-ups)
+- The Zone Planner map store never frees zones from discarded maps — [notes](docs/todo-details.md#zone-map-store-reclaim)
 
 ## 🆕 New Features (version 2026.3)
 

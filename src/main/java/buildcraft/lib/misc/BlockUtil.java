@@ -18,6 +18,7 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -28,6 +29,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BucketPickup;
@@ -70,6 +72,29 @@ public class BlockUtil {
     /** Whether {@code state} is a miner's tube; see {@link #MINER_TUBES}. */
     public static boolean isMinerTube(BlockState state) {
         return state.is(MINER_TUBES);
+    }
+
+    /**
+     * Whether the chunk holding {@code pos} is actually in memory, a check that never loads it: a block read there
+     * ({@code getBlockState}, {@code getFluidState}, {@code getBlockEntity}) is then answered from the loaded chunk, not
+     * by a synchronous load-or-generate on the server thread. A machine that reads cells it was not told about (a
+     * flood fill, a probe along a line) asks first and treats an absent chunk as out of reach.
+     *
+     * <p>Presence, not {@code Level.hasChunkAt}/{@code isLoaded}: on a live {@code ServerLevel} those only test that
+     * the chunk's ticket level <em>could</em> reach {@code FULL}, which holds for a chunk that is queued but not yet
+     * loaded (the same trap {@code OilGenStructure.isChunkLoaded} documents), so the next read would load it anyway.
+     * {@code getChunkNow} returns the chunk only when it is genuinely there, and never schedules a load; it answers
+     * null off the server thread, which reads as absent.
+     */
+    public static boolean isChunkPresent(LevelAccessor level, BlockPos pos) {
+        return isChunkPresent(level, pos.getX(), pos.getZ());
+    }
+
+    /** {@link #isChunkPresent(LevelAccessor, BlockPos)} for a column given by its <em>block</em> coordinates (not
+     *  chunk coordinates). */
+    public static boolean isChunkPresent(LevelAccessor level, int blockX, int blockZ) {
+        return level.getChunkSource().getChunkNow(SectionPos.blockToSectionCoord(blockX),
+                SectionPos.blockToSectionCoord(blockZ)) != null;
     }
 
     // --- Version-neutral useItemOn result values ---

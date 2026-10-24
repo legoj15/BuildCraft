@@ -93,7 +93,7 @@ public abstract class OilGenStructure {
         if (level instanceof WorldGenRegion region) {
             return region.hasChunk(blockX >> 4, blockZ >> 4);
         }
-        return level.getChunkSource().getChunkNow(blockX >> 4, blockZ >> 4) != null;
+        return BlockUtil.isChunkPresent(level, blockX, blockZ);
     }
 
     public void setOilIfCanReplace(LevelAccessor level, BlockPos pos) {

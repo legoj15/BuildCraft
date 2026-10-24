@@ -6,7 +6,9 @@
 package buildcraft.robotics;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -29,15 +31,17 @@ public class JobClaimTest extends VanillaSetupBaseTester {
 
     private static final BlockPos BLOCK = new BlockPos(3, 64, 3);
 
-    /** Records every reclaim/release and answers reclaims with {@link #free}. */
+    /** Records every reclaim/release and answers reclaims with {@link #free}, except for the jobs in
+     *  {@link #refused}. */
     private static final class RecordingClaimer implements JobClaim.Claimer<String> {
         final List<String> calls = new ArrayList<>();
         boolean free = true;
+        final Set<String> refused = new HashSet<>();
 
         @Override
         public boolean reclaim(IRobotAccess robot, IRobotRegistry registry, String job) {
             calls.add("reclaim " + job);
-            return free;
+            return free && !refused.contains(job);
         }
 
         @Override
@@ -180,6 +184,76 @@ public class JobClaimTest extends VanillaSetupBaseTester {
 
         claim.release();
         Assertions.assertEquals(2, claimer.calls.size(), "an empty claim has nothing to release");
+    }
+
+    @Test
+    public void claimingAnotherJobGivesTheHeldOneBackBeforeTakingTheNew() {
+        MockRobotAccess robot = new MockRobotAccess();
+        RecordingClaimer claimer = new RecordingClaimer();
+        JobClaim<String> claim = new JobClaim<>(robot, OnReload.RECLAIM, claimer);
+
+        Assertions.assertTrue(claim.claim("first"));
+        Assertions.assertTrue(claim.claim("second"));
+
+        Assertions.assertEquals(List.of("reclaim first", "release first", "reclaim second"), claimer.calls,
+                "the held job goes back first: a claimer that remembers what it took (a station visit) would "
+                        + "otherwise lose the old one when the new take overwrites its record");
+        Assertions.assertEquals("second", claim.job());
+        Assertions.assertTrue(claim.isHolding());
+    }
+
+    @Test
+    public void aRefusedClaimLeavesThePreviousJobHeld() {
+        MockRobotAccess robot = new MockRobotAccess();
+        RecordingClaimer claimer = new RecordingClaimer();
+        JobClaim<String> claim = new JobClaim<>(robot, OnReload.RECLAIM, claimer);
+        Assertions.assertTrue(claim.claim("first"));
+        claimer.refused.add("second");
+
+        Assertions.assertFalse(claim.claim("second"), "another robot holds the new job");
+
+        Assertions.assertEquals("first", claim.job(), "the latch is left on the job it had");
+        Assertions.assertTrue(claim.isHolding(), "...and the robot holds it again, not stranded unheld");
+        Assertions.assertEquals(List.of("reclaim first", "release first", "reclaim second", "reclaim first"),
+                claimer.calls, "the previous job was given back for the attempt, so it is taken back after it");
+    }
+
+    @Test
+    public void aRefusedClaimThatCannotTakeThePreviousJobBackLeavesItRememberedWithNothingToGiveBack() {
+        MockRobotAccess robot = new MockRobotAccess();
+        RecordingClaimer claimer = new RecordingClaimer();
+        JobClaim<String> claim = new JobClaim<>(robot, OnReload.RECLAIM, claimer);
+        Assertions.assertTrue(claim.claim("first"));
+        claimer.free = false;
+
+        Assertions.assertFalse(claim.claim("second"));
+
+        Assertions.assertEquals("first", claim.job(), "the job is still remembered...");
+        Assertions.assertFalse(claim.isHolding(), "...but not claimed: preempt decides whether it is still ours");
+
+        claimer.free = true;
+        claimer.calls.clear();
+        Assertions.assertTrue(claim.claim("third"));
+
+        Assertions.assertEquals(List.of("reclaim third"), claimer.calls,
+                "a remembered job holds no claim to give back: only a held one is released before the next take");
+        Assertions.assertEquals("third", claim.job());
+        Assertions.assertTrue(claim.isHolding());
+    }
+
+    @Test
+    public void claimingTheJobAlreadyHeldChangesNothing() {
+        MockRobotAccess robot = new MockRobotAccess();
+        RecordingClaimer claimer = new RecordingClaimer();
+        JobClaim<String> claim = new JobClaim<>(robot, OnReload.RECLAIM, claimer);
+        Assertions.assertTrue(claim.claim("job"));
+
+        Assertions.assertTrue(claim.claim("job"));
+
+        Assertions.assertEquals(List.of("reclaim job"), claimer.calls,
+                "a second take of the same job would, for a station visit, read the first as the robot's own "
+                        + "and stop giving it back");
+        Assertions.assertTrue(claim.isHolding());
     }
 
     @Test

@@ -688,6 +688,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_idle_finds_column_pool_promptly", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsAColumnPoolPromptly);
         reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
+        // The pump never loads a chunk: not its flood fill, not a drain on a chunk border; an idle pump finds fluid once it loads
+        reg.accept("buildcraftunofficial:pump_fill_skips_unloaded_chunk", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::fillStopsAtAnUnloadedChunkWithoutLoadingIt);
+        reg.accept("buildcraftunofficial:pump_idle_finds_fluid_when_chunk_loads", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::idlePumpFindsFluidOnceTheChunkBesideItLoads);
+
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
         reg.accept("buildcraftunofficial:pump_probe_dry_spring_under_water", () -> buildcraft.factory.PumpSpringProbeTester::testDrySpringUnderWaterReportsNoOil);

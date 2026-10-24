@@ -12,9 +12,12 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -176,6 +179,10 @@ public class BCRobotics {
         // bound — not yet true at this constructor-time init. The API handle is safe to wire now.
         BuildcraftRecipeRegistry.programmingTable = ProgrammingRecipeRegistry.INSTANCE;
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> BCRoboticsRecipes.ensureInitialized());
+        NeoForge.EVENT_BUS.addListener(ExplosionEvent.Detonate.class, RobotProtection::onExplosionDetonate);
+        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, RobotProtection::onEntityJoin);
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> RobotProtection.clearChained());
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> RobotProtection.clearChained());
 
         LOGGER.info("BuildCraft Robotics initialized");
     }

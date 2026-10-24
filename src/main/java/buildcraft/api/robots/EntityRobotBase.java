@@ -154,8 +154,9 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
      *
      *  <p>Two deliberate non-ports: the base is 1.0, not 7.1.x's 2.0 — modern item components already
      *  carry the weapon's full damage as the attribute modifier, and 7.1.x's 2.0 would sit on top of it;
-     *  and the enchantment pass / looting (7.1.x {@code func_151385_b}/{@code func_151384_a}) is dropped —
-     *  the robot's loot is the target's own.
+     *  and the enchantment pass (7.1.x {@code func_151385_b}/{@code func_151384_a}) is dropped. Looting is not
+     *  this method's: a kill's loot reads it off the causing player's hand, which the protection seam fills with
+     *  the weapon ({@code RobotProtection.attack}).
      *
      *  <p>The hurt call is the only version directive in this file: {@code hurtOrSimulate} replaced
      *  {@code hurt} at 1.21.10. */

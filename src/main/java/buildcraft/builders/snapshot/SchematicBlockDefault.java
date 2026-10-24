@@ -189,15 +189,26 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // No level: the steps below read only the state and the block, and the one that reads the world is skipped.
         SchematicBlockContext context = new SchematicBlockContext(null, BlockPos.ZERO, BlockPos.ZERO, state,
             state.getBlock());
-        Set<JsonRule> rules = RulesLoader.getRules(state, null);
-        schematic.setRequiredBlockOffsets(context, rules);
-        schematic.setBlockState(context, rules);
-        schematic.setIgnoredProperties(context, rules);
-        schematic.setPlaceBlock(context, rules);
-        schematic.setUpdateBlockOffsets(context, rules);
-        schematic.setCanBeReplacedWithBlocks(context, rules);
+        schematic.captureState(context, RulesLoader.getRules(state, null));
         schematic.readWithDefaults = !readFully;
         return schematic;
+    }
+
+    /**
+     * Every capture step that reads only the state and the block, in the one order they must run, shared by a scan
+     * ({@link #init}) and {@link #ofBareState} so the two cannot capture different schematics for one state. The
+     * place block is set before the ignored properties because the class-based ones ({@link StairBlock}'s
+     * {@code shape}) are chosen from the place block: run the other way round, a capture saved a stair with
+     * {@code shape} still compared, while the same schematic read back ({@link #deserializeNbt}, which has the place
+     * block first) ignored it, so the snapshot key changed with one store round-trip.
+     */
+    private void captureState(SchematicBlockContext context, Set<JsonRule> rules) {
+        setRequiredBlockOffsets(context, rules);
+        setBlockState(context, rules);
+        setPlaceBlock(context, rules);
+        setIgnoredProperties(context, rules);
+        setUpdateBlockOffsets(context, rules);
+        setCanBeReplacedWithBlocks(context, rules);
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
@@ -423,13 +434,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
             ? be.saveWithoutMetadata(context.world.registryAccess())
             : null;
         Set<JsonRule> rules = RulesLoader.getRules(context.blockState, beNbt);
-        setRequiredBlockOffsets(context, rules);
-        setBlockState(context, rules);
-        setIgnoredProperties(context, rules);
+        captureState(context, rules);
         setTileNbt(context, rules);
-        setPlaceBlock(context, rules);
-        setUpdateBlockOffsets(context, rules);
-        setCanBeReplacedWithBlocks(context, rules);
     }
 
     @Nonnull

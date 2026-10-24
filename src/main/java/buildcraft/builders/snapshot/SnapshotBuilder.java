@@ -1166,7 +1166,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         NBTUtilBC.readCompoundList(nbt.get("breakTasks")).map(BreakTask::new).forEach(breakTasks::add);
         placeTasks.clear();
         NBTUtilBC.readCompoundList(nbt.get("placeTasks")).map(PlaceTask::new).forEach(placeTasks::add);
-        currentCheckIndex = NBTUtilBC.getInt(nbt, "currentCheckIndex", 0);
+        // checkOrder was just rebuilt from the live snapshot, so a saved index from a different (or edited) one can lie
+        // past its end, and tick() would index out of bounds on every call.
+        int loadedCheckIndex = NBTUtilBC.getInt(nbt, "currentCheckIndex", 0);
+        currentCheckIndex = checkOrder != null && loadedCheckIndex >= 0 && loadedCheckIndex < checkOrder.length
+            ? loadedCheckIndex
+            : 0;
     }
 
     /**

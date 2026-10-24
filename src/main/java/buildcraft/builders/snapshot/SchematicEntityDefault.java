@@ -173,6 +173,10 @@ public class SchematicEntityDefault implements ISchematicEntity {
             newEntityNbt.putByte("Facing", (byte) hangingFacing.get2DDataValue());
             rotate = false;
         }
+        // 1.12.2's replaceNbt: the matching rules' overrides, merged over the data about to be loaded. Matched on the
+        // captured NBT, as the selectors saw it at scan time.
+        newEntityNbt = JsonRule.applyReplaceNbt(newEntityNbt,
+            RulesLoader.getRules(Identifier.parse(NBTUtilBC.getString(entityNbt, "id", "")), entityNbt));
         // Load entity from NBT via EntityType.create. Vanilla's Entity.load rethrows any loader failure as a
         // ReportedException rather than skipping the entity, so malformed NBT (an upload, a mod's fragile loader)
         // would crash the server tick, and again on every restart while the Builder retries the spawn.

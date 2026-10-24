@@ -3,15 +3,86 @@
         "selectors": [
             "buildcraftunofficial:quarry",
             "buildcraftunofficial:filler",
+            "buildcraftunofficial:builder"
+        ],
+        "replaceNbt": {
+            "battery_mj": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:quarry"
+        ],
+        "replaceNbt": {
+            "task_power": null
+        }
+    },
+    {
+        "selectors": [
             "buildcraftunofficial:chute",
             "buildcraftunofficial:distiller",
             "buildcraftunofficial:pump",
             "buildcraftunofficial:mining_well",
+            "buildcraftunofficial:mj_dynamo"
+        ],
+        "replaceNbt": {
+            "mjStored": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:autoworkbench_item"
+        ],
+        "replaceNbt": {
+            "mjStored": null,
+            "powerStored": null
+        }
+    },
+    {
+        "selectors": [
             "buildcraftunofficial:laser"
         ],
         "replaceNbt": {
             "battery": {
-                "stored": 0
+                "stored": null
+            }
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:engine_stone",
+            "buildcraftunofficial:engine_iron",
+            "buildcraftunofficial:engine_rf",
+            "buildcraftunofficial:mj_dynamo",
+            "buildcraftunofficial:assembly_table",
+            "buildcraftunofficial:advanced_crafting_table",
+            "buildcraftunofficial:integration_table",
+            "buildcraftunofficial:programming_table"
+        ],
+        "replaceNbt": {
+            "power": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:engine_rf",
+            "buildcraftunofficial:mj_dynamo"
+        ],
+        "replaceNbt": {
+            "currentFe": null
+        }
+    },
+    {
+        "selectors": [
+            "buildcraftunofficial:pipe_holder"
+        ],
+        "replaceNbt": {
+            "pipe": {
+                "beh": {
+                    "battery": {
+                        "stored": null
+                    }
+                }
             }
         }
     }

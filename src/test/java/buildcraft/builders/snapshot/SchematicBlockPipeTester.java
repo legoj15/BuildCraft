@@ -15,6 +15,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -179,6 +180,63 @@ public class SchematicBlockPipeTester {
         // getRotated returns a copy — the original schematic's NBT must be untouched.
         helper.assertFalse(NBTUtilBC.getCompound(plugsOf(schematic), "north").isEmpty(),
                 "getRotated must not mutate the original schematic (its pluggable should still be on NORTH)");
+        helper.succeed();
+    }
+
+    /**
+     * A pluggable the blueprint cannot price is left off the pipe the Builder places, not placed for free. A
+     * captured pipe with a blocker on UP is given, in its stored NBT, a gate that cannot be rebuilt on NORTH and one
+     * from an add-on that is gone on SOUTH; built into an empty cell it must come out as a working pipe with the
+     * blocker and nothing else. Before the fix the unrebuildable gate made the whole pipe fail to load, which wiped the
+     * pipe and the blocker with it.
+     */
+    public static void pipeSchematicLeavesUnpriceablePluggablesOff(GameTestHelper helper) {
+        BlockPos relPos = new BlockPos(1, 2, 1);
+        helper.setBlock(relPos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder source = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder source = helper.getBlockEntity(relPos);*/
+        //?}
+        source.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        source.replacePluggable(Direction.UP, new PluggableBlocker(BCTransportPlugs.blocker, source, Direction.UP));
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(relPos);
+        BlockState state = level.getBlockState(abs);
+        ISchematicBlock captured = SchematicBlockManager.getSchematicBlock(
+                new SchematicBlockContext(level, BlockPos.ZERO, abs, state, state.getBlock()));
+        helper.assertTrue(captured instanceof SchematicBlockPipe,
+                "Pipe holder should route to SchematicBlockPipe, got " + captured.getClass().getSimpleName());
+        SchematicBlockPipe schematic = (SchematicBlockPipe) captured;
+        CompoundTag plugs = NBTUtilBC.getCompound(schematic.tileNbt, "plugs").copy();
+        plugs.put(Direction.NORTH.getName(), SchematicBlockPipePluggablePricingTester.unrebuildableGateEntry());
+        plugs.put(Direction.SOUTH.getName(), SchematicBlockPipePluggablePricingTester.unknownPluggableEntry());
+        schematic.tileNbt.put("plugs", plugs);
+
+        List<ItemStack> required = schematic.computeRequiredItems();
+        helper.assertTrue(required.size() == 2 && required.get(0).is(BCTransportItems.PIPE_COBBLE_ITEM.get())
+                        && required.get(1).is(BCTransportItems.PLUG_BLOCKER.get()),
+                "Only the pipe and the blocker are charged for, got " + itemNames(required));
+
+        helper.setBlock(relPos, Blocks.AIR);
+        helper.assertTrue(schematic.build(level, abs), "The pipe schematic should build into the emptied cell");
+        //? if >=1.21.10 {
+        TilePipeHolder built = helper.getBlockEntity(relPos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder built = helper.getBlockEntity(relPos);*/
+        //?}
+        helper.assertTrue(built.getPipe() != null,
+                "The pipe must survive an unpriceable pluggable (it used to be wiped with it)");
+        helper.assertTrue(built.getPluggable(Direction.UP) instanceof PluggableBlocker,
+                "The priced blocker on UP must still be placed");
+        helper.assertTrue(built.getPluggable(Direction.NORTH) == null,
+                "The unrebuildable gate on NORTH must not be placed");
+        helper.assertTrue(built.getPluggable(Direction.SOUTH) == null,
+                "The unknown pluggable on SOUTH must not be placed");
+        // The blueprint itself still carries them: only the placed copy is trimmed.
+        helper.assertFalse(NBTUtilBC.getCompound(plugsOf(schematic), "north").isEmpty(),
+                "Building must not edit the stored schematic");
         helper.succeed();
     }
 

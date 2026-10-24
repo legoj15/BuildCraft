@@ -16,8 +16,8 @@ public interface IStripesActivator {
     void dropItem(@Nonnull ItemStack itemStack, Direction from);
 
     /** Asked by a handler just before it uses {@code itemStack} with no block target (a use in the air), where the
-     *  item's own aim from {@code player} decides what it touches. False withholds the use, and the handler then
-     *  reports it as not handled; the activator keeps its own account of why. The default allows it: a stripes pipe
+     *  item's own aim from {@code player} decides what it touches. False withholds the use: the handler reports it as not
+     *  handled and counts it a refused click, which ends the dispatch; the activator keeps its own account of why. The default allows it: a stripes pipe
      *  uses items as the one player whose own events already judge the use. */
     default boolean mayUseInAir(@Nonnull Player player, @Nonnull ItemStack itemStack) {
         return true;

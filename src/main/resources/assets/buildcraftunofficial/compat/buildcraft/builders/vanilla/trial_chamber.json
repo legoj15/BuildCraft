@@ -1,0 +1,6 @@
+[
+    {
+        "selectors": ["minecraft:trial_spawner", "minecraft:vault"],
+        "ignoredProperties": ["trial_spawner_state", "vault_state", "ominous"]
+    }
+]

@@ -139,7 +139,6 @@ Found by the 2026-10-24 robot-deployer review; both predate it. `BoardRobotBombe
 
 From the 2026-10-24 blueprint-pricing reviews, none a free-item hole:
 - Decorated pot sherds are stripped from every blueprint (`SchematicBlockDefault.sanitizeTileNbt`): a pot drops its sherds when broken and no extractor prices a list of item ids, so a scanned pot is rebuilt plain. Price them with a new extractor if the fidelity matters.
-- Unverified: a rebuilt trial spawner or vault changes its state property as it ticks; if `isBuilt` compares that property, a Builder could break and replace it in a loop. Add the property to the ignored ones if so.
-- `RulesLoader.BLOCK_RULES_CACHE` is keyed by live `CompoundTag`s that callers later mutate (`stripContainerContentsFromNbt` strips the copy it just looked up), leaving stale entries with changed hashes until they expire.
+- `RulesLoader.BLOCK_RULES_CACHE` is keyed by live `CompoundTag`s, so any caller that mutates a tag it looked up leaves a stale entry with a changed hash until it expires. The one that did (the container-contents strip) now looks up by the canonical tag; copy the key on insert to make the next one safe.
 - The deny-by-default clear reaches only `Clearable` block entities. Every vanilla item holder is `Clearable`, and other mods' blocks are captured only when the mod ships BuildCraft builder rules (`RulesLoader.READ_DOMAINS`), so such a mod must price or clear its own non-`Clearable` inventories.
 - `GuiReplacer.schematicReadable` is unused.

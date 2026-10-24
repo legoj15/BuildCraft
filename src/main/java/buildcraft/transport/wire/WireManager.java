@@ -25,8 +25,6 @@ import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.lib.misc.NBTUtilBC;
-import buildcraft.lib.net.NetEnumUtil;
-import buildcraft.lib.net.PacketBufferBC;
 
 public class WireManager implements IWireManager {
     private final IPipeHolder holder;
@@ -230,24 +228,5 @@ public class WireManager implements IWireManager {
             }
             parts.put(EnumWirePart.VALUES[partIndex], colour);
         }
-    }
-
-    public void writePayload(PacketBufferBC buffer) {
-        buffer.writeInt(parts.size());
-        for (Entry<EnumWirePart, DyeColor> entry : parts.entrySet()) {
-            NetEnumUtil.write(buffer, entry.getKey());
-            NetEnumUtil.write(buffer, entry.getValue());
-        }
-    }
-
-    public void readPayload(PacketBufferBC buffer) {
-        parts.clear();
-        int count = buffer.readInt();
-        for (int i = 0; i < count; i++) {
-            EnumWirePart part = NetEnumUtil.read(buffer, EnumWirePart.class);
-            DyeColor colour = NetEnumUtil.read(buffer, DyeColor.class);
-            parts.put(part, colour);
-        }
-        updateBetweens(false);
     }
 }

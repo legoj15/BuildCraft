@@ -577,6 +577,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:container_contents_unpriced_builds_empty", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testUnpricedCampfireBuildsEmpty);
         // A BuildCraft machine's rule names the keys its tile really saves: a tank's, an engine's, a distiller's contents are charged.
         reg.accept("buildcraftunofficial:container_contents_bc_machines_priced", () -> buildcraft.builders.snapshot.ContainerContentsScanTester::testBuildCraftMachineContentsArePriced);
+        // Blueprint replaceNbt wiring: a charged quarry/laser, scanned and rebuilt through each real build path, starts with no stored energy.
+        reg.accept("buildcraftunofficial:blueprint_build_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildDropsStoredEnergy);
+        reg.accept("buildcraftunofficial:blueprint_build_without_checks_drops_stored_energy", () -> buildcraft.builders.snapshot.BlueprintRebuildEnergyTester::testBuildWithoutChecksDropsStoredEnergy);
         // Pipe required-item resolution: each captured pipe schematic must resolve its own pipe
         // item (type lives in BE NBT, not the shared holder block) — distinct types stay distinct.
         reg.accept("buildcraftunofficial:pipe_schematic_resolves_per_type_item", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicResolvesPerTypeItem);
@@ -586,6 +589,9 @@ public class BuildCraftGameTests {
         // Pluggables must rotate with the blueprint: a plug on NORTH moves to EAST under a 90° CW
         // rotation, otherwise facades stay on captured faces after a rotated build and block flow.
         reg.accept("buildcraftunofficial:pipe_schematic_rotates_pluggable_faces", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicRotatesPluggableFaces);
+        // A pluggable the blueprint cannot price (unrebuildable, or from a removed add-on) is left off the placed pipe
+        // instead of being restored for free; the pipe and its priced pluggables still build.
+        reg.accept("buildcraftunofficial:pipe_schematic_leaves_unpriceable_pluggables_off", () -> buildcraft.builders.snapshot.SchematicBlockPipeTester::pipeSchematicLeavesUnpriceablePluggablesOff);
 
         // Heat Exchanger fluid filtering (heatant on START, coolant on END; output drain-only).
         // The 1.21.1 branches stand on the version-neutral BCFluidTank / tile-tank surface —
@@ -920,6 +926,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_steady_state_leaves_flag_false", () -> buildcraft.transport.WireSystemTester::testSteadyStateLeavesGatesChangedFalse);
         reg.accept("buildcraftunofficial:wire_gate_emit_propagates_and_resets", () -> buildcraft.transport.WireSystemTester::testGateEmitPropagatesAndFlagResets);
         reg.accept("buildcraftunofficial:wire_resolve_actions_clearing_marks_dirty", () -> buildcraft.transport.WireSystemTester::testGateResolveActionsClearingMarksGatesChanged);
+
+        // Wire visibility - system state reaches only players whose chunk tracking view holds a chunk of the
+        // system, and a delivered wire chunk queues that player for a full resend (none for terrain-only chunks).
+        reg.accept("buildcraftunofficial:wire_visible_only_to_players_whose_view_holds_system", () -> buildcraft.transport.WireSystemTester::testWireVisibleOnlyToPlayersWhoseViewHoldsTheSystem);
+        reg.accept("buildcraftunofficial:wire_system_spanning_two_chunks_seen_from_either", () -> buildcraft.transport.WireSystemTester::testWireSystemSpanningTwoChunksIsSeenFromEither);
+        reg.accept("buildcraftunofficial:wire_chunk_delivery_queues_only_wire_chunks", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires);
+        reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
         // (isOn/triggerOn/actionOn) is recomputed every tick and never resurrected by an

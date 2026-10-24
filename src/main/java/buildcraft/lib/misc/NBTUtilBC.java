@@ -5,6 +5,8 @@
  */
 package buildcraft.lib.misc;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -82,6 +84,67 @@ public class NBTUtilBC {
             return Optional.empty();
         }
         return Optional.of(tag);
+    }
+
+    /**
+     * Merges {@code source} over {@code destination}, as 1.12.2's blueprint rule directive {@code replaceNbt} did.
+     * Compounds merge recursively over the union of their keys; a {@code source} key whose value is
+     * {@link #NBT_NULL} (JSON {@code null} in a rule file) removes that key; any other {@code source} value replaces
+     * the destination's wholesale (lists and scalars, and a compound over a non-compound).
+     * <p>
+     * Neither argument is mutated and the result shares no tag with either, so a rule's tag (shared by every
+     * schematic it matches) can be merged into freshly loaded data that is then edited. Unlike 1.12.2, a
+     * {@link #NBT_NULL} inside a compound that has nothing to merge into is dropped too, rather than copied over as a
+     * stray end tag that the loader would choke on; and a compound holding nothing but removals, for a key the
+     * destination lacks, adds no empty compound in its place.
+     *
+     * @return null if {@code source} is null; {@link #NBT_NULL} if it is {@link #NBT_NULL} itself; the merged compound
+     *         if it is a compound; else a copy of {@code source}. */
+    @Nullable
+    public static Tag merge(@Nullable Tag destination, @Nullable Tag source) {
+        if (source == null) {
+            return null;
+        }
+        if (source == NBT_NULL) {
+            return NBT_NULL;
+        }
+        if (!(source instanceof CompoundTag sourceCompound)) {
+            return source.copy();
+        }
+        CompoundTag destinationCompound = destination instanceof CompoundTag compound ? compound : null;
+        CompoundTag result = new CompoundTag();
+        if (destinationCompound != null) {
+            for (String key : keysOf(destinationCompound)) {
+                if (!sourceCompound.contains(key)) {
+                    result.put(key, destinationCompound.get(key).copy());
+                }
+            }
+        }
+        for (String key : keysOf(sourceCompound)) {
+            Tag value = sourceCompound.get(key);
+            if (value == NBT_NULL) {
+                continue;
+            }
+            Tag existing = destinationCompound == null ? null : destinationCompound.get(key);
+            Tag merged = merge(existing, value);
+            // A compound of nothing but removals, aimed at a key the destination does not have, removes nothing and
+            // must not leave an empty compound behind (a rule for one kind of pipe is aimed at every pipe).
+            if (existing == null && merged instanceof CompoundTag mergedCompound && mergedCompound.isEmpty()
+                && !((CompoundTag) value).isEmpty()) {
+                continue;
+            }
+            result.put(key, merged);
+        }
+        return result;
+    }
+
+    /** A snapshot of {@code tag}'s keys, safe to iterate while editing the tag. */
+    private static List<String> keysOf(CompoundTag tag) {
+        //? if >=1.21.10 {
+        return new ArrayList<>(tag.keySet());
+        //?} else {
+        /*return new ArrayList<>(tag.getAllKeys());*/
+        //?}
     }
 
     // Item NBT data (replaces 1.12.2 stack.getTagCompound() pattern)

@@ -6,10 +6,13 @@
 
 package buildcraft.builders.snapshot;
 
+import java.util.Collection;
 import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+
+import buildcraft.lib.misc.NBTUtilBC;
 
 @SuppressWarnings("WeakerAccess")
 public class JsonRule {
@@ -23,4 +26,23 @@ public class JsonRule {
     public CompoundTag replaceNbt = null;
     public boolean ignore = false; // blacklist for blocks
     public boolean capture = false; // whitelist for entities
+
+    /**
+     * {@code nbt} with the {@link #replaceNbt} of every one of {@code rules} merged over it ({@link NBTUtilBC#merge}:
+     * a JSON {@code null} removes the key). Each rule is merged over the data in turn, in the iteration order of
+     * {@code rules} ({@link RulesLoader#getRules} returns them in load order), so when two set the same key the later
+     * one wins. 1.12.2 instead merged the rules into one tag first, which dropped every rule's removals but the
+     * first's. The directives are applied to the data about to be placed, never to a stored blueprint or its preview.
+     * Returns {@code nbt} itself when no rule declares one, otherwise a new tag; never mutates {@code nbt}, and the
+     * result shares nothing with a rule's own tag.
+     */
+    static CompoundTag applyReplaceNbt(CompoundTag nbt, Collection<JsonRule> rules) {
+        CompoundTag result = nbt;
+        for (JsonRule rule : rules) {
+            if (rule.replaceNbt != null) {
+                result = (CompoundTag) NBTUtilBC.merge(result, rule.replaceNbt);
+            }
+        }
+        return result;
+    }
 }

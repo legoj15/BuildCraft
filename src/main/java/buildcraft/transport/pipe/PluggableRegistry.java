@@ -6,6 +6,8 @@
 
 package buildcraft.transport.pipe;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,5 +26,10 @@ public class PluggableRegistry implements IPluggableRegistry {
     @Override
     public PluggableDefinition getDefinition(Object identifier) {
         return definitions.get(identifier);
+    }
+
+    /** Every registered definition, in no particular order (a read-only view). */
+    public Collection<PluggableDefinition> getDefinitions() {
+        return Collections.unmodifiableCollection(definitions.values());
     }
 }

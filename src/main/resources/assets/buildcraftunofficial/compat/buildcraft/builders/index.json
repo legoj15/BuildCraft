@@ -8,6 +8,7 @@
     "vanilla/redstone_wire",
     "vanilla/multiple_variants",
     "vanilla/observer",
+    "vanilla/trial_chamber",
     "vanilla/doors",
     "vanilla/hopper",
     "vanilla/daylight_detector",
@@ -24,6 +25,5 @@
     "vanilla/minecarts",
     "buildcraft/blocks_buildcraft_inventories",
     "buildcraft/blocks_buildcraft_tanks",
-    "buildcraft/blocks_batteries",
-    "buildcraft/builders"
+    "buildcraft/blocks_batteries"
 ]

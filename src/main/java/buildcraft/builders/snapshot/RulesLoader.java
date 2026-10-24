@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -166,14 +167,20 @@ public class RulesLoader {
                         )
                     )
             )
-            .collect(Collectors.toCollection(HashSet::new));
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
+    /**
+     * The rules whose selectors match, in the order they were loaded (index.json order, then file order). The order
+     * matters: each rule's {@code replaceNbt} is merged over the ones before it, and {@code placeBlock} takes the first
+     * rule that names one. An unordered set could give a different result on each run.
+     */
     @SuppressWarnings("WeakerAccess")
     public static Set<JsonRule> getRules(BlockState blockState, CompoundTag tileNbt) {
         return BLOCK_RULES_CACHE.getUnchecked(Pair.of(blockState, tileNbt));
     }
 
+    /** The entity rules whose selectors match, in load order (see {@link #getRules(BlockState, CompoundTag)}). */
     @SuppressWarnings("WeakerAccess")
     public static Set<JsonRule> getRules(Identifier entityId, CompoundTag tileNbt) {
         return RulesLoader.RULES.stream()
@@ -182,7 +189,7 @@ public class RulesLoader {
                 rule.selectors.stream()
                     .anyMatch(selector -> selector.matches(entityId.toString()::equals, tileNbt))
             )
-            .collect(Collectors.toCollection(HashSet::new));
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     /** Get the string value of a property from a block state. */

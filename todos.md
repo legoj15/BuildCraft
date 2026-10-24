@@ -11,7 +11,7 @@ Last audited: 2026-10-23
 - Guard test for the data creative middle-click clones strip — [notes](docs/todo-details.md#snapshot-security-follow-ups)
 - Bomber robots and robot melee ask no protection mod for permission — [notes](docs/todo-details.md#robot-bomber-and-melee-protection)
 - The Architect can save scans too large for the library to read back — [notes](docs/todo-details.md#architect-scan-size-cap)
-- Blueprint follow-ups: decorated pot sherds, spawner rebuild states, rule cache keys — [notes](docs/todo-details.md#blueprint-follow-ups)
+- Blueprint follow-ups: decorated pot sherds, rule cache keys, modded inventories — [notes](docs/todo-details.md#blueprint-follow-ups)
 
 ## 🆕 New Features (version 2026.3)
 

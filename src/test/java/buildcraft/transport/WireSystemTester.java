@@ -5,13 +5,31 @@
  */
 package buildcraft.transport;
 
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.UUID;
+
+import com.google.common.collect.ImmutableList;
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ChunkTrackingView;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
+
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 
 import buildcraft.api.transport.EnumWirePart;
+
+import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.misc.PositionUtil;
 
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.gate.EnumGateLogic;
@@ -24,6 +42,7 @@ import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
 import buildcraft.transport.wire.SavedDataWireSystems;
+import buildcraft.transport.wire.WireSystem;
 
 /**
  * Wire-system signaling regression tests.
@@ -49,6 +68,11 @@ import buildcraft.transport.wire.SavedDataWireSystems;
  *       call that replaced the dead reflective branch. The test deactivates a previously-set
  *       broadcast and verifies the wire system gets re-woken so the wire de-powers.</li>
  * </ol>
+ * <p>
+ * A second group pins who receives wire-system state: only players whose chunk tracking view includes a chunk of
+ * the system ({@link WireSystem#isPlayerWatching}), and a chunk delivered to a player queues that player for a full
+ * resend only when it holds a system ({@link SavedDataWireSystems#onChunkSent}, fed by the {@code ChunkWatchEvent.Sent}
+ * listener in {@code BCTransport}). Both used to go to every player of the level.
  */
 public class WireSystemTester {
 
@@ -211,6 +235,181 @@ public class WireSystemTester {
             "Wire should de-power once the gate stops emitting");
         helper.assertFalse(wireSystems.gatesChanged,
             "gatesChanged should reset to false after the second recompute");
+        helper.succeed();
+    }
+
+    // ---------- Wire visibility: who receives a system's state ----------
+
+    /** Two distinct cached fake players, so a test can watch with one and stand elsewhere with the other. */
+    private static final GameProfile WATCHER = fixedProfile("bc_wire_watcher");
+    private static final GameProfile BYSTANDER = fixedProfile("bc_wire_bystander");
+
+    /** Blocks from the test's own arena to a chunk no other test (or arena) ever puts a wire in: 4096 chunks. */
+    private static final int FAR_BLOCKS = 16 * 4096;
+
+    /** Chunk-tracking radius used for a view that "sees" a chunk; at least 1, a radius of 0 contains nothing. */
+    private static final int VIEW_RADIUS = 2;
+
+    private static GameProfile fixedProfile(String name) {
+        return new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)), name);
+    }
+
+    private static ChunkPos chunkOf(BlockPos pos) {
+        return PositionUtil.chunkContaining(pos);
+    }
+
+    /**
+     * Wire-system state must reach only the players whose chunk tracking view includes a chunk of the system. Before
+     * the fix the wire tick sent every system to every player of the level, so a player on the far side of the world
+     * received wires it could never see.
+     * <p>
+     * A real wired pipe gives a one-chunk system. One fake player's view is centred on that chunk, the other's far
+     * away: only the first is watching. Then the two swap places, and a player whose view is empty (a client that has
+     * been sent no chunk yet) is watching nothing. Failure mode if the per-player check is lost: the bystander (or the
+     * empty view) reads as watching.
+     */
+    public static void testWireVisibleOnlyToPlayersWhoseViewHoldsTheSystem(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TilePipeHolder tile = placeStructurePipe(helper, new BlockPos(1, 2, 1));
+        EnumWirePart part = EnumWirePart.WEST_UP_NORTH;
+        tile.getWireManager().addPart(part, DyeColor.RED);
+
+        List<WireSystem> systems = SavedDataWireSystems.get(level)
+            .getWireSystemsWithElement(new WireSystem.WireElement(tile.getBlockPos(), part));
+        helper.assertTrue(systems.size() == 1, "Precondition: exactly one wire system holds the new wire, got " + systems.size());
+        WireSystem system = systems.get(0);
+
+        ChunkPos here = chunkOf(tile.getBlockPos());
+        ChunkPos far = chunkOf(tile.getBlockPos().offset(FAR_BLOCKS, 0, 0));
+
+        try (FakePlayerUtil.Lease watcherLease = FakePlayerUtil.lease(level, WATCHER, null);
+             FakePlayerUtil.Lease bystanderLease = FakePlayerUtil.lease(level, BYSTANDER, null)) {
+            ServerPlayer watcher = watcherLease.player();
+            ServerPlayer bystander = bystanderLease.player();
+            try {
+                watcher.setChunkTrackingView(ChunkTrackingView.of(here, VIEW_RADIUS));
+                bystander.setChunkTrackingView(ChunkTrackingView.of(far, VIEW_RADIUS));
+                helper.assertTrue(system.isPlayerWatching(watcher),
+                    "A player whose view is centred on the system's chunk must be sent it");
+                helper.assertFalse(system.isPlayerWatching(bystander),
+                    "A player whose view is thousands of chunks away must not be sent the system");
+
+                // The two walk past each other: visibility follows the view, not who was near when it was built.
+                watcher.setChunkTrackingView(ChunkTrackingView.of(far, VIEW_RADIUS));
+                bystander.setChunkTrackingView(ChunkTrackingView.of(here, VIEW_RADIUS));
+                helper.assertFalse(system.isPlayerWatching(watcher),
+                    "A player who moved away must stop being sent the system");
+                helper.assertTrue(system.isPlayerWatching(bystander),
+                    "A player who moved in must start being sent the system");
+
+                watcher.setChunkTrackingView(ChunkTrackingView.EMPTY);
+                helper.assertFalse(system.isPlayerWatching(watcher),
+                    "A player with an empty view (no chunk sent yet) watches no system");
+            } finally {
+                watcher.setChunkTrackingView(ChunkTrackingView.EMPTY);
+                bystander.setChunkTrackingView(ChunkTrackingView.EMPTY);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A system that spans several chunks is visible to a player who sees ANY one of them (1.12.2's per-player
+     * {@code containsPlayer} over each of the system's chunks), and to nobody who sees none. Built straight from two
+     * elements 40 chunks apart: {@code isPlayerWatching} reads only the cached chunk set, so no pipe is needed (a
+     * real two-chunk system would need the random arena origin to straddle a chunk border).
+     */
+    public static void testWireSystemSpanningTwoChunksIsSeenFromEither(GameTestHelper helper) {
+        BlockPos a = helper.absolutePos(new BlockPos(1, 2, 1));
+        BlockPos b = a.offset(16 * 40, 0, 0);
+        BlockPos between = a.offset(16 * 20, 0, 0);
+        WireSystem system = new WireSystem(ImmutableList.of(
+            new WireSystem.WireElement(a, EnumWirePart.WEST_UP_NORTH),
+            new WireSystem.WireElement(b, EnumWirePart.WEST_UP_NORTH)), DyeColor.RED);
+
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel(), WATCHER, null)) {
+            ServerPlayer player = lease.player();
+            try {
+                player.setChunkTrackingView(ChunkTrackingView.of(chunkOf(a), VIEW_RADIUS));
+                helper.assertTrue(system.isPlayerWatching(player), "Seeing only the first chunk is enough");
+                player.setChunkTrackingView(ChunkTrackingView.of(chunkOf(b), VIEW_RADIUS));
+                helper.assertTrue(system.isPlayerWatching(player), "Seeing only the second chunk is enough");
+                player.setChunkTrackingView(ChunkTrackingView.of(chunkOf(between), VIEW_RADIUS));
+                helper.assertFalse(system.isPlayerWatching(player), "Seeing neither chunk is not enough");
+            } finally {
+                player.setChunkTrackingView(ChunkTrackingView.EMPTY);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * A chunk delivered to a player queues that player for a full wire resend only when a wire system has an element
+     * in it. {@code onChunkSent} runs once per chunk delivered (thousands at login), and terrain streaming must never
+     * trigger a resend: a chunk with no wires leaves the queue alone. The queue is consumed by the next wire tick.
+     */
+    public static void testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TilePipeHolder tile = placeStructurePipe(helper, new BlockPos(1, 2, 1));
+        tile.getWireManager().addPart(EnumWirePart.WEST_UP_NORTH, DyeColor.RED);
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+
+        ChunkPos holding = chunkOf(tile.getBlockPos());
+        ChunkPos empty = chunkOf(tile.getBlockPos().offset(FAR_BLOCKS, 0, 0));
+        helper.assertFalse(wireSystems.wireSystems.keySet().stream()
+                .anyMatch(system -> system.getChunkPosesAsStream().anyMatch(empty::equals)),
+            "Precondition: no wire system has an element in the far chunk");
+
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, WATCHER, null)) {
+            ServerPlayer player = lease.player();
+            try {
+                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                    "Precondition: the player is not queued before any chunk is delivered");
+
+                wireSystems.onChunkSent(player, empty);
+                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                    "A chunk with no wires must not queue the player for a full resend");
+
+                wireSystems.onChunkSent(player, holding);
+                helper.assertTrue(wireSystems.changedPlayers.contains(player),
+                    "A chunk holding a wire system must queue the player for a full resend");
+
+                wireSystems.tick();
+                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                    "The wire tick must consume the queue, or the player is resent every tick");
+            } finally {
+                wireSystems.changedPlayers.remove(player);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The {@code ChunkWatchEvent.Sent} listener in {@code BCTransport} is what feeds {@code onChunkSent}: posting the
+     * real event for a wire-holding chunk queues the player. Pins the wiring (the event, the level, the player and the
+     * chunk position all reach {@code onChunkSent}) that a direct call cannot.
+     */
+    public static void testChunkSentEventQueuesPlayerForWireChunk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        TilePipeHolder tile = placeStructurePipe(helper, new BlockPos(1, 2, 1));
+        tile.getWireManager().addPart(EnumWirePart.WEST_UP_NORTH, DyeColor.RED);
+        SavedDataWireSystems wireSystems = flushToSteadyState(helper);
+        LevelChunk chunk = level.getChunkAt(tile.getBlockPos());
+
+        try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, WATCHER, null)) {
+            ServerPlayer player = lease.player();
+            try {
+                helper.assertFalse(wireSystems.changedPlayers.contains(player),
+                    "Precondition: the player is not queued before the chunk is sent");
+
+                NeoForge.EVENT_BUS.post(new ChunkWatchEvent.Sent(player, chunk, level));
+
+                helper.assertTrue(wireSystems.changedPlayers.contains(player),
+                    "ChunkWatchEvent.Sent for a wire-holding chunk must queue the player through the BCTransport listener");
+            } finally {
+                wireSystems.changedPlayers.remove(player);
+            }
+        }
         helper.succeed();
     }
 }

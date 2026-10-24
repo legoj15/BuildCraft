@@ -766,16 +766,35 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 // null-guard (NPE), unlike modern; pass the placed block pos (the legitimate source).
                 .forEach(updatePos -> level.neighborChanged(updatePos, placeBlock, blockPos));*/
                 //?}
-            if (tileNbt != null) {
-                CompoundTag newTileNbt = tileNbt.copy();
-                if (!includeContainerContents) {
-                    stripContainerContentsFromNbt(newTileNbt);
-                }
+            CompoundTag newTileNbt = tileNbtToPlace(includeContainerContents);
+            if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
             return true;
         }
         return false;
+    }
+
+    /**
+     * The block entity data {@link #build} and {@link #buildWithoutChecks} load: a fresh copy of {@link #tileNbt}
+     * (never the field, which is shared across rebuilds and rotations) with the container contents stripped when
+     * {@code includeContainerContents} is false ({@link EnumContainerContentsMode#IGNORE IGNORE} mode), and every
+     * matching rule's {@link JsonRule#replaceNbt} merged over it (a directive 1.12.2 applied too). That is what keeps
+     * a rebuilt machine from starting with the stored power it was scanned with. The rules are matched against the
+     * captured {@link #tileNbt}, so a selector on tile data sees what the Architect saw, not what the strip or an
+     * earlier rule left. Null when the schematic has no tile data.
+     */
+    @Nullable
+    CompoundTag tileNbtToPlace(boolean includeContainerContents) {
+        if (tileNbt == null) {
+            return null;
+        }
+        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+        CompoundTag data = tileNbt.copy();
+        if (!includeContainerContents) {
+            stripContainerContentsFromNbt(rules, data);
+        }
+        return JsonRule.applyReplaceNbt(data, rules);
     }
 
     /**
@@ -792,8 +811,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /**
-     * Writes {@code data} (a copy of {@link #tileNbt}, already stripped as the caller's mode requires) into the block
-     * entity just placed at {@code blockPos}. Two guards, shared by both build paths:
+     * Writes {@code data} ({@link #tileNbtToPlace}: a copy of {@link #tileNbt} stripped as the caller's mode requires
+     * and with the rules' {@code replaceNbt} applied) into the block entity just placed at {@code blockPos}. Two
+     * guards, shared by both build paths:
      * <ul>
      *   <li>Deny by default: when no rule prices the contents ({@link #contentsArePriced()}), the block entity is
      *       emptied after the load through {@link Clearable}, which every vanilla item holder and every BuildCraft
@@ -805,7 +825,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
      *       is replaced with a fresh default one and the placement still counts, so the cell is not retried.</li>
      * </ul>
      */
-    private void loadTileData(Level level, BlockPos blockPos, CompoundTag data) {
+    protected void loadTileData(Level level, BlockPos blockPos, CompoundTag data) {
         BlockEntity tileEntity = level.getBlockEntity(blockPos);
         if (tileEntity == null) {
             return;
@@ -852,12 +872,13 @@ public class SchematicBlockDefault implements ISchematicBlock {
     }
 
     /**
-     * Walk the JSON rules for this schematic and strip every container-contents path from the supplied
-     * tileNbt. Mutates {@code tileNbt} in place — callers pass a copy, never the canonical
-     * {@link #tileNbt} field (which is shared across rebuilds and rotations).
+     * Walk the JSON {@code rules} matching this schematic and strip every container-contents path from the
+     * supplied tileNbt. Mutates {@code tileNbt} in place — callers pass a copy, never the canonical
+     * {@link #tileNbt} field (which is shared across rebuilds and rotations). The rules are looked up by the caller
+     * from the canonical field: {@link RulesLoader#getRules} keeps its argument as a cache key, which a tag about to
+     * be mutated must not be.
      */
-    private void stripContainerContentsFromNbt(CompoundTag tileNbt) {
-        Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
+    private static void stripContainerContentsFromNbt(Set<JsonRule> rules, CompoundTag tileNbt) {
         for (JsonRule rule : rules) {
             if (rule.requiredExtractors == null) continue;
             for (RequiredExtractor extractor : rule.requiredExtractors) {
@@ -870,9 +891,10 @@ public class SchematicBlockDefault implements ISchematicBlock {
     @SuppressWarnings("Duplicates")
     public boolean buildWithoutChecks(Level level, BlockPos blockPos) {
         if (level.setBlock(blockPos, blockState, 0)) {
-            if (tileNbt != null) {
-                // The same pricing and crash guards as build(): skipping the checks must not skip those.
-                loadTileData(level, blockPos, tileNbt.copy());
+            // The same pricing, replaceNbt and crash guards as build(): skipping the checks must not skip those.
+            CompoundTag newTileNbt = tileNbtToPlace(true);
+            if (newTileNbt != null) {
+                loadTileData(level, blockPos, newTileNbt);
             }
             return true;
         }

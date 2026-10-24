@@ -19,6 +19,7 @@ import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerItem;
 
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.misc.MachineRefusals;
 
 /** Stripes handler that tries to use items by calling their useOn method — acts like
  *  a player right-clicking with the item. This is a simplified port from the 1.12.2
@@ -72,8 +73,10 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
         }
 
         // Strategy 3: Use in air (right-click with no target block). The activator has a say first: where this use
-        // lands is the item's own aim, which a robot answering to a second player asks that player about.
+        // lands is the item's own aim, which a robot answering to a second player asks that player about. A refusal
+        // is tallied as a refused click, so the dispatch ends here instead of trying a later handler.
         if (!activator.mayUseInAir(player, stack)) {
+            MachineRefusals.record(player);
             return false;
         }
         return BlockUtil.useItemInAir(world, player, InteractionHand.MAIN_HAND, stack);

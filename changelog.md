@@ -15,6 +15,7 @@
 - Fixed the Distiller so that it now drops the items in its container slots.
 - The Electronic Library no longer rejects blueprints holding pistons or blocks with replaceable variants. Older saved blueprints will be repaired automatically.
 - Fixed an edge case in the Guide Book where text would render over page numbers, and links that wrap onto the next page are now clickable on both pages.
+- The guide book's Sort By System button has its own icon instead of the old Sort By Mod one.
 - {1.21.10/1.21.11/26.1/26.1.1/26.1.2/26.2} Fixed Fragile Fluid Shards showing the wrong color for colored fluids (lava shards looked blue) on Minecraft 1.21.10 and newer.
 - The Wooden Diamond pipe's filter modes are now called Allowlist and Blocklist since that is easier to translate.
 - In the off chance where you'd have more than 24 robot boards, the programming table can now advance to the next page.

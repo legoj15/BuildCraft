@@ -16,7 +16,7 @@ Last audited: 2026-10-23
 ## 🆕 New Features (version 2026.3)
 
 - Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length
-- Guide book follow-ups from the Robots chapter: board icons, sort-button art, robot name tags — [list](docs/todo-details.md#guide-book-follow-ups)
+- Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)

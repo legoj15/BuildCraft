@@ -9,7 +9,6 @@ package buildcraft.lib.tile.item;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.CrashReport;
@@ -22,6 +21,7 @@ import buildcraft.api.core.IStackFilter;
 import buildcraft.lib.inventory.AbstractInvItemTransactor;
 import buildcraft.lib.misc.INBTSerializable;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.item.StackInsertionFunction.InsertionResult;
 
@@ -157,11 +157,10 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         return callback != null;
     }
 
-    /** The largest count {@code ItemStack.CODEC} carries (it bounds a count to 1..99 and never checks the item's own
-     *  limit). The default inserter fills a slot up to the item's stack limit, which a mod can raise past that. */
-    private static final int CODEC_MAX_COUNT = 99;
-    /** A slot's real count, saved beside its {@code stack} only when the codec cannot carry it. Also the count key of
-     *  the legacy {@code id} + {@code count} form, which has no {@code stack}. */
+    /** A slot's real count, saved beside its {@code stack} only when the codec cannot carry it (the default inserter
+     *  fills a slot up to the item's stack limit, which a mod can raise past the codec's bound; see
+     *  {@link StackNbt}). Also the count key of the legacy {@code id} + {@code count} form, which has no
+     *  {@code stack}. */
     private static final String COUNT_KEY = "count";
 
     @Override
@@ -170,19 +169,9 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         ListTag list = new ListTag();
         for (ItemStack stack : stacks) {
             CompoundTag itemNbt = new CompoundTag();
-            if (!stack.isEmpty()) {
-                // Use ItemStack.CODEC so DataComponentPatch (enchantments, custom name,
-                // damage, dyed colors, etc.) round-trips on save/load.
-                ItemStack encoded = stack;
-                if (stack.getCount() > CODEC_MAX_COUNT) {
-                    // The codec refuses a larger count, so the stack goes in at one with its count beside it.
-                    encoded = stack.copyWithCount(1);
-                    itemNbt.putInt(COUNT_KEY, stack.getCount());
-                }
-                ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), encoded)
-                        .resultOrPartial()
-                        .ifPresent(payload -> itemNbt.put("stack", payload));
-            }
+            // Through the codec so DataComponentPatch (enchantments, custom name, damage, dyed colors, etc.)
+            // round-trips on save/load; StackNbt keeps a count past the codec's bound beside the stack.
+            StackNbt.write(itemNbt, "stack", COUNT_KEY, stack);
             list.add(itemNbt);
         }
         nbt.put("items", list);
@@ -195,14 +184,8 @@ public class ItemHandlerSimple extends AbstractInvItemTransactor
         for (int i = 0; i < list.size() && i < size(); i++) {
             CompoundTag itemNbt = NBTUtilBC.getCompound(list, i);
             ItemStack stack = ItemStack.EMPTY;
-            Tag stackPayload = itemNbt.get("stack");
-            if (stackPayload != null) {
-                stack = ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
-                        .resultOrPartial()
-                        .orElse(ItemStack.EMPTY);
-                if (!stack.isEmpty() && itemNbt.contains(COUNT_KEY)) {
-                    stack = stack.copyWithCount(NBTUtilBC.getInt(itemNbt, COUNT_KEY, stack.getCount()));
-                }
+            if (itemNbt.contains("stack")) {
+                stack = StackNbt.read(itemNbt, "stack", COUNT_KEY);
             } else if (itemNbt.contains("id")) {
                 // Legacy format (id + count, no components) -- read existing world saves.
                 String idStr = NBTUtilBC.getString(itemNbt, "id", "");

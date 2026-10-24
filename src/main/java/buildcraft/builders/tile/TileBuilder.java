@@ -61,6 +61,7 @@ import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.PositionUtil;
+import buildcraft.lib.misc.StackNbt;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.tile.TileBC_Neptune;
@@ -622,9 +623,7 @@ public class TileBuilder extends TileBC_Neptune
             output.putBoolean("box_initialized", false);
         }
         // Inventory
-        if (!invSnapshot.isEmpty()) {
-            output.store("invSnapshot", ItemStack.CODEC, invSnapshot);
-        }
+        StackNbt.write(output, "invSnapshot", "invSnapshotCount", invSnapshot);
         // Resources: one blob via the itemManager (same key/shape as TileFiller). Legacy saves wrote
         // per-slot invRes_N keys; those are migrated on read and never written again.
         output.store("items", CompoundTag.CODEC, itemManager.serializeNBT());
@@ -707,7 +706,7 @@ public class TileBuilder extends TileBC_Neptune
             currentBox.setMax(new BlockPos(maxX, maxY, maxZ));
         }
         // Inventory
-        invSnapshot = input.read("invSnapshot", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        invSnapshot = StackNbt.read(input, "invSnapshot", "invSnapshotCount");
         // Resources. New format is one "items" blob (itemManager). Absent "items" => a pre-migration
         // save: read the legacy per-slot invRes_N keys ONCE (we only ever write the new format). On
         // the client the update tag always carries "items", so this legacy branch is server-only —

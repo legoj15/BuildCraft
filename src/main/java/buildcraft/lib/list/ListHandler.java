@@ -27,6 +27,7 @@ import buildcraft.api.lists.ListMatchHandler.Type;
 import buildcraft.api.lists.ListRegistry;
 
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackNbt;
 
 public final class ListHandler {
     public static final int WIDTH = 9;
@@ -149,13 +150,11 @@ public final class ListHandler {
                         // etc.) round-trip — Precise mode compares components, so the saved
                         // exemplar must preserve them. The `id` shorthand below covers stacks
                         // saved by older builds before this fix landed.
-                        Tag stackPayload = itemTag.get("stack");
-                        if (stackPayload != null) {
-                            final int slotIdx = i;
-                            ItemStack.CODEC.parse(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stackPayload)
-                                    .resultOrPartial()
-                                    .filter(s -> !s.isEmpty())
-                                    .ifPresent(s -> line.stacks.set(slotIdx, s));
+                        if (itemTag.contains("stack")) {
+                            ItemStack read = StackNbt.read(itemTag, "stack", "count");
+                            if (!read.isEmpty()) {
+                                line.stacks.set(i, read);
+                            }
                         } else if (itemTag.contains("id")) {
                             // Legacy format (id + count, no components).
                             String itemId = NBTUtilBC.getString(itemTag, "id", "");
@@ -184,14 +183,10 @@ public final class ListHandler {
             ListTag stackList = new ListTag();
             for (ItemStack stack : stacks) {
                 CompoundTag stackTag = new CompoundTag();
-                if (!stack.isEmpty()) {
-                    // Preserve the full ItemStack — components included — via the standard codec
-                    // so Precise matching round-trips correctly. Uses RegistryOps so dynamic-
-                    // registry components (enchantments, etc.) survive the encode.
-                    ItemStack.CODEC.encodeStart(buildcraft.lib.misc.NBTUtilBC.registryAwareOps(), stack)
-                            .resultOrPartial()
-                            .ifPresent(payload -> stackTag.put("stack", payload));
-                }
+                // Preserve the full ItemStack — components included — via the standard codec
+                // so Precise matching round-trips correctly. Uses RegistryOps so dynamic-
+                // registry components (enchantments, etc.) survive the encode.
+                StackNbt.write(stackTag, "stack", "count", stack);
                 stackList.add(stackTag);
             }
             data.put("st", stackList);

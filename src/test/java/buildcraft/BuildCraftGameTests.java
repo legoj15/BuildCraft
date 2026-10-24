@@ -750,7 +750,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:drops_filtered_buffer_skips_filter", () -> BlockDropsTester::testFilteredBufferSkipsFilterSlots);
         reg.accept("buildcraftunofficial:drops_marker_hand", () -> BlockDropsTester::testMarkerHandBreakDropsSelf);
         // Non-player removal (explosion / piston / /setblock ... destroy) spills machine contents — regression guard
-        // for the central TileBC_Neptune.dropContentsOnRemoval path (and Flood Gate's standalone copy).
+        // for the shared removal hook (AbstractBCSyncedBlockEntity) and the tiles' dropContentsOnRemoval.
         reg.accept("buildcraftunofficial:drops_chute_nonplayer", () -> BlockDropsTester::testChuteNonPlayerRemovalDropsContents);
         reg.accept("buildcraftunofficial:drops_pump_nonplayer", () -> BlockDropsTester::testPumpNonPlayerRemovalDropsFluid);
         reg.accept("buildcraftunofficial:drops_floodgate_nonplayer", () -> BlockDropsTester::testFloodGateNonPlayerRemovalDropsFluid);
@@ -759,6 +759,9 @@ public class BuildCraftGameTests {
         // The distiller's bucket / bottle slots drop with the machine, on a player break and a non-player removal.
         reg.accept("buildcraftunofficial:drops_distiller_hand", () -> BlockDropsTester::testDistillerHandBreakDropsContainerSlots);
         reg.accept("buildcraftunofficial:drops_distiller_nonplayer", () -> BlockDropsTester::testDistillerNonPlayerRemovalDropsContainerSlots);
+        // A player break of the Tank, Flood Gate, Distiller and Heat Exchanger reaches the same removal hook (no
+        // block-side drop of their own): each machine's contents arrive exactly once.
+        reg.accept("buildcraftunofficial:drops_fluid_machines_once", () -> BlockDropsTester::testFluidMachinesPlayerBreakDropsContentsOnce);
         // A replace-mode /setblock (and /fill, /clone, structure placement) wipes the old tile instead of spilling
         // it (Clearable on 1.21.1, the skip-side-effects flag on the newer nodes); destroy mode keeps spilling.
         reg.accept("buildcraftunofficial:setblock_replace_spills_nothing", () -> CommandReplaceTester::testSetblockReplaceSpillsNothing);

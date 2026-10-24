@@ -14,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.NonNullList;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -44,7 +43,6 @@ import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 
 import buildcraft.api.blocks.ICustomRotationHandler;
-import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
@@ -270,37 +268,10 @@ public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> imp
         return InteractionResult.SUCCESS;
     }
 
-    // --- Block removal: drop fluid shards ---
-
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileHeatExchange exchange) {
-                TileHeatExchange.ExchangeSection section = exchange.getSection();
-                if (section != null) {
-                    NonNullList<ItemStack> toDrop = NonNullList.create();
-                    FluidItemDrops.addFluidDrops(toDrop, section.tankInput.getFluidStack(0));
-                    FluidItemDrops.addFluidDrops(toDrop, section.tankOutput.getFluidStack(0));
-                    for (ItemStack drop : toDrop) {
-                        Block.popResource(level, pos, drop);
-                    }
-                }
-                // Drop bucket / fluid-shard slot contents from the START tile.
-                for (int i = 0; i < exchange.containerSlots.size(); i++) {
-                    ItemStack slotStack = exchange.containerSlots.getStackInSlot(i);
-                    if (!slotStack.isEmpty()) {
-                        Block.popResource(level, pos, slotStack);
-                    }
-                }
-                exchange.markDropsHandled();
-            }
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
-    // (>=1.21.10 uses TileHeatExchange#preRemoveSideEffects).
+    // --- Block removal: drop fluid shards + bucket / fluid-shard slots ---
+    // Nothing here: TileHeatExchange#dropContentsOnRemoval spills them on every removal, a player break included.
+    // The <1.21.10 catch-all is inherited from BlockBCTile_Neptune (>=1.21.10 uses
+    // AbstractBCSyncedBlockEntity#preRemoveSideEffects).
 
     @Override
     //? if >=1.21.10 {

@@ -64,6 +64,25 @@ public abstract class AbstractBCSyncedBlockEntity extends AbstractBCBlockEntity 
     }*/
     //?}
 
+    // --- Removal drops (>=1.21.10 hook) ---
+    // Every removal with side effects (player break, explosion, piston, /setblock ... destroy) routes into
+    // dropContentsOnRemoval here, once for every tile on this base: TileBC_Neptune (opt-in, flag-guarded), the engines
+    // and the fluid machines (TileTank, TileDistiller_BC8, TileHeatExchange, TileFloodGate), which spill and then empty
+    // themselves. A player break reaches this hook too (playerWillDestroy is followed by the removal), so the block of
+    // a tile that empties what it spills drops nothing in playerWillDestroy; the emptying is what keeps a second call
+    // from dropping twice. The <1.21.10 twin is the onRemove catch-all in BlockBCTile_Neptune,
+    // BlockBCTile_Directional and BlockEngineBase_BC8. A tile that holds nothing inherits the no-op default.
+
+    //? if >=1.21.10 {
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level != null && !level.isClientSide()) {
+            dropContentsOnRemoval(level, pos);
+        }
+    }
+    //?}
+
     // --- No-re-mesh client state push ---
 
     /**

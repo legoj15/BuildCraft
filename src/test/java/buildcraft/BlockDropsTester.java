@@ -38,6 +38,7 @@ import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.factory.tile.TileFloodGate;
+import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
@@ -219,8 +220,8 @@ public class BlockDropsTester {
 
     // ---------- Non-player removal (explosion / piston / mod tool) spills contents ----------
     // A bare level.removeBlock stands in for an explosion / piston / mod setBlock. It routes through
-    // TileBC_Neptune.preRemoveSideEffects (>=1.21.10) or the block's onRemove (1.21.1) → the central
-    // dropContentsOnRemoval, with no playerWillDestroy involved. The block item itself is gone (it
+    // AbstractBCSyncedBlockEntity.preRemoveSideEffects (>=1.21.10) or the block's onRemove (1.21.1) → the
+    // tile's dropContentsOnRemoval, with no playerWillDestroy involved. The block item itself is gone (it
     // only returns via the loot table on a tool harvest), but the stored contents must still spill —
     // matching 1.12.2's universal breakBlock→onRemove→addDrops. It is NOT a stand-in for a replace-mode
     // /setblock, /fill or /clone: those wipe the old tile first (Clearable) or skip the side effects
@@ -274,7 +275,7 @@ public class BlockDropsTester {
             //?} else {
             /*TileFloodGate gate = helper.getBlockEntity(pos);*/
             //?}
-            // Flood Gate is a standalone BlockEntity; it carries its own preRemoveSideEffects / onRemove.
+            // The Flood Gate empties its own tank in dropContentsOnRemoval (no itemManager, no opt-in flag).
             fillBcTank(gate.getTank(), new FluidStack(net.minecraft.world.level.material.Fluids.WATER, 1000));
 
             DropArenaUtil.removeBlock(helper, pos);
@@ -323,6 +324,54 @@ public class BlockDropsTester {
         }, Drops.near(pos, 2.0)
                 .present(Items.BUCKET, BCCoreItems.FRAGILE_FLUID_CONTAINER.get())
                 .absent(BCFactoryBlocks.DISTILLER.get().asItem()));
+    }
+
+    // ---------- Fluid machines: a player break spills each machine's contents exactly once ----------
+    // The Tank, Flood Gate, Distiller and Heat Exchanger have no player-break drop of their own; a player break
+    // reaches the shared removal hook like an explosion does. Every machine's contents must arrive once, not zero
+    // times (a hook the break never reached) and not twice (a block-side drop on top of the hook). They sit three
+    // blocks apart for the same reason the engines do (see CONTENT_ENGINES).
+
+    private static final BlockPos MACHINE_TANK = new BlockPos(1, 2, 1);
+    private static final BlockPos MACHINE_FLOOD_GATE = new BlockPos(4, 2, 1);
+    private static final BlockPos MACHINE_DISTILLER = new BlockPos(1, 2, 4);
+    private static final BlockPos MACHINE_EXCHANGER = new BlockPos(4, 2, 4);
+
+    public static void testFluidMachinesPlayerBreakDropsContentsOnce(GameTestHelper helper) {
+        Item shard = BCCoreItems.FRAGILE_FLUID_CONTAINER.get();
+        NonNullList<ItemStack> oneSpill = NonNullList.create();
+        FluidItemDrops.addFluidDrops(oneSpill, water());
+        int shards = oneSpill.stream().mapToInt(ItemStack::getCount).sum();
+        if (shards <= 0) {
+            throw new IllegalStateException("a bucket of water should yield fluid shards, so the shard counts "
+                    + "below would pass vacuously");
+        }
+        DropArenaUtil.awaitDrops(helper, () -> {
+            helper.setBlock(MACHINE_TANK, BCFactoryBlocks.TANK.get());
+            tile(helper, MACHINE_TANK, TileTank.class).tank.setFluidStack(0, water());
+
+            helper.setBlock(MACHINE_FLOOD_GATE, BCFactoryBlocks.FLOOD_GATE.get());
+            tile(helper, MACHINE_FLOOD_GATE, TileFloodGate.class).getTank().setFluidStack(0, water());
+
+            helper.setBlock(MACHINE_DISTILLER, BCFactoryBlocks.DISTILLER.get());
+            TileDistiller_BC8 distiller = tile(helper, MACHINE_DISTILLER, TileDistiller_BC8.class);
+            distiller.getTankIn().setFluidStack(0, water());
+            distiller.containerSlots.setStackInSlot(0, new ItemStack(Items.BUCKET));
+            distiller.containerSlots.setStackInSlot(2, new ItemStack(Items.GLASS_BOTTLE));
+
+            // A lone exchanger block owns no section (that takes a multiblock), so only its bucket slots spill.
+            helper.setBlock(MACHINE_EXCHANGER, BCFactoryBlocks.HEAT_EXCHANGE.get());
+            tile(helper, MACHINE_EXCHANGER, TileHeatExchange.class).containerSlots
+                    .setStackInSlot(1, new ItemStack(Items.BUCKET));
+
+            for (BlockPos pos : new BlockPos[] { MACHINE_TANK, MACHINE_FLOOD_GATE, MACHINE_DISTILLER, MACHINE_EXCHANGER }) {
+                DropArenaUtil.breakBlock(helper, pos, ItemStack.EMPTY);
+            }
+        }, Drops.near(MACHINE_TANK, 1.0).exactly(shard, shards)
+                .alsoNear(MACHINE_FLOOD_GATE, 1.0).exactly(shard, shards)
+                .alsoNear(MACHINE_DISTILLER, 1.0).exactly(shard, shards)
+                .exactly(Items.BUCKET, 1).exactly(Items.GLASS_BOTTLE, 1)
+                .alsoNear(MACHINE_EXCHANGER, 1.0).exactly(Items.BUCKET, 1));
     }
 
     // ---------- Stirling engine (raw fuel slot) ----------

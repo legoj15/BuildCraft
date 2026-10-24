@@ -39,9 +39,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import net.minecraft.core.NonNullList;
-
-import buildcraft.api.items.FluidItemDrops;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -229,24 +226,7 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
     }
 
     // --- Block removal: drop fluid shards ---
-
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state,
-            net.minecraft.world.entity.player.Player player) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileTank tank) {
-                NonNullList<ItemStack> toDrop = NonNullList.create();
-                FluidItemDrops.addFluidDrops(toDrop, tank.tank.getFluidStack(0));
-                for (ItemStack drop : toDrop) {
-                    Block.popResource(level, pos, drop);
-                }
-                tank.markDropsHandled();
-            }
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
-
-    // The <1.21.10 non-player-removal catch-all is inherited from BlockBCTile_Neptune
-    // (>=1.21.10 uses TileTank#preRemoveSideEffects).
+    // Nothing here: TileTank#dropContentsOnRemoval spills the fluid on every removal, a player break included.
+    // The <1.21.10 catch-all is inherited from BlockBCTile_Neptune (>=1.21.10 uses
+    // AbstractBCSyncedBlockEntity#preRemoveSideEffects).
 }

@@ -167,15 +167,7 @@ public class BlockFloodGate extends BlockBCTile_Neptune<TileFloodGate> {
         return BlockUtil.itemUseSuccess();
     }
 
-    /** Drops the internal 2-bucket tank as fragile fluid-shard items. The flood gate has no
-     *  item inventory. */
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof TileFloodGate floodGate) {
-            buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, floodGate.getTank());
-            floodGate.markDropsHandled();
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
+    // The internal 2-bucket tank drops as fragile fluid-shard items on every removal, a player break included:
+    // TileFloodGate#dropContentsOnRemoval (the <1.21.10 catch-all is inherited from BlockBCTile_Neptune, >=1.21.10
+    // uses AbstractBCSyncedBlockEntity#preRemoveSideEffects). The flood gate has no item inventory.
 }

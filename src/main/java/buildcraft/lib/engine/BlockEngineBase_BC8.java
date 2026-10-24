@@ -143,7 +143,7 @@ public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, 
     // --- Removal drops ---
 
     // Every engine's contents spill on every removal, whatever tool or cause (player break, explosion, piston,
-    // /setblock ... destroy): TileEngineBase_BC8#preRemoveSideEffects on >=1.21.10, this onRemove catch-all before
+    // /setblock ... destroy): AbstractBCSyncedBlockEntity#preRemoveSideEffects on >=1.21.10, this onRemove catch-all before
     // that. The tile's dropContentsOnRemoval does the spilling; engines without contents inherit its no-op.
     //? if <1.21.10 {
     /*@Override

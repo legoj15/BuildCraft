@@ -12,7 +12,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 //? if >=1.21.10 {
@@ -139,18 +138,8 @@ public abstract class TileBC_Neptune extends AbstractBCSyncedBlockEntity {
      *  {@link #dropExtraContentsOnRemoval}, over exactly the same contents. */
     protected void clearExtraContents() {}
 
-    // Non-player removal catch-all (explosion / piston / /setblock ... destroy / mod tools) on the >=1.21.10 API:
-    // the BlockEntity is still alive here (removed right after, before affectNeighborsAfterRemoval).
-    // Player breaks set contentsDropped via markDropsHandled in playerWillDestroy, so this is a no-op there.
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
+    // The >=1.21.10 removal hook that calls dropContentsOnRemoval lives on AbstractBCSyncedBlockEntity.
+    // Player breaks set contentsDropped via markDropsHandled in playerWillDestroy, so it is a no-op there.
 
     @Nullable
     public IBCItemHandler getItemHandler(net.minecraft.core.Direction facing) {

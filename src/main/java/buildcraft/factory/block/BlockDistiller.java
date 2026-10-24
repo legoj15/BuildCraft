@@ -30,11 +30,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
-import net.minecraft.core.NonNullList;
-
-
 import buildcraft.api.blocks.ICustomRotationHandler;
-import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
@@ -179,26 +175,8 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
         return InteractionResult.SUCCESS;
     }
 
-    // --- Block removal: drop fluid shards ---
-
-    @Override
-    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof TileDistiller_BC8 distiller) {
-                NonNullList<ItemStack> toDrop = NonNullList.create();
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankIn().getFluidStack(0));
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankGasOut().getFluidStack(0));
-                FluidItemDrops.addFluidDrops(toDrop, distiller.getTankLiquidOut().getFluidStack(0));
-                for (ItemStack drop : toDrop) {
-                    Block.popResource(level, pos, drop);
-                }
-                // The bucket / bottle slots, as the Heat Exchanger drops its own: breaking the machine used to
-                // destroy whatever the player had left in them.
-                buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, distiller.containerSlots);
-                distiller.markDropsHandled();
-            }
-        }
-        return super.playerWillDestroy(level, pos, state, player);
-    }
+    // --- Block removal: drop fluid shards + bucket / bottle slots ---
+    // Nothing here: TileDistiller_BC8#dropContentsOnRemoval spills them on every removal, a player break included.
+    // The <1.21.10 catch-all is inherited from BlockBCTile_Neptune (>=1.21.10 uses
+    // AbstractBCSyncedBlockEntity#preRemoveSideEffects).
 }

@@ -128,7 +128,7 @@ public abstract class AbstractBCBlockEntity extends BlockEntity implements Clear
     }
 
     // --- Non-player-removal drop hook ---
-    // The block base's <1.21.10 onRemove catch-all (and, on >=1.21.10, TileBC_Neptune's
+    // The block base's <1.21.10 onRemove catch-all (and, on >=1.21.10, AbstractBCSyncedBlockEntity's
     // preRemoveSideEffects) call this polymorphically on a non-player removal (explosion / piston /
     // /setblock ... destroy / mod tools). Default no-op — TileBC_Neptune (gated on spillsContentsOnRemoval)
     // and the raw fluid/engine tiles override it with their own spill logic; tiles that never spill inherit

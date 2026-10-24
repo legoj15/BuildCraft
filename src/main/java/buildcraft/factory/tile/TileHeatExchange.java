@@ -91,7 +91,8 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
      *   <li>3: fills from START.tankOutput (the cooled output)</li>
      * </ul>
      * Present on every tile (NBT-persistent) but only ticked when {@link #isStart()};
-     * dropped on block break by {@code BlockHeatExchange.playerWillDestroy}.
+     * spilled on any removal by {@link #dropContentsOnRemoval} (the removal hook itself is
+     * {@code AbstractBCSyncedBlockEntity}'s).
      */
     public final ItemHandlerSimple containerSlots = new ItemHandlerSimple(4, 1);
 
@@ -103,28 +104,23 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         super(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), pos, state);
     }
 
-    // --- Non-player removal drops (explosion / piston / /setblock ... destroy) ---
-    // Sits on the synced base beside TileBC_Neptune (a bespoke section per multiblock end, no itemManager):
-    // carries its own drop hook. Spills the section tanks (START/END tiles only) as fragile shards plus the
-    // container slots, mirroring BlockHeatExchange#playerWillDestroy. A command REPLACE wipes the same set
-    // (clearContent below).
+    // --- Removal drops (every removal: player break, explosion, piston, /setblock ... destroy) ---
+    // The removal hook is AbstractBCSyncedBlockEntity's; this is just what this tile holds. Spills the section
+    // tanks (START/END tiles only) as fragile shards plus the container slots, then empties them, which keeps a
+    // second call from dropping them again (BlockHeatExchange drops nothing in playerWillDestroy: a player break
+    // reaches the hook too). A command REPLACE wipes the same set (clearContent below).
 
-    private boolean dropsHandled = false;
-
-    public void markDropsHandled() {
-        dropsHandled = true;
-    }
-
+    @Override
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {
-        if (dropsHandled || level.isClientSide()) {
+        if (level.isClientSide()) {
             return;
         }
-        dropsHandled = true;
         ExchangeSection section = getSection();
         if (section != null) {
             buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, pos, section.tankInput, section.tankOutput);
         }
         buildcraft.lib.misc.BlockDropsUtil.dropItems(level, pos, containerSlots);
+        clearContent();
     }
 
     /** Wipes exactly what {@link #dropContentsOnRemoval} would spill: the section tanks (when this tile owns
@@ -138,16 +134,6 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         }
         containerSlots.clearStacks();
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        super.preRemoveSideEffects(pos, state);
-        if (level != null) {
-            dropContentsOnRemoval(level, pos);
-        }
-    }
-    //?}
 
     // --- Section accessors ---
 

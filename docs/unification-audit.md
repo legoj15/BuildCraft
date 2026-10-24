@@ -27,7 +27,7 @@ Because there is *no intermediate base* between `BlockEntity` and these tiles, t
 | `//? if >=1.21.10` save/load directive → `writeData`/`readData` | `TileBC_Neptune.java:108-132` | **10** (byte-identical; each comment says "see TileBC_Neptune for the rationale") | Unjustified |
 | Owner `GameProfile` NBT (`ownerUUID`/`ownerName`) | `TileBC_Neptune.java:81-156` | **4** (engine/floodgate/distiller + base) | Unjustified + has a bug |
 | `getUpdateTag`/`getUpdatePacket` + `<1.21.10 onDataPacket` compat | `TileBC_Neptune.java:227-250` | 7 (the `onDataPacket` fix only on 2 of them) | Unjustified + latent bug |
-| Non-player-removal drop hook (`dropsHandled`/`preRemoveSideEffects`) | `TileBC_Neptune.java:178-218` | 4 fluid tiles (field-name `contentsDropped` vs `dropsHandled`) | Justified-within-structure |
+| Non-player-removal drop hook (`dropsHandled`/`preRemoveSideEffects`) | `AbstractBCSyncedBlockEntity#preRemoveSideEffects` (hoisted 2026-10-24; was `TileBC_Neptune.java:178-218`) | none left: the 4 fluid tiles and the engines override only `dropContentsOnRemoval` + `clearContent` | Resolved |
 | Player-tracking GUI coupling (`ContainerBCTile<T extends TileBC_Neptune>`) | `ContainerBCTile.java:14` | raw GUIs re-roll `stillValid` 4x | Justified bound (latent) |
 
 `TileSpringOil.java:61-118` is the worst offender — it inlines `BCValueInput`/`BCValueOutput` construction *inside* the directive in both load and save arms, with no `writeData`/`readData` hook at all.

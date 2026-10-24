@@ -16,7 +16,7 @@ The contents page offers three orders (`GuiGuide.SORTING_TYPES`, first is the de
 | Sort Alphabetically | flat | search-style |
 
 Sort By Mod is gone (one mod, so it collapsed to one node); its button art was renamed to `sort_system*`
-and still shows the old glyph — an art pass is pending.
+and redrawn (2026-10-24) as a small hierarchy: one root block branching to three coloured child blocks.
 
 **Systems** (`buildcraft.guide.chapter.system.<key>`, fixed order in `GuideManager`; unknown keys sort after,
 A–Z): `getting_started`, `power`, `transport`, `logic` (Gates and Logic), `building`, `mining_fluids`,

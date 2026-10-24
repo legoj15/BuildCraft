@@ -5,3 +5,4 @@
 - Robots and Stripes pipes no longer lose fluid containers after consuming the fluid, it ejects it somewhere.
 - Electronic Library no longer rejects blueprints that hold pistons/blocks with replaceable variants (blueprints saved before this fix need saving again).
 - Fixed the guide book putting text over a page number in specific cases.
+- The guide book's Sort By System button has its own icon instead of the old Sort By Mod one.

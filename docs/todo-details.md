@@ -59,7 +59,6 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 ## Guide book follow-ups
 
 Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-robots-and-toc.md](guide-robots-and-toc.md)):
-- The Sort By System button reuses the old Sort By Mod glyph (`textures/gui/sprites/guide/sort_system*.png`, four states). Needs a 14x14 icon that says "system".
 - Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
 
 ## Guide page-spanning link clicks

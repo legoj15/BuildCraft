@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -36,6 +37,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
@@ -104,9 +106,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private EnumFluidHandlingMode cachedAreaFluidMode;
     /** Ticks since {@link #cachedAreaFluid} was taken. */
     private int cachedAreaFluidAge;
-    /** Whether {@link #replaceCensus} holds the census of the last REPLACE sweep that found fluid. */
+    /** Whether {@link #replaceCensus} holds the census of the last REPLACE/NO_REPLACE sweep that found fluid. */
     private boolean replaceCensusKnown;
-    /** The fluid census of the last REPLACE sweep ({@link #scanReplaceFluid}). */
+    /** The fluid census of the last REPLACE/NO_REPLACE sweep ({@link #scanReplaceFluid}). */
     private long replaceCensus;
     /** Game time at which {@link #replaceCensus} was first read as it is now. */
     private long replaceCensusSince;
@@ -195,12 +197,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         TOLERATED_ONLY,
         /** CLEAR: fluid that mopping is still to clear (an air cell, or a block the check has not accepted). */
         UNCLEARED,
-        /** REPLACE: fluid that has stopped changing (a walled pond, or flowing fluid that has filled every cell it
-         *  can reach); see {@link #scanReplaceFluid}. It can wash away only a fragile block placed beside or below
-         *  it. */
+        /** REPLACE and NO_REPLACE: fluid that has stopped changing (a walled pond, or flowing fluid that has filled
+         *  every cell it can reach); see {@link #scanReplaceFluid}. It can wash away only a fragile block placed
+         *  beside or below it. */
         SETTLED,
-        /** REPLACE: fluid that has changed lately, or whose open surroundings have: it may reach any cell of the box
-         *  a few flow steps from now. */
+        /** REPLACE and NO_REPLACE: fluid that has changed lately, or whose open surroundings have: it may reach any
+         *  cell of the box a few flow steps from now. */
         MOVING
     }
 
@@ -213,13 +215,13 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * just the fragile blocks that fluid touches. Counting accepted cells as "still to mop" would hold the gate shut
      * for every other block for as long as one tolerated wet block stands, since mopping can never remove its water.
      *
-     * <p>REPLACE never removes fluid, so it splits it into fluid that can still move ({@link AreaFluid#MOVING}) and
-     * fluid that has settled ({@link AreaFluid#SETTLED}); see {@link #scanReplaceFluid}. Moving fluid holds every
-     * fragile placement back, settled fluid only the fragile blocks it touches. Holding them back on any fluid at all
-     * meant a REPLACE build with one still pond in its box never placed its torches.
+     * <p>REPLACE and NO_REPLACE never remove fluid, so they split it into fluid that can still move
+     * ({@link AreaFluid#MOVING}) and fluid that has settled ({@link AreaFluid#SETTLED}); see {@link #scanReplaceFluid}.
+     * Moving fluid holds every fragile placement back, settled fluid only the fragile blocks it touches. Holding them
+     * back on any fluid at all meant a REPLACE build with one still pond in its box never placed its torches.
      *
      * <p>The CLEAR sweep stops at the first uncleared fluid, so it is cheap while there is any, but a clear area, and
-     * one holding only tolerated fluid, are only known after every cell has been read; the REPLACE sweep always reads
+     * one holding only tolerated fluid, are only known after every cell has been read; the other modes' sweep reads
      * every cell. That is why the gate does not call this directly: {@link #areaFluid} asks for it only once a placement
      * actually reaches the gate, and reuses the answer for {@link #FLUID_SCAN_INTERVAL} ticks, except to let a
      * fragile placement through (see {@link #areaFluid} for what a reused answer may get wrong). The walk itself
@@ -234,8 +236,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         BlockPos max = info.box.max();
         if (min == null || max == null) return AreaFluid.NONE;
         Level world = tile.getWorldBC();
-        if (getFluidMode() == EnumFluidHandlingMode.REPLACE) return scanReplaceFluid(world, min, max);
+        if (getFluidMode() != EnumFluidHandlingMode.CLEAR) return scanReplaceFluid(world, min, max);
         replaceCensusKnown = false;
+        if (!mayHoldFluid(world, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ())) {
+            return AreaFluid.NONE;
+        }
         AreaFluid result = AreaFluid.NONE;
         // y outermost, x innermost: the order a chunk section stores its blocks in.
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
@@ -264,7 +269,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     /**
-     * The REPLACE half of {@link #scanAreaFluid()}: has the fluid in and around the build box stopped changing?
+     * The REPLACE and NO_REPLACE half of {@link #scanAreaFluid()}: has the fluid in and around the build box stopped
+     * changing?
      *
      * <p>Whether fluid will move cannot be read off one cell. Flowing fluid that has filled every cell it can reach
      * stays as it is for as long as its source does (a waterlogged block spilling into the air cell beside it, the
@@ -283,13 +289,18 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * water can flow into it. The walk allocates nothing per cell (two reused cursors).
      */
     private AreaFluid scanReplaceFluid(Level world, BlockPos min, BlockPos max) {
+        // Fluid never flows up, so the shell needs no layer below the box.
+        if (!mayHoldFluid(world, min.getX() - 1, min.getY(), min.getZ() - 1,
+                max.getX() + 1, max.getY() + 1, max.getZ() + 1)) {
+            replaceCensusKnown = false;
+            return AreaFluid.NONE;
+        }
         long census = 0;
         boolean any = false;
         int maxDelay = 0;
         Fluid lastType = null;
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         BlockPos.MutableBlockPos neighbour = new BlockPos.MutableBlockPos();
-        // Fluid never flows up, so the shell needs no layer below the box.
         for (int y = min.getY(); y <= max.getY() + 1; y++) {
             for (int z = min.getZ() - 1; z <= max.getZ() + 1; z++) {
                 for (int x = min.getX() - 1; x <= max.getX() + 1; x++) {
@@ -327,6 +338,29 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         }
         return now - replaceCensusSince > (long) SETTLE_TICK_DELAYS * maxDelay ? AreaFluid.SETTLED : AreaFluid.MOVING;
     }
+
+    /**
+     * Can any cell from {@code (x0, y0, z0)} to {@code (x1, y1, z1)} hold fluid? Reads only the block-state palettes
+     * of the chunk sections the region touches, not its cells, so a dry area (the usual case: NO_REPLACE, the default
+     * mode, sweeps for every fragile placement too) costs a handful of palette reads instead of a walk of every cell.
+     * A palette can list a state no cell holds any more, so {@code true} means only "maybe": the walk decides.
+     */
+    private static boolean mayHoldFluid(Level world, int x0, int y0, int z0, int x1, int y1, int z1) {
+        int sections = world.getSectionsCount();
+        for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) {
+            for (int cx = x0 >> 4; cx <= x1 >> 4; cx++) {
+                LevelChunkSection[] column = world.getChunk(cx, cz).getSections();
+                for (int sy = y0 >> 4; sy <= y1 >> 4; sy++) {
+                    int index = world.getSectionIndexFromSectionY(sy);
+                    if (index < 0 || index >= sections || index >= column.length) continue;
+                    if (column[index].maybeHas(HOLDS_FLUID)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static final Predicate<BlockState> HOLDS_FLUID = state -> !state.getFluidState().isEmpty();
 
     /** Folds one fluid cell into a {@link #scanReplaceFluid} census (order-dependent; the walk order is fixed). */
     private static long mixCensus(long census, long pos, int state, int open) {
@@ -381,14 +415,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             if (fluid == AreaFluid.UNCLEARED) return false;
             return !(fluid == AreaFluid.TOLERATED_ONLY && isFragileSchematicAt(pos) && isFragileWashedAwayAt(pos));
         }
-        if (mode == EnumFluidHandlingMode.REPLACE) {
-            // Only fragile blocks wait in REPLACE, so only they need the sweep.
-            if (!isFragileSchematicAt(pos)) return true;
-            AreaFluid fluid = areaFluid(mode);
-            if (fluid == AreaFluid.MOVING) return false;
-            return !(fluid == AreaFluid.SETTLED && isFragileWashedAwayAt(pos));
-        }
-        return true;
+        // REPLACE and NO_REPLACE: only fragile blocks wait, so only they need the sweep.
+        if (!isFragileSchematicAt(pos)) return true;
+        AreaFluid fluid = areaFluid(mode);
+        if (fluid == AreaFluid.MOVING) return false;
+        return !(fluid == AreaFluid.SETTLED && isFragileWashedAwayAt(pos));
     }
     /**
      * The last step before a placement that passed {@link #passesFluidGate} takes its items: a fragile placement is
@@ -398,7 +429,6 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * or that cannot stand yet, keeps to one sweep per {@link #FLUID_SCAN_INTERVAL}.
      */
     private boolean passesFreshFluidGate(EnumFluidHandlingMode mode, BlockPos pos) {
-        if (mode != EnumFluidHandlingMode.CLEAR && mode != EnumFluidHandlingMode.REPLACE) return true;
         if (cachedAreaFluid != null && cachedAreaFluidMode == mode && cachedAreaFluidAge == 0) return true;
         if (!isFragileSchematicAt(pos)) return true;
         cachedAreaFluid = null;
@@ -688,8 +718,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   infinite-source rule keeps re-making from that permanent fluid) the check accepts it as
             //   done (BlueprintBuilder#isFragileUnbuildableAt) rather than leaving it here, deferred for
             //   ever with the build reported busy. A source that will not come back is still mopped.
-            // - REPLACE: defer fragile placements only — solid placements proceed because they
-            //   displace water on placement and aren't replaceable. Without this, fragile
+            // - REPLACE and NO_REPLACE: defer fragile placements only. Solid placements need no gate:
+            //   in REPLACE they displace the water on placement and aren't washed away, and NO_REPLACE
+            //   never places one into fluid at all (BlueprintBuilder#canPlace/#isBlockCorrect skip a
+            //   fluid cell, except a block that keeps that very fluid as its own). Without this, fragile
             //   schematic blocks (snow_layer in the user's case) at positions where water flows
             //   in over a few ticks get stuck in an extract-then-defer-then-refund loop: the
             //   per-build fragile defer in SchematicBlockDefault.build catches the placement,
@@ -702,7 +734,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             //   surroundings have, see scanReplaceFluid), or SETTLED fluid beside or above the cell
             //   itself. A still pond, or flowing water that has stopped spreading, elsewhere in the
             //   box no longer holds every torch back for ever. A fragile cell that fluid which stays
-            //   put washes can never be built in REPLACE at all; the check accepts it as done
+            //   put washes can never be built in these modes at all; the check accepts it as done
             //   (BlueprintBuilder#isFragileUnbuildableAt) instead of leaving it deferred here for ever.
             //
             // The gate itself is passesFluidGate; it reads the area's fluid only when a placement reaches it, from

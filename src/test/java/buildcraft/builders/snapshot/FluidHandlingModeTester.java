@@ -909,14 +909,12 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * NO_REPLACE intentionally doesn't run the fragile defer — the mode's contract is "leave
-     * fluids alone", and adding fluid-aware deferrals to the no-fluid-handling mode would be
-     * surprising. The Builder's existing fluid-skip filter (in SnapshotBuilder) already keeps
-     * fluid positions out of the queue under NO_REPLACE, so the defer would only kick in for
-     * empty-position placements with adjacent water — a rarer case the mode's user opted out of
-     * fluid handling for.
+     * A Builder in NO_REPLACE defers a fragile block beside water like the other modes: placed, the water would wash
+     * it away (its item dropping), and the flooded cell then counts as built in NO_REPLACE, so it would never be
+     * placed again. The schematic item placed by hand ({@code build(Level, BlockPos)}) keeps no defer: a player's
+     * snow layer goes down beside water as a player's would.
      */
-    public static void testNoReplaceModeSkipsFragileCheck(GameTestHelper helper) {
+    public static void testNoReplaceModeDefersFragileButHandPlacementDoesNot(GameTestHelper helper) {
         try {
             BlockPos local = new BlockPos(2, 2, 2);
             BlockPos abs = helper.absolutePos(local);
@@ -926,10 +924,14 @@ public class FluidHandlingModeTester {
 
             SchematicBlockDefault s = schem(Blocks.SNOW.defaultBlockState());
             boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE);
-            assertTrue(placed, "NO_REPLACE must skip the fragile defer entirely; the user opted out of fluid handling");
+            assertTrue(!placed, "a NO_REPLACE Builder placement must defer a fragile block beside water");
+            assertTrue(helper.getLevel().getBlockState(abs).isAir(),
+                    "the deferred NO_REPLACE placement must leave the cell untouched");
 
+            boolean placedByHand = s.build(helper.getLevel(), abs);
+            assertTrue(placedByHand, "a placement by hand must not run the fragile defer");
             BlockState atPos = helper.getLevel().getBlockState(abs);
-            assertTrue(atPos.getBlock() == Blocks.SNOW, "snow should be placed under NO_REPLACE despite the adjacent water");
+            assertTrue(atPos.getBlock() == Blocks.SNOW, "snow placed by hand should stand despite the adjacent water");
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());

@@ -505,7 +505,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_solid_placed_despite_adjacent_fluid", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testSolidBlockPlacedDespiteAdjacentFluid);
         reg.accept("buildcraftunofficial:fluidmode_fragile_deferred_for_fluid_above", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFragileBlockDeferredForFluidAbove);
         reg.accept("buildcraftunofficial:fluidmode_waterloggable_not_deferred", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterloggableBlockNotDeferredNearWater);
-        reg.accept("buildcraftunofficial:fluidmode_no_replace_skips_fragile_check", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeSkipsFragileCheck);
+        reg.accept("buildcraftunofficial:fluidmode_no_replace_defers_fragile", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDefersFragileButHandPlacementDoesNot);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);
@@ -545,6 +545,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_replace_settled_flowing_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::settledFlowingWaterDoesNotHoldBackADistantFragileBlock);
         reg.accept("buildcraftunofficial:builder_replace_fragile_in_settled_water_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceRestsWithFragileCellsInSettledWater);
         reg.accept("buildcraftunofficial:builder_no_replace_fluid_in_solid_cell_rests", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceRestsWithFluidInASolidCell);
+        reg.accept("buildcraftunofficial:builder_no_replace_fragile_waits_for_reaching_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceFragilePlacementWaitsForWaterThatCanReachIt);
+        reg.accept("buildcraftunofficial:builder_no_replace_settled_water_places_fragile", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceSettledWaterDoesNotHoldBackADistantFragileBlock);
+        reg.accept("buildcraftunofficial:builder_no_replace_places_waterlogged_into_own_water", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplacePlacesWaterloggedBlockIntoItsOwnWater);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::replaceBreaksWaterloggedBlockInAirCell);
         reg.accept("buildcraftunofficial:builder_no_replace_breaks_waterlogged_air_cell", () -> buildcraft.builders.snapshot.BuilderFluidSweepTester::noReplaceBreaksWaterloggedBlockInAirCell);
         reg.accept("buildcraftunofficial:filler_rests_with_fluid_in_unset_cell", () -> buildcraft.builders.snapshot.FillerFluidTester::fillerRestsWithFluidInAnUnsetCell);

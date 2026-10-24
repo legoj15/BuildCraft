@@ -365,13 +365,23 @@ public class SchematicBlockDefault implements ISchematicBlock {
 
     @SuppressWarnings({"unused", "WeakerAccess"})
     protected void setPlaceBlock(SchematicBlockContext context, Set<JsonRule> rules) {
-        placeBlock = rules.stream()
+        placeBlock = placeBlockFor(rules, context.block);
+    }
+
+    /**
+     * The block {@code rules} say to place: the first rule that names one, in the rules' load order
+     * ({@link RulesLoader#getRules(BlockState, CompoundTag)} hands them over ordered, so two rules that both name one
+     * resolve the same way on every run), else {@code fallback}. Shared by the capture and the scan-safety check, so
+     * the two cannot disagree.
+     */
+    private static Block placeBlockFor(Set<JsonRule> rules, Block fallback) {
+        return rules.stream()
             .map(rule -> rule.placeBlock)
             .filter(Objects::nonNull)
             .findFirst()
             .map(Identifier::parse)
             .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
-            .orElse(context.block);
+            .orElse(fallback);
     }
 
     @SuppressWarnings({"unused", "WeakerAccess"})
@@ -538,9 +548,14 @@ public class SchematicBlockDefault implements ISchematicBlock {
         return level.isEmptyBlock(blockPos);
     }
 
+    /**
+     * Places the block as a player would by hand (the single schematic item): no fluid handling and no fragile-block
+     * defer, so a torch goes down beside water exactly as a player's would. Every Builder mode goes through
+     * {@link #build(Level, BlockPos, EnumFluidHandlingMode, boolean)} instead.
+     */
     @Override
     public boolean build(Level level, BlockPos blockPos) {
-        return build(level, blockPos, EnumFluidHandlingMode.NO_REPLACE, true);
+        return build(level, blockPos, EnumFluidHandlingMode.NO_REPLACE, true, false);
     }
 
     /**
@@ -555,19 +570,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         return build(level, blockPos, fluidMode, true);
     }
 
-    /**
-     * Mode-aware variant of {@link #build(Level, BlockPos, EnumFluidHandlingMode)}. When
-     * {@code includeContainerContents} is false (Builder in
-     * {@link EnumContainerContentsMode#IGNORE IGNORE} mode), any items-list NBT paths declared
-     * by the matching JSON rules (the {@code Items} tag for vanilla chests/hoppers/etc.) are
-     * stripped from the tileNbt copy before {@code loadWithComponents} runs — the placed
-     * container appears empty even though the architect captured its contents. Cosmetic and
-     * structural tags (custom name, lock string, loot table seed, brewing fuel level, …) are
-     * preserved.
-     */
     /** The state {@link #build} places, before its fluid and leaf adjustments: the captured state carried over to
      *  the place block, with the ignored properties reset to the place block's defaults. */
-    private BlockState placedState() {
+    BlockState placedState() {
         BlockState newBlockState = blockState;
         if (placeBlock != blockState.getBlock()) {
             newBlockState = placeBlock.defaultBlockState();
@@ -629,9 +634,26 @@ public class SchematicBlockDefault implements ISchematicBlock {
         return state.setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
     }
 
-    @SuppressWarnings("Duplicates")
+    /**
+     * Mode-aware variant of {@link #build(Level, BlockPos, EnumFluidHandlingMode)}. When
+     * {@code includeContainerContents} is false (Builder in
+     * {@link EnumContainerContentsMode#IGNORE IGNORE} mode), any items-list NBT paths declared
+     * by the matching JSON rules (the {@code Items} tag for vanilla chests/hoppers/etc.) are
+     * stripped from the tileNbt copy before {@code loadWithComponents} runs — the placed
+     * container appears empty even though the architect captured its contents. Cosmetic and
+     * structural tags (custom name, lock string, loot table seed, brewing fuel level, …) are
+     * preserved.
+     */
     public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
                          boolean includeContainerContents) {
+        return build(level, blockPos, fluidMode, includeContainerContents, true);
+    }
+
+    /** {@link #build(Level, BlockPos, EnumFluidHandlingMode, boolean)}, with the fragile-block defer only when
+     *  {@code deferFragile} (a Builder placement, in any mode; never a placement by hand). */
+    @SuppressWarnings("Duplicates")
+    private boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
+                          boolean includeContainerContents, boolean deferFragile) {
         if (placeBlock == Blocks.AIR) {
             return true;
         }
@@ -680,7 +702,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // iteration below: if vanilla updateShape returns AIR for any direction, the block has
         // self-destructed and we undo the placement + refund items. That reflects post-cascade
         // reality, which is what actually decides whether a block survives.)
-        // Fragile-block defer: in REPLACE/CLEAR, when the block we're about to place is one whose
+        // Fragile-block defer: in every Builder mode, when the block we're about to place is one whose
         // canBeReplaced(fluid) returns true (snow_layer, carpet, button, redstone wire, torch,
         // sapling, …), any adjacent fluid will flow into the freshly placed block on the next
         // fluid tick and destroy it. canSurvive doesn't catch this because it evaluates against
@@ -688,8 +710,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // user sees a place→destroy→place loop (item consumed once per cycle until the inventory
         // drains) when REPLACE-ing snow into a leaky pool. Solid blocks aren't fragile
         // (canBeReplaced returns false) and waterloggable blocks — waterlogged or dry — coexist
-        // with fluid, so isWashedAwayBy excludes both.
-        if (fluidMode == EnumFluidHandlingMode.REPLACE || fluidMode == EnumFluidHandlingMode.CLEAR) {
+        // with fluid, so isWashedAwayBy excludes both. NO_REPLACE needs it too: there the washed-away
+        // cell then holds fluid, which that mode counts as built, so the block was lost for good.
+        if (deferFragile) {
             boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
                     && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
             if (!placedAsWaterlogged && hasWashingFluidNeighbour(level, blockPos, newBlockState)) {
@@ -1274,14 +1297,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (SchematicBlockFluid.isFluidBlock(blockState)) return false;
         if ((blockState.getBlock() instanceof BlockPipeHolder) != (this instanceof SchematicBlockPipe)) return false;
         Set<JsonRule> rules = RulesLoader.getRules(blockState, tileNbt);
-        Block expectedPlaceBlock = rules.stream()
-            .map(rule -> rule.placeBlock)
-            .filter(Objects::nonNull)
-            .findFirst()
-            .map(Identifier::parse)
-            .map(id -> buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.BLOCK, id))
-            .orElse(blockState.getBlock());
-        if (placeBlock != expectedPlaceBlock) return false;
+        if (placeBlock != placeBlockFor(rules, blockState.getBlock())) return false;
         if (blockState.isAir()) return true;
         Identifier registryName = BuiltInRegistries.BLOCK.getKey(blockState.getBlock());
         if (registryName == null || !RulesLoader.READ_DOMAINS.contains(registryName.getNamespace())) return false;

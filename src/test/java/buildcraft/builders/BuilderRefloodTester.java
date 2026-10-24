@@ -70,9 +70,12 @@ public class BuilderRefloodTester {
     public static final int AIR = 2;
     /** A fragile block (any fluid washes it away), to check tolerated water does not hold every one back. */
     public static final int SNOW = 3;
+    /** A bottom oak slab the blueprint itself wants waterlogged. */
+    public static final int WET_SLAB = 4;
     private static final BlockState[] KIND_STATES = {
         Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
-        Blocks.SNOW.defaultBlockState() };
+        Blocks.SNOW.defaultBlockState(),
+        Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true) };
 
     public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
@@ -95,7 +98,7 @@ public class BuilderRefloodTester {
     }
 
     /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
-     *  {@link #AIR} or {@link #SNOW} (one snow layer). */
+     *  {@link #AIR}, {@link #SNOW} (one snow layer) or {@link #WET_SLAB}. */
     private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column,
             List<ISchematicEntity> entities) {
         Blueprint blueprint = new Blueprint();
@@ -134,13 +137,14 @@ public class BuilderRefloodTester {
         return state.is(Blocks.WATER) && state.getFluidState().isSource();
     }
 
-    /** Is {@code state} the dry, finished block the blueprint wants for {@code kind}? */
+    /** Is {@code state} the finished block the blueprint wants for {@code kind} (dry, except {@link #WET_SLAB})? */
     public static boolean isBuilt(int kind, BlockState state) {
         return switch (kind) {
             case SLAB -> isDrySlab(state);
             case STONE -> state.is(Blocks.STONE);
             case AIR -> state.isAir();
             case SNOW -> state.is(Blocks.SNOW);
+            case WET_SLAB -> isWetSlab(state);
             default -> throw new IllegalArgumentException("bad kind " + kind);
         };
     }

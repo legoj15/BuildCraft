@@ -406,50 +406,90 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     //? if >=1.21.10 {
-    /** The complete fill state, so a station-side insert made inside an UNCOMMITTED transaction leaves no
-     *  trace. The pipe's own per-face capability deliberately does not roll back (its state re-normalises
-     *  every tick); this seam must, because the unload AIs dry-run it once per candidate station while
-     *  choosing where to fly — a committing dry run would mint a bucket per station scanned. */
+    /** The complete server-side fill state of every section, so an insert made inside a transaction that is
+     *  later aborted leaves no trace. Both transactional entry points journal through {@link #journal}
+     *  before they mutate anything: the per-face {@link Section} capability, because
+     *  {@code ResourceHandlerUtil.move} dry-runs inside a transaction it never commits and rolls back any
+     *  transfer the source cannot honour; and {@link StationOutput}, because the unload AIs dry-run it once
+     *  per candidate station. A committing insert in either minted the inserted fluid on every abort, as the
+     *  source's extraction rolled back while the pipe kept what it had taken.
+     *
+     *  <p>Snapshots are reused (see {@link #journal}): once warm, journalling the per-tick pipe-to-pipe push
+     *  (which commits every time) allocates no snapshot. The push's own transaction and side checks are
+     *  outside this class's control. */
     private final class FlowSnapshot {
-        private final FluidStack fluid = currentFluid.copy();
-        private final int delay = currentDelay;
-        private final Map<EnumPipePart, int[]> incoming = new EnumMap<>(EnumPipePart.class);
-        private final Map<EnumPipePart, int[]> scalars = new EnumMap<>(EnumPipePart.class);
+        private FluidStack fluid = FluidStack.EMPTY;
+        private int delay;
+        private final int[][] incoming = new int[EnumPipePart.VALUES.length][];
+        private final int[] amount = new int[EnumPipePart.VALUES.length];
+        private final int[] incomingTotalCache = new int[EnumPipePart.VALUES.length];
+        private final int[] currentTime = new int[EnumPipePart.VALUES.length];
+        private final int[] ticksInDirection = new int[EnumPipePart.VALUES.length];
 
-        FlowSnapshot() {
-            for (Map.Entry<EnumPipePart, Section> entry : sections.entrySet()) {
-                Section s = entry.getValue();
-                incoming.put(entry.getKey(), s.incoming.clone());
-                scalars.put(entry.getKey(),
-                        new int[] { s.amount, s.incomingTotalCache, s.currentTime, s.ticksInDirection });
+        FlowSnapshot capture() {
+            // A reference is enough: the pipe only ever REPLACES currentFluid (setFluid, restore), never
+            // mutates the stack it holds.
+            fluid = currentFluid;
+            delay = currentDelay;
+            for (EnumPipePart part : EnumPipePart.VALUES) {
+                Section s = sections.get(part);
+                int i = part.ordinal();
+                incoming[i] = copyInto(incoming[i], s.incoming);
+                amount[i] = s.amount;
+                incomingTotalCache[i] = s.incomingTotalCache;
+                currentTime[i] = s.currentTime;
+                ticksInDirection[i] = s.ticksInDirection;
             }
+            return this;
         }
 
         void restore() {
             currentFluid = fluid;
             currentDelay = delay;
-            for (Map.Entry<EnumPipePart, Section> entry : sections.entrySet()) {
-                Section s = entry.getValue();
-                s.incoming = incoming.get(entry.getKey()).clone();
-                int[] values = scalars.get(entry.getKey());
-                s.amount = values[0];
-                s.incomingTotalCache = values[1];
-                s.currentTime = values[2];
-                s.ticksInDirection = values[3];
+            for (EnumPipePart part : EnumPipePart.VALUES) {
+                Section s = sections.get(part);
+                int i = part.ordinal();
+                // setFluid() may have swapped in a fresh array of another length since the capture
+                s.incoming = copyInto(s.incoming, incoming[i]);
+                s.amount = amount[i];
+                s.incomingTotalCache = incomingTotalCache[i];
+                s.currentTime = currentTime[i];
+                s.ticksInDirection = ticksInDirection[i];
             }
         }
     }
 
-    private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<FlowSnapshot> stationJournal =
+    /** Copies {@code src} into {@code dst} when the lengths match, else returns a fresh copy. */
+    private static int[] copyInto(@Nullable int[] dst, int[] src) {
+        if (dst == null || dst.length != src.length) {
+            return src.clone();
+        }
+        System.arraycopy(src, 0, dst, 0, src.length);
+        return dst;
+    }
+
+    /** One spare snapshot covers the usual single-depth transaction; deeper nesting allocates (rarely). */
+    @Nullable
+    private FlowSnapshot spareSnapshot;
+
+    private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<FlowSnapshot> journal =
             new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<>() {
                 @Override
                 protected FlowSnapshot createSnapshot() {
-                    return new FlowSnapshot();
+                    FlowSnapshot snapshot = spareSnapshot;
+                    spareSnapshot = null;
+                    return (snapshot != null ? snapshot : new FlowSnapshot()).capture();
                 }
 
                 @Override
                 protected void revertToSnapshot(FlowSnapshot snapshot) {
                     snapshot.restore();
+                }
+
+                @Override
+                protected void releaseSnapshot(FlowSnapshot snapshot) {
+                    snapshot.fluid = FluidStack.EMPTY; // do not pin a stack while parked
+                    spareSnapshot = snapshot;
                 }
             };
 
@@ -512,7 +552,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             if (accepted <= 0) {
                 return 0;
             }
-            stationJournal.updateSnapshots(transaction);
+            journal.updateSnapshots(transaction);
             return insertFluidForce(resource.toStack(accepted), face, false);
         }
 
@@ -638,16 +678,16 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluid)) {
             return 0;
         }
-        if (currentFluid.isEmpty() && !simulate) {
-            setFluid(fluid.copy());
+        // Measure first, as insertFluidForce does: setFluid() must only run when something lands, or a
+        // 0 mB insert into an empty pipe leaves a fluid type behind.
+        int room = s.fill(fluid.getAmount(), false);
+        if (room <= 0 || simulate) {
+            return Math.max(room, 0);
         }
-        int filled = s.fill(fluid.getAmount(), !simulate);
-        if (filled == 0) {
-            return 0;
+        if (currentFluid.isEmpty()) {
+            setFluid(fluid.copyWithAmount(room));
         }
-        if (simulate) {
-            return filled;
-        }
+        int filled = s.fill(fluid.getAmount(), true);
         if (from != null) {
             sections.get(EnumPipePart.fromFacing(from)).ticksInDirection = COOLDOWN_INPUT;
         }
@@ -1330,6 +1370,40 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return clientAmountThis > 0 | clientAmountLast > 0;
         }
 
+        /** How much of {@code fluidStack} a neighbour may push into this face section right now, mutating
+         *  nothing — the shared front half of the capability insert/fill on every node. */
+        private int measureNeighbourInsert(FluidStack fluidStack) {
+            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
+                return 0;
+            }
+            // TryInsert fires before the fluid-type check, as it always has: listeners see every attempt.
+            PipeEventFluid.TryInsert tryInsert = new PipeEventFluid.TryInsert(
+                pipe.getHolder(), PipeFlowFluids.this, part.face, fluidStack
+            );
+            pipe.getHolder().fireEvent(tryInsert);
+            if (tryInsert.isCanceled()) {
+                return 0;
+            }
+            if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
+                return 0;
+            }
+            // An empty pipe's delay line is all zeros, exactly what setFluid() would rebuild it to, so the
+            // measure here is what the commit below will accept.
+            return fill(fluidStack.getAmount(), false);
+        }
+
+        /** Lands {@code accepted} mB (from {@link #measureNeighbourInsert}) in this section. */
+        private int commitNeighbourInsert(FluidStack fluidStack, int accepted) {
+            if (currentFluid.isEmpty()) {
+                setFluid(fluidStack.copyWithAmount(accepted));
+            }
+            int filled = fill(accepted, true);
+            if (filled > 0) {
+                ticksInDirection = COOLDOWN_INPUT;
+            }
+            return filled;
+        }
+
         // Fluid-handler capability surface — Transfer API (ResourceHandler<FluidResource>) on 1.21.10+,
         // classic IFluidHandler on 1.21.1. The pipe section is a single tank (size/getTanks == 1).
         //? if >=1.21.10 {
@@ -1366,31 +1440,15 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         @Override
         public int insert(int index, FluidResource resource, int insertAmount,
                           net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-            if (index != 0) return 0;
+            if (index != 0 || insertAmount <= 0) return 0;
             FluidStack fluidStack = resource.toStack(insertAmount);
-            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
+            int accepted = measureNeighbourInsert(fluidStack);
+            if (accepted <= 0) {
                 return 0;
             }
-            PipeEventFluid.TryInsert tryInsert = new PipeEventFluid.TryInsert(
-                pipe.getHolder(), PipeFlowFluids.this, part.face, fluidStack
-            );
-            pipe.getHolder().fireEvent(tryInsert);
-            if (tryInsert.isCanceled()) {
-                return 0;
-            }
-
-            if (currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
-                // BC manages its own state — commit changes immediately within the transaction
-                if (currentFluid.isEmpty()) {
-                    setFluid(fluidStack.copy());
-                }
-                int filled = fill(insertAmount, true);
-                if (filled > 0) {
-                    ticksInDirection = COOLDOWN_INPUT;
-                }
-                return filled;
-            }
-            return 0;
+            // Journal BEFORE mutating, so an aborted transaction restores the exact pre-insert state.
+            journal.updateSnapshots(transaction);
+            return commitNeighbourInsert(fluidStack, accepted);
         }
 
         @Override
@@ -1427,28 +1485,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
         @Override
         public int fill(FluidStack fluidStack, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-            if (!getCurrentDirection().canInput() || !pipe.isConnected(part.face) || fluidStack.isEmpty()) {
-                return 0;
+            int accepted = measureNeighbourInsert(fluidStack);
+            if (accepted <= 0 || action.simulate()) {
+                // A dry run leaves no trace: no fluid type, no input cooldown.
+                return Math.max(accepted, 0);
             }
-            PipeEventFluid.TryInsert tryInsert = new PipeEventFluid.TryInsert(
-                pipe.getHolder(), PipeFlowFluids.this, part.face, fluidStack
-            );
-            pipe.getHolder().fireEvent(tryInsert);
-            if (tryInsert.isCanceled()) {
-                return 0;
-            }
-
-            if (currentFluid.isEmpty() || FluidStack.isSameFluidSameComponents(currentFluid, fluidStack)) {
-                if (currentFluid.isEmpty()) {
-                    setFluid(fluidStack.copy());
-                }
-                int filled = fill(fluidStack.getAmount(), action.execute());
-                if (filled > 0) {
-                    ticksInDirection = COOLDOWN_INPUT;
-                }
-                return filled;
-            }
-            return 0;
+            return commitNeighbourInsert(fluidStack, accepted);
         }
 
         @Override

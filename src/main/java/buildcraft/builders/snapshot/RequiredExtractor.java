@@ -78,6 +78,21 @@ public abstract class RequiredExtractor {
     }
 
     /**
+     * Whether this extractor charges for an entity itself, whatever it holds: a fixed list of items or fluids
+     * ({@code constant}), which the Builder's IGNORE container-contents mode never skips. False for every extractor
+     * that reads the entity's data (the ones that price what it holds), and for {@code item_from_block}, which prices
+     * a block and has no entity form: an entity rule needs one of these or it builds its entity for free.
+     * <p>
+     * This is deliberately narrower than "not {@link #isContainerContents() contents}": a {@code tank} extractor is
+     * not contents (the IGNORE mode charges its fluid) but still prices only what the entity holds, so an entity with
+     * an empty tank costs nothing. A rule that prices an entity only through a tank is therefore refused too, and
+     * needs a {@code constant} beside it.
+     */
+    public boolean pricesEntityItself() {
+        return false;
+    }
+
+    /**
      * One stack as an extractor's path finds it: vanilla's {@code ItemStack.CODEC} compound ({@code id}, {@code count},
      * {@code components}), or a BuildCraft {@code ItemHandlerSimple} slot, which wraps that compound under
      * {@code stack} and saves a count the codec cannot carry (over 99) beside it as {@code count}. Reading only the
@@ -116,6 +131,7 @@ public abstract class RequiredExtractor {
         ITEM_FROM_BLOCK(RequiredExtractorItemFromBlock.class),
         ITEM(RequiredExtractorItem.class),
         ITEMS_LIST(RequiredExtractorItemsList.class),
+        POT_SHERDS(RequiredExtractorPotSherds.class),
         TANK(RequiredExtractorTank.class);
 
         public final Class<? extends RequiredExtractor> clazz;

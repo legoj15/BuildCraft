@@ -79,9 +79,18 @@ public class SchematicEntityDefault implements ISchematicEntity {
         /*CompoundTag entityNbt = new CompoundTag();
         context.entity.save(entityNbt);*/
         //?}
-        return RulesLoader.getRules(registryName, entityNbt)
-            .stream()
-            .anyMatch(rule -> rule.capture);
+        return capturableByRules(registryName, entityNbt);
+    }
+
+    /**
+     * Whether the rules for entity {@code id} (its saved data {@code entityNbt}) let the Architect capture it: one
+     * whitelists it ({@code capture}) and the matching rules together charge for the entity itself
+     * ({@link JsonRule#pricesEntityItself}). A bare whitelist is not enough: the entity would be captured, then built
+     * for free. The rule half of {@link #predicate}, apart from the live entity it needs.
+     */
+    static boolean capturableByRules(Identifier id, CompoundTag entityNbt) {
+        Set<JsonRule> rules = RulesLoader.getRules(id, entityNbt);
+        return rules.stream().anyMatch(rule -> rule.capture) && rules.stream().anyMatch(JsonRule::pricesEntityItself);
     }
 
     @Override
@@ -122,8 +131,9 @@ public class SchematicEntityDefault implements ISchematicEntity {
      * stand's gear, an item frame's item, a chest or hopper minecart's inventory) are skipped, while the constant
      * extractor that prices the entity itself (the stand, the frame, the cart) is never contents and always counts.
      * Only the rule data guarantees such an extractor exists: every shipped entity rule carries one (a test pins
-     * it), but a rule without one, including a bare {@code capture} whitelist, prices nothing for the entity itself
-     * in either mode. Unlike blocks, entities have no {@code item_from_block} fallback to price them instead.
+     * it). A rule without one prices nothing for the entity itself in either mode, and unlike blocks, entities have
+     * no {@code item_from_block} fallback to price them instead; so the Architect does not capture such an entity
+     * and a blueprint does not read one back ({@link #capturableByRules}, {@link #isPricedByRules}).
      */
     @Nonnull
     @Override
@@ -312,12 +322,14 @@ public class SchematicEntityDefault implements ISchematicEntity {
     }
 
     /**
-     * Whether this entity is one a blueprint may hold: its NBT names an entity the shipped JSON rules sanction —
-     * a rule that either whitelists it for capture (what the architect's own scan predicate demands) or charges for
-     * it (non-null {@code requiredExtractors}, the exact mechanism {@link #computeRequiredItems()} prices through).
-     * Deny by default: an entity no rule mentions would {@code build()} from its NBT verbatim while costing
-     * nothing. A rule that only matches without doing either is not enough — the gate must be at least as strict
-     * as the price. Package-private and static so the blueprint read loop and the tests share one definition.
+     * Whether this entity is one a blueprint may hold: its NBT names an entity the JSON rules charge for — some
+     * matching rule has an extractor that prices the entity itself ({@link JsonRule#pricesEntityItself}, the
+     * mechanism {@link #computeRequiredItems()} prices the entity body through). Deny by default: an entity no rule
+     * mentions would {@code build()} from its NBT verbatim while costing nothing, and so would one a rule only
+     * whitelists ({@code capture}) or prices through its contents alone, since entities have no
+     * {@code item_from_block} fallback and the Builder's IGNORE mode skips the contents. The gate must be at least
+     * as strict as the price. Package-private and static so the blueprint read loop and the tests share one
+     * definition.
      */
     static boolean isPricedByRules(CompoundTag entityNbt) {
         String id = NBTUtilBC.getString(entityNbt, "id", "");
@@ -325,8 +337,7 @@ public class SchematicEntityDefault implements ISchematicEntity {
         if (entityId == null) {
             return false;
         }
-        return RulesLoader.getRules(entityId, entityNbt).stream()
-            .anyMatch(rule -> rule.capture || rule.requiredExtractors != null);
+        return RulesLoader.getRules(entityId, entityNbt).stream().anyMatch(JsonRule::pricesEntityItself);
     }
 
     @Override

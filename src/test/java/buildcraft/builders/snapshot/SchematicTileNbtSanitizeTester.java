@@ -64,9 +64,10 @@ public class SchematicTileNbtSanitizeTester {
     }
 
     @Test
-    public void beesAndSherdsAreStrippedOnlyFromTheirOwnBlocks() {
-        // Nothing can price a hive's bees (entities) or a pot's sherds (dropped when the pot breaks), so building
-        // either from the captured tag would mint them; a chest that happens to carry the same key names keeps them.
+    public void beesAreStrippedOnlyFromTheirOwnBlocks() {
+        // Nothing can price a hive's bees (entities), so building them from the captured tag would mint them; a chest
+        // that happens to carry the same key name keeps it. A pot's sherds are not stripped: its rule prices them
+        // (SchematicDecoratedPotTester).
         CompoundTag hive = new CompoundTag();
         hive.put("bees", new ListTag());
         SchematicBlockDefault.sanitizeTileNbt(hive, Blocks.BEE_NEST.defaultBlockState());
@@ -76,7 +77,7 @@ public class SchematicTileNbtSanitizeTester {
         pot.put("sherds", new ListTag());
         pot.put("item", new CompoundTag());
         SchematicBlockDefault.sanitizeTileNbt(pot, Blocks.DECORATED_POT.defaultBlockState());
-        Assertions.assertFalse(pot.contains("sherds"));
+        Assertions.assertTrue(pot.contains("sherds"), "the pot's sides are priced by its rule, so they stay");
         Assertions.assertTrue(pot.contains("item"), "the pot's stored item is priced by its rule, so it stays");
 
         CompoundTag chest = new CompoundTag();

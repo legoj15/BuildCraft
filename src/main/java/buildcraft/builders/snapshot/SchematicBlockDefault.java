@@ -863,10 +863,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * guards, shared by both build paths:
      * <ul>
      *   <li>Deny by default: when no rule prices the contents ({@link #contentsArePriced()}), the block entity is
-     *       emptied after the load through {@link Clearable}, which every vanilla item holder and every BuildCraft
-     *       tile implements over exactly its contents (a BuildCraft tile's {@code clearContent} wipes what it would
-     *       spill, never its configuration). Otherwise a legitimately scanned item holder no rule names would be
-     *       rebuilt full for the price of the empty block.</li>
+     *       emptied after the load through {@link Clearable}, which the vanilla item holders and every BuildCraft
+     *       tile implement over exactly their contents (a BuildCraft tile's {@code clearContent} wipes what it would
+     *       spill, never its configuration; a brushed suspicious block is the vanilla holder that is not one, and is
+     *       stripped at capture time by {@link #sanitizeTileNbt(CompoundTag, BlockState)}). Otherwise a legitimately
+     *       scanned item holder no rule names would be rebuilt full for the price of the empty block.</li>
      *   <li>A loader that throws on the NBT (any mod's, on malformed or hand-made data) must not crash the server
      *       tick, which would recur on every restart while the Builder retries the cell. The half-loaded block entity
      *       is replaced with a fresh default one and the placement still counts, so the cell is not retried.</li>
@@ -1186,8 +1187,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
     /**
      * {@link #sanitizeTileNbt(CompoundTag)}, plus the keys of {@code state}'s block entity that hold something no rule
      * can price and building it would therefore mint: a beehive's or bee nest's occupants (entities, under
-     * {@code bees} on every node) and a decorated pot's sherds ({@code sherds}, which the pot drops when broken).
-     * Both blocks are rebuilt as their plain selves. The decorated pot's stored item is priced by its rule instead.
+     * {@code bees} on every node), which are rebuilt as the plain block. A decorated pot keeps both its stored item and
+     * its sherds, which its rule prices ({@link RequiredExtractorPotSherds}: the sides are charged as the items the pot
+     * drops when cracked).
      * <p>
      * Also the item holders that are not {@link Clearable}, which the deny-by-default clear in {@link #build} cannot
      * reach: a brushed suspicious block's {@code item} (what brushing it yields, the same key on every node). And a
@@ -1218,7 +1220,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
                 removeComponent(components, DataComponents.BEES);
             }
         } else if (block instanceof DecoratedPotBlock) {
-            tileNbt.remove("sherds");
+            // The sides live in "sherds" (priced by the pot's rule); a pot_decorations component is a second copy no
+            // extractor reads, so it goes.
             if (components != null) {
                 removeComponent(components, DataComponents.POT_DECORATIONS);
             }

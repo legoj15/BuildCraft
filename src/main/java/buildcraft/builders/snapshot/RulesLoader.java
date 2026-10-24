@@ -10,9 +10,11 @@ import java.time.Duration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,6 +30,8 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,6 +47,8 @@ import net.neoforged.neoforgespi.language.IModInfo;
 import buildcraft.lib.misc.JsonUtil;
 
 public class RulesLoader {
+    private static final Logger LOGGER = LogManager.getLogger("BCBlueprint");
+
     private static final Gson GSON = JsonUtil.registerNbtSerializersDeserializers(new GsonBuilder())
         .registerTypeAdapter(
             BlockPos.class,
@@ -96,11 +102,7 @@ public class RulesLoader {
                             return resourceAsStream;
                         })
                         .flatMap(localInputStream ->
-                            GSON.<List<JsonRule>>fromJson(
-                                new InputStreamReader(localInputStream),
-                                new TypeToken<List<JsonRule>>() {
-                                }.getType()
-                            ).stream()
+                            parseRules(new InputStreamReader(localInputStream, StandardCharsets.UTF_8)).stream()
                         )
                         .forEach(RULES::add);
                     READ_DOMAINS.add(domain);
@@ -108,6 +110,11 @@ public class RulesLoader {
             }
         }
         READ_DOMAINS.add("minecraft");
+        for (JsonRule rule : captureRulesWithoutPrice(RULES)) {
+            LOGGER.warn("The blueprint rule for {} whitelists its entity for capture but has no extractor that prices"
+                + " the entity itself (a constant one), so no entity it matches is captured or read back unless"
+                + " another matching rule prices it", rule.describeSelectors());
+        }
         // Note: BC blocks aren't in the default-schematic whitelist. They have
         // dedicated schematic factories registered via SchematicBlockFactoryRegistry,
         // so they shouldn't fall through to SchematicBlockDefault. In 1.12.2 a planned
@@ -115,6 +122,25 @@ public class RulesLoader {
         // default factory for testing — but the flag was never implemented. If you
         // need that toggle later, add a single `READ_DOMAINS.add("buildcraftunofficial")`
         // here under the dev-mode condition.
+    }
+
+    /** The rules {@code reader} holds, as one rule file's JSON array. */
+    static List<JsonRule> parseRules(Reader reader) {
+        return GSON.fromJson(reader, new TypeToken<List<JsonRule>>() {
+        }.getType());
+    }
+
+    /**
+     * The {@code capture} rules among {@code rules} that charge for nothing the entity itself is made of
+     * ({@link JsonRule#pricesEntityItself}): a bare whitelist, or one with contents extractors only. Entities have no
+     * {@code item_from_block} fallback, so such an entity would be built for free; neither the Architect nor a
+     * blueprint read accepts it (see {@link SchematicEntityDefault#capturableByRules}). {@link #loadAll} warns once
+     * for each.
+     */
+    static List<JsonRule> captureRulesWithoutPrice(Collection<JsonRule> rules) {
+        return rules.stream()
+            .filter(rule -> rule.capture && !rule.pricesEntityItself())
+            .collect(Collectors.toList());
     }
 
     private static Set<JsonRule> getBlockRulesInternal(BlockState blockState, CompoundTag tileNbt) {
@@ -177,7 +203,14 @@ public class RulesLoader {
      */
     @SuppressWarnings("WeakerAccess")
     public static Set<JsonRule> getRules(BlockState blockState, CompoundTag tileNbt) {
-        return BLOCK_RULES_CACHE.getUnchecked(Pair.of(blockState, tileNbt));
+        Set<JsonRule> cached = BLOCK_RULES_CACHE.getIfPresent(Pair.of(blockState, tileNbt));
+        if (cached != null) {
+            return cached;
+        }
+        // The cache keeps its key, and a CompoundTag hashes by content: a caller that goes on to edit the tag it passed
+        // would strand the entry under a hash the edited key no longer has, to sit there until it expires. So the
+        // entry is keyed by a copy of the tag; a lookup (above) can use the caller's own.
+        return BLOCK_RULES_CACHE.getUnchecked(Pair.of(blockState, tileNbt == null ? null : tileNbt.copy()));
     }
 
     /** The entity rules whose selectors match, in load order (see {@link #getRules(BlockState, CompoundTag)}). */

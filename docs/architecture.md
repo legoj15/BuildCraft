@@ -115,6 +115,15 @@ blocks/entities are saved and placed. `SchematicBlockFactoryRegistry` and
 `SchematicEntityFactoryRegistry` map block/entity types to their schematic factories.
 `GlobalSavedDataSnapshots` persists snapshot data server-side.
 
+The Builder's deny-by-default clear (a placed block entity whose contents no JSON rule prices is
+emptied after its data loads, so a scanned item holder is never rebuilt full for the price of the
+empty block) goes through `Clearable`, so it reaches only `Clearable` block entities. Nearly every
+vanilla item holder is one; the exception is a brushed suspicious block's single item, which is
+stripped from its data at capture time instead (`SchematicBlockDefault.sanitizeTileNbt`). Another
+mod's blocks are captured at all only when that mod ships BuildCraft builder rules
+(`RulesLoader.READ_DOMAINS`), so such a mod must price or clear its own non-`Clearable` inventories
+itself. This is a documented limit of the design, not a bug.
+
 **Networking**: Custom payloads using NeoForge's `RegisterPayloadHandlersEvent`. Payloads use
 `StreamCodec<RegistryFriendlyByteBuf, T>` for serialization. Handlers call `ctx.enqueueWork()`
 to execute on the logical thread.

@@ -91,6 +91,9 @@
             }, {
                 "type": "item",
                 "path": ["item"]
+            }, {
+                "type": "pot_sherds",
+                "path": ["sherds"]
             }
         ]
     }

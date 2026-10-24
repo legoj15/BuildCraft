@@ -8,6 +8,7 @@ package buildcraft.builders.snapshot;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -26,6 +27,20 @@ public class JsonRule {
     public CompoundTag replaceNbt = null;
     public boolean ignore = false; // blacklist for blocks
     public boolean capture = false; // whitelist for entities
+
+    /**
+     * Whether this rule charges for an entity itself ({@link RequiredExtractor#pricesEntityItself}): the one thing a
+     * {@link #capture} whitelist does not do. An entity is built from its saved data with no {@code item_from_block}
+     * fallback, so a rule without such an extractor lets the entity be built for nothing in either contents mode.
+     */
+    boolean pricesEntityItself() {
+        return requiredExtractors != null && requiredExtractors.stream().anyMatch(RequiredExtractor::pricesEntityItself);
+    }
+
+    /** The ids this rule's selectors name, for a log line. */
+    String describeSelectors() {
+        return selectors == null ? "[]" : selectors.stream().map(JsonSelector::base).collect(Collectors.joining(", ", "[", "]"));
+    }
 
     /**
      * {@code nbt} with the {@link #replaceNbt} of every one of {@code rules} merged over it ({@link NBTUtilBC#merge}:

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.LongConsumer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,6 +96,84 @@ public class BlockUtil {
     public static boolean isChunkPresent(LevelAccessor level, int blockX, int blockZ) {
         return level.getChunkSource().getChunkNow(SectionPos.blockToSectionCoord(blockX),
                 SectionPos.blockToSectionCoord(blockZ)) != null;
+    }
+
+    /** {@link #isChunkPresent(LevelAccessor, BlockPos)}, telling {@code absentChunk} the {@link #chunkKey} of the chunk
+     *  when it is not in memory (null: tell no one). */
+    public static boolean isChunkPresent(LevelAccessor level, BlockPos pos, @Nullable LongConsumer absentChunk) {
+        return isChunkPresent(level, pos.getX(), pos.getZ(), absentChunk);
+    }
+
+    private static boolean isChunkPresent(LevelAccessor level, int blockX, int blockZ,
+            @Nullable LongConsumer absentChunk) {
+        if (isChunkPresent(level, blockX, blockZ)) {
+            return true;
+        }
+        if (absentChunk != null) {
+            absentChunk.accept(chunkKey(SectionPos.blockToSectionCoord(blockX), SectionPos.blockToSectionCoord(blockZ)));
+        }
+        return false;
+    }
+
+    /** A chunk's coordinates as one long, x in the low half and z in the high half. (Not {@code ChunkPos.asLong}: the
+     *  26.3 node has no such method.) */
+    public static long chunkKey(int chunkX, int chunkZ) {
+        return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
+    }
+
+    /**
+     * How far, horizontally, the world's reaction to a drain reads from the drained cell: three blocks. Taking the
+     * fluid sets the cell to air (or dries it), and the cells around it get {@code neighborChanged}. A block that asks
+     * whether it is powered ({@code hasNeighborSignal}: a lamp, a piston, a door, a rail, a dropper, TNT) reads the
+     * signal of the cells around itself, which for a solid block is the direct signal of the cells around that one
+     * (1 + 1 + 1). A fluid or observer update only schedules a tick, which runs in a ticking chunk (vanilla keeps its
+     * surroundings loaded), and {@code updateIndirectNeighbourShapes} is redstone wire's alone (a drained cell is
+     * never wire).
+     *
+     * <p>That is the reach of the drain's own update, not of everything it can set off. A neighbour that changes in
+     * response sends its own update, and one kind does so on the spot: a lava cell with water beside it that has not
+     * turned to stone yet becomes obsidian, cobblestone or basalt inside {@code LiquidBlock.neighborChanged}
+     * ({@code FluidInteractionRegistry.canInteract} calls {@code setBlockAndUpdate}), and the cells around it get
+     * their update in turn: four blocks from the drained cell for one such change, one more for each further one in
+     * a row. Lava and water only sit side by side like that when world generation (or a command) left them so, never
+     * because a machine took a bucket, so the guard does not chase it: a drain beside such lava can still touch an
+     * absent chunk that lies just beyond the guarded reach.
+     */
+    public static final int DRAIN_UPDATE_REACH = 3;
+
+    /** The offsets, along each horizontal axis, of the corners of the square of cells within {@link #DRAIN_UPDATE_REACH}
+     *  of a drained cell. */
+    private static final int[] DRAIN_REACH_CORNER_OFFSETS = {-DRAIN_UPDATE_REACH, DRAIN_UPDATE_REACH};
+
+    /**
+     * Whether draining the cell at {@code pos} stays inside chunks that are in memory: the chunk holding the cell,
+     * and every chunk within {@link #DRAIN_UPDATE_REACH} blocks of it. Taking the fluid updates the cells around it
+     * out to that reach, and a read in an absent chunk loads it (generating it, if it was never made) on the server
+     * thread. Reads no block itself. A cell at least that far in from every chunk border cannot reach another chunk,
+     * so only a cell near a border asks about more than its own; the square of cells within reach is narrower than a
+     * chunk, so the chunks it overlaps are exactly the ones its four corners lie in (the diagonal chunk across a
+     * corner included).
+     *
+     * <p>Ask at the moment of draining, not only when the cell is chosen: a chunk beside it can unload in between.
+     *
+     * @param absentChunk told the {@link #chunkKey} of every absent chunk the check meets, not just the first (so a
+     *                    machine can remember each and wake when one loads); null when that is not wanted
+     */
+    public static boolean drainStaysInLoadedChunks(LevelAccessor level, BlockPos pos,
+            @Nullable LongConsumer absentChunk) {
+        boolean allPresent = isChunkPresent(level, pos, absentChunk);
+        int localX = pos.getX() & 15;
+        int localZ = pos.getZ() & 15;
+        if (localX >= DRAIN_UPDATE_REACH && localX <= 15 - DRAIN_UPDATE_REACH
+                && localZ >= DRAIN_UPDATE_REACH && localZ <= 15 - DRAIN_UPDATE_REACH) {
+            return allPresent;
+        }
+        for (int dx : DRAIN_REACH_CORNER_OFFSETS) {
+            for (int dz : DRAIN_REACH_CORNER_OFFSETS) {
+                allPresent &= isChunkPresent(level, pos.getX() + dx, pos.getZ() + dz, absentChunk);
+            }
+        }
+        return allPresent;
     }
 
     // --- Version-neutral useItemOn result values ---

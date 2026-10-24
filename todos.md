@@ -7,7 +7,6 @@ Last audited: 2026-10-24
 - In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
 - Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
 - Small code cleanups found in passing — [list](docs/todo-details.md#small-cleanups)
-- The Zone Planner map store never frees zones from discarded maps — [notes](docs/todo-details.md#zone-map-store-reclaim)
 
 ## 🆕 New Features (version 2026.3)
 

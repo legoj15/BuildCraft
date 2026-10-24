@@ -184,7 +184,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 StackUtil.mergeSameItems(requiredItems).stream()
                     .noneMatch(stack ->
                         tile.getInvResources().extract(
-                            extracted -> StackUtil.canMerge(stack, extracted),
+                            RequiredExtractor.payer(stack),
                             stack.getCount(),
                             stack.getCount(),
                             true
@@ -210,7 +210,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                             requiredItems.stream()
                                 .map(stack ->
                                     tile.getInvResources().extract(
-                                        extracted -> StackUtil.canMerge(stack, extracted),
+                                        RequiredExtractor.payer(stack),
                                         stack.getCount(),
                                         stack.getCount(),
                                         simulate

@@ -50,7 +50,7 @@ the safety net — this skill is the manual.
    watchdog timeout — async tests with `succeedWhen*` need enough headroom; synchronous tests
    that throw or succeed immediately can use `20`. **Any test's `max_ticks` must be strictly
    greater than the largest `tickUntil`/`tickUntilThen`/`ConfigScope.succeedWhen`/marker
-   `await`/`awaitThen` budget in the test, or than `DropArenaUtil.POLL_TICKS` for one that calls
+   `await`/`awaitThen` budget in the test (a marker one counts `CELL_READY_TICKS` on top of its own), or than `DropArenaUtil.POLL_TICKS` for one that calls
    `awaitDrops`, or than `BuilderRefloodTester.DRIVE_POLL_TICKS` for one that calls `drive`** (see
    "Entity and robot tests" below) —
    `GameTestPollBudgetTester` fails the unit run otherwise, so give the poll a literal, a named
@@ -174,6 +174,23 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   only in a ticking chunk (`placeSource`'s tick is kept if the fluid already scheduled its own: 5 ticks for water, 30
   for lava), `BlockWaterloggingTester.buildBasin` force-loads the cell, and `waterloggable_marker_holds_back_lava`
   waits with `whenCellTicking`.
+- **Which polls need that gate.** Every poll whose condition waits on something that ticks (a robot's first tick, a
+  station registering on its pipe's tick, an item crossing a pipe, a comparator following a block entity, a drop that
+  must become visible to a scan) gets `forceLoadCell` and `whenCellTicking`, a one-block rig included: its chunk's
+  promotion is the machine's clock, and a budget counted from tick 1 charges it to the code under test. Two kinds
+  do not: a poll whose condition is itself `isEntityTicking`/`isCellEntityTicking` (its whole budget is the
+  readiness wait and its body is synchronous), and a poll that drives the machine by hand on every poll tick (the
+  Quarry and Filler tests call `tick()` themselves, so no chunk's ticking matters to them). A fixture that polls for
+  every test of its file (`whenStationRegistered`) gates once, inside the fixture, and every manifest of those tests
+  gets the larger `max_ticks`. A hand-rolled `runAfterDelay` loop is the same trap as `tickUntil` and is invisible
+  to `GameTestPollBudgetTester`: convert it to `tickUntil` (`UpstreamTailRegressionTester` did, and so did
+  `ElectronicLibraryTester.runSteps`, whose per-test budget is enforced by the gate while the poll's own, guard-read
+  budget is `CELL_READY_TICKS + LONGEST_STEPS_TICKS`), so the guard reads it. The same goes for a fixed
+  `runAfterDelay(N)` that waits N ticks of a machine's OWN running (an engine's heat bleed, a fluid's flow, a
+  settle after a setup): its clock must start when the cell ticks, so make the setup the first phase of
+  `tickUntilThen(..., whenCellTicking(...), setup, N, check, ...)` (`EngineTester`'s overheat and recovery tests,
+  `BlockFrameTester`); a check that nothing "slid back" is otherwise vacuous on a machine that never ran. A delay that
+  only waits for a tile to exist and then reads predicates or calls `serverTick` by hand is not the trap.
 - **A "break a block, check its drops" test goes through `DropArenaUtil.awaitDrops(helper, act, drops)`.**
   Never `runAfterDelay(10, ...)` after the break: `filtered_buffer_drops` failed that way (the drop was
   invisible on tick 10 in a cell chunk that was not entity-ticking yet), and a fixed wait long enough for that is
@@ -203,7 +220,12 @@ was the 2026-09-26 flake: orientation, volume_los and triangulation_3d failing t
 - **A marker test** goes through `MarkerArenaUtil` (`src/test/java/buildcraft/lib/test/`): `open` evicts
   everything already in scan range (WARN-logged, so the polluter is findable), `Session.place` refuses
   coordinates outside the 6x7 cell, `await`/`awaitThen` gate on the marker joining the cache (it does on the
-  first level tick, not on placement) and clean up on timeout, `guard`/`finish` clean up on every other exit.
+  first level tick, not on placement) and clean up on timeout, `guard`/`finish` clean up on every other exit. Their
+  budget starts when the whole cell is entity-ticking (`open` force-loads it), so the poll runs for up to
+  `CELL_READY_TICKS + budget` ticks: the guard adds that itself, so the test passes its own `REGISTER_TICKS`-style
+  budget and the manifest's `max_ticks` sits above the sum (350 for a 40 tick budget). A wait that runs before the
+  arena opens (strays planted to be evicted by `open`) goes through `MarkerArenaUtil.openWithoutEviction` and `adopt`,
+  so it is gated and cleaned up the same way.
   Give it its own `test_environment` file (copy `marker_volume_los.json`) and set the manifest's `environment`
   to the test's own id; `MarkerTestIsolationTester` enforces both. Never schedule from inside a scheduled
   runnable (the framework iterates a fastutil map while running them): schedule every poll up front.
@@ -213,6 +235,31 @@ was the 2026-09-26 flake: orientation, volume_los and triangulation_3d failing t
   references `MARKER_VOLUME`/`MARKER_PATH` without it.
 - `GameTestHelper.relativePos` inverts the rotation wrongly even for an unrotated arena (26.1.2 returns
   `(-1,2,-1)` for `(1,2,1)`); subtract `absolutePos(BlockPos.ZERO)` instead.
+
+## Tests that need an absent chunk (or one that unloads)
+
+A test of code that must never load a chunk (a machine that reads or changes a cell beside a chunk border) needs a
+chunk whose neighbour is *known* to be absent. Build it on `FarChunk` (`src/test/java/buildcraft/lib/test/FarChunk.java`),
+never on `setChunkForced`:
+
+- **`setChunkForced` is not isolated.** Its ticket reaches two chunks out, so the ring around the chunk is queued to
+  load on other threads, and "the chunk next door is absent" then passes or fails with what ran before it
+  (`pump_fill_skips_unloaded_chunk` failed two full runs in six on its "must stay absent" precondition).
+  `FarChunk.load` uses a plain `getChunk`, whose ticket is at the chunk alone and lasts for the rest of the tick:
+  build, drive and tear down inside one tick, no polls. `FarChunk.hold` pins the chunk across ticks until `release`,
+  for a test that waits for the chunk beside it to unload (`pump_drain_rechecks_reach_when_chunk_unloads`).
+- **Every test gets its own offset**, at least 8 chunks from every other (the list is in `FarChunk`'s javadoc): the arenas
+  of a run sit on one grid some fifty chunks across, so two tests on one offset can land on neighbouring chunks and the
+  first one's chunk is still loaded when the second asserts that its neighbour is absent.
+- **Keep the machine two blocks in from the border.** A block entity's own `setChanged` (the pump's runs every ten
+  ticks, on a random tick of the ten, so in about one run in ten) lets vanilla tell the comparators around it, and past a
+  solid neighbour that reads the cell beyond with no chunk check: a pump one block from the border loaded the chunk
+  beside it.
+- **Write every cell the test depends on** (`FarChunk.setRaw`, no block update): the chunk is real worldgen, so what stands
+  in it is not controlled. Place a fluid the normal way and `LiquidBlock.onPlace` reads its neighbours.
+- A test that merely runs code which now refuses to touch a chunk that is not in memory (the robot pump AI and its
+  board, `BlockUtil.drainStaysInLoadedChunks`) must have its neighbours loaded: `EntityArenaUtil.forceLoadCell(helper)`
+  first, because the framework loads only the one chunk under the arena.
 
 ## To verify your test is actually running (not silently skipped)
 

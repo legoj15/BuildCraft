@@ -56,7 +56,11 @@ public class RobotPumpProtectionTester {
                 "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
     }
 
+    /** The robot, unadded, at {@code relPos}. The cell's chunks are force-loaded first: the pump AI and the board's
+     *  search leave a block whose drain would read a chunk that is not in memory alone, and the framework loads only
+     *  the one chunk under the arena. */
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
         robot.setPos(pos.x, pos.y, pos.z);

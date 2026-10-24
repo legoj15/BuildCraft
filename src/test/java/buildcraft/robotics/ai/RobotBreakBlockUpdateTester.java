@@ -143,6 +143,11 @@ public class RobotBreakBlockUpdateTester {
     private static final int CANOPY_WORK_TICKS = 450;
     private static final int CANOPY_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + CANOPY_WORK_TICKS;
 
+    /** The work budget of the bare-trunk chop, counted from the arena cell ticking like the canopy test's: the poll's own
+     *  budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and the
+     *  manifest's {@code max_ticks} stays above that sum. */
+    private static final int CHOP_WORK_TICKS = 900;
+
     /**
      * The user report end to end: a REAL lumberjack robot (live {@code AIRobotMain} tree — search,
      * fly, equip check, {@link AIRobotBreak}) sent against a vined tree. Once every log is gone, no
@@ -156,7 +161,8 @@ public class RobotBreakBlockUpdateTester {
     public static void testLumberjackRobotChopsTreeAndDropsItsVines(GameTestHelper helper) {
         ServerLevel level = (ServerLevel) helper.getLevel();
         BlockPos robotRel = new BlockPos(4, 3, 3);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        // The whole cell, not just the robot's chunk: the trunk at x=2 can sit in the chunk next door.
+        EntityArenaUtil.forceLoadCell(helper);
 
         BlockPos logBottom = helper.absolutePos(new BlockPos(2, 2, 2));
         BlockPos logMid = logBottom.above();
@@ -197,10 +203,11 @@ public class RobotBreakBlockUpdateTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_AXE));
         level.addFreshEntity(robot);
 
-        EntityArenaUtil.tickUntil(helper, 900,
-                () -> level.getBlockState(logBottom).isAir()
-                        && level.getBlockState(logMid).isAir()
-                        && level.getBlockState(logTop).isAir(),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CHOP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CHOP_WORK_TICKS,
+                        () -> level.getBlockState(logBottom).isAir()
+                                && level.getBlockState(logMid).isAir()
+                                && level.getBlockState(logTop).isAir()),
                 () -> {
                     StringBuilder remaining = null;
                     for (BlockPos vine : vines) {

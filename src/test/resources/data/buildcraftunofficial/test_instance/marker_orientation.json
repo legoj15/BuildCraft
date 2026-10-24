@@ -3,7 +3,7 @@
     "function":  "buildcraftunofficial:marker_orientation",
     "environment":  "buildcraftunofficial:marker_orientation",
     "structure":  "minecraft:empty",
-    "max_ticks":  100,
+    "max_ticks":  350,
     "setup_ticks":  0,
     "required":  true
 }

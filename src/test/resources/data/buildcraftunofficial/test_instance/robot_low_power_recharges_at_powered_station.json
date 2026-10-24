@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_low_power_recharges_at_powered_station",
     "environment": "buildcraftunofficial:robot_recharge",
     "structure": "minecraft:empty",
-    "max_ticks": 400,
+    "max_ticks": 690,
     "setup_ticks": 0,
     "required": true
 }

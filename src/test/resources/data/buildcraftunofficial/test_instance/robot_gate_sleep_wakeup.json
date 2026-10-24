@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_gate_sleep_wakeup",
     "environment": "buildcraftunofficial:robot_gate",
     "structure": "minecraft:empty",
-    "max_ticks": 460,
+    "max_ticks": 710,
     "setup_ticks": 0,
     "required": true
 }

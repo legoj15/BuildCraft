@@ -42,6 +42,13 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class PipeFlowForceInsertTester {
 
+    /** The work budget of the delivery poll, counted from the arena cell ticking: the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and the manifest's
+     *  {@code max_ticks} stays above that sum. The item crosses two pipes and enters the chest, and a pipe moves it only
+     *  once its chunk ticks: the framework forces only the structure's chunk, and the rig's two columns can sit either
+     *  side of a chunk border. */
+    private static final int DELIVERY_WORK_TICKS = 200;
+
     /** Rig: a chest under pipe B, pipe B east of pipe A. The item is force-inserted into pipe A from
      *  ABOVE — the robot-station parity geometry, where a station pluggable sits on the UP face and
      *  {@code DockingStationPipe} injects through its own face ({@code getItemOutputSide()}), with
@@ -52,6 +59,7 @@ public class PipeFlowForceInsertTester {
         BlockPos chestPos = new BlockPos(2, 1, 1);
         BlockPos pipeBPos = new BlockPos(2, 2, 1);
         BlockPos pipeAPos = new BlockPos(1, 2, 1);
+        EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(chestPos, Blocks.CHEST);
         TilePipeHolder tileB = placeItemPipe(helper, pipeBPos, BCTransportItems.PIPE_COBBLE_ITEM.get());
@@ -87,11 +95,12 @@ public class PipeFlowForceInsertTester {
         // The rig is rebuilt by nobody once the item is in flight, so a chest that stops being a chest was
         // overwritten from outside (another test of the same batch writing across its cell): say so, instead of
         // the item being dropped at the pipe end and the poll timing out with a message that blames the pipes.
-        EntityArenaUtil.tickUntil(helper, 200, () -> {
-            helper.assertTrue(helper.getBlockState(chestPos).is(Blocks.CHEST),
-                "the rig's chest was overwritten by another test (now " + helper.getBlockState(chestPos) + ")");
-            return !chest.isEmpty();
-        }, () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DELIVERY_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DELIVERY_WORK_TICKS, () -> {
+                helper.assertTrue(helper.getBlockState(chestPos).is(Blocks.CHEST),
+                    "the rig's chest was overwritten by another test (now " + helper.getBlockState(chestPos) + ")");
+                return !chest.isEmpty();
+            }), () -> {
             helper.assertTrue(flowA.getAllItemsForRender().isEmpty(), "item should have left pipe A");
             PipeFlowItems flowB = (PipeFlowItems) tileB.getPipe().getFlow();
             helper.assertTrue(flowB.getAllItemsForRender().isEmpty(), "item should have left pipe B");

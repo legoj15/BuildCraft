@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_item_blank_robot_refuses_placement",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 370,
     "setup_ticks": 0,
     "required": true
 }

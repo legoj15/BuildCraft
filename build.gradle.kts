@@ -264,14 +264,20 @@ neoForge {
             // race-sensitive to a bounded battery filling up between ticks.
             systemProperty("buildcraft.dev", "true")
             gameDirectory = project.file("run-gameTestServer")
-            // Optional test filter: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
+            // Optional test filter, on every node: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
             // runs only the matching tests instead of the whole suite (a ResourceSelectorArgument glob —
             // `namespace:pattern`, `*`/`?` wildcards). Inert without the property: empty selection = run all.
-            // The `--tests` selector parses against the TEST_INSTANCE registry, which exists only on
-            // 1.21.10+ — 1.21.1's server Main rejects the option outright, so the arg is gated off there.
-            if (project.hasProperty("bcTests") && stonecutter.eval(stonecutter.current.version, ">=1.21.10")) {
-                programArguments.add("--tests")
-                programArguments.add(project.property("bcTests").toString())
+            // 1.21.10+ hands the glob to the server's own `--tests` selector, which parses against the
+            // TEST_INSTANCE registry. 1.21.1 has neither the registry nor the option (its server Main
+            // rejects `--tests` outright) and its runner takes every registered TestFunction, so there the
+            // same glob rides a system property and BuildCraftGameTests applies it at registration time.
+            if (project.hasProperty("bcTests")) {
+                if (stonecutter.eval(stonecutter.current.version, ">=1.21.10")) {
+                    programArguments.add("--tests")
+                    programArguments.add(project.property("bcTests").toString())
+                } else {
+                    systemProperty("buildcraft.gameTestFilter", project.property("bcTests").toString())
+                }
             }
             // The `fullTestSuite` tier runs this task on ALL six nodes under a tool that caps captured
             // stdout at 256 KB; the six server consoles at INFO total ~1.8 MB and blow that cap even on
@@ -442,6 +448,50 @@ tasks.register<JavaExec>("dumpMethods") {
 // before it resolves/compiles them, or compileJava races stonecutterGenerate.
 tasks.named("createMinecraftArtifacts") {
     dependsOn("stonecutterGenerate")
+}
+
+// ─── 1.21.1: a game-test server that never started must fail the run ───────────
+// 1.21.1's net.minecraft.server.Main catches every Exception thrown during startup, logs "Failed to start the
+// minecraft server" and returns normally, so a mod-loading error or an empty test list leaves runGameTestServer
+// green with exit code 0 (the 1.21.10+ nodes exit non-zero). fullTestSuite trusts that exit code, so on this node
+// the task also reads the server's own log. A run that got through its tests printed the "GAME TESTS COMPLETE"
+// summary and then "All N required tests passed"; a run with failures prints "N required tests failed" instead
+// (the exit status is that count, which wraps to 0 at 256 on POSIX, so the log is the only reliable word), and a failed
+// startup prints the start-failure line. The previous log is deleted first so a run that wrote none cannot pass on
+// the last run's; a log that cannot be deleted (locked by a viewer or scanner) fails the run for the same reason,
+// as its stale completion line would otherwise stand in for this run's. The closures use only a local File and
+// locals, never a script-level val or the script logger: the configuration cache cannot serialise those.
+if (isPre1_21_10) {
+    tasks.matching { it.name == "runGameTestServer" }.configureEach {
+        val serverLog = layout.projectDirectory.file("run-gameTestServer/logs/latest.log").asFile
+        doFirst {
+            if (serverLog.exists() && !serverLog.delete()) {
+                throw GradleException(
+                    "Cannot delete the previous game-test log $serverLog (locked by another process?): its " +
+                        "completion line would pass this run even if the server wrote nothing. Close whatever " +
+                        "holds it open and re-run."
+                )
+            }
+        }
+        doLast {
+            val text = if (serverLog.isFile) serverLog.readText() else ""
+            val completed = text.contains("GAME TESTS COMPLETE")
+            // A positive count: "All 0 required tests passed" is an empty run, not a pass.
+            val allRequiredPassed = Regex("""All [1-9]\d* required tests passed""").containsMatchIn(text)
+            val requiredFailed = Regex("""\d+ required tests failed""").containsMatchIn(text)
+            val startFailed = text.contains("Failed to start the minecraft server")
+            if (!completed || !allRequiredPassed || requiredFailed || startFailed) {
+                throw GradleException(
+                    "The game-test server exited 0 without a clean pass: $serverLog needs the 'GAME TESTS COMPLETE' " +
+                        "summary and 'All N required tests passed' with N > 0, and neither 'N required tests failed' nor " +
+                        "'Failed to start the minecraft server' (1.21.1's server Main swallows startup failures, " +
+                        "and its exit status is the failed-test count, which wraps to 0 at 256 on POSIX). " +
+                        "completed=$completed, allRequiredPassed=$allRequiredPassed, requiredFailed=$requiredFailed, " +
+                        "startFailed=$startFailed."
+                )
+            }
+        }
+    }
 }
 
 // `./gradlew buildAndCollect` at the Tree root cascades to every version node and

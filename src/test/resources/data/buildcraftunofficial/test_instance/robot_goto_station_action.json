@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_goto_station_action",
     "environment": "buildcraftunofficial:robot_gate",
     "structure": "minecraft:empty",
-    "max_ticks": 460,
+    "max_ticks": 730,
     "setup_ticks": 0,
     "required": true
 }

@@ -64,7 +64,9 @@ import buildcraft.lib.test.MarkerArenaUtil.Stray;
 public class MarkerTester {
 
     /** How long a test waits for its markers to join the cache (they do on the first level tick after placement,
-     *  so this is a generous upper bound, not an expected duration). Must stay well under the manifests' max_ticks. */
+     *  so this is a generous upper bound, not an expected duration). Counted from the cell ticking, not from the
+     *  test's first tick (see {@code Session.await}): the manifests' max_ticks must outlast
+     *  {@code EntityArenaUtil.CELL_READY_TICKS + REGISTER_TICKS}, which {@code GameTestPollBudgetTester} enforces. */
     private static final int REGISTER_TICKS = 40;
     /** Ticks a finished connection is watched before the test passes, to catch anything tearing it down. */
     private static final int SETTLE_TICKS = 5;
@@ -325,12 +327,15 @@ public class MarkerTester {
     public static void testOpenEvictsLeftoverMarkers(GameTestHelper helper) {
         Block volume = BCCoreBlocks.MARKER_VOLUME.get();
         Block path = BCCoreBlocks.MARKER_PATH.get();
+        // The leftovers exist before the arena OPENS, so the wait for them runs on a session that evicts nothing: it
+        // force-loads the cell and starts the budget when the cell ticks, and it removes the strays if the wait runs out.
+        Session wait = MarkerArenaUtil.openWithoutEviction(helper);
         List<Stray> strays = List.of(
-                MarkerArenaUtil.plantStray(helper, new BlockPos(-5, 2, 2), volume),
-                MarkerArenaUtil.plantStray(helper, new BlockPos(12, 2, 3), path),
-                MarkerArenaUtil.plantGhost(helper, volume, new BlockPos(2, 2, 15)),
-                MarkerArenaUtil.plantGhost(helper, path, new BlockPos(3, 2, -9)));
-        EntityArenaUtil.tickUntil(helper, REGISTER_TICKS,
+                wait.adopt(MarkerArenaUtil.plantStray(helper, new BlockPos(-5, 2, 2), volume)),
+                wait.adopt(MarkerArenaUtil.plantStray(helper, new BlockPos(12, 2, 3), path)),
+                wait.adopt(MarkerArenaUtil.plantGhost(helper, volume, new BlockPos(2, 2, 15))),
+                wait.adopt(MarkerArenaUtil.plantGhost(helper, path, new BlockPos(3, 2, -9))));
+        wait.await(REGISTER_TICKS,
                 () -> strays.stream().allMatch(stray -> stray.isRegistered(helper.getLevel())), () -> {
             Session arena = MarkerArenaUtil.open(helper);
             strays.forEach(arena::adopt);

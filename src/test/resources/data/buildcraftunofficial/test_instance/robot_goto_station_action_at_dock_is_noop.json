@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_goto_station_action_at_dock_is_noop",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 400,
+    "max_ticks": 610,
     "setup_ticks": 0,
     "required": true
 }

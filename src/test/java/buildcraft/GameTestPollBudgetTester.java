@@ -52,7 +52,9 @@ import buildcraft.lib.test.EntityArenaUtil;
  * guard instead of being skipped: skipping would let a new poll slip through unchecked, so use a literal or a named
  * {@code static final int}. The exceptions are the harnesses whose loop is the poll, whose budget the harness
  * fixes: a call of {@code DropArenaUtil.awaitDrops} counts as that harness's {@code POLL_TICKS}, and a call of the
- * Builder tests' {@code BuilderRefloodTester.drive} as its {@code DRIVE_POLL_TICKS}, both read from their source.
+ * Builder tests' {@code BuilderRefloodTester.drive} as its {@code DRIVE_POLL_TICKS}, both read from their source. A
+ * marker session's {@code await}/{@code awaitThen} takes the budget the test writes and waits for the cell to tick
+ * first, so it counts {@code EntityArenaUtil.CELL_READY_TICKS} on top of it.
  * The guard needs {@code max_ticks > budget}, one tick of margin beyond the poll's last tick, which is the only
  * tick the framework's own check ({@code tickCount > max_ticks}) cannot beat.
  *
@@ -223,14 +225,15 @@ public class GameTestPollBudgetTester {
     }
 
     @Test
-    public void scannerReadsAMarkerSessionAwait() {
+    public void scannerReadsAMarkerSessionAwaitWithItsCellReadyWait() {
         PollBudgets b = scan("""
             private static final int REGISTER_TICKS = 40;
             public static void test(GameTestHelper helper) {
                 arena.await(REGISTER_TICKS, () -> true, helper::succeed, "a");
                 arena.awaitThen(REGISTER_TICKS + 20, () -> true, () -> { }, 5, () -> { }, "b");
             }""");
-        Assertions.assertEquals(60, b.max());
+        Assertions.assertEquals(EntityArenaUtil.CELL_READY_TICKS + 60, b.max(),
+            "the session's await waits for the cell to tick (up to CELL_READY_TICKS) before its own budget starts");
         Assertions.assertEquals(2, b.polls.size());
     }
 
@@ -403,7 +406,8 @@ public class GameTestPollBudgetTester {
             "\\b(tickUntilThen|tickUntil|succeedWhen)\\s*\\(\\s*\\w+\\s*,\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
 
         /** The marker session's own polls ({@code MarkerArenaUtil.Session#await}/{@code awaitThen}): the budget is the
-         *  first argument, and they clean the markers up on their timeout like the polls above. */
+         *  first argument, they clean the markers up on their timeout like the polls above, and each waits for the
+         *  cell to tick first, so {@link #scan} counts {@code EntityArenaUtil.CELL_READY_TICKS} on top of it. */
         private static final Pattern AWAIT_POLL = Pattern.compile(
             "\\b(awaitThen|await)\\s*\\(\\s*((?:[^,()]|\\([^()]*\\))+?)\\s*,");
 
@@ -529,6 +533,9 @@ public class GameTestPollBudgetTester {
 
         private void scan(String source, String body, Map<String, Integer> constants, Set<String> visited) {
             for (Pattern poll : List.of(POLL, AWAIT_POLL)) {
+                // The marker session's await waits for its cell to tick (up to CELL_READY_TICKS) before its own budget
+                // starts, so its poll runs that long in front of the budget the test writes.
+                int ready = poll == AWAIT_POLL ? sharedConstants().get("EntityArenaUtil.CELL_READY_TICKS") : 0;
                 Matcher p = poll.matcher(body);
                 while (p.find()) {
                     String kind = p.group(1);
@@ -537,8 +544,8 @@ public class GameTestPollBudgetTester {
                     if (value == null) {
                         unresolved.add(kind + " budget `" + budget + "`");
                     } else {
-                        polls.add(kind + " " + value);
-                        max = Math.max(max, value);
+                        polls.add(kind + " " + (ready + value));
+                        max = Math.max(max, ready + value);
                     }
                 }
             }

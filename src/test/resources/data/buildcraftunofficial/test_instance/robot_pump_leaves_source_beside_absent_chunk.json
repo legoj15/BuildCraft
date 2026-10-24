@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_pump_leaves_source_beside_absent_chunk",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 200,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -26,6 +26,7 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.factory.tile.TileTank;
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsBlocks;
 import buildcraft.robotics.tile.TileRequester;
 import buildcraft.transport.BCTransportBlocks;
@@ -36,6 +37,12 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * branch (record: docs/todo-details.md, "Upstream 7.1.x tail sweep").
  */
 public class UpstreamTailRegressionTester {
+
+    /** The work budget of the two end-to-end comparator polls, counted from the arena cell ticking: a poll's own budget
+     *  adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. The block entity's tick and the comparator's scheduled tick
+     *  run only once their chunk does, and the framework forces only the structure's chunk. */
+    private static final int COMPARATOR_WORK_TICKS = 80;
 
     /**
      * Upstream #3307 ("Auto Workbench not reacting to item insertion correctly in all cases", 7.1.21
@@ -98,6 +105,7 @@ public class UpstreamTailRegressionTester {
      */
     public static void testTankDrivesComparator(GameTestHelper helper) {
         BlockPos tankPos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(tankPos, BCFactoryBlocks.TANK.get());
         //? if >=1.21.10 {
         TileTank tank = helper.getBlockEntity(tankPos, TileTank.class);
@@ -116,33 +124,24 @@ public class UpstreamTailRegressionTester {
 
         // End to end: a real comparator settles on the half-full level, then must follow a later fill. Only
         // the tank's own tick can deliver that second change (it notices the new level and notifies its
-        // neighbours), so both phases gate on the observed output, never a fixed tick. Every poll is
-        // scheduled up front (see EntityArenaUtil.tickUntil for why).
+        // neighbours), so both phases gate on the observed output, never a fixed tick, and the budget starts
+        // once the cell ticks (see EntityArenaUtil.tickUntil and whenCellTicking for why).
         BlockPos comparatorPos = placeComparatorEastOf(helper, tankPos);
-        int maxTicks = 80;
         int[] phase = { 0 };
-        for (int t = 1; t <= maxTicks; t++) {
-            final int tick = t;
-            helper.runAfterDelay(tick, () -> {
-                if (phase[0] == 2) {
-                    return;
-                }
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + COMPARATOR_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, COMPARATOR_WORK_TICKS, () -> {
                 int output = comparatorOutput(helper, comparatorPos);
                 if (phase[0] == 0 && output == 8) {
                     phase[0] = 1;
                     tank.tank.fill(0, new FluidStack(Fluids.WATER, 8_000), false);
                     int full = comparatorLevel(helper, state, abs);
                     helper.assertTrue(full == 15, "A full tank must read 15, got " + full);
-                } else if (phase[0] == 1 && output == 15) {
-                    phase[0] = 2;
-                    helper.succeed();
-                } else if (tick == maxTicks) {
-                    int stuckAt = phase[0];
-                    phase[0] = 2;
-                    helper.fail("Comparator never followed the tank (phase " + stuckAt + ", output " + output + ")");
+                    return false;
                 }
-            });
-        }
+                return phase[0] == 1 && output == 15;
+            }, () -> "Comparator never followed the tank (phase " + phase[0] + ", output "
+                + comparatorOutput(helper, comparatorPos) + ")"),
+            helper::succeed, "Comparator never followed the tank");
     }
 
     /**
@@ -154,6 +153,7 @@ public class UpstreamTailRegressionTester {
      */
     public static void testFilteredBufferDrivesComparator(GameTestHelper helper) {
         BlockPos bufferPos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(bufferPos, BCTransportBlocks.FILTERED_BUFFER.get());
         //? if >=1.21.10 {
         TileFilteredBuffer buffer = helper.getBlockEntity(bufferPos, TileFilteredBuffer.class);
@@ -177,29 +177,20 @@ public class UpstreamTailRegressionTester {
         int quarter = comparatorLevel(helper, state, abs);
         helper.assertTrue(quarter == 4, "A quarter-full filtered buffer must read 4, got " + quarter);
 
-        int maxTicks = 80;
         int[] phase = { 0 };
-        for (int t = 1; t <= maxTicks; t++) {
-            final int tick = t;
-            helper.runAfterDelay(tick, () -> {
-                if (phase[0] == 2) {
-                    return;
-                }
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + COMPARATOR_WORK_TICKS,
+            EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, COMPARATOR_WORK_TICKS, () -> {
                 int output = comparatorOutput(helper, comparatorPos);
                 if (phase[0] == 0 && output == 4) {
                     phase[0] = 1;
                     // (32/64 + 64/64) / 2 = 0.75 -> floor(10.5) + 1 = 11.
                     buffer.invMain.setStackInSlot(1, new ItemStack(Items.DIRT, 64));
-                } else if (phase[0] == 1 && output == 11) {
-                    phase[0] = 2;
-                    helper.succeed();
-                } else if (tick == maxTicks) {
-                    int stuckAt = phase[0];
-                    phase[0] = 2;
-                    helper.fail("Comparator never followed the buffer (phase " + stuckAt + ", output " + output + ")");
+                    return false;
                 }
-            });
-        }
+                return phase[0] == 1 && output == 11;
+            }, () -> "Comparator never followed the buffer (phase " + phase[0] + ", output "
+                + comparatorOutput(helper, comparatorPos) + ")"),
+            helper::succeed, "Comparator never followed the buffer");
     }
 
     /**

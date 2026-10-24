@@ -16,9 +16,10 @@ import net.minecraft.network.codec.StreamCodec;
 /**
  * What a written ZONE map location carries in place of its zone: the zone's {@code id} in a {@link ZoneMapSavedData},
  * and that store's random {@code store} token. Ids are a per-world counter, so the token is what keeps a map that
- * leaves its world (a structure or blueprint captured with the chest it sits in, built in another world) from reading
- * whichever zone holds the same number there: a map whose token is not the store's names no zone in it, which a
- * robot reads as an empty zone and idles on, instead of working another station's area.
+ * leaves its world (a structure captured with the chest it sits in, built in another world) from reading whichever
+ * zone holds the same number there: a map whose token is not the store's names no zone in it, which a robot reads as
+ * an empty zone and idles on, instead of working another station's area. A blueprint carries the plan beside the ref
+ * ({@link buildcraft.core.item.ZoneMapPortability}), so a map it builds names the same zone in any world.
  */
 public record ZoneMapRef(long store, int id) {
     public static final Codec<ZoneMapRef> CODEC = RecordCodecBuilder.create(instance -> instance.group(

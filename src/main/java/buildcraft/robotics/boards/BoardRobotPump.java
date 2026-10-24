@@ -110,11 +110,15 @@ public class BoardRobotPump extends RedstoneBoardRobot {
     }
 
     /** The search predicate: a drainable fluid source nobody else has reserved that the station's gate filter
-     *  lets through and that has not refused this board's robot (see {@link #refusals}). Asking protection mods
+     *  lets through, that has not refused this board's robot (see {@link #refusals}) and whose drain stays inside
+     *  loaded chunks ({@link BlockUtil#drainStaysInLoadedChunks}). Asking protection mods
      *  is NOT part of it: this runs for every scanned cell, so the pump AI asks once, about the one block it was
      *  sent to, and the answer comes back through {@link #delegateAIEnded}. */
     public boolean isSearchCandidate(@Nullable Level level, BlockPos pos) {
         return level != null
+                // Never one whose drain would read an absent chunk (the pump AI leaves it alone): offering it would
+                // only send the robot there and back, and the read below would load the chunk itself.
+                && BlockUtil.drainStaysInLoadedChunks(level, pos, null)
                 // A Mining Well / Pump tube drilled through water is waterlogged, a source like any other; it is the
                 // machine's own plumbing, so the pond around it is pumped but the tube is left wet (as TilePump does).
                 && !BlockUtil.isMinerTube(level.getBlockState(pos))

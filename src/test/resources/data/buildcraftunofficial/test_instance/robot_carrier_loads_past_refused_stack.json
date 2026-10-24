@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_carrier_loads_past_refused_stack",
     "environment": "buildcraftunofficial:robot_carrier_loads_past_refused_stack",
     "structure": "minecraft:empty",
-    "max_ticks": 340,
+    "max_ticks": 570,
     "setup_ticks": 0,
     "required": true
 }

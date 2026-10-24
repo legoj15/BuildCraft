@@ -63,6 +63,14 @@ public class FluidCarrierTester {
      *  sends it recharging mid-task. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
+    /** The work budgets of the polls below, each counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each
+     *  manifest's {@code max_ticks} stays above that sum. A station registers on its pipe's first tick and a pipe
+     *  aims itself on it, but the framework forces only the structure's chunk and a 6x7 cell straddles a chunk border
+     *  in about 57% of runs, so a pipe or robot in the neighbouring chunk does not tick until that chunk does. */
+    private static final int REGISTER_WORK_TICKS = 140;
+    private static final int LOAD_WORK_TICKS = 340;
+
     // ---------- fixtures ----------
 
     private static TilePipeHolder placeFluidPipe(GameTestHelper helper, BlockPos relPos, net.minecraft.world.item.Item pipeItem) {
@@ -158,6 +166,7 @@ public class FluidCarrierTester {
         BlockPos plainTankRel = new BlockPos(1, 2, 1);
         BlockPos woodRel = new BlockPos(4, 3, 1);
         BlockPos woodTankRel = new BlockPos(4, 2, 1);
+        EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(plainTankRel, BCFactoryBlocks.TANK.get());
         installFluidStation(helper, plainRel, BCTransportItems.PIPE_COBBLE_FLUID.get(), Direction.UP);
@@ -167,12 +176,13 @@ public class FluidCarrierTester {
         // The wooden pipe aims itself on its first server tick (PipeBehaviourDirectional.onTick advances to
         // the first face carrying a TILE connection), so gate on the stations existing AND the wooden one
         // having resolved its tank — never on a fixed tick.
-        EntityArenaUtil.tickUntil(helper, 140,
-                () -> {
-                    DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
-                    return wood != null && wood.getFluidInput() != null
-                            && stationAt(helper, plainRel, Direction.UP) != null;
-                },
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> {
+                            DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
+                            return wood != null && wood.getFluidInput() != null
+                                    && stationAt(helper, plainRel, Direction.UP) != null;
+                        }),
                 () -> {
                     DockingStationPipe plain = stationAt(helper, plainRel, Direction.UP);
                     helper.assertTrue(plain.getFluidInput() == null,
@@ -210,7 +220,7 @@ public class FluidCarrierTester {
         // aimed wooden fluid pipe.
         BlockPos tankRel = new BlockPos(2, 2, 4);
         BlockPos robotRel = new BlockPos(4, 3, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         TilePipeHolder tile = installFluidStation(helper, pipeRel, BCTransportItems.PIPE_WOOD_FLUID.get(),
                 Direction.UP);
@@ -228,7 +238,8 @@ public class FluidCarrierTester {
         // fluid supply discovery makes this test naturally hermetic — no other test's station sits on a
         // wooden FLUID pipe, so this robot's station search can only end at this rig.
         EntityRobot[] robot = { null };
-        EntityArenaUtil.tickUntil(helper, 340,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LOAD_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LOAD_WORK_TICKS,
                 () -> {
                     if (stationAt(helper, pipeRel, Direction.UP) == null) {
                         return false;
@@ -239,6 +250,9 @@ public class FluidCarrierTester {
                     }
                     return carriedBy(robot[0]) > 0;
                 },
+                () -> robot[0] == null ? "the supply station never registered, so the carrier was never added"
+                        : "the fluid carrier robot never loaded the water from the supply tank (carrying "
+                                + carriedBy(robot[0]) + " mB)"),
                 () -> {
                     helper.assertTrue(carriedBy(robot[0]) == 1000,
                             "the fluid carrier must load the tank's whole bucket into its own tank, got "
@@ -275,7 +289,7 @@ public class FluidCarrierTester {
     public static void fluidUnloadStationDoesNotNeedAnOppositeFaceConnection(GameTestHelper helper) {
         BlockPos pipeRel = new BlockPos(2, 3, 4);
         BlockPos robotRel = new BlockPos(2, 4, 4);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         // A plain cobblestone FLUID pipe with nothing at all around it: no tank, no neighbouring pipe, and
         // in particular nothing on the DOWN face opposite the station.
@@ -284,8 +298,9 @@ public class FluidCarrierTester {
         addAlwaysOnGate(tile, Direction.WEST, BCRoboticsStatements.ACTION_STATION_ACCEPT_FLUIDS);
 
         EntityRobot[] spawned = { null };
-        EntityArenaUtil.tickUntil(helper, 140,
-                () -> stationAt(helper, pipeRel, Direction.UP) != null,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> stationAt(helper, pipeRel, Direction.UP) != null),
                 () -> {
                     DockingStationPipe station = stationAt(helper, pipeRel, Direction.UP);
                     EntityRobot robot = ZonePinnedRobot.spawn(helper, robotRel, BoardRobotEmptyNBT.INSTANCE);

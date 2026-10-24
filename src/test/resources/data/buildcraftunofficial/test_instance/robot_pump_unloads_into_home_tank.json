@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_pump_unloads_into_home_tank",
     "environment": "buildcraftunofficial:robot_gate",
     "structure": "minecraft:empty",
-    "max_ticks": 1200,
+    "max_ticks": 1410,
     "setup_ticks": 0,
     "required": true
 }

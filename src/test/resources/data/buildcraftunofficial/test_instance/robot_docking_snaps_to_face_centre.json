@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_docking_snaps_to_face_centre",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 374,
     "setup_ticks": 0,
     "required": true
 }

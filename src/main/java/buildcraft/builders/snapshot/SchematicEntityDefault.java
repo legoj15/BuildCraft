@@ -53,6 +53,8 @@ import buildcraft.api.schematics.SchematicEntityContext;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RotationUtil;
 
+import buildcraft.core.item.ZoneMapPortability;
+
 public class SchematicEntityDefault implements ISchematicEntity {
     private static final org.apache.logging.log4j.Logger LOGGER =
         org.apache.logging.log4j.LogManager.getLogger("BCBlueprint");
@@ -111,6 +113,15 @@ public class SchematicEntityDefault implements ISchematicEntity {
             hangingPos = BlockPos.containing(pos);
             hangingFacing = Direction.NORTH;
         }
+    }
+
+    /**
+     * The block twin's {@link SchematicBlockDefault#carryZonePlans}, for an entity the Architect's scan keeps: a zone
+     * map in a frame or a cart carries its plan for the build to hand on. Not part of {@link #init}, which the Builder
+     * also runs on every stray entity it checks each tick.
+     */
+    public void carryZonePlans() {
+        ZoneMapPortability.carryPlans(entityNbt);
     }
 
     @Override
@@ -255,7 +266,10 @@ public class SchematicEntityDefault implements ISchematicEntity {
             SchematicBlockDefault.stripContainerContentsFromNbt(rules, newEntityNbt);
         }
         // 1.12.2's replaceNbt: the matching rules' overrides, merged over the data about to be loaded.
-        return JsonRule.applyReplaceNbt(newEntityNbt, rules);
+        CompoundTag placed = JsonRule.applyReplaceNbt(newEntityNbt, rules);
+        // The carried zone plans go to this world's store (ZoneMapPortability); map locations are not moved.
+        ZoneMapPortability.settlePlans(placed);
+        return placed;
     }
 
     private static Optional<Entity> createEntity(Level level, CompoundTag newEntityNbt) {

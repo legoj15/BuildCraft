@@ -26,9 +26,15 @@ public class RobotChargingLatchTester {
     private static final long THRESHOLD = RobotChargeReceiver.CHARGE_DETECT_THRESHOLD;
     private static final long BIG_OFFER = 100L * MjAPI.MJ;
 
+    /** The work budget of the latch poll, counted from the arena cell ticking: its own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and the manifest's
+     *  {@code max_ticks} stays above that sum. The robot ticks (gets its id, drains the latch) only once its chunk
+     *  does, and the framework forces only the structure's chunk. */
+    private static final int LATCH_WORK_TICKS = 200;
+
     public static void chargingLatchFollowsAcceptedPowerAndDrains(GameTestHelper helper) {
         BlockPos relPos = new BlockPos(3, 3, 3);
-        EntityArenaUtil.forceLoadEntityArena(helper, relPos);
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
         robot.setPos(pos.x, pos.y, pos.z);
@@ -39,7 +45,8 @@ public class RobotChargingLatchTester {
         boolean[] sawSleepWhileCharging = { false };
         boolean[] armed = { false };
 
-        EntityArenaUtil.tickUntil(helper, 200, () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + LATCH_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, LATCH_WORK_TICKS, () -> {
             if (!armed[0]) {
                 if (robot.getRobotId() == EntityRobotBase.NULL_ROBOT_ID) {
                     return false; // not ticking yet
@@ -79,7 +86,8 @@ public class RobotChargingLatchTester {
                 sawSleepWhileCharging[0] = true;
             }
             return latch == 0;
-        }, () -> {
+        }, () -> armed[0] ? "the robot's charging latch never drained to zero (now " + robot.getTicksCharging() + ")"
+                : "the robot never ticked"), () -> {
             long drained = helper.getLevel().getGameTime() - fullAt[0];
             helper.assertTrue(drained >= 30,
                     "the latch drains one per entity tick, so 30 cannot be gone in fewer than 30 ticks: " + drained);

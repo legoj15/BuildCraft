@@ -42,7 +42,39 @@ public class BuildCraftGameTests {
     //?} else {
     /*@net.neoforged.bus.api.SubscribeEvent
     public static void onRegisterGameTests(net.neoforged.neoforge.event.RegisterGameTestsEvent event) {
-        registerAll((id, sup) -> addReflectively(id, sup));
+        String filter = System.getProperty("buildcraft.gameTestFilter");
+        if (filter == null || filter.isBlank()) {
+            registerAll((id, sup) -> addReflectively(id, sup));
+            return;
+        }
+        // `-PbcTests=<glob>` (build.gradle.kts sets the property on this node only). 1.21.1's server Main has
+        // no `--tests` option and its runner takes every TestFunction already in GameTestRegistry, so the
+        // filter has to act here, before the runner reads the list. Same matching as the modern selector
+        // (ResourceSelectorArgument): a pattern without a colon gets "minecraft:", then a case-sensitive
+        // commons-io wildcard match (`*`/`?`) against the full test id.
+        String pattern = filter.strip();
+        if (!pattern.contains(":")) pattern = "minecraft:" + pattern;
+        final String glob = pattern;
+        java.util.concurrent.atomic.AtomicInteger selected = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger total = new java.util.concurrent.atomic.AtomicInteger();
+        registerAll((id, sup) -> {
+            total.incrementAndGet();
+            if (org.apache.commons.io.FilenameUtils.wildcardMatch(id, glob)) {
+                selected.incrementAndGet();
+                addReflectively(id, sup);
+            }
+        });
+        // WARN so it clears the quiet game-test console mirror (gameTestServerLog4j2-quiet.xml).
+        org.slf4j.Logger log = com.mojang.logging.LogUtils.getLogger();
+        log.warn("BuildCraft game-test filter '{}' selected {} of {} tests", glob, selected.get(), total.get());
+        if (selected.get() == 0) {
+            log.error("-PbcTests='{}' matched none of the {} BuildCraft game tests; expected a namespace:glob such as "
+                + "buildcraftunofficial:painted_pipe_*", filter, total.get());
+            // Throwing from this listener only reaches server Main, which logs "Failed to start the minecraft
+            // server" and returns normally, so Gradle would report a green run of zero tests for a mistyped
+            // glob. Exit non-zero so the task fails like a failing game test does.
+            System.exit(1);
+        }
     }
 
     // 1.21.1 has no dynamic TEST_FUNCTION registry; GameTestRegistry.TEST_FUNCTIONS is a private
@@ -508,6 +540,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_fragile_deferred_for_fluid_above", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFragileBlockDeferredForFluidAbove);
         reg.accept("buildcraftunofficial:fluidmode_waterloggable_not_deferred", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterloggableBlockNotDeferredNearWater);
         reg.accept("buildcraftunofficial:fluidmode_no_replace_defers_fragile", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDefersFragileButHandPlacementDoesNot);
+        reg.accept("buildcraftunofficial:fluidmode_failed_place_keeps_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementKeepsFluidSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);
@@ -690,9 +723,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_idle_finds_column_pool_promptly", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsAColumnPoolPromptly);
         reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
-        // The pump never loads a chunk: not its flood fill, not a drain on a chunk border; an idle pump finds fluid once it loads
+        // The pump never loads a chunk: not its flood fill, not a drain within block-update reach of a chunk border (straight or
+        // across a corner), not one whose neighbouring chunk unloaded after the cell was queued; an idle pump finds fluid once
+        // it loads. The robot pump leaves such a source alone too
         reg.accept("buildcraftunofficial:pump_fill_skips_unloaded_chunk", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::fillStopsAtAnUnloadedChunkWithoutLoadingIt);
         reg.accept("buildcraftunofficial:pump_idle_finds_fluid_when_chunk_loads", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::idlePumpFindsFluidOnceTheChunkBesideItLoads);
+        reg.accept("buildcraftunofficial:pump_drain_reach_spares_unloaded_chunk", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::drainThreeBlocksFromAnAbsentChunkNeverReadsIntoIt);
+        reg.accept("buildcraftunofficial:pump_drain_reach_spares_diagonal_chunk", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::drainBesideACornerNeverReadsIntoTheDiagonalChunk);
+        reg.accept("buildcraftunofficial:pump_drain_rechecks_reach_when_chunk_unloads", () -> buildcraft.factory.tile.PumpUnloadedChunkTester::drainRechecksTheChunksBesideItWhenOneUnloads);
 
         // Pump spring-aware probe — drilling past water to a submerged oil spring
         reg.accept("buildcraftunofficial:pump_probe_oil_beneath_water", () -> buildcraft.factory.PumpSpringProbeTester::testOilBeneathWaterIsFound);
@@ -1334,6 +1372,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_board_skips_refused_pickup", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsABlockWhosePickupRefused);
         reg.accept("buildcraftunofficial:robot_pump_board_reasks_for_new_owner", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardAsksAgainForANewOwner);
         reg.accept("buildcraftunofficial:robot_pump_board_skips_miner_tube", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsWaterloggedMinerTube);
+        reg.accept("buildcraftunofficial:robot_pump_leaves_source_beside_absent_chunk", () -> buildcraft.robotics.ai.RobotPumpUnloadedChunkTester::pumpLeavesASourceBesideAnAbsentChunkAlone);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);

@@ -55,6 +55,16 @@ public class RobotActionAIsTester {
     /** Above {@code SAFETY_POWER} so the {@code AIRobotMain} ladder never preempts with a recharge. */
     private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
+    /** The work budgets of the three polls that wait on the world, each counted from the arena cell ticking: a poll's
+     *  own budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and
+     *  each manifest's {@code max_ticks} stays above that sum. The mobs, the drops and the knight sit a few blocks apart
+     *  in a 6x7 cell that straddles a chunk border in about 57% of runs, and the framework forces only the
+     *  structure's chunk, so what lands in the neighbour is invisible to a scan (and its mob stands still) until that
+     *  chunk is entity-ticking. */
+    private static final int DROP_WORK_TICKS = 60;
+    private static final int SEARCH_WORK_TICKS = 60;
+    private static final int KNIGHT_WORK_TICKS = 200;
+
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
@@ -126,7 +136,7 @@ public class RobotActionAIsTester {
         helper.setBlock(youngRel,
                 Blocks.WHEAT.defaultBlockState().setValue(CropBlock.AGE, 3));
 
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = unaddedRobot(helper, robotRel);
         AIRobotHarvest harvester = new AIRobotHarvest(robot, helper.absolutePos(matureRel));
         int cycles = 0;
@@ -143,9 +153,10 @@ public class RobotActionAIsTester {
         // The drops are spawned this tick; an entity added to a chunk whose entity section is not loaded yet
         // is invisible to entity scans until it is, so poll on observed state rather than reading tick 0
         // (flaked on 1.21.11, 2026-10-17).
-        EntityArenaUtil.tickUntil(helper, 60,
-                () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).stream()
-                        .anyMatch(item -> item.getItem().is(Items.WHEAT)),
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DROP_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DROP_WORK_TICKS,
+                        () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).stream()
+                                .anyMatch(item -> item.getItem().is(Items.WHEAT))),
                 helper::succeed,
                 "the harvest drops its loot at the robot (wheat among it)",
                 () -> EntityArenaUtil.droppedItems(helper, robotRel, 3).forEach(item -> item.discard()));
@@ -191,6 +202,8 @@ public class RobotActionAIsTester {
      *  gone. The source sits in a stone cup so no neighbour can re-feed the cell. */
     public static void pumpDrainsSourceIntoTank(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        // The pump AI leaves a source whose drain would read a chunk that is not in memory alone.
+        EntityArenaUtil.forceLoadCell(helper);
         BlockPos wellRel = new BlockPos(2, 1, 2);
         helper.setBlock(wellRel, Blocks.STONE);
         for (Direction dir : new Direction[]{Direction.NORTH, Direction.SOUTH,
@@ -229,6 +242,7 @@ public class RobotActionAIsTester {
 
     private static void pumpKeepsWaterloggedMarker(GameTestHelper helper, BlockPos wellRel) {
         ServerLevel level = helper.getLevel();
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(wellRel.below(), Blocks.STONE);
         helper.setBlock(wellRel, buildcraft.core.BCCoreBlocks.MARKER_VOLUME.get().defaultBlockState()
                 .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true));
@@ -430,9 +444,12 @@ public class RobotActionAIsTester {
         // The scan is a synchronous getEntitiesOfClass: a mob whose entity section isn't accessible yet is in
         // the world but invisible to it, so scanning on tick 0 flaked. Force-load the arena and scan on the
         // first tick every mob is visible to the same kind of query the AI makes.
-        EntityArenaUtil.forceLoadEntityArena(helper, new BlockPos(3, 2, 3));
-        EntityArenaUtil.tickUntil(helper, 60, () -> java.util.Arrays.stream(spawned).allMatch(mob -> helper.getLevel()
-                        .getEntitiesOfClass(Mob.class, AABB.ofSize(mob.position(), 1, 1, 1)).contains(mob)), () -> {
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SEARCH_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SEARCH_WORK_TICKS,
+                        () -> java.util.Arrays.stream(spawned).allMatch(mob -> helper.getLevel()
+                                .getEntitiesOfClass(Mob.class, AABB.ofSize(mob.position(), 1, 1, 1)).contains(mob))),
+                () -> {
             EntityRobot robot = unaddedRobot(helper, new BlockPos(1, 2, 2));
             IEntityFilter hostiles = entity -> entity instanceof Enemy;
             AIRobotSearchEntity search = new AIRobotSearchEntity(robot, hostiles, 8F, null);
@@ -458,7 +475,7 @@ public class RobotActionAIsTester {
      *  attack cooldown clearing the target's invulnerability window every swing. */
     public static void knightFightsZombieToTheDeath(GameTestHelper helper) {
         BlockPos robotRel = new BlockPos(3, 4, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         //? if >=26.2 {
         Zombie zombie = helper.spawn(net.minecraft.world.entity.EntityTypes.ZOMBIE, 3, 4, 3);
@@ -478,7 +495,10 @@ public class RobotActionAIsTester {
 
         // succeed() belongs in the success block: it used to follow the tickUntil call, which only SCHEDULES the
         // poll, so the test passed on its first tick without the knight ever swinging.
-        EntityArenaUtil.tickUntil(helper, 200, zombie::isDeadOrDying, helper::succeed,
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + KNIGHT_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, KNIGHT_WORK_TICKS,
+                        zombie::isDeadOrDying),
+                helper::succeed,
                 "the knight must fell the zombie (three 8.0 swings at the 21-tick cadence)",
                 () -> {
                     EntityArenaUtil.discard(zombie, robot);

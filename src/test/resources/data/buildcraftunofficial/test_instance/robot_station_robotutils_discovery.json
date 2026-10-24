@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_station_robotutils_discovery",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 350,
     "setup_ticks": 0,
     "required": true
 }

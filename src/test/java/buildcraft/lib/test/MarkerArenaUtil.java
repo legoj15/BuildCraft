@@ -53,7 +53,10 @@ import buildcraft.lib.marker.MarkerSubCache;
  *     {@code onLoad} is deferred to {@code tickBlockEntities}), so {@link Session#isRegistered} +
  *     {@link Session#awaitThen} replace the old {@code runAfterDelay(2)} guesses. The cell's chunks are
  *     force-loaded (5x5 around each corner) because the framework forces only the one chunk under the
- *     arena's north-west corner.</li>
+ *     arena's north-west corner, and a wait's budget starts only once the whole cell is entity-ticking: that
+ *     registration itself needs only a loaded chunk, but what a marker test observes next (a path marker popping on
+ *     a scheduled block tick, the drop it leaves, a connection held across ticks) needs the chunk ticking, and a
+ *     budget counted from tick 1 would charge the chunk promotion to the code under test.</li>
  * </ul>
  *
  * <p>Scheduling note: everything is scheduled UP FRONT from the test body, never from inside a scheduled
@@ -94,26 +97,11 @@ public final class MarkerArenaUtil {
     /** As {@link #open} but leaves existing markers alone. Only for tests that plant their own leftovers and
      *  then call {@link Session#evictStrays} at a moment of their choosing. */
     public static Session openWithoutEviction(GameTestHelper gth) {
-        forceLoadCell(gth);
+        // The chunks under all four corners of the cell, 5x5 each (see EntityArenaUtil#forceLoadEntityArena): the
+        // framework forces only the arena's north-west chunk, and the grid drops at a random world position, so the
+        // cell crosses a chunk border in about 57% of runs. The session's await polls wait for exactly this to tick.
+        EntityArenaUtil.forceLoadCell(gth);
         return new Session(gth);
-    }
-
-    /** Force-loads the chunks under all four corners of the cell (5x5 each, see
-     *  {@link EntityArenaUtil#forceLoadEntityArena}). The framework forces only the arena's north-west chunk,
-     *  and the grid drops at a random world position, so the cell crosses a chunk border in about 57% of runs. */
-    private static void forceLoadCell(GameTestHelper gth) {
-        Set<Long> seen = new HashSet<>();
-        for (int x : new int[] { 0, CELL_MAX_X }) {
-            for (int z : new int[] { 0, CELL_MAX_Z }) {
-                BlockPos rel = new BlockPos(x, 0, z);
-                BlockPos abs = gth.absolutePos(rel);
-                // Own chunk key: ChunkPos.asLong/pack is renamed across the node lines.
-                long chunkKey = ((long) (abs.getX() >> 4) << 32) ^ ((abs.getZ() >> 4) & 0xFFFFFFFFL);
-                if (seen.add(chunkKey)) {
-                    EntityArenaUtil.forceLoadEntityArena(gth, rel);
-                }
-            }
-        }
     }
 
     /** Removes any marker block at the given arena-relative positions. For game tests that are NOT marker tests
@@ -347,9 +335,16 @@ public final class MarkerArenaUtil {
             }
         }
 
-        /** Polls once per tick for up to {@code maxTicks} for {@code condition}, then runs {@code then}. Fails
-         *  (after cleaning up) with {@code failureMessage} plus a dump of the nearby marker caches if the
-         *  condition never comes true. */
+        /** Polls once per tick for {@code condition}, then runs {@code then}. The budget {@code maxTicks} starts
+         *  counting only once the cell is entity-ticking ({@link EntityArenaUtil#isCellEntityTicking}), never from the
+         *  test's first tick: the cell crosses a chunk border in about 57% of runs and the half the test is not
+         *  standing in starts ticking later, so a budget counted from tick 1 charges that chunk promotion to the
+         *  code under test (the scheduled block ticks that pop a path marker, the drop it leaves for a scan). A cell
+         *  that never ticks fails as the machine's load, within {@link EntityArenaUtil#CELL_READY_TICKS}. The whole
+         *  poll therefore runs for up to {@code CELL_READY_TICKS + maxTicks} ticks, which the test's manifest
+         *  {@code max_ticks} must outlast ({@code GameTestPollBudgetTester} reads it that way). Fails (after
+         *  cleaning up) with {@code failureMessage} plus a dump of the nearby marker caches if the condition never
+         *  comes true. */
         public void await(int maxTicks, BooleanSupplier condition, Runnable then, Supplier<String> failureMessage) {
             awaitThen(maxTicks, condition, then, 0, null, failureMessage);
         }
@@ -359,44 +354,28 @@ public final class MarkerArenaUtil {
         }
 
         /** Two-phase {@link #await}: runs {@code first} on the tick {@code condition} comes true and
-         *  {@code second} {@code gapTicks} ticks later. {@code second} may be null. Every poll is scheduled up
-         *  front (see the class javadoc), and every exit path — an exception from either phase, or a timeout —
+         *  {@code second} {@code gapTicks} ticks later (the {@code maxTicks} budget covers both, as it always has:
+         *  the condition gets {@code maxTicks - gapTicks} polls once the cell ticks). {@code second} may be null.
+         *  Built on {@link EntityArenaUtil#tickUntil}/{@link EntityArenaUtil#tickUntilThen}, so every poll is scheduled
+         *  up front (see the class javadoc) and every exit path — success, an exception from either phase, or a timeout —
          *  cleans up. */
         public void awaitThen(int maxTicks, BooleanSupplier condition, Runnable first, int gapTicks, Runnable second,
                               Supplier<String> failureMessage) {
-            int[] firstFiredAt = { -1 };
-            boolean[] done = { false };
-            for (int t = 1; t <= maxTicks; t++) {
-                final int tick = t;
-                gth.runAfterDelay(tick, () -> {
-                    if (done[0]) {
-                        return;
-                    }
-                    if (firstFiredAt[0] < 0) {
-                        boolean ready;
-                        try {
-                            ready = condition.getAsBoolean();
-                        } catch (RuntimeException e) {
-                            done[0] = true;
-                            cleanup();
-                            throw e;
-                        }
-                        if (ready) {
-                            firstFiredAt[0] = tick;
-                            done[0] = second == null;
-                            guard(first);
-                        } else if (tick + gapTicks >= maxTicks) {
-                            done[0] = true;
-                            String message = failureMessage.get() + " (waited " + (maxTicks - gapTicks) + " ticks). "
-                                + describeCaches();
-                            cleanup();
-                            gth.fail(message);
-                        }
-                    } else if (tick >= firstFiredAt[0] + gapTicks) {
-                        done[0] = true;
-                        guard(second);
-                    }
-                });
+            int pollTicks = EntityArenaUtil.CELL_READY_TICKS + maxTicks;
+            BooleanSupplier gated = EntityArenaUtil.gateOnReady(() -> EntityArenaUtil.isCellEntityTicking(gth),
+                detail -> {
+                    // The gate fails by throwing and the poll's own cleanup then runs, but the caches are dumped BEFORE
+                    // anything is removed, so the report names what the markers looked like when the wait gave up.
+                    String message = detail + ". " + describeCaches();
+                    cleanup();
+                    gth.fail(message);
+                },
+                EntityArenaUtil.CELL_READY_TICKS, maxTicks - gapTicks, condition, failureMessage);
+            String timeout = "the marker session's poll ran out"; // the gate fails first; this is the poll's backstop
+            if (second == null) {
+                EntityArenaUtil.tickUntil(gth, pollTicks, gated, first, timeout, this::cleanup);
+            } else {
+                EntityArenaUtil.tickUntilThen(gth, pollTicks, gated, first, gapTicks, second, timeout, this::cleanup);
             }
         }
 

@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.FarChunk;
 
 /**
  * Game tests for the oil-generation pipeline's structure primitives:
@@ -94,21 +95,16 @@ public class OilGenStructureTester {
      */
     public static void testSetOilSkipsUnloadedHorizontalNeighbour(GameTestHelper helper) {
         net.minecraft.server.level.ServerLevel level = helper.getLevel();
-        BlockPos arena = helper.absolutePos(new BlockPos(0, 0, 0));
-        // An isolated chunk far from the arena/spawn (and from other tests' far-chunk references): force-load
-        // ONLY it, so its four neighbours stay ungenerated.
-        int cx = (arena.getX() >> 4) + 777;
-        int cz = (arena.getZ() >> 4) + 777;
-        level.setChunkForced(cx, cz, true);
-        helper.assertTrue(level.getChunkSource().getChunkNow(cx, cz) != null,
-                "Precondition: the isolated chunk must be force-generated to FULL");
-        helper.assertTrue(level.getChunkSource().getChunkNow(cx + 1, cz) == null,
+        // An isolated chunk far from the arena/spawn (and from other tests' far-chunk references): loaded ALONE (a
+        // forced chunk's ticket would queue its neighbours to load too, and the one next door could turn present
+        // before the assertions run), so its four neighbours stay ungenerated.
+        FarChunk far = FarChunk.load(helper, 777);
+        helper.assertTrue(far.isAbsent(1, 0),
                 "Precondition: its east neighbour must stay ungenerated (not present at FULL)");
         // Oil on the east edge (local x = 15) — its east neighbour is the ungenerated chunk (cx+1, cz).
-        BlockPos edge = new BlockPos(cx * 16 + 15, level.getMinY() + 40, cz * 16 + 8);
+        BlockPos edge = far.pos(15, level.getMinY() + 40, 8);
         OilGenStructure.setOil(level, edge);
-        boolean neighbourStillUnloaded = level.getChunkSource().getChunkNow(cx + 1, cz) == null;
-        level.setChunkForced(cx, cz, false); // release the ticket before asserting
+        boolean neighbourStillUnloaded = far.isAbsent(1, 0);
         helper.assertTrue(neighbourStillUnloaded,
                 "setOil must NOT force-load an ungenerated horizontal neighbour via LiquidBlock.onPlace -> "
                         + "FluidInteractionRegistry.canInteract (the fluid-interaction worldgen-deadlock guard)");

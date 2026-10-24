@@ -35,108 +35,123 @@ import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.lib.test.EntityArenaUtil;
 
 public class EngineTester {
+
+    /** Work budgets of the engine polls below, each counted from the cell ticking, not from the test's first tick:
+     *  an engine accumulates power, heat and bleed only on the ticks it gets, and its chunk can start ticking
+     *  late (a one-block rig two blocks in sits across a chunk border in about a quarter of runs). Each poll's own
+     *  budget adds {@code EntityArenaUtil.CELL_READY_TICKS}, which {@code GameTestPollBudgetTester} reads, and every
+     *  manifest's {@code max_ticks} stays above that sum. */
+    private static final int DRY_RUN_WORK_TICKS = 60;
+    /** The wait for the engine's tile to exist once the cell ticks (immediate in practice), ahead of a phase that
+     *  is timed from it. */
+    private static final int TILE_WORK_TICKS = 10;
+    /** Ticks an engine runs between the setup of a timed test and its check. */
+    private static final int SAFE_LIMIT_SETTLE_TICKS = 20;
+    private static final int OVERHEAT_HOLD_TICKS = 50;
+    private static final int OVERHEAT_EXIT_TICKS = 140;
+    private static final int COOLANT_RECOVERY_TICKS = 80;
+    private static final int CLEAR_OVERHEAT_SETTLE_TICKS = 5;
 
     public static void testRedstoneEngineDryRunHeat(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
         BlockPos redstonePos = new BlockPos(2, 2, 1);
-        
+
         BlockState engineState = BCCoreBlocks.ENGINE_REDSTONE.get().defaultBlockState()
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
-                
+
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(enginePos, engineState);
         helper.setBlock(redstonePos, Blocks.REDSTONE_BLOCK);
-        
-        // Give the engine 40 ticks to natively generate power via its internal block mechanics
-        helper.runAfterDelay(40, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engine == null) {
-                throw new IllegalStateException("Failed to place Redstone Engine!");
-            }
-            
-            // Validate it is running natively
-            if (!engine.isBurning()) {
-                throw new IllegalStateException("Engine is not burning with redstone signal!");
-            }
-            
-            // Ensure dry-run mechanics naturally accumulated power and increased heat
-            if (engine.getPower() <= 0) {
-                throw new IllegalStateException("Engine dry-run failed to natively accumulate internal power over 40 ticks!");
-            }
-            if (engine.getHeatLevel() <= 0) {
-                throw new IllegalStateException("Engine dry-run failed to natively increase heat over 40 ticks! Current Heat: " + engine.getHeatLevel());
-            }
-            
-            // Now that we've verified native scaling works, manually fast-forward energy limits
-            // to instantly assert 1.12.2 threshold accuracy without waiting 1.4 real-life hours
-            
-            // Test Stage: BLUE (< 25%)
-            fastForwardEnergy(engine, 0.0f);
-            if (engine.getPowerStage() != EnumPowerStage.BLUE) {
-                throw new IllegalStateException("Engine should start in BLUE stage! Found: " + engine.getPowerStage());
-            }
-            
-            // Fast forward to 26% energy limit
-            fastForwardEnergy(engine, 0.26f);
-            if (engine.getPowerStage() != EnumPowerStage.GREEN) {
-                throw new IllegalStateException(String.format("Engine should be GREEN at 26%%! Found: %s, Heat=%.2f, HeatLevel=%.4f", engine.getPowerStage(), getHeatDirect(engine), engine.getHeatLevel()));
-            }
 
-            // Fast forward to 51% energy limit
-            fastForwardEnergy(engine, 0.51f);
-            if (engine.getPowerStage() != EnumPowerStage.YELLOW) {
-                throw new IllegalStateException("Engine should be YELLOW at 51% heat level! Found: " + engine.getPowerStage());
-            }
+        // Give the engine its own ticks to natively generate power via its internal block mechanics: poll until it is
+        // burning with power and heat, counted from the cell ticking (the engine needs well under 40 ticks of its own).
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + DRY_RUN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, DRY_RUN_WORK_TICKS, () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    if (engine == null) {
+                        throw new IllegalStateException("Failed to place Redstone Engine!");
+                    }
+                    return engine.isBurning() && engine.getPower() > 0 && engine.getHeatLevel() > 0;
+                }, () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    return !engine.isBurning() ? "Engine is not burning with redstone signal!"
+                            : engine.getPower() <= 0 ? "Engine dry-run failed to natively accumulate internal power!"
+                            : "Engine dry-run failed to natively increase heat! Current Heat: " + engine.getHeatLevel();
+                }),
+                () -> checkDryRunStages(helper, engineAt(helper, enginePos)),
+                "The redstone engine never ran on its own");
+    }
 
-            // Fast forward to 76% energy limit
-            fastForwardEnergy(engine, 0.76f);
-            if (engine.getPowerStage() != EnumPowerStage.RED) {
-                throw new IllegalStateException("Engine should be RED at 76% heat level! Found: " + engine.getPowerStage());
-            }
-            
-            helper.succeed();
-        });
+    private static TileEngineBase_BC8 engineAt(GameTestHelper helper, BlockPos pos) {
+        //? if >=1.21.10 {
+        return helper.getBlockEntity(pos, TileEngineBase_BC8.class);
+        //?} else {
+        /*return helper.getBlockEntity(pos);*/
+        //?}
+    }
+
+    private static void checkDryRunStages(GameTestHelper helper, TileEngineBase_BC8 engine) {
+        // Now that we've verified native scaling works, manually fast-forward energy limits
+        // to instantly assert 1.12.2 threshold accuracy without waiting 1.4 real-life hours
+
+        // Test Stage: BLUE (< 25%)
+        fastForwardEnergy(engine, 0.0f);
+        if (engine.getPowerStage() != EnumPowerStage.BLUE) {
+            throw new IllegalStateException("Engine should start in BLUE stage! Found: " + engine.getPowerStage());
+        }
+
+        // Fast forward to 26% energy limit
+        fastForwardEnergy(engine, 0.26f);
+        if (engine.getPowerStage() != EnumPowerStage.GREEN) {
+            throw new IllegalStateException(String.format("Engine should be GREEN at 26%%! Found: %s, Heat=%.2f, HeatLevel=%.4f", engine.getPowerStage(), getHeatDirect(engine), engine.getHeatLevel()));
+        }
+
+        // Fast forward to 51% energy limit
+        fastForwardEnergy(engine, 0.51f);
+        if (engine.getPowerStage() != EnumPowerStage.YELLOW) {
+            throw new IllegalStateException("Engine should be YELLOW at 51% heat level! Found: " + engine.getPowerStage());
+        }
+
+        // Fast forward to 76% energy limit
+        fastForwardEnergy(engine, 0.76f);
+        if (engine.getPowerStage() != EnumPowerStage.RED) {
+            throw new IllegalStateException("Engine should be RED at 76% heat level! Found: " + engine.getPowerStage());
+        }
+
+        helper.succeed();
     }
 
     public static void testRedstoneEngineSafeLimit(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(enginePos, BCCoreBlocks.ENGINE_REDSTONE.get());
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
-        helper.runAfterDelay(1, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            // Push to 84% (right at the boundary below OVERHEAT which is 85%)
-            // The engine naturally maxes out at 80% (0.8f).
-            fastForwardEnergy(engine, 0.84f);
-        });
+        // The settle time must be the engine's own ticks: with the clock started at tick 1, an engine whose chunk ticks
+        // late would be checked after fewer ticks than the test says (or none, and pass without having run).
+        EntityArenaUtil.tickUntilThen(helper,
+                EntityArenaUtil.CELL_READY_TICKS + TILE_WORK_TICKS + SAFE_LIMIT_SETTLE_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, TILE_WORK_TICKS,
+                        () -> engineAt(helper, enginePos) != null, () -> "no engine block entity at " + enginePos),
+                () -> {
+                    // Push to 84% (right at the boundary below OVERHEAT which is 85%)
+                    // The engine naturally maxes out at 80% (0.8f).
+                    fastForwardEnergy(engineAt(helper, enginePos), 0.84f);
+                }, SAFE_LIMIT_SETTLE_TICKS, () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    // Engine should comfortably lock internally at RED, but never OVERHEAT
+                    if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Redstone Engine entered an OVERHEAT stage. Redstone engines should be perfectly safe and lock at RED.");
+                    }
+                    if (engine.getPowerStage() != EnumPowerStage.RED) {
+                        throw new IllegalStateException("Redstone Engine failed to reach RED stage. Found: " + engine.getPowerStage());
+                    }
 
-        // Scheduled up front, from the test body, never from inside the runnable above: the framework runs its
-        // scheduled runnables while iterating the map a nested runAfterDelay would insert into.
-        helper.runAfterDelay(1 + 20, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            // Engine should comfortably lock internally at RED, but never OVERHEAT
-            if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Redstone Engine entered an OVERHEAT stage. Redstone engines should be perfectly safe and lock at RED.");
-            }
-            if (engine.getPowerStage() != EnumPowerStage.RED) {
-                throw new IllegalStateException("Redstone Engine failed to reach RED stage. Found: " + engine.getPowerStage());
-            }
-
-            helper.succeed();
-        });
+                    helper.succeed();
+                }, "The redstone engine never appeared");
     }
 
     public static void testStirlingEngineFuel(GameTestHelper helper) {
@@ -209,6 +224,11 @@ public class EngineTester {
         });
     }
 
+    /** The work budget of the unfueled Stirling poll, counted from the cell ticking (the poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS}, read as such by {@code GameTestPollBudgetTester}; the manifest's
+     *  {@code max_ticks} stays above the sum). */
+    private static final int STORED_POWER_WORK_TICKS = 110;
+
     /**
      * Regression for "stored energy doesn't release unless fueled" (RC4 feedback): a redstone-powered
      * Stirling engine with a charged MJ buffer but NO fuel (burnTime stays 0, so isBurning()==false)
@@ -222,6 +242,9 @@ public class EngineTester {
         BlockPos enginePos   = new BlockPos(2, 2, 2);
         BlockPos testerPos   = new BlockPos(2, 3, 2);
 
+        // The framework forces only the structure's chunk, and the engine column can sit in the neighbouring one:
+        // neither the engine nor the tester ticks until that chunk does.
+        EntityArenaUtil.forceLoadCell(helper);
         BlockState engineState = BCEnergyBlocks.ENGINE_STONE.get().defaultBlockState()
                 .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP);
         helper.setBlock(enginePos, engineState);
@@ -240,16 +263,21 @@ public class EngineTester {
         }
 
         // Poll until the tester has received some MJ. Tolerant of arena startup jitter (redstone poll +
-        // capability connection take a variable few ticks). Cumulative total stays >0 once any arrives.
-        helper.succeedWhen(() -> {
-            //? if >=1.21.10 {
-            TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
-            //?} else {
-            /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
-            //?}
-            helper.assertTrue(readTesterTotal(tester) > 0,
-                    "Unfueled Stirling engine has not yet delivered its stored buffer to the receiver");
-        });
+        // capability connection take a variable few ticks). Cumulative total stays >0 once any arrives. The work
+        // budget starts only once the cell is ticking: the engine and the tester are blocks of a cell whose far half
+        // can sit in a chunk that is promoted later, and a framework watchdog counted from tick 1 would charge that
+        // wait to the engine.
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + STORED_POWER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, STORED_POWER_WORK_TICKS, () -> {
+                    //? if >=1.21.10 {
+                    TilePowerConsumerTester tester = helper.getBlockEntity(testerPos, TilePowerConsumerTester.class);
+                    //?} else {
+                    /*TilePowerConsumerTester tester = helper.getBlockEntity(testerPos);*/
+                    //?}
+                    return readTesterTotal(tester) > 0;
+                }, () -> "the unfueled Stirling engine has not delivered its stored buffer to the receiver"),
+                helper::succeed,
+                "Unfueled Stirling engine never delivered its stored buffer to the receiver");
     }
 
     /** Sniffs the power tester's debug output for a non-zero "Total received" line (mirrors the helper
@@ -400,62 +428,58 @@ public class EngineTester {
      */
     public static void testStirlingEngineOverheatNoExplodeDefault(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
-        helper.runAfterDelay(1, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            fastForwardEnergy(engine, 1.0f);
+        // One flat poll, timed from the setup, which runs once the cell ticks: the bleed this test measures is the
+        // engine's own ticks, and a clock started at tick 1 spent the ones its chunk had not yet started (the exit
+        // check at tick 141 needs ~111 of them). The hold check runs at exactly OVERHEAT_HOLD_TICKS after the setup
+        // (the poll runs once per tick) and the poll ends at OVERHEAT_EXIT_TICKS.
+        long[] setupAt = {-1};
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + OVERHEAT_EXIT_TICKS + TILE_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS,
+                        OVERHEAT_EXIT_TICKS + TILE_WORK_TICKS, () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    if (setupAt[0] < 0) {
+                        setupAt[0] = helper.getTick();
+                        fastForwardEnergy(engine, 1.0f);
 
-            // Trigger the BLUE → OVERHEAT transition (would have exploded pre-port)
-            if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Engine should transition to OVERHEAT at 100% heat. Found: " + engine.getPowerStage());
-            }
+                        // Trigger the BLUE → OVERHEAT transition (would have exploded pre-port)
+                        if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                            throw new IllegalStateException("Engine should transition to OVERHEAT at 100% heat. Found: " + engine.getPowerStage());
+                        }
 
-            // Sit just inside the OVERHEAT band (0.86 > 0.85); the bleed must now cool the engine
-            // through the whole hysteresis band before the stage may leave OVERHEAT.
-            fastForwardEnergy(engine, 0.86f);
-        });
-
-        // Both checks are scheduled up front, from the test body, never from inside the setup runnable above: the
-        // framework runs its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
-
-        // Hysteresis hold: at tick 50 (power ~0.81 — below entry, above the 0.75 exit) the stage
-        // must still read OVERHEAT instead of flapping back to RED.
-        helper.runAfterDelay(1 + 50, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engineHeld = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engineHeld.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Hysteresis should hold OVERHEAT through the cool-down band at tick 50. Found: " + engineHeld.getPowerStage());
-            }
-        });
-
-        // By tick 140 the bleed has crossed the 0.75 exit: stage out of OVERHEAT, block intact
-        // (no explosion with canEnginesExplode=false).
-        helper.runAfterDelay(1 + 140, () -> {
-            BlockState stateAfter = helper.getBlockState(enginePos);
-            if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
-                throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
-            }
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engineAfter == null) {
-                throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
-            }
-            if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Engine should self-cool past overheatExitLevel within ~140 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
-            }
-            helper.succeed();
-        });
+                        // Sit just inside the OVERHEAT band (0.86 > 0.85); the bleed must now cool the engine
+                        // through the whole hysteresis band before the stage may leave OVERHEAT.
+                        fastForwardEnergy(engine, 0.86f);
+                        return false;
+                    }
+                    long age = helper.getTick() - setupAt[0];
+                    if (age == OVERHEAT_HOLD_TICKS) {
+                        // Hysteresis hold: at tick 50 (power ~0.81 — below entry, above the 0.75 exit) the stage
+                        // must still read OVERHEAT instead of flapping back to RED.
+                        if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                            throw new IllegalStateException("Hysteresis should hold OVERHEAT through the cool-down band at tick 50. Found: " + engine.getPowerStage());
+                        }
+                    }
+                    return age >= OVERHEAT_EXIT_TICKS;
+                }, () -> "the overheat test's poll ran out before its check at " + OVERHEAT_EXIT_TICKS + " ticks"),
+                () -> {
+                    // By tick 140 the bleed has crossed the 0.75 exit: stage out of OVERHEAT, block intact
+                    // (no explosion with canEnginesExplode=false).
+                    BlockState stateAfter = helper.getBlockState(enginePos);
+                    if (stateAfter.getBlock() != BCEnergyBlocks.ENGINE_STONE.get()) {
+                        throw new IllegalStateException("Engine should still be present with canEnginesExplode=false. Block now: " + stateAfter.getBlock());
+                    }
+                    TileEngineBase_BC8 engineAfter = engineAt(helper, enginePos);
+                    if (engineAfter == null) {
+                        throw new IllegalStateException("Engine block entity disappeared after OVERHEAT transition");
+                    }
+                    if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Engine should self-cool past overheatExitLevel within ~140 ticks (1 MJ/tick bleed). Still: " + engineAfter.getPowerStage());
+                    }
+                    helper.succeed();
+                }, "The overheat test never finished");
     }
 
     /**
@@ -468,44 +492,43 @@ public class EngineTester {
      */
     public static void testCombustionEngineOverheatCoolantRecovery(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_IRON.get());
         helper.setBlock(new BlockPos(2, 1, 2), Blocks.REDSTONE_BLOCK);
 
-        helper.runAfterDelay(2, () -> {
-            //? if >=1.21.10 {
-            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
-            //?} else {
-            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engine == null) {
-                throw new IllegalStateException("Failed to place Combustion Engine!");
-            }
-            // Plenty of water coolant (fill() is node-uniform — same call loadTank uses).
-            engine.tankCoolant.fill(0, new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
+        // The 80 ticks are the engine's own: the clock starts at the setup, which runs once the cell ticks.
+        EntityArenaUtil.tickUntilThen(helper,
+                EntityArenaUtil.CELL_READY_TICKS + TILE_WORK_TICKS + COOLANT_RECOVERY_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, TILE_WORK_TICKS,
+                        () -> ironEngineAt(helper, enginePos) != null, () -> "no engine block entity at " + enginePos),
+                () -> {
+                    TileEngineIron_BC8 engine = ironEngineAt(helper, enginePos);
+                    // Plenty of water coolant (fill() is node-uniform — same call loadTank uses).
+                    engine.tankCoolant.fill(0, new net.neoforged.neoforge.fluids.FluidStack(Fluids.WATER, 10_000), false);
 
-            // Force overheat. Iron heat is its own accumulator (not power-derived); fastForwardEnergy
-            // sets the heat field directly (the power it also sets is inert for iron's heat path).
-            fastForwardEnergy(engine, 0.86f);
-            if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Combustion engine should be OVERHEAT at heat 0.86. Found: " + engine.getPowerStage());
-            }
-        });
+                    // Force overheat. Iron heat is its own accumulator (not power-derived); fastForwardEnergy
+                    // sets the heat field directly (the power it also sets is inert for iron's heat path).
+                    fastForwardEnergy(engine, 0.86f);
+                    if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Combustion engine should be OVERHEAT at heat 0.86. Found: " + engine.getPowerStage());
+                    }
+                }, COOLANT_RECOVERY_TICKS, () -> {
+                    TileEngineIron_BC8 engine = ironEngineAt(helper, enginePos);
+                    if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException(
+                            "Redstone-powered, water-cooled combustion engine failed to self-recover from OVERHEAT "
+                            + "within 80 ticks — overheatExitLevel() likely sits at/below the 0.80 coolant equilibrium");
+                    }
+                    helper.succeed();
+                }, "The combustion engine never appeared");
+    }
 
-        // Scheduled up front, from the test body, never from inside the setup runnable above: the framework runs
-        // its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
-        helper.runAfterDelay(2 + 80, () -> {
-            //? if >=1.21.10 {
-            TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos, TileEngineIron_BC8.class);
-            //?} else {
-            /*TileEngineIron_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException(
-                    "Redstone-powered, water-cooled combustion engine failed to self-recover from OVERHEAT "
-                    + "within 80 ticks — overheatExitLevel() likely sits at/below the 0.80 coolant equilibrium");
-            }
-            helper.succeed();
-        });
+    private static TileEngineIron_BC8 ironEngineAt(GameTestHelper helper, BlockPos pos) {
+        //? if >=1.21.10 {
+        return helper.getBlockEntity(pos, TileEngineIron_BC8.class);
+        //?} else {
+        /*return helper.getBlockEntity(pos);*/
+        //?}
     }
 
     /**
@@ -639,51 +662,46 @@ public class EngineTester {
      */
     public static void testEngineClearOverheatApi(GameTestHelper helper) {
         BlockPos enginePos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
         helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
 
-        helper.runAfterDelay(1, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engine = helper.getBlockEntity(enginePos);*/
-            //?}
-            fastForwardEnergy(engine, 1.0f);
-            if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Engine should be OVERHEAT before clear. Found: " + engine.getPowerStage());
-            }
+        // The "subsequent ticks" are the engine's own: the clock starts at the setup, which runs once the cell ticks
+        // (a check that nothing slid back into OVERHEAT is vacuous on an engine that has not ticked).
+        EntityArenaUtil.tickUntilThen(helper,
+                EntityArenaUtil.CELL_READY_TICKS + TILE_WORK_TICKS + CLEAR_OVERHEAT_SETTLE_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, TILE_WORK_TICKS,
+                        () -> engineAt(helper, enginePos) != null, () -> "no engine block entity at " + enginePos),
+                () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    fastForwardEnergy(engine, 1.0f);
+                    if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Engine should be OVERHEAT before clear. Found: " + engine.getPowerStage());
+                    }
 
-            if (!engine.clearOverheat(null)) {
-                throw new IllegalStateException("clearOverheat should return true for an overheated engine");
-            }
-            if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Stage should not be OVERHEAT after clearOverheat. Found: " + engine.getPowerStage());
-            }
-            if (Math.abs(getHeatDirect(engine) - TileEngineBase_BC8.MIN_HEAT) > 0.01f) {
-                throw new IllegalStateException("Heat should be MIN_HEAT after clear. Found: " + getHeatDirect(engine));
-            }
-            // Calling on a non-overheated engine returns false (no-op)
-            if (engine.clearOverheat(null)) {
-                throw new IllegalStateException("clearOverheat on a non-overheated engine should return false");
-            }
-            // Regression for the "turns blue, then black again" bug: clearOverheat vents the power
-            // buffer, so the heat re-derived from power each tick stays low and the engine must NOT
-            // slide back into OVERHEAT on subsequent ticks. (The pre-fix clearOverheat reset only heat,
-            // which the next tick's updateHeatLevel undid from the still-full buffer.)
-        });
-
-        // Scheduled up front, from the test body, never from inside the setup runnable above: the framework runs
-        // its scheduled runnables while iterating the map a nested runAfterDelay would insert into.
-        helper.runAfterDelay(1 + 5, () -> {
-            //? if >=1.21.10 {
-            TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos, TileEngineBase_BC8.class);
-            //?} else {
-            /*TileEngineBase_BC8 engineAfter = helper.getBlockEntity(enginePos);*/
-            //?}
-            if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
-                throw new IllegalStateException("Engine re-entered OVERHEAT after a wrench-clear — the power buffer was not vented");
-            }
-            helper.succeed();
-        });
+                    if (!engine.clearOverheat(null)) {
+                        throw new IllegalStateException("clearOverheat should return true for an overheated engine");
+                    }
+                    if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Stage should not be OVERHEAT after clearOverheat. Found: " + engine.getPowerStage());
+                    }
+                    if (Math.abs(getHeatDirect(engine) - TileEngineBase_BC8.MIN_HEAT) > 0.01f) {
+                        throw new IllegalStateException("Heat should be MIN_HEAT after clear. Found: " + getHeatDirect(engine));
+                    }
+                    // Calling on a non-overheated engine returns false (no-op)
+                    if (engine.clearOverheat(null)) {
+                        throw new IllegalStateException("clearOverheat on a non-overheated engine should return false");
+                    }
+                    // Regression for the "turns blue, then black again" bug: clearOverheat vents the power
+                    // buffer, so the heat re-derived from power each tick stays low and the engine must NOT
+                    // slide back into OVERHEAT on subsequent ticks. (The pre-fix clearOverheat reset only heat,
+                    // which the next tick's updateHeatLevel undid from the still-full buffer.)
+                }, CLEAR_OVERHEAT_SETTLE_TICKS, () -> {
+                    TileEngineBase_BC8 engineAfter = engineAt(helper, enginePos);
+                    if (engineAfter.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Engine re-entered OVERHEAT after a wrench-clear — the power buffer was not vented");
+                    }
+                    helper.succeed();
+                }, "The engine never appeared");
     }
 
     /**

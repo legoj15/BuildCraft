@@ -139,7 +139,7 @@ public class NBTUtilBC {
     }
 
     /** A snapshot of {@code tag}'s keys, safe to iterate while editing the tag. */
-    private static List<String> keysOf(CompoundTag tag) {
+    public static List<String> keysOf(CompoundTag tag) {
         //? if >=1.21.10 {
         return new ArrayList<>(tag.keySet());
         //?} else {

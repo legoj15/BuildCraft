@@ -5,6 +5,7 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -905,6 +908,123 @@ public class FluidHandlingModeTester {
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        }
+    }
+
+    /**
+     * A placement that fails must leave the world as it found it. The fluid cases: a placement that fails after it has
+     * already overwritten a fluid source must put the source back. The source is gone the moment the block goes in,
+     * and a block that pops straight away (a torch or lantern with nothing under it, a door whose lower half has no
+     * floor) used to be rolled back to air, so the Builder lost the lava or water for good while it refunded the
+     * item. Those cases: a torch into lava, a torch into water, a lantern into water (REPLACE waterlogs it, CLEAR
+     * places it dry), and a door whose upper cell, or both cells, hold water.
+     * <p>
+     * The block cases: a cell that holds a waterlogged block keeps it. A refused placement (the cell already holds
+     * the very state, a waterlogged fence) must not be "restored" to bare water, which would delete the fence; a
+     * torch that pops after replacing a waterlogged slab or stair must give the slab or stair back, where the source
+     * alone would leave plain water in its place. Every case runs and every broken one is reported.
+     */
+    public static void testFailedPlacementKeepsFluidSource(GameTestHelper helper) {
+        BlockPos at = new BlockPos(1, 2, 1);
+        BlockPos doorAt = new BlockPos(3, 2, 1);
+        try {
+            BlockState torch = Blocks.TORCH.defaultBlockState();
+            BlockState lantern = Blocks.LANTERN.defaultBlockState();
+            BlockState door = Blocks.OAK_DOOR.defaultBlockState();
+            BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+            BlockState wetSlab = Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+            BlockState wetStairs = Blocks.OAK_STAIRS.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+            List<String> broken = new ArrayList<>();
+            for (EnumFluidHandlingMode mode : EnumFluidHandlingMode.values()) {
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "a fence the cell already holds", mode,
+                        wetFence, wetFence, at));
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over a waterlogged slab", mode,
+                        torch, wetSlab, at));
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over waterlogged stairs", mode,
+                        torch, wetStairs, at));
+            }
+            for (EnumFluidHandlingMode mode : new EnumFluidHandlingMode[] {
+                    EnumFluidHandlingMode.REPLACE, EnumFluidHandlingMode.CLEAR}) {
+                check(broken, () -> assertFailedPlaceKeepsSource(helper, "torch into lava", mode, torch, Blocks.LAVA,
+                        at, at));
+                check(broken, () -> assertFailedPlaceKeepsSource(helper, "torch into water", mode, torch,
+                        Blocks.WATER, at, at));
+                check(broken, () -> assertFailedPlaceKeepsSource(helper, "lantern into water", mode, lantern,
+                        Blocks.WATER, at, at));
+                check(broken, () -> assertFailedPlaceKeepsSource(helper, "door under water", mode, door,
+                        Blocks.WATER, doorAt, doorAt.above()));
+                check(broken, () -> assertFailedPlaceKeepsSource(helper, "door into two water cells", mode, door,
+                        Blocks.WATER, doorAt, doorAt, doorAt.above()));
+            }
+            assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
+            helper.succeed();
+        } catch (Throwable t) {
+            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+        } finally {
+            for (BlockPos cell : new BlockPos[] {at, doorAt, doorAt.above()}) {
+                helper.setBlock(cell, Blocks.AIR);
+            }
+        }
+    }
+
+    /** Runs one case, noting its failure instead of ending the test, so a run names every broken case. */
+    private static void check(List<String> broken, Runnable one) {
+        try {
+            one.run();
+        } catch (IllegalStateException e) {
+            broken.add(e.getMessage());
+        }
+    }
+
+    /**
+     * Puts {@code before} at {@code placeAt} (arena-relative) over an empty cell, builds {@code wanted} there, and
+     * asserts nothing was placed (the block pops with nothing under it, or is already there) and the cell still holds
+     * exactly {@code before}. Resets the cell afterwards so the next case starts clean.
+     */
+    private static void assertFailedPlaceLeavesCell(GameTestHelper helper, String what, EnumFluidHandlingMode mode,
+            BlockState wanted, BlockState before, BlockPos placeAt) {
+        Level level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(placeAt);
+        level.setBlock(abs.below(), Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(abs, before, 3);
+        boolean placed = schem(wanted).build(level, abs, mode);
+        try {
+            assertTrue(!placed, what + ": nothing could be placed, so the " + mode + " build must report false");
+            BlockState after = level.getBlockState(abs);
+            assertTrue(after == before, what + ": a failed " + mode + " placement must leave " + before
+                    + " in the cell, got " + after);
+        } finally {
+            level.setBlock(abs, Blocks.AIR.defaultBlockState(), 3);
+        }
+    }
+
+    /**
+     * Fills {@code sourceCells} (arena-relative) with source {@code fluid}, builds {@code wanted} at {@code placeAt}
+     * over an empty cell below it, and asserts the build fails and every cell still holds that source. Resets the
+     * cells afterwards so the next case starts clean.
+     */
+    private static void assertFailedPlaceKeepsSource(GameTestHelper helper, String what, EnumFluidHandlingMode mode,
+            BlockState wanted, Block fluid, BlockPos placeAt, BlockPos... sourceCells) {
+        Level level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(placeAt);
+        level.setBlock(abs.below(), Blocks.AIR.defaultBlockState(), 3);
+        for (BlockPos cell : sourceCells) {
+            level.setBlock(helper.absolutePos(cell), fluid.defaultBlockState(), 3);
+        }
+        boolean placed = schem(wanted).build(level, abs, mode);
+        try {
+            assertTrue(!placed, what + " has nothing to stand on, so the " + mode + " placement must fail");
+            for (BlockPos cell : sourceCells) {
+                FluidState after = level.getFluidState(helper.absolutePos(cell));
+                assertTrue(after.isSource() && after.getType() == fluid.defaultBlockState().getFluidState().getType(),
+                        what + ": the source at " + cell + " must survive a failed " + mode + " placement, got "
+                                + level.getBlockState(helper.absolutePos(cell)));
+            }
+        } finally {
+            level.setBlock(abs, Blocks.AIR.defaultBlockState(), 3);
+            for (BlockPos cell : sourceCells) {
+                level.setBlock(helper.absolutePos(cell), Blocks.AIR.defaultBlockState(), 3);
+            }
         }
     }
 

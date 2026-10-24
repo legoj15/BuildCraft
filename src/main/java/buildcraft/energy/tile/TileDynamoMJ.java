@@ -6,7 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,8 +21,6 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 /*import net.neoforged.neoforge.energy.IEnergyStorage;*/
 //?}
 
-import buildcraft.lib.mj.BCFeStorage;
-
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
@@ -37,37 +34,15 @@ import buildcraft.lib.mj.MjBatteryReceiver;
 
 @SuppressWarnings("this-escape")
 public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider {
-    public static final int MAX_FE = 10_000;
     public static final long MAX_MJ = 1000 * MjAPI.MJ;
-
-    public static final float HEAT_RATE = 0.06f;
-    public static final float COOLDOWN_RATE = 0.01f;
-
-    // The gear upgrade slots (more FE/t output capacity), their MJ-per-tick table and what they spill on removal
-    // are TileEngineGearBase's.
 
     private final MjBattery mjBattery;
     private final MjBatteryReceiver mjConnector;
 
-    public final BCFeStorage energyStorage = new BCFeStorage(MAX_FE, 0, MAX_FE) {
-        @Override
-        protected void onFeChanged() {
-            setChanged();
-        }
-    };
-
     public TileDynamoMJ(BlockPos pos, BlockState state) {
-        super(BCEnergyBlockEntities.DYNAMO_MJ.get(), pos, state);
+        super(BCEnergyBlockEntities.DYNAMO_MJ.get(), pos, state, 0, MAX_FE);
         mjBattery = new MjBattery(MAX_MJ);
         mjConnector = new MjBatteryReceiver(mjBattery);
-    }
-
-    public int getCurrentFe() {
-        return (int) energyStorage.getAmountAsLong();
-    }
-
-    public void setCurrentFe(int fe) {
-        energyStorage.set(Math.max(0, Math.min(MAX_FE, fe)));
     }
 
     @Nonnull
@@ -121,10 +96,7 @@ public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider 
             if (mjBattery.extractPower(maxFe * mjPerRf)) {
                 currentOutput = maxFe;
                 energyStorage.set(currentFe + maxFe);
-                heat += HEAT_RATE;
-                if (heat >= 200) {
-                    heat = 200;
-                }
+                addBurnHeat();
             }
         } else {
             currentOutput = 0;
@@ -187,17 +159,6 @@ public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider 
     }
 
     @Override
-    public void updateHeatLevel() {
-        if (heat > MIN_HEAT) {
-            heat -= COOLDOWN_RATE;
-        }
-        if (heat <= MIN_HEAT) {
-            heat = MIN_HEAT;
-        }
-        getPowerStage();
-    }
-
-    @Override
     public long getMaxPower() {
         return MAX_MJ;
     }
@@ -236,11 +197,6 @@ public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider 
     }
 
     @Override
-    public float explosionRange() {
-        return 4;
-    }
-
-    @Override
     protected int getMaxChainLength() {
         return 3;
     }
@@ -248,14 +204,12 @@ public class TileDynamoMJ extends TileEngineGearBase implements IBCMenuProvider 
     @Override
     protected void writeData(BCValueOutput output) {
         super.writeData(output);
-        output.putInt("currentFe", getCurrentFe());
         output.putLong("mjStored", mjBattery.getStored());
     }
 
     @Override
     protected void readData(BCValueInput input) {
         super.readData(input);
-        setCurrentFe(input.getIntOr("currentFe", 0));
 
         CompoundTag mjTag = new CompoundTag();
         mjTag.putLong("stored", input.getLongOr("mjStored", 0L));

@@ -71,12 +71,13 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 ## Small cleanups
 
-Follow-ups left by the 2026-10-22 pre-release sweep and the 2026-10-24 cleanup round; none is a known player-facing bug.
-- `TileEngineFE` and `TileDynamoMJ` still duplicate their heat and FE-storage code (`updateHeatLevel`, `MAX_FE`, `HEAT_RATE`, `COOLDOWN_RATE`, `getCurrentFe`/`setCurrentFe`); the two storages insert/extract in opposite directions, so sharing them needs a design choice.
-- Game tests: a few `helper.succeedWhen` polls still start counting at tick 1 with no cell gate (`EngineTester`, `MachinePipeConnectivityTester` x2, `OilWaterInteractionTest`, `RobotStationPluggableTester`); gate them with `forceLoadCell` + `whenCellTicking` like the others. Not seen to flake yet.
-- On the 1.21.1 node `runGameTestServer` ignores `-PbcTests` (gated off in `build.gradle.kts`), so a filtered check there runs the whole suite.
-- `SchematicBlockDefault` place path (REPLACE/CLEAR): the deferred `destroyBlock` of a fluid source commits before `setBlock` and the post-place `updateShape` cascade, so a placement that then fails or pops its block leaves the source permanently removed (rare: e.g. a torch into lava). Restore the source on the failure paths. Found by the 2026-10-24 GLM review.
-- `TilePump` guards only the drained cell's horizontal neighbour chunks; `updateIndirectNeighbourShapes` and neighbour-of-neighbour reads of wires and fluids can still touch a chunk further out (normally loaded around a ticking pump).
+Follow-ups left by the 2026-10-24 cleanup rounds; none is a known player-facing bug in normal play.
+- `SchematicBlockDefault.build` called directly in REPLACE/CLEAR over a waterlogged slab, stair or chest destroys it without drops even when the placement succeeds (`BlueprintBuilder.canPlace` passes any fluid cell); the Builder's own break-first flow avoids it. A failed placement over flowing fluid or a replaceable block (grass, snow) still rolls back to air, and a waterlogged chest's contents still spill inside `destroyBlock`.
+- `TilePump.isQueueable` runs `BlockUtil.getDrainableFluid` before the reach check, and that runs `canSurvive` on waterlogged blocks, which can read a neighbour in an absent chunk during the flood fill.
+- Robot search and path code (`SoftBlockAccess` and friends) tests chunks with `level.hasChunk`, which on a server only checks the ticket level, so robot boards other than the pump may still read absent chunks.
+- Zone maps: `RequiredExtractor.Payer` still encodes every same-item held container whenever the price holds a map location, on each extraction attempt of a stalled build; a zone map placed inside a built container keeps its carried plan until it is moved out and ticked; `ZoneMapPortability` has two near-identical walkers (`forEachZoneMap`, `forEachMapLocation`) that could be one.
+- Zone maps: ids allocated after the last save can be reissued to another zone after a crash (the store reloads `nextId` from the file); maps that carry a plan are guarded, plain zone maps are not.
+- Test helpers `check`/`unaddedRobot` are copied across `PumpUnloadedChunkTester`, `RobotPumpProtectionTester` and `RobotPumpUnloadedChunkTester`; share them in `buildcraft/lib/test`.
 
 ## In-client smoke 2026-09-26
 
@@ -110,9 +111,3 @@ One-line technical breadcrumbs for bullets that don't need a full section:
 ## JEI old transfer overload
 
 JEI 30.30.0.203+ (26.2 node) marks the six-arg `IRecipeTransferHandler#transferRecipe(C,R,IRecipeSlotsView,Player,boolean,boolean)` for removal but keeps it abstract, so `AbstractBucketTransferHandler`, `BlueprintTransferHandler` and `AssemblyTableTransferHandler` must still declare it; their real entry point on 26.2 is the `//? if >=26.2` `transferRecipe(IRecipeTransferContext, boolean)` override, and both delegate to a private `transfer(...)`. Reopen trigger: a JEI 30.x (or later 26.2+ line) release where the six-arg method is gone. Then delete the old override behind `//? if <that line` (other nodes' JEI never had the context overload), and remove the `IRecipeTransferHandler#transferRecipe` entry from `ForRemovalApiGuardTester.PENDING`. Note that dropping it also drops support for JEI < 30.30 on 26.2, so add a `jei` version range to the mods.toml at that point.
-
-## Zone map store reclaim
-
-Written Zone Planner maps now keep their zone in `ZoneMapSavedData` (overworld saved data `buildcraft_zone_maps`) and carry only a `{store, id}` reference. Like vanilla maps, entries are never removed: reclaiming one needs a live-reference scan (player and block-entity inventories, entities, offline player files) or a reference count. Identical zones share one entry, so growth is bounded by distinct layouts. A map taken to another world reads as an empty zone there (the old item-carried model kept working, e.g. in a chest copied by a blueprint); if that portability matters, expand references back into payloads when block-entity contents are captured.
-
-Also from the 2026-10-24 Qwen review: `ZoneMapSavedData.encodeForSave` marks new entries durable at encode time, and `ItemMapLocation.migrateLegacyZone` drops the item's own copy once an entry is durable; if the saved-data file write then fails (logged only, e.g. a file held by a virus scanner), a later save can drop the legacy payload with no copy on disk. Mark durability only after a write lands, if the save API exposes that.

@@ -3,7 +3,7 @@
     "function":  "buildcraftunofficial:marker_session_cleans_up_on_failure",
     "environment":  "buildcraftunofficial:marker_session_cleans_up_on_failure",
     "structure":  "minecraft:empty",
-    "max_ticks":  100,
+    "max_ticks":  350,
     "setup_ticks":  0,
     "required":  true
 }

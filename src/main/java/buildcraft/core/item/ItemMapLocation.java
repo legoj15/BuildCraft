@@ -58,10 +58,10 @@ import buildcraft.robotics.zone.ZonePlan;
 
 public class ItemMapLocation extends Item implements IMapLocation {
     private static final String[] STORAGE_TAGS = "x,y,z,side,xMin,xMax,yMin,yMax,zMin,zMax,path,chunkMapping,name".split(",");
-    private static final String TAG_MAP_TYPE = "mapType";
+    static final String TAG_MAP_TYPE = "mapType";
     /** Where builds before the map-id model kept a ZONE map's whole plan, inside the stack's custom data. Read only to
      *  migrate such a stack ({@link #migrateLegacyZone}). */
-    private static final String TAG_LEGACY_ZONE = "chunkMapping";
+    static final String TAG_LEGACY_ZONE = "chunkMapping";
 
     public ItemMapLocation(Item.Properties properties) {
         super(properties);
@@ -463,13 +463,18 @@ public class ItemMapLocation extends Item implements IMapLocation {
     /**
      * Moves the plan a legacy ZONE map carries in its custom data into {@code store} and points the stack at it,
      * keeping everything else the stack carries. Returns the plan it found when the stack's zone is that plan (null for
-     * a stack with no plan, which is left alone, or one whose ref the store already holds, which reads by ref).
+     * a stack with no plan, which is left alone, or one whose ref the store holds with that same plan, which reads by
+     * ref).
      *
      * <p>The stack keeps its own copy of the plan until the store's entry is {@linkplain ZoneMapSavedData#isDurable
-     * durable} (encoded for a level save): player data is saved before level data, so dropping it sooner could leave a
-     * crash with a map whose zone is in neither file. A later read or inventory tick drops it. A stack whose ref the
-     * store does not hold (from another world) takes a ref to its plan here. With no store (off the server thread) the
-     * stack is not touched, and the plan it carries is returned.
+     * durable} (seen in the store's file on disk): player data is saved before level data, and a level-data write can
+     * fail, so dropping it sooner could leave a map whose zone is in neither file. A later read or inventory tick
+     * drops it. A stack whose ref the store does not hold (from another world, or a blueprint built there) takes a ref
+     * to its plan here. So does one whose ref the store holds with a different plan: a crash that lost the entry lets
+     * the next session hand its id to another zone (ids count on from the file), and the plan the stack still carries
+     * is the zone it names. With no store (off the server thread) the stack is not touched, and the plan it carries is
+     * returned. The carried plan is parsed and compared once per store and custom-data value
+     * ({@link ZoneMapSavedData#isCheckedCarrier}), not on every inventory tick while the entry is not yet durable.
      */
     @Nullable
     static ZonePlan migrateLegacyZone(@Nonnull ItemStack stack, @Nullable ZoneMapSavedData store) {
@@ -477,23 +482,40 @@ public class ItemMapLocation extends Item implements IMapLocation {
         if (data == null || !data.contains(TAG_LEGACY_ZONE)) {
             return null;
         }
-        CompoundTag cpt = data.copyTag();
         ZoneMapRef ref = stack.get(BCCore.ZONE_MAP_ID.get());
+        if (store != null && ref != null && store.isCheckedCarrier(data, ref)) {
+            // Already matched with (or stored as) that entry: it reads by ref, and only durability can have changed.
+            dropCarriedPlanIfDurable(stack, data, ref, store);
+            return null;
+        }
+        ZonePlan carried = new ZonePlan();
+        carried.readFromNBT(data.copyTag());
+        if (store == null) {
+            return carried;
+        }
         ZonePlan found = null;
-        if (store == null || ref == null || !store.holds(ref)) {
-            found = new ZonePlan();
-            found.readFromNBT(cpt);
-            if (store == null) {
-                return found;
-            }
+        if (ref == null || !store.holdsSame(ref, carried)) {
+            found = carried;
             ref = store.intern(found);
             stack.set(BCCore.ZONE_MAP_ID.get(), ref);
         }
-        if (store.isDurable(ref)) {
-            cpt.remove(TAG_LEGACY_ZONE);
-            setCustomTag(stack, cpt);
+        if (!dropCarriedPlanIfDurable(stack, data, ref, store)) {
+            store.markCheckedCarrier(data, ref);
         }
         return found;
+    }
+
+    /** Drops the plan {@code data} (the stack's custom data) carries once {@code store}'s entry for {@code ref} is
+     *  durable; returns whether it did. */
+    private static boolean dropCarriedPlanIfDurable(ItemStack stack, CustomData data, ZoneMapRef ref,
+            ZoneMapSavedData store) {
+        if (!store.isDurable(ref)) {
+            return false;
+        }
+        CompoundTag cpt = data.copyTag();
+        cpt.remove(TAG_LEGACY_ZONE);
+        setCustomTag(stack, cpt);
+        return true;
     }
 
     /**
@@ -519,6 +541,34 @@ public class ItemMapLocation extends Item implements IMapLocation {
         cpt.putString(TAG_MAP_TYPE, MapLocationType.ZONE.name());
         setCustomTag(stack, cpt);
         updateModelData(stack, MapLocationType.ZONE);
+    }
+
+    /**
+     * The stack a blueprint charges for {@code stack}: for a ZONE map (by type, or by the ref it carries), a blank map
+     * of the same item and count, with the zone, its ref, its type and its model selector stripped and anything else
+     * it carries kept; any other stack unchanged. The Zone Planner writes a zone onto a blank map for free, and a
+     * zone map's exact data (a ref into another world's store, or a plan carried for the build) is nothing a player
+     * could hold, so pricing it exactly would make the build unpayable.
+     */
+    public static ItemStack pricedAsBlank(@Nonnull ItemStack stack) {
+        if (!(stack.getItem() instanceof ItemMapLocation)
+                || (getTypeFromStack(stack) != MapLocationType.ZONE && !stack.has(BCCore.ZONE_MAP_ID.get()))) {
+            return stack;
+        }
+        ItemStack blank = stack.copy();
+        blank.remove(BCCore.ZONE_MAP_ID.get());
+        blank.remove(DataComponents.CUSTOM_MODEL_DATA);
+        CompoundTag cpt = getCustomTag(blank);
+        for (String key : STORAGE_TAGS) {
+            cpt.remove(key);
+        }
+        cpt.remove(TAG_MAP_TYPE);
+        if (cpt.isEmpty()) {
+            blank.remove(DataComponents.CUSTOM_DATA);
+        } else {
+            setCustomTag(blank, cpt);
+        }
+        return blank;
     }
 
     // --- Legacy migration of carried items ---

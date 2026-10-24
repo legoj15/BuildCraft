@@ -944,6 +944,13 @@ public class BuilderBoardTester {
 
     // ---------- the E2E ----------
 
+    /** The work budget of the E2E poll, counted from the arena cell ticking: its own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and the manifest's
+     *  {@code max_ticks} stays above that sum. The robot, the supply pipe and the Builder sit in different columns of a
+     *  cell that straddles a chunk border in about 57% of runs, and the pipe's station and the Builder run only once
+     *  their chunk does. */
+    private static final int SUPPLY_WORK_TICKS = 400;
+
     /** The full autonomous loop: a builder-board robot, a wooden supply pipe over a stone chest with an
      *  always-on Provide-Items gate, and a one-stone blueprint loaded in a Builder machine. The robot
      *  must fetch the stone and hand it to the machine's resource grid. */
@@ -953,7 +960,7 @@ public class BuilderBoardTester {
         BlockPos chestRel = new BlockPos(2, 1, 2);
         BlockPos robotRel = new BlockPos(2, 4, 2);
         BlockPos builderRel = new BlockPos(4, 2, 2);
-        EntityArenaUtil.forceLoadEntityArena(helper, robotRel);
+        EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(pipeRel, BCTransportBlocks.PIPE_HOLDER.get());
         //? if >=1.21.10 {
@@ -994,14 +1001,15 @@ public class BuilderBoardTester {
 
         // The assertions live in the success block. They used to follow the tickUntil call, which only SCHEDULES
         // the poll, so they ran on the test's first tick against an empty grid and the test passed at once.
-        EntityArenaUtil.tickUntil(helper, 400, () -> {
-            for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
-                if (!builder.getResource(slot).isEmpty()) {
-                    return true;
-                }
-            }
-            return false;
-        }, () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SUPPLY_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SUPPLY_WORK_TICKS, () -> {
+                    for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
+                        if (!builder.getResource(slot).isEmpty()) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }), () -> {
             for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
                 ItemStack stack = builder.getResource(slot);
                 helper.assertTrue(stack.isEmpty() || stack.is(Items.STONE),

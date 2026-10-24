@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:pump_drain_reach_spares_diagonal_chunk",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 200,
+    "setup_ticks": 0,
+    "required": true
+}

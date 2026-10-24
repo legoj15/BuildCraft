@@ -95,6 +95,12 @@ public class RobotRemovalRoutesTester {
         }
     }
 
+    /** The work budget of the two registration polls, counted from the arena cell ticking: a poll's own budget adds
+     *  {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and each manifest's
+     *  {@code max_ticks} stays above that sum. A robot registers on its first tick, which starts only once its chunk
+     *  ticks, and the framework forces only the structure's chunk. */
+    private static final int REGISTER_WORK_TICKS = 60;
+
     private static EntityRobot addRobot(GameTestHelper helper) {
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(ROBOT_REL));
@@ -111,9 +117,12 @@ public class RobotRemovalRoutesTester {
 
     /** A robot destroyed in the world ({@code discard()} -> {@code remove} -> {@code killRobot}). */
     public static void removedRobotReleasesEverythingItHolds(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper, ROBOT_REL);
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper);
-        EntityArenaUtil.tickUntil(helper, 60, () -> registered(helper, robot), () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> registered(helper, robot)),
+                () -> {
             Holdings h = new Holdings(helper, robot);
             try {
                 robot.discard();
@@ -137,9 +146,12 @@ public class RobotRemovalRoutesTester {
     /** A robot whose chunk unloads ({@code setRemoved(UNLOADED_TO_CHUNK)} -> {@code onRemovedFromLevel} ->
      *  {@code unloadRobot}): everything that is not its home or dock goes, and the indexes name exactly those two. */
     public static void unloadedRobotReleasesWhatItDoesNotKeep(GameTestHelper helper) {
-        EntityArenaUtil.forceLoadEntityArena(helper, ROBOT_REL);
+        EntityArenaUtil.forceLoadCell(helper);
         EntityRobot robot = addRobot(helper);
-        EntityArenaUtil.tickUntil(helper, 60, () -> registered(helper, robot), () -> {
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
+                        () -> registered(helper, robot)),
+                () -> {
             Holdings h = new Holdings(helper, robot);
             try {
                 robot.setRemoved(Entity.RemovalReason.UNLOADED_TO_CHUNK);

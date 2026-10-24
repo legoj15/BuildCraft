@@ -66,7 +66,9 @@ import buildcraft.builders.container.LibraryUploadBuffer;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
+import buildcraft.builders.snapshot.SchematicBlockDefault;
 import buildcraft.builders.snapshot.SchematicBlockManager;
+import buildcraft.builders.snapshot.SchematicEntityDefault;
 import buildcraft.builders.snapshot.SchematicEntityManager;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Snapshot.Header;
@@ -410,6 +412,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         }
         if (snapshotType == EnumSnapshotType.BLUEPRINT) {
             ISchematicBlock schematicBlock = readSchematicBlock(worldScanPos);
+            if (schematicBlock instanceof SchematicBlockDefault kept) {
+                kept.carryZonePlans();
+            }
             int index = blueprintScannedPalette.indexOf(schematicBlock);
             if (index == -1) {
                 index = blueprintScannedPalette.size();
@@ -534,7 +539,12 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 ))
             )
             .filter(Objects::nonNull)
-            .forEach(blueprintScannedEntities::add);
+            .forEach(schematicEntity -> {
+                if (schematicEntity instanceof SchematicEntityDefault kept) {
+                    kept.carryZonePlans();
+                }
+                blueprintScannedEntities.add(schematicEntity);
+            });
     }
 
     /** Drop what a scan collected: a finished one is stored (or refused) and the next starts clean. */

@@ -11,6 +11,8 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
+
+import buildcraft.lib.misc.SoundUtil;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.lib.BCLib;
@@ -53,18 +55,20 @@ public class BCCoreBlocks {
     public static final DeferredBlock<Block> DECORATED_PAPER;
     public static final DeferredBlock<Block> DECORATED_LEATHER;
 
-    // Markers were Material.CIRCUITS in 1.12.2 → hand-breakable (no tool gate).
+    // Markers were Material.CIRCUITS in 1.12.2 → hand-breakable (no tool gate); torch-like, so they sound like a torch pitched up.
+    private static final SoundType MARKER_SOUND = SoundUtil.pitched(SoundType.WOOD, 1.3f);
+
     public static final DeferredBlock<buildcraft.core.block.BlockMarkerVolume> MARKER_VOLUME = RegistrationUtilBC.registerBlock(BLOCKS,
             "marker_volume",
-            buildcraft.core.block.BlockMarkerVolume::new, () -> BlockBehaviour.Properties.of().sound(SoundType.METAL));
+            buildcraft.core.block.BlockMarkerVolume::new, () -> BlockBehaviour.Properties.of().sound(MARKER_SOUND));
 
     public static final DeferredBlock<BlockMarkerPath> MARKER_PATH = RegistrationUtilBC.registerBlock(BLOCKS,
             "marker_path",
-            BlockMarkerPath::new, () -> BlockBehaviour.Properties.of().sound(SoundType.METAL));
+            BlockMarkerPath::new, () -> BlockBehaviour.Properties.of().sound(MARKER_SOUND));
 
     public static final DeferredBlock<BlockEngineRedstone_BC8> ENGINE_REDSTONE = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_redstone",
-            BlockEngineRedstone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockEngineRedstone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.WOOD).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockEngineCreative> ENGINE_CREATIVE = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_creative",

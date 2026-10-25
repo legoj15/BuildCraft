@@ -24,7 +24,7 @@ public class BCEnergyBlocks {
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     public static final DeferredBlock<BlockEngineStone_BC8> ENGINE_STONE = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_stone",
-            BlockEngineStone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockEngineStone_BC8::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockEngineIron_BC8> ENGINE_IRON = RegistrationUtilBC.registerBlock(BLOCKS,
             "engine_iron",

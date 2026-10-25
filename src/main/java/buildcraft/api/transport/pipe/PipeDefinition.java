@@ -4,6 +4,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.SoundType;
 
 
 
@@ -18,6 +19,9 @@ public final class PipeDefinition {
     public final int itemTextureTop, itemTextureCenter, itemTextureBottom;
     public final PipeFaceTex itemModelTop, itemModelCenter, itemModelBottom;
     public final boolean canBeColoured;
+    /** The break/step/place/hit sounds of a placed pipe, or null for the pipe block's default. */
+    @Nullable
+    public final SoundType soundType;
     private EnumPipeColourType colourType;
 
     public PipeDefinition(PipeDefinitionBuilder builder) {
@@ -36,6 +40,7 @@ public final class PipeDefinition {
         this.itemModelCenter = builder.itemModelCenter;
         this.itemModelTop = builder.itemModelTop;
         this.canBeColoured = builder.canBeColoured;
+        this.soundType = builder.soundType;
         this.colourType = builder.colourType;
     }
 
@@ -78,6 +83,8 @@ public final class PipeDefinition {
         public PipeFaceTex itemModelBottom = PipeFaceTex.get(0);
         public boolean canBeColoured;
         public EnumPipeColourType colourType;
+        @Nullable
+        public SoundType soundType;
 
         public PipeDefinitionBuilder() {}
 
@@ -166,6 +173,11 @@ public final class PipeDefinition {
         public PipeDefinitionBuilder logic(IPipeCreator creator, IPipeLoader loader) {
             logicConstructor = creator;
             logicLoader = loader;
+            return this;
+        }
+
+        public PipeDefinitionBuilder sound(@Nullable SoundType sound) {
+            soundType = sound;
             return this;
         }
 

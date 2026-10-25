@@ -34,7 +34,7 @@ public class BCBuildersBlocks {
     // derives those lists from isSolid(), which forceSolidOn() still drives).
     public static final DeferredBlock<BlockFrame> FRAME = RegistrationUtilBC.registerBlock(BLOCKS,
             "frame",
-            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.METAL).requiresCorrectToolForDrops());
+            BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.COPPER_GRATE).requiresCorrectToolForDrops());
 
     public static final DeferredBlock<BlockFiller> FILLER = RegistrationUtilBC.registerBlock(BLOCKS,
             "filler",

@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -152,6 +153,20 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
             return (lvl, pos, st, be) -> ((TilePipeHolder) be).tick();
         }
         return null;
+    }
+
+    // Sounds
+
+    /** Every pipe shares this one block, so the sound comes from the placed pipe's material. */
+    @Override
+    public SoundType getSoundType(BlockState state, LevelReader level, BlockPos pos, @Nullable Entity entity) {
+        if (level.getBlockEntity(pos) instanceof TilePipeHolder tile && tile.getPipe() != null) {
+            SoundType sound = tile.getPipe().getDefinition().soundType;
+            if (sound != null) {
+                return sound;
+            }
+        }
+        return super.getSoundType(state, level, pos, entity);
     }
 
     // Explosions

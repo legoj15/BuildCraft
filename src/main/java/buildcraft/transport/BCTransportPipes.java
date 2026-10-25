@@ -10,6 +10,7 @@ import java.util.Arrays;
 
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.SoundType;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeDefinition;
@@ -18,6 +19,7 @@ import buildcraft.api.transport.pipe.PipeDefinition.IPipeLoader;
 import buildcraft.api.transport.pipe.PipeDefinition.PipeDefinitionBuilder;
 import buildcraft.api.transport.pipe.PipeFlowType;
 
+import buildcraft.lib.misc.SoundUtil;
 import buildcraft.transport.pipe.PipeRegistry;
 import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
@@ -104,15 +106,26 @@ public class BCTransportPipes {
 
         DefinitionBuilder builder = new DefinitionBuilder();
 
+        // Each material sounds like its nearest modern vanilla block; the builder carries the sound into every
+        // pipe defined after it until the next material sets its own. Diamond-family, lapis and quartz pipes
+        // keep the classic metal sound.
+        SoundType woodSound = SoundUtil.pitched(SoundType.SCAFFOLDING, 0.8f);
+        SoundType grateSound = SoundType.COPPER_GRATE;
+        SoundType classicSound = SoundType.METAL;
+        SoundType stoneSound = SoundType.STONE;
+        SoundType hardStoneSound = SoundUtil.pitched(stoneSound, 1.1f);
+
         // === Structure pipe ===
         builder.logic(PipeBehaviourStructure::new, PipeBehaviourStructure::new);
         builder.builder.enableBorderColouring();
+        builder.builder.sound(stoneSound);
         structure = builder.idTex("structure").flow(PipeApi.flowStructure).define();
         builder.builder.enableColouring();
 
         // === Wood pipes ===
         builder.logic(PipeBehaviourWood::new, PipeBehaviourWood::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
+        builder.builder.sound(woodSound);
         woodItem = builder.idTexPrefix("wood_item").flowItem().define();
         woodFluid = builder.idTexPrefix("wood_fluid").flowFluid().define();
         builder.logic(PipeBehaviourWoodPower::new, PipeBehaviourWoodPower::new);
@@ -122,6 +135,7 @@ public class BCTransportPipes {
 
         // === Stone pipes ===
         builder.logic(PipeBehaviourStone::new, PipeBehaviourStone::new);
+        builder.builder.sound(hardStoneSound);
         stoneItem = builder.idTex("stone_item").flowItem().define();
         stoneFluid = builder.idTex("stone_fluid").flowFluid().define();
         stonePower = builder.idTex("stone_power").flowPower().define();
@@ -129,6 +143,7 @@ public class BCTransportPipes {
 
         // === Cobblestone pipes ===
         builder.logic(PipeBehaviourCobble::new, PipeBehaviourCobble::new);
+        builder.builder.sound(stoneSound);
         cobbleItem = builder.idTex("cobblestone_item").flowItem().define();
         cobbleFluid = builder.idTex("cobblestone_fluid").flowFluid().define();
         cobblePower = builder.idTex("cobblestone_power").flowPower().define();
@@ -136,6 +151,7 @@ public class BCTransportPipes {
 
         // === Quartz pipes ===
         builder.logic(PipeBehaviourQuartz::new, PipeBehaviourQuartz::new);
+        builder.builder.sound(classicSound);
         quartzItem = builder.idTex("quartz_item").flowItem().define();
         quartzFluid = builder.idTex("quartz_fluid").flowFluid().define();
         quartzPower = builder.idTex("quartz_power").flowPower().define();
@@ -143,6 +159,7 @@ public class BCTransportPipes {
 
         // === Gold pipes ===
         builder.logic(PipeBehaviourGold::new, PipeBehaviourGold::new);
+        builder.builder.sound(SoundUtil.pitched(grateSound, 1.2f));
         goldItem = builder.idTex("gold_item").flowItem().define();
         goldFluid = builder.idTex("gold_fluid").flowFluid().define();
         goldPower = builder.idTex("gold_power").flowPower().define();
@@ -150,6 +167,7 @@ public class BCTransportPipes {
 
         // === Sandstone pipes ===
         builder.logic(PipeBehaviourSandstone::new, PipeBehaviourSandstone::new);
+        builder.builder.sound(SoundType.CALCITE);
         sandstoneItem = builder.idTex("sandstone_item").flowItem().define();
         sandstoneFluid = builder.idTex("sandstone_fluid").flowFluid().define();
         sandstonePower = builder.idTex("sandstone_power").flowPower().define();
@@ -158,6 +176,7 @@ public class BCTransportPipes {
         // === Iron pipes ===
         builder.logic(PipeBehaviourIron::new, PipeBehaviourIron::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
+        builder.builder.sound(grateSound);
         ironItem = builder.idTexPrefix("iron_item").flowItem().define();
         ironFluid = builder.idTexPrefix("iron_fluid").flowFluid().define();
         builder.builder.itemTex(0);
@@ -172,6 +191,7 @@ public class BCTransportPipes {
 
         builder.logic(PipeBehaviourDiamondItem::new, PipeBehaviourDiamondItem::new).texSuffixes(diamondTextureSuffixes);
         builder.builder.itemTex(7);
+        builder.builder.sound(classicSound);
         diamondItem = builder.idTexPrefix("diamond_item").flowItem().define();
 
         builder.logic(PipeBehaviourDiamondFluid::new, PipeBehaviourDiamondFluid::new);
@@ -182,17 +202,22 @@ public class BCTransportPipes {
         builder.logic(PipeBehaviourLimiter::new, PipeBehaviourLimiter::new).flowPower();
         builder.texSuffixes("_m0", "_m4", "_m8", "_m16", "_m32", "_m64", "_m128");
         builder.builder.itemTex(6);
+        builder.builder.sound(grateSound);
         ironPower = builder.idTexPrefix("iron_power").define();
+        builder.builder.sound(classicSound);
         diamondPower = builder.idTexPrefix("diamond_power").define();
         
         builder.flowRf();
+        builder.builder.sound(grateSound);
         ironRf = builder.idTexPrefix("iron_rf").define();
+        builder.builder.sound(classicSound);
         diamondRf = builder.idTexPrefix("diamond_rf").define();
         builder.builder.itemTex(0);
 
-        // === Diamond-wood (emerald) pipes ===
+        // === Diamond-wood pipes ===
         builder.logic(PipeBehaviourWoodDiamond::new, PipeBehaviourWoodDiamond::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
+        builder.builder.sound(classicSound);
         diaWoodItem = builder.idTexPrefix("diamond_wood_item").flowItem().define();
         diaWoodFluid = builder.idTexPrefix("diamond_wood_fluid").flowFluid().define();
         builder.logic(PipeBehaviourWoodPower::new, PipeBehaviourWoodPower::new);
@@ -202,16 +227,19 @@ public class BCTransportPipes {
 
         // === Clay pipes ===
         builder.logic(PipeBehaviourClay::new, PipeBehaviourClay::new);
+        builder.builder.sound(SoundType.DECORATED_POT);
         clayItem = builder.idTex("clay_item").flowItem().define();
         clayFluid = builder.idTex("clay_fluid").flowFluid().define();
 
         // === Void pipes ===
         builder.logic(PipeBehaviourVoid::new, PipeBehaviourVoid::new);
+        builder.builder.sound(hardStoneSound);
         voidItem = builder.idTex("void_item").flowItem().define();
         voidFluid = builder.idTex("void_fluid").flowFluid().define();
 
         // === Obsidian pipes ===
         builder.logic(PipeBehaviourObsidian::new, PipeBehaviourObsidian::new);
+        builder.builder.sound(hardStoneSound);
         obsidianItem = builder.idTex("obsidian_item").flowItem().define();
 
         // === Lapis pipes ===
@@ -222,6 +250,7 @@ public class BCTransportPipes {
         }
 
         builder.logic(PipeBehaviourLapis::new, PipeBehaviourLapis::new).texSuffixes(texSuffix);
+        builder.builder.sound(classicSound);
         lapisItem = builder.idTexPrefix("lapis_item").flowItem().define();
 
         // === Daizuli pipes ===
@@ -230,16 +259,19 @@ public class BCTransportPipes {
 
         builder.logic(PipeBehaviourDaizuli::new, PipeBehaviourDaizuli::new).texSuffixes(texSuffixPlus);
         builder.builder.itemTex(0, 0, 16);
+        builder.builder.sound(classicSound);
         daizuliItem = builder.idTexPrefix("daizuli_item").flowItem().define();
 
         // === Emzuli pipes ===
         builder.logic(PipeBehaviourEmzuli::new, PipeBehaviourEmzuli::new).texSuffixes("_clear", "_filled");
         builder.builder.itemTex(0, 0, 1);
+        builder.builder.sound(SoundType.AMETHYST);
         emzuliItem = builder.idTexPrefix("emzuli_item").flowItem().define();
 
         // === Stripes pipes ===
         builder.builder.itemTex(0);
         builder.logic(PipeBehaviourStripes::new, PipeBehaviourStripes::new);
+        builder.builder.sound(SoundUtil.pitched(grateSound, 0.85f));
         stripesItem = builder.idTex("stripes_item").flowItem().define();
     }
 

@@ -18,9 +18,16 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.neoforged.neoforge.common.SoundActions;
+import net.neoforged.neoforge.common.util.DeferredSoundType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 public class SoundUtil {
+    /** A copy of {@code base} with its pitch scaled by {@code factor} (above 1 is higher). */
+    public static SoundType pitched(SoundType base, float factor) {
+        return new DeferredSoundType(base.getVolume(), base.getPitch() * factor, base::getBreakSound, base::getStepSound,
+                base::getPlaceSound, base::getHitSound, base::getFallSound);
+    }
+
     public static void playBlockPlace(Level world, BlockPos pos) {
         playBlockPlace(world, pos, world.getBlockState(pos));
     }

@@ -324,11 +324,12 @@ block "building" "builders" "replacer"
 
 // ---- Building / Markers (markers) ----------------------------------------
 // The Path Mark and Land Mark blocks (writeups at block/marker_path.md and
-// block/marker_volume.md), the connector that links markers, and the creative volume box
-// that stands in for a marked area. These were "Specialized" blocks and loose tools.
+// block/marker_volume.md), the wrenches that link markers and resize volume boxes, and the creative
+// volume box that stands in for a marked area. These were "Specialized" blocks and loose tools.
 block "building" "markers" "marker_path"
 block "building" "markers" "marker_volume"
-item_stack "building" "item" "markers" "marker_connector" "buildcraftunofficial:marker_connector"
+item_stack "building" "item" "markers" "marker_wrench" "buildcraftunofficial:marker_wrench"
+item_stack "building" "item" "markers" "volume_wrench" "buildcraftunofficial:volume_wrench"
 item_stack_creative "building" "item" "markers" "box_volume" "buildcraftunofficial:volume_box"
 
 // ---- Building / Paperwork ------------------------------------------------

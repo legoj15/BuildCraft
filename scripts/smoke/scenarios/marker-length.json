@@ -1,6 +1,6 @@
 {
   "name": "marker-length",
-  "description": "Marker laser length under the crosshair. A connected 10-block volume line shows a white '10 blocks' label; stone in the sight line hides it, leaves do not; two unconnected markers 7 apart show a grey '7 blocks' only while a Marker Connector is held. The rig is cleared at the end so other marker scenarios start clean.",
+  "description": "Marker laser length under the crosshair. A connected 10-block volume line shows a white '10 blocks' label; stone in the sight line hides it, leaves do not; two unconnected markers 7 apart show a grey '7 blocks' only while a Marker Wrench is held. The rig is cleared at the end so other marker scenarios start clean.",
   "base": [0, 150, 0],
   "steps": [
     { "do": "wait", "ms": 2500 },
@@ -38,9 +38,9 @@
     { "do": "look", "yaw": 180, "pitch": 1.7 },
     { "do": "wait", "ms": 600 },
     { "name": "preview-empty-hand", "do": "shot", "look": "two markers, no preview line between them; the label (if any) is the connected line further back, through the leaves: 10 blocks" },
-    { "do": "hold", "item": "buildcraftunofficial:marker_connector" },
+    { "do": "hold", "item": "buildcraftunofficial:marker_wrench" },
     { "do": "wait", "ms": 600 },
-    { "name": "preview-connector", "do": "shot", "look": "faint preview line between the markers; grey '7 blocks' below the crosshair" },
+    { "name": "preview-marker-wrench", "do": "shot", "look": "faint preview line between the markers; grey '7 blocks' below the crosshair" },
 
     { "do": "hold", "item": "minecraft:air" },
     { "label": "take the rig down", "do": "cmd", "run": [

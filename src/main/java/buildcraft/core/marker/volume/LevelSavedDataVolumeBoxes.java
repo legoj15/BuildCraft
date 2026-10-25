@@ -199,7 +199,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     /**
      * Mark the saved data dirty AND broadcast the new state to clients in the dimension. Use this from
      * any caller that mutates VolumeBoxes outside of {@link #addVolumeBox} or {@link #tick} (e.g.
-     * editing flow in ItemMarkerConnector, lock additions in TileFiller / TileArchitectTable).
+     * editing flow in ItemMarkerWrench, lock additions in TileFiller / TileArchitectTable).
      */
     public void markDirtyAndBroadcast() {
         setDirty();

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "c",
+    "g",
+    "w"
+  ],
+  "key": {
+    "c": "buildcraftunofficial:chipset_diamond",
+    "g": "buildcraftunofficial:gear_diamond",
+    "w": "buildcraftunofficial:marker_wrench"
+  },
+  "result": {
+    "id": "buildcraftunofficial:volume_wrench"
+  }
+}

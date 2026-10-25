@@ -16,21 +16,21 @@ import net.minecraft.world.item.Items;
  *
  * <ul>
  *   <li>{@link #NO_REPLACE} — original behavior: any position holding a fluid (flowing or
- *       source) is silently skipped.</li>
- *   <li>{@link #REPLACE} — the schematic block is placed. If the block supports vanilla
- *       {@code WATERLOGGED} and the fluid is a water source, it's placed as waterlogged
- *       (preserving the water "for free"); otherwise the fluid is destroyed first. Positions
- *       whose schematic entry is fluid (water-feature blueprints) keep their fluid intact, and
- *       waterlogged blocks captured-dry-in-schematic stay wet in the world (the lenient
- *       "world wet, schematic dry" comparison in {@link SchematicBlockDefault#isBuilt}).</li>
+ *       source) is skipped, except a block the blueprint wants waterlogged, which goes into a
+ *       source of its own fluid and keeps it.</li>
+ *   <li>{@link #REPLACE} — the schematic block is placed over the fluid. If the block supports
+ *       vanilla {@code WATERLOGGED} and the fluid is a water source, it's placed as waterlogged
+ *       (preserving the water "for free"); otherwise the fluid is destroyed first. A real block
+ *       that holds fluid (a waterlogged slab, kelp) is broken first, like any other wrong block.
+ *       Positions whose schematic entry is fluid (water-feature blueprints) keep their fluid
+ *       intact, and waterlogged blocks captured-dry-in-schematic stay wet in the world (the
+ *       lenient "world wet, schematic dry" comparison in {@link SchematicBlockDefault#isBuilt}).</li>
  *   <li>{@link #CLEAR} — clear all fluids in the build area, full stop. Source AND flowing,
  *       schematic-air positions AND schematic-fluid positions (blueprint-fluid is treated as
- *       schematic-air for classification purposes), waterlogged blocks (the WATERLOGGED
- *       property gets toggled off in-place to match the schematic's dry capture, no item
- *       extracted from inventory). Subsequent placements wait until every fluid in the area is
- *       cleared, except waterlog-clear-only places which run alongside mopping because they
- *       contribute to it. Use REPLACE if you want a water-feature blueprint to preserve its
- *       water; CLEAR is the "I want this area dry no matter what" mode.</li>
+ *       schematic-air for classification purposes); a waterlogged block the schematic wants dry
+ *       is broken and its water mopped. Placements wait until every fluid the Builder can remove
+ *       is cleared. Use REPLACE if you want a water-feature blueprint to preserve its water;
+ *       CLEAR is the "I want this area dry no matter what" mode.</li>
  * </ul>
  */
 public enum EnumFluidHandlingMode {

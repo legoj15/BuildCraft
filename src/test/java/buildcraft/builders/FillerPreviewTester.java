@@ -34,6 +34,7 @@ public class FillerPreviewTester {
     private static final BlockPos FILLER = new BlockPos(5, 1, 5);
     private static final BlockPos FIRST_STONE = new BlockPos(3, 2, 3);
     private static final BlockPos SECOND_STONE = new BlockPos(2, 1, 2);
+    private static final BlockPos THIRD_STONE = new BlockPos(4, 3, 4);
 
     /** The wait, once the cell ticks, before the box is set up (immediate: the gate's condition is already true). */
     private static final int READY_WORK_TICKS = 10;
@@ -120,6 +121,11 @@ public class FillerPreviewTester {
         // A changed pattern builds new building info, and what was kept for the old one must never be drawn again.
         switchesPatternWithoutDrawingTheOldCells(helper, level, filler, state);
 
+        // A pass that took longer than RESCAN_TICKS is trusted for as long as it took.
+        restsAsLongAsTheLastPassTook(helper, level, state);
+        // A pass the Filler's building paused starts over when the preview comes back.
+        startsAgainAfterAPassWasPaused(helper, level, state);
+
         // A block that lands in the box is not noticed until the cache scans again, which is the point of the cache.
         helper.setBlock(SECOND_STONE, Blocks.STONE);
         helper.assertTrue(state.cache.cellsToDraw(level, state.info, state.camera).size() == 26,
@@ -170,6 +176,82 @@ public class FillerPreviewTester {
             "the frame's pass is done: exactly its 20 cells, not what the abandoned fill pass had found");
     }
 
+    /**
+     * A box too big to read in {@code RESCAN_TICKS} keeps a pass running for many ticks; the wait after it used to be
+     * the fixed {@code RESCAN_TICKS}, so the next pass was under way for most of the time and a client read a slice of
+     * the box every frame. Here one cell is read per "frame" and one frame happens per tick, on an explicit clock: the
+     * pass over the 27 cells takes 26 ticks. A block that lands right after it must not show until the idle gap, as
+     * long as the pass took, is over and the pass after it has read all 27 cells (a gap of {@code RESCAN_TICKS} would
+     * show it 26 ticks earlier), and it must show eventually.
+     */
+    private static void restsAsLongAsTheLastPassTook(GameTestHelper helper, ServerLevel level, State state) {
+        final long start = 1000;
+        final int passTicks = 26;
+        FillPreviewCache cache = new FillPreviewCache(30, 1);
+        List<BlockPos> drawn = List.of();
+        for (long now = start; now <= start + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+        }
+        helper.assertTrue(drawn.size() == 26, "the pass over the 27 cells ends with the 26 empty ones, got " + drawn.size());
+
+        helper.setBlock(THIRD_STONE, Blocks.STONE);
+        // Idle for passTicks (26): the next pass starts at start + 52 and ends at start + 78.
+        for (long now = start + passTicks + 1; now < start + 2 * passTicks + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+            helper.assertTrue(drawn.size() == 26, "tick " + (now - start) + ": the 26 tick pass was followed by less than 26 idle ticks,"
+                + " the new block is already shown");
+        }
+        // The gap is "at least" the pass: given a few ticks more than that, the rescan must have come.
+        for (long now = start + 3 * passTicks; now <= start + 3 * passTicks + FillPreviewCache.RESCAN_TICKS; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+        }
+        helper.assertTrue(drawn.size() == 25, "the block that landed was never noticed, got " + drawn.size() + " cells");
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
+    }
+
+    /**
+     * While the Filler builds, the preview stands down and nothing asks the cache for a while; a pass it was in the
+     * middle of must not go on when the preview comes back: the blocks it had read are out of date, the time that went
+     * by would count as the pass's own and so delay the next one by as long as the build took, and its kept cells would
+     * be the ones nearest to where the camera was. Here five frames of a pass are read from one corner of the box, 60
+     * ticks go by, and the preview returns with the camera at the opposite corner: it must keep the cells nearest to
+     * the camera it now has, and trust them for the 26 ticks the new pass took, not for the 85 since the old one began.
+     */
+    private static void startsAgainAfterAPassWasPaused(GameTestHelper helper, ServerLevel level, State state) {
+        final long start = 5000;
+        final long resume = start + 4 + 60;
+        final int passTicks = 26;
+        Vec3 near = state.camera;
+        // Beyond the box's far top corner, whose cell is the one nearest to it.
+        Vec3 far = Vec3.atLowerCornerOf(helper.absolutePos(BOX_MAX)).add(1.4, 1.9, 1.2);
+        BlockPos farCorner = helper.absolutePos(THIRD_STONE);
+        FillPreviewCache cache = new FillPreviewCache(5, 1);
+
+        for (long now = start; now < start + 5; now++) {
+            cache.cellsToDraw(level, state.info, near, now);
+        }
+        List<BlockPos> drawn = List.of();
+        for (long now = resume; now <= resume + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, far, now);
+        }
+        Set<BlockPos> expected = new HashSet<>(new FillPreviewCache(5).cellsToDraw(level, state.info, far));
+        helper.assertTrue(new HashSet<>(drawn).equals(expected) && drawn.size() == 5,
+            "the pass that was paused went on with the camera it began with: it kept " + drawn
+                + " but the 5 cells nearest the camera now are " + expected);
+        helper.assertTrue(drawn.contains(farCorner), "precondition: the far corner's cell is among the 5 nearest the camera");
+
+        // Block the nearest cell: it must drop out of the 5 once the next pass has run, and that pass must come one
+        // pass-length after the new pass, not one pass-length after the paused pass began.
+        helper.setBlock(THIRD_STONE, Blocks.STONE);
+        long published = resume + passTicks;
+        for (long now = published + 1; now <= published + 2 * passTicks + FillPreviewCache.RESCAN_TICKS; now++) {
+            drawn = cache.cellsToDraw(level, state.info, far, now);
+        }
+        helper.assertTrue(!drawn.contains(farCorner),
+            "the pause was counted into the pass: the block built at the nearest cell is still being drawn over");
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
+    }
+
     private static void secondLook(GameTestHelper helper, State state) {
         ServerLevel level = helper.getLevel();
         BlockPos second = helper.absolutePos(SECOND_STONE);
@@ -191,6 +273,7 @@ public class FillerPreviewTester {
         helper.setBlock(FILLER, Blocks.AIR);
         helper.setBlock(FIRST_STONE, Blocks.AIR);
         helper.setBlock(SECOND_STONE, Blocks.AIR);
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
     }
 
     private static double distance(BlockPos cell, Vec3 camera) {

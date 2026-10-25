@@ -25,7 +25,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -33,13 +32,12 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MachineBreakAttributionTester;
 import buildcraft.lib.test.EntityArenaUtil;
-import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.entity.EntityRobot;
 
 /**
@@ -57,18 +55,13 @@ import buildcraft.robotics.entity.EntityRobot;
  */
 public class RobotOwnerIdentityTester {
 
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
-
     private static GameProfile ownerProfile(String name) {
         return new GameProfile(UUID.nameUUIDFromBytes(name.getBytes(StandardCharsets.UTF_8)), name);
     }
 
     /** A robot with a home station owned by {@code owner}, not added to the level (cycled by hand). */
     private static EntityRobot robotOwnedBy(GameTestHelper helper, BlockPos relPos, GameProfile owner) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        EntityRobot robot = RobotArenaUtil.unaddedRobot(helper, relPos);
         robot.setMainStation(new DockingStation(helper.absolutePos(relPos), Direction.UP) {
             @Override
             public GameProfile getOwner() {

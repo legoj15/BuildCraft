@@ -29,7 +29,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.util.BlockSnapshot;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -47,6 +46,7 @@ import buildcraft.lib.block.LocalBlockUpdateNotifier;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.WorkClaimMod;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.ai.AIRobotBreak;
@@ -419,11 +419,7 @@ public class MachineProtectionTester {
     /** Zone-pinned to the test's cell (no board of its own: the tests build theirs): a board cycled on it searches,
      *  and reserves, whatever it finds in the dimension otherwise, a neighbouring arena's logs included. */
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
-        EntityRobot robot = new ZonePinnedRobot(helper, null);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
-        return robot;
+        return RobotArenaUtil.unadded(new ZonePinnedRobot(helper, null), helper, relPos);
     }
 
     /**

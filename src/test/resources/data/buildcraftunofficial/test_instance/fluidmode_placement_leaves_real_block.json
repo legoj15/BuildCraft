@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fluidmode_clear_dries_waterlogged_block",
+    "function": "buildcraftunofficial:fluidmode_placement_leaves_real_block",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 100,
+    "max_ticks": 400,
     "setup_ticks": 0,
     "required": true
 }

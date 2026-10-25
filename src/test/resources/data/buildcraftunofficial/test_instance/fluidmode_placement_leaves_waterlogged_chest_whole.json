@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fluidmode_placement_drops_displaced_block",
+    "function": "buildcraftunofficial:fluidmode_placement_leaves_waterlogged_chest_whole",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 400,

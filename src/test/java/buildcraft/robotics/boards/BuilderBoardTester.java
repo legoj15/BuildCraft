@@ -5,6 +5,9 @@
  */
 package buildcraft.robotics.boards;
 
+import static buildcraft.robotics.RobotArenaUtil.SEEDED_CHARGE;
+import static buildcraft.robotics.RobotArenaUtil.unaddedRobot;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,7 +35,6 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
@@ -50,7 +52,6 @@ import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreStatements;
 import buildcraft.lib.test.EntityArenaUtil;
-import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.BCRoboticsStatements;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ZonePinnedRobot;
@@ -84,8 +85,6 @@ import buildcraft.lib.statement.TriggerWrapper;
  *  builder board robot → Builder machine's resource grid). The blueprint is built programmatically —
  *  one stone cell — exactly the way the Architect Table's scanner would have captured it. */
 public class BuilderBoardTester {
-
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
 
     // ---------- blueprint fixture ----------
 
@@ -139,14 +138,6 @@ public class BuilderBoardTester {
             tile.tick();
         }
         return tile;
-    }
-
-    private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
-        return robot;
     }
 
     // ---------- the state machine ----------

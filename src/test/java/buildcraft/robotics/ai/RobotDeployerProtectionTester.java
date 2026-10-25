@@ -52,7 +52,6 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
@@ -61,6 +60,7 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.DockingStationPipe;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.boards.BoardRobotBomber;
 import buildcraft.robotics.entity.EntityRobot;
@@ -85,7 +85,6 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class RobotDeployerProtectionTester {
 
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
     /** Enough cycles for the plant AI's 40-cycle wind-up and its one attempt. */
     private static final int PLANT_CYCLES = 45;
     /** Enough cycles for a diamond pickaxe to break stone (6 are needed). */
@@ -103,10 +102,7 @@ public class RobotDeployerProtectionTester {
     /** A robot deployed by {@code deployer} (null: none recorded) on a home station owned by {@code owner}. */
     private static EntityRobot robot(GameTestHelper helper, BlockPos relPos, @Nullable GameProfile deployer,
             GameProfile owner) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        EntityRobot robot = RobotArenaUtil.unaddedRobot(helper, relPos);
         robot.setDeployer(deployer);
         robot.setMainStation(new OwnedStation(helper.absolutePos(relPos), owner));
         return robot;
@@ -398,10 +394,7 @@ public class RobotDeployerProtectionTester {
     /** A robot deployed by {@code deployer} (null: none recorded) homed on {@code home}. */
     private static EntityRobot robotOn(GameTestHelper helper, BlockPos relPos, @Nullable GameProfile deployer,
             DockingStation home) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        EntityRobot robot = RobotArenaUtil.unaddedRobot(helper, relPos);
         robot.setDeployer(deployer);
         robot.setMainStation(home);
         return robot;

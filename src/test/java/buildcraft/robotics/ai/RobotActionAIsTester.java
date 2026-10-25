@@ -5,6 +5,9 @@
  */
 package buildcraft.robotics.ai;
 
+import static buildcraft.robotics.RobotArenaUtil.unadded;
+import static buildcraft.robotics.RobotArenaUtil.unaddedRobot;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -28,7 +31,6 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.IEntityFilter;
@@ -52,9 +54,6 @@ import buildcraft.robotics.entity.EntityRobot;
  *  window — three 8.0 swings cannot fell a zombie any faster). */
 public class RobotActionAIsTester {
 
-    /** Above {@code SAFETY_POWER} so the {@code AIRobotMain} ladder never preempts with a recharge. */
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
-
     /** The work budgets of the three polls that wait on the world, each counted from the arena cell ticking: a poll's
      *  own budget adds {@code EntityArenaUtil.CELL_READY_TICKS} (read as such by {@code GameTestPollBudgetTester}), and
      *  each manifest's {@code max_ticks} stays above that sum. The mobs, the drops and the knight sit a few blocks apart
@@ -64,14 +63,6 @@ public class RobotActionAIsTester {
     private static final int DROP_WORK_TICKS = 60;
     private static final int SEARCH_WORK_TICKS = 60;
     private static final int KNIGHT_WORK_TICKS = 200;
-
-    private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
-        return robot;
-    }
 
     // ---------- AIRobotBreak: the progress formula ----------
 
@@ -486,11 +477,8 @@ public class RobotActionAIsTester {
         zombie.setNoGravity(true);
 
         // Zone-pinned: the knight's entity search covers 250 blocks otherwise, and a sibling test's mob is a target.
-        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotKnightNBT.INSTANCE);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
-        robot.setPos(pos.x, pos.y, pos.z);
+        EntityRobot robot = unadded(new ZonePinnedRobot(helper, BoardRobotKnightNBT.INSTANCE), helper, robotRel);
         robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
         helper.getLevel().addFreshEntity(robot);
 
         // succeed() belongs in the success block: it used to follow the tickUntil call, which only SCHEDULES the
@@ -536,11 +524,8 @@ public class RobotActionAIsTester {
         float wolfHealth = wolf.getHealth();
 
         // Zone-pinned: the butcher's entity search covers 250 blocks otherwise, and a sibling test's animal is a target.
-        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotButcherNBT.INSTANCE);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
-        robot.setPos(pos.x, pos.y, pos.z);
+        EntityRobot robot = unadded(new ZonePinnedRobot(helper, BoardRobotButcherNBT.INSTANCE), helper, robotRel);
         robot.setItemInUse(new ItemStack(Items.DIAMOND_SWORD));
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
         helper.getLevel().addFreshEntity(robot);
 
         EntityArenaUtil.tickUntil(helper, 360, EntityArenaUtil.whenCellTicking(helper, 80, 280, cow::isDeadOrDying), () -> {

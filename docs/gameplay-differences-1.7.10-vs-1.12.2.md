@@ -267,7 +267,7 @@ this port have **16**, which multiplies every wire-signal trigger/action.
 Fuel chain: 1.7.10 is **Oil → Refinery → Fuel** (two fluids, period). 1.12.2 replaces the refinery
 block with **Distiller + Heat Exchanger** and splits oil into Distilled/Heavy/Dense Oil, Residue
 (→ pipe sealant), Mixed fuels, and **Gaseous/Light/Dense Fuel** (8/6/4 MJ per cycle; dirty vs
-clean). This port inherits all of it and plans heat-tiered fuel + Nether oil.
+clean). This port inherits all of it and adds heat-tiered fuel (hot x1.25, searing x0.75 and runs hot) plus searing Nether oil.
 
 ### Builders
 

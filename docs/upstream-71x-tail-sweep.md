@@ -44,7 +44,7 @@ The 51 non-merge commits in `upstream/8.0.x-1.12.2..upstream/7.1.x` (7.1.20 → 
 | 04936780c | crash when a machine clicks a gate (#3542) | COVERED (structural) | PluggableGate never casts containerMenu; NeoForge FakePlayer.openMenu does nothing. |
 | d5033da8a | BuildCraft 7.1.21 | N/A | Release. |
 | 54eb54d59 | #3498 refinery deletes insufficient input | COVERED | Distiller checks the input amount and output room before extracting. |
-| bfa69a2ef | #3497 Nether flammable-fluid explosion | N/A | Dropped by 8.0.x; design input for Nether oil (followup). |
+| bfa69a2ef | #3497 Nether flammable-fluid explosion | ADAPTED | Dropped by 8.0.x; the port brings it back for gaseous fluids only (`BCEnergyFluids.igniteGasInNether`), so Nether oil stays usable. |
 | 9417e8a59 | #3307 autoworkbench not reacting to insertion | COVERED + PINNED | WorkbenchCrafting dirty flags; game test autoworkbench_resumes_after_input. |
 | e2c2361df | #3503 dupe, #3496 icon crash, #3500 div-by-zero | COVERED / N/A | Symmetric component matching plus craftExact re-verification; no metadata icons; miningMultiplier range 1.0 to 200.0. |
 | 25318e36c | sanitize fluid block draining (#3495) | COVERED | BlockUtil drains through FluidState.isSource and BucketPickup. |

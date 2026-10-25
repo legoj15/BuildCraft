@@ -122,6 +122,8 @@ public class BCEnergyFluids {
 
     // Convenience accessors for crude oil (needed by world gen, spring blocks, etc.)
     public static FluidEntry OIL_COOL;
+    /** Searing crude oil: the only crude that generates in the Nether (see {@code OilGenerator#crudeOilFor}). */
+    public static FluidEntry OIL_SEARING;
 
     // ─── Static initializer: register all fluids ──────────────────────
 
@@ -146,6 +148,10 @@ public class BCEnergyFluids {
                 // Store convenience reference for crude oil cool
                 if (i == 0 && heat == 0) {
                     OIL_COOL = entry;
+                }
+                // ...and for crude oil searing (heat 2)
+                if (i == 0 && heat == 2) {
+                    OIL_SEARING = entry;
                 }
             }
         }
@@ -201,6 +207,31 @@ public class BCEnergyFluids {
         if (stateBelow.getBlock() instanceof LiquidBlock && stateBelow.getFluidState().is(FluidTags.WATER)) {
             level.setBlockAndUpdate(below, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
         }
+    }
+
+    /** TNT-strength, the same blast upstream 7.1.x used. */
+    private static final float NETHER_GAS_BLAST = 4.0F;
+
+    /**
+     * Gaseous BuildCraft fluids (every fluid past its boil point) explode as soon as they flow in the
+     * Nether. Upstream 7.1.x did this for every flammable fluid (#3497); here only gases do, so Nether oil
+     * and the liquid fuels refined from it stay usable for a Nether start. Tanks and pipes are safe: only
+     * a placed fluid block ticks. Runs from the fluid tick that {@code LiquidBlock.onPlace} schedules, not
+     * from {@code onPlace} itself, so the blast never fires mid-{@code setBlock}.
+     *
+     * @return whether the fluid was consumed by the blast (the caller must stop ticking it).
+     */
+    static boolean igniteGasInNether(net.minecraft.world.level.Level level, BlockPos pos, Fluid fluid) {
+        if (fluid.getFluidType().getDensity() >= 0 || level.dimension() != net.minecraft.world.level.Level.NETHER) {
+            return false;
+        }
+        // Clear first without block updates (as upstream did), so the blast sees an empty cell and
+        // neighbouring gas doesn't re-tick against a half-removed block.
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),
+            net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+        level.explode(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, NETHER_GAS_BLAST, true,
+            net.minecraft.world.level.Level.ExplosionInteraction.BLOCK);
+        return true;
     }
 
     // ─── Factory method ───────────────────────────────────────────────
@@ -367,6 +398,9 @@ public class BCEnergyFluids {
         //?} else {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
+            if (igniteGasInNether(level, pos, this)) {
+                return;
+            }
             if (isDenseFluid()) {
                 displaceWaterBelow(level, pos);
             }
@@ -452,6 +486,9 @@ public class BCEnergyFluids {
         //?} else {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
+            if (igniteGasInNether(level, pos, this)) {
+                return;
+            }
             if (isDenseFluid()) {
                 displaceWaterBelow(level, pos);
             }

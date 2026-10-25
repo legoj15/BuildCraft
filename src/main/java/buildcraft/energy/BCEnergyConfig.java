@@ -41,6 +41,7 @@ public class BCEnergyConfig {
     public static ModConfigSpec.EnumValue<ListMode> biomeListMode;
     public static ModConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
     public static ModConfigSpec.EnumValue<ListMode> dimensionListMode;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> netherSpringBiomes;
 
     /** Polarity for the excludedBiomes / excludedDimensions lists. */
     public enum ListMode {
@@ -210,7 +211,7 @@ public class BCEnergyConfig {
                 .comment("Dimension IDs that participate in the include/exclude check below. See dimensionListMode.")
                 .defineListAllowEmpty(
                         "excludedDimensions",
-                        List.of("minecraft:the_nether", "minecraft:the_end"),
+                        List.of("minecraft:the_end"),
                         () -> "",
                         s -> s instanceof String
                 );
@@ -221,6 +222,17 @@ public class BCEnergyConfig {
                         "WHITELIST: oil only generates in dimensions from the excludedDimensions list."
                 )
                 .defineEnum("dimensionListMode", ListMode.BLACKLIST);
+
+        netherSpringBiomes = builder
+                .comment("Nether biome IDs where a LARGE oil roll gets an infinite searing-oil spring at the world floor.",
+                         "Crimson Forest by default (high biomass). Nether oil is always searing crude; every other",
+                         "Nether biome only rolls finite pockets, lava-sea slicks and small spouts.")
+                .defineListAllowEmpty(
+                        "netherSpringBiomes",
+                        List.of("minecraft:crimson_forest"),
+                        () -> "",
+                        s -> s instanceof String
+                );
 
         builder.pop();
     }
@@ -355,5 +367,9 @@ public class BCEnergyConfig {
 
     public static Set<Identifier> getExcludedDimensions() {
         return toIdSet(excludedDimensions);
+    }
+
+    public static Set<Identifier> getNetherSpringBiomes() {
+        return toIdSet(netherSpringBiomes);
     }
 }

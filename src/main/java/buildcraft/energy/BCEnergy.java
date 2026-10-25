@@ -18,7 +18,9 @@ import org.slf4j.LoggerFactory;
 
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.core.BCCore;
+import buildcraft.core.block.BlockSpring;
 import buildcraft.energy.client.BCEnergyFluidsClient;
+import buildcraft.energy.generation.OilGenerator;
 import buildcraft.energy.tile.TileSpringOil;
 
 /**
@@ -147,6 +149,10 @@ public class BCEnergy {
     private static void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             EnumSpring.OIL.liquidBlock = BCEnergyFluids.OIL_COOL.block().get().defaultBlockState();
+            // liquidBlock stays the cool default; the resolver swaps in searing crude under a Nether biome so a Nether
+            // spring regenerates the same oil its deposit was generated with.
+            BlockSpring.oilLiquidResolver = (level, pos) ->
+                    OilGenerator.crudeOilFor(level.getBiome(pos)).block().get().defaultBlockState();
             EnumSpring.OIL.tileConstructor = () -> {
                 return null;
             };

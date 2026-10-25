@@ -6,6 +6,8 @@
 
 package buildcraft.core.block;
 
+import java.util.function.BiFunction;
+
 import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
@@ -36,6 +38,12 @@ public class BlockSpring extends Block implements EntityBlock {
      *  core but its BE is defined in energy; the energy module wires this on
      *  init so core doesn't need to import energy. */
     public static @Nullable BlockEntityType.BlockEntitySupplier<? extends BlockEntity> oilTileFactory;
+
+    /** Late-bound choice of the liquid an OIL spring emits at a given position, for the same reason as
+     *  {@link #oilTileFactory}: the rule (searing crude in the Nether, cool elsewhere) lives in energy. Without it a
+     *  spring would replace the searing oil its deposit was generated with by {@link EnumSpring#liquidBlock}'s cool
+     *  default. Unset (or a non-oil spring) falls back to {@link EnumSpring#liquidBlock}. */
+    public static @Nullable BiFunction<ServerLevel, BlockPos, BlockState> oilLiquidResolver;
 
     private final EnumSpring springType;
 
@@ -78,6 +86,11 @@ public class BlockSpring extends Block implements EntityBlock {
             return;
         }
 
+        BlockState liquid = springType.liquidBlock;
+        if (springType == EnumSpring.OIL && oilLiquidResolver != null) {
+            liquid = oilLiquidResolver.apply(level, pos);
+        }
+
         BlockPos upPos = pos.above();
         BlockState upState = level.getBlockState(upPos);
         // Place into air, or displace a fluid that isn't already our own output
@@ -85,7 +98,7 @@ public class BlockSpring extends Block implements EntityBlock {
         // case an ocean-borne spring goes permanently sterile once water occupies
         // the block above it — that block is then never empty again.
         boolean canPlace = upState.isAir()
-            || (!upState.equals(springType.liquidBlock) && BlockUtil.getFluidWithFlowing(level, upPos) != null);
+            || (!upState.equals(liquid) && BlockUtil.getFluidWithFlowing(level, upPos) != null);
         if (!canPlace) {
             return;
         }
@@ -94,7 +107,7 @@ public class BlockSpring extends Block implements EntityBlock {
             return;
         }
 
-        level.setBlock(upPos, springType.liquidBlock, 3);
+        level.setBlock(upPos, liquid, 3);
     }
 
     @Override

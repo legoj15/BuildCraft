@@ -39,6 +39,7 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
 
     private static final int IN_X = 8, IN_Y = 4, TANK_W = 16, TANK_H = 40;
     private static final int RESIDUE_X = 32, RESIDUE_Y = 4;
+    private static final int RUNS_HOT_X = 60;
 
     public CombustionFuelCategory(IGuiHelper guiHelper) {
         super(
@@ -98,5 +99,12 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
                 "gui.jei.category.buildcraftunofficial.combustion_engine_fuel.burn",
                 recipe.getTotalBurningTime()).getString();
         g.text(font, burn, IN_X, 58, TEXT_COLOR, false);
+        // Searing fuels heat the engine beyond their output; flag it beside the tanks, which leave that
+        // corner free.
+        if (recipe.getHeatPerCycle() > recipe.getPowerPerCycle()) {
+            String hot = Component.translatable(
+                    "gui.jei.category.buildcraftunofficial.combustion_engine_fuel.runs_hot").getString();
+            g.text(font, hot, RUNS_HOT_X, IN_Y + 4, TEXT_COLOR, false);
+        }
     }
 }

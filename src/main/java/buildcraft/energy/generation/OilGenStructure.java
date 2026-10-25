@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.material.FluidState;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.enums.EnumSpring;
@@ -26,6 +28,7 @@ import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyFluids;
+import buildcraft.energy.BCEnergyFluids.FluidEntry;
 import buildcraft.energy.tile.TileSpringOil;
 
 public abstract class OilGenStructure {
@@ -46,10 +49,18 @@ public abstract class OilGenStructure {
 
     public final Box box;
     public final ReplaceType replaceType;
+    /** The crude oil this structure places, tubes it builds internally and a {@link Spring}'s oil-above included:
+     *  cool crude everywhere except the Nether, which gets searing (see {@link OilGenerator#crudeOilFor}). */
+    public final FluidEntry oil;
 
     public OilGenStructure(Box containingBox, ReplaceType replaceType) {
+        this(containingBox, replaceType, BCEnergyFluids.OIL_COOL);
+    }
+
+    public OilGenStructure(Box containingBox, ReplaceType replaceType, FluidEntry oil) {
         this.box = containingBox;
         this.replaceType = replaceType;
+        this.oil = oil;
     }
 
     public final void generate(LevelAccessor level, Box within) {
@@ -106,7 +117,7 @@ public abstract class OilGenStructure {
             return;
         }
         if (canReplaceForOil(level, pos)) {
-            setOil(level, pos);
+            setOil(level, pos, oil);
         }
     }
 
@@ -115,7 +126,12 @@ public abstract class OilGenStructure {
     }
 
     public static void setOil(LevelAccessor level, BlockPos pos) {
-        BlockState oil = BCEnergyFluids.OIL_COOL.source().get().defaultFluidState().createLegacyBlock();
+        setOil(level, pos, BCEnergyFluids.OIL_COOL);
+    }
+
+    /** {@link #setOil(LevelAccessor, BlockPos)} for a specific crude (searing in the Nether). */
+    public static void setOil(LevelAccessor level, BlockPos pos, FluidEntry crude) {
+        BlockState oil = crude.source().get().defaultFluidState().createLegacyBlock();
         if (setWorldgenBlock(level, pos, oil) && !(level instanceof Level)) {
             // Worldgen-region path: region setBlock fires no onPlace, so nothing schedules the fluid
             // tick that makes exposed oil start flowing once the chunk goes live (spout overflow,
@@ -396,6 +412,24 @@ public abstract class OilGenStructure {
             public boolean canReplace(LevelAccessor level, BlockPos pos) {
                 return ALWAYS.canReplace(level, pos);
             }
+        },
+        /** Replaces anything but air and bedrock. The Nether's buried pocket uses it so a sphere that clips an open
+         *  cavern fills only its rock (and lava), never leaving oil blobs hanging in mid-air. */
+        NOT_AIR_OR_BEDROCK {
+            @Override
+            public boolean canReplace(LevelAccessor level, BlockPos pos) {
+                BlockState state = level.getBlockState(pos);
+                return !state.isAir() && !state.is(Blocks.BEDROCK);
+            }
+        },
+        /** Replaces only lava SOURCE blocks (flowing lava and everything else stays). The Nether's lava-sea slick uses
+         *  it so oil floats on the sea where the sea is, and nothing is painted onto netherrack or lava falls. */
+        LAVA_SOURCE {
+            @Override
+            public boolean canReplace(LevelAccessor level, BlockPos pos) {
+                FluidState fluid = level.getBlockState(pos).getFluidState();
+                return fluid.isSource() && fluid.is(FluidTags.LAVA);
+            }
         };
         public abstract boolean canReplace(LevelAccessor level, BlockPos pos);
     }
@@ -404,7 +438,12 @@ public abstract class OilGenStructure {
         public final Predicate<BlockPos> predicate;
 
         public GenByPredicate(Box containingBox, ReplaceType replaceType, Predicate<BlockPos> predicate) {
-            super(containingBox, replaceType);
+            this(containingBox, replaceType, predicate, BCEnergyFluids.OIL_COOL);
+        }
+
+        public GenByPredicate(Box containingBox, ReplaceType replaceType, Predicate<BlockPos> predicate,
+            FluidEntry oil) {
+            super(containingBox, replaceType, oil);
             this.predicate = predicate;
         }
 
@@ -433,17 +472,25 @@ public abstract class OilGenStructure {
         private final boolean[][] pattern;
         private final int depth;
 
-        private FlatPattern(Box containingBox, ReplaceType replaceType, boolean[][] pattern, int depth) {
-            super(containingBox, replaceType);
+        private FlatPattern(Box containingBox, ReplaceType replaceType, boolean[][] pattern, int depth,
+            FluidEntry oil) {
+            super(containingBox, replaceType, oil);
             this.pattern = pattern;
             this.depth = depth;
         }
 
+        /** A fixed-Y layer: {@code start.y} is the TOP of the {@code depth} layers, and the pattern is anchored at
+         *  {@code start}'s x/z. Unlike {@link SurfacePool} it never searches for the surface. */
         public static FlatPattern create(BlockPos start, ReplaceType replaceType, boolean[][] pattern, int depth) {
+            return create(start, replaceType, pattern, depth, BCEnergyFluids.OIL_COOL);
+        }
+
+        public static FlatPattern create(BlockPos start, ReplaceType replaceType, boolean[][] pattern, int depth,
+            FluidEntry oil) {
             BlockPos min = start.offset(0, 1 - depth, 0);
             BlockPos max = start.offset(pattern.length - 1, 0, pattern.length == 0 ? 0 : pattern[0].length - 1);
             Box box = new Box(min, max);
-            return new FlatPattern(box, replaceType, pattern, depth);
+            return new FlatPattern(box, replaceType, pattern, depth, oil);
         }
 
         @Override
@@ -596,7 +643,11 @@ public abstract class OilGenStructure {
         private int count = 0;
 
         public Spout(BlockPos start, ReplaceType replaceType, int radius, int height) {
-            super(createBox(start), replaceType);
+            this(start, replaceType, radius, height, BCEnergyFluids.OIL_COOL);
+        }
+
+        public Spout(BlockPos start, ReplaceType replaceType, int radius, int height, FluidEntry oil) {
+            super(createBox(start), replaceType, oil);
             this.start = start;
             this.radius = radius;
             this.height = height;
@@ -641,12 +692,13 @@ public abstract class OilGenStructure {
                     break;
                 }
             }
-            OilGenStructure tubeY = OilGenerator.createTube(start, worldTop.getY() - start.getY(), radius, Axis.Y);
+            OilGenStructure tubeY = OilGenerator.createTube(start, worldTop.getY() - start.getY(), radius, Axis.Y,
+                ReplaceType.ALWAYS, oil);
             tubeY.generate(level, tubeY.box);
             count += tubeY.countOilBlocks();
             BlockPos base = worldTop;
             for (int r = radius; r >= 0; r--) {
-                OilGenStructure struct = OilGenerator.createTube(base, height, r, Axis.Y);
+                OilGenStructure struct = OilGenerator.createTube(base, height, r, Axis.Y, ReplaceType.ALWAYS, oil);
                 struct.generate(level, struct.box);
                 base = base.offset(0, height, 0);
                 count += struct.countOilBlocks();
@@ -662,11 +714,110 @@ public abstract class OilGenStructure {
         }
     }
 
+    /**
+     * The spout for a roofed dimension (the Nether). {@link Spout} scans DOWN from the build limit for the terrain
+     * top, which under a bedrock roof is the roof itself: it would fill every cavern between the pocket and the
+     * roof with an oil pillar and punch it through the bedrock. This one scans UP from the pocket for the first open
+     * air (the floor of the cavern the deposit leaks into, or the lava sea's surface), fills a tube of oil from the
+     * pocket to that floor, and raises the usual {@code height}-tall column from it into the cavern.
+     *
+     * <p>It places nothing at all when the way up meets bedrock, or runs out of rock and lava without reaching air
+     * {@link #CEILING_MARGIN} blocks under the ceiling, and the column is cut short at that same limit, so the roof
+     * and the void above it are never touched. Its {@code replaceType} should be {@link ReplaceType#NOT_BEDROCK}:
+     * the column may still pass through a non-bedrock ceiling inside the limit.
+     */
+    public static class CavernSpout extends OilGenStructure {
+        /** Blocks kept clear under the dimension's ceiling: the scan stops and the column ends this far below it. */
+        public static final int CEILING_MARGIN = 8;
+
+        private static final int NO_AIR = Integer.MIN_VALUE;
+
+        public final BlockPos start;
+        public final int radius;
+        public final int height;
+        /** The highest y the scan and the column may reach: {@code ceilingY - CEILING_MARGIN}. */
+        public final int limitY;
+        private int count = 0;
+        private boolean generated = false;
+
+        /**
+         * @param start the pocket centre; the scan for air begins one block above it
+         * @param ceilingY the topmost usable block of the dimension (the Nether's bedrock roof, not its build limit)
+         */
+        public CavernSpout(BlockPos start, ReplaceType replaceType, int radius, int height, int ceilingY,
+            FluidEntry oil) {
+            super(new Box(start, new BlockPos(start.getX(), ceilingY, start.getZ())), replaceType, oil);
+            this.start = start;
+            this.radius = radius;
+            this.height = height;
+            this.limitY = ceilingY - CEILING_MARGIN;
+        }
+
+        @Override
+        protected void generateWithin(LevelAccessor level, Box intersect) {
+            generated = true;
+            count = 0;
+            // Like Spout: everything hangs off the centre column, so skip when that column isn't safely accessible
+            // (see isChunkLoaded); stray cells are guarded again at the setWorldgenBlock leaf.
+            if (!isChunkLoaded(level, start.getX(), start.getZ())) {
+                return;
+            }
+            int airY = findFirstAirAbove(level);
+            if (airY == NO_AIR) {
+                return;
+            }
+            // The topmost non-air block under the cavern: where the solid tube ends and the free column begins.
+            BlockPos base = new BlockPos(start.getX(), airY - 1, start.getZ());
+            OilGenStructure tube = OilGenerator.createTube(start, base.getY() - start.getY(), radius, Axis.Y,
+                replaceType, oil);
+            tube.generate(level, tube.box);
+            count += tube.countOilBlocks();
+            // Same tapered column as Spout (radius..0, each `height` tall), but never above the limit.
+            int room = limitY - base.getY();
+            for (int r = radius; r >= 0 && room > 0; r--) {
+                int segment = Math.min(height, room);
+                OilGenStructure struct = OilGenerator.createTube(base, segment, r, Axis.Y, replaceType, oil);
+                struct.generate(level, struct.box);
+                count += struct.countOilBlocks();
+                base = base.above(segment);
+                room -= segment;
+            }
+        }
+
+        /** The y of the first air block above the pocket, or {@link #NO_AIR} when bedrock comes first or none is
+         *  found by {@link #limitY}. Reads only the centre column, which {@code generateWithin} proved accessible. */
+        private int findFirstAirAbove(LevelAccessor level) {
+            for (int y = start.getY() + 1; y <= limitY; y++) {
+                BlockState state = level.getBlockState(new BlockPos(start.getX(), y, start.getZ()));
+                if (state.is(Blocks.BEDROCK)) {
+                    return NO_AIR;
+                }
+                if (state.isAir()) {
+                    return y;
+                }
+            }
+            return NO_AIR;
+        }
+
+        @Override
+        protected int countOilBlocks() {
+            // Zero is valid here (no way up to the air, so nothing was placed); only "never ran" is a misuse.
+            if (!generated) {
+                throw new IllegalStateException("Called countOilBlocks before calling generateWithin!");
+            }
+            return count;
+        }
+    }
+
     public static class Spring extends OilGenStructure {
         public final BlockPos pos;
 
         public Spring(BlockPos pos) {
-            super(new Box(pos, pos), ReplaceType.ALWAYS);
+            this(pos, BCEnergyFluids.OIL_COOL);
+        }
+
+        public Spring(BlockPos pos, FluidEntry oil) {
+            super(new Box(pos, pos), ReplaceType.ALWAYS, oil);
             this.pos = pos;
         }
 
@@ -692,7 +843,7 @@ public abstract class OilGenStructure {
             // so pos.above() is at minY+1 — well within the bedrock gradient.
             // Without ALWAYS-replace we'd land on bedrock and the spring would
             // never regenerate (its tick checks isEmptyBlock above).
-            setOil(level, pos.above());
+            setOil(level, pos.above(), oil);
             BlockEntity tile = level.getBlockEntity(pos);
             TileSpringOil spring;
             if (tile instanceof TileSpringOil) {

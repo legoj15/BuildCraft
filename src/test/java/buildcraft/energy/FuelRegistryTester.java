@@ -64,10 +64,42 @@ public class FuelRegistryTester {
         if (dirtyWithResidue < 3) {
             throw new IllegalStateException("Expected >= 3 dirty fuels carrying residue, found " + dirtyWithResidue);
         }
-        // fuel_gaseous is the 8 MJ/t headline fuel — pin the top rate so the category can never
-        // silently display a wrong number.
-        if (maxPower != 8 * MjAPI.MJ) {
-            throw new IllegalStateException("Expected top combustion fuel rate of 8 MJ/t, found " + (maxPower / MjAPI.MJ) + " MJ/t");
+        // Cool fuel_gaseous is the 8 MJ/t headline fuel — pin it so the category can never
+        // silently display a wrong number. (Hot gaseous fuel tops the table at 10 MJ/t.)
+        IFuel coolGas = fuelFor("fuel_gaseous", 0);
+        if (coolGas == null || coolGas.getPowerPerCycle() != 8 * MjAPI.MJ) {
+            throw new IllegalStateException("Expected cool gaseous fuel at 8 MJ/t, found "
+                + (coolGas == null ? "none" : coolGas.getPowerPerCycle() / MjAPI.MJ + " MJ/t"));
+        }
+        if (maxPower != 10 * MjAPI.MJ) {
+            throw new IllegalStateException("Expected top combustion fuel rate of 10 MJ/t (hot gaseous), found "
+                + (maxPower / (double) MjAPI.MJ) + " MJ/t");
+        }
+
+        // Heat-tier curve: every fuel burns at every heat tier. Hot beats cool (x1.25 power), searing is
+        // worse than cool (x0.75 power) yet heats the engine like 1.5x the cool fuel. Burn time per
+        // bucket and residue don't change with heat.
+        for (String base : BCEnergyFluids.BASE_NAMES) {
+            IFuel cool = fuelFor(base, 0);
+            if (cool == null) {
+                continue; // not a fuel (residue)
+            }
+            IFuel hot = fuelFor(base, 1);
+            IFuel searing = fuelFor(base, 2);
+            if (hot == null || searing == null) {
+                throw new IllegalStateException(base + ": hot/searing variants are not registered as fuels");
+            }
+            long p = cool.getPowerPerCycle();
+            expect(base + " hot power", p * 5 / 4, hot.getPowerPerCycle());
+            expect(base + " searing power", p * 3 / 4, searing.getPowerPerCycle());
+            expect(base + " cool heat", p, cool.getHeatPerCycle());
+            expect(base + " hot heat", p * 5 / 4, hot.getHeatPerCycle());
+            expect(base + " searing heat", p * 3 / 2, searing.getHeatPerCycle());
+            expect(base + " hot burn time", cool.getTotalBurningTime(), hot.getTotalBurningTime());
+            expect(base + " searing burn time", cool.getTotalBurningTime(), searing.getTotalBurningTime());
+            if ((cool instanceof IDirtyFuel) != (searing instanceof IDirtyFuel)) {
+                throw new IllegalStateException(base + ": searing variant disagrees with cool on residue");
+            }
         }
 
         if (BuildcraftFuelRegistry.coolant == null) {
@@ -93,5 +125,20 @@ public class FuelRegistryTester {
         }
 
         helper.succeed();
+    }
+
+    private static IFuel fuelFor(String baseName, int heat) {
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            if (entry.baseName().equals(baseName) && entry.heat() == heat) {
+                return BuildcraftFuelRegistry.fuel.getFuel(new FluidStack(entry.source().get(), 1));
+            }
+        }
+        throw new IllegalStateException("No such fluid: " + baseName + " at heat " + heat);
+    }
+
+    private static void expect(String what, long expected, long actual) {
+        if (expected != actual) {
+            throw new IllegalStateException(what + ": expected " + expected + ", found " + actual);
+        }
     }
 }

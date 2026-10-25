@@ -113,7 +113,7 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
         // sync corrects them.
         if (tile.getWorldBC() != null && !tile.getWorldBC().isClientSide()) {
             if (placeTask.items != null && !placeTask.items.isEmpty()) {
-                tile.getInvResources().insert(placeTask.items.get(0), false, false);
+                dropRefundLeftover(tile.getInvResources().insert(placeTask.items.get(0), false, false));
             }
         }
     }

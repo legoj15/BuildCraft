@@ -23,9 +23,11 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BubbleColumnBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
@@ -72,10 +74,14 @@ public class BuilderRefloodTester {
     public static final int SNOW = 3;
     /** A bottom oak slab the blueprint itself wants waterlogged. */
     public static final int WET_SLAB = 4;
+    /** An oak door's lower half: its upper half goes into the cell above (outside the one-high box), which build
+     *  sets in the same call. */
+    public static final int DOOR = 5;
     private static final BlockState[] KIND_STATES = {
         Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
         Blocks.SNOW.defaultBlockState(),
-        Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true) };
+        Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true),
+        Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER) };
 
     public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
@@ -105,7 +111,7 @@ public class BuilderRefloodTester {
     }
 
     /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
-     *  {@link #AIR}, {@link #SNOW} (one snow layer) or {@link #WET_SLAB}. */
+     *  {@link #AIR}, {@link #SNOW} (one snow layer), {@link #WET_SLAB} or {@link #DOOR}. */
     private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column,
             List<ISchematicEntity> entities) {
         Blueprint blueprint = new Blueprint();
@@ -152,6 +158,7 @@ public class BuilderRefloodTester {
             case AIR -> state.isAir();
             case SNOW -> state.is(Blocks.SNOW);
             case WET_SLAB -> isWetSlab(state);
+            case DOOR -> state.is(Blocks.OAK_DOOR) && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER;
             default -> throw new IllegalArgumentException("bad kind " + kind);
         };
     }

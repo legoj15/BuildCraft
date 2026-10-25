@@ -17,10 +17,11 @@ import net.minecraft.world.item.Items;
  * <ul>
  *   <li>{@link #NO_REPLACE} — original behavior: any position holding a fluid (flowing or
  *       source) is skipped, except a block the blueprint wants waterlogged, which goes into a
- *       source of its own fluid and keeps it.</li>
+ *       source of its own fluid and keeps it. So is a bed, door or tall plant whose other half
+ *       would go into fluid it does not keep.</li>
  *   <li>{@link #REPLACE} — the schematic block is placed over the fluid. If the block supports
  *       vanilla {@code WATERLOGGED} and the fluid is a water source, it's placed as waterlogged
- *       (preserving the water "for free"); otherwise the fluid is destroyed first. A real block
+ *       (preserving the water "for free"); otherwise the placement removes the fluid. A real block
  *       that holds fluid (a waterlogged slab, kelp) is broken first, like any other wrong block.
  *       Positions whose schematic entry is fluid (water-feature blueprints) keep their fluid
  *       intact, and waterlogged blocks captured-dry-in-schematic stay wet in the world (the

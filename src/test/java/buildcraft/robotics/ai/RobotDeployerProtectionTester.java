@@ -90,6 +90,16 @@ public class RobotDeployerProtectionTester {
     /** Enough cycles for a diamond pickaxe to break stone (6 are needed). */
     private static final int BREAK_CYCLES = 40;
 
+    /** Runs {@code body} once the whole arena cell is entity-ticking. The blast and melee tests spawn their mobs and
+     *  sweep up their drops in the same tick, and an entity added to a chunk whose entities are not loaded yet is
+     *  invisible to a scan: the bomber's blast then missed its cow, which was neither hurt nor asked about ("the
+     *  refused player was asked about" failed about one robot run in four). */
+    private static void whenCellTicking(GameTestHelper helper, Runnable body) {
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,
+                "the arena cell never became entity-ticking");
+    }
+
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),
                 "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
@@ -540,6 +550,10 @@ public class RobotDeployerProtectionTester {
      *  so claim mods and kill credit see who sent the robot. Its blast then spares every block and entity either
      *  player may not touch. */
     public static void bomberNeedsBothAndTntIsTheDeployers(GameTestHelper helper) {
+        whenCellTicking(helper, () -> bomberNeedsBoth(helper));
+    }
+
+    private static void bomberNeedsBoth(GameTestHelper helper) {
         requireProtectionChecksOn();
         GameProfile deployer = profile("bc_deployer_bomb_deployer");
         GameProfile owner = profile("bc_deployer_bomb_owner");
@@ -682,6 +696,10 @@ public class RobotDeployerProtectionTester {
      *  the deployer and the station's owner; a refused swing does no damage and the target is left alone for a
      *  while, and a permitted one names the deployer's player as the attacker. */
     public static void meleeNeedsBothAndNamesTheDeployer(GameTestHelper helper) {
+        whenCellTicking(helper, () -> meleeNeedsBoth(helper));
+    }
+
+    private static void meleeNeedsBoth(GameTestHelper helper) {
         requireProtectionChecksOn();
         GameProfile deployer = profile("bc_deployer_melee_deployer");
         GameProfile owner = profile("bc_deployer_melee_owner");

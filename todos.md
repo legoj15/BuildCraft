@@ -1,4 +1,4 @@
-Last audited: 2026-10-24
+Last audited: 2026-10-25
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 

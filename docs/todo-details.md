@@ -59,7 +59,7 @@ Spike result: pipe rendered with panorama backdrop and GUI icons bleeding throug
 ## Guide book follow-ups
 
 Left over from the 2026-10-15 Sort By System / Robots chapter work ([docs/guide-robots-and-toc.md](guide-robots-and-toc.md)):
-- Only 26.1.2 was looked at in-client for the new contents page and pages; the other four nodes compiled and passed unit tests only.
+- Only 26.1.2 was looked at in-client for the new contents page and pages; the other nodes compiled and passed unit tests only. `scripts/smoke/scenarios/guide-robots.json` drives every page in question, and the Sort By System button got a new glyph on 2026-10-24, so its hover needs a look too.
 
 ## JEI transfer decisions
 

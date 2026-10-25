@@ -239,6 +239,9 @@ public class TileFiller extends TileBC_Neptune
         if (builder != null && getTemplateBuildingInfo() != null) {
             builder.cancel();
         }
+        // Progress on the old plan says nothing about the new one; without this a pattern change on a starved
+        // Filler would keep its new preview hidden until the old stamp ages out.
+        lastProgressTick = Long.MIN_VALUE / 2;
         builtFrom = currentBuildKey();
         buildingInfo = hasBox() ? FillerUtil.createBuildingInfo(
             this,
@@ -791,8 +794,11 @@ public class TileFiller extends TileBC_Neptune
 
     /** Server side: whether the builder made progress within {@link #PROGRESS_WINDOW_TICKS}, as sent with every sync. */
     private boolean isBuildingNow() {
-        return level != null && mode != Mode.OFF && !isFinished()
-            && level.getGameTime() - lastProgressTick <= PROGRESS_WINDOW_TICKS;
+        if (level == null || mode == Mode.OFF || isFinished()) {
+            return false;
+        }
+        long sinceProgress = level.getGameTime() - lastProgressTick;
+        return sinceProgress >= 0 && sinceProgress <= PROGRESS_WINDOW_TICKS;
     }
 
     /**

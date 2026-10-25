@@ -2,6 +2,10 @@ Last audited: 2026-10-25
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
+## 🔧 Outstanding work
+
+- A Filler on Loop resends its full data to nearby players every tick once a cycle is done — [quick notes](docs/todo-details.md#quick-notes)
+
 ## 🆕 New Features (version 2026.3)
 
 - Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length

@@ -528,7 +528,6 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_replace_water_solid", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceWaterSourceWithSolidBlock);
         reg.accept("buildcraftunofficial:fluidmode_replace_lava_waterloggable", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceLavaSourceWithWaterloggableBlock);
         reg.accept("buildcraftunofficial:fluidmode_clear_destroys_source_at_place", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testClearDestroysSourceInsteadOfWaterlogging);
-        reg.accept("buildcraftunofficial:fluidmode_no_replace_no_waterlog", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDoesNotWaterlog);
         reg.accept("buildcraftunofficial:fluidmode_flowing_not_destroyed", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFlowingFluidIsNotSpeciallyDestroyed);
         reg.accept("buildcraftunofficial:fluidmode_cycle_all_states", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFluidModeCyclesThroughAllStates);
         reg.accept("buildcraftunofficial:fluidmode_ordinal_clamps", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFluidModeFromOrdinalClampsOutOfRange);
@@ -547,6 +546,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_block_before_placing", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceBuilderBreaksWaterloggedBlockBeforePlacing);
         reg.accept("buildcraftunofficial:builder_two_cell_block_never_placeable_counts_as_built", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testTwoCellBlockItCanNeverPlaceCountsAsBuilt);
         reg.accept("buildcraftunofficial:builder_refund_to_full_grid_drops_leftover", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testRefundToAFullGridDropsTheLeftover);
+        reg.accept("buildcraftunofficial:builder_noreplace_placement_leaves_fluid", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceBuilderPlacementLeavesFluidItDoesNotKeep);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);

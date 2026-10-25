@@ -178,32 +178,6 @@ public class FluidHandlingModeTester {
     }
 
     /**
-     * NO_REPLACE must not waterlog. In the real builder flow this path would never be reached
-     * (the break filter skips the position), but calling build directly with NO_REPLACE still
-     * must not add a WATERLOGGED property to the placed state — otherwise the invariant that
-     * the mode controls fluid preservation is broken.
-     */
-    public static void testNoReplaceModeDoesNotWaterlog(GameTestHelper helper) {
-        try {
-            BlockPos local = new BlockPos(1, 2, 1);
-            BlockPos abs = helper.absolutePos(local);
-            helper.getLevel().setBlock(abs, Blocks.WATER.defaultBlockState(), 3);
-
-            SchematicBlockDefault s = schem(Blocks.OAK_FENCE.defaultBlockState());
-            boolean placed = s.build(helper.getLevel(), abs, EnumFluidHandlingMode.NO_REPLACE);
-            assertTrue(placed, "build() must report success");
-
-            BlockState after = helper.getLevel().getBlockState(abs);
-            assertTrue(after.getBlock() == Blocks.OAK_FENCE, "block should be oak fence");
-            assertTrue(!after.getValue(BlockStateProperties.WATERLOGGED),
-                    "NO_REPLACE must not opportunistically waterlog");
-            helper.succeed();
-        } catch (Throwable t) {
-            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
-        }
-    }
-
-    /**
      * Flowing (non-source) fluid must not trigger destroyBlock — the branch only fires on
      * sources. {@code setBlock} will overwrite the flowing water anyway, but destroyBlock would
      * produce an unwanted block-break sound/particle cluster in the user's face.
@@ -1204,6 +1178,15 @@ public class FluidHandlingModeTester {
                 helper.setBlock(upper, Blocks.WATER);
                 expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.NO_REPLACE,
                         SnapshotBuilder.CHECK_RESULT_CORRECT, "water in the upper cell", broken);
+                // A mode switch asks such a cell again at once. Its own cell holds no fluid, so resetting only the
+                // cells that hold fluid left it built until the sweep came round, and a Builder on a path could
+                // move on without it.
+                tile.cycleFluidMode();
+                byte afterSwitch = builder.checkResults[builder.posToIndex(helper.absolutePos(cell(0)))];
+                if (afterSwitch != SnapshotBuilder.CHECK_RESULT_UNKNOWN) {
+                    broken.add("switching from NO_REPLACE left the door skipped for the water above it checked "
+                            + afterSwitch + " instead of asking it again (0)");
+                }
                 expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.REPLACE,
                         SnapshotBuilder.CHECK_RESULT_TO_PLACE, "water in the upper cell", broken);
                 helper.setBlock(upper, Blocks.SKELETON_SKULL);
@@ -1215,6 +1198,68 @@ public class FluidHandlingModeTester {
             helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
             helper.succeed();
         });
+    }
+
+    /**
+     * A NO_REPLACE Builder placement never builds over fluid it does not keep, in its own cell or its other half's: the
+     * check skips such a cell, but a placement queued while the cell was dry lands after water flowed in, and build
+     * used to overwrite it. A fence captured dry goes in neither over the water nor waterlogged (the mode never
+     * waterlogs a block on its own), a block that keeps the source as its own (a waterlogged slab) still goes in, and a
+     * placement by hand still sets a door's upper half over water, as a player's does.
+     */
+    public static void testNoReplaceBuilderPlacementLeavesFluidItDoesNotKeep(GameTestHelper helper) {
+        Level level = helper.getLevel();
+        BlockPos door = new BlockPos(1, 2, 1);
+        BlockPos fence = new BlockPos(3, 2, 1);
+        BlockPos slab = new BlockPos(1, 2, 4);
+        BlockPos[] cells = {door, door.above(), fence, slab};
+        List<String> broken = new ArrayList<>();
+        try {
+            for (BlockPos cell : new BlockPos[] {door, fence, slab}) {
+                helper.setBlock(cell.below(), Blocks.STONE);
+            }
+            helper.setBlock(door.above(), Blocks.WATER);
+            helper.setBlock(fence, Blocks.WATER);
+            helper.setBlock(slab, Blocks.WATER);
+
+            SchematicBlockDefault doorSchematic = schem(Blocks.OAK_DOOR.defaultBlockState());
+            if (doorSchematic.build(level, helper.absolutePos(door), EnumFluidHandlingMode.NO_REPLACE)) {
+                broken.add("the door went in under the water source above it");
+            }
+            if (!isWaterSource(helper.getBlockState(door.above()))) {
+                broken.add("the water above the door became " + helper.getBlockState(door.above()));
+            }
+            if (schem(Blocks.OAK_FENCE.defaultBlockState()).build(level, helper.absolutePos(fence),
+                    EnumFluidHandlingMode.NO_REPLACE)) {
+                broken.add("the dry fence went into the water source");
+            }
+            if (!isWaterSource(helper.getBlockState(fence))) {
+                broken.add("the water the fence was refused for became " + helper.getBlockState(fence));
+            }
+            if (!schem(waterlogged(Blocks.OAK_SLAB)).build(level, helper.absolutePos(slab),
+                    EnumFluidHandlingMode.NO_REPLACE)
+                    || !helper.getBlockState(slab).is(Blocks.OAK_SLAB)
+                    || !helper.getBlockState(slab).getValue(BlockStateProperties.WATERLOGGED)) {
+                broken.add("a waterlogged slab must go into a water source as its own, found "
+                        + helper.getBlockState(slab));
+            }
+            if (!doorSchematic.build(level, helper.absolutePos(door))
+                    || !helper.getBlockState(door.above()).is(Blocks.OAK_DOOR)) {
+                broken.add("a door placed by hand must set its upper half over the water, found "
+                        + helper.getBlockState(door.above()));
+            }
+            helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
+            helper.succeed();
+        } finally {
+            for (BlockPos cell : cells) {
+                helper.setBlock(cell, Blocks.AIR);
+                helper.setBlock(cell.below(), Blocks.AIR);
+            }
+        }
+    }
+
+    private static boolean isWaterSource(BlockState state) {
+        return state.is(Blocks.WATER) && state.getFluidState().isSource();
     }
 
     /**

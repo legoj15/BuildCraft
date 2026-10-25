@@ -7,12 +7,11 @@ package buildcraft.core;
 
 import net.neoforged.neoforge.registries.DeferredRegister;
 import buildcraft.lib.misc.RegistrationUtilBC;
+import buildcraft.lib.misc.SoundUtil;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
-
-import buildcraft.lib.misc.SoundUtil;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.api.enums.EnumSpring;
 import buildcraft.lib.BCLib;

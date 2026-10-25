@@ -19,11 +19,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
@@ -34,7 +32,7 @@ import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.RefusingSourceBlock;
 import buildcraft.lib.test.TestOnlyBlocks;
-import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.boards.BoardRobotPump;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -57,11 +55,7 @@ public class RobotPumpProtectionTester {
      *  the one chunk under the arena. */
     private static EntityRobot unaddedRobot(GameTestHelper helper, BlockPos relPos) {
         EntityArenaUtil.forceLoadCell(helper);
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(relPos));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
-        return robot;
+        return RobotArenaUtil.unaddedRobot(helper, relPos);
     }
 
     /** A stone cup around {@code wellRel} so no neighbour can re-feed the cell. */

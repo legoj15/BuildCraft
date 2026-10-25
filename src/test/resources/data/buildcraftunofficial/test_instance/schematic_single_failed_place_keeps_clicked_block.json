@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:fluidmode_placement_over_waterlogged_chest_drops_once",
+    "function": "buildcraftunofficial:schematic_single_failed_place_keeps_clicked_block",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 400,
+    "max_ticks": 20,
     "setup_ticks": 0,
     "required": true
 }

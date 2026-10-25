@@ -359,6 +359,13 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 && !def.blockState.canSurvive(tile.getWorldBC(), blockPos)) {
             return false;
         }
+        // The same for a bed, door or tall plant whose other half's cell holds a block (a torch, a skull): build
+        // would refuse it and the item would only fly out and back. With excavation on that block is broken first
+        // (the cell is the other half's own, TO_BREAK); with it off nothing ever breaks it, and the item would go out
+        // and come back on every pass.
+        if (self instanceof SchematicBlockDefault def && !def.hasRoomForSecondHalf(tile.getWorldBC(), blockPos)) {
+            return false;
+        }
         return true;
     }
 

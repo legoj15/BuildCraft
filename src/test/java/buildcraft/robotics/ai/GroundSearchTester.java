@@ -13,11 +13,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.test.FarChunk;
-import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.entity.EntityRobot;
 
 /** {@link AIRobotSearchRandomGroundBlock}, the bomber's "somewhere to drop" search, against a real level. It picks
@@ -26,7 +25,6 @@ import buildcraft.robotics.entity.EntityRobot;
  *  nothing to pick from must fail the search, not throw. Unadded robot, cycled synchronously; nothing is placed. */
 public class GroundSearchTester {
 
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
     /** Chunks east and south of the arena's, apart from every other test's far chunk (see {@link FarChunk}). */
     private static final int QUEUED_CHUNK_OFFSET = 1666;
 
@@ -132,11 +130,7 @@ public class GroundSearchTester {
     }
 
     private static EntityRobot robot(GameTestHelper helper) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 spawn = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 3)));
-        robot.setPos(spawn.x, spawn.y, spawn.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
-        return robot;
+        return RobotArenaUtil.unaddedRobot(helper, new BlockPos(2, 2, 3));
     }
 
     /** Records how its delegate went. */

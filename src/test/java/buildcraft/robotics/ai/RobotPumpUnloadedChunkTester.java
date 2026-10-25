@@ -11,12 +11,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.Vec3;
 
-import buildcraft.api.mj.MjAPI;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.FarChunk;
-import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.boards.BoardRobotPump;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -34,16 +32,6 @@ public class RobotPumpUnloadedChunkTester {
     /** Chunks east and south of the arena's, apart from every other test's far chunk (see {@link FarChunk}). */
     private static final int CHUNK_OFFSET = 1444;
     private static final int BUCKET = 1000;
-
-    /** The robot, unadded, in the arena. Unlike {@code RobotPumpProtectionTester}'s it does not force-load the cell: the
-     *  cell the pump AI judges is in the {@link FarChunk}, not here, and the arena's neighbours are far from it. */
-    private static EntityRobot unaddedRobot(GameTestHelper helper) {
-        EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(5000L * MjAPI.MJ, false);
-        return robot;
-    }
 
     /** Cycles a pump AI until it has pumped, been refused, or run out of cycles (its 40-cycle wait included). */
     private static void runPumpAi(AIRobotPumpBlock pumper) {
@@ -66,7 +54,9 @@ public class RobotPumpUnloadedChunkTester {
             well = chunk.pos(15, level.getMinY() + 40, 8);
             chunk.setRaw(well, Blocks.WATER.defaultBlockState());
             check(chunk.isAbsent(1, 0), "precondition: the chunk across the border must be absent");
-            EntityRobot robot = unaddedRobot(helper);
+            // The cell is not force-loaded, unlike RobotPumpProtectionTester's: the cell the pump AI judges is in the
+            // FarChunk, not here, and the arena's neighbours are far from it.
+            EntityRobot robot = RobotArenaUtil.unaddedRobot(helper, new BlockPos(2, 2, 2));
             BoardRobotPump board = new BoardRobotPump(robot);
 
             check(!board.isSearchCandidate(level, well),

@@ -69,11 +69,6 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 
 `AIRobotSearchStation.start()` returns the station a robot is already docked at before it checks `isRobotForbidden` (7.1.x did the same), so a Forbid Robot gate on a robot's own dock does not stop it loading, unloading or recharging there. A fix was tried on 2026-10-17 (make the docked shortcut honour the forbid) and backed out: with no other accepting station in reach, a Delivery robot homed on a forbidding station then disposed of its whole cargo on the ground. Options: keep 7.1.x behaviour; or, when a forbid starts matching the docked robot, undock it so the search picks another station (cargo-safe), and decide whether a robot may still sleep at a home that forbids it.
 
-## Small cleanups
-
-Follow-ups left by the 2026-10-24 cleanup rounds; none is a known player-facing bug in normal play.
-- `unaddedRobot` test helpers: the copies in `BuilderBoardTester` and `RobotActionAIsTester` are identical and `RobotPumpProtectionTester`'s differs only by a force-load; share them in `EntityArenaUtil`.
-
 ## In-client smoke 2026-09-26
 
 Verified in a live 26.1.2 client on 2026-09-26 (McDevBridge): kinesis MJ flow, tank/distiller/heat-exchanger fluids, laser beam, Builder/Auto Workbench/Diamond-wood/Emzuli/Tank/List/Filler GUIs (placement, vanilla-face buttons, pressed-in modes, ledgers), the red exhaust particle and its size-bound command error; no BuildCraft render errors in the log. (JEI's quick-play "hasn't started yet / missing TagsUpdatedEvent" line also appears in 2026-08 logs and BC has no listener for that event, so it's JEI quick-play timing, not ours.) Still owed:

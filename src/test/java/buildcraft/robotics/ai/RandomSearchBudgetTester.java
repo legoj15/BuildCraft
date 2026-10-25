@@ -11,14 +11,13 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IZone;
-import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.lib.misc.data.Box;
 import buildcraft.robotics.BCRoboticsEntities;
+import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.RobotRegistryLiveTester.LiveStation;
 import buildcraft.robotics.ZonePinnedRobot;
 import buildcraft.robotics.boards.BoardRobotPlanter;
@@ -32,7 +31,6 @@ import buildcraft.robotics.entity.EntityRobot;
  *  stations. */
 public class RandomSearchBudgetTester {
 
-    private static final long SEEDED_CHARGE = 5000L * MjAPI.MJ;
     /** Past the 1000-round budget, with room for the composed AIs' own start-up cycles. */
     private static final int CYCLE_BOUND = 1200;
 
@@ -82,9 +80,7 @@ public class RandomSearchBudgetTester {
     }
 
     private static EntityRobot robot(GameTestHelper helper, EntityRobot robot) {
-        Vec3 spawn = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 3)));
-        robot.setPos(spawn.x, spawn.y, spawn.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
+        RobotArenaUtil.unadded(robot, helper, new BlockPos(2, 2, 3));
         IRobotRegistry registry = robot.getRegistry();
         robot.setUniqueRobotId(registry.getNextRobotId());
         registry.registerRobot(robot);

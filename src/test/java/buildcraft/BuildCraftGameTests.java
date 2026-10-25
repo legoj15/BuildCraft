@@ -541,9 +541,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_waterloggable_not_deferred", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterloggableBlockNotDeferredNearWater);
         reg.accept("buildcraftunofficial:fluidmode_no_replace_defers_fragile", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDefersFragileButHandPlacementDoesNot);
         reg.accept("buildcraftunofficial:fluidmode_failed_place_keeps_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementKeepsFluidSource);
-        reg.accept("buildcraftunofficial:fluidmode_placement_drops_displaced_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementDropsTheBlockItDisplaces);
-        reg.accept("buildcraftunofficial:fluidmode_placement_over_waterlogged_chest_drops_once", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementOverWaterloggedChestDropsChestAndContentsOnce);
-        reg.accept("buildcraftunofficial:fluidmode_failed_place_over_waterlogged_chest_drops_it", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementOverWaterloggedChestDropsIt);
+        reg.accept("buildcraftunofficial:fluidmode_placement_leaves_real_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementLeavesARealBlockStanding);
+        reg.accept("buildcraftunofficial:fluidmode_placement_leaves_waterlogged_chest_whole", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementLeavesAWaterloggedChestWhole);
+        reg.accept("buildcraftunofficial:schematic_single_failed_place_keeps_clicked_block", () -> buildcraft.builders.item.ItemSchematicSingleTester::testFailedPlacementKeepsTheClickedBlock);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_block_before_placing", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceBuilderBreaksWaterloggedBlockBeforePlacing);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
@@ -556,7 +556,6 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:blockutil_water_break_cost", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterBreakCostIsOneMj);
         reg.accept("buildcraftunofficial:blockutil_lava_break_cost", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testLavaBreakCostIsOneMj);
         reg.accept("buildcraftunofficial:blockutil_stone_break_cost_unchanged", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testSolidBlockBreakCostUnchanged);
-        reg.accept("buildcraftunofficial:fluidmode_clear_dries_waterlogged_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testClearModeDriesWaterloggedBlock);
         reg.accept("buildcraftunofficial:fluidmode_replace_still_opportunistically_waterlogs", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceModeStillOpportunisticallyWaterlogs);
         reg.accept("buildcraftunofficial:fluidmode_isbuilt_strict_in_clear", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsBuiltStrictInClearMode);
         reg.accept("buildcraftunofficial:fluidmode_isbuilt_lenient_in_replace", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testIsBuiltLenientInReplaceMode);

@@ -6,6 +6,8 @@
 
 package buildcraft.factory.tile;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
@@ -28,9 +30,15 @@ import buildcraft.lib.misc.InventoryUtil;
  * breaking blocks and ejecting drops to adjacent inventories.
  * Ported from 1.12.2 TileMiningWell.
  */
-public class TileMiningWell extends TileMiner {
+public class TileMiningWell extends TileMiner implements IPumpHost {
+    static final int DRAINED_RECHECK_TICKS = 20;
+
     private boolean shouldCheck = true;
     private int recheckCooldown = 0;
+    /** The thick-fluid cell the last scan stopped at (null when it stopped for anything else, or found a target), for
+     *  a Pump standing on the well. Not saved: a loaded well scans on its first tick. */
+    @Nullable
+    private BlockPos blockingFluid;
 
     public TileMiningWell(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.MINING_WELL.get(), pos, state);
@@ -44,6 +52,20 @@ public class TileMiningWell extends TileMiner {
     public void scheduleRecheck() {
         shouldCheck = true;
         recheckCooldown = 0;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getBlockingFluid() {
+        return blockingFluid;
+    }
+
+    /** A Pump on the well drained some of the fluid it stopped at: look again within {@link #DRAINED_RECHECK_TICKS}
+     *  rather than in up to 256. Repeated calls never push the scan later, and a pump taking a bucket a tick still
+     *  costs about one column scan per {@link #DRAINED_RECHECK_TICKS}. */
+    @Override
+    public void onBlockingFluidDrained() {
+        recheckCooldown = Math.min(recheckCooldown, DRAINED_RECHECK_TICKS);
     }
 
     @Override
@@ -138,6 +160,7 @@ public class TileMiningWell extends TileMiner {
     }
 
     private void nextPos() {
+        blockingFluid = null;
         currentPos = worldPosition;
         while (true) {
             currentPos = currentPos.below();
@@ -167,7 +190,11 @@ public class TileMiningWell extends TileMiner {
                     || isPassable) {
                 continue;
             } else {
-                // Hit an impassable block (bedrock, lava, oil, etc.) — stop
+                // Hit an impassable block (bedrock, lava, oil, etc.) — stop. A thick fluid is what a Pump on the
+                // well can clear.
+                if (!fluidState.isEmpty()) {
+                    blockingFluid = currentPos;
+                }
                 break;
             }
         }

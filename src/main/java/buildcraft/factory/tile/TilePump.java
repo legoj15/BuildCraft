@@ -216,7 +216,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         oilSpringPos = null;
         targetPos = worldPosition.below();
 
-        ColumnProbe probe = probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
+        ColumnProbe probe = probeColumn();
         idleColumn = ColumnSignature.of(level, probe);
         BlockPos oilPos = probe.firstOil();
         BlockPos springPos = probe.spring();
@@ -343,6 +343,43 @@ public class TilePump extends TileMiner implements IDebuggable {
             break;
         }
         return new ColumnProbe(firstFluid, firstOil, null);
+    }
+
+    /** The miner this pump stands on, or null when it stands on anything else. Both sides (the renderer asks too). */
+    @Nullable
+    public IPumpHost getHost() {
+        return level != null && level.getBlockEntity(worldPosition.below()) instanceof IPumpHost host ? host : null;
+    }
+
+    /**
+     * What this pump should drain. On a miner it is the fluid the miner stopped at, standing in for the column the
+     * miner blocks (the oil-first and spring rules of {@link #probeDown} have nothing to choose between there; the
+     * spring search in {@link #buildQueue0} still runs for oil). Anywhere else it is the pump's own column.
+     */
+    private ColumnProbe probeColumn() {
+        IPumpHost host = getHost();
+        if (host == null) {
+            return probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
+        }
+        BlockPos blocking = host.getBlockingFluid();
+        Fluid fluid = blocking == null ? null : BlockUtil.getFluidWithFlowing(level, blocking);
+        // The host's cell is cached between its scans: fluid the miner would pass (water flowed in after the lava
+        // was scooped) is not in its way, so it is nothing to drain.
+        if (fluid == null || BlockUtil.isPassableFluid(fluid)) {
+            return new ColumnProbe(null, null, null);
+        }
+        return new ColumnProbe(blocking, isOil(fluid) ? blocking : null, null);
+    }
+
+    /** Takes up to {@code wanted} MJ from the pump's own battery, then the rest from its host's while the host is not
+     *  digging (stopped by the fluid, or finished): a digging host keeps its power for itself. */
+    private long drawPower(long wanted) {
+        long got = battery.extractPower(0, wanted);
+        IPumpHost host = getHost();
+        if (got < wanted && host != null && !host.hasWork()) {
+            got += host.getBattery().extractPower(0, wanted - got);
+        }
+        return got;
     }
 
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, LongSet checked) {
@@ -593,7 +630,8 @@ public class TilePump extends TileMiner implements IDebuggable {
         // Return targetPos as long as the pump has work: either queued blocks or
         // a block being actively drained. Fixes tube not spawning for small volumes
         // where nextPos() empties the queue before updateLength() is called.
-        if (queue.isEmpty() && currentPos == null) {
+        // A pump on a miner reaches down through the miner's own tube: it lays none of its own.
+        if ((queue.isEmpty() && currentPos == null) || getHost() != null) {
             return null;
         }
         return targetPos;
@@ -612,12 +650,17 @@ public class TilePump extends TileMiner implements IDebuggable {
 
     /** Whether the column no longer matches what the last rebuild saw. Walks one column, never the pool. */
     private boolean columnChanged() {
-        ColumnProbe probe = probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
-        return !ColumnSignature.of(level, probe).equals(idleColumn);
+        return !ColumnSignature.of(level, probeColumn()).equals(idleColumn);
     }
 
     @Override
     public void serverTick() {
+        if (wantedLength != 0 && getHost() != null) {
+            // A pump that had laid a tube and now stands on a miner (the miner placed in its bore): the tube cells below
+            // belong to the miner now, so forget them rather than let the next updateLength retract them.
+            wantedLength = 0;
+            currentLength = 0;
+        }
         if (!queueBuilt || builtAtRevision != CONFIG_REVISION.get()) {
             buildQueue();
             queueBuilt = true;
@@ -666,7 +709,7 @@ public class TilePump extends TileMiner implements IDebuggable {
                 refusals.permit(currentPos, level.getBlockState(currentPos), getOwner());
                 askedThisTick = true;
             }
-            progress += (int) battery.extractPower(0, target - progress);
+            progress += (int) drawPower(target - progress);
             if (progress < target) {
                 return;
             }
@@ -714,6 +757,10 @@ public class TilePump extends TileMiner implements IDebuggable {
                 tank.fill(0, drain, false);
                 progress = 0;
                 refusals.revokePermit(); // the next bucket asks again
+                IPumpHost host = getHost();
+                if (host != null && host.getBlockingFluid() != null) {
+                    host.onBlockingFluidDrained();
+                }
 
                 if (getOwner() != null) {
                     AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_DRAIN_ANY);
@@ -839,6 +886,9 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluidStack(0)));
         left.add("queue size = " + queue.size());
         left.add("infinite = " + isInfiniteWaterSource);
+        IPumpHost host = getHost();
+        BlockPos blocking = host == null ? null : host.getBlockingFluid();
+        left.add("host = " + (host == null ? "none" : blocking == null ? "no fluid in its way" : "blocked at " + blocking));
     }
 
     @Override
@@ -855,6 +905,16 @@ public class TilePump extends TileMiner implements IDebuggable {
     }
 
     // --- Cleanup ---
+
+    @Override
+    public void onRemove() {
+        if (getHost() != null) {
+            // The column below is the miner's: never walk into it on an old tube length (serverTick forgets the length
+            // too, but only on the pump's next tick).
+            wantedLength = 0;
+        }
+        super.onRemove();
+    }
 
     @Override
     public void setRemoved() {

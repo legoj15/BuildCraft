@@ -27,8 +27,6 @@ public interface IContainerFilling {
 
     boolean isInverted();
 
-    void setInverted(boolean value);
-
     default boolean isLocked() {
         return false;
     }

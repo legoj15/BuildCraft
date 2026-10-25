@@ -7,6 +7,7 @@ package buildcraft.builders.tile;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,9 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
+
+import buildcraft.api.mj.MjAPI;
+import buildcraft.api.tiles.IControllable.Mode;
 
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.BCBuildersStatements;
@@ -58,8 +62,21 @@ public class TileFillerPreviewTest {
 
     /** What the server pushes: the tile's data as it stands. */
     private static void sync(TileFiller server, TileFiller client) {
+        sync(server, client, data -> {});
+    }
+
+    /** {@link #sync(TileFiller, TileFiller)} with {@code tweak} applied to the data first, for a state the server only
+     *  reaches by ticking a build (a finished flag). */
+    private static void sync(TileFiller server, TileFiller client, Consumer<CompoundTag> tweak) {
         CompoundTag data = ValueIoTestUtil.write(server::writeData);
+        tweak.accept(data);
         client.readData(ValueIoTestUtil.inputOf(data));
+    }
+
+    /** What a build in progress leaves on a client: a placement in the queue. Added after the sync, which replaces the
+     *  queue with the server's own (empty here). */
+    private static void queueAPlacement(TileFiller client) {
+        client.builder.clientPlaceTasks.add(client.builder.new PlaceTask(MIN, null, 0L));
     }
 
     private static Set<BlockPos> previewCells(TileFiller client) {
@@ -143,6 +160,35 @@ public class TileFillerPreviewTest {
 
         // Rebuilding on every sync would cancel the client builder's tasks every five ticks of a running build.
         Assertions.assertSame(first, client.getTemplateBuildingInfo(), "nothing changed, so nothing should be rebuilt");
+    }
+
+    @Test
+    public void aQueueAloneIsNotWorkOnlyARunningPoweredFillerWithOneIs() {
+        TileFiller server = server();
+        TileFiller client = client();
+
+        sync(server, client);
+        queueAPlacement(client);
+        Assertions.assertFalse(client.hasWorkInFlight(), "no power in the battery: the queue is waiting, not placing");
+
+        server.getBattery().setStored(5 * MjAPI.MJ);
+        sync(server, client);
+        queueAPlacement(client);
+        Assertions.assertTrue(client.hasWorkInFlight(), "a running, powered Filler with a block queued is working");
+
+        sync(server, client);
+        Assertions.assertFalse(client.hasWorkInFlight(), "nothing queued: nothing is being placed");
+
+        server.setControlMode(Mode.OFF);
+        sync(server, client);
+        queueAPlacement(client);
+        Assertions.assertFalse(client.hasWorkInFlight(),
+                "switched OFF mid-build: the synced queue stays, but nothing is placed, so the preview must show");
+
+        server.setControlMode(Mode.ON);
+        sync(server, client, data -> data.putBoolean("finished", true));
+        queueAPlacement(client);
+        Assertions.assertFalse(client.hasWorkInFlight(), "a finished Filler places nothing, whatever its queue holds");
     }
 
     @Test

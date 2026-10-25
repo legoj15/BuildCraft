@@ -37,8 +37,8 @@ public class FillerPreviewTester {
 
     /** The wait, once the cell ticks, before the box is set up (immediate: the gate's condition is already true). */
     private static final int READY_WORK_TICKS = 10;
-    /** How long the second look waits: more than {@code FillPreviewCache.RESCAN_TICKS}, so the cache has had to scan
-     *  again (checked in the test). Each poll's own budget adds {@code EntityArenaUtil.CELL_READY_TICKS}. */
+    /** How long the second look waits: more than {@code FillPreviewCache.RESCAN_TICKS} (10), so the cache has had to
+     *  scan again. Each poll's own budget adds {@code EntityArenaUtil.CELL_READY_TICKS}. */
     private static final int RESCAN_WAIT_TICKS = 15;
     /** Cells mirrored about the camera are the same distance away; the cache sorts on a float, so the order among
      *  them is arbitrary and the doubles here differ in their last bits. */
@@ -59,11 +59,11 @@ public class FillerPreviewTester {
         Template.BuildingInfo info;
         Vec3 camera;
         final FillPreviewCache cache = new FillPreviewCache();
+        /** Reads ten template cells a frame (the box has 27), and keeps all 26 that are left. */
+        final FillPreviewCache slow = new FillPreviewCache(30, 10);
     }
 
     private static void firstLook(GameTestHelper helper, State state) {
-        helper.assertTrue(RESCAN_WAIT_TICKS > FillPreviewCache.RESCAN_TICKS,
-            "the second look has to be later than the cache's trust window");
         ServerLevel level = helper.getLevel();
 
         helper.setBlock(FILLER, BCBuildersBlocks.FILLER.get());
@@ -82,7 +82,7 @@ public class FillerPreviewTester {
         helper.setBlock(FIRST_STONE, Blocks.STONE);
         BlockPos stone = helper.absolutePos(FIRST_STONE);
 
-        List<BlockPos> fillable = FillPreview.collectFillable(level, state.info);
+        List<BlockPos> fillable = FillPreview.collect(state.info, pos -> FillPreview.isFillable(level, pos));
         helper.assertTrue(fillable.size() == 26 && !fillable.contains(stone),
             "27 cells minus the one already built should be left to fill, got " + fillable.size());
 
@@ -109,6 +109,14 @@ public class FillerPreviewTester {
                 "the capped list is not farthest first at " + i);
         }
 
+        // A big box is read a slice of a frame at a time: nothing to show until the pass has read all 27 cells.
+        helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).isEmpty(),
+            "10 of 27 cells read: the first pass has nothing to show yet");
+        helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).isEmpty(),
+            "20 of 27 cells read: the first pass has nothing to show yet");
+        helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).size() == 26,
+            "27 of 27 cells read: the pass is done and shows the 26 empty cells");
+
         // A block that lands in the box is not noticed until the cache scans again, which is the point of the cache.
         helper.setBlock(SECOND_STONE, Blocks.STONE);
         helper.assertTrue(state.cache.cellsToDraw(level, state.info, state.camera).size() == 26,
@@ -121,6 +129,14 @@ public class FillerPreviewTester {
         List<BlockPos> drawn = state.cache.cellsToDraw(level, state.info, state.camera);
         helper.assertTrue(drawn.size() == 25 && !drawn.contains(second) && !drawn.contains(helper.absolutePos(FIRST_STONE)),
             "after the trust window the preview should leave out both built cells, got " + drawn.size() + " cells");
+
+        // The slow cache starts its next pass but keeps drawing the old result until the pass has read every cell.
+        for (int frame = 1; frame <= 2; frame++) {
+            helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).size() == 26,
+                "frame " + frame + " of the second pass: the previous result should still be drawn");
+        }
+        helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).size() == 25,
+            "the second pass is done: the preview now leaves out both built cells");
         helper.succeed();
     }
 

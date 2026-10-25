@@ -21,41 +21,69 @@ import buildcraft.builders.snapshot.Template;
  * What a client's Filler keeps between frames so its preview does not walk its box every frame: the cells still to
  * fill, and the order to draw them in.
  * <p>
- * The cell list is rebuilt when the Filler builds a new {@code BuildingInfo} (a changed pattern, parameter, invert or
- * box always does — the same object identity is what makes a stale preview impossible), and every
- * {@link #RESCAN_TICKS} ticks otherwise, because a block placed or broken inside the box (by a player, a pipe, a
- * robot) announces itself to no client event. The draw order — far to near, for the translucent blend — is redone only
- * when the cells change or the camera has moved a few blocks.
+ * The cells come from a <em>pass</em> over the template, at most {@link #SCAN_CELLS_PER_FRAME} cells per frame, so a
+ * huge box costs a bounded slice of every frame for a while instead of one long stall; until a pass finishes the
+ * previous result keeps being drawn. A pass keeps only the {@link #MAX_CUBES} cells nearest the camera as it began
+ * (a bounded max-heap of packed distance and template index, no per-cell storage), because no more than that is ever
+ * drawn. A new pass starts {@link #RESCAN_TICKS} after the last one finished, because a block placed or broken inside
+ * the box (by a player, a pipe, a robot) announces itself to no client event; and at once when the Filler builds a new
+ * {@code BuildingInfo}. A changed pattern, parameter, invert or box always does, and the same object identity is what
+ * makes a stale preview impossible: the old cells are dropped the frame the new info shows up.
+ * <p>
+ * The draw order — far to near, for the translucent blend — is redone when a pass finishes or the camera has moved a
+ * few blocks; it only ever sorts the kept cells.
  */
 public final class FillPreviewCache {
-    /** How long a scan of the box is trusted, in game ticks. */
+    /** How long a finished pass is trusted before the next one starts, in game ticks. */
     public static final int RESCAN_TICKS = 10;
     /** How long the Filler must have had nothing to place or break before its preview shows, so the gaps between
      *  tasks of a running build do not flicker it. */
     public static final int IDLE_GRACE_TICKS = 20;
-    /** Most cubes drawn. A cube is 24 immediate-mode vertices; past this the nearest are kept and the far ones left
-     *  undrawn rather than let a huge box cost every frame. */
+    /** Most cubes drawn (24 vertices each) and so most cells kept: past this a pass keeps the nearest and leaves the far
+     *  ones undrawn, so a huge box never costs every frame the draw of all of it. */
     public static final int MAX_CUBES = 4096;
+    /** Most template cells a pass reads per frame (each is a block read and a few small objects: a fraction of a
+     *  millisecond). */
+    public static final int SCAN_CELLS_PER_FRAME = 8192;
 
     private static final double RESORT_DISTANCE_SQR = 2.0 * 2.0;
 
     private final int maxCubes;
+    private final int scanCellsPerFrame;
+
+    // The last finished pass.
     @Nullable
-    private Template.BuildingInfo scannedFor;
-    private long scannedAt;
+    private Template.BuildingInfo publishedFor;
+    private long publishedAt;
     private List<BlockPos> cells = List.of();
     @Nullable
     private Vec3 sortedFrom;
     private List<BlockPos> drawOrder = List.of();
+
+    // The pass in progress, if any.
+    @Nullable
+    private FillPreview.Walk walk;
+    @Nullable
+    private long[] nearest;
+    private int nearestCount;
+    private Vec3 passCamera = Vec3.ZERO;
+
     private long lastBusy = Long.MIN_VALUE / 2;
 
     public FillPreviewCache() {
-        this(MAX_CUBES);
+        this(MAX_CUBES, SCAN_CELLS_PER_FRAME);
     }
 
     /** A cache drawing at most {@code maxCubes} cubes instead of {@link #MAX_CUBES}. */
     public FillPreviewCache(int maxCubes) {
-        this.maxCubes = maxCubes;
+        this(maxCubes, SCAN_CELLS_PER_FRAME);
+    }
+
+    /** A cache that also reads at most {@code scanCellsPerFrame} template cells a frame instead of
+     *  {@link #SCAN_CELLS_PER_FRAME}. */
+    public FillPreviewCache(int maxCubes, int scanCellsPerFrame) {
+        this.maxCubes = Math.max(1, maxCubes);
+        this.scanCellsPerFrame = Math.max(1, scanCellsPerFrame);
     }
 
     /**
@@ -73,33 +101,110 @@ public final class FillPreviewCache {
     /** The cubes to draw this frame, farthest first, at most {@link #MAX_CUBES} (or the constructor's) of the nearest. */
     public List<BlockPos> cellsToDraw(Level level, Template.BuildingInfo info, Vec3 camera) {
         long now = level.getGameTime();
-        if (info != scannedFor || now < scannedAt || now - scannedAt >= RESCAN_TICKS) {
-            List<BlockPos> scanned = FillPreview.collectFillable(level, info);
-            scannedFor = info;
-            scannedAt = now;
-            if (!scanned.equals(cells)) {
-                cells = scanned;
-                sortedFrom = null;
+        if (publishedFor != null && publishedFor != info) {
+            // New building info: what was kept is the shape the Filler had, not the one it has.
+            publishedFor = null;
+            cells = List.of();
+            drawOrder = List.of();
+            sortedFrom = null;
+        }
+        if (walk != null && walk.info() != info) {
+            walk = null;
+        }
+        if (walk == null && (publishedFor != info || now < publishedAt || now - publishedAt >= RESCAN_TICKS)) {
+            walk = new FillPreview.Walk(info);
+            nearestCount = 0;
+            passCamera = camera;
+            if (nearest == null) {
+                nearest = new long[maxCubes];
             }
         }
+        if (walk != null && walk.advance(scanCellsPerFrame, (index, pos) -> consider(level, index, pos))) {
+            publish(info, now);
+            walk = null;
+        }
         if (sortedFrom == null || sortedFrom.distanceToSqr(camera) > RESORT_DISTANCE_SQR) {
-            drawOrder = farToNear(cells, camera, maxCubes);
+            drawOrder = farToNear(cells, camera);
             sortedFrom = camera;
         }
         return drawOrder;
     }
 
-    /** Drops what was scanned, so the next frame starts from a fresh scan and nothing stays held meanwhile. */
+    /** Drops everything kept, so a preview switched off holds no cell lists and the next one starts fresh. */
     public void clear() {
-        scannedFor = null;
+        publishedFor = null;
         cells = List.of();
         sortedFrom = null;
         drawOrder = List.of();
+        walk = null;
+        nearestCount = 0;
+        nearest = null;
     }
 
-    /** The nearest {@code maxCubes} cells, farthest first. Sorted on packed (distance bits, index) keys: positive
-     *  floats order like their bit patterns, and a primitive sort allocates nothing per comparison. */
-    private static List<BlockPos> farToNear(List<BlockPos> cells, Vec3 from, int maxCubes) {
+    /** One template cell of the pass: kept if the Filler could still fill it and it is among the nearest so far. */
+    private void consider(Level level, int index, BlockPos pos) {
+        if (!FillPreview.isFillable(level, pos)) {
+            return;
+        }
+        double dx = pos.getX() + 0.5 - passCamera.x;
+        double dy = pos.getY() + 0.5 - passCamera.y;
+        double dz = pos.getZ() + 0.5 - passCamera.z;
+        // Positive floats order like their bit patterns; the index rides in the low half.
+        long key = ((long) Float.floatToIntBits((float) (dx * dx + dy * dy + dz * dz)) << 32) | index;
+        if (nearestCount < nearest.length) {
+            siftUp(nearestCount++, key);
+        } else if (key < nearest[0]) {
+            siftDown(key);
+        }
+    }
+
+    /** Keeps the cells the finished pass kept, as the new result. */
+    private void publish(Template.BuildingInfo info, long now) {
+        Template template = info.getSnapshot();
+        List<BlockPos> kept = new ArrayList<>(nearestCount);
+        for (int k = 0; k < nearestCount; k++) {
+            kept.add(info.toWorld(template.indexToPos((int) nearest[k])));
+        }
+        cells = kept;
+        publishedFor = info;
+        publishedAt = now;
+        sortedFrom = null;
+    }
+
+    /** Max-heap on the packed key: the root is the farthest cell kept so far, the first to be replaced. */
+    private void siftUp(int at, long key) {
+        while (at > 0) {
+            int parent = (at - 1) >>> 1;
+            if (nearest[parent] >= key) {
+                break;
+            }
+            nearest[at] = nearest[parent];
+            at = parent;
+        }
+        nearest[at] = key;
+    }
+
+    /** Replaces the root with {@code key} and restores the heap. */
+    private void siftDown(long key) {
+        int at = 0;
+        int half = nearestCount >>> 1;
+        while (at < half) {
+            int child = 2 * at + 1;
+            if (child + 1 < nearestCount && nearest[child + 1] > nearest[child]) {
+                child++;
+            }
+            if (key >= nearest[child]) {
+                break;
+            }
+            nearest[at] = nearest[child];
+            at = child;
+        }
+        nearest[at] = key;
+    }
+
+    /** The cells, farthest first. Sorted on packed (distance bits, index) keys: a primitive sort allocates nothing per
+     *  comparison. */
+    private static List<BlockPos> farToNear(List<BlockPos> cells, Vec3 from) {
         int count = cells.size();
         long[] keys = new long[count];
         for (int i = 0; i < count; i++) {
@@ -110,9 +215,8 @@ public final class FillPreviewCache {
             keys[i] = ((long) Float.floatToIntBits((float) (dx * dx + dy * dy + dz * dz)) << 32) | i;
         }
         Arrays.sort(keys);
-        int keep = Math.min(count, maxCubes);
-        List<BlockPos> ordered = new ArrayList<>(keep);
-        for (int k = keep - 1; k >= 0; k--) {
+        List<BlockPos> ordered = new ArrayList<>(count);
+        for (int k = count - 1; k >= 0; k--) {
             ordered.add(cells.get((int) keys[k]));
         }
         return ordered;

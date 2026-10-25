@@ -13,7 +13,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 //? if <1.21.10 {
-/*import net.minecraft.client.renderer.MultiBufferSource;*/
+/*import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;*/
 //?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -120,18 +121,19 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
     /** The block, or — with the preview on — the block and the whole box, so the frustum test keeps the renderer alive. */
     @Override
     public AABB getRenderBoundingBox(TileFiller tile) {
-        AABB block = new AABB(tile.getBlockPos());
-        return tile.isPreviewEnabled() && tile.hasBox() ? block.minmax(tile.box.getBoundingBox()) : block;
+        return tile.getRenderBounds();
     }
 
+    /** Every node's dispatcher asks this before drawing a BER, globally rendered or not (checked in each node's
+     *  {@code BlockEntityRenderDispatcher}), so the distance gate below applies to the preview too. */
     @Override
     public boolean shouldRender(TileFiller tile, Vec3 cameraPos) {
-        if (tile.isPreviewEnabled() && tile.hasBox()) {
-            // Within view distance of the nearest point of the box, not of the Filler block.
-            AABB box = tile.box.getBoundingBox();
-            double dx = Math.max(Math.max(box.minX - cameraPos.x, 0), cameraPos.x - box.maxX);
-            double dy = Math.max(Math.max(box.minY - cameraPos.y, 0), cameraPos.y - box.maxY);
-            double dz = Math.max(Math.max(box.minZ - cameraPos.z, 0), cameraPos.z - box.maxZ);
+        if (tile.isPreviewEnabled()) {
+            // Within view distance of the nearest point of the block or the box, not of the block's centre.
+            AABB bounds = tile.getRenderBounds();
+            double dx = Math.max(Math.max(bounds.minX - cameraPos.x, 0), cameraPos.x - bounds.maxX);
+            double dy = Math.max(Math.max(bounds.minY - cameraPos.y, 0), cameraPos.y - bounds.maxY);
+            double dz = Math.max(Math.max(bounds.minZ - cameraPos.z, 0), cameraPos.z - bounds.maxZ);
             double view = getViewDistance();
             if (dx * dx + dy * dy + dz * dz <= view * view) {
                 return true;
@@ -177,15 +179,17 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
                     (pose, consumer) -> FillPreviewRenderer.emit(consumer, pose.pose(), preview, origin));
         }
         //?} else {
-        /*MultiBufferSource.BufferSource bufferSource =
+        /*// Each type is flushed on its own: a bare endBatch() would flush every type pending in the frame, twice per Filler.
+        MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
-        bufferSource.endBatch();
+        RenderType led = BCLibRenderTypes.led();
+        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(led));
+        bufferSource.endBatch(led);
         List<BlockPos> preview = previewCells(tile, Minecraft.getInstance().gameRenderer.getMainCamera().getPosition());
         if (!preview.isEmpty()) {
-            FillPreviewRenderer.emit(bufferSource.getBuffer(BCLibRenderTypes.debugFilled()), poseStack.last().pose(),
-                    preview, tile.getBlockPos());
-            bufferSource.endBatch();
+            RenderType filled = BCLibRenderTypes.debugFilled();
+            FillPreviewRenderer.emit(bufferSource.getBuffer(filled), poseStack.last().pose(), preview, tile.getBlockPos());
+            bufferSource.endBatch(filled);
         }*/
         //?}
 

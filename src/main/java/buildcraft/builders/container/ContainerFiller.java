@@ -203,11 +203,6 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     public static final int NET_PREVIEW = 13;
 
     @Override
-    public void setInverted(boolean value) {
-        tile.inverted = value;
-    }
-
-    @Override
     public void readMessage(int id, buildcraft.lib.net.PacketBufferBC buffer, boolean isClient, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         if (id == NET_STATEMENT) {
             try {

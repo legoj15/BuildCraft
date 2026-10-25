@@ -35,6 +35,7 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IAreaProvider;
@@ -118,6 +119,10 @@ public class TileFiller extends TileBC_Neptune
     private BuildKey builtFrom;
     /** Client only: the cells the preview draws, kept between frames. */
     public final FillPreviewCache previewCache = new FillPreviewCache();
+    /** Client only: {@link #getRenderBounds()}, and what it was made from. */
+    private AABB renderBounds;
+    private boolean renderBoundsWithBox;
+    private BlockPos renderBoundsMin, renderBoundsMax;
     public TemplateBuilder builder = new TemplateBuilder(this);
 
     /** The inputs of {@link #buildingInfo}: the pattern with its parameters, the invert flag and the box. */
@@ -746,9 +751,35 @@ public class TileFiller extends TileBC_Neptune
         }
     }
 
-    /** Client side: true while this copy of the builder still shows blocks being placed or broken. */
+    /**
+     * Client side: the area the Filler's renderer must stay alive for: the block, or with the preview on the block and
+     * the whole box. Kept until the preview toggle or the box changes, since the renderer asks every frame.
+     */
+    public AABB getRenderBounds() {
+        boolean withBox = previewEnabled && box.isInitialized();
+        BlockPos min = withBox ? box.min() : null;
+        BlockPos max = withBox ? box.max() : null;
+        if (renderBounds == null || withBox != renderBoundsWithBox || min != renderBoundsMin || max != renderBoundsMax) {
+            AABB block = new AABB(worldPosition);
+            renderBounds = withBox ? block.minmax(box.getBoundingBox()) : block;
+            renderBoundsWithBox = withBox;
+            renderBoundsMin = min;
+            renderBoundsMax = max;
+        }
+        return renderBounds;
+    }
+
+    /**
+     * Client side: true while this Filler is really placing or breaking blocks, which is what hides its preview.
+     * A queued task is not enough. The queue a client holds is only what the server last sent: a Filler switched OFF
+     * mid-build keeps it for good (an OFF server stops syncing), a finished one can too, and one with no power in its
+     * battery leaves it waiting for the energy to spend. So the Filler must also be running (not OFF, not finished) and
+     * have power in its battery (synced with every update); a battery that reads empty for a moment between engine
+     * pulses is bridged by the grace period of {@link FillPreviewCache#IDLE_GRACE_TICKS}.
+     */
     public boolean hasWorkInFlight() {
-        return builder != null && (!builder.clientBreakTasks.isEmpty() || !builder.clientPlaceTasks.isEmpty());
+        return mode != Mode.OFF && !isFinished() && hasPower()
+            && builder != null && (!builder.clientBreakTasks.isEmpty() || !builder.clientPlaceTasks.isEmpty());
     }
 
     public boolean getFinished() {

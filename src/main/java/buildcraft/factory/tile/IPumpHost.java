@@ -8,6 +8,8 @@ package buildcraft.factory.tile;
 
 import javax.annotation.Nullable;
 
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 
 import buildcraft.api.mj.MjBattery;
@@ -28,6 +30,10 @@ public interface IPumpHost {
 
     /** Whether the host is digging (and so keeps its power to itself). */
     boolean hasWork();
+
+    /** The host's owner, or null when unowned: a pump borrows power only from a host with its own owner. */
+    @Nullable
+    GameProfile getOwner();
 
     /** The pump took a bucket from the blocking fluid's pool: the host should look at its column again. */
     void onBlockingFluidDrained();

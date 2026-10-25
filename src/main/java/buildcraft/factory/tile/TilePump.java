@@ -22,10 +22,11 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 
 import javax.annotation.Nullable;
 
+import com.mojang.authlib.GameProfile;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -283,12 +284,10 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
     }
 
-    /** Returns true if the fluid is crude oil (any heat variant). */
+    /** Returns true if the fluid is crude oil: any heat variant, source or flowing. (A name test missed cool crude's
+     *  flowing fluid, {@code oil_flowing}, which a pump on a miner meets whenever the miner stopped at an oil front.) */
     private static boolean isOil(Fluid fluid) {
-        Identifier id = BuiltInRegistries.FLUID.getKey(fluid);
-        // Covers "buildcraftunofficial:oil", "buildcraftunofficial:oil_heat_1", "buildcraftunofficial:oil_heat_2"
-        return id.getNamespace().equals("buildcraftunofficial")
-            && (id.getPath().equals("oil") || id.getPath().startsWith("oil_heat_"));
+        return "oil".equals(BCEnergyFluids.getBaseName(fluid));
     }
 
     /**
@@ -377,10 +376,21 @@ public class TilePump extends TileMiner implements IDebuggable {
     private long drawPower(long wanted) {
         long got = battery.extractPower(0, wanted);
         IPumpHost host = getHost();
-        if (got < wanted && host != null && !host.hasWork()) {
+        if (got < wanted && host != null && !host.hasWork() && sharesOwner(host)) {
             got += host.getBattery().extractPower(0, wanted - got);
         }
         return got;
+    }
+
+    /** Whether the host is this pump's owner's (or both are unowned): a pump set on someone else's miner must not run
+     *  on their power. */
+    private boolean sharesOwner(IPumpHost host) {
+        GameProfile mine = getOwner();
+        GameProfile theirs = host.getOwner();
+        if (mine == null || theirs == null) {
+            return mine == theirs;
+        }
+        return GameProfileUtil.getId(mine).equals(GameProfileUtil.getId(theirs));
     }
 
     private void buildQueue0(Fluid queueFluid, List<BlockPos> nextPosesToCheck, LongSet checked) {

@@ -63,6 +63,9 @@ import buildcraft.lib.net.PacketBufferBC;
 public final class ZoneSurveyMap {
     /** Chunks sampled per level tick from those that loaded recently; the rest wait for later ticks. */
     private static final int SAMPLES_PER_TICK = 64;
+    /** Most chunks waiting to be sampled. A burst of loads past it (pre-generation) is not queued: those chunks are
+     *  sampled as they unload instead. */
+    private static final int MAX_PENDING = 4096;
     /** A region nothing has read or written for this many ticks (five minutes), and that has been saved, is dropped. */
     private static final long IDLE_TICKS = 6000;
     /** How often idle regions are looked for. */
@@ -73,6 +76,7 @@ public final class ZoneSurveyMap {
     /** Fewest server ticks between two far-map sends to one player, however many planner screens they open. */
     public static final int SEND_INTERVAL_TICKS = 100;
 
+    /** Emptied by each level's unload and by server stop. */
     private static final Map<ServerLevel, ZoneSurveyMap> MAPS = new HashMap<>();
     /** When each player was last sent a far map (server tick count), so reopening a screen cannot flood them. */
     private static final Map<UUID, Integer> LAST_SEND = new HashMap<>();
@@ -101,7 +105,7 @@ public final class ZoneSurveyMap {
             // The chunk is not FULL yet and the level must not be touched now (NeoForge's note on the event): it is
             // sampled from the level on a later tick, if it is still there. Posted on the server thread (the FULL
             // status task runs on the main-thread executor, every node), so no guard is needed here.
-            if (event.getLevel() instanceof ServerLevel server) {
+            if (event.getLevel() instanceof ServerLevel server && of(server).pending.size() < MAX_PENDING) {
                 of(server).pending.add(key(event.getChunk().getPos().getMinBlockX() >> 4,
                         event.getChunk().getPos().getMinBlockZ() >> 4));
             }
@@ -109,13 +113,15 @@ public final class ZoneSurveyMap {
         NeoForge.EVENT_BUS.addListener((ChunkEvent.Unload event) -> {
             // Saved and about to go: its blocks are still all there, and it is read on its own, not through the level.
             // (1.21.1 types the event's chunk as a ChunkAccess; it is a LevelChunk on every node.)
-            if (event.getLevel() instanceof ServerLevel server && server.getServer().isSameThread()
-                    && event.getChunk() instanceof LevelChunk chunk) {
+            // (ChunkMap's unload task runs on the main-thread executor; the guard only keeps a stray caller out.)
+            if (event.getLevel() instanceof ServerLevel server && server.getServer().isSameThread()) {
                 ZoneSurveyMap map = of(server);
-                int cx = chunk.getPos().getMinBlockX() >> 4;
-                int cz = chunk.getPos().getMinBlockZ() >> 4;
+                int cx = event.getChunk().getPos().getMinBlockX() >> 4;
+                int cz = event.getChunk().getPos().getMinBlockZ() >> 4;
                 map.pending.remove(key(cx, cz));
-                map.record(chunk, cx, cz);
+                if (event.getChunk() instanceof LevelChunk chunk) {
+                    map.record(chunk, cx, cz);
+                }
             }
         });
         NeoForge.EVENT_BUS.addListener((LevelTickEvent.Post event) -> {
@@ -362,7 +368,7 @@ public final class ZoneSurveyMap {
                     Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
                 }
                 region.dirty = false;
-            } catch (IOException e3) {
+            } catch (IOException | RuntimeException e3) {
                 try {
                     Files.deleteIfExists(tmp);
                 } catch (IOException ignored) {

@@ -134,12 +134,13 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     public static final int NET_PAINT_ACK = 12;
 
     // ── Far map ──────────────────────────────────────────────────────────────────────────
-    // Past the client's own chunks the viewport draws what the server has recorded of the terrain (ZoneSurveyMap).
-    // The screen asks once as it opens (NET_FAR_MAP_REQUEST, no payload: the area is always this planner's survey
-    // square, never the client's choice), and the server answers with one NET_FAR_MAP_REGION per 32x32-chunk region
-    // it knows anything of, FAR_REGIONS_PER_TICK a tick, so a whole square (up to 25 messages, about 600 KB
-    // altogether when every chunk of it is known) is spread over a second or so. A player is sent at most one square per ZoneSurveyMap.SEND_INTERVAL_TICKS; a request inside
-    // that waits for it instead of being dropped, so a screen resized right after opening still gets its map.
+    // Past the client's own chunks the viewport draws what the server has recorded of the terrain (ZoneSurveyMap). The
+    // screen asks once as it opens (NET_FAR_MAP_REQUEST, no payload: the area is always this planner's survey square,
+    // never the client's choice), and the server answers with one NET_FAR_MAP_REGION per 32x32-chunk region it knows
+    // anything of, looking at FAR_REGIONS_PER_TICK regions a tick, so a whole square (up to 25 messages, about 600 KB
+    // altogether when every chunk of it is known) is spread over a second or so. A player is sent at most one square
+    // per ZoneSurveyMap.SEND_INTERVAL_TICKS; a request inside that waits for it instead of being dropped, so a screen
+    // resized right after opening still gets its map.
     public static final int NET_FAR_MAP_REQUEST = 13;
     public static final int NET_FAR_MAP_REGION = 14;
     private static final int FAR_REGIONS_PER_TICK = 2;
@@ -255,12 +256,12 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
             }
         }
         ZoneSurveyMap map = ZoneSurveyMap.of(level);
-        for (int sent = 0; sent < FAR_REGIONS_PER_TICK && !farQueue.isEmpty(); ) {
+        // Regions polled, not regions sent: an empty one costs its file read and chunk lookups all the same.
+        for (int polled = 0; polled < FAR_REGIONS_PER_TICK && !farQueue.isEmpty(); polled++) {
             int[] r = farQueue.poll();
             byte[] bytes = map.encodeRegion(r[0], r[1], farSquare[0], farSquare[1], farSquare[2], farSquare[3]);
             if (bytes != null) {
                 sendMessage(NET_FAR_MAP_REGION, buf -> buf.writeBytes(bytes));
-                sent++;
             }
         }
     }
@@ -346,9 +347,21 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         if (id == NET_FAR_MAP_REGION && isClient) {
             // ZonePlannerMapDataClient names no client-only type, so this branch links on a dedicated server too
             // (where it never runs).
+            if (tile == null) {
+                return;
+            }
+            // Only chunks of this planner's survey square are kept, whatever arrives.
             Level level = player.level();
-            ZoneSurveyMap.decode(buffer, (cx, cz, heights, colours) ->
-                    ZonePlannerMapDataClient.INSTANCE.acceptFarChunk(level, cx, cz, heights, colours));
+            BlockPos pos = tile.getBlockPos();
+            int minCX = (pos.getX() + ZonePlan.SURVEY_MIN_BLOCK) >> 4;
+            int minCZ = (pos.getZ() + ZonePlan.SURVEY_MIN_BLOCK) >> 4;
+            int maxCX = (pos.getX() + ZonePlan.SURVEY_MAX_BLOCK) >> 4;
+            int maxCZ = (pos.getZ() + ZonePlan.SURVEY_MAX_BLOCK) >> 4;
+            ZoneSurveyMap.decode(buffer, (cx, cz, heights, colours) -> {
+                if (cx >= minCX && cx <= maxCX && cz >= minCZ && cz <= maxCZ) {
+                    ZonePlannerMapDataClient.INSTANCE.acceptFarChunk(level, cx, cz, heights, colours);
+                }
+            });
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);

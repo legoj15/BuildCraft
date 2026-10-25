@@ -10,9 +10,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import io.netty.buffer.Unpooled;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.robotics.client.zone.ZonePlannerMapChunk;
 
 /**
  * Pins the Zone Planner's far-map region store: what a server records about a chunk must come back the same from its
@@ -77,6 +84,47 @@ public class ZoneSurveyRegionTest {
         ZoneSurveyRegion back = ZoneSurveyRegion.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())));
         for (int i = 0; i < ZoneSurveyRegion.CHUNKS; i++) {
             Assertions.assertFalse(back.has(i));
+        }
+    }
+
+    @Test
+    void wireMessageRestoresNegativeChunkCoordinates() {
+        // Region -1 holds chunks -32..-1; local index (31, 0) is world chunk (-1, -32).
+        PacketBufferBC buf = new PacketBufferBC(Unpooled.buffer());
+        buf.writeInt(-1);
+        buf.writeInt(-1);
+        buf.writeVarInt(1);
+        buf.writeShort(ZoneSurveyRegion.chunkIndex(-1, -32));
+        short[] h = heights(10);
+        byte[] c = colours(5);
+        for (short v : h) {
+            buf.writeShort(v);
+        }
+        buf.writeBytes(c);
+        List<int[]> got = new ArrayList<>();
+        ZoneSurveyMap.decode(buf, (cx, cz, heights, colourIds) -> {
+            got.add(new int[] {cx, cz});
+            Assertions.assertArrayEquals(h, heights);
+            Assertions.assertArrayEquals(c, colourIds);
+        });
+        buf.release();
+        Assertions.assertEquals(1, got.size());
+        Assertions.assertArrayEquals(new int[] {-1, -32}, got.get(0));
+    }
+
+    @Test
+    void clientFarChunkReadsEachColumnFromTheSampleTheServerFiledItUnder() {
+        // The server files samples by ZoneSurveyRegion.sampleIndex; the client's coarse chunk must read every column
+        // back from that same sample, or the far map draws shifted or transposed terrain.
+        short[] h = new short[ZoneSurveyRegion.SAMPLES];
+        for (int s = 0; s < h.length; s++) {
+            h[s] = (short) (s * 3);
+        }
+        ZonePlannerMapChunk chunk = new ZonePlannerMapChunk(h, new byte[ZoneSurveyRegion.SAMPLES]);
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                Assertions.assertEquals(h[ZoneSurveyRegion.sampleIndex(x, z)], chunk.getSurfaceY(x, z), x + "," + z);
+            }
         }
     }
 

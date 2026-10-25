@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:filler_planner_has_no_slots",
+    "function": "buildcraftunofficial:filler_preview_draws_only_empty_cells_farthest_first",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 20,
+    "max_ticks": 335,
     "setup_ticks": 0,
     "required": true
 }

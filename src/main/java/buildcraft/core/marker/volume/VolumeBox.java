@@ -7,9 +7,7 @@
 package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -18,11 +16,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-
-import buildcraft.api.core.BCLog;
 
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -37,7 +32,6 @@ public class VolumeBox {
     private BlockPos held = null;
     private double dist = 0;
     private BlockPos oldMin = null, oldMax = null;
-    public final Map<EnumAddonSlot, Addon> addons = new EnumMap<>(EnumAddonSlot.class);
     public final List<Lock> locks = new ArrayList<>();
 
     public VolumeBox(Level world, BlockPos at) {
@@ -72,26 +66,8 @@ public class VolumeBox {
             oldMax = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "oldMax"));
         }
 
-        if (nbt.contains("addons")) {
-            ListTag addonsList = NBTUtilBC.getList(nbt, "addons", Tag.TAG_COMPOUND);
-            for (int i = 0; i < addonsList.size(); i++) {
-                CompoundTag addonsEntryTag = NBTUtilBC.getCompound(addonsList, i);
-                String addonClassName = NBTUtilBC.getString(addonsEntryTag, "addonClass", "");
-                try {
-                    Class<? extends Addon> addonClass = AddonsRegistry.INSTANCE
-                            .getClassByName(Identifier.parse(addonClassName));
-                    Addon addon = addonClass.getDeclaredConstructor().newInstance();
-                    addon.volumeBox = this;
-                    addon.readFromNBT(NBTUtilBC.getCompound(addonsEntryTag, "addonData"));
-                    String slotStr = NBTUtilBC.getString(addonsEntryTag, "slot", "");
-                    EnumAddonSlot slot = EnumAddonSlot.valueOf(slotStr);
-                    addons.put(slot, addon);
-                    addon.postReadFromNbt();
-                } catch (Exception e) {
-                    BCLog.logger.warn("[core.volume] Failed to load a volume box addon from NBT", e);
-                }
-            }
-        }
+        // An "addons" list in an old save (the Filler Planner was the only addon ever) is not read, and not written
+        // back: the box simply loses it, quietly.
 
         if (nbt.contains("locks")) {
             ListTag locksList = NBTUtilBC.getList(nbt, "locks", Tag.TAG_COMPOUND);
@@ -126,7 +102,6 @@ public class VolumeBox {
     public void confirmEditing() {
         player = null;
         resetEditing();
-        addons.values().forEach(Addon::onVolumeBoxSizeChange);
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -199,17 +174,6 @@ public class VolumeBox {
         if (oldMax != null) {
             nbt.put("oldMax", NBTUtilBC.writeBlockPos(oldMax));
         }
-
-        ListTag addonsList = new ListTag();
-        addons.entrySet().forEach(entry -> {
-            CompoundTag addonsEntryTag = new CompoundTag();
-            addonsEntryTag.putString("slot", entry.getKey().name());
-            addonsEntryTag.putString("addonClass",
-                    AddonsRegistry.INSTANCE.getNameByClass(entry.getValue().getClass()).toString());
-            addonsEntryTag.put("addonData", entry.getValue().writeToNBT(new CompoundTag()));
-            addonsList.add(addonsEntryTag);
-        });
-        nbt.put("addons", addonsList);
 
         ListTag locksList = new ListTag();
         for (Lock lock : locks) {

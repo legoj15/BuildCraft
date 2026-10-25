@@ -30,12 +30,15 @@ public record ButtonSprite(Identifier id, int size) {
     /** Emzuli pipe paint button with no colour set (a painted slot shows the paintbrush item instead). */
     public static final ButtonSprite NO_PAINT = of("no_paint", 16);
 
-    /** Filler / Filler Planner toggles. The icon is the state: struck-through shovel = won't dig first. */
+    /** Filler toggles. The icon is the state: struck-through shovel = won't dig first. */
     public static final ButtonSprite EXCAVATE_ON = of("excavate_on", 16);
     public static final ButtonSprite EXCAVATE_OFF = of("excavate_off", 16);
     /** Solid square = the pattern as drawn; hollow square = inverted (fill where the pattern is empty). */
     public static final ButtonSprite INVERT_OFF = of("invert_off", 16);
     public static final ButtonSprite INVERT_ON = of("invert_on", 16);
+    /** Open eye = the Filler draws what it will fill; struck-through eye = it does not. */
+    public static final ButtonSprite PREVIEW_ON = of("preview_on", 16);
+    public static final ButtonSprite PREVIEW_OFF = of("preview_off", 16);
 
     private static ButtonSprite of(String name, int size) {
         return new ButtonSprite(Identifier.fromNamespaceAndPath("buildcraftunofficial", "button/" + name), size);

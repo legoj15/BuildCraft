@@ -14,8 +14,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 
-import org.apache.commons.lang3.tuple.Pair;
-
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -37,8 +35,6 @@ import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.core.marker.PathSubCache;
 import buildcraft.core.marker.VolumeSubCache;
-import buildcraft.core.marker.volume.Addon;
-import buildcraft.core.marker.volume.EnumAddonSlot;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
@@ -129,34 +125,13 @@ public class ItemMarkerConnector extends Item {
         Vec3 start = player.position().add(0, player.getEyeHeight(), 0);
         Vec3 end = start.add(player.getLookAngle().scale(4));
 
-        Pair<VolumeBox, EnumAddonSlot> selectingVolumeBoxAndSlot = EnumAddonSlot.getSelectingVolumeBoxAndSlot(
-            player,
-            volumeBoxes.volumeBoxes
-        );
-        VolumeBox addonVolumeBox = selectingVolumeBoxAndSlot.getLeft();
-        EnumAddonSlot addonSlot = selectingVolumeBoxAndSlot.getRight();
-        if (addonVolumeBox != null && addonSlot != null) {
-            if (addonVolumeBox.addons.containsKey(addonSlot) &&
-                addonVolumeBox.getLockTargetsStream().noneMatch(target ->
-                    target instanceof Lock.Target.TargetAddon && ((Lock.Target.TargetAddon) target).slot == addonSlot
-                )) {
-                if (player.isShiftKeyDown()) {
-                    addonVolumeBox.addons.get(addonSlot).onRemoved();
-                    addonVolumeBox.addons.remove(addonSlot);
-                    volumeBoxes.markDirtyAndBroadcast();
-                } else {
-                    addonVolumeBox.addons.get(addonSlot).onPlayerRightClick(player);
-                    volumeBoxes.markDirtyAndBroadcast();
-                }
-            }
-        } else if (player.isShiftKeyDown()) {
+        if (player.isShiftKeyDown()) {
             if (currentEditing == null) {
                 for (Iterator<VolumeBox> iterator = volumeBoxes.volumeBoxes.iterator(); iterator.hasNext();) {
                     VolumeBox volumeBox = iterator.next();
                     Optional<Vec3> clip = volumeBox.box.getBoundingBox().clip(start, end);
                     if (clip.isPresent()) {
                         if (volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
-                            volumeBox.addons.values().forEach(Addon::onRemoved);
                             iterator.remove();
                             volumeBoxes.markDirtyAndBroadcast();
                             return InteractionResult.SUCCESS;

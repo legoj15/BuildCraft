@@ -23,6 +23,9 @@ import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class Lock {
+    /** The saved name of the lock target that used to pin a Filler Planner addon to a Volume Box; saves still hold it. */
+    private static final String RETIRED_ADDON_TARGET = "ADDON";
+
     public Cause cause;
     public List<Target> targets = new ArrayList<>();
 
@@ -63,6 +66,9 @@ public class Lock {
             for (int i = 0; i < targetsList.size(); i++) {
                 CompoundTag targetTag = NBTUtilBC.getCompound(targetsList, i);
                 String targetType = NBTUtilBC.getString(targetTag, "type", "REMOVE");
+                if (RETIRED_ADDON_TARGET.equals(targetType)) {
+                    continue; // the addon layer is gone, so there is nothing left for this target to lock
+                }
                 Target target = Target.EnumTarget.valueOf(targetType).supplier.get();
                 target.readFromNBT(NBTUtilBC.getCompound(targetTag, "data"));
                 targets.add(target);
@@ -171,28 +177,6 @@ public class Lock {
             }
         }
 
-        public static class TargetAddon extends Target {
-            public EnumAddonSlot slot;
-
-            public TargetAddon() {
-            }
-
-            public TargetAddon(EnumAddonSlot slot) {
-                this.slot = slot;
-            }
-
-            @Override
-            public CompoundTag writeToNBT(CompoundTag nbt) {
-                nbt.putString("slot", slot.name());
-                return nbt;
-            }
-
-            @Override
-            public void readFromNBT(CompoundTag nbt) {
-                slot = EnumAddonSlot.valueOf(NBTUtilBC.getString(nbt, "slot", ""));
-            }
-        }
-
         public static class TargetUsedByMachine extends Target {
             public EnumType type;
 
@@ -235,7 +219,6 @@ public class Lock {
         enum EnumTarget {
             REMOVE(TargetRemove::new),
             RESIZE(TargetResize::new),
-            ADDON(TargetAddon::new),
             USED_BY_MACHINE(TargetUsedByMachine::new);
 
             public final Supplier<? extends Target> supplier;

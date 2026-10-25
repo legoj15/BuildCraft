@@ -91,11 +91,6 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
             List<VolumeBox> boxes = ClientVolumeBoxes.INSTANCE.volumeBoxes;
 
             if (message.fullReplace) {
-                Set<UUID> previousIds = new HashSet<>();
-                for (VolumeBox vb : boxes) {
-                    previousIds.add(vb.id);
-                }
-
                 List<VolumeBox> rebuilt = new ArrayList<>(message.upserts.size());
                 for (CompoundTag tag : message.upserts) {
                     rebuilt.add(new VolumeBox(world, tag));
@@ -103,16 +98,8 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
 
                 boxes.clear();
                 boxes.addAll(rebuilt);
-
-                for (VolumeBox vb : rebuilt) {
-                    if (!previousIds.contains(vb.id)) {
-                        fireOnAdded(vb);
-                    }
-                }
             } else {
-                // Removals first, then add-or-replace. onAdded fires only for genuinely-new ids,
-                // matching the pre-delta full-replace: persisting/updated ids never re-fired it, and
-                // a replaced box's addons still refresh via VolumeBox's ctor postReadFromNbt().
+                // Removals first, then add-or-replace.
                 if (!message.removed.isEmpty()) {
                     Set<UUID> toRemove = new HashSet<>(message.removed);
                     boxes.removeIf(vb -> toRemove.contains(vb.id));
@@ -124,7 +111,6 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
                         boxes.set(idx, rebuilt);
                     } else {
                         boxes.add(rebuilt);
-                        fireOnAdded(rebuilt);
                     }
                 }
             }
@@ -138,13 +124,5 @@ public record MessageVolumeBoxes(boolean fullReplace, List<CompoundTag> upserts,
             }
         }
         return -1;
-    }
-
-    private static void fireOnAdded(VolumeBox vb) {
-        for (Addon addon : vb.addons.values()) {
-            if (addon != null) {
-                addon.onAdded();
-            }
-        }
     }
 }

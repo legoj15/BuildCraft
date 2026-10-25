@@ -23,8 +23,6 @@ import buildcraft.api.tiles.IControllable;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.statement.FullStatement;
 
-import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
-
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.tile.TileFiller;
@@ -40,7 +38,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     private static final int DATA_MODE = 4;
     private static final int DATA_TO_PLACE = 5;
     private static final int DATA_TO_BREAK = 6;
-    private static final int DATA_COUNT = 7;
+    private static final int DATA_PREVIEW = 7;
+    private static final int DATA_COUNT = 8;
 
     private final ContainerData data;
     private final FullStatement<IFillerPattern> patternStatementClient = new FullStatement<>(
@@ -136,13 +135,13 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                 public int get(int index) {
                     return switch (index) {
                         case DATA_CAN_EXCAVATE -> tile.getCanExcavate() ? 1 : 0;
-                        // On a planner's box the planner's flag is the one the button toggles and the build uses.
-                        case DATA_INVERTED -> (tile.addon != null ? tile.addon.inverted : tile.inverted) ? 1 : 0;
+                        case DATA_INVERTED -> tile.inverted ? 1 : 0;
                         case DATA_FINISHED -> tile.getFinished() ? 1 : 0;
                         case DATA_LOCKED -> tile.getLockedTicks();
                         case DATA_MODE -> tile.getModeOrdinal();
                         case DATA_TO_PLACE -> tile.getCountToPlace();
                         case DATA_TO_BREAK -> tile.getCountToBreak();
+                        case DATA_PREVIEW -> tile.isPreviewEnabled() ? 1 : 0;
                         default -> 0;
                     };
                 }
@@ -190,7 +189,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
     @Override
     public FullStatement<IFillerPattern> getPatternStatement() {
-        return tile.addon != null ? tile.addon.patternStatement : tile.patternStatement;
+        return tile.patternStatement;
     }
 
     @Override
@@ -201,14 +200,11 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
     public static final int NET_EXCAVATE = 10;
     public static final int NET_STATEMENT = 11;
     public static final int NET_INVERT = 12;
+    public static final int NET_PREVIEW = 13;
 
     @Override
     public void setInverted(boolean value) {
-        if (tile.addon != null) {
-            tile.addon.inverted = value;
-        } else {
-            tile.inverted = value;
-        }
+        tile.inverted = value;
     }
 
     @Override
@@ -246,28 +242,22 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
             }
         } else if (id == NET_INVERT) {
             if (tile != null) {
-                if (tile.addon != null) {
-                    tile.addon.inverted = !tile.addon.inverted;
-                } else {
-                    tile.inverted = !tile.inverted;
-                }
+                tile.inverted = !tile.inverted;
                 tile.setChanged();
                 valuesChanged();
+            }
+        } else if (id == NET_PREVIEW) {
+            // Not valuesChanged(): showing the preview must not reset a build in progress.
+            if (tile != null) {
+                tile.setPreviewEnabled(!tile.isPreviewEnabled());
             }
         }
     }
 
     @Override
     public void valuesChanged() {
-        if (tile.addon != null) {
-            tile.addon.updateBuildingInfo();
-        }
         if (tile.getLevel() != null && !tile.getLevel().isClientSide()) {
             tile.onStatementChange();
-            if (tile.addon != null) {
-                // The edit belongs to the planner's box: save it and refresh the preview its viewers draw.
-                LevelSavedDataVolumeBoxes.get(tile.getLevel()).markDirtyAndBroadcast();
-            }
         }
     }
 
@@ -300,6 +290,10 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
 
     public boolean getSyncedCanExcavate() {
         return data.get(DATA_CAN_EXCAVATE) != 0;
+    }
+
+    public boolean getSyncedPreview() {
+        return data.get(DATA_PREVIEW) != 0;
     }
 
     public boolean getSyncedFinished() {

@@ -18,7 +18,6 @@ import buildcraft.builders.snapshot.pattern.PatternSpherePart;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterCenter;
 
 public class BCBuildersSprites {
-    public static final SpriteHolder FILLER_PLANNER;
     public static final SpriteHolder ROBOT;
 
     public static final SpriteHolder FILLER_NONE;
@@ -57,7 +56,6 @@ public class BCBuildersSprites {
     public static final Map<PatternSpherePart.SpherePartType, SpriteHolder> FILLER_SPHERE_PART;
 
     static {
-        FILLER_PLANNER = getHolder("addons/filler_planner");
         ROBOT = getHolder("block/robot");
 
         FILLER_NONE = getHolder("filler/patterns/none");

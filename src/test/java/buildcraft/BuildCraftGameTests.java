@@ -408,11 +408,8 @@ public class BuildCraftGameTests {
 
         // Filler Inventory Filtering
         reg.accept("buildcraftunofficial:filler_block_item_filter", () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
-
-        // Filler Planner is a pattern-only screen — its container must expose no slots (no player inventory).
-        reg.accept("buildcraftunofficial:filler_planner_has_no_slots", () -> buildcraft.builders.FillerPlannerContainerTester::testFillerPlannerHasNoSlots);
-        // Invert and pattern edits made on a Filler's screen reach the planner it stands on, its button and its viewers.
-        reg.accept("buildcraftunofficial:filler_screen_edits_reach_planner", () -> buildcraft.builders.FillerPlannerContainerTester::fillerScreenEditsReachThePlanner);
+        // The Filler's preview cubes: only cells still empty, farthest first, the nearest kept past the cap, scanned rarely.
+        reg.accept("buildcraftunofficial:filler_preview_draws_only_empty_cells_farthest_first", () -> buildcraft.builders.FillerPreviewTester::previewDrawsOnlyWhatIsStillEmptyFarthestFirst);
 
         // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
         reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);

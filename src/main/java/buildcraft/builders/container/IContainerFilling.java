@@ -17,8 +17,7 @@ import buildcraft.lib.statement.FullStatement;
 
 import buildcraft.builders.filler.FillerType;
 
-/** Interface for containers that manage filler pattern selection and inversion.
- *  Used by both the Filler block and the Filler Planner addon. */
+/** Interface for containers that manage filler pattern selection and inversion. */
 public interface IContainerFilling {
     Player getPlayer();
 

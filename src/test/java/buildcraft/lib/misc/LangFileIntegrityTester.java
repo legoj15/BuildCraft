@@ -196,8 +196,8 @@ public class LangFileIntegrityTester {
         Assertions.assertTrue(drifted.isEmpty(),
                 "these zh_cn values spell the Zone Planner " + wrongForm + " instead of " + blockName + " " + drifted);
 
-        // The Filler Planner is a different item (填充规划器) and keeps its own name; only the Zone Planner's own help
-        // ledger is in scope for the bare "规划器" shorthand, which must read as the block name instead.
+        // Only the Zone Planner's own help ledger is in scope for the bare "规划器" shorthand, which must read as the
+        // block name instead.
         List<String> bareShorthand = zh.entrySet().stream()
                 .filter(e -> e.getKey().startsWith("buildcraft.help.zone_planner.") && e.getValue().contains("规划器"))
                 .map(Map.Entry::getKey)

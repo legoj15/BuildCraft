@@ -5,6 +5,9 @@
  */
 package buildcraft.builders.snapshot;
 
+import static buildcraft.builders.BuilderRefloodTester.AIR;
+import static buildcraft.builders.BuilderRefloodTester.BUILDER;
+import static buildcraft.builders.BuilderRefloodTester.DOOR;
 import static buildcraft.builders.BuilderRefloodTester.STONE;
 import static buildcraft.builders.BuilderRefloodTester.builderQuiet;
 import static buildcraft.builders.BuilderRefloodTester.cell;
@@ -1171,6 +1174,86 @@ public class FluidHandlingModeTester {
                         + builder.placeTasks.size());
             }
         });
+    }
+
+    /**
+     * A two-cell block the Builder can never place as things stand counts as built instead of staying "to place" for
+     * ever, which kept the build from finishing: in NO_REPLACE when its other half would go into fluid (build sets
+     * that half over whatever fluid the cell holds, and the mode never replaces fluid), and in every mode when the
+     * other half's cell is outside the box and holds a block build will not overwrite (nothing breaks a cell outside
+     * the box). The blueprint is a door's lower half in a one-high box, so its upper half's cell, the one above, is
+     * outside the box. A clear upper cell leaves the door to place, and REPLACE still places over water. The Builder
+     * holds no door, so it never queues one; each case classifies the door's cell directly, in the tick the upper cell
+     * is set (the water has not fallen yet).
+     */
+    public static void testTwoCellBlockItCanNeverPlaceCountsAsBuilt(GameTestHelper helper) {
+        TileBuilder tile = setUpBuilder(helper, new int[] {DOOR}, new BlockPos[0]);
+        BlockPos upper = cell(0).above();
+        boolean[] finished = {false};
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            if (builder == null || builder.getBuildingInfo() == null) {
+                expect(t < 200, "the Builder never took up its blueprint");
+                return;
+            }
+            finished[0] = true;
+            List<String> broken = new ArrayList<>();
+            try {
+                expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.NO_REPLACE,
+                        SnapshotBuilder.CHECK_RESULT_TO_PLACE, "a clear upper cell", broken);
+                helper.setBlock(upper, Blocks.WATER);
+                expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.NO_REPLACE,
+                        SnapshotBuilder.CHECK_RESULT_CORRECT, "water in the upper cell", broken);
+                expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.REPLACE,
+                        SnapshotBuilder.CHECK_RESULT_TO_PLACE, "water in the upper cell", broken);
+                helper.setBlock(upper, Blocks.SKELETON_SKULL);
+                expectDoorCheck(helper, tile, builder, EnumFluidHandlingMode.REPLACE,
+                        SnapshotBuilder.CHECK_RESULT_CORRECT, "a skull in the upper cell, outside the box", broken);
+            } finally {
+                helper.setBlock(upper, Blocks.AIR);
+            }
+            helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A cancelled placement puts its items back into the Builder's resources, and what no longer fits (the grid filled
+     * since the items were taken, by a robot or a pipe) drops on top of the Builder. The leftover insert returns used to be
+     * thrown away, deleting the item, and a placement the Builder refuses (a cell a player filled since it was queued)
+     * ends in this refund.
+     */
+    public static void testRefundToAFullGridDropsTheLeftover(GameTestHelper helper) {
+        TileBuilder tile = setUpBuilder(helper, new int[] {AIR}, new BlockPos[0]);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            for (int slot = 0; slot < tile.invResources.getSlots(); slot++) {
+                tile.setResource(slot, new ItemStack(Items.DIRT, 64));
+            }
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            expect(builder != null, "the Builder lost its blueprint builder");
+            cancelPlacement(builder, helper.absolutePos(cell(0)), new ItemStack(Items.STONE));
+        }, Drops.near(BUILDER.above(), 1.5).exactly(Items.STONE, 1));
+    }
+
+    /** Cancels a placement at {@code pos} that holds {@code stack}, as a refused or failed one is. */
+    private static <T extends ITileForSnapshotBuilder> void cancelPlacement(SnapshotBuilder<T> builder, BlockPos pos,
+            ItemStack stack) {
+        builder.cancelPlaceTask(builder.new PlaceTask(pos, List.of(stack), 0));
+    }
+
+    /** Classifies the door's cell in {@code mode} and records it in {@code broken} unless it is {@code want}. */
+    private static void expectDoorCheck(GameTestHelper helper, TileBuilder tile, SnapshotBuilder<?> builder,
+            EnumFluidHandlingMode mode, byte want, String what, List<String> broken) {
+        while (tile.getFluidMode() != mode) {
+            tile.cycleFluidMode();
+        }
+        BlockPos door = helper.absolutePos(cell(0));
+        builder.check(door);
+        byte got = builder.checkResults[builder.posToIndex(door)];
+        if (got != want) {
+            broken.add(mode + " with " + what + ": the door's cell checked " + got + ", want " + want
+                    + " (1 built, 2 to break, 3 to place)");
+        }
     }
 
     /**

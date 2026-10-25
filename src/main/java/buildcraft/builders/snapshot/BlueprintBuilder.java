@@ -360,13 +360,35 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             return false;
         }
         // The same for a bed, door or tall plant whose other half's cell holds a block (a torch, a skull): build
-        // would refuse it and the item would only fly out and back. With excavation on that block is broken first
-        // (the cell is the other half's own, TO_BREAK); with it off nothing ever breaks it, and the item would go out
-        // and come back on every pass.
-        if (self instanceof SchematicBlockDefault def && !def.hasRoomForSecondHalf(tile.getWorldBC(), blockPos)) {
+        // would refuse it and the item would only fly out and back. Inside the box, with excavation on, that block is
+        // broken first (the cell is the other half's own, TO_BREAK); with it off nothing ever breaks it, and the item
+        // would go out and come back on every pass. A cell the check counts as never clearing (isSecondHalfBlocked:
+        // outside the box, or fluid in NO_REPLACE) is caught here too when it changed since the last check sweep.
+        if (self instanceof SchematicBlockDefault def && (!def.hasRoomForSecondHalf(tile.getWorldBC(), blockPos)
+                || isSecondHalfBlocked(def, blockPos))) {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Can the two-cell block (a bed, door or tall plant) the schematic at {@code blockPos} places never go in as things
+     * stand, because of the cell its other half takes? In NO_REPLACE when that cell holds fluid the other half does
+     * not keep as its own source: build sets the half over whatever fluid is there, and this mode never replaces
+     * fluid. In every mode when that cell is outside the box and holds a block build will not overwrite (a torch, a
+     * chest): only a cell inside the box is ever broken, so nothing would make room. Inside the box such a block is
+     * the other half's own cell, a wrong block, and is broken first. A one-cell block never is.
+     */
+    private boolean isSecondHalfBlocked(SchematicBlockDefault def, BlockPos blockPos) {
+        BlockPos other = def.secondHalfCell(blockPos);
+        if (other == null) return false;
+        Level world = tile.getWorldBC();
+        BlockState there = world.getBlockState(other);
+        if (tile.getFluidMode() == EnumFluidHandlingMode.NO_REPLACE && isFluidOnly(there)
+                && !def.secondHalfKeeps(there.getFluidState())) {
+            return true;
+        }
+        return !getBuildingInfo().box.contains(other) && !SchematicBlockDefault.isOverwritable(world, other, there);
     }
 
     @Override
@@ -408,14 +430,17 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
     @Override
     protected void cancelPlaceTask(PlaceTask placeTask) {
         super.cancelPlaceTask(placeTask);
-        // Return item stacks to inventory (non-fluid items)
+        // Server only, as the Filler's: a client sync cancels its copies of the tasks too, and refunding those put
+        // ghost items into the client's resources.
+        if (tile.getWorldBC() == null || tile.getWorldBC().isClientSide()) return;
+        // Return item stacks to inventory (non-fluid items), dropping what no longer fits
         placeTask.items.stream()
             .filter(stack -> {
                 net.minecraft.world.item.component.CustomData customData =
                     stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
                 return customData == null || !customData.copyTag().contains(FLUID_STACK_KEY);
             })
-            .forEach(stack -> tile.getInvResources().insert(stack, false, false));
+            .forEach(stack -> dropRefundLeftover(tile.getInvResources().insert(stack, false, false)));
         // Return fluids to tanks
         placeTask.items.stream()
             .filter(stack -> {
@@ -470,6 +495,13 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // replacement, so it is built rather than skipped.
         if (tile.getFluidMode() == EnumFluidHandlingMode.NO_REPLACE && !(schematic instanceof SchematicBlockFluid)
                 && isFluidOnly(tile.getWorldBC().getBlockState(blockPos)) && !placesIntoOwnFluid(blockPos)) {
+            return true;
+        }
+        // A two-cell block whose other half can never go in as things stand (isSecondHalfBlocked) is as built as this
+        // Builder makes it too, while its own cell is ready for it: left "to place" it was never queued, and the build
+        // never finished. The next check sweep after that cell clears sends it to TO_PLACE.
+        if (schematic instanceof SchematicBlockDefault twoCell && isSecondHalfBlocked(twoCell, blockPos)
+                && canPlace(blockPos)) {
             return true;
         }
         // Pass fluidMode through to the SchematicBlockDefault overload so CLEAR mode reports

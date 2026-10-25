@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:builder_two_cell_block_never_placeable_counts_as_built",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 1360,
+    "setup_ticks": 0,
+    "required": true
+}

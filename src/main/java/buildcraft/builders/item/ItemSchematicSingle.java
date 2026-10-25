@@ -159,11 +159,13 @@ public class ItemSchematicSingle extends Item {
             // A clicked block a placement replaces (grass, a snow layer, seagrass) is taken out first, since the
             // schematic builds only into an empty cell, and put back on every way out that places nothing: a click
             // that builds nothing (no items to pay, no room for a door's upper half) must not cost the world the grass.
-            // Taking out seagrass or kelp leaves its water, so "nothing was placed" is the cell still holding what
-            // the removal left, not the cell being empty.
+            // Taking out seagrass leaves its water, so "nothing was placed" is the cell still holding what the removal
+            // left, not the cell being empty. A replaceable block with a block entity (none in vanilla) is not taken:
+            // putting it back would bring it back empty, so the schematic, which builds only into an empty cell,
+            // refuses it, as the Builder's does.
             BlockState taken = null;
             BlockState left = null;
-            if (replaceable && !world.isEmptyBlock(placePos)) {
+            if (replaceable && !world.isEmptyBlock(placePos) && world.getBlockEntity(placePos) == null) {
                 taken = clickedState;
                 world.removeBlock(placePos, false);
                 left = world.getBlockState(placePos);

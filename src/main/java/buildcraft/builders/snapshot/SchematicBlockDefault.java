@@ -651,11 +651,26 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * door whose upper cell is blocked; build asks again when the block goes in.
      */
     boolean hasRoomForSecondHalf(Level level, BlockPos blockPos) {
-        if (blockState == null || placeBlock == null || placeBlock == Blocks.AIR) {
-            return true;
-        }
-        BlockPos other = secondHalfPos(placedState(), blockPos);
+        BlockPos other = secondHalfCell(blockPos);
         return other == null || isOverwritable(level, other, level.getBlockState(other));
+    }
+
+    /** The cell {@link #build} at {@code blockPos} sets the other half of a two-cell block in, or null for a block of
+     *  one cell (or a schematic that places nothing). */
+    @Nullable
+    BlockPos secondHalfCell(BlockPos blockPos) {
+        if (blockState == null || placeBlock == null || placeBlock == Blocks.AIR) {
+            return null;
+        }
+        return secondHalfPos(placedState(), blockPos);
+    }
+
+    /** Does the other half {@link #build} sets (with no fluid handling, as NO_REPLACE builds) hold a source of
+     *  {@code fluid}'s kind as its own (tall seagrass's upper half, a small dripleaf captured waterlogged)? Only for a
+     *  schematic {@link #secondHalfCell} names a cell for. */
+    boolean secondHalfKeeps(FluidState fluid) {
+        FluidState own = secondHalfState(placedState()).getFluidState();
+        return own.isSource() && fluid.isSource() && fluid.getType().isSame(own.getType());
     }
 
     /** The other half of {@code state}, for a state {@link #secondHalfPos} names a cell for. */

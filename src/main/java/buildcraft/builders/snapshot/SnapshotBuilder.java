@@ -34,6 +34,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -500,6 +501,15 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                 Math.min(placeTask.power, tile.getBattery().getCapacity() - tile.getBattery().getStored()),
                 false
             );
+        }
+    }
+
+    /** Drops on top of the Builder what a cancelled placement's refund could not put back into its resources (the
+     *  grid filled since the items were taken, by a robot or a pipe), where it used to be deleted. On top, not inside:
+     *  an item popped inside the machine's block is pushed out of whichever side is nearest. */
+    protected void dropRefundLeftover(ItemStack leftover) {
+        if (!leftover.isEmpty()) {
+            Block.popResourceFromFace(tile.getWorldBC(), tile.getBuilderPos(), Direction.UP, leftover);
         }
     }
 

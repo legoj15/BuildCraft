@@ -1,0 +1,44 @@
+{
+  "name": "docked-pump",
+  "base": [0, 150, 0],
+  "steps": [
+    { "label": "clear the area, lay a barrier floor, barriers to stand on at the two viewpoints", "do": "cmd", "run": [
+      "fill {X-6} {Y-7} {Z-6} {X+6} {Y+4} {Z+6} minecraft:air",
+      "fill {X-6} {Y-7} {Z-6} {X+6} {Y-7} {Z+6} minecraft:barrier",
+      "setblock {X-1} {Y} {Z-4} minecraft:barrier",
+      "setblock {X} {Y} {Z-2} minecraft:barrier"
+    ] },
+    { "label": "a 3x3 lava pool four blocks under the well, walled in stone, stone under it", "do": "cmd", "run": [
+      "fill {X-2} {Y-6} {Z-2} {X+2} {Y-4} {Z+2} minecraft:stone",
+      "fill {X-1} {Y-4} {Z-1} {X+1} {Y-4} {Z+1} minecraft:lava"
+    ] },
+    { "label": "mining well with a pump on top and a tank beside the pump; chest for the well's drops; engine placed but not yet powered", "do": "cmd", "run": [
+      "setblock {X} {Y} {Z} buildcraftunofficial:mining_well",
+      "setblock {X} {Y+1} {Z} buildcraftunofficial:pump",
+      "setblock {X+1} {Y+1} {Z} buildcraftunofficial:tank",
+      "setblock {X-1} {Y} {Z} minecraft:chest",
+      "setblock {X+1} {Y} {Z} buildcraftunofficial:engine_creative[facing=west]"
+    ] },
+    { "label": "a lone pump on stone for comparison (no host, nothing to pump)", "do": "cmd", "run": [
+      "setblock {X-3} {Y} {Z} minecraft:stone",
+      "setblock {X-3} {Y+1} {Z} buildcraftunofficial:pump"
+    ] },
+    { "do": "wait", "ms": 3000 },
+    { "label": "lava still under the well before power (expect: Test passed)", "do": "cmd", "echo": true, "run": "execute if block {X} {Y-4} {Z} minecraft:lava" },
+    { "do": "tp", "at": [-1, 1, -4], "yaw": 0, "pitch": 12 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "docked-draining", "do": "shot", "look": "pump on the mining well (right): its STATUS LED (the left LED of the pair high on each face; the right one is the power LED) is BRIGHT BLUE: it has lava queued but no power yet. The lone pump on stone (left) shows the old colours: status LED OFF (dark)." },
+    { "label": "power the well", "do": "cmd", "run": "setblock {X+2} {Y} {Z} minecraft:redstone_block" },
+    { "label": "wait for the pool to be drained", "do": "waitCmd", "run": "execute unless block {X} {Y-4} {Z} minecraft:lava", "match": "passed", "timeoutSec": 120 },
+    { "do": "wait", "ms": 4000 },
+    { "label": "lava gone from the well's column (expect: Test passed)", "do": "cmd", "echo": true, "run": "execute unless block {X} {Y-4} {Z} minecraft:lava" },
+    { "label": "the well dug past the pool: a tube now stands in the old lava cell (expect: Test passed)", "do": "cmd", "echo": true, "run": "execute if block {X} {Y-4} {Z} buildcraftunofficial:tube" },
+    { "label": "the tank beside the pump holds the lava", "do": "cmd", "echo": true, "run": "data get block {X+1} {Y+1} {Z}" },
+    { "do": "tp", "at": [-1, 1, -4], "yaw": 0, "pitch": 12 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "docked-idle", "do": "shot", "look": "same view after the drain: the docked pump's status LED is DIM BLUE (connected, nothing to drain) while the well digs on (its tube visible going down if in view); the tank beside the pump shows lava. Lone pump still dark." },
+    { "do": "tp", "at": [0, 1, -2], "yaw": 0, "pitch": 30 },
+    { "do": "wait", "ms": 1000 },
+    { "name": "docked-close", "do": "shot", "look": "close-up of the docked pump's south face: power LED (red-to-yellow) and the dim blue status LED side by side, no tube drawn from the pump itself through the well" }
+  ]
+}

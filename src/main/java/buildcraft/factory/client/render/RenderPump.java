@@ -57,6 +57,10 @@ public class RenderPump implements BlockEntityRenderer<TilePump, BCRenderState> 
 //?}
     /** 16-step red→yellow gradient driven by battery fill %. ABGR; the low byte is red. */
     private static final int[] COLOUR_POWER = new int[16];
+    /** The status LED of a pump standing on a miner (ABGR): light blue with fluid to drain, and a dark blue, still
+     *  clearly lit, with none, so the link shows while the pump is idle. */
+    private static final int COLOUR_BLUE_ON = 0xFF_FF_10_00;
+    private static final int COLOUR_BLUE_IDLE = 0xFF_80_40_18;
 
     private static final double LED_INSET = 0.4 / 16.0;
     private static final double POWER_OFFSET = 1.5 / 16.0;
@@ -156,7 +160,12 @@ public class RenderPump implements BlockEntityRenderer<TilePump, BCRenderState> 
         int powerColour = COLOUR_POWER[(int) (percentFilled * (COLOUR_POWER.length - 1))];
 
         boolean complete = tile.isComplete();
-        int statusColour = complete ? LedRenderUtil.COLOUR_OFF : LedRenderUtil.COLOUR_GREEN_ON;
+        int statusColour;
+        if (tile.getHost() != null) {
+            statusColour = complete ? COLOUR_BLUE_IDLE : COLOUR_BLUE_ON;
+        } else {
+            statusColour = complete ? LedRenderUtil.COLOUR_OFF : LedRenderUtil.COLOUR_GREEN_ON;
+        }
 
         for (int i = 0; i < 4; i++) {
             Direction dir = Direction.from2DDataValue(i);

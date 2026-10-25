@@ -11,4 +11,6 @@ It will pump fluids in a 64 blocks radius from top to bottom and the outer edges
 <chapter name="Machine Mechanics"/>
 As with most machines, it requires power. The more power you supply it, the faster it will pump.
 Applying a redstone signal to the pump will stop the pump from pumping so be careful where you place your levers.
+<chapter name="On a Mining Well"/>
+Placed on top of a Mining Well, the pump stops pumping below itself and instead drains the lava, oil or other thick liquid that has stopped the well, spending its own stored power first and then the well's. Its status light turns blue while it sits there: bright while it drains, dim while it has nothing to drain. It cannot clear a solid block such as obsidian. Pipe the pumped liquid away, or the pump stops once its tank is half full.
 <recipes_usages stack="buildcraftunofficial:pump"/>

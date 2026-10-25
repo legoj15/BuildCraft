@@ -14,9 +14,9 @@ Make a fuel's *heat tier* change its value in the Combustion Engine, on a delibe
 
 Design input: upstream 7.1.x `bfa69a2ef` (#3497) made flammable BuildCraft fluids explode in the Nether and skipped oil worldgen there; 8.0.x and the port dropped it. Decide explicitly whether any Nether flammability rule comes back.
 
-## Pump on top of miners
+## Pump on top of a Quarry
 
-Both miners stop when they hit blocking fluids today (Mining Well and Quarry both halt on lava/oil; both drill past low-viscosity water to the solids below). Adding a Pump on top of either should consume fluid from the same blocking column, draining it into a buffer / adjacent tank or pipe so the miner can resume. Power for the on-top Pump comes out of the host miner's internal MJ battery rather than requiring a separate engine hookup. Mining Well top texture should swap to the open Flood Gate sprite when a Pump is mounted. Open: shared-battery priority/throttling, where the drained fluid goes, whether the Quarry's larger column needs a different sweep pattern than the Well's single-block-below path.
+Seam to plug into: `factory.tile.IPumpHost` (the Mining Well implements it; a `TilePump` on any host drains from `getBlockingFluid()` on the host's battery). The Quarry does not fit it as-is: it never stops at fluid, it *skips* a fluid cell (`canMine` false) and every cell under it (`canMoveDownTo` false) and finishes, leaving lava pillars. Needs: the quarry recording the obstructing fluid cells its sweep skipped (cheaply: an idle pump re-asks every 30 ticks), a revisit of those columns after draining (resetting `boxIterator` re-walks the box), and a way back to work once finished (a finished quarry's receiver stops requesting power and its chunk tickets are released, see `hasPendingWork`/`isActive`). The pump sits on the quarry block at the frame's edge; `pumpMaxDistance` is measured from the seed, so the remote pool is fine. Open: whether lava that flowed into the dug pit counts as blocking.
 
 ## Reclaimable marker region
 

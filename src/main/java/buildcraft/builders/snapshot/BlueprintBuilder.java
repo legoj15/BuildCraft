@@ -371,6 +371,23 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         return true;
     }
 
+    /** Also asks again a two-cell block whose other half's cell holds fluid: its check depends on the mode too
+     *  ({@link #isSecondHalfBlocked}), and its own cell may hold none, which is all the base method looks at. */
+    @Override
+    public void invalidateChecksForFluidPositions() {
+        super.invalidateChecksForFluidPositions();
+        if (checkResults == null || getBuildingInfo() == null) return;
+        for (int i = 0; i < checkResults.length; i++) {
+            BlockPos pos = indexToPos(i);
+            if (getSchematicBlock(pos) instanceof SchematicBlockDefault def) {
+                BlockPos other = def.secondHalfCell(pos);
+                if (other != null && !tile.getWorldBC().getFluidState(other).isEmpty()) {
+                    checkResults[i] = CHECK_RESULT_UNKNOWN;
+                }
+            }
+        }
+    }
+
     /**
      * Can the two-cell block (a bed, door or tall plant) the schematic at {@code blockPos} places never go in as things
      * stand, because of the cell its other half takes? In NO_REPLACE when that cell holds fluid the other half does
@@ -464,7 +481,8 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 if (fluid == null || fluid == net.minecraft.world.level.material.Fluids.EMPTY) return FluidStack.EMPTY;
                 return new FluidStack(fluid, amount);
             })
-            // Defensive filter — if for any reason the round-trip above came back empty (old
+            // What a full tank cannot take back is lost: fluid has no item to drop, and the tank gave it up
+            // moments before. Defensive filter — if for any reason the round-trip above came back empty (old
             // save data from before this serialization existed, a fluid whose id has since
             // been unregistered, …) skip it rather than crashing tankManager.insert on
             // FluidResource.EMPTY.

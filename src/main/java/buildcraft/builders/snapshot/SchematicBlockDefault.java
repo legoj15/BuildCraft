@@ -669,8 +669,19 @@ public class SchematicBlockDefault implements ISchematicBlock {
      *  {@code fluid}'s kind as its own (tall seagrass's upper half, a small dripleaf captured waterlogged)? Only for a
      *  schematic {@link #secondHalfCell} names a cell for. */
     boolean secondHalfKeeps(FluidState fluid) {
-        FluidState own = secondHalfState(placedState()).getFluidState();
+        return keepsAsOwn(secondHalfState(placedState()), fluid);
+    }
+
+    /** Does {@code placed} hold a source of {@code fluid}'s kind as its own, so that placing it into a source of
+     *  that fluid keeps the fluid instead of replacing it? */
+    private static boolean keepsAsOwn(BlockState placed, FluidState fluid) {
+        FluidState own = placed.getFluidState();
         return own.isSource() && fluid.isSource() && fluid.getType().isSame(own.getType());
+    }
+
+    /** Would placing {@code placed} over {@code state} (a cell of nothing but fluid) replace that fluid? */
+    private static boolean replacesFluid(BlockState state, BlockState placed) {
+        return SnapshotBuilder.isFluidOnly(state) && !keepsAsOwn(placed, state.getFluidState());
     }
 
     /** The other half of {@code state}, for a state {@link #secondHalfPos} names a cell for. */
@@ -699,11 +710,11 @@ public class SchematicBlockDefault implements ISchematicBlock {
         return build(level, blockPos, fluidMode, includeContainerContents, true);
     }
 
-    /** {@link #build(Level, BlockPos, EnumFluidHandlingMode, boolean)}, with the fragile-block defer only when
-     *  {@code deferFragile} (a Builder placement, in any mode; never a placement by hand). */
+    /** {@link #build(Level, BlockPos, EnumFluidHandlingMode, boolean)}, with the fragile-block defer and NO_REPLACE's
+     *  fluid rule only when {@code byBuilder} (a Builder placement, in any mode; never a placement by hand). */
     @SuppressWarnings("Duplicates")
     private boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode,
-                          boolean includeContainerContents, boolean deferFragile) {
+                          boolean includeContainerContents, boolean byBuilder) {
         if (placeBlock == Blocks.AIR) {
             return true;
         }
@@ -717,6 +728,13 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // anything changes: the Builder's place task can land on a cell a player has filled since it was queued.
         BlockState existingState = level.getBlockState(blockPos);
         if (!isOverwritable(level, blockPos, existingState)) {
+            return false;
+        }
+        // A NO_REPLACE Builder never builds over fluid the block does not keep as its own, here or in the other
+        // half's cell (below): the check skips such a cell, but a placement queued while the cell was dry can land
+        // after fluid flowed in. A placement by hand goes over it, as a player's does.
+        boolean keepsFluid = byBuilder && fluidMode == EnumFluidHandlingMode.NO_REPLACE;
+        if (keepsFluid && replacesFluid(existingState, newBlockState)) {
             return false;
         }
         FluidState existing = existingState.getFluidState();
@@ -775,7 +793,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // (canBeReplaced returns false) and waterloggable blocks — waterlogged or dry — coexist
         // with fluid, so isWashedAwayBy excludes both. NO_REPLACE needs it too: there the washed-away
         // cell then holds fluid, which that mode counts as built, so the block was lost for good.
-        if (deferFragile) {
+        if (byBuilder) {
             boolean placedAsWaterlogged = newBlockState.hasProperty(BlockStateProperties.WATERLOGGED)
                     && newBlockState.getValue(BlockStateProperties.WATERLOGGED);
             if (!placedAsWaterlogged && hasWashingFluidNeighbour(level, blockPos, newBlockState)) {
@@ -796,7 +814,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
         BlockState displacedOtherState = null;
         if (otherHalfPos != null) {
             BlockState atOther = level.getBlockState(otherHalfPos);
-            if (!isOverwritable(level, otherHalfPos, atOther)) {
+            if (!isOverwritable(level, otherHalfPos, atOther)
+                    || keepsFluid && replacesFluid(atOther, secondHalfState(newBlockState))) {
                 return false;
             }
             if (!atOther.isAir()) {

@@ -41,7 +41,7 @@ RECIPE_DIR = RES / "data/buildcraftunofficial/recipe"
 MODELS = ASSETS / "models"
 
 # raw.githubusercontent base for embedding textures. Branch must hold the textures.
-BRANCH = "26.1.x"
+BRANCH = "main"
 RAW = f"https://raw.githubusercontent.com/legoj15/BuildCraft/{BRANCH}/src/main/resources/"
 
 OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else (REPO / "wiki-export")
@@ -95,85 +95,106 @@ def lang_name(stack_id, is_block=False):
 # Parse guide.txt + util.txt  ->  list of Entry
 # --------------------------------------------------------------------------- #
 class Entry:
-    __slots__ = ("path", "ptype", "subtype", "stack", "statement", "title_key",
-                 "sort", "creative", "book", "md", "content", "title")
+    __slots__ = ("path", "ptype", "subtype", "system", "stack", "statement", "title_key",
+                 "sort", "creative", "book", "icon", "md", "content", "title")
     def __init__(self, path, ptype, subtype, stack=None, statement=None,
-                 title_key=None, sort=0, creative=False, book="main"):
+                 title_key=None, sort=0, creative=False, book="main", system=None, icon=None):
         self.path = path            # e.g. "block/quarry" (matches en_us/<path>.md)
         self.ptype = ptype          # block | item | pipe | trigger | action | config | concept
         self.subtype = subtype      # automation | engine | pipe_item | ...
+        self.system = system        # tag_system: getting_started | power | ... (None: config book, strays)
         self.stack = stack          # buildcraftunofficial:quarry  (None for statements)
         self.statement = statement
-        self.title_key = title_key  # explicit override (logic_gates / pipe_wires / config name)
+        self.title_key = title_key  # explicit title (lang buildcraft.guide.page.<key>, or an override)
         self.sort = sort
         self.creative = creative
         self.book = book
+        self.icon = icon            # hero icon URL for entries with no stack (robot boards)
         self.md = None
         self.content = None
 
-def parse_guide():
-    text = (GUIDE_DIR.parent / "guide.txt").read_text(encoding="utf-8")
-    entries = []
+# The registration script is a tiny macro language: `alias <name> <argc> `<body>`` defines a
+# macro whose body may use %0..%n and ${0} (the book passed to `import`); every other line calls a
+# macro or the primitive `add "<path>" `<json>``. Expanding the aliases here, instead of mirroring
+# each one's argument layout, keeps this script in step with util.txt when aliases change.
+_TOKEN = re.compile(r'"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`|(\n)|([^\s"`]+)|[ \t\r]+', re.DOTALL)
 
-    # 1) Extract the two literal multi-line `add "path" `{...}`` blocks first.
-    for m in re.finditer(r'add\s+"([^"]+)"\s+`(\{.*?\})`', text, re.DOTALL):
-        path, raw = m.group(1), m.group(2)
-        obj = json.loads(raw)
+def _strip_comments(text):
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    return "\n".join("" if l.strip().startswith(("//", "~")) else l for l in text.splitlines())
+
+def _statements(text):
+    """Yield (name, [args]) per statement; a statement ends at a newline outside quotes/backticks."""
+    cur = []
+    for m in _TOKEN.finditer(text):
+        q, bt, nl, word = m.groups()
+        if nl is not None:
+            if cur:
+                yield cur[0], cur[1:]
+            cur = []
+        elif q is not None:
+            cur.append(q)
+        elif bt is not None:
+            cur.append(bt.replace("\\`", "`"))
+        elif word is not None:
+            cur.append(word)
+    if cur:
+        yield cur[0], cur[1:]
+
+def _load_aliases():
+    aliases = {}
+    text = _strip_comments((GUIDE_DIR / "util.txt").read_text(encoding="utf-8"))
+    for name, args in _statements(text):
+        if name == "alias":
+            aliases[args[0]] = (int(args[1]), args[2])
+    return aliases
+
+def parse_guide():
+    aliases = _load_aliases()
+    text = _strip_comments((GUIDE_DIR.parent / "guide.txt").read_text(encoding="utf-8"))
+    entries = []
+    state = {"book": "buildcraftunofficial:main"}   # set by each `import "<util>" "<book>"`
+
+    def run(src, depth=0):
+        for name, args in _statements(src):
+            if name == "import":
+                state["book"] = args[1] if len(args) > 1 else "buildcraftunofficial:main"
+            elif name == "add" and len(args) == 2:
+                add(args[0], args[1].replace("${0}", state["book"]))
+            elif name in aliases and depth < 16:
+                argc, body = aliases[name]
+                if len(args) != argc:
+                    warn(f"guide.txt: alias '{name}' wants {argc} args, got {len(args)}: {args}")
+                for i in sorted(range(len(args)), reverse=True):
+                    body = body.replace(f"%{i}", args[i])
+                run(body, depth + 1)
+            else:
+                warn(f"guide.txt: unhandled statement '{name}' {args}")
+
+    def add(path, raw):
+        try:
+            obj = json.loads(raw)
+        except Exception as e:
+            warn(f"guide.txt: bad JSON for '{path}': {e}")
+            return
+        icon = None
+        if isinstance(obj.get("icon"), dict) and "board" in obj["icon"]:
+            icon = RAW + "assets/buildcraftunofficial/textures/item/redstone_board.png"
         entries.append(Entry(
             path=path,
             ptype=obj.get("tag_type", "item"),
             subtype=obj.get("tag_subtype", ""),
+            system=obj.get("tag_system"),
             stack=obj.get("stack"),
             statement=obj.get("statement"),
             title_key=obj.get("title"),
             sort=int(obj.get("sort", 0) or 0),
             creative=bool(obj.get("creative_only", False)),
             book="config" if obj.get("book", "").endswith("config") else "main",
+            icon=icon,
         ))
-    text = re.sub(r'add\s+"[^"]+"\s+`\{.*?\}`', "", text, flags=re.DOTALL)
 
-    # 2) Alias-call lines.
-    book = "main"
-    BC = "buildcraftunofficial:"
-    def E(path, ptype, subtype, **kw):
-        entries.append(Entry(path, ptype, subtype, book=book, **kw))
-
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("//") or line.startswith("/*") or line.startswith("*") or line.startswith("~"):
-            continue
-        if line.startswith("import"):
-            if line.endswith('"buildcraftunofficial:config"'):
-                book = "config"
-            continue
-        toks = re.findall(r'"([^"]*)"', line)
-        name = line.split()[0]
-
-        if name == "block_auto":       E(f"block/{toks[0]}", "block", "automation", stack=BC+toks[0])
-        elif name == "block_fluid":    E(f"block/{toks[0]}", "block", "fluid", stack=BC+toks[0])
-        elif name == "block_mining":   E(f"block/{toks[0]}", "block", "mining", stack=BC+toks[0])
-        elif name == "block_refining": E(f"block/{toks[0]}", "block", "refining", stack=BC+toks[0])
-        elif name == "block_engine":   E(f"block/{toks[0]}", "block", "engine", stack=toks[1])
-        elif name == "block":          E(f"block/{toks[1]}", "block", toks[0], stack=BC+toks[1])
-        elif name == "chipset":        E(f"item/{toks[0]}", "item", "chipset", stack=BC+toks[0])
-        elif name == "gear":           E(f"item/{toks[0]}", "item", "gear", stack=BC+toks[0])
-        elif name == "plug":           E(f"item/{toks[0]}", "item", "pipe_plug", stack=BC+toks[0])
-        elif name == "paper":          E(f"item/{toks[0]}", "item", "paperwork", stack=BC+toks[0])
-        elif name == "tool":           E(f"item/{toks[0]}", "item", "tool", stack=BC+toks[0])
-        elif name == "item_typed":     E(f"item/{toks[1]}", "item", toks[0], stack=toks[2])
-        elif name == "item_stack":     E(f"{toks[0]}/{toks[2]}", toks[0], toks[1], stack=toks[3])
-        elif name == "item_stack_creative":
-            E(f"{toks[0]}/{toks[2]}", toks[0], toks[1], stack=toks[3], creative=True)
-        elif name in ("pipe_item_s", "pipe_fluid_s", "pipe_power_s", "pipe_rf_s"):
-            sub = name[:-2]  # pipe_item / pipe_fluid / pipe_power / pipe_rf
-            E(f"pipe/{toks[0]}", "pipe", sub, stack=toks[1], sort=int(toks[2]))
-        elif name == "pipe_s":
-            E(f"pipe/{toks[1]}", "pipe", toks[0], stack=toks[2], sort=int(toks[3]))
-        elif name == "trigger":        E(f"trigger/{toks[1]}", "trigger", toks[0], statement=toks[2])
-        elif name == "action":         E(f"action/{toks[1]}", "action", toks[0], statement=toks[2])
-        elif name == "cfg_res":        E(f"config/{toks[0]}", "config", "resourcepack", title_key=toks[0])
-        else:
-            warn(f"guide.txt: unhandled alias '{name}': {line}")
+    run(text)
     return entries
 
 # --------------------------------------------------------------------------- #
@@ -572,6 +593,17 @@ def filename(title):
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
+# Category pages are registered in code, not guide.txt: their system and subtype come from the
+# registerCategory calls in GuideManager.java. Keep in step with those.
+CATEGORY_PLACEMENT = {
+    "concept/filler_patterns": ("building", "builders"),
+    "concept/emzuli_extraction_presets": ("transport", "pipe_item"),
+    "concept/pipe_signals": ("logic", "wire"),
+    "concept/set_pipe_direction": ("transport", "pipe_item"),
+    "action/pipe_colour": ("transport", "pipe_item"),
+    "concept/set_power_limit": ("power", "power_delivery"),
+}
+
 def main():
     entries = parse_guide()
 
@@ -582,10 +614,11 @@ def main():
         if rel in registered:
             continue
         if rel == "item/guide":
-            continue  # the book intro itself — its prose becomes the Home page
+            continue  # the book's own intro page; Home has its own wording
         top = rel.split("/")[0]
         ptype = "concept" if top == "concept" else top
-        entries.append(Entry(rel, ptype, "", stack=None))
+        system, subtype = CATEGORY_PLACEMENT.get(rel, (None, ""))
+        entries.append(Entry(rel, ptype, subtype, stack=None, system=system))
         registered.add(rel)
 
     # Attach md content; resolve titles.
@@ -596,6 +629,8 @@ def main():
         # title
         if e.title_key and e.title_key in TITLE_OVERRIDE:
             e.title = TITLE_OVERRIDE[e.title_key]
+        elif e.title_key and f"buildcraft.guide.page.{e.title_key}" in LANG:
+            e.title = LANG[f"buildcraft.guide.page.{e.title_key}"]
         elif e.title_key:
             e.title = prettify(e.title_key)
         elif e.stack:
@@ -654,7 +689,7 @@ def main():
     for e in entries:
         parts = [f"# {e.title}\n"]
         # hero icon
-        hero = icon_url(e.stack) if e.stack else None
+        hero = icon_url(e.stack) if e.stack else e.icon
         if hero:
             parts.append(f'<img src="{hero}" width="64" height="64" align="right" alt="{e.title}">\n')
         body = ""
@@ -681,7 +716,7 @@ def main():
         written += 1
 
     write_sidebar(entries)
-    write_home(entries, stub_count)
+    write_home(entries)
     write_footer()
 
     print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs)")
@@ -696,93 +731,74 @@ def main():
 # --------------------------------------------------------------------------- #
 # Sidebar / Home / Footer
 # --------------------------------------------------------------------------- #
-TYPE_ORDER = ["block", "item", "pipe", "trigger", "action", "concept", "config"]
-TYPE_NAME = {"block": "Blocks", "item": "Items", "pipe": "Pipes",
-             "trigger": "Triggers", "action": "Actions",
-             "concept": "Concepts & Mechanics", "config": "Configuration"}
-SUBTYPE_ORDER = {
-    "block": ["automation", "engine", "fluid", "laser", "mining", "refining", "specialized"],
-    "item": ["basic", "chipset", "fluid", "gear", "paperwork", "pipe_plug", "tool", "wire"],
-    "pipe": ["pipe_item", "pipe_fluid", "pipe_power", "pipe_structure", "pipe_rf"],
-    "trigger": ["automation", "basic", "engine", "fluid", "pipe_fluid", "item", "pipe_item", "pipe_plug", "power_delivery"],
-    "action": ["automation", "basic", "pipe_item", "pipe_plug"],
-}
+# Same top-level order as the book's contents page (GuideManager.SYSTEM_CHAPTER_ORDER): a reading
+# path through the mod, not A-Z. Pages with no system (unregistered concept pages) come next, then
+# the separate config book.
+SYSTEM_ORDER = ["getting_started", "power", "transport", "logic", "building", "mining_fluids",
+                "silicon", "robots"]
+OTHER, CONFIG = "_other", "_config"
+
+def system_name(sys_key):
+    if sys_key == OTHER:
+        return "Other Pages"
+    if sys_key == CONFIG:
+        return "Configuration"
+    return LANG.get(f"buildcraft.guide.chapter.system.{sys_key}", prettify(sys_key))
+
 def subtype_name(sub):
     return LANG.get(f"buildcraft.guide.chapter.subtype.{sub}", prettify(sub) if sub else "")
 
 def grouped(entries):
-    """type -> subtype -> [entries], honouring SUBTYPE_ORDER then (sort, title)."""
+    """[(system, [(subtype, [entries])])] in contents-page order. As in the book, a subtype
+    inherits its lowest member's sort weight; equal weights fall back to the subtype's name."""
     tree = {}
     for e in entries:
-        tree.setdefault(e.ptype, {}).setdefault(e.subtype, []).append(e)
-    for t, subs in tree.items():
-        for sub, es in subs.items():
+        key = CONFIG if e.book == "config" else (e.system or OTHER)
+        tree.setdefault(key, {}).setdefault(e.subtype, []).append(e)
+    known = [s for s in SYSTEM_ORDER if s in tree]
+    rest = sorted(s for s in tree if s not in SYSTEM_ORDER and s not in (OTHER, CONFIG))
+    out = []
+    for key in known + rest + [k for k in (OTHER, CONFIG) if k in tree]:
+        subs = tree[key]
+        for es in subs.values():
             es.sort(key=lambda e: (e.sort, e.title.lower()))
-    return tree
-
-def ordered_subtypes(ptype, subs):
-    order = SUBTYPE_ORDER.get(ptype, [])
-    known = [s for s in order if s in subs]
-    rest = sorted(s for s in subs if s not in order)
-    return known + rest
+        order = sorted(subs, key=lambda s: (min(e.sort for e in subs[s]), subtype_name(s).lower()))
+        out.append((key, [(s, subs[s]) for s in order]))
+    return out
 
 def write_sidebar(entries):
-    tree = grouped(entries)
     lines = ["### BuildCraft Wiki", "", "[Home](Home)", ""]
-    for t in TYPE_ORDER:
-        if t not in tree:
-            continue
-        lines.append(f"**{TYPE_NAME[t]}**")
-        subs = tree[t]
-        if t in ("concept",) or list(subs.keys()) == [""]:
-            for e in sorted((e for es in subs.values() for e in es), key=lambda e: e.title.lower()):
-                lines.append(f"- [[{e.title}]]")
-        else:
-            for sub in ordered_subtypes(t, subs):
-                sn = subtype_name(sub)
-                if sn:
-                    lines.append(f"- _{sn}_")
-                    for e in subs[sub]:
-                        lines.append(f"  - [[{e.title}]]")
-                else:  # un-subtyped entries sit directly under the type
-                    for e in subs[sub]:
-                        lines.append(f"- [[{e.title}]]")
+    for key, subs in grouped(entries):
+        lines.append(f"**{system_name(key)}**")
+        for sub, es in subs:
+            sn = subtype_name(sub)
+            if sn and len(subs) > 1:
+                lines.append(f"- _{sn}_")
+                lines += [f"  - [[{e.title}]]" for e in es]
+            else:  # a lone or un-subtyped group sits directly under the system
+                lines += [f"- [[{e.title}]]" for e in es]
         lines.append("")
     (OUT / "_Sidebar.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
 
-def write_home(entries, stub_count):
-    tree = grouped(entries)
+def write_home(entries):
     total = len(entries)
-    intro = (EN / "item/guide.md")
-    blurb = ""
-    if intro.exists():
-        # reuse the in-book intro prose (strip its forum/issue footer + tags)
-        txt = intro.read_text(encoding="utf-8")
-        txt = re.sub(r"\$\[[^\]]*\](\([^)]*\))?", "", txt)
-        txt = txt.split("We hope you have fun")[0].strip()
-        blurb = txt
+    # Intro wording is the user's own (hand-edited on the wiki 2026-05-31); keep it.
     lines = [
         "# BuildCraft Wiki", "",
-        blurb or "Welcome to the BuildCraft documentation.", "",
-        f"This wiki is generated from BuildCraft's in-game Guide Book "
-        f"({total} entries). Browse by category in the sidebar, or jump in below.",
+        "This Wiki directly mirrors the content within the mod's own in-game guide book "
+        f"({total} entries). You can find the contents of the book here: "
+        f"https://github.com/legoj15/BuildCraft/tree/{BRANCH}/src/main/resources/"
+        "assets/buildcraftunofficial/compat/buildcraft/guide",
         "",
         "## Sections", "",
     ]
-    for t in TYPE_ORDER:
-        if t not in tree:
-            continue
-        count = sum(len(es) for es in tree[t].values())
-        lines.append(f"### {TYPE_NAME[t]} ({count})")
-        subs = tree[t]
-        if t == "concept" or list(subs.keys()) == [""]:
-            picks = sorted((e for es in subs.values() for e in es), key=lambda e: e.title.lower())
-            lines.append(", ".join(f"[[{e.title}]]" for e in picks))
-        else:
-            for sub in ordered_subtypes(t, subs):
-                sn = subtype_name(sub)
-                names = ", ".join(f"[[{e.title}]]" for e in subs[sub])
-                lines.append(f"- **{sn}:** {names}" if sn else f"- {names}")
+    for key, subs in grouped(entries):
+        count = sum(len(es) for _, es in subs)
+        lines.append(f"### {system_name(key)} ({count})")
+        for sub, es in subs:
+            sn = subtype_name(sub)
+            names = ", ".join(f"[[{e.title}]]" for e in es)
+            lines.append(f"- **{sn}:** {names}" if sn else f"- {names}")
         lines.append("")
     lines += [
         "---",
@@ -796,7 +812,7 @@ def write_home(entries, stub_count):
 
 def write_footer():
     (OUT / "_Footer.md").write_text(
-        "<sub>BuildCraft (Unofficial) for Minecraft 26.1 · "
+        "<sub>BuildCraft (Unofficial) for NeoForge · "
         "[Repository](https://github.com/legoj15/BuildCraft) · "
         "Generated from the in-game Guide Book.</sub>\n", encoding="utf-8")
 

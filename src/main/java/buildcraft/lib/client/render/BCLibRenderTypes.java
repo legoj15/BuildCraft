@@ -351,6 +351,22 @@ public final class BCLibRenderTypes {
         //?}
     }
 
+    /**
+     * The line type for a block-outline replacement, picked as {@code LevelRenderer.submitBlockOutline} picks its
+     * normal-contrast one (its high-contrast branch is not mirrored). From 26.3, with improved transparency (OIT) on,
+     * shape outlines draw in the OIT pass, and plain {@link #lines()} has no OIT pipelines: the client crashes with
+     * "Render type lines does not have OIT pipelines set up" the first frame one is in view.
+     */
+    public static RenderType blockOutline() {
+        //? if >=26.3 {
+        return net.minecraft.client.Minecraft.getInstance().gameRenderer.useImprovedTransparency()
+                ? RenderTypes.linesTranslucentNoDepthWrite()
+                : RenderTypes.linesTranslucent();
+        //?} else {
+        /*return lines();*/
+        //?}
+    }
+
     /** Cull-back-face cutout for the given texture. 26.1 has a dedicated {@code entityCutoutCull};
      * 1.21.11 / 1.21.10 fold it into {@code entityCutout}. */
     public static RenderType entityCutoutCull(Identifier texture) {

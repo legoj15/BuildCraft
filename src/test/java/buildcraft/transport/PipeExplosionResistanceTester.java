@@ -81,8 +81,27 @@ public class PipeExplosionResistanceTester {
         helper.assertTrue(glassSide == bare,
             "a glass facade must not make the pipe weaker than bare (" + bare + "), got " + glassSide);
 
+        facadesShadeLikeTheirBlock(helper, tile, abs, obsidian);
         realBlastSparesTheArmouredSide(helper, obsidian);
         helper.succeed();
+    }
+
+    /** The same disguise for smooth lighting: neighbours ask the pipe how much it darkens their face corners. Called
+     *  with obsidian on the east side and glass on the west, as the armour checks above leave the pipe. The darkest
+     *  facade wins (glass, like a glass block, casts none), and a hollow facade casts none either. */
+    private static void facadesShadeLikeTheirBlock(GameTestHelper helper, TilePipeHolder tile, BlockPos abs,
+                                                   FacadeBlockStateInfo obsidian) {
+        ServerLevel level = helper.getLevel();
+        float solid = Blocks.OBSIDIAN.defaultBlockState().getShadeBrightness(level, abs);
+        float shaded = level.getBlockState(abs).getShadeBrightness(level, abs);
+        helper.assertTrue(shaded == solid,
+            "a pipe with an obsidian facade must shade its neighbours like obsidian (" + solid + "), got " + shaded);
+
+        tile.replacePluggable(Direction.EAST, new PluggableFacade(BCSiliconPlugs.facade, tile, Direction.EAST,
+            FacadeInstance.createSingle(obsidian, true)));
+        float hollow = level.getBlockState(abs).getShadeBrightness(level, abs);
+        helper.assertTrue(hollow == 1.0F,
+            "hollow obsidian beside a glass facade must cast no shade (1.0), got " + hollow);
     }
 
     /** The same armour against a real TNT blast, whose rays ask the hook themselves: the obsidian-faced pipe with its

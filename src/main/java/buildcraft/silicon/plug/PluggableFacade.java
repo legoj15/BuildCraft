@@ -9,6 +9,7 @@ package buildcraft.silicon.plug;
 import javax.annotation.Nullable;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -16,6 +17,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -147,6 +149,19 @@ public class PluggableFacade extends PipePluggable implements IFacade {
         // the same trade-off every "disguise" block makes. BlockPipeHolder#getExplosionResistance is the caller.
         return states.phasedStates[activeState].stateInfo.state
             .getExplosionResistance(holder.getPipeWorld(), holder.getPipePos(), explosion);
+    }
+
+    @Override
+    public float getShadeBrightness(BlockGetter level, BlockPos pos) {
+        // A hollow facade is see-through, so it casts no corner shadow. A solid one answers as its block would
+        // (stone 0.2, glass 1), asked at the pipe's position — the same trade-off as getExplosionResistance above.
+        // A block-entity block never makes a valid facade; one smuggled in by NBT (a pipe_holder facade would recurse
+        // straight back here) is skipped rather than asked at a position that holds someone else's block entity.
+        BlockState state = states.phasedStates[activeState].stateInfo.state;
+        if (isHollow() || state.hasBlockEntity()) {
+            return 1;
+        }
+        return state.getShadeBrightness(level, pos);
     }
 
     @Override

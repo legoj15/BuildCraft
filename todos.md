@@ -10,7 +10,6 @@ Last audited: 2026-10-25
 
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
 - Editable, reclaimable marker regions in survival — [notes](docs/todo-details.md#reclaimable-marker-region)
-- Smooth shading on facades — [quick notes](docs/todo-details.md#quick-notes)
 - Abandoned quarry frames over pre-dug holes (worldgen)
 - Make the wrench a real tool: light damage, durability, enchantable, best against BuildCraft blocks, maybe a zombie drop
 - Let resource packs reshape plugs via standard model files — [notes](docs/todo-details.md#plug-model-unification)

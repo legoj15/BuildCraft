@@ -21,9 +21,11 @@ import net.minecraft.world.level.ScheduledTickAccess;
 //?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -32,8 +34,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.api.properties.BuildCraftProperties;
 
+import buildcraft.lib.block.BCWaterlogging;
+
 @SuppressWarnings("this-escape")
-public class BlockFrame extends Block {
+public class BlockFrame extends Block implements SimpleWaterloggedBlock {
     //? if <26.3 {
     /*public static final MapCodec<BlockFrame> CODEC = simpleCodec(BlockFrame::new);
     *///?}
@@ -54,7 +58,7 @@ public class BlockFrame extends Block {
 
     public BlockFrame(Properties properties) {
         super(properties);
-        BlockState defaultState = stateDefinition.any();
+        BlockState defaultState = defaultBlockState().setValue(BCWaterlogging.WATERLOGGED, false);
         for (Property<Boolean> prop : CONNECTED_MAP.values()) {
             defaultState = defaultState.setValue(prop, false);
         }
@@ -71,6 +75,16 @@ public class BlockFrame extends Block {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         CONNECTED_MAP.values().forEach(builder::add);
+        builder.add(BCWaterlogging.WATERLOGGED);
+    }
+
+    // Waterlogging: a frame is a thin lattice, so a quarry dug below the waterline stands its frame in the
+    // water rather than in a cage of air pockets. Flowing fluids stay held back, as forceSolidOn already
+    // ensured (see BCBuildersBlocks). Shared pattern: BCWaterlogging.
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return BCWaterlogging.fluidState(state);
     }
 
     // --- Connection Logic ---
@@ -89,7 +103,8 @@ public class BlockFrame extends Block {
 
     @Override
     public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext context) {
-        return computeConnections(context.getLevel(), context.getClickedPos(), defaultBlockState());
+        return computeConnections(context.getLevel(), context.getClickedPos(),
+            BCWaterlogging.placementState(defaultBlockState(), context));
     }
 
     @Override
@@ -101,6 +116,11 @@ public class BlockFrame extends Block {
     /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
             net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
     //?}
+        //? if >=1.21.10 {
+        BCWaterlogging.tickContainedWater(state, scheduledTickAccess, level, pos);
+        //?} else {
+        /*BCWaterlogging.tickContainedWater(state, level, pos);*/
+        //?}
         Property<Boolean> prop = CONNECTED_MAP.get(direction);
         if (prop != null) {
             state = state.setValue(prop, canConnectTo(level, neighborPos));

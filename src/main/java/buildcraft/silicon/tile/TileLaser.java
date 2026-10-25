@@ -13,8 +13,11 @@ import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -236,6 +239,40 @@ public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBloc
     public void clientTick() {
         if (clientLaserMoveInterval.markTimeIfDelay(level) || targetPos == null) {
             updateLaser();
+        }
+        spawnUnderwaterBubbles();
+    }
+
+    /** Whether the beam is drawn: it has a target and carries enough power to show. */
+    public boolean isBeamVisible() {
+        return laserPos != null && averageClient > 200_000;
+    }
+
+    /** Where the beam leaves the emitter: 4px out from the block centre along {@link BlockLaser#FACING}. */
+    public Vec3 getBeamStart() {
+        Direction side = getBlockState().getValue(BlockLaser.FACING);
+        return Vec3.atCenterOf(worldPosition)
+            .add(new Vec3(side.getStepX(), side.getStepY(), side.getStepZ()).scale(4 / 16D));
+    }
+
+    /** A beam fired through water boils off bubbles along its length; each one lands at a random point on
+     *  the beam and only where that point is in water (the bubble particle pops itself in air anyway). */
+    private void spawnUnderwaterBubbles() {
+        if (!isBeamVisible()) {
+            return;
+        }
+        Vec3 start = getBeamStart();
+        Vec3 beam = laserPos.subtract(start);
+        RandomSource random = level.getRandom();
+        int attempts = (int) beam.length() + 1;
+        for (int i = 0; i < attempts; i++) {
+            if (random.nextFloat() > 0.4f) {
+                continue;
+            }
+            Vec3 p = start.add(beam.scale(random.nextDouble()));
+            if (level.getFluidState(BlockPos.containing(p)).is(FluidTags.WATER)) {
+                level.addParticle(ParticleTypes.BUBBLE, p.x, p.y, p.z, 0, 0.04, 0);
+            }
         }
     }
 

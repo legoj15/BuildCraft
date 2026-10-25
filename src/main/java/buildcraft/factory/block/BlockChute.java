@@ -14,14 +14,10 @@ import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
-//? if >=1.21.10 {
-import net.minecraft.world.level.ScheduledTickAccess;
-//?}
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -44,7 +40,8 @@ import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileChute;
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 
 /**
  * The Chute block — an enhanced hopper that picks up items and inserts them
@@ -52,7 +49,7 @@ import buildcraft.lib.block.BlockBCTile_Neptune;
  * Ported from 1.12.2 BlockChute.
  */
 @SuppressWarnings("this-escape")
-public class BlockChute extends BlockBCTile_Neptune<TileChute> {
+public class BlockChute extends BlockBCTile_Waterloggable<TileChute> {
     //? if <26.3 {
     /*public static final MapCodec<BlockChute> CODEC = simpleCodec(BlockChute::new);
     *///?}
@@ -61,7 +58,7 @@ public class BlockChute extends BlockBCTile_Neptune<TileChute> {
 
     public BlockChute(Properties properties) {
         super(properties);
-        BlockState defaultState = this.stateDefinition.any().setValue(FACING, Direction.DOWN);
+        BlockState defaultState = defaultBlockState().setValue(FACING, Direction.DOWN);
         for (Property<Boolean> prop : CONNECTED_MAP.values()) {
             defaultState = defaultState.setValue(prop, false);
         }
@@ -77,24 +74,21 @@ public class BlockChute extends BlockBCTile_Neptune<TileChute> {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(FACING);
         CONNECTED_MAP.values().forEach(builder::add);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockState state = this.defaultBlockState().setValue(FACING, context.getClickedFace());
+        BlockState state = BCWaterlogging.placementState(
+            defaultBlockState().setValue(FACING, context.getClickedFace()), context);
         return computeAllConnections(context.getLevel(), context.getClickedPos(), state);
     }
 
     @Override
-    //? if >=1.21.10 {
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
-            BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
-    //?} else {
-    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
-    //?}
+    protected BlockState updateNeighbourShape(BlockState state, LevelReader level, BlockPos pos, Direction direction,
+            BlockState neighborState) {
         Property<Boolean> prop = CONNECTED_MAP.get(direction);
         if (prop != null) {
             return state.setValue(prop, shouldConnect(level, pos, state, direction));

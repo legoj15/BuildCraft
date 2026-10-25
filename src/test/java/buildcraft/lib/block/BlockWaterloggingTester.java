@@ -16,8 +16,10 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
@@ -33,7 +35,9 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.core.BCCoreBlocks;
+import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TilePump;
@@ -41,6 +45,7 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.MarkerArenaUtil;
 import buildcraft.lib.test.TestOnlyBlocks;
+import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -505,6 +510,8 @@ public class BlockWaterloggingTester {
 
     // ---------- Placement: placing into a water source keeps the water ----------
 
+    /** The non-cube blocks a player sets out underwater: the laser rig (laser, tables, engines) and the
+     *  machines whose model leaves an air pocket. Placed into water they must keep it. */
     public static void testPlacementIntoWaterSourceWaterlogs(GameTestHelper helper) {
         buildBasin(helper);
         ServerLevel level = helper.getLevel();
@@ -512,7 +519,25 @@ public class BlockWaterloggingTester {
             BCCoreBlocks.MARKER_VOLUME.get(),
             BCCoreBlocks.MARKER_PATH.get(),
             BCTransportBlocks.PIPE_HOLDER.get(),
+            BCSiliconBlocks.LASER.get(),
+            BCSiliconBlocks.ASSEMBLY_TABLE.get(),
+            BCSiliconBlocks.ADVANCED_CRAFTING_TABLE.get(),
+            BCSiliconBlocks.PROGRAMMING_TABLE.get(),
+            BCSiliconBlocks.INTEGRATION_TABLE.get(),
+            BCCoreBlocks.ENGINE_REDSTONE.get(),
+            BCCoreBlocks.ENGINE_CREATIVE.get(),
+            BCEnergyBlocks.ENGINE_STONE.get(),
+            BCEnergyBlocks.ENGINE_IRON.get(),
+            BCEnergyBlocks.ENGINE_FE.get(),
+            BCEnergyBlocks.DYNAMO_MJ.get(),
+            BCFactoryBlocks.TANK.get(),
+            BCFactoryBlocks.CHUTE.get(),
+            BCFactoryBlocks.DISTILLER.get(),
+            BCFactoryBlocks.HEAT_EXCHANGE.get(),
+            BCBuildersBlocks.FRAME.get(),
         };
+        // The laser's placement reads the placer's look direction, so a player is needed.
+        Player player = helper.makeMockPlayer(GameType.CREATIVE);
         BlockPos abs = helper.absolutePos(SUBJECT);
         for (boolean wet : new boolean[] { true, false }) {
             helper.setBlock(SUBJECT, wet ? Blocks.WATER : Blocks.AIR);
@@ -520,7 +545,7 @@ public class BlockWaterloggingTester {
                 // Aim at the subject cell itself: water and air are replaceable, so the clicked cell IS the
                 // placement cell — exactly what a player clicking into a water source produces.
                 BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(abs), Direction.UP, abs, false);
-                BlockPlaceContext ctx = new BlockPlaceContext(level, null, InteractionHand.MAIN_HAND,
+                BlockPlaceContext ctx = new BlockPlaceContext(level, player, InteractionHand.MAIN_HAND,
                     new ItemStack(block.asItem()), hit);
                 BlockState placed = block.getStateForPlacement(ctx);
                 helper.assertTrue(placed != null && placed.hasProperty(BlockStateProperties.WATERLOGGED),
@@ -535,6 +560,20 @@ public class BlockWaterloggingTester {
             }
         }
         helper.setBlock(SUBJECT, Blocks.AIR);
+        player.discard();
+
+        // A machine, a Builder or /setblock places a block's DEFAULT state, so that must be dry or it spawns
+        // water. The trap: a boolean property's first state is true, so a default built from
+        // stateDefinition.any() comes out waterlogged.
+        StringBuilder wetDefaults = new StringBuilder();
+        for (Block block : BuiltInRegistries.BLOCK) {
+            if (NAMESPACE.equals(BuiltInRegistries.BLOCK.getKey(block).getNamespace())
+                    && block.defaultBlockState().hasProperty(BlockStateProperties.WATERLOGGED)
+                    && block.defaultBlockState().getValue(BlockStateProperties.WATERLOGGED)) {
+                wetDefaults.append("\n  ").append(BuiltInRegistries.BLOCK.getKey(block));
+            }
+        }
+        helper.assertTrue(wetDefaults.isEmpty(), "BuildCraft block(s) whose default state is waterlogged:" + wetDefaults);
         helper.succeed();
     }
 

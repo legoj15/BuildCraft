@@ -70,7 +70,8 @@ public class LaserTargetingTester {
         helper.succeed();
     }
 
-    /** The cone still finds a clear in-front target, and the box also covers that near-front target. */
+    /** The cone still finds a clear in-front target, and the box also covers that near-front target.
+     *  Water on the path counts as clear. */
     public static void testConeFindsClearFrontTarget(GameTestHelper helper) {
         Level level = helper.getLevel();
         BlockPos origin = new BlockPos(1, 1, 1);
@@ -90,6 +91,15 @@ public class LaserTargetingTester {
         }
         if (!box.contains(absFront)) {
             helper.fail("Box scan should also reach the clear near-front table");
+        }
+
+        // Water on the path is not a wall: an underwater laser must still see the table.
+        BlockPos relWater = origin.offset(0, 1, 0);
+        helper.setBlock(relWater, Blocks.WATER);
+        List<BlockPos> coneThroughWater = TileLaser.scanCone(level, absOrigin, face, TileLaser.TARGETING_RANGE);
+        helper.setBlock(relWater, Blocks.AIR);
+        if (!coneThroughWater.contains(absFront)) {
+            helper.fail("Cone scan should see a table through water on its path");
         }
         helper.succeed();
     }

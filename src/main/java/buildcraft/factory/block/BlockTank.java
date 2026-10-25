@@ -18,10 +18,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.LevelReader;
-//? if >=1.21.10 {
-import net.minecraft.world.level.ScheduledTickAccess;
-//?}
-import net.minecraft.util.RandomSource;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -43,7 +39,8 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
@@ -55,7 +52,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockTank.
  */
 @SuppressWarnings("this-escape")
-public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlockConnector {
+public class BlockTank extends BlockBCTile_Waterloggable<TileTank> implements ITankBlockConnector {
     //? if <26.3 {
     /*public static final MapCodec<BlockTank> CODEC = simpleCodec(BlockTank::new);
     *///?}
@@ -66,7 +63,7 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
 
     public BlockTank(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(JOINED_BELOW, false));
+        this.registerDefaultState(defaultBlockState().setValue(JOINED_BELOW, false));
     }
 
     //? if <26.3 {
@@ -86,6 +83,7 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(JOINED_BELOW);
     }
 
@@ -148,26 +146,17 @@ public class BlockTank extends BlockBCTile_Neptune<TileTank> implements ITankBlo
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
         boolean isTankBelow = level.getBlockState(pos.below()).getBlock() instanceof ITankBlockConnector;
-        return this.defaultBlockState().setValue(JOINED_BELOW, isTankBelow);
+        return BCWaterlogging.placementState(defaultBlockState().setValue(JOINED_BELOW, isTankBelow), context);
     }
 
     @Override
-    //? if >=1.21.10 {
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
-            BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
-    //?} else {
-    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
-    //?}
+    protected BlockState updateNeighbourShape(BlockState state, LevelReader level, BlockPos pos, Direction direction,
+            BlockState neighborState) {
         if (direction == Direction.DOWN) {
             boolean isTankBelow = neighborState.getBlock() instanceof ITankBlockConnector;
             return state.setValue(JOINED_BELOW, isTankBelow);
         }
-        //? if >=1.21.10 {
-        return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
-        //?} else {
-        /*return super.updateShape(state, direction, neighborState, level, pos, neighborPos);*/
-        //?}
+        return state;
     }
 
     @Override

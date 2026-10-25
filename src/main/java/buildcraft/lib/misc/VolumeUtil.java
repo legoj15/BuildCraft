@@ -16,6 +16,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.core.Direction.AxisDirection;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Provides methods for iterating over a specific volume in a world. */
 public class VolumeUtil {
@@ -32,7 +34,7 @@ public class VolumeUtil {
             unknown.removeAll(allVisible);
             boolean visible = true;
             for (BlockPos p : unknown) {
-                if (level.isEmptyBlock(p)) {
+                if (isSeeThrough(level.getBlockState(p))) {
                     allVisible.add(p);
                 } else {
                     visible = false;
@@ -41,6 +43,11 @@ public class VolumeUtil {
             }
             iter.takePos(level, start, possible.pos, visible);
         }
+    }
+
+    /** Air, or a cell holding nothing but fluid — a laser underwater still sees through the water. */
+    private static boolean isSeeThrough(BlockState state) {
+        return state.isAir() || state.getBlock() instanceof LiquidBlock;
     }
 
     public static class VisiblePos {

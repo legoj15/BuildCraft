@@ -28,7 +28,8 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.tile.TileLaser;
 
@@ -38,7 +39,7 @@ import buildcraft.silicon.tile.TileLaser;
  * Ported from 1.12.2 BlockLaser.
  */
 @SuppressWarnings("this-escape")
-public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
+public class BlockLaser extends BlockBCTile_Waterloggable<TileLaser> {
     //? if <26.3 {
     /*public static final MapCodec<BlockLaser> CODEC = simpleCodec(BlockLaser::new);
     *///?}
@@ -62,7 +63,7 @@ public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
 
     public BlockLaser(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP));
+        this.registerDefaultState(defaultBlockState().setValue(FACING, Direction.UP));
     }
 
     //? if <26.3 {
@@ -74,13 +75,15 @@ public class BlockLaser extends BlockBCTile_Neptune<TileLaser> {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(FACING);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         // Face opposite the direction the player is looking (laser points away from placement surface)
-        return this.defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite());
+        return BCWaterlogging.placementState(
+            defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite()), context);
     }
 
     @Nullable

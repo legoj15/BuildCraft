@@ -15,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.StringRepresentable;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -23,9 +22,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
-//? if >=1.21.10 {
-import net.minecraft.world.level.ScheduledTickAccess;
-//?}
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
@@ -47,7 +43,8 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileHeatExchange;
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -57,7 +54,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockHeatExchange.
  */
 @SuppressWarnings("this-escape")
-public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> implements ICustomRotationHandler {
+public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchange> implements ICustomRotationHandler {
     //? if <26.3 {
     /*public static final MapCodec<BlockHeatExchange> CODEC = simpleCodec(BlockHeatExchange::new);
     *///?}
@@ -82,7 +79,7 @@ public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> imp
 
     public BlockHeatExchange(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any()
+        this.registerDefaultState(defaultBlockState()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(PART, EnumExchangePart.MIDDLE)
                 .setValue(CONNECTED_LEFT, false)
@@ -98,24 +95,20 @@ public class BlockHeatExchange extends BlockBCTile_Neptune<TileHeatExchange> imp
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(FACING, PART, CONNECTED_LEFT, CONNECTED_RIGHT);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Direction facing = context.getHorizontalDirection().getOpposite();
-        BlockState state = this.defaultBlockState().setValue(FACING, facing);
+        BlockState state = BCWaterlogging.placementState(defaultBlockState().setValue(FACING, facing), context);
         return updateConnections(state, context.getLevel(), context.getClickedPos(), facing);
     }
 
     @Override
-    //? if >=1.21.10 {
-    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
-            BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource randomSource) {
-    //?} else {
-    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-            net.minecraft.world.level.LevelAccessor level, BlockPos pos, BlockPos neighborPos) {*/
-    //?}
+    protected BlockState updateNeighbourShape(BlockState state, LevelReader level, BlockPos pos, Direction direction,
+            BlockState neighborState) {
         // Only care about horizontal neighbors
         if (direction.getAxis().isVertical()) {
             return state;

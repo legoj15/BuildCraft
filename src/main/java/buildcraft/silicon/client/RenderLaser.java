@@ -15,7 +15,6 @@ import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 //?}
-import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,7 +28,6 @@ import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 
-import buildcraft.silicon.block.BlockLaser;
 import buildcraft.silicon.tile.TileLaser;
 
 /**
@@ -93,23 +91,12 @@ public class RenderLaser {
         //?}
 
         for (TileLaser laser : ACTIVE_LASERS) {
+            if (!laser.isBeamVisible()) continue;
             Vec3 target = laser.laserPos;
-            if (target == null) continue;
-
-            long avg = laser.getAverageClient();
-            if (avg <= 200_000) continue;
-            avg += 200_000;
+            long avg = laser.getAverageClient() + 200_000;
 
             // Direction-aware start offset: emit from the red face of the laser block.
-            Direction side = laser.getBlockState().getValue(BlockLaser.FACING);
-            //? if >=1.21.10 {
-            Vec3 offset = new Vec3(0.5, 0.5, 0.5).add(
-                Vec3.atLowerCornerOf(side.getUnitVec3i()).scale(4 / 16D));
-            //?} else {
-            /*Vec3 offset = new Vec3(0.5, 0.5, 0.5).add(
-                Vec3.atLowerCornerOf(side.getNormal()).scale(4 / 16D));*/
-            //?}
-            Vec3 start = Vec3.atLowerCornerOf(laser.getBlockPos()).add(offset);
+            Vec3 start = laser.getBeamStart();
 
             int index = (int) (avg * MAX_POWER / laser.getMaxPowerPerTick());
             if (index > MAX_POWER) index = MAX_POWER;

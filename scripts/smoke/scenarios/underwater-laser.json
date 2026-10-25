@@ -1,0 +1,38 @@
+{
+  "name": "underwater-laser",
+  "base": [0, 150, 0],
+  "steps": [
+    { "label": "clear the area and build a glass tank full of water", "do": "cmd", "run": [
+      "fill {X-6} {Y-1} {Z-7} {X+6} {Y+6} {Z+6} minecraft:air",
+      "fill {X-3} {Y-1} {Z-3} {X+3} {Y+5} {Z+3} minecraft:glass hollow",
+      "fill {X-2} {Y} {Z-2} {X+2} {Y+4} {Z+2} minecraft:water",
+      "fill {X-6} {Y-1} {Z-7} {X+6} {Y-1} {Z+6} minecraft:barrier replace minecraft:air"
+    ] },
+    { "label": "laser rig: creative engine (redstone-powered) feeds a laser that fires up into an assembly table crafting redstone chipsets", "do": "cmd", "run": [
+      "setblock {X} {Y} {Z} buildcraftunofficial:laser[facing=up,waterlogged=true]",
+      "setblock {X+1} {Y} {Z} buildcraftunofficial:engine_creative[facing=west,waterlogged=true]",
+      "setblock {X+2} {Y} {Z} minecraft:redstone_block",
+      "setblock {X} {Y+3} {Z} buildcraftunofficial:assembly_table[waterlogged=true]{items:{inv:{items:[{stack:{id:\"minecraft:redstone\",count:64}}]}},recipes_states:{entries:[{recipe:\"chipset_redstone\",state:1,output:{id:\"buildcraftunofficial:chipset_redstone\",count:1}}]}}"
+    ] },
+    { "label": "the other non-cube blocks that now waterlog", "do": "cmd", "run": [
+      "setblock {X-2} {Y} {Z-2} buildcraftunofficial:tank[waterlogged=true]",
+      "setblock {X-2} {Y} {Z} buildcraftunofficial:distiller[facing=north,waterlogged=true]",
+      "setblock {X-2} {Y} {Z+2} buildcraftunofficial:chute[facing=down,waterlogged=true]",
+      "setblock {X+2} {Y} {Z-2} buildcraftunofficial:frame[waterlogged=true]",
+      "setblock {X+2} {Y} {Z+2} buildcraftunofficial:heat_exchange[facing=north,waterlogged=true]",
+      "setblock {X} {Y} {Z+2} buildcraftunofficial:engine_stone[facing=up,waterlogged=true]",
+      "setblock {X-2} {Y+3} {Z} buildcraftunofficial:integration_table[waterlogged=true]"
+    ] },
+    { "label": "the laser is waterlogged (expect: Test passed)", "do": "cmd", "echo": true, "run": "execute if block {X} {Y} {Z} buildcraftunofficial:laser[waterlogged=true]" },
+    { "do": "tp", "at": [0, 1, -6], "yaw": 0, "pitch": 15 },
+    { "do": "wait", "ms": 8000 },
+    { "label": "the table is receiving laser power (power > 0)", "do": "cmd", "echo": true, "run": "data get block {X} {Y+3} {Z} power" },
+    { "name": "front", "do": "shot", "look": "glass tank of water seen from the front. Laser at the bottom centre fires a beam up into the assembly table; BUBBLES rise along the beam. Every block (laser, engine, tables, tank, distiller, chute, frame, heat exchanger, stone engine) stands IN water: no air pocket (no clear box) around any of them" },
+    { "do": "tp", "at": [-6, 2, 0], "yaw": -90, "pitch": 15 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "side", "do": "shot", "look": "same rig from the west side: beam with bubbles, no air pockets around the frame, tank or tables" },
+    { "do": "tp", "at": [0, 2, -2], "yaw": 0, "pitch": 30 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "inside", "do": "shot", "look": "view from inside the water (underwater fog): the beam and its bubbles, the blocks around without air-pocket artefacts" }
+  ]
+}

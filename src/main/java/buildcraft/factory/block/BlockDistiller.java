@@ -34,7 +34,8 @@ import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.tools.IToolWrench;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileDistiller_BC8;
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 
@@ -44,7 +45,7 @@ import buildcraft.lib.misc.FluidUtilBC;
  * Ported from 1.12.2 BlockDistiller.
  */
 @SuppressWarnings("this-escape")
-public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> implements ICustomRotationHandler {
+public class BlockDistiller extends BlockBCTile_Waterloggable<TileDistiller_BC8> implements ICustomRotationHandler {
     //? if <26.3 {
     /*public static final MapCodec<BlockDistiller> CODEC = simpleCodec(BlockDistiller::new);
     *///?}
@@ -52,7 +53,7 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
 
     public BlockDistiller(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.WEST));
+        this.registerDefaultState(defaultBlockState().setValue(FACING, Direction.WEST));
     }
 
     //? if <26.3 {
@@ -64,12 +65,14 @@ public class BlockDistiller extends BlockBCTile_Neptune<TileDistiller_BC8> imple
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(FACING);
     }
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+        return BCWaterlogging.placementState(
+            defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()), context);
     }
 
     @Nullable

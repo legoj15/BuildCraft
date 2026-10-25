@@ -32,7 +32,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.api.mj.ILaserTargetBlock;
-import buildcraft.lib.block.BlockBCTile_Neptune;
+import buildcraft.lib.block.BlockBCTile_Waterloggable;
 import buildcraft.silicon.BCSiliconBlockEntities;
 import buildcraft.silicon.tile.TileLaserTableBase;
 
@@ -41,7 +41,7 @@ import buildcraft.silicon.tile.TileLaserTableBase;
  * Implements ILaserTargetBlock so lasers can find and target it, and EntityBlock
  * so each variant creates the correct block entity.
  */
-public class BlockLaserTable extends BlockBCTile_Neptune<TileLaserTableBase> implements ILaserTargetBlock {
+public class BlockLaserTable extends BlockBCTile_Waterloggable<TileLaserTableBase> implements ILaserTargetBlock {
     /** The 1.12 bounding box: full width, 9/16 height. */
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 9, 16);
 

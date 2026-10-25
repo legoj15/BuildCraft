@@ -48,6 +48,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
 import buildcraft.api.tiles.IDebuggable;
 
+import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.chunkload.ChunkLoaderManager;
 import buildcraft.lib.chunkload.IChunkLoadingTile;
 import buildcraft.lib.debug.IAdvDebugTarget;
@@ -1427,7 +1428,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 frameRefusals.remember(level, framePos, getOwner());
                 return false;
             }
-            level.setBlockAndUpdate(framePos, BCBuildersBlocks.FRAME.get().defaultBlockState());
+            // Into a water source, the frame waterlogs rather than deleting the water.
+            level.setBlockAndUpdate(framePos,
+                BCWaterlogging.placementState(BCBuildersBlocks.FRAME.get().defaultBlockState(), level, framePos));
             return true;
         }
     }

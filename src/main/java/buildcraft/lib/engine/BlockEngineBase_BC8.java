@@ -16,13 +16,22 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+//? if >=1.21.10 {
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+//?} else {
+/*import net.minecraft.world.level.LevelAccessor;*/
+//?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.material.FluidState;
 //? if >=1.21.10 {
 import net.minecraft.world.level.redstone.Orientation;
 //?}
@@ -36,6 +45,7 @@ import buildcraft.api.blocks.ICustomRotationHandler;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.api.tools.IToolWrench;
 
+import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.misc.BlockUtil;
 
 /**
@@ -47,24 +57,50 @@ import buildcraft.lib.misc.BlockUtil;
  * mechanism for wrench rotation — it fires for ALL wrench clicks (normal and crouch).
  */
 @SuppressWarnings("this-escape")
-public abstract class BlockEngineBase_BC8 extends Block implements EntityBlock, ICustomRotationHandler {
+public abstract class BlockEngineBase_BC8 extends Block
+        implements EntityBlock, ICustomRotationHandler, SimpleWaterloggedBlock {
 
     public BlockEngineBase_BC8(Properties properties) {
         super(properties.noOcclusion());
         registerDefaultState(defaultBlockState()
-            .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP));
+            .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP)
+            .setValue(BCWaterlogging.WATERLOGGED, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(BuildCraftProperties.BLOCK_FACING_6);
+        builder.add(BuildCraftProperties.BLOCK_FACING_6, BCWaterlogging.WATERLOGGED);
     }
 
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        return defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, ctx.getClickedFace());
+        return BCWaterlogging.placementState(
+            defaultBlockState().setValue(BuildCraftProperties.BLOCK_FACING_6, ctx.getClickedFace()), ctx);
     }
+
+    // Waterlogging: the engine model is a mounting plate and a moving piston, not a cube, so one set out
+    // underwater stands in the water rather than an air pocket. Shared pattern: BCWaterlogging.
+
+    @Override
+    protected FluidState getFluidState(BlockState state) {
+        return BCWaterlogging.fluidState(state);
+    }
+
+    @Override
+    //? if >=1.21.10 {
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess,
+            BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        BCWaterlogging.tickContainedWater(state, scheduledTickAccess, level, pos);
+        return super.updateShape(state, level, scheduledTickAccess, pos, direction, neighborPos, neighborState, random);
+    }
+    //?} else {
+    /*protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
+            LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+        BCWaterlogging.tickContainedWater(state, level, pos);
+        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    }*/
+    //?}
 
     @Override
     public BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rot) {

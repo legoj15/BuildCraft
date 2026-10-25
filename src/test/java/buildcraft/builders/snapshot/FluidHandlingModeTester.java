@@ -19,6 +19,7 @@ import java.util.Optional;
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -1155,6 +1156,57 @@ public class FluidHandlingModeTester {
                     helper.setBlock(chestAt, Blocks.AIR);
                     helper.setBlock(chestAt.below(), Blocks.AIR);
                 }));
+    }
+
+    /**
+     * A failed placement over a block that has a block entity drops that block instead of putting it back: the
+     * restore could only bring back a fresh, empty block entity, and whatever the old one held only in its drop (a
+     * shulker box's contents, a named or configured block) would be gone. A torch with nothing under it, placed over
+     * a waterlogged chest holding three diamonds, pops; the cell must be left with the chest's water, and the chest
+     * and the diamonds must each drop once. Glass walls keep the water that is left, and the drops floating in it,
+     * in the cell.
+     */
+    public static void testFailedPlacementOverWaterloggedChestDropsIt(GameTestHelper helper) {
+        BlockPos chestAt = new BlockPos(2, 3, 2);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            Level level = helper.getLevel();
+            BlockPos abs = helper.absolutePos(chestAt);
+            // Nothing under the torch, so it pops; a floor a block lower and walls keep the water and the drops in.
+            level.setBlock(abs.below(), Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(abs.below(2), Blocks.STONE.defaultBlockState(), 3);
+            for (BlockPos wall : failedChestWalls(abs)) {
+                level.setBlock(wall, Blocks.GLASS.defaultBlockState(), 3);
+            }
+            level.setBlock(abs, waterlogged(Blocks.CHEST), 3);
+            assertTrue(level.getBlockEntity(abs) instanceof Container,
+                    "precondition: the chest has an inventory");
+            ((Container) level.getBlockEntity(abs)).setItem(0, new ItemStack(Items.DIAMOND, 3));
+            assertTrue(!schem(Blocks.TORCH.defaultBlockState()).build(level, abs, EnumFluidHandlingMode.REPLACE),
+                    "a torch with nothing under it must fail to place");
+            BlockState after = level.getBlockState(abs);
+            assertTrue(after.is(Blocks.WATER) && after.getFluidState().isSource(),
+                    "the cell must keep the chest's water, not a fresh empty chest; found " + after);
+        }, Drops.near(chestAt, 1.5).exactly(Items.CHEST, 1).exactly(Items.DIAMOND, 3)
+                .andCheck(() -> {
+                    Level level = helper.getLevel();
+                    for (BlockPos wall : failedChestWalls(helper.absolutePos(chestAt))) {
+                        level.setBlock(wall, Blocks.AIR.defaultBlockState(), 3);
+                    }
+                    helper.setBlock(chestAt, Blocks.AIR);
+                    helper.setBlock(chestAt.below(), Blocks.AIR);
+                    helper.setBlock(chestAt.below(2), Blocks.AIR);
+                }));
+    }
+
+    /** The four sides of the chest's cell and of the cell below it. */
+    private static List<BlockPos> failedChestWalls(BlockPos chest) {
+        List<BlockPos> walls = new ArrayList<>();
+        for (BlockPos cell : new BlockPos[] {chest, chest.below()}) {
+            for (Direction side : Direction.Plane.HORIZONTAL) {
+                walls.add(cell.relative(side));
+            }
+        }
+        return walls;
     }
 
     /**

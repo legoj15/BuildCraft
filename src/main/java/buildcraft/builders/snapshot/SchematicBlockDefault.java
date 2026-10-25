@@ -587,8 +587,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * under REPLACE or CLEAR) drops its loot into the world (as the Builder's iron pickaxe would), once the placement has held;
      * a placement that fails afterwards (a torch with no floor pops) puts back whatever each cell
      * held (fluid, a waterlogged block, grass, a snow layer), in every mode, and drops no loot. A
-     * container's contents are the exception: they spill when the block is removed, so a failed
-     * placement over a waterlogged chest puts the chest back empty, its contents on the ground.
+     * block with a block entity is the exception: it is dropped, not put back (a fresh one would be
+     * empty), so a failed placement over a waterlogged chest leaves its water, the chest and its
+     * contents on the ground.
      */
     public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         return build(level, blockPos, fluidMode, true);
@@ -783,7 +784,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // on a failure duplicates no drop); the setBlock below is what finally removes the source, and the failure
         // exit restores displacedState. A container's contents spill here, when its block goes, as they do when the
         // Builder breaks it (vanilla spills them from the removal itself): a placement undone afterwards leaves the
-        // container back empty with its contents on the ground, none lost.
+        // container's water, with the container and its contents on the ground, none lost.
         if (willDestroyFluidAtPos) {
             level.destroyBlock(blockPos, false);
         }
@@ -845,9 +846,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
                     // below). Roll back this half AND the atomic other half (if applicable),
                     // putting back any fluid source each cell held, then return false so
                     // cancelPlaceTask refunds items.
-                    rollBackCell(level, blockPos, displacedState);
+                    rollBackCell(level, blockPos, displacedState, displacedLoot);
                     if (secondHalfPos != null) {
-                        rollBackCell(level, secondHalfPos, displacedOtherState);
+                        rollBackCell(level, secondHalfPos, displacedOtherState, displacedOtherLoot);
                     }
                     return false;
                 }
@@ -908,10 +909,18 @@ public class SchematicBlockDefault implements ISchematicBlock {
     /**
      * Puts {@code pos} back after {@link #build} undoes a placement: what the cell held before the placement
      * overwrote it ({@code displacedState}: fluid, source or flowing, a waterlogged block, a replaceable block), or
-     * air when it held nothing. Flag 3 notifies the neighbours and lets a liquid block schedule its flow tick
-     * again, as it does when placed in vanilla.
+     * air when it held nothing. A block with a block entity is not put back: the restore could only make a fresh,
+     * empty one, and what the old one held only in its drop (a shulker box's contents, a custom name) would be
+     * gone, so it drops {@code displacedLoot} instead and leaves its fluid. Flag 3 notifies the neighbours and lets
+     * a liquid block schedule its flow tick again, as it does when placed in vanilla.
      */
-    private static void rollBackCell(Level level, BlockPos pos, @Nullable BlockState displacedState) {
+    private static void rollBackCell(Level level, BlockPos pos, @Nullable BlockState displacedState,
+                                     List<ItemStack> displacedLoot) {
+        if (displacedState != null && displacedState.hasBlockEntity()) {
+            level.setBlock(pos, displacedState.getFluidState().createLegacyBlock(), 3);
+            displacedLoot.forEach(drop -> Block.popResource(level, pos, drop));
+            return;
+        }
         level.setBlock(pos, displacedState != null ? displacedState : Blocks.AIR.defaultBlockState(), 3);
     }
 

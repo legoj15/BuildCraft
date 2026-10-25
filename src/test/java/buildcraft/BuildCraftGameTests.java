@@ -543,6 +543,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_failed_place_keeps_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementKeepsFluidSource);
         reg.accept("buildcraftunofficial:fluidmode_placement_drops_displaced_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementDropsTheBlockItDisplaces);
         reg.accept("buildcraftunofficial:fluidmode_placement_over_waterlogged_chest_drops_once", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementOverWaterloggedChestDropsChestAndContentsOnce);
+        reg.accept("buildcraftunofficial:fluidmode_failed_place_over_waterlogged_chest_drops_it", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementOverWaterloggedChestDropsIt);
         reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_block_before_placing", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceBuilderBreaksWaterloggedBlockBeforePlacing);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);

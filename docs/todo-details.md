@@ -72,7 +72,6 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 ## Small cleanups
 
 Follow-ups left by the 2026-10-24 cleanup rounds; none is a known player-facing bug in normal play.
-- `SchematicBlockDefault.build` over a waterlogged chest: a placement that is then undone puts the chest back empty with its contents on the ground (none lost); other block-entity data (sign text) of a displaced block is not restored. Only direct calls reach it; the Builder breaks such cells first.
 - `unaddedRobot` test helpers: the copies in `BuilderBoardTester` and `RobotActionAIsTester` are identical and `RobotPumpProtectionTester`'s differs only by a force-load; share them in `EntityArenaUtil`.
 
 ## In-client smoke 2026-09-26

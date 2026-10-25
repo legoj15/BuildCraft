@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_deployer_bomber_needs_both",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 20,
+    "max_ticks": 90,
     "setup_ticks": 0,
     "required": true
 }

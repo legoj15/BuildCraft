@@ -5,12 +5,14 @@
  */
 package buildcraft.robotics.ai;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -343,11 +345,34 @@ public class RobotBreakBlockUpdateTester {
                         }
                     }
                     return true;
-                }),
+                }, () -> canopyStall(level, robot, List.of(logBottom, logMid, logTop), regionMin, regionMax, allVines)),
                 helper::succeed,
                 "the lumberjack robot never finished the chop-and-decay lifecycle (trunk chopped, every leaf decayed and"
                         + " every vine fallen)",
                 () -> cleanUpLumberjack(helper, robot));
+    }
+
+    /** Which stage of the canopy lifecycle never finished, and what the robot was doing then. */
+    private static String canopyStall(ServerLevel level, EntityRobot robot, List<BlockPos> logs, BlockPos regionMin,
+                                      BlockPos regionMax, List<BlockPos> vines) {
+        StringBuilder out = new StringBuilder();
+        for (BlockPos log : logs) {
+            if (!level.getBlockState(log).isAir()) out.append("log left at ").append(log).append("; ");
+        }
+        for (BlockPos p : BlockPos.betweenClosed(regionMin, regionMax)) {
+            BlockState s = level.getBlockState(p);
+            if (s.getBlock() instanceof LeavesBlock) out.append("leaf left at ").append(p).append(' ').append(s).append("; ");
+        }
+        for (BlockPos v : vines) {
+            if (!level.getBlockState(v).isAir()) {
+                out.append("vine left at ").append(v).append(' ').append(level.getBlockState(v)).append("; ");
+            }
+        }
+        List<String> left = new ArrayList<>();
+        List<String> right = new ArrayList<>();
+        robot.getDebugInfo(left, right, Direction.UP);
+        out.append("robot removed=").append(robot.isRemoved()).append(' ').append(left).append(' ').append(right);
+        return out.toString();
     }
 
     /** Every exit of a lumberjack test: the robot goes (it would keep scanning, or sleeping, past the test) and so

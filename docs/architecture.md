@@ -124,6 +124,11 @@ mod's blocks are captured at all only when that mod ships BuildCraft builder rul
 (`RulesLoader.READ_DOMAINS`), so such a mod must price or clear its own non-`Clearable` inventories
 itself. This is a documented limit of the design, not a bug.
 
+Kelp is a known, accepted Builder loop (not tracked as a todo, decided 2026-10-24): breaking kelp
+under an air schematic in REPLACE or NO_REPLACE leaves the water those modes keep, kelp regrows
+into it, and the round-robin check marks it to break again; a schematic kelp loops too, since
+`isBuilt` compares its growth age. Solid schematics over kelp, and seagrass, terminate.
+
 **Zone Planner maps**: a written zone map carries only a `{store, id}` ref; the zone lives in
 `ZoneMapSavedData` (overworld saved data). Entries are never freed, like vanilla filled maps, and
 this is deliberate (decided 2026-10-24): proving no map anywhere still names a zone means scanning

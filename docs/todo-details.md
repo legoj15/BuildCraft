@@ -72,7 +72,6 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 ## Small cleanups
 
 Follow-ups left by the 2026-10-24 cleanup rounds; none is a known player-facing bug in normal play.
-- Builder over kelp: breaking kelp under an air schematic leaves water, kelp regrows into it, and the round-robin check marks it to break again, so a REPLACE build can loop; a schematic kelp loops too, since `isBuilt` compares its growth age (pre-existing; solid schematics and seagrass terminate).
 - `SchematicBlockDefault.build` over a waterlogged chest: a placement that is then undone puts the chest back empty with its contents on the ground (none lost); other block-entity data (sign text) of a displaced block is not restored. Only direct calls reach it; the Builder breaks such cells first.
 - `unaddedRobot` test helpers: the copies in `BuilderBoardTester` and `RobotActionAIsTester` are identical and `RobotPumpProtectionTester`'s differs only by a force-load; share them in `EntityArenaUtil`.
 

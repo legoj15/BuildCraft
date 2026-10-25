@@ -1,8 +1,8 @@
 # Robotics resurrection — plan & context
 
-Linked from [todos.md](../todos.md). This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
+Linked from the robotics issues on GitHub. This is the working plan for porting the robot system; update phase status here as work lands, and delete a phase's section only if the whole program is ever abandoned.
 
-**Status: Ph0 (seams b, c), Ph1 through Ph9 are ALL COMPLETE — the robotics resurrection is finished. What remains of the robot system is the polish list in [todos.md](../todos.md) and the audit's follow-ups.**
+**Status: Ph0 (seams b, c), Ph1 through Ph9 are ALL COMPLETE — the robotics resurrection is finished. What remains of the robot system is the open robotics issues on GitHub and the audit's follow-ups.**
 
 **2026-09-03 gameplay audit** against the live 7.1.27 reference client (record: [robotics-gameplay-audit.md](robotics-gameplay-audit.md)): numeric parity complete; 16 deviations fixed tests-first, the remaining ones listed there as follow-ups/decisions.
 

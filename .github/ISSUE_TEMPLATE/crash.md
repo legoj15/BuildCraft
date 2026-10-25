@@ -2,7 +2,7 @@
 name: Game Crash
 about: Your game crashed and produced a crash report file.
 title: 'Crash'
-labels: 'auto: crash'
+labels: 'needs-triage'
 assignees: ''
 
 ---

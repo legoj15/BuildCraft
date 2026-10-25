@@ -1,6 +1,6 @@
 ---
 name: in-client-smoke
-description: Visually verifying BuildCraft in a real dev client on one or all Stonecutter nodes — render sites, machine GUIs, button hovers/tooltips, guide book clicks — with the scripted McDevBridge runner (scripts/smoke/Invoke-InClientSmoke.ps1). Use when a change needs an in-game look, when todos/todo-details list "in-client" or "in-game check" items, or when the user asks to smoke-test, screenshot, or click through the game.
+description: Visually verifying BuildCraft in a real dev client on one or all Stonecutter nodes — render sites, machine GUIs, button hovers/tooltips, guide book clicks — with the scripted McDevBridge runner (scripts/smoke/Invoke-InClientSmoke.ps1). Use when a change needs an in-game look, when an open issue asks for an "in-client" or "in-game check", or when the user asks to smoke-test, screenshot, or click through the game.
 ---
 
 # In-client smoke runs
@@ -36,8 +36,8 @@ failed step, fatal error or BuildCraft ERROR log line.
 2. Open every screenshot (`Read` the PNGs) and compare against the step's `look` text. Crop/zoom small geometry
    before judging (pipes are glass-framed by design; don't mistake that for missing textures).
 3. The same shot across nodes is the useful comparison — a node that differs is the finding.
-4. Record results where the checklist lives (usually `docs/todo-details.md`), trim the todo bullet, and file
-   anything broken as its own bullet.
+4. Record results as a comment on the issue that asked for the check (`bash ~/.claude/skills/issues/issues.sh note N`), `done N` when
+   the check passes, and file anything broken as its own issue (`bash ~/.claude/skills/issues/issues.sh add … --type bug`).
 
 ## Authoring scenario steps
 

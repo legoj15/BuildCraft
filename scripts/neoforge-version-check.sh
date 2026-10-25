@@ -142,6 +142,6 @@ ctx="NeoForge version check: one or more Stonecutter nodes are behind upstream."
 for frag in "${behind_ctx[@]}"; do
     ctx="$ctx\\n  - $frag"
 done
-ctx="$ctx\\nFor each node: read the cumulative changelog entries above the pinned build, cross-reference todos.md, classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version). See AGENTS.md -> 'NeoForge version tracking'."
+ctx="$ctx\\nFor each node: read the cumulative changelog entries above the pinned build, cross-reference the open GitHub issues (bash ~/.claude/skills/issues/issues.sh list), classify the delta (neutral / beneficial / cautionary), and offer a per-node bump (edit that node's versions/<id>/gradle.properties -> neo_version). See AGENTS.md -> 'NeoForge version tracking'."
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$ctx"
 exit 0

@@ -1,6 +1,6 @@
 ---
 name: neoforge-bump
-description: Bumping NeoForge on any Stonecutter node in BuildCraft — use when the SessionStart version-check hook reports a node behind upstream, or the user asks to update/bump NeoForge or minecraft_version. Covers the changelog fetch, the neutral/beneficial/cautionary classification against todos.md, the per-node pin edit, the .neoforge-ref sources re-sync, post-bump testing, and the fresh-clone settings.json hook wiring.
+description: Bumping NeoForge on any Stonecutter node in BuildCraft — use when the SessionStart version-check hook reports a node behind upstream, or the user asks to update/bump NeoForge or minecraft_version. Covers the changelog fetch, the neutral/beneficial/cautionary classification against the open GitHub issues, the per-node pin edit, the .neoforge-ref sources re-sync, post-bump testing, and the fresh-clone settings.json hook wiring.
 ---
 
 # Bumping NeoForge in BuildCraft
@@ -26,12 +26,12 @@ when all nodes are current; fails silently when offline. Check manually anytime 
 
 Every build publishes a *cumulative* changelog at
 `…/neoforge/<version>/neoforge-<version>-changelog.txt`. Fetch the **latest** version's
-changelog, read the entries above the pinned `neo_version`, cross-reference `todos.md`, then
+changelog, read the entries above the pinned `neo_version`, cross-reference the open issues (`bash ~/.claude/skills/issues/issues.sh list`), then
 classify the delta for the user:
 
 - **Neutral** — nothing BuildCraft touches; just note the update exists.
-- **Beneficial** — a new API/event/hook that unblocks a `todos.md` item or enables an
-  optimization; name the relevant bullet.
+- **Beneficial** — a new API/event/hook that unblocks an open issue (the `blocked` ones name their reopen trigger) or enables an
+  optimization; name the issue number.
 - **Cautionary** — a deprecation, removal, signature change, or restructuring in an API
   BuildCraft *does* use; identify what breaks *before* bumping.
 

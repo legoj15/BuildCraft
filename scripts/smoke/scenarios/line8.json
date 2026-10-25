@@ -1,6 +1,6 @@
 {
   "name": "line8",
-  "description": "The in-client checklist in docs/todo-details.md#in-client-smoke-2026-09-26: render sites, machine GUIs with button tooltips, the guide book.",
+  "description": "The 2026-09-26 in-client checklist (now closed): render sites, machine GUIs with button tooltips, the guide book.",
   "base": [0, 150, 0],
   "steps": [
     { "label": "setup", "do": "cmd", "run": [

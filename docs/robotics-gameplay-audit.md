@@ -3,7 +3,7 @@
 Started 2026-09-03. Companion to [robotics-resurrection.md](robotics-resurrection.md) and
 [gameplay-differences-1.7.10-vs-1.12.2.md](gameplay-differences-1.7.10-vs-1.12.2.md). Agent-facing working
 record: what was compared, how, what was found, the status of each finding, and what was fixed. The
-user-facing outcome is the todos.md bullets it produces.
+user-facing outcome is the GitHub issues it produces.
 
 ## Method
 
@@ -175,7 +175,7 @@ merged and re-verified. Every fix carries a plain-English `changelog.md` bullet.
 
 ## Follow-ups
 
-Tracked as one-liners in todos.md; the detail lives here.
+Tracked as GitHub issues; the detail lives here.
 
 - **Decided 2026-09-03 (user):** see "Decided: blank robots and boards" below. Still open from the same list:
   sneak-wrench puts the robot item in the inventory (7.1.x dropped it on the ground) — keep the port's

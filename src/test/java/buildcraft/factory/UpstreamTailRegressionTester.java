@@ -34,7 +34,7 @@ import buildcraft.transport.tile.TileFilteredBuffer;
 
 /**
  * Regression pins from the 2026-09 sweep of the upstream 7.1.20-7.1.27 fixes that never reached any 8.0.x
- * branch (record: docs/todo-details.md, "Upstream 7.1.x tail sweep").
+ * branch (record: docs/upstream-71x-tail-sweep.md).
  */
 public class UpstreamTailRegressionTester {
 

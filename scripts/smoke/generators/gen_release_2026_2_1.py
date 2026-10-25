@@ -20,7 +20,7 @@ Shot names carry the item letter, so the review goes one item at a time:
      page 2 with "Diamond FE Pipe". Before the fix only the last page's links clicked.
   D  Programming Table paging: no shipped recipe has more than 24 options (one board recipe, 18 boards incl. blank),
      so the pager never shows in normal play; the shot pins the grid with the pager absent.
-  E  cheap extras from docs/todo-details.md "In-client smoke 2026-09-26" (blocks-atlas sweep render sites): gate
+  E  cheap extras from the 2026-09-26 in-client smoke checklist (closed) (blocks-atlas sweep render sites): gate
      plugs, LED variable models, the Architect's pipe-preview pluggables, painted fluid-pipe item models.
   F  (a second scenario, release-2026-2-1-f.json) the rest of that list: F1 the guide's side chapter tabs on a wide
      window, F2 the Filler's Preview toggle on a volume box (the eye button, its tooltips, the cubes in the box, the

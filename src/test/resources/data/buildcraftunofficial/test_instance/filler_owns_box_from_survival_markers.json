@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:filler_owns_box_from_survival_markers",
+    "environment":  "buildcraftunofficial:filler_owns_box_from_survival_markers",
+    "structure":  "minecraft:empty",
+    "max_ticks":  350,
+    "setup_ticks":  0,
+    "required":  true
+}

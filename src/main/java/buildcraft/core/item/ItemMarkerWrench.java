@@ -8,10 +8,13 @@ package buildcraft.core.item;
 
 import net.minecraft.resources.Identifier;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -50,9 +53,11 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
  * <b>Click priority.</b> A marker laser hangs in the air, so the block behind the crosshair is usually the ground,
  * and the wrench would rotate that instead. {@link #isAimingAtMarkerTarget} tells whether the click is meant for a
  * marker target (a laser, an addon slot, a box to remove, a box being edited, or a corner this wrench may drag);
- * {@link #onItemUseFirst} and {@link #useOn} then pass, so vanilla falls through to {@link #use}, which does the
- * marker work. Anything else keeps the inherited wrench behaviour. The client runs the same test on its own
- * marker caches and box list, because it decides whether to send the {@code use} at all.
+ * {@link #onItemUseFirst} then does the marker work itself and consumes the click, so neither the wrench rotation
+ * nor the block's own use runs (a chest or machine behind the laser would otherwise open its screen: the wrench
+ * lets sneak-clicks through to blocks). The server does the work; the client only answers with the same success,
+ * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before. Anything else
+ * keeps the inherited wrench behaviour. The client runs the same test on its own marker caches and box list.
  * <p>
  * Dragging a box corner is gated by {@link #canEditCorners()}; only the {@link ItemVolumeWrench} turns it on.
  */
@@ -76,25 +81,25 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         return false;
     }
 
+    /**
+     * The server tick on which each player's last marker click was handled from {@link #onItemUseFirst}. Should the
+     * client have disagreed about the target (its caches lag the server's by a packet) and gone on to send a
+     * {@code use} for the same click, {@link #use} finds the click handled and does not act on it a second time.
+     */
+    private static final Map<UUID, Long> HANDLED_ON_BLOCK = new HashMap<>();
+
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
-        if (claimsClick(context)) {
-            return InteractionResult.PASS;
+        Player player = context.getPlayer();
+        if (player != null && isAimingAtMarkerTarget(context.getLevel(), player, context.getClickLocation())) {
+            Level level = context.getLevel();
+            if (!level.isClientSide()) {
+                HANDLED_ON_BLOCK.put(player.getUUID(), level.getGameTime());
+                doMarkerClick(level, player);
+            }
+            return InteractionResult.SUCCESS;
         }
         return super.onItemUseFirst(stack, context);
-    }
-
-    @Override
-    public InteractionResult useOn(UseOnContext context) {
-        if (claimsClick(context)) {
-            return InteractionResult.PASS;
-        }
-        return super.useOn(context);
-    }
-
-    private boolean claimsClick(UseOnContext context) {
-        Player player = context.getPlayer();
-        return player != null && isAimingAtMarkerTarget(context.getLevel(), player, context.getClickLocation());
     }
 
     @Override
@@ -112,20 +117,29 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
 
     private InteractionResult useImpl(Level level, Player player) {
         if (!level.isClientSide()) {
+            Long handled = HANDLED_ON_BLOCK.remove(player.getUUID());
+            if (handled != null && handled == level.getGameTime()) {
+                return InteractionResult.SUCCESS;
+            }
+        }
+        doMarkerClick(level, player);
+        // Always consume the action so the player gets swing feedback
+        return InteractionResult.SUCCESS;
+    }
+
+    /** The marker work of a click: connect the aimed laser, else act on the volume boxes. Server side; a no-op on
+     *  the client. */
+    private void doMarkerClick(Level level, Player player) {
+        if (!level.isClientSide()) {
             Vec3 eye = player.getEyePosition();
             Vec3 look = player.getLookAngle();
             for (MarkerCache<?> cache : MarkerCache.CACHES) {
                 if (connectAimedLine(cache.getSubCache(level), player, eye, look)) {
-                    return InteractionResult.SUCCESS;
+                    return;
                 }
             }
         }
-        InteractionResult volumeResult = onUseVolumeBoxes(level, player);
-        if (volumeResult.consumesAction()) {
-            return volumeResult;
-        }
-        // Always consume the action so the player gets swing feedback
-        return InteractionResult.SUCCESS;
+        onUseVolumeBoxes(level, player);
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -303,7 +317,10 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
                     nearest = box;
                 }
             }
-            if (nearest != null && nearest.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
+            // A box a machine holds on to (Remove), or uses as it is (Resize), stays. A box a machine owns is
+            // locked against removal only: it goes with its machine, never by a wrench.
+            if (nearest != null && nearest.getLockTargetsStream().noneMatch(
+                target -> target instanceof Lock.Target.TargetRemove || target instanceof Lock.Target.TargetResize)) {
                 return new VolumePick(VolumeClick.BOX_REMOVE, nearest, null, null, nearestDist);
             }
             return VolumePick.NOTHING;

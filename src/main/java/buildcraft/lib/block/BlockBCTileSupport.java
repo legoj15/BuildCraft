@@ -73,6 +73,9 @@ final class BlockBCTileSupport {
     static void dropOnRemove(BlockState state, Level level, BlockPos pos, BlockState newState) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof AbstractBCBlockEntity tile) {
             tile.dropContentsOnRemoval(level, pos);
+            if (!level.isClientSide()) {
+                tile.onBlockRemoved(level, pos);
+            }
         }
     }
 

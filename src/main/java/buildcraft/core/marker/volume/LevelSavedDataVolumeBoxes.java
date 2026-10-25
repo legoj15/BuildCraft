@@ -8,11 +8,14 @@ package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -26,6 +29,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -35,6 +39,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -144,10 +149,65 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.box.contains(pos)).findFirst().orElse(null);
     }
 
+    /** A free (not machine-owned) box containing {@code pos}: what a machine placed against it may adopt. A box
+     *  another machine owns is that machine's working area, never a second machine's. */
+    @Nullable
+    public VolumeBox getFreeVolumeBoxAt(BlockPos pos) {
+        return volumeBoxes.stream().filter(volumeBox -> volumeBox.getOwner() == null && volumeBox.box.contains(pos))
+            .findFirst().orElse(null);
+    }
+
+    /** The box the machine at {@code ownerPos} owns, or null. */
+    @Nullable
+    public VolumeBox getOwnedBy(BlockPos ownerPos) {
+        for (VolumeBox volumeBox : volumeBoxes) {
+            if (volumeBox.isOwnedBy(ownerPos)) {
+                return volumeBox;
+            }
+        }
+        return null;
+    }
+
     public void addVolumeBox(BlockPos pos) {
         volumeBoxes.add(new VolumeBox(world, pos));
         setDirty();
         broadcastToDimension();
+    }
+
+    /**
+     * Creates the box a machine owns from the area it took over (survival markers), replacing any box already owned
+     * from that position. Locked against removal and marked as in use by the machine; not against resizing, so the
+     * Volume Wrench can drag its corners and the machine follows (see {@link VolumeBox#getOwner()}).
+     */
+    public VolumeBox addOwnedBox(BlockPos min, BlockPos max, BlockPos ownerPos, Block ownerBlock,
+                                 Lock.Target.TargetUsedByMachine.EnumType use) {
+        removeOwnedBy(ownerPos);
+        VolumeBox volumeBox = new VolumeBox(world, min);
+        volumeBox.box.extendToEncompass(max);
+        volumeBox.setOwner(ownerPos, ownerBlock);
+        volumeBox.locks.add(new Lock(
+            new Lock.Cause.CauseBlock(ownerPos.immutable(), ownerBlock),
+            new Lock.Target.TargetRemove(),
+            new Lock.Target.TargetUsedByMachine(use)));
+        volumeBoxes.add(volumeBox);
+        markDirtyAndBroadcast();
+        return volumeBox;
+    }
+
+    /** Removes the box the machine at {@code ownerPos} owns, if any: the machine is gone. */
+    public void removeOwnedBy(BlockPos ownerPos) {
+        boolean removed = false;
+        for (Iterator<VolumeBox> it = volumeBoxes.iterator(); it.hasNext(); ) {
+            VolumeBox volumeBox = it.next();
+            if (volumeBox.isOwnedBy(ownerPos)) {
+                volumeBox.addons.values().forEach(Addon::onRemoved);
+                it.remove();
+                removed = true;
+            }
+        }
+        if (removed) {
+            markDirtyAndBroadcast();
+        }
     }
 
     /**
@@ -218,6 +278,16 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         boolean dirty = false;
         for (int i = 0; i < volumeBoxes.size(); i++) {
             VolumeBox volumeBox = volumeBoxes.get(i);
+            // The fallback for an owner removed without its removal hook (a >=1.21.10 command replace skips block
+            // side effects): a box whose machine is no longer there goes too. An unloaded machine keeps its box
+            // (stillWorks holds while the chunk is not loaded).
+            Lock.Cause.CauseBlock owner = volumeBox.getOwner();
+            if (owner != null && !owner.stillWorks(world)) {
+                volumeBox.addons.values().forEach(Addon::onRemoved);
+                volumeBoxes.remove(i--);
+                dirty = true;
+                continue;
+            }
             if (volumeBox.isEditing()) {
                 Player player = volumeBox.getPlayer(world);
                 if (player == null) {
@@ -231,7 +301,9 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
                             player.position()
                                     .add(0, player.getEyeHeight(), 0)
                                     .add(player.getLookAngle().scale(volumeBox.getDist())));
-                    volumeBox.box.extendToEncompass(lookingAt);
+                    // No drag makes a box larger than markers could: each axis stops at the marker reach.
+                    volumeBox.box.extendToEncompass(VolumeBox.clampDragTarget(volumeBox.getHeld(), lookingAt,
+                            BCCoreConfig.markerMaxDistance.get()));
                     if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
                         dirty = true;
                     }

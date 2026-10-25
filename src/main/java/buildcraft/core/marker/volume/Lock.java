@@ -120,9 +120,11 @@ public class Lock {
                 //?}
             }
 
+            /** Assumed to hold while the block's chunk is not loaded: checking would load it (the volume boxes are
+             *  ticked every tick), and an unloaded machine is still there. */
             @Override
             public boolean stillWorks(Level world) {
-                return world.getBlockState(pos).getBlock() == block;
+                return !world.isLoaded(pos) || world.getBlockState(pos).getBlock() == block;
             }
         }
 

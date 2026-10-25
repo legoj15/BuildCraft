@@ -186,6 +186,9 @@ public abstract class BlockEngineBase_BC8 extends Block
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof TileEngineBase_BC8 tile) {
             tile.dropContentsOnRemoval(level, pos);
+            if (!level.isClientSide()) {
+                tile.onBlockRemoved(level, pos);
+            }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
     }*/

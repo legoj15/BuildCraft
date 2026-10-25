@@ -137,6 +137,16 @@ public abstract class AbstractBCBlockEntity extends BlockEntity implements Clear
     /** Spills this tile's contents on a non-player removal. Default no-op. */
     public void dropContentsOnRemoval(net.minecraft.world.level.Level level, BlockPos pos) {}
 
+    /**
+     * Called once when this tile's block is removed for good (a player break, explosion, {@code /setblock}, a
+     * different block set over it), from the same two sites as {@link #dropContentsOnRemoval}, but on every such
+     * removal, player breaks included, and never for a chunk unload (unlike {@code setRemoved}). For tiles that keep
+     * something alive outside themselves, such as a machine's owned volume box. A replace by command skips it on
+     * {@code >=1.21.10} (the skip-side-effects flag), so whatever relies on it needs a fallback. Server side only.
+     * Default no-op.
+     */
+    public void onBlockRemoved(net.minecraft.world.level.Level level, BlockPos pos) {}
+
     // --- Replace-by-command wipe hook ---
     // Vanilla's contract for a command or structure REPLACING a block entity: the contents vanish, they do not
     // spill (a replaced chest keeps nothing). On 1.21.1, /setblock (replace and keep), /fill, /clone and

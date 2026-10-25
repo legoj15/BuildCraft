@@ -683,6 +683,8 @@ public class BuildCraftGameTests {
 
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
+        // Survival markers a Filler takes over become a volume box it owns: no wrench removes it, and it goes with the Filler.
+        reg.accept("buildcraftunofficial:filler_owns_box_from_survival_markers", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::survivalMarkersBecomeABoxTheFillerOwns);
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);

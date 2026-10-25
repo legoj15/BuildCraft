@@ -155,6 +155,13 @@ public class TileFiller extends TileBC_Neptune
         BCBuildersEventDist.INSTANCE.validateFiller(this);
     }
 
+    /** The box this Filler owns goes with it (see {@link #followOwnedBox}). */
+    @Override
+    public void onBlockRemoved(Level level, BlockPos pos) {
+        super.onBlockRemoved(level, pos);
+        LevelSavedDataVolumeBoxes.get(level).removeOwnedBy(pos);
+    }
+
     // ==================== Placement ====================
 
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
@@ -170,9 +177,9 @@ public class TileFiller extends TileBC_Neptune
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
 
-        // Try volume box system first
+        // Try volume box system first. A box another machine owns is that machine's area, not one to adopt.
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumeBox volumeBox = volumeBoxes.getVolumeBoxAt(offsetPos);
+        VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
         BlockEntity tile = level.getBlockEntity(offsetPos);
 
         if (volumeBox != null) {
@@ -221,6 +228,10 @@ public class TileFiller extends TileBC_Neptune
             box.setMin(provider.min());
             box.setMax(provider.max());
             provider.removeFromWorld();
+            // The markers become a box this Filler owns, which the Volume Wrench can resize. markerBox stays on:
+            // the renderer leaves the area to the box while there is one (a copy of this tile has none).
+            volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
+                Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE);
         }
 
         updateBuildingInfo();
@@ -270,6 +281,9 @@ public class TileFiller extends TileBC_Neptune
         if (lockedTicks < 0) {
             lockedTicks = 0;
         }
+        if (followOwnedBox()) {
+            return;
+        }
         if (mode == Mode.OFF || isFinished()) {
             return;
         }
@@ -298,6 +312,41 @@ public class TileFiller extends TileBC_Neptune
                 MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
+    }
+
+    // ==================== Owned box ====================
+
+    /**
+     * Keeps the working area in step with the volume box this Filler owns, if it owns one (it does when it took over
+     * survival markers; a Filler from before boxes were owned has none and keeps its area as it is). The box is
+     * looked up by its owner position rather than by an id saved on the tile, so a copy of this tile's data (a
+     * blueprint, a structure) can never point a second Filler at it.
+     * <p>
+     * {@link #box} stays the area the builder works on, mirrored from the owned box only once a drag is confirmed:
+     * the builder's snapshot is laid out for one fixed area, so it must never see a box that changes under it. While
+     * a drag is under way (paused ones included) the Filler waits; a confirmed new size restarts the job from scratch
+     * on the new area, and a cancelled drag puts the old size back, so nothing changes.
+     *
+     * @return true while the box is being dragged: the Filler does no work this tick.
+     */
+    private boolean followOwnedBox() {
+        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getOwnedBy(worldPosition);
+        if (owned == null) {
+            return false;
+        }
+        if (owned.hasEditInProgress()) {
+            return true;
+        }
+        if (!box.isInitialized() || !owned.box.min().equals(box.min()) || !owned.box.max().equals(box.max())) {
+            box.reset();
+            box.setMin(owned.box.min());
+            box.setMax(owned.box.max());
+            finished = false;
+            updateBuildingInfo();
+            setChanged();
+            markForRenderUpdate();
+        }
+        return false;
     }
 
     // ==================== Statement Change ====================
@@ -366,6 +415,8 @@ public class TileFiller extends TileBC_Neptune
         markerBox = input.getBooleanOr("markerBox", true);
 
         // Box
+        BlockPos oldMin = box.isInitialized() ? box.min() : null;
+        BlockPos oldMax = box.isInitialized() ? box.max() : null;
         if (input.getBooleanOr("box_initialized", false)) {
             int minX = input.getIntOr("box_minX", 0);
             int minY = input.getIntOr("box_minY", 0);
@@ -399,7 +450,9 @@ public class TileFiller extends TileBC_Neptune
         // into the client inventory and resets all builder arrays, causing ghost items and
         // item count flickering in the GUI.
         // On the server (disk load) or on initial client sync (buildingInfo == null), always rebuild.
-        if (level == null || !level.isClientSide() || buildingInfo == null) {
+        // A new area (an owned box resized) is the exception: the old building info no longer fits it.
+        boolean boxChanged = box.isInitialized() && (!box.min().equals(oldMin) || !box.max().equals(oldMax));
+        if (level == null || !level.isClientSide() || buildingInfo == null || boxChanged) {
             updateBuildingInfo();
         }
 

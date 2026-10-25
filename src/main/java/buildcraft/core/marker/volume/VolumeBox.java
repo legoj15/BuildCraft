@@ -14,6 +14,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import javax.annotation.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -21,6 +23,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 
 import buildcraft.api.core.BCLog;
 
@@ -39,6 +42,14 @@ public class VolumeBox {
     private BlockPos oldMin = null, oldMax = null;
     public final Map<EnumAddonSlot, Addon> addons = new EnumMap<>(EnumAddonSlot.class);
     public final List<Lock> locks = new ArrayList<>();
+    /**
+     * The machine this box belongs to, or null for a free box (one placed with the Volume Box item). A Filler or
+     * Architect Table that takes over survival markers turns them into a box it owns: the box lives exactly as long
+     * as the machine (removed with it, never by a wrench) and is the machine's editable working area. Saved under
+     * {@code owner}; absent in saves from before ownership existed, which load as free boxes, as they were.
+     */
+    @Nullable
+    private Lock.Cause.CauseBlock owner = null;
 
     public VolumeBox(Level world, BlockPos at) {
         if (world == null)
@@ -93,6 +104,11 @@ public class VolumeBox {
             }
         }
 
+        if (nbt.contains("owner")) {
+            owner = new Lock.Cause.CauseBlock();
+            owner.readFromNBT(NBTUtilBC.getCompound(nbt, "owner"));
+        }
+
         if (nbt.contains("locks")) {
             ListTag locksList = NBTUtilBC.getList(nbt, "locks", Tag.TAG_COMPOUND);
             for (int i = 0; i < locksList.size(); i++) {
@@ -107,6 +123,42 @@ public class VolumeBox {
     @SuppressWarnings("WeakerAccess")
     public boolean isEditing() {
         return player != null;
+    }
+
+    /** Whether a drag is under way, including one paused because its player left: the box's size is not final. */
+    public boolean hasEditInProgress() {
+        return player != null || oldPlayer != null;
+    }
+
+    /** Makes this box belong to the machine block at {@code pos} (see {@link #owner}). */
+    public void setOwner(BlockPos pos, Block block) {
+        owner = new Lock.Cause.CauseBlock(pos.immutable(), block);
+    }
+
+    /** The machine this box belongs to, or null for a free box. */
+    @Nullable
+    public Lock.Cause.CauseBlock getOwner() {
+        return owner;
+    }
+
+    public boolean isOwnedBy(BlockPos pos) {
+        return owner != null && owner.pos.equals(pos);
+    }
+
+    /**
+     * Where the dragged corner goes when the player aims at {@code target} while {@code held} stays put: each axis is
+     * kept within {@code maxSpan} blocks of the held corner, the same reach a marker connection has, so a box can
+     * never be dragged larger than markers could make it. Axes are clamped on their own.
+     */
+    public static BlockPos clampDragTarget(BlockPos held, BlockPos target, int maxSpan) {
+        return new BlockPos(
+            clampAxis(held.getX(), target.getX(), maxSpan),
+            clampAxis(held.getY(), target.getY(), maxSpan),
+            clampAxis(held.getZ(), target.getZ(), maxSpan));
+    }
+
+    private static int clampAxis(int held, int target, int maxSpan) {
+        return Math.max(held - maxSpan, Math.min(held + maxSpan, target));
     }
 
     private void resetEditing() {
@@ -216,6 +268,9 @@ public class VolumeBox {
             locksList.add(lock.writeToNBT());
         }
         nbt.put("locks", locksList);
+        if (owner != null) {
+            nbt.put("owner", owner.writeToNBT(new CompoundTag()));
+        }
         return nbt;
     }
 

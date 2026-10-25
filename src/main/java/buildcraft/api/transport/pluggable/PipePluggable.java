@@ -156,6 +156,14 @@ public abstract class PipePluggable {
         return 0;
     }
 
+    /** PipePluggable version of {@code BlockBehaviour#getShadeBrightness(BlockState, BlockGetter, BlockPos)}: how
+     * much this pluggable darkens smooth lighting (ambient occlusion) on the faces of neighbouring blocks, 0.2 for a
+     * full opaque block and 1 for none. The pipe holder answers with the darkest value of its pluggables, so a solid
+     * facade shades its neighbours the way the block it copies would. 1 (the default) leaves the pipe unshaded. */
+    public float getShadeBrightness(BlockGetter level, BlockPos pos) {
+        return 1;
+    }
+
     public boolean canConnectToRedstone(@Nullable Direction to) {
         return false;
     }

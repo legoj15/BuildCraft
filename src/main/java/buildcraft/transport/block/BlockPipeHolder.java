@@ -70,6 +70,8 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_contents");
 
     // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
+    private static final Direction[] DIRECTIONS = Direction.values();
+
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
     // Connection arms for each direction.
     // A 0.01-pixel epsilon gap prevents Shapes.or() from merging arms with the center,
@@ -342,6 +344,24 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     /*public boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {*/
     //?}
         return true;
+    }
+
+    /** Smooth lighting asks each neighbour how much it darkens a face corner. The pipe core alone is not a full
+     *  cube (1 = no shadow), so a wall of facades never cast the creases real blocks do. The darkest pluggable wins:
+     *  a solid stone facade shades like stone. The question carries no direction, so a facade on one side shades
+     *  every neighbour, the way a real block would. Called on chunk-build threads against the section copy. */
+    @Override
+    protected float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        float shade = super.getShadeBrightness(state, level, pos);
+        if (level.getBlockEntity(pos) instanceof TilePipeHolder tile) {
+            for (Direction side : DIRECTIONS) {
+                PipePluggable pluggable = tile.getPluggable(side);
+                if (pluggable != null) {
+                    shade = Math.min(shade, pluggable.getShadeBrightness(level, pos));
+                }
+            }
+        }
+        return shade;
     }
 
     // Placement

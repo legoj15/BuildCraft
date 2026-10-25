@@ -76,7 +76,6 @@ The item-definition coverage guard compares against the DEV registry (`tasks.tes
 
 One-line technical breadcrumbs for bullets that don't need a full section:
 
-- **Facade smooth shading** — AO infrastructure already exists in `MutableQuad`; needs facade-specific wiring.
 - **Filler mode icons** — the old `filling/` selector-icon set archived at `misc/unused_textures/filling/` is stale erroneous leftover, not a basis for the new art.
 - **Goggles texture** — `item/goggles.png` is a verbatim copy of the vanilla paper texture; the headpiece stays dev-gated until real art exists.
 - **Cauldron as tank** — NeoForge already exposes `IFluidHandler` capabilities for cauldrons; wire that into BC's fluid pipe connection logic (drain water/lava/powder-snow, fill to the appropriate level).

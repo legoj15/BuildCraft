@@ -22,9 +22,14 @@ Shot names carry the item letter, so the review goes one item at a time:
      so the pager never shows in normal play; the shot pins the grid with the pager absent.
   E  cheap extras from docs/todo-details.md "In-client smoke 2026-09-26" (blocks-atlas sweep render sites): gate
      plugs, LED variable models, the Architect's pipe-preview pluggables, painted fluid-pipe item models.
+  F  (a second scenario, release-2026-2-1-f.json) the rest of that list: F1 the guide's side chapter tabs on a wide
+     window, F2 a Filler Planner addon on a volume box (icon, Fill preview, invert), F3 robot exhaust on Minimal.
+     F2 cannot pick an arbitrary pattern: the pattern list is dragged from, and the bridge has no press-drag-release.
+     Run it the same way with -Scenario scripts/smoke/scenarios/release-2026-2-1-f.json.
 
 GUI coordinates assume the scenario's window (1600x900) and guiScale 3, i.e. a 534x300 GUI.
 """
+import math
 import os
 import sys
 
@@ -340,3 +345,283 @@ scenario = {
 }
 write(OUT, scenario)
 print("wrote %s (%d steps)" % (os.path.normpath(OUT), len(S)))
+
+
+# ══ F: what the 2026-09-26 smoke still owed (its own scenario, release-2026-2-1-f) ═════════════════════════════
+# Volume boxes live in the level's saved data, which no command reaches, so the rig is made by hand each run: a
+# sneak-click with the Marker Connector first removes the box an earlier run left, then a Volume Box makes a 1x1x1
+# box and a connector drag grows it to 3x3x3. While a corner is held the server puts it at
+# floor(eye + look * dist), where dist is fixed by the click that grabbed it (max(1.5, hit distance + 0.5)), so the
+# drag is solved here: the release aim must land deep inside the target block, and no click ray may pass through
+# an addon slot (a 1/8-block cube on each box corner), which would take the click instead.
+
+FOUT = os.path.join(os.path.dirname(__file__), "..", "scenarios", "release-2026-2-1-f.json")
+EYE = 1.62
+SLOT = 1 / 16.0
+
+
+def _eye(p):
+    return (p[0] + 0.5, p[1] + EYE, p[2] + 0.5)
+
+
+def _seg_hits(o, q, lo, hi, length=4.0):
+    """Distance along the 4-block look segment from o toward q at which it enters [lo, hi], or None."""
+    d = [q[i] - o[i] for i in range(3)]
+    n = math.sqrt(sum(c * c for c in d))
+    d = [c / n for c in d]
+    t0, t1 = 0.0, length
+    for i in range(3):
+        if abs(d[i]) < 1e-12:
+            if o[i] < lo[i] or o[i] > hi[i]:
+                return None
+            continue
+        a, b = (lo[i] - o[i]) / d[i], (hi[i] - o[i]) / d[i]
+        a, b = min(a, b), max(a, b)
+        t0, t1 = max(t0, a), min(t1, b)
+        if t0 > t1:
+            return None
+    return t0
+
+
+def _slots(lo, hi):
+    return [tuple(c - SLOT for c in (x, y, z)) + tuple(c + SLOT for c in (x, y, z))
+            for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])]
+
+
+def _misses_slots(o, q, lo, hi, allow=None):
+    for s in _slots(lo, hi):
+        if allow is not None and s == allow:
+            continue
+        if _seg_hits(o, q, s[:3], s[3:]) is not None:
+            return False
+    return True
+
+
+def solve_drag(p, b, t):
+    """Player block p grabs the 1x1x1 box at block b and drags its corner to block t. Returns (grab point, release
+    point, margin) or None when no release aim lands in t."""
+    e = _eye(p)
+    grab = (b[0] + 0.5, b[1] + 0.5, b[2] + 0.5)
+    lo, hi = b, tuple(c + 1 for c in b)
+    hit = _seg_hits(e, grab, lo, hi)
+    if hit is None or not _misses_slots(e, grab, lo, hi):
+        return None
+    dist = max(1.5, hit + 0.5)
+    flo = tuple(min(b[i], t[i]) for i in range(3))
+    fhi = tuple(max(b[i], t[i]) + 1 for i in range(3))
+    best = None
+    for i in range(1, 20):
+        for j in range(1, 20):
+            for k in range(1, 20):
+                q = (t[0] + i / 20.0, t[1] + j / 20.0, t[2] + k / 20.0)
+                d = [q[n] - e[n] for n in range(3)]
+                r = math.sqrt(sum(c * c for c in d))
+                rel = [e[n] + d[n] / r * dist for n in range(3)]     # where the server will put the corner
+                inside = [rel[n] - t[n] for n in range(3)]
+                margin = min(min(v, 1 - v) for v in inside)
+                if margin > 0.15 and (best is None or margin > best[2]) and _misses_slots(e, rel, flo, fhi):
+                    best = (grab, tuple(round(v, 3) for v in rel), margin)
+    return best
+
+
+FP1 = (13, 0, 3)        # where the drag is done from (outside the finished box)
+FB = (12, 0, 6)         # the Volume Box's first block
+FT = (10, 2, 4)         # the corner it is dragged to: box x10-12, y0-2, z4-6
+drag = solve_drag(FP1, FB, FT)
+if drag is None:
+    raise SystemExit("F: no drag solution for %s -> %s from %s" % (FB, FT, FP1))
+FGRAB, FRELEASE, _ = drag
+FLO = tuple(min(FB[i], FT[i]) for i in range(3))
+FHI = tuple(max(FB[i], FT[i]) + 1 for i in range(3))
+FCENTRE = tuple((FLO[i] + FHI[i]) / 2.0 for i in range(3))
+FP2 = (12, 0, 1)        # the viewing and addon position, north of the box
+FCORNER = (FHI[0], FHI[1], FLO[2])
+assert _misses_slots(_eye(FP2), FCORNER, FLO, FHI,
+                     allow=tuple(c - SLOT for c in FCORNER) + tuple(c + SLOT for c in FCORNER))
+
+F = []
+
+
+def fstep(**kw):
+    F.append(kw)
+
+
+def fcmd(label, *run, **kw):
+    fstep(label=label, do="cmd", run=list(run), **kw)
+
+
+def fshot(name, look):
+    fstep(name=name, do="shot", look=look)
+
+
+def fwait(ms):
+    fstep(do="wait", ms=ms)
+
+
+def faim(point, exact=True):
+    fstep(do="aim", at=list(point), exact=exact)
+
+
+fstep(label="window 1600x900 (GUI coordinates below assume it with guiScale 3)", do="window", width=1600, height=900)
+fcmd("load the rig's chunks", "gamemode creative @p", "?forceload add {X-16} {Z-24} {X+16} {Z+16}")
+fstep(do="tp", at=list(FP2), yaw=0, pitch=12)
+fwait(3000)
+fcmd("clear and floor",
+     "difficulty peaceful", "time set 6000", "?gamerule doDaylightCycle false", "?gamerule advance_time false",
+     "weather clear", "?clear @p",
+     "?kill @e[type=%s,x={X},y={Y},z={Z},distance=..80]" % ROBOT,
+     "?fill {X-16} {Y} {Z-24} {X+16} {Y+8} {Z+16} minecraft:air",
+     "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..80]",
+     "fill {X-16} {Y-1} {Z-24} {X+16} {Y-1} {Z+16} minecraft:smooth_stone",
+     "?advancement grant @p everything")
+fwait(2000)
+
+# ── F1: the guide's side chapter tabs on a window wide enough for them ─────────────────────────────────────────
+fstep(label="F1: a window wide enough for side tabs (640 GUI units at guiScale 3; under 590 the guide uses its "
+            "Chapters overlay instead)", do="window", width=1920, height=1080)
+fstep(do="hold", item="buildcraftunofficial:guide")
+fstep(do="look", yaw=0, pitch=-90)
+fwait(300)
+fstep(label="F1: open the guide", do="use")
+fstep(do="expectScreen", contains="GuiGuide", timeoutSec=20)
+fstep(label="F1: open the cover", do="click", fx=0.5, fy=0.5)
+fwait(2500)
+# The book is 385 GUI units wide whatever the window, centred: its page-forward arrow sits at centre + (171, 109).
+fstep(label="F1: turn to the contents page", do="click", x=491, y=289)
+fwait(800)
+fstep(label="F1: park the cursor", do="hover", fx=0.02, fy=0.02)
+fshot("f1-contents-wide", "F1: the contents page (3/24) on a wide window: chapter tabs stand out from the book's "
+      "left edge (no 'Chapters' tab peeking over the top of the right page), and the three sort buttons down the "
+      "left page's top-left corner are whole, not covered by a tab")
+fstep(do="close")
+fstep(label="F1: back to the scenario window", do="window", width=1600, height=900)
+
+# ── F2: a Filler Planner addon on a volume box: its icon, its preview, its invert button ───────────────────────
+fstep(do="tp", at=list(FP1), yaw=0, pitch=20)
+fstep(do="hold", item="buildcraftunofficial:marker_connector")
+fstep(label="F2: sneak (removes the box an earlier run left)", do="keybind", key="key.sneak", action="press")
+faim(FCENTRE)
+for i in range(3):  # a stale drag cancels first, an addon would go next, then the box
+    fstep(label="F2: sneak-click the old box (%d/3)" % (i + 1), do="use")
+fstep(do="keybind", key="key.sneak", action="release")
+fwait(300)
+fstep(do="hold", item="buildcraftunofficial:volume_box")
+faim((FB[0] + 0.5, FB[1] - 0.001, FB[2] + 0.5))
+fstep(label="F2: a Volume Box on the floor's top face makes a 1x1x1 box above it", do="use")
+fwait(500)
+fstep(do="hold", item="buildcraftunofficial:marker_connector")
+faim(FGRAB)
+fstep(label="F2: grab the box's corner with the Marker Connector", do="use")
+faim(FRELEASE)
+fwait(800)
+fstep(label="F2: release it two blocks over, up and back (a 3x3x3 box)", do="use")
+fwait(500)
+fstep(do="tp", at=list(FP2), yaw=0, pitch=20)
+fstep(do="hold", item="buildcraftunofficial:filler_planner")
+faim(FCORNER)
+fstep(label="F2: put a Filler Planner on the box's north-east top corner", do="use")
+fwait(500)
+fstep(do="hold", item="minecraft:air")
+faim(FCENTRE)
+fwait(1000)
+fshot("f2-box-with-addon", "F2: a 3x3x3 volume box (its outline) right in front, with the Filler Planner's icon drawn "
+      "as a small textured cube on its near top-LEFT corner (the camera faces south, so east is screen left): the "
+      "planner's own sprite, not a missing-texture square and not a random block texture. No preview cubes at all: a "
+      "new planner starts on None, and the box an earlier run left (removed above) must be gone from the client too")
+fstep(do="hold", item="buildcraftunofficial:marker_connector")
+faim(FCORNER)
+fstep(label="F2: click the addon with the connector (opens the planner)", do="use")
+fstep(do="expectScreen", contains="GuiFillerPlanner", timeoutSec=10)
+fwait(500)
+fstep(name="f2-planner", do="widgets")
+fstep(label="F2: park the cursor", do="hover", x=10, y=10)
+fshot("f2-planner-gui", "F2: the Filler Planner screen: the pattern list at the left of the panel, the pattern slot "
+      "on None (grey), four parameter slots, the invert button at the right (not pressed)")
+fstep(label="F2: hover the hollow square in the pattern list (third in its top row)", do="hover", x=152, y=123)
+fshot("f2-pattern-choices", "F2: the pattern list's hollow square shows its tooltip 'Box'")
+# The list is dragged from (press on a pattern, release over the slot), which the bridge cannot do: its click is a
+# press and release in place. On the slot that opens the hold-and-release variant menu and picks its centre entry,
+# Fill, which is the better invert check anyway (every cell, then none).
+fstep(label="F2: click the pattern slot (an in-place click picks the variant menu's centre entry, Fill)", do="click",
+      x=207, y=157)
+fwait(500)
+fstep(label="F2: park the cursor", do="hover", x=10, y=10)
+fshot("f2-planner-fill", "F2: the pattern slot now shows Fill (a solid dark square)")
+fstep(do="close")
+faim(FCENTRE)
+fwait(1000)
+fshot("f2-preview-fill", "F2: the planner previews Fill: one translucent cube in every cell of the 3x3x3 box, the "
+      "yellow addon icon still on its corner")
+faim(FCORNER)
+fstep(label="F2: reopen the planner", do="use")
+fstep(do="expectScreen", contains="GuiFillerPlanner", timeoutSec=10)
+fwait(500)
+fstep(label="F2: hover the invert button", do="hover", x=339, y=157)
+fshot("f2-invert-tooltip", "F2: the invert button's tooltip 'Do Not Invert' (the current mode), the button not "
+      "pressed yet")
+fstep(label="F2: press invert", do="click", x=339, y=157)
+fwait(500)
+fstep(label="F2: park the cursor", do="hover", x=10, y=10)
+fstep(label="F2: hover the invert button again", do="hover", x=339, y=157)
+fshot("f2-inverted-gui", "F2: the invert button now latched (lighter, pressed-in face) and its tooltip says 'Invert'")
+fstep(do="close")
+faim(FCENTRE)
+fwait(1000)
+fshot("f2-preview-inverted", "F2: inverted Fill: no preview cubes left, only the red outline and the addon icon")
+
+
+# ── F3: a working robot's exhaust on All, then on Minimal particles ─────────────────────────────────────────────
+# Digging costs 1.1 MJ/t and fetching 1.5 (flying 0.1), so a Shovelman puffs about twice a second on All and about
+# once every seven seconds on Minimal (RobotExhaust: one puff per 100 << 2*setting spend). The rule itself is unit
+# tested; what only a client shows is that Minimal still draws the rare puff (the spawn skips vanilla's limiter).
+def video_particles(label, clicks):
+    fstep(label=label, do="pause")
+    fstep(do="click", widgetText="Options...")
+    fstep(do="expectScreen", contains="OptionsScreen")
+    fstep(do="click", widgetText="Video Settings")
+    fstep(do="expectScreen", contains="VideoSettings")
+    for _ in range(clicks):
+        fstep(label="cycle Particles", do="click", widgetText="Particles")
+    fstep(name="f3-video", do="widgets")
+
+
+fcmd("F3: a two-layer dirt patch and the Shovelman's home (shovel), its Work-in-Area zone over the patch",
+     "fill {X-10} {Y-1} {Z+9} {X-2} {Y} {Z+11} minecraft:dirt",
+     *station(-6, 6, ["minecraft:iron_shovel"], "buildcraft:station.provide_items", (-10, -1, 8, -2, 1, 12)))
+F.extend(deploy("F3: deploy a Shovelman", -6, 6, "boardRobotShovelman"))
+fstep(do="hold", item="minecraft:air")
+fstep(do="tp", at=[-6, 0, 3], yaw=0, pitch=25)
+# The view is set again before each burst: the tp's rotation came out nearly level on 1.21.1 (the hand then hid the
+# robot), and on 26.3 the Video Settings trip can turn the camera (the runner's real-Esc focus grab).
+F3_VIEW = dict(do="look", yaw=0, pitch=25)
+fstep(**F3_VIEW)
+fwait(4000)
+for i in range(1, 11):
+    fshot("f3-all-%02d" % i, "F3 on All, burst %d/10 (about half a second apart): the Shovelman digging the dirt "
+          "patch, small red exhaust puffs around it in most shots" % i)
+    fwait(300)
+video_particles("F3: Particles All -> Decreased -> Minimal", 2)
+fshot("f3-video-minimal", "F3: Video Settings with 'Particles: Minimal'")
+fstep(do="close")
+fstep(**F3_VIEW)
+fwait(1000)
+for i in range(1, 21):
+    fshot("f3-minimal-%02d" % i, "F3 on Minimal, burst %d/20 (about a second apart): far fewer puffs than the All "
+          "burst, but across the burst at least one red puff near the robot (none at all in twenty shots is the "
+          "finding: Minimal suppressing the exhaust entirely)" % i)
+    fwait(800)
+video_particles("F3: Particles Minimal -> All (the runner also resets it every run)", 1)
+fshot("f3-video-all", "F3: Video Settings back on 'Particles: All'")
+fstep(do="close")
+
+scenario_f = {
+    "name": "release-2026-2-1-f",
+    "description": "What the 2026-09-26 in-client smoke still owed: F1 the guide's side chapter tabs on a wide "
+                   "window, F2 a Filler Planner addon on a volume box (icon, preview, invert button), F3 a working "
+                   "robot's exhaust on Minimal particles. Generated by generators/gen_release_2026_2_1.py.",
+    "base": BASE,
+    "guiScale": 3,
+    "steps": F,
+}
+write(FOUT, scenario_f)
+print("wrote %s (%d steps); F drag: grab %s release %s" % (os.path.normpath(FOUT), len(F), FGRAB, FRELEASE))

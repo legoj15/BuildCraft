@@ -4,9 +4,6 @@ Last audited: 2026-10-25
 
 ## 🔧 Outstanding work (version 2026.2.1)
 
-- In-game check of the few visual changes the scripted check doesn't cover yet — [checklist](docs/todo-details.md#in-client-smoke-2026-09-26)
-- Guide book: check the Robots chapter and new contents page in-client on the other nodes — [list](docs/todo-details.md#guide-book-follow-ups)
-
 ## 🆕 New Features (version 2026.3)
 
 - Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length
@@ -39,5 +36,6 @@ Last audited: 2026-10-25
 
 - Re-verify the REI integration — no REI release for MC 26.1 exists yet — [notes](docs/todo-details.md#rei-recompile)
 - Dedicated pipe-texture atlas — vanilla render internals forbid it today — [why + reopen trigger](docs/todo-details.md#pipe-atlas-split-blocked)
+- Try the Zone Planner's Ctrl+click erase on a Mac — needs a Mac to run it on — [notes](docs/todo-details.md#zone-planner-ctrl-click-erase-on-macos)
 - Fluid viscosity — floating gases and swim effects need vanilla support — [quick notes](docs/todo-details.md#quick-notes)
 - Drop the old JEI recipe-transfer method on 26.2 once JEI deletes it — [notes](docs/todo-details.md#jei-old-transfer-overload)

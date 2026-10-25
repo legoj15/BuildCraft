@@ -105,6 +105,14 @@ one.) Entities added during the test must be discarded before `succeed()` — pa
 sweeps only ~1 block, and leaked entities fail unrelated tests; assert dropped items by
 identity, not proximity. Full diagnosis: docs/robotics-ph3-design.md, amendment 4.
 
+The framework also walls each structure in with barriers (`encaseStructure`, on every node with
+`test_instance` manifests). Around the one-block `minecraft:empty` structure that shell lies inside
+the cell: all of the 2x2x2 corner (0..1, 0..1, 0..1) except the origin itself is barrier, with more
+barrier walls one block outside it. A `setBlock` there overwrites one, and a block that anchors to a
+full face can hold on to the barriers left: the canopy lumberjack test's bottom vine at (1,1,1) grew a
+face onto one on a random tick and outlived its canopy (one run in about 300). A rig that reaches
+that corner calls `EntityArenaUtil.clearOriginBarriers(helper)` first, or is built elsewhere.
+
 A test that genuinely needs a floor wider than its cell (the oil pool tests lay a 24x24 one) builds
 it at `EntityArenaUtil.ABOVE_ARENAS_Y`, never at the arena's own level: the arenas of a batch run
 at the same time, and a wide floor at y=1 overwrote the chest of `pipe_force_insert_entry_leg`

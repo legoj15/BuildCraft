@@ -23,6 +23,8 @@ import buildcraft.api.tiles.IControllable;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.statement.FullStatement;
 
+import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
+
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.tile.TileFiller;
@@ -134,7 +136,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                 public int get(int index) {
                     return switch (index) {
                         case DATA_CAN_EXCAVATE -> tile.getCanExcavate() ? 1 : 0;
-                        case DATA_INVERTED -> tile.inverted ? 1 : 0;
+                        // On a planner's box the planner's flag is the one the button toggles and the build uses.
+                        case DATA_INVERTED -> (tile.addon != null ? tile.addon.inverted : tile.inverted) ? 1 : 0;
                         case DATA_FINISHED -> tile.getFinished() ? 1 : 0;
                         case DATA_LOCKED -> tile.getLockedTicks();
                         case DATA_MODE -> tile.getModeOrdinal();
@@ -222,7 +225,7 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                     buildcraft.lib.statement.FullStatement<IFillerPattern> stat = getPatternStatement();
                     if (stat != null) {
                         stat.readFromBuffer(buffer);
-                        tile.onStatementChange();
+                        valuesChanged();
                         tile.setChanged(); // Make sure chunk knows to save!
                     }
                 }
@@ -261,6 +264,10 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         }
         if (tile.getLevel() != null && !tile.getLevel().isClientSide()) {
             tile.onStatementChange();
+            if (tile.addon != null) {
+                // The edit belongs to the planner's box: save it and refresh the preview its viewers draw.
+                LevelSavedDataVolumeBoxes.get(tile.getLevel()).markDirtyAndBroadcast();
+            }
         }
     }
 

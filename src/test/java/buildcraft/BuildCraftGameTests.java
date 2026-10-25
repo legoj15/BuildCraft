@@ -411,6 +411,8 @@ public class BuildCraftGameTests {
 
         // Filler Planner is a pattern-only screen — its container must expose no slots (no player inventory).
         reg.accept("buildcraftunofficial:filler_planner_has_no_slots", () -> buildcraft.builders.FillerPlannerContainerTester::testFillerPlannerHasNoSlots);
+        // Invert and pattern edits made on a Filler's screen reach the planner it stands on, its button and its viewers.
+        reg.accept("buildcraftunofficial:filler_screen_edits_reach_planner", () -> buildcraft.builders.FillerPlannerContainerTester::fillerScreenEditsReachThePlanner);
 
         // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
         reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);
@@ -1257,6 +1259,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:legacy_saved_data_legacy_alone_migrates_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeMigratesALegacyFileAlone);
         // The volume boxes' 26.1+ type builds for the level the storage hands it, not the one its builder was given.
         reg.accept("buildcraftunofficial:legacy_saved_data_volume_boxes_use_storage_level", () -> buildcraft.lib.misc.LegacySavedDataTester::volumeBoxesTypeBuildsForTheStoragesLevel);
+        // Removing a box that was on disk at load reaches the clients (no ghost box until rejoin).
+        reg.accept("buildcraftunofficial:volume_box_loaded_removal_reaches_clients", () -> buildcraft.core.marker.volume.VolumeBoxSyncTester::removingABoxLoadedFromDiskReachesClients);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

@@ -108,3 +108,6 @@ _gametest-*.log
 # the GUI server in the interactive desktop session). Machine-specific paths; not for VCS.
 /deploy/
 .mcp.json
+
+# Python bytecode from the smoke scripts
+__pycache__/

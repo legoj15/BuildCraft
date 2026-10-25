@@ -162,9 +162,11 @@ function Initialize-RunDir([string]$Node) {
         ) | Set-Content -LiteralPath $options -Encoding utf8
     }
     # GUI scale is re-applied every run: the scenario's "guiScale" (Minecraft clamps it to what the window fits, so a
-    # big scale only takes effect after a `window` step grows the client area), else 2.
+    # big scale only takes effect after a `window` step grows the client area), else 2. Particles go back to All every
+    # run, so a scenario that lowers them in Video Settings and fails before restoring them can't thin the next one.
     $scale = if ($ScenarioData.PSObject.Properties['guiScale']) { [int]$ScenarioData.guiScale } else { 2 }
-    $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch '^guiScale:' }) + "guiScale:$scale"
+    $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch '^(guiScale|particles):' }) +
+        "guiScale:$scale" + 'particles:0'
     $lines | Set-Content -LiteralPath $options -Encoding utf8
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
@@ -416,10 +418,12 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             $detail = "at $x $y $z"
         }
         'aim' {
+            # `exact` aims at the point `at` itself (a box corner, an addon slot) instead of that block's centre.
+            $c = if ($Step.PSObject.Properties['exact'] -and $Step.exact) { 0 } else { 0.5 }
             $p = (Get-State).player.pos
-            $dx = $Base[0] + $Step.at[0] + 0.5 - $p.x
-            $dy = $Base[1] + $Step.at[1] + 0.5 - ($p.y + 1.62)
-            $dz = $Base[2] + $Step.at[2] + 0.5 - $p.z
+            $dx = $Base[0] + $Step.at[0] + $c - $p.x
+            $dy = $Base[1] + $Step.at[1] + $c - ($p.y + 1.62)
+            $dz = $Base[2] + $Step.at[2] + $c - $p.z
             $yaw = [math]::Atan2(-$dx, $dz) * 180 / [math]::PI
             $pitch = - [math]::Atan2($dy, [math]::Sqrt($dx * $dx + $dz * $dz)) * 180 / [math]::PI
             Invoke-Bridge POST '/look' @{ mode = 'absolute'; yaw = $yaw; pitch = $pitch } | Out-Null
@@ -489,6 +493,13 @@ function Invoke-Step($Step, [string]$Node, [string]$NodeOut, [int]$Index) {
             Start-Sleep -Milliseconds 300   # let the next frames redraw
         }
         'key' { Invoke-Bridge POST '/screenkeys' @{ type = 'key'; key = $Step.key } | Out-Null; $detail = $Step.key }
+        # A game keybind by translation key: `press`/`release` hold one (key.sneak for a sneak-click), `tap` clicks it once.
+        'keybind' {
+            $r = Invoke-Bridge POST '/keybind' @{ keyName = $Step.key; action = $Step.action }
+            if ($r.PSObject.Properties['success'] -and -not $r.success) { throw "keybind refused: $($r.message)" }
+            Start-Sleep -Milliseconds 150   # held state reaches the server with the next tick's input packet
+            $detail = "$($Step.key) $($Step.action)"
+        }
         # Typed text goes to whichever widget of the open screen has focus (click a search box first).
         'text' { Invoke-Bridge POST '/screenkeys' @{ type = 'text'; value = $Step.text } | Out-Null; $detail = $Step.text }
         # The close packet and a following /command race on the server: a slot change made while the server still has

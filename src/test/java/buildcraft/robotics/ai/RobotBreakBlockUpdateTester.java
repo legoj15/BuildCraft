@@ -245,6 +245,9 @@ public class RobotBreakBlockUpdateTester {
         BlockPos robotRel = new BlockPos(4, 3, 4);
         // The whole cell, not just the robot's chunk: the tree and its vines can sit in the chunk next door.
         EntityArenaUtil.forceLoadCell(helper);
+        // The west strand's bottom vine sits in the framework's barrier corner: a random tick grew it a face onto the
+        // barrier beside it, and it then outlived the decayed canopy (one run in about 300).
+        EntityArenaUtil.clearOriginBarriers(helper);
 
         BlockState leaf = Blocks.OAK_LEAVES.defaultBlockState()
                 .setValue(LeavesBlock.DISTANCE, 1)

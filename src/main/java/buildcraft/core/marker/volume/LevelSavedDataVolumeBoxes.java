@@ -100,13 +100,17 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         );
     }
 
-    private static LevelSavedDataVolumeBoxes fromNbt(CompoundTag nbt, Level world) {
+    static LevelSavedDataVolumeBoxes fromNbt(CompoundTag nbt, Level world) {
         LevelSavedDataVolumeBoxes instance = new LevelSavedDataVolumeBoxes(world);
         if (nbt.contains("volumeBoxes")) {
             ListTag listTag = NBTUtilBC.getList(nbt, "volumeBoxes", Tag.TAG_COMPOUND);
             for (int i = 0; i < listTag.size(); i++) {
                 CompoundTag tag = NBTUtilBC.getCompound(listTag, i);
-                instance.volumeBoxes.add(new VolumeBox(world, tag));
+                VolumeBox volumeBox = new VolumeBox(world, tag);
+                instance.volumeBoxes.add(volumeBox);
+                // Every client that joins is sent the whole loaded set, so it is the baseline too: left empty, the
+                // removal of a box that was there at load diffed to nothing and the client kept a ghost box.
+                instance.lastBroadcast.put(volumeBox.id, volumeBox.writeToNBT());
             }
         }
         return instance;
@@ -154,6 +158,14 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     public void broadcastToDimension() {
         if (!(world instanceof ServerLevel sl)) return;
 
+        MessageVolumeBoxes delta = takeDelta();
+        if (delta != null) {
+            PacketDistributor.sendToPlayersInDimension(sl, delta);
+        }
+    }
+
+    /** What changed since dimension clients were last told (null when nothing did); moves the baseline to now. */
+    MessageVolumeBoxes takeDelta() {
         Map<UUID, CompoundTag> current = new HashMap<>();
         List<CompoundTag> upserts = new ArrayList<>();
         for (VolumeBox volumeBox : volumeBoxes) {
@@ -174,8 +186,8 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         lastBroadcast.clear();
         lastBroadcast.putAll(current);
 
-        if (upserts.isEmpty() && removed.isEmpty()) return;
-        PacketDistributor.sendToPlayersInDimension(sl, MessageVolumeBoxes.delta(upserts, removed));
+        if (upserts.isEmpty() && removed.isEmpty()) return null;
+        return MessageVolumeBoxes.delta(upserts, removed);
     }
 
     /** Sends the full current set of VolumeBoxes to one specific player (initial tracking). Server-side only. */

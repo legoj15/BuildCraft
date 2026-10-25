@@ -5,6 +5,8 @@
  */
 package buildcraft.builders.client.render.pip;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
@@ -33,12 +35,6 @@ import buildcraft.transport.client.model.key.PipeModelKey;
  * </ol>
  */
 public class PipePreviewModelTester {
-
-    private static void check(boolean cond, String msg) {
-        if (!cond) {
-            throw new IllegalStateException(msg);
-        }
-    }
 
     /** Builds the tile-NBT shape {@code TilePipeHolder.saveAdditional} produces: pipe data under "pipe". */
     private static CompoundTag tileNbtFor(String def, int con) {

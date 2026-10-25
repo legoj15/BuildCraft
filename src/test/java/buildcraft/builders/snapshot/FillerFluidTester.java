@@ -6,6 +6,8 @@
 
 package buildcraft.builders.snapshot;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.BitSet;
 
 import net.minecraft.core.BlockPos;
@@ -39,12 +41,6 @@ public class FillerFluidTester {
      *  sources tick, and the pockets' blocks update, only once their chunks do), so its budget is the sum of the two,
      *  read as such by {@code GameTestPollBudgetTester}; the manifest's {@code max_ticks} stays above it. */
     private static final int BUDGET = 100;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     /** A Filler over a two-cell column: the unset cell at {@code pocket} (the fluid), the set cell above it. */
     private static BuilderClaimTester.TestFiller columnFiller(ServerLevel level, BlockPos pocket) {

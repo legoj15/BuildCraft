@@ -18,6 +18,7 @@ import net.minecraft.world.Container;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -252,11 +253,18 @@ public abstract class DockingStation {
         return !isMainStation() && !linkIsDocked();
     }
 
-    /** Whether this station's chunk is loaded, i.e. whether a robot could fly to it now: robots path only through
+    /** Whether this station's chunk is in memory, i.e. whether a robot could fly to it now: robots path only through
      *  loaded cells, so a station in an unloaded chunk is never a destination worth choosing. A station with no world
-     *  (a test double) has no chunk to check and counts as loaded. */
+     *  (a test double) has no chunk to check and counts as loaded.
+     *
+     *  <p>Presence ({@code getChunkNow}, which never schedules a load), not {@code Level.isLoaded}: on a server that
+     *  only tests the chunk's ticket level, which a chunk still queued to load already satisfies, and the read that
+     *  follows a "loaded" answer (the station's pipe, its neighbours) would then load it synchronously. Off the server
+     *  thread {@code getChunkNow} answers null, which reads as not loaded; a client level answers from the chunks it
+     *  has received. */
     public boolean isChunkLoaded() {
-        return world == null || world.isLoaded(pos);
+        return world == null || world.getChunkSource().getChunkNow(SectionPos.blockToSectionCoord(pos.getX()),
+                SectionPos.blockToSectionCoord(pos.getZ())) != null;
     }
 
     public boolean isInitialized() {

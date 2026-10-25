@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.ai;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.Collections;
 import java.util.UUID;
 
@@ -44,12 +46,6 @@ import buildcraft.robotics.entity.EntityRobot;
  * memory under test lives on the board, not on the one-attempt AI.
  */
 public class RobotPumpProtectionTester {
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),

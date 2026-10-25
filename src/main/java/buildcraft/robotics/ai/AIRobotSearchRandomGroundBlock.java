@@ -8,7 +8,6 @@
 package buildcraft.robotics.ai;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 
@@ -17,6 +16,7 @@ import java.util.Random;
 import buildcraft.api.core.IZone;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.robotics.RobotUtils;
 import buildcraft.robotics.path.IBlockFilter;
 
@@ -94,7 +94,9 @@ public class AIRobotSearchRandomGroundBlock extends AIRobot {
                 z = b.getZ();
             }
 
-            if (level.hasChunk(SectionPos.blockToSectionCoord(x), SectionPos.blockToSectionCoord(z))) {
+            // In memory, not Level.hasChunk (which on a server only tests the ticket level, true for a chunk still
+            // queued to load): the scan below reads the column.
+            if (BlockUtil.isChunkPresent(level, x, z)) {
                 break;
             }
         }

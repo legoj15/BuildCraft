@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.ai;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -88,12 +90,6 @@ public class RobotDeployerProtectionTester {
     private static final int PLANT_CYCLES = 45;
     /** Enough cycles for a diamond pickaxe to break stone (6 are needed). */
     private static final int BREAK_CYCLES = 40;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),

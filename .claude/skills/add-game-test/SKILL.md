@@ -248,6 +248,8 @@ never on `setChunkForced`:
   `FarChunk.load` uses a plain `getChunk`, whose ticket is at the chunk alone and lasts for the rest of the tick:
   build, drive and tear down inside one tick, no polls. `FarChunk.hold` pins the chunk across ticks until `release`,
   for a test that waits for the chunk beside it to unload (`pump_drain_rechecks_reach_when_chunk_unloads`).
+  `FarChunk.queue` makes a chunk that is ticketed but not in memory (`hasChunk`/`isLoaded` true, `getChunkNow`
+  null): the case that proves a gate tests presence, not the ticket level (`robot_search_skips_queued_chunk`).
 - **Every test gets its own offset**, at least 8 chunks from every other (the list is in `FarChunk`'s javadoc): the arenas
   of a run sit on one grid some fifty chunks across, so two tests on one offset can land on neighbouring chunks and the
   first one's chunk is still loaded when the second asserts that its neighbour is absent.

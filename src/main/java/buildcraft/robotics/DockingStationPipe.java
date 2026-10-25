@@ -45,6 +45,7 @@ import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -366,7 +367,10 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     *///?}
         IPipeHolder h = getHolder();
         Direction facing = fluidExtractionFacing(h);
-        if (facing == null || world == null || !world.isLoaded(getPos().relative(facing))) {
+        // In memory, not Level.isLoaded: the capability lookup below reads the neighbour cell, which loads a chunk that
+        // is only queued. This also keeps the pipe holder's own neighbour guard from ever being the one that decides
+        // for a robot, which reads outside the pipe's tick.
+        if (facing == null || world == null || !BlockUtil.isChunkPresent(world, getPos().relative(facing))) {
             return null;
         }
         // The fluid source this station's pipe draws from: the block one cell out along the WOODEN FLUID
@@ -520,16 +524,18 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return getHolder() != null || !loaded();
     }
 
-    /** Whether this station's chunk is loaded; a station not yet given a world counts as not loaded. Not
-     *  {@link #isChunkLoaded()}, which lets a world-less test double count as loaded. */
+    /** Whether this station's chunk is in memory; a station not yet given a world counts as not loaded. Not
+     *  {@link #isChunkLoaded()}, which lets a world-less test double count as loaded. Presence, not
+     *  {@code Level.isLoaded}: on a server that only tests the ticket level, which a chunk still queued to load
+     *  satisfies, and the read that follows would load it synchronously. */
     private boolean loaded() {
-        return world != null && world.isLoaded(getPos());
+        return world != null && BlockUtil.isChunkPresent(world, getPos());
     }
 
-    /** The block entity at {@code pos}, or null while its chunk is not loaded: {@code Level.getBlockEntity} would
+    /** The block entity at {@code pos}, or null while its chunk is not in memory: {@code Level.getBlockEntity} would
      *  load the chunk synchronously to answer. */
     private @Nullable BlockEntity loadedBlockEntity(BlockPos pos) {
-        return world != null && world.isLoaded(pos) ? world.getBlockEntity(pos) : null;
+        return world != null && BlockUtil.isChunkPresent(world, pos) ? world.getBlockEntity(pos) : null;
     }
 
     /** 7.1.x's {@code getPipe(); if (pipe == null) return false;} guard: a station whose pipe is gone
@@ -558,7 +564,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *  station's pipe ({@link #getHolder}). A station whose chunk is not loaded is not gone (and asking would load the
      *  chunk). */
     private boolean isPipeGone() {
-        if (world == null || !world.isLoaded(getPos())) {
+        if (!loaded()) {
             return false;
         }
         if (world.getBlockEntity(getPos()) instanceof IPipeHolder iph

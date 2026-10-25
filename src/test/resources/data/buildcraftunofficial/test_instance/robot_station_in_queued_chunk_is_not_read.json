@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_in_queued_chunk_is_not_read",
+    "environment": "buildcraftunofficial:robot_station_rig",
+    "structure": "minecraft:empty",
+    "max_ticks": 20,
+    "setup_ticks": 0,
+    "required": true
+}

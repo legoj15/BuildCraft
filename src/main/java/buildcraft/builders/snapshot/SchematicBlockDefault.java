@@ -31,12 +31,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 //? if >=1.21.10 {
 import net.minecraft.util.ProblemReporter;
 //?}
 import net.minecraft.world.Clearable;
 import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.BaseSpawner;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -581,9 +583,12 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * water source at {@code blockPos} is preserved as a waterlogged state if the
      * {@code placeBlock} supports vanilla {@code WATERLOGGED}; otherwise the fluid is
      * destroyed before placing. Lava and non-source fluids always fall through to
-     * destroy-then-place. A placement that fails afterwards (a torch with no floor pops) puts
-     * back what the cell held when it held a fluid source (the lava or water, or the waterlogged
-     * block with its water), in every mode, so a failed build leaves the world's sources alone.
+     * destroy-then-place. A real block the placement overwrites (a waterlogged slab, stair or chest
+     * under REPLACE or CLEAR) drops its loot into the world (as the Builder's iron pickaxe would), once the placement has held;
+     * a placement that fails afterwards (a torch with no floor pops) puts back whatever each cell
+     * held (fluid, a waterlogged block, grass, a snow layer), in every mode, and drops no loot. A
+     * container's contents are the exception: they spill when the block is removed, so a failed
+     * placement over a waterlogged chest puts the chest back empty, its contents on the ground.
      */
     public boolean build(Level level, BlockPos blockPos, EnumFluidHandlingMode fluidMode) {
         return build(level, blockPos, fluidMode, true);
@@ -677,14 +682,16 @@ public class SchematicBlockDefault implements ISchematicBlock {
             return true;
         }
         BlockState newBlockState = placedState();
-        // What the cell holds before this call touches it, when that carries a fluid source (a lava or water source
-        // block, or a waterlogged block): the placement below overwrites it, and a placement that is undone
-        // afterwards (the block popped in the updateShape sweep) puts exactly that back instead of leaving air, so a
-        // failed build never costs the world its source, nor the waterlogged slab or stair that held it. The whole
-        // state, not just the fluid's legacy block, because destroyBlock below turns a waterlogged block into bare
-        // water. Every mode keeps it: NO_REPLACE overwrites the cell too.
-        FluidState existing = level.getFluidState(blockPos);
-        BlockState displacedState = existing.isSource() ? level.getBlockState(blockPos) : null;
+        // What the cell holds before this call touches it, whatever it is but air (a lava or water source, flowing
+        // fluid, a waterlogged block, a replaceable block such as grass or a snow layer): the placement below
+        // overwrites it, and a placement that is undone afterwards (the block popped in the updateShape sweep) puts
+        // exactly that back instead of leaving air, so a failed build never costs the world a source, a waterlogged
+        // slab or stair, or the plant that stood there. The whole state, not just the fluid's legacy block, because
+        // destroyBlock below turns a waterlogged block into bare water. Every mode keeps it: NO_REPLACE overwrites
+        // the cell too.
+        BlockState existingState = level.getBlockState(blockPos);
+        FluidState existing = existingState.getFluidState();
+        BlockState displacedState = existingState.isAir() ? null : existingState;
         // Pre-compute fluid handling: under REPLACE/CLEAR, decide up-front whether the source at
         // blockPos will be waterlogged into the placed state or destroyed first. Don't actually
         // destroy yet — every "should we abort?" check (canSurvive, fragile-block defer) needs to
@@ -751,8 +758,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // (refund the item via cancelPlaceTask) until the other cell is clear. Without this, the first half would
         // setBlock alone, then vanilla updateShape would destroy it on the next tick when it can't find its other
         // half, and the Builder would have already consumed the item.
-        // A water source in that cell passes (it is replaceable) and is overwritten by the other half, so what the
-        // cell held is remembered like the one at blockPos and restored if the placement is undone.
+        // Water, grass or a snow layer in that cell passes (it is replaceable) and is overwritten by the other half,
+        // so what the cell held is remembered like the one at blockPos and restored if the placement is undone.
         BlockPos otherHalfPos = secondHalfPos(newBlockState, blockPos);
         BlockState displacedOtherState = null;
         if (otherHalfPos != null) {
@@ -760,14 +767,23 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (!atOther.isAir() && !atOther.canBeReplaced(Fluids.WATER)) {
                 return false;
             }
-            if (atOther.getFluidState().isSource()) {
+            if (!atOther.isAir()) {
                 displacedOtherState = atOther;
             }
         }
+        // What the real blocks this placement is about to overwrite drop, worked out now (the loot of a chest or a
+        // sign reads the block entity, which is gone after the overwrite) and spawned only once the placement has
+        // held: a placement undone below puts the block back, and its drop as well would duplicate it.
+        List<ItemStack> displacedLoot = loot(level, blockPos, displacedState, newBlockState);
+        List<ItemStack> displacedOtherLoot = otherHalfPos == null ? List.of()
+            : loot(level, otherHalfPos, displacedOtherState, secondHalfState(newBlockState));
         // All checks passed; commit the deferred fluid-destroy now. destroyBlock leaves the fluid's own block behind
         // (the lava or water source itself, or just the water of a waterlogged block, which it removes without
-        // dropping anything: dropBlock is false, so restoring displacedState on a failure duplicates no drop); the
-        // setBlock below is what finally removes the source, and the failure exit restores displacedState.
+        // dropping anything: dropBlock is false, the loot above is spawned on success, and restoring displacedState
+        // on a failure duplicates no drop); the setBlock below is what finally removes the source, and the failure
+        // exit restores displacedState. A container's contents spill here, when its block goes, as they do when the
+        // Builder breaks it (vanilla spills them from the removal itself): a placement undone afterwards leaves the
+        // container back empty with its contents on the ground, none lost.
         if (willDestroyFluidAtPos) {
             level.destroyBlock(blockPos, false);
         }
@@ -853,18 +869,47 @@ public class SchematicBlockDefault implements ISchematicBlock {
             if (newTileNbt != null) {
                 loadTileData(level, blockPos, newTileNbt);
             }
+            displacedLoot.forEach(drop -> Block.popResource(level, blockPos, drop));
+            if (otherHalfPos != null) {
+                displacedOtherLoot.forEach(drop -> Block.popResource(level, otherHalfPos, drop));
+            }
             return true;
         }
-        // setBlock refused: the cell already holds the state, so there is nothing to undo. Restoring displacedState
-        // here would overwrite an identical waterlogged block (a fence the schematic wants) with its own water.
+        // setBlock refused: it returns null only when the cell already holds the placed state, so there is nothing
+        // to undo. The destroyBlock above leaves the fluid's own block, never the placed state, so a refusal after it
+        // is not expected; were it reached, the displaced block would stay removed. Restoring displacedState here
+        // would overwrite an identical waterlogged block (a fence the schematic wants) with its own water.
         return false;
     }
 
     /**
+     * What overwriting {@code displaced} at {@code pos} with {@code replacement} drops: its loot under the Builder's
+     * break tool, an iron pickaxe, tier gate included (obsidian drops nothing, as when the Builder breaks it), the
+     * block entity included; empty when nothing is lost.
+     * Nothing is lost when the cell held air, held fluid and nothing else (a {@code LiquidBlock}), held a block
+     * that is replaced as it stands (grass, a snow layer, seagrass: a player placing over it drops nothing either),
+     * or held the very block being placed, changing state (a dry fence for a waterlogged one, a top slab for a
+     * bottom one: the block stays, so it is not removed). Called before the overwrite, while the block entity can
+     * still be read.
+     */
+    private static List<ItemStack> loot(Level level, BlockPos pos, @Nullable BlockState displaced,
+                                        BlockState replacement) {
+        if (displaced == null || displaced.getBlock() == replacement.getBlock() || displaced.canBeReplaced()
+                || SnapshotBuilder.isFluidOnly(displaced) || !(level instanceof ServerLevel server)) {
+            return List.of();
+        }
+        ItemStack tool = new ItemStack(Items.IRON_PICKAXE);
+        if (displaced.requiresCorrectToolForDrops() && !tool.isCorrectToolForDrops(displaced)) {
+            return List.of();
+        }
+        return Block.getDrops(displaced, server, pos, level.getBlockEntity(pos), null, tool);
+    }
+
+    /**
      * Puts {@code pos} back after {@link #build} undoes a placement: what the cell held before the placement
-     * overwrote it ({@code displacedState}, a fluid source block or a waterlogged block), or air when it held no
-     * source. Flag 3 notifies the neighbours and lets a liquid block schedule its flow tick again, as it does when
-     * placed in vanilla.
+     * overwrote it ({@code displacedState}: fluid, source or flowing, a waterlogged block, a replaceable block), or
+     * air when it held nothing. Flag 3 notifies the neighbours and lets a liquid block schedule its flow tick
+     * again, as it does when placed in vanilla.
      */
     private static void rollBackCell(Level level, BlockPos pos, @Nullable BlockState displacedState) {
         level.setBlock(pos, displacedState != null ? displacedState : Blocks.AIR.defaultBlockState(), 3);

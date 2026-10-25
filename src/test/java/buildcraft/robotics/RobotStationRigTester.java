@@ -38,6 +38,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.IZone;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
+import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
@@ -51,6 +52,7 @@ import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.FarChunk;
 
 import buildcraft.robotics.boards.BoardRobotLumberjackNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
@@ -380,6 +382,59 @@ public class RobotStationRigTester {
                 "a station in an unloaded chunk cannot be flown to, so the search must not pick it");
         helper.assertFalse(level.isLoaded(far), "the search must not load the station's chunk either");
         helper.succeed();
+    }
+
+    /** Chunks east and south of the arena's for the queued station's chunk, apart from every other test's far chunk
+     *  (see {@link FarChunk}). */
+    private static final int QUEUED_STATION_CHUNK_OFFSET = 1777;
+
+    /** A station whose chunk is merely queued to load (a holder at the ticket level of a loaded chunk, not in memory:
+     *  the case {@code Level.isLoaded} answers yes to) is treated as away. Nothing a robot asks of it may read its
+     *  pipe, or a cell beside it, because the first such read loads the chunk on the server thread: it is not a
+     *  destination, it still counts as usable, it stays registered on its cached pipe, and a robot can still be homed
+     *  there. */
+    public static void stationInAQueuedChunkIsNotReadThere(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        IRobotRegistry registry = RobotManager.registryProvider.getRegistry(level);
+        FarChunk chunk = FarChunk.queue(helper, QUEUED_STATION_CHUNK_OFFSET);
+        DockingStationPipe station = null;
+        try {
+            BlockPos at = chunk.pos(8, 64, 8);
+            // The fixture is built far away, in a chunk with no ticket: resolving its gate outside a tick reads the
+            // pipe's neighbours, and a queued chunk would be loaded by that. The station is then read back from a
+            // record that puts it in the queued chunk, with the pipe it had resolved still cached - a station whose
+            // chunk went away.
+            BlockPos built = helper.absolutePos(new BlockPos(2, 3, 2)).offset(UNLOADED_OFFSET, 0, 320);
+            station = unloadedStation(level, built, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS, null);
+            CompoundTag record = new CompoundTag();
+            record.putIntArray("pos", new int[] { at.getX(), at.getY(), at.getZ() });
+            record.putByte("side", (byte) STATION_FACE.ordinal());
+            station.readFromNbt(record);
+            registry.registerStation(station);
+            helper.assertTrue(chunk.isAbsent(0, 0), "precondition: building the station loaded nothing");
+
+            helper.assertFalse(station.isChunkLoaded(), "a station in a chunk still queued to load is not reachable");
+            helper.assertTrue(station.isInitialized(),
+                    "...but usable: it must not read as uninitialized, which freezes a robot homed on it");
+            helper.assertTrue(station.getHolder() != null,
+                    "its cached pipe stands in: resolving it afresh would load the chunk");
+            helper.assertTrue(station.getItemInput() == null,
+                    "the inventory beside it is not read while its chunk is queued");
+            helper.assertTrue(station.getRequestProvider() == station,
+                    "no requester beside it is looked for while its chunk is queued");
+            ZonePinnedRobot robot = new ZonePinnedRobot(helper, null);
+            robot.setUniqueRobotId(registry.getNextRobotId());
+            helper.assertTrue(station.takeAsMain(robot),
+                    "a station whose chunk is merely queued is not gone: a robot may be homed on it");
+            helper.assertTrue(stationAt(level, at) == station, "...and it stays registered");
+            helper.assertTrue(chunk.isAbsent(0, 0), "nothing about a station may load its chunk");
+            helper.succeed();
+        } finally {
+            if (station != null) {
+                registry.removeStation(station);
+            }
+            chunk.release();
+        }
     }
 
     /** A station in a chunk that is not loaded, as a chunk unload leaves one that had resolved its pipe: a real wooden

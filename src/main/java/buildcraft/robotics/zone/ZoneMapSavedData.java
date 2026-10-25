@@ -33,10 +33,14 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.loading.FMLEnvironment;
+//? if <1.21.10 {
+/*import net.neoforged.neoforge.common.IOUtilities;*/
+//?}
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import org.jspecify.annotations.Nullable;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -63,6 +67,16 @@ import buildcraft.lib.misc.NBTUtilBC;
  * dropped. An entry becomes durable when the store's file on disk is read back holding it ({@link #onLevelSave}); the
  * encode for a save proves nothing, since vanilla clears the dirty flag right after it and writes later, on another
  * thread.
+ *
+ * <p>Ids are handed out only below a reserved mark that the store's file already holds. A crash restarts the store from
+ * its last saved file, so an id handed out after that save would be handed out again by the restarted store, and a map
+ * item that still holds it (an item is saved with the player or the chest, on its own schedule) would name another
+ * zone. The mark makes the restarted store start above every id the lost session could have used: when the ids below it
+ * run out the store reserves the next {@link #RESERVE_BLOCK}, writes its file at once (the level's data storage, joined,
+ * on the server thread) and reads it back before the first id from the new block is handed out. A session therefore
+ * skips at most one block of ids, and writes the file at most once per block. If the write cannot be confirmed the id
+ * is handed out anyway (the zone must still be writable), and so are the rest of the block until the next level save,
+ * after which the next id tries the write again.
  *
  * <p>Zones are handed out as copies, so no caller can edit the stored one.
  */
@@ -111,8 +125,32 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
     /** The store used when no server is running (the unit-test JVM, which has none): never saved. */
     private static final ZoneMapSavedData DETACHED = new ZoneMapSavedData();
 
+    /** How many ids one reservation covers: at most this many are skipped per session, and the file is written at most
+     *  once per this many new zones. */
+    static final int RESERVE_BLOCK = 32;
+
+    /** Writes the store's current state to its file now and returns the file's payload as read back (null when there
+     *  is none to read). How a reservation is made durable before an id from it is handed out. */
+    @FunctionalInterface
+    interface Persister {
+        @Nullable
+        CompoundTag flush();
+    }
+
     private final Map<Integer, ZonePlan> maps = new HashMap<>();
     private int nextId;
+    /** Ids below this may be handed out; at {@link #nextId} the next block is reserved first. Written to the file
+     *  ({@code reserved}), where it is the lowest id a restarted store may use. */
+    private int reservedUpTo;
+    /** Whether the file is known to hold {@link #reservedUpTo}. False between reserving a block and seeing it on disk. */
+    private boolean reserveConfirmed = true;
+    /** Set when a write ahead of an id could not be confirmed: the next ids of the block are handed out without another
+     *  write until a level save has had its turn ({@link #confirmOnDisk}) or the next block is reserved, so a file that
+     *  stays unreadable costs one write per save, not one per zone. */
+    private boolean reserveRetryHeld;
+    /** How the file is written ahead of an id; null for a store nothing ever writes (a detached or test store). */
+    @Nullable
+    private Persister persister;
     /** Written into every ref this store hands out; a ref with another token is from another store (another world). */
     private long token = ThreadLocalRandom.current().nextLong();
     /** Ids added in this session whose entry has not been seen in the store's file on disk yet. */
@@ -142,11 +180,32 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
             return null;
         }
         ServerLevel overworld = server.overworld();
+        if (overworld == null) {
+            // Shutdown: the levels are unloaded before the server stops being the current one.
+            return null;
+        }
         //? if >=1.21.10 {
-        return overworld.getDataStorage().computeIfAbsent(TYPE);
+        ZoneMapSavedData store = overworld.getDataStorage().computeIfAbsent(TYPE);
         //?} else {
-        /*return overworld.getDataStorage().computeIfAbsent(TYPE, NAME);*/
+        /*ZoneMapSavedData store = overworld.getDataStorage().computeIfAbsent(TYPE, NAME);*/
         //?}
+        if (store.persister == null) {
+            store.persister = () -> flushOverworld(server);
+        }
+        return store;
+    }
+
+    /** Writes the overworld's dirty saved data (this store among it) and waits for the write, then reads this store's
+     *  file back. Server thread only. */
+    @Nullable
+    private static CompoundTag flushOverworld(MinecraftServer server) {
+        //? if >=1.21.10 {
+        server.overworld().getDataStorage().saveAndJoin();
+        //?} else {
+        /*server.overworld().getDataStorage().save();
+        IOUtilities.waitUntilIOWorkerComplete();*/
+        //?}
+        return LegacySavedData.readPayload(LegacySavedData.overworldDataFile(server, NAME));
     }
 
     /**
@@ -171,7 +230,7 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
         //?} else {
         /*ZoneMapSavedData store = level.getDataStorage().get(TYPE, NAME);*/
         //?}
-        if (store == null || store.unsaved.isEmpty()) {
+        if (store == null || (store.unsaved.isEmpty() && store.reserveConfirmed)) {
             return;
         }
         store.confirmOnDisk(LegacySavedData.readPayload(LegacySavedData.overworldDataFile(server, NAME)));
@@ -235,12 +294,48 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
                 return new ZoneMapRef(token, id);
             }
         }
-        int id = nextId++;
+        int id = takeId();
         maps.put(id, new ZonePlan(plan));
         sameHash.add(id);
         unsaved.add(id);
         setDirty();
         return new ZoneMapRef(token, id);
+    }
+
+    /** The next id, from a block the file already holds the reservation of (see the class comment). */
+    private int takeId() {
+        if (nextId >= reservedUpTo) {
+            reservedUpTo = (int) Math.min((long) nextId + RESERVE_BLOCK, Integer.MAX_VALUE);
+            reserveConfirmed = false;
+            reserveRetryHeld = false;
+            setDirty();
+        }
+        if (!reserveConfirmed && !reserveRetryHeld) {
+            makeReserveDurable();
+        }
+        return nextId++;
+    }
+
+    /** Writes the file now and confirms {@link #reservedUpTo} from what is read back. The same read confirms the
+     *  entries added so far. A store nothing ever writes has nothing to lose, so it counts as confirmed. */
+    private void makeReserveDurable() {
+        Persister write = persister;
+        if (write == null) {
+            reserveConfirmed = true;
+            return;
+        }
+        CompoundTag onDisk = null;
+        try {
+            onDisk = write.flush();
+        } catch (RuntimeException e) {
+            BCLog.logger.warn("[zone maps] Could not write the zone map store ahead of handing out an id", e);
+        }
+        confirmOnDisk(onDisk);
+        if (!reserveConfirmed) {
+            reserveRetryHeld = true;
+            BCLog.logger.warn("[zone maps] The zone map store's file does not hold the reserved ids yet; handing out"
+                    + " ids anyway until the next save. A crash before a save lands may hand them out again.");
+        }
     }
 
     /** How many zones the store holds. */
@@ -269,18 +364,22 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
     /**
      * Called with the store's file as it is on disk (its {@code data} payload; null when there is none or it cannot be
      * read): every entry of {@code onDisk} that is this store's own (same token) becomes
-     * {@linkplain #isDurable durable}. An entry still missing from the file is marked dirty again, so the next save
-     * writes it again.
+     * {@linkplain #isDurable durable}, and a file holding the reserved id mark confirms it. An entry still missing
+     * from the file, or a mark not yet in it, is marked dirty again, so the next save writes it again.
      */
     public void confirmOnDisk(@Nullable CompoundTag onDisk) {
+        reserveRetryHeld = false;
         if (onDisk != null && onDisk.contains("token") && NBTUtilBC.getLong(onDisk, "token", 0L) == token) {
             // Entries never change and an id is never reused under one token, so an id in the file is the entry.
             ListTag list = NBTUtilBC.getList(onDisk, "maps", Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
                 unsaved.remove(NBTUtilBC.getInt(NBTUtilBC.getCompound(list, i), "id", -1));
             }
+            if (NBTUtilBC.getInt(onDisk, "reserved", 0) >= reservedUpTo) {
+                reserveConfirmed = true;
+            }
         }
-        if (!unsaved.isEmpty()) {
+        if (!unsaved.isEmpty() || !reserveConfirmed) {
             setDirty();
         }
     }
@@ -289,6 +388,7 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
         CompoundTag tag = new CompoundTag();
         tag.putLong("token", token);
         tag.putInt("nextId", nextId);
+        tag.putInt("reserved", Math.max(reservedUpTo, nextId));
         ListTag list = new ListTag();
         for (Map.Entry<Integer, ZonePlan> e : maps.entrySet()) {
             CompoundTag entry = new CompoundTag();
@@ -311,7 +411,9 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
             // Written before stores had a token: keep the fresh one, and save it.
             setDirty();
         }
-        int next = NBTUtilBC.getInt(tag, "nextId", 0);
+        // The reserved mark covers ids the saved session may have handed out without this file seeing their entries, so
+        // the counter starts at it (a file from before the mark has only the counter).
+        int next = Math.max(NBTUtilBC.getInt(tag, "nextId", 0), NBTUtilBC.getInt(tag, "reserved", 0));
         ListTag list = NBTUtilBC.getList(tag, "maps", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             CompoundTag entry = NBTUtilBC.getCompound(list, i);
@@ -326,5 +428,13 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
             next = Math.max(next, id + 1);
         }
         nextId = next;
+        // Nothing past the counter is reserved yet: the first new zone reserves (and writes) the next block.
+        reservedUpTo = next;
+        reserveConfirmed = true;
+    }
+
+    /** Replaces how the file is written ahead of an id, for a test that stands in for the level's data storage. */
+    void usePersister(@Nullable Persister persister) {
+        this.persister = persister;
     }
 }

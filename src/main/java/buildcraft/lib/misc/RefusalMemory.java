@@ -216,8 +216,9 @@ public final class RefusalMemory {
     }
 
     /** {@link #remember(BlockPos, BlockState, long, GameProfile, StateLookup)} for the cell's current state and the
-     *  world's clock. A cell in an unloaded chunk is not read (that would load it) and so not remembered: it has not
-     *  been seen to refuse. Other remembered cells in unloaded chunks are likewise left unread, only aged out. */
+     *  world's clock. A cell in a chunk that is not in memory ({@link BlockUtil#isChunkPresent}) is not read (that
+     *  would load it) and so not remembered: it has not been seen to refuse. Other remembered cells in unloaded
+     *  chunks are likewise left unread, only aged out. */
     public void remember(Level level, BlockPos pos, @Nullable GameProfile owner) {
         remember(level, pos, owner, owner);
     }
@@ -225,16 +226,16 @@ public final class RefusalMemory {
     /** {@link #remember(Level, BlockPos, GameProfile)} for a machine that acted as {@code actor} and needed
      *  {@code owner}'s leave too. */
     public void remember(Level level, BlockPos pos, @Nullable GameProfile actor, @Nullable GameProfile owner) {
-        if (!level.isLoaded(pos)) {
+        if (!BlockUtil.isChunkPresent(level, pos)) {
             return;
         }
         remember(pos, level.getBlockState(pos), level.getGameTime(), actor, owner,
-                cell -> level.isLoaded(cell) ? level.getBlockState(cell) : null);
+                cell -> BlockUtil.isChunkPresent(level, cell) ? level.getBlockState(cell) : null);
     }
 
     /** {@link #isRefused(BlockPos, BlockState, long, GameProfile)} against the world's current state and clock. A cell
-     *  in an unloaded chunk is not read (that would load it) and is reported as not refused, its entry left as it was
-     *  to be judged once the cell is loaded. */
+     *  in a chunk that is not in memory ({@link BlockUtil#isChunkPresent}) is not read (that would load it) and is
+     *  reported as not refused, its entry left as it was to be judged once the cell is loaded. */
     public boolean isRefused(Level level, BlockPos pos, @Nullable GameProfile owner) {
         return isRefused(level, pos, owner, owner);
     }
@@ -243,7 +244,7 @@ public final class RefusalMemory {
      *  {@code owner}'s leave too. */
     public boolean isRefused(Level level, BlockPos pos, @Nullable GameProfile actor, @Nullable GameProfile owner) {
         keyOn(actor, owner);
-        return !refused.isEmpty() && level.isLoaded(pos)
+        return !refused.isEmpty() && BlockUtil.isChunkPresent(level, pos)
                 && isRefused(pos, level.getBlockState(pos), level.getGameTime(), actor, owner);
     }
 

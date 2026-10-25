@@ -277,9 +277,10 @@ public class ItemMapLocationZoneTest extends VanillaSetupBaseTester {
                         + " vs " + held.getComponentsPatch());
     }
 
-    /** A crash loses the entries added since the last save; the next session counts ids on from the file and can hand
-     *  a lost entry's id to another zone. A legacy map still carrying both that id and its own plan must keep its
-     *  plan, not read the other zone. Blueprint builds rely on the same rule for a plan whose id was reused. */
+    /** A crash under a build from before ids were reserved ahead lost the entries added since the last save, and the
+     *  next session handed a lost entry's id to another zone. A legacy map still carrying both that id and its own
+     *  plan must keep its plan, not read the other zone. Blueprint builds rely on the same rule for a plan whose id
+     *  was reused. */
     @Test
     public void aLegacyMapWhoseIdWentToAnotherZoneKeepsItsOwnPlan() {
         ZoneMapSavedData store = new ZoneMapSavedData();

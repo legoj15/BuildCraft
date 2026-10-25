@@ -486,7 +486,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             return;
         }
         for (BlockPos blockPos : frameRefusals.takeExpired(level, FRAME_RETRY_PROBES_PER_TICK)) {
-            if (!level.isLoaded(blockPos)) {
+            if (!BlockUtil.isChunkPresent(level, blockPos)) {
                 continue;
             }
             if (canMine(blockPos)) {

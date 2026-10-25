@@ -5,6 +5,8 @@
  */
 package buildcraft.robotics.ai;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -33,12 +35,8 @@ public class RobotPumpUnloadedChunkTester {
     private static final int CHUNK_OFFSET = 1444;
     private static final int BUCKET = 1000;
 
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
-
+    /** The robot, unadded, in the arena. Unlike {@code RobotPumpProtectionTester}'s it does not force-load the cell: the
+     *  cell the pump AI judges is in the {@link FarChunk}, not here, and the arena's neighbours are far from it. */
     private static EntityRobot unaddedRobot(GameTestHelper helper) {
         EntityRobot robot = new EntityRobot(BCRoboticsEntities.ROBOT.get(), helper.getLevel());
         Vec3 pos = Vec3.atCenterOf(helper.absolutePos(new BlockPos(2, 2, 2)));

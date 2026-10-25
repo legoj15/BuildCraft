@@ -8,6 +8,7 @@ package buildcraft.core.item;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.component.DataComponents;
@@ -16,6 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
@@ -49,7 +51,14 @@ import buildcraft.robotics.zone.ZonePlan;
 public final class ZoneMapPortability {
     /** {@link #holdsMapLocation}'s answers, by price patch; cleared whole when it fills. */
     private static final Map<DataComponentPatch, Boolean> HOLDS_MAP_BY_PATCH = new ConcurrentHashMap<>();
-    private static final int HOLDS_MAP_CACHE_LIMIT = 256;
+    /** {@link #withZoneMapsBlank(ItemStack)}'s answers, by held stack (empty: nothing to blank); cleared whole when it
+     *  fills. */
+    private static final Map<HeldKey, ItemStack> BLANKED_BY_HELD = new ConcurrentHashMap<>();
+    /** Entries either remembered answer holds before it is cleared. */
+    private static final int CACHE_LIMIT = 256;
+
+    /** What {@link #withZoneMapsBlank(ItemStack)} depends on: a stack's item and its component patch (not its count). */
+    private record HeldKey(Item item, DataComponentPatch patch) {}
 
     private ZoneMapPortability() {}
 
@@ -155,19 +164,39 @@ public final class ZoneMapPortability {
      * {@code held} (a stack offered to pay for a priced one) with every ZONE map location in it as a blank map, the
      * held-side twin of {@link #withZoneMapsBlank(CompoundTag)}: {@code held} itself when it holds none, else a copy,
      * of count 1. Encodes the stack, so callers try the exact match, and {@link #holdsMapLocation} on the price, first.
+     *
+     * <p>The answer is remembered per item and component patch (an immutable value, compared by content), so a stalled
+     * build that offers the same held stacks on every extraction attempt encodes each distinct one once, not once per
+     * attempt.
      */
     public static ItemStack withZoneMapsBlank(ItemStack held) {
         if (held.isEmpty() || held.getComponentsPatch().isEmpty()) {
             return held;
         }
+        HeldKey key = new HeldKey(held.getItem(), held.getComponentsPatch());
+        ItemStack blanked = BLANKED_BY_HELD.get(key);
+        if (blanked == null) {
+            blanked = blankedCopy(held);
+            if (BLANKED_BY_HELD.size() >= CACHE_LIMIT) {
+                BLANKED_BY_HELD.clear();
+            }
+            BLANKED_BY_HELD.put(key, blanked);
+        }
+        // The remembered stack is never handed out: a caller may edit what it gets.
+        return blanked.isEmpty() ? held : blanked.copy();
+    }
+
+    /** {@code held} with its zone maps blank (count 1), or {@link ItemStack#EMPTY} when that changes nothing or the
+     *  result does not parse. */
+    private static ItemStack blankedCopy(ItemStack held) {
         if (!(encode(held.copyWithCount(1)) instanceof CompoundTag compound)) {
-            return held;
+            return ItemStack.EMPTY;
         }
         CompoundTag blank = withZoneMapsBlank(compound);
         if (blank == compound) {
-            return held;
+            return ItemStack.EMPTY;
         }
-        return ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), blank).result().orElse(held);
+        return ItemStack.CODEC.parse(NBTUtilBC.registryAwareOps(), blank).result().orElse(ItemStack.EMPTY);
     }
 
     /**
@@ -192,7 +221,7 @@ public final class ZoneMapPortability {
             return known;
         }
         boolean found = encodedHoldsMapLocation(stack);
-        if (HOLDS_MAP_BY_PATCH.size() >= HOLDS_MAP_CACHE_LIMIT) {
+        if (HOLDS_MAP_BY_PATCH.size() >= CACHE_LIMIT) {
             HOLDS_MAP_BY_PATCH.clear();
         }
         HOLDS_MAP_BY_PATCH.put(patch, found);
@@ -248,47 +277,40 @@ public final class ZoneMapPortability {
     /** Calls {@code action} with every saved map location stack in {@code tag} ({@code tag} itself included), at any
      *  depth; the action may edit that compound. */
     private static void forEachMapLocation(Tag tag, Consumer<CompoundTag> action) {
-        if (tag instanceof CompoundTag compound) {
-            if (compound.contains("id") && mapLocationId().equals(NBTUtilBC.getString(compound, "id", ""))) {
-                // A map location holds no stacks: nothing below it to walk.
-                action.accept(compound);
-                return;
-            }
-            for (String key : NBTUtilBC.keysOf(compound)) {
-                Tag child = compound.get(key);
-                if (child instanceof CompoundTag || child instanceof ListTag) {
-                    forEachMapLocation(child, action);
-                }
-            }
-        } else if (tag instanceof ListTag list) {
-            for (Tag child : list) {
-                if (child instanceof CompoundTag || child instanceof ListTag) {
-                    forEachMapLocation(child, action);
-                }
-            }
-        }
+        walkStacks(tag, stack -> stack.contains("id") && mapLocationId().equals(NBTUtilBC.getString(stack, "id", ""))
+                ? stack : null, action);
     }
 
     /** Calls {@code action} with the {@code components} compound of every saved zone map stack in {@code tag}, at any
      *  depth; the action may edit that compound. */
     private static void forEachZoneMap(Tag tag, Consumer<CompoundTag> action) {
+        walkStacks(tag, stack -> stack.contains("id") && stack.get("components") instanceof CompoundTag components
+                && components.contains(zoneKey()) ? components : null, action);
+    }
+
+    /**
+     * The walk both finders share: depth-first through the compounds and lists of {@code tag}, handing {@code action}
+     * what {@code target} picks out of each compound (null: not a stack of interest, so its children are walked). A
+     * stack of interest is not walked into: a map location holds no stacks, and its plan can be large.
+     */
+    private static void walkStacks(Tag tag, Function<CompoundTag, @Nullable CompoundTag> target,
+            Consumer<CompoundTag> action) {
         if (tag instanceof CompoundTag compound) {
-            if (compound.contains("id") && compound.get("components") instanceof CompoundTag components
-                    && components.contains(zoneKey())) {
-                // A map location holds no stacks, and its plan can be large: nothing below it to walk.
-                action.accept(components);
+            CompoundTag hit = target.apply(compound);
+            if (hit != null) {
+                action.accept(hit);
                 return;
             }
             for (String key : NBTUtilBC.keysOf(compound)) {
                 Tag child = compound.get(key);
                 if (child instanceof CompoundTag || child instanceof ListTag) {
-                    forEachZoneMap(child, action);
+                    walkStacks(child, target, action);
                 }
             }
         } else if (tag instanceof ListTag list) {
             for (Tag child : list) {
                 if (child instanceof CompoundTag || child instanceof ListTag) {
-                    forEachZoneMap(child, action);
+                    walkStacks(child, target, action);
                 }
             }
         }

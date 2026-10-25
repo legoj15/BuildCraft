@@ -5,6 +5,8 @@
  */
 package buildcraft.factory.tile;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -39,12 +41,6 @@ public class PumpIdleRebuildTester {
 
     /** What a pump rebuilding every 30 ticks costs over the idle stretch; a back-off must come in far under it. */
     private static final int IDLE_TICKS = 1500;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static TilePump buildPump(GameTestHelper helper) {
         check(!BCCoreConfig.minePlayerProtected.get(),

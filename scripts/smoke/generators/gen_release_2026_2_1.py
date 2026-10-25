@@ -23,7 +23,8 @@ Shot names carry the item letter, so the review goes one item at a time:
   E  cheap extras from docs/todo-details.md "In-client smoke 2026-09-26" (blocks-atlas sweep render sites): gate
      plugs, LED variable models, the Architect's pipe-preview pluggables, painted fluid-pipe item models.
   F  (a second scenario, release-2026-2-1-f.json) the rest of that list: F1 the guide's side chapter tabs on a wide
-     window, F2 a Filler Planner addon on a volume box (icon, Fill preview, invert), F3 robot exhaust on Minimal.
+     window, F2 the Filler's Preview toggle on a volume box (the eye button, its tooltips, the cubes in the box, the
+     cubes with the Filler block off screen, the cubes gone again), F3 robot exhaust on Minimal.
      F2 cannot pick an arbitrary pattern: the pattern list is dragged from, and the bridge has no press-drag-release.
      Run it the same way with -Scenario scripts/smoke/scenarios/release-2026-2-1-f.json.
 
@@ -349,15 +350,15 @@ print("wrote %s (%d steps)" % (os.path.normpath(OUT), len(S)))
 
 # ══ F: what the 2026-09-26 smoke still owed (its own scenario, release-2026-2-1-f) ═════════════════════════════
 # Volume boxes live in the level's saved data, which no command reaches, so the rig is made by hand each run: a
-# sneak-click with the Marker Connector first removes the box an earlier run left, then a Volume Box makes a 1x1x1
-# box and a connector drag grows it to 3x3x3. While a corner is held the server puts it at
-# floor(eye + look * dist), where dist is fixed by the click that grabbed it (max(1.5, hit distance + 0.5)), so the
-# drag is solved here: the release aim must land deep inside the target block, and no click ray may pass through
-# an addon slot (a 1/8-block cube on each box corner), which would take the click instead.
+# sneak-click with the Marker Connector first removes the box an earlier run left (the clear-and-floor fill has already
+# taken away the Filler that locked it), then a Volume Box makes a 1x1x1 box and a connector drag grows it to 3x3x3.
+# While a corner is held the server puts it at floor(eye + look * dist), where dist is fixed by the click that grabbed
+# it (max(1.5, hit distance + 0.5)), so the drag is solved here: the release aim must land deep inside the target block.
+# A Filler finds its box when it is PLACED (onPlacedBy: the block behind it is inside a volume box), so it is placed by
+# a player click, never with setblock.
 
 FOUT = os.path.join(os.path.dirname(__file__), "..", "scenarios", "release-2026-2-1-f.json")
 EYE = 1.62
-SLOT = 1 / 16.0
 
 
 def _eye(p):
@@ -383,32 +384,16 @@ def _seg_hits(o, q, lo, hi, length=4.0):
     return t0
 
 
-def _slots(lo, hi):
-    return [tuple(c - SLOT for c in (x, y, z)) + tuple(c + SLOT for c in (x, y, z))
-            for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])]
-
-
-def _misses_slots(o, q, lo, hi, allow=None):
-    for s in _slots(lo, hi):
-        if allow is not None and s == allow:
-            continue
-        if _seg_hits(o, q, s[:3], s[3:]) is not None:
-            return False
-    return True
-
-
 def solve_drag(p, b, t):
     """Player block p grabs the 1x1x1 box at block b and drags its corner to block t. Returns (grab point, release
-    point, margin) or None when no release aim lands in t."""
+    point, margin) or None when no release aim lands in t (or the grab ray misses the box)."""
     e = _eye(p)
     grab = (b[0] + 0.5, b[1] + 0.5, b[2] + 0.5)
     lo, hi = b, tuple(c + 1 for c in b)
     hit = _seg_hits(e, grab, lo, hi)
-    if hit is None or not _misses_slots(e, grab, lo, hi):
+    if hit is None:
         return None
     dist = max(1.5, hit + 0.5)
-    flo = tuple(min(b[i], t[i]) for i in range(3))
-    fhi = tuple(max(b[i], t[i]) + 1 for i in range(3))
     best = None
     for i in range(1, 20):
         for j in range(1, 20):
@@ -419,7 +404,7 @@ def solve_drag(p, b, t):
                 rel = [e[n] + d[n] / r * dist for n in range(3)]     # where the server will put the corner
                 inside = [rel[n] - t[n] for n in range(3)]
                 margin = min(min(v, 1 - v) for v in inside)
-                if margin > 0.15 and (best is None or margin > best[2]) and _misses_slots(e, rel, flo, fhi):
+                if margin > 0.15 and (best is None or margin > best[2]):
                     best = (grab, tuple(round(v, 3) for v in rel), margin)
     return best
 
@@ -434,10 +419,14 @@ FGRAB, FRELEASE, _ = drag
 FLO = tuple(min(FB[i], FT[i]) for i in range(3))
 FHI = tuple(max(FB[i], FT[i]) + 1 for i in range(3))
 FCENTRE = tuple((FLO[i] + FHI[i]) / 2.0 for i in range(3))
-FP2 = (12, 0, 1)        # the viewing and addon position, north of the box
-FCORNER = (FHI[0], FHI[1], FLO[2])
-assert _misses_slots(_eye(FP2), FCORNER, FLO, FHI,
-                     allow=tuple(c - SLOT for c in FCORNER) + tuple(c + SLOT for c in FCORNER))
+FP2 = (12, 0, 1)        # the placing, GUI and viewing position, north of the box
+FILLER = (11, 0, 3)     # the Filler: against the box's north face, middle column, its back toward the box
+FPV = (12, 0, -2)       # the viewing position for the whole box (the Filler block stands low in front of it)
+# Off the box's east side (x = 15 is the last floor column), turned toward the south-south-west: the Filler against the
+# box's north face is past the right edge of the picture, even with a wider field of view than the default 70, while
+# the box's southern two thirds stay in it.
+FP3 = (15, 0, 4)
+FP3_YAW = 35
 
 F = []
 
@@ -496,12 +485,44 @@ fshot("f1-contents-wide", "F1: the contents page (3/24) on a wide window: chapte
 fstep(do="close")
 fstep(label="F1: back to the scenario window", do="window", width=1600, height=900)
 
-# ── F2: a Filler Planner addon on a volume box: its icon, its preview, its invert button ───────────────────────
-fstep(do="tp", at=list(FP1), yaw=0, pitch=20)
+# ── F2: the Filler's Preview toggle: its eye button, the cubes in the box, off screen, and off again ────────────
+# GUI coordinates: the Filler screen is 176x241 and the window 534x300 GUI units, so its panel starts at (179, 29);
+# the preview button's centre is panel-local (160, 28), the invert button's (160, 48), the pattern slot's (28, 48).
+PREVIEW_BTN = (339, 57)
+INVERT_BTN = (339, 77)
+PATTERN_SLOT = (207, 77)
+FILLER_AT = "{X+%d} {Y+%d} {Z+%d}" % FILLER
+
+
+def f2_open_gui(label):
+    fstep(do="hold", item="minecraft:air")
+    faim(tuple(c + 0.5 for c in FILLER))
+    fstep(label=label, do="use")
+    fstep(do="expectScreen", contains="GuiFiller", timeoutSec=10)
+    fwait(500)
+
+
+def f2_view_main(settle=1500):
+    """Back from the box, looking at its middle with the Filler block low in front of it."""
+    fstep(do="hold", item="minecraft:air")
+    fstep(do="tp", at=list(FPV), yaw=0, pitch=12)
+    fwait(300)
+    faim(FCENTRE)
+    fwait(settle)
+
+
+def f2_view_away(settle=1500):
+    fstep(do="tp", at=list(FP3), yaw=FP3_YAW, pitch=8)
+    fwait(300)
+    fstep(do="look", yaw=FP3_YAW, pitch=8)
+    fwait(settle)
+
+
+fstep(label="F2: go to the drag spot with the Marker Connector", do="tp", at=list(FP1), yaw=0, pitch=20)
 fstep(do="hold", item="buildcraftunofficial:marker_connector")
 fstep(label="F2: sneak (removes the box an earlier run left)", do="keybind", key="key.sneak", action="press")
 faim(FCENTRE)
-for i in range(3):  # a stale drag cancels first, an addon would go next, then the box
+for i in range(3):  # a stale drag cancels first, then the box
     fstep(label="F2: sneak-click the old box (%d/3)" % (i + 1), do="use")
 fstep(do="keybind", key="key.sneak", action="release")
 fwait(300)
@@ -516,58 +537,76 @@ faim(FRELEASE)
 fwait(800)
 fstep(label="F2: release it two blocks over, up and back (a 3x3x3 box)", do="use")
 fwait(500)
-fstep(do="tp", at=list(FP2), yaw=0, pitch=20)
-fstep(do="hold", item="buildcraftunofficial:filler_planner")
-faim(FCORNER)
-fstep(label="F2: put a Filler Planner on the box's north-east top corner", do="use")
-fwait(500)
-fstep(do="hold", item="minecraft:air")
-faim(FCENTRE)
+fstep(label="F2: to the placing spot", do="tp", at=list(FP2), yaw=0, pitch=20)
+fstep(do="hold", item="buildcraftunofficial:filler")
+faim((FILLER[0] + 0.5, FILLER[1] - 0.001, FILLER[2] + 0.5))
+fstep(label="F2: place a Filler on the floor against the box's north face (its back is toward the box)", do="use")
 fwait(1000)
-fshot("f2-box-with-addon", "F2: a 3x3x3 volume box (its outline) right in front, with the Filler Planner's icon drawn "
-      "as a small textured cube on its near top-LEFT corner (the camera faces south, so east is screen left): the "
-      "planner's own sprite, not a missing-texture square and not a random block texture. No preview cubes at all: a "
-      "new planner starts on None, and the box an earlier run left (removed above) must be gone from the client too")
-fstep(do="hold", item="buildcraftunofficial:marker_connector")
-faim(FCORNER)
-fstep(label="F2: click the addon with the connector (opens the planner)", do="use")
-fstep(do="expectScreen", contains="GuiFillerPlanner", timeoutSec=10)
-fwait(500)
-fstep(name="f2-planner", do="widgets")
+fcmd("F2: the Filler's saved preview flag starts false (expect 0b)",
+     "data get block %s showPreview" % FILLER_AT, allowFail=True, echo=True)
+f2_view_main()
+fshot("f2-box-with-filler", "F2: a 3x3x3 volume box (its outline, drawn striped now that a machine locks it) in "
+      "front with the Filler block low in the foreground against its near face. NO translucent cubes in the box: a new "
+      "Filler has its preview off")
+f2_open_gui("F2: open the Filler")
+fstep(name="f2-filler", do="widgets")
 fstep(label="F2: park the cursor", do="hover", x=10, y=10)
-fshot("f2-planner-gui", "F2: the Filler Planner screen: the pattern list at the left of the panel, the pattern slot "
-      "on None (grey), four parameter slots, the invert button at the right (not pressed)")
-fstep(label="F2: hover the hollow square in the pattern list (third in its top row)", do="hover", x=152, y=123)
-fshot("f2-pattern-choices", "F2: the pattern list's hollow square shows its tooltip 'Box'")
-# The list is dragged from (press on a pattern, release over the slot), which the bridge cannot do: its click is a
-# press and release in place. On the slot that opens the hold-and-release variant menu and picks its centre entry,
-# Fill, which is the better invert check anyway (every cell, then none).
+fshot("f2-gui-off", "F2: the Filler screen. The new eye button is the small square directly ABOVE the invert button "
+      "(top right of the panel), showing the white eye crossed out by a red diagonal slash ('preview off') as real art, "
+      "not a purple-black missing-texture square; same button face and size as the excavate and invert buttons "
+      "beside it")
+fstep(label="F2: hover the preview button", do="hover", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
+fshot("f2-tooltip-off", "F2: tooltip 'Do Not Preview Fill' next to the cursor over the eye button, button not latched")
+fstep(label="F2: press the preview button", do="click", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
+fwait(500)
+fstep(label="F2: park the cursor", do="hover", x=10, y=10)
+fstep(label="F2: hover the preview button again", do="hover", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
+fshot("f2-tooltip-on", "F2: the eye button now shows the plain white open eye with its pupil ('preview on', no red slash) and its "
+      "tooltip says 'Preview Fill'")
+fstep(label="F2: park the cursor", do="hover", x=10, y=10)
+fcmd("F2: the flag reached the tile (expect 1b)", "data get block %s showPreview" % FILLER_AT,
+     allowFail=True, echo=True)
+# The pattern list is dragged from (press on a pattern, release over the slot), which the bridge cannot do: its click is
+# a press and release in place. On the slot that opens the hold-and-release variant menu and picks its centre entry,
+# Fill: every cell of the box.
 fstep(label="F2: click the pattern slot (an in-place click picks the variant menu's centre entry, Fill)", do="click",
-      x=207, y=157)
+      x=PATTERN_SLOT[0], y=PATTERN_SLOT[1])
 fwait(500)
 fstep(label="F2: park the cursor", do="hover", x=10, y=10)
-fshot("f2-planner-fill", "F2: the pattern slot now shows Fill (a solid dark square)")
+fshot("f2-gui-fill", "F2: the pattern slot now shows Fill (a solid dark square) and the eye button still shows the "
+      "plain open eye; invert unchanged (solid square, not latched)")
 fstep(do="close")
-faim(FCENTRE)
-fwait(1000)
-fshot("f2-preview-fill", "F2: the planner previews Fill: one translucent cube in every cell of the 3x3x3 box, the "
-      "yellow addon icon still on its corner")
-faim(FCORNER)
-fstep(label="F2: reopen the planner", do="use")
-fstep(do="expectScreen", contains="GuiFillerPlanner", timeoutSec=10)
-fwait(500)
-fstep(label="F2: hover the invert button", do="hover", x=339, y=157)
-fshot("f2-invert-tooltip", "F2: the invert button's tooltip 'Do Not Invert' (the current mode), the button not "
-      "pressed yet")
-fstep(label="F2: press invert", do="click", x=339, y=157)
+f2_view_main(settle=2500)
+fshot("f2-preview-on", "F2: the preview: a translucent grey-white cube in every cell of the 3x3x3 box (27, each a "
+      "little smaller than its cell so neighbours read as separate, lighter on top, darker underneath), drawn over the "
+      "box's outline. The Filler block is still low in front. Cubes missing, solid opaque cubes, or a cube sticking "
+      "out of the box is the finding")
+f2_view_away(settle=2500)
+fshot("f2-preview-offscreen", "F2: looking south-south-west from the box's east side, so the Filler block is OUT of the "
+      "picture (the box's north end, where it stands, is past the right edge) but most of the box is in it: the "
+      "preview cubes still draw in that part of the box. No cubes here would mean the preview dies when the Filler "
+      "block leaves the screen")
+fstep(label="F2: back to the Filler", do="tp", at=list(FP2), yaw=0, pitch=20)
+fwait(300)
+f2_open_gui("F2: reopen the Filler")
+fstep(label="F2: hover the preview button", do="hover", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
+fshot("f2-gui-reopened", "F2: reopened: the eye button still shows the plain open eye ('Preview Fill' tooltip): the flag "
+      "was saved and synced, not reset by closing the screen")
+fstep(label="F2: press the preview button off", do="click", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
 fwait(500)
 fstep(label="F2: park the cursor", do="hover", x=10, y=10)
-fstep(label="F2: hover the invert button again", do="hover", x=339, y=157)
-fshot("f2-inverted-gui", "F2: the invert button now latched (lighter, pressed-in face) and its tooltip says 'Invert'")
+fstep(label="F2: hover the preview button again", do="hover", x=PREVIEW_BTN[0], y=PREVIEW_BTN[1])
+fshot("f2-tooltip-off-again", "F2: the eye button is back to the red-slashed eye and the tooltip says 'Do Not Preview "
+      "Fill'")
 fstep(do="close")
-faim(FCENTRE)
-fwait(1000)
-fshot("f2-preview-inverted", "F2: inverted Fill: no preview cubes left, only the red outline and the addon icon")
+fcmd("F2: the flag is false again (expect 0b)", "data get block %s showPreview" % FILLER_AT,
+     allowFail=True, echo=True)
+f2_view_main(settle=2500)
+fshot("f2-preview-off", "F2: the same view as f2-preview-on with the preview off: the box outline and the Filler "
+      "block only, no cubes at all")
+f2_view_away(settle=1500)
+fshot("f2-preview-off-away", "F2: the same view as f2-preview-offscreen with the preview off: no cubes in the part "
+      "of the box in view")
 
 
 # ── F3: a working robot's exhaust on All, then on Minimal particles ─────────────────────────────────────────────
@@ -617,7 +656,7 @@ fstep(do="close")
 scenario_f = {
     "name": "release-2026-2-1-f",
     "description": "What the 2026-09-26 in-client smoke still owed: F1 the guide's side chapter tabs on a wide "
-                   "window, F2 a Filler Planner addon on a volume box (icon, preview, invert button), F3 a working "
+                   "window, F2 the Filler's preview toggle on a volume box (button, tooltips, cubes, off-screen), F3 a working "
                    "robot's exhaust on Minimal particles. Generated by generators/gen_release_2026_2_1.py.",
     "base": BASE,
     "guiScale": 3,

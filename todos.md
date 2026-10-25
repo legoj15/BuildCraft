@@ -2,10 +2,9 @@ Last audited: 2026-10-25
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
-## 🔧 Outstanding work (version 2026.2.1)
-
 ## 🆕 New Features (version 2026.3)
 
+- Move the "Filler Planner"'s functionality to the actual Filler block for survival QoL, and remove the Filler Planner item and assets.
 - Laser blocks can be waterlogged, and lasers beams fired under water emit bubbles along their length
 - Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)

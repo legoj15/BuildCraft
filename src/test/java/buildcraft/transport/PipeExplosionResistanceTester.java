@@ -10,14 +10,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Explosion;
+import net.minecraft.world.level.Level;
 //? if >=1.21.10 {
 import net.minecraft.world.level.ServerExplosion;
 //?}
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.silicon.BCSiliconPlugs;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -77,7 +81,42 @@ public class PipeExplosionResistanceTester {
         helper.assertTrue(glassSide == bare,
             "a glass facade must not make the pipe weaker than bare (" + bare + "), got " + glassSide);
 
+        realBlastSparesTheArmouredSide(helper, obsidian);
         helper.succeed();
+    }
+
+    /** The same armour against a real TNT blast, whose rays ask the hook themselves: the obsidian-faced pipe with its
+     *  facade toward the blast stands, and a bare pipe as close on the other side is blown up (the blast is strong
+     *  enough). Built high above the arenas, out of reach of every other test's rig. */
+    private static void realBlastSparesTheArmouredSide(GameTestHelper helper, FacadeBlockStateInfo obsidian) {
+        ServerLevel level = helper.getLevel();
+        BlockPos centre = helper.absolutePos(new BlockPos(2, EntityArenaUtil.ABOVE_ARENAS_Y + 16, 3));
+        BlockPos armoured = centre.west();
+        BlockPos exposed = centre.east();
+        try {
+            for (BlockPos pos : new BlockPos[] {armoured, exposed}) {
+                level.setBlock(pos, BCTransportBlocks.PIPE_HOLDER.get().defaultBlockState(), 3);
+                ((TilePipeHolder) level.getBlockEntity(pos)).onPlacedBy(null,
+                        new ItemStack(BCTransportItems.PIPE_WOOD_ITEM.get()));
+            }
+            TilePipeHolder tile = (TilePipeHolder) level.getBlockEntity(armoured);
+            tile.replacePluggable(Direction.EAST, new PluggableFacade(BCSiliconPlugs.facade, tile, Direction.EAST,
+                    FacadeInstance.createSingle(obsidian, false)));
+
+            level.explode(null, centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5, 3.0F,
+                    Level.ExplosionInteraction.TNT);
+
+            helper.assertTrue(level.getBlockState(armoured).is(BCTransportBlocks.PIPE_HOLDER.get()),
+                    "a TNT blast blew up the pipe whose obsidian facade faced it: " + level.getBlockState(armoured));
+            helper.assertTrue(level.getBlockState(exposed).isAir(),
+                    "premise: the blast must blow up a bare pipe as close, got " + level.getBlockState(exposed));
+        } finally {
+            level.setBlock(armoured, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(exposed, Blocks.AIR.defaultBlockState(), 3);
+            for (ItemEntity drop : level.getEntitiesOfClass(ItemEntity.class, new AABB(centre).inflate(8))) {
+                drop.discard();
+            }
+        }
     }
 
     /** An explosion object at {@code centre} that is never detonated — only its centre is consulted. */

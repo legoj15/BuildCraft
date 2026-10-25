@@ -18,6 +18,7 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -259,6 +260,23 @@ public final class EntityArenaUtil {
         forceLoadEntityArena(gth, new BlockPos(CELL_SIZE_X - 1, 0, 0));
         forceLoadEntityArena(gth, new BlockPos(0, 0, CELL_SIZE_Z - 1));
         forceLoadEntityArena(gth, new BlockPos(CELL_SIZE_X - 1, 0, CELL_SIZE_Z - 1));
+    }
+
+    /** The framework walls every test's structure in with barriers when it places it ({@code GameTestInfo.placeStructure}
+     *  calls {@code encaseStructure}). Around the one-block {@code minecraft:empty} structure that shell is the whole
+     *  3x3x3 cube at the arena origin except the origin and the test block at (0, -1, -1) (measured on 26.3): the cell's
+     *  2x2x2 corner, walls at x and z -1 just outside it, and a floor at y -1. A rig built there overwrites some of them
+     *  and can anchor to the rest: a vine on a random tick grows a face onto a barrier beside it, or spreads into a
+     *  freed cell next to a wall, and then outlives everything the test meant to hold it up. This turns the shell's walls
+     *  and ceiling (y 0 and 1) into air; the floor stays, as nothing hangs from the block below it. On 1.21.1 the
+     *  stand-in structure is 16 blocks wide, its shell lies outside the cell, and there is nothing to clear. */
+    public static void clearOriginBarriers(GameTestHelper gth) {
+        for (BlockPos rel : BlockPos.betweenClosed(-1, 0, -1, 1, 1, 1)) {
+            BlockPos pos = gth.absolutePos(rel);
+            if (gth.getLevel().getBlockState(pos).is(Blocks.BARRIER)) {
+                gth.getLevel().setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
     }
 
     /** How many ticks a cell-gated poll waits for its arena cell to start ticking before it fails the test as the

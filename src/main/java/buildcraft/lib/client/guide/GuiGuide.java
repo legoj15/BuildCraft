@@ -609,6 +609,17 @@ public class GuiGuide extends Screen {
         // (1.12.2 behavior). secondPageX was computed above for renderSecondPage.
         boolean drawContents = true;
         boolean smallScreen = isSmallScreen();
+        // 1.21.1 draws the GUI depth-tested: page items sit about 150 forward and text underlines 0.01 forward, so the
+        // open overlay at depth 0 let both show through it. Lift it, and the page buttons drawn after it (the Back
+        // button overlaps its lower edge), staying under tooltips (400). Later nodes draw in submission order and need
+        // nothing.
+        //? if <1.21.10 {
+        /*BCGraphics overlayGraphics = smallScreen && showingContentsMenu ? GuiIcon.getGuiGraphics() : null;
+        if (overlayGraphics != null) {
+            overlayGraphics.pose().pushPose();
+            overlayGraphics.pose().translate(0.0F, 0.0F, 300.0F);
+        }*/
+        //?}
         if (smallScreen) {
             drawContents = showingContentsMenu;
             String str = LocaleUtil.localize("buildcraft.guide.chapter_list");
@@ -652,6 +663,11 @@ public class GuiGuide extends Screen {
         drawPageButton(historyBackButton, partialTicks);
         drawPageButton(pageForwardButton, partialTicks);
         drawPageButton(pageBackwardButton, partialTicks);
+        //? if <1.21.10 {
+        /*if (overlayGraphics != null) {
+            overlayGraphics.pose().popPose();
+        }*/
+        //?}
 
         // Render tooltips last so they sit above all other content. Item tooltips
         // (set by GuidePartItem.drawItemStack when the mouse is over a stack)

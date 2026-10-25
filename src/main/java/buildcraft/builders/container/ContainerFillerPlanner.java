@@ -36,6 +36,9 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
     /** Nullable on the client if the addon couldn't be located (e.g. volume box despawned mid-flight). */
     public final AddonFillerPlanner addon;
 
+    /** Client: the invert flag the server last sent (see {@link #trackInverted}). */
+    private boolean invertedClient;
+
     private final FullStatement<IFillerPattern> patternStatementClient = new FullStatement<>(
         FillerType.INSTANCE,
         4,
@@ -109,6 +112,7 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
         super(BCBuildersMenuTypes.FILLER_PLANNER.get(), containerId, playerInv.player);
         this.addon = addon;
         // No player inventory: this is a pattern-planning screen with no item slots.
+        trackInverted();
     }
 
     /** Client-side: read box UUID + slot from buf, look up addon in {@link ClientVolumeBoxes}. */
@@ -128,6 +132,25 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
         }
         this.addon = found;
         // No player inventory: this is a pattern-planning screen with no item slots.
+        invertedClient = found != null && found.inverted;
+        trackInverted();
+    }
+
+    /** The server's invert flag, synced as menu data: every box sync rebuilds the client's VolumeBox objects, so the
+     *  client's {@link #addon} stops following the server the first time the box changes (pressing invert left the
+     *  button showing the old mode until the screen was reopened). */
+    private void trackInverted() {
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override
+            public int get() {
+                return addon != null && addon.inverted ? 1 : 0;
+            }
+
+            @Override
+            public void set(int value) {
+                invertedClient = value != 0;
+            }
+        });
     }
 
     public void onStatementChange() {
@@ -156,6 +179,9 @@ public class ContainerFillerPlanner extends ContainerBC_Neptune implements ICont
 
     @Override
     public boolean isInverted() {
+        if (player != null && player.level() != null && player.level().isClientSide()) {
+            return invertedClient;
+        }
         return addon != null && addon.inverted;
     }
 

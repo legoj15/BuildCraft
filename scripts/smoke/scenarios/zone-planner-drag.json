@@ -1,0 +1,38 @@
+{
+  "name": "zone-planner-drag",
+  "description": "Zone Planner pan and paint strokes driven by a REAL mouse. The planner asks the window system whether the pan's or stroke's button is still down (GLFW below 26.3, SDL on 26.3), which the bridge's synthetic events cannot fake, so this scenario only sets the screen up and waits while a person or a desktop-control agent drives the map (an agent sends right through scripts/smoke/Send-MouseButton.ps1; see the README): first 45 s with an empty hand (hold LEFT, drag, release: the map pans), then, with the red brush on the cursor, 90 s for a stroke (hold LEFT, drag, tap RIGHT while still holding left, keep dragging, release LEFT). The red layer is echoed before and after. Expected: the map follows the pan drag; one red rectangle from the press point to the release point; a rectangle that stops where right was tapped, or nothing at all, is the bug. A plain right-drag erases the same way. Run it on 1.21.1 (GLFW, oldest), 26.2 and 26.3 (SDL).",
+  "base": [32, 150, 32],
+  "guiScale": 3,
+  "steps": [
+    { "label": "window 1600x900 (the map spans the left of the screen at guiScale 3)", "do": "window", "width": 1600, "height": 900 },
+    { "label": "setup", "do": "cmd", "run": [
+      "gamemode creative @p", "time set 6000", "weather clear", "?clear @p",
+      "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..80]",
+      "?forceload add {X-8} {Z-8} {X+8} {Z+8}",
+      "?fill {X-4} {Y} {Z-4} {X+4} {Y+3} {Z+4} minecraft:air",
+      "fill {X-4} {Y-1} {Z-4} {X+4} {Y-1} {Z+4} minecraft:smooth_stone",
+      "setblock {X} {Y} {Z+2} buildcraftunofficial:zone_planner",
+      "item replace entity @p inventory.0 with buildcraftunofficial:paintbrush[buildcraftunofficial:brush_color=\"red\",buildcraftunofficial:brush_uses=64]" ] },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [0, 0, 2] },
+    { "label": "open the zone planner", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiZonePlanner", "timeoutSec": 10 },
+    { "do": "wait", "ms": 2500 },
+    { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
+    { "name": "zp-start", "do": "shot", "look": "the Zone Planner map at its opening view" },
+    { "label": "REAL MOUSE NOW (pan): empty hand, hold LEFT on the map, drag about a third of its width, release", "do": "wait", "ms": 45000 },
+    { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
+    { "name": "zp-panned", "do": "shot", "look": "the map shifted the way the cursor was dragged (the terrain moved with the cursor)" },
+    { "label": "red layer before (expect no painted entries)", "do": "cmd", "run": [ "data get block {X} {Y} {Z+2} layer_14" ], "allowFail": true, "echo": true },
+    { "label": "pick up the red brush", "do": "click", "slotIndex": 0 },
+    { "label": "park the cursor off the map", "do": "hover", "fx": 0.9, "fy": 0.9 },
+    { "name": "zp-before", "do": "shot", "look": "the Zone Planner map, red brush on the cursor, nothing painted" },
+    { "label": "REAL MOUSE NOW (paint): on the map hold LEFT, drag, tap RIGHT (left still held), keep dragging, release LEFT", "do": "wait", "ms": 90000 },
+    { "name": "zp-after", "do": "shot", "look": "one red rectangle from where left went down to where it came up (not cut short where right was tapped)" },
+    { "label": "red layer after (expect painted entries)", "do": "cmd", "run": [ "data get block {X} {Y} {Z+2} layer_14" ], "allowFail": true, "echo": true },
+    { "label": "put the brush back", "do": "click", "slotIndex": 0, "allowMiss": true },
+    { "do": "close" },
+    { "label": "remove the planner (its layers live in the block entity)", "do": "cmd", "run": [ "setblock {X} {Y} {Z+2} minecraft:air", "?clear @p" ] }
+  ]
+}

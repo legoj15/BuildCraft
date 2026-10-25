@@ -1,0 +1,28 @@
+{
+  "name": "library-scrollbar-drag",
+  "description": "The Electronic Library's scrollbar dragged by a REAL mouse (the bridge has no press-drag-release). The list shows the client's own blueprints, so first copy 14 or more .bcnbt files into versions/<node>/run-smoke/snapshots-client (the node's run-gameTestServer/snapshots-server has dozens). The scenario opens the Library and waits 45 s while a person or a desktop-control agent holds LEFT on the scrollbar's thumb (the strip at the list's right edge), drags it to the bottom and releases. Expected: the list scrolls with the thumb and stays there after the release. Worth running on 26.3, where SDL renumbered the mouse buttons.",
+  "base": [48, 150, 32],
+  "guiScale": 3,
+  "steps": [
+    { "label": "window 1600x900", "do": "window", "width": 1600, "height": 900 },
+    { "label": "setup", "do": "cmd", "run": [
+      "gamemode creative @p", "time set 6000", "weather clear", "?clear @p",
+      "?forceload add {X-8} {Z-8} {X+8} {Z+8}",
+      "?fill {X-3} {Y} {Z-3} {X+3} {Y+3} {Z+3} minecraft:air",
+      "fill {X-3} {Y-1} {Z-3} {X+3} {Y-1} {Z+3} minecraft:smooth_stone",
+      "setblock {X} {Y} {Z+2} buildcraftunofficial:library" ] },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [0, 0, 2] },
+    { "label": "open the library", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiElectronicLibrary", "timeoutSec": 10 },
+    { "do": "wait", "ms": 1500 },
+    { "label": "park the cursor", "do": "hover", "fx": 0.95, "fy": 0.95 },
+    { "name": "lib-before", "do": "shot", "look": "the blueprint list at its top, the scrollbar thumb at the top of its strip" },
+    { "label": "REAL MOUSE NOW: hold LEFT on the scrollbar thumb, drag it to the bottom, release", "do": "wait", "ms": 45000 },
+    { "label": "park the cursor", "do": "hover", "fx": 0.95, "fy": 0.95 },
+    { "name": "lib-after", "do": "shot", "look": "the list scrolled to its end (later rows showing) and the thumb at the bottom of its strip" },
+    { "do": "close" },
+    { "label": "remove the library", "do": "cmd", "run": [ "setblock {X} {Y} {Z+2} minecraft:air" ] }
+  ]
+}

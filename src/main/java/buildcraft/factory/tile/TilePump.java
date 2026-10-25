@@ -443,11 +443,14 @@ public class TilePump extends TileMiner implements IDebuggable {
         }
     }
 
-    /** Whether the pump should line up a bucket from {@code pos}: {@code drainBlock} can take it, and it has not
-     *  refused (and stayed the same) since. A refusing cell still carries the BFS through it, just not the queue. */
+    /** Whether the pump should line up a bucket from {@code pos}: its drain stays inside loaded chunks,
+     *  {@code drainBlock} can take it, and it has not refused (and stayed the same) since. A refusing cell still
+     *  carries the BFS through it, just not the queue. The reach check comes first: judging whether a waterlogged block
+     *  can take the drain ({@code getDrainableFluid}) runs its {@code canSurvive}, which can read a neighbour, and a
+     *  read in an absent chunk loads it. */
     private boolean isQueueable(BlockPos pos) {
-        return BlockUtil.getDrainableFluid(level, pos) != null && !refusals.isRefused(level, pos, getOwner())
-                && drainStaysInLoadedChunks(pos);
+        return drainStaysInLoadedChunks(pos) && BlockUtil.getDrainableFluid(level, pos) != null
+                && !refusals.isRefused(level, pos, getOwner());
     }
 
     /** Whether the chunk holding {@code pos} is in memory, which is what makes reading it safe (a read of an absent

@@ -6,6 +6,8 @@
 
 package buildcraft.lib.misc;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,12 +47,6 @@ import buildcraft.api.core.BuildCraftAPI;
  * that is still in use, and that closing a lease drops the stacks the caller left on it.
  */
 public class FakePlayerUtilTester {
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static GameProfile uniqueProfile() {
         return new GameProfile(UUID.randomUUID(), "bc_fake_player_test");

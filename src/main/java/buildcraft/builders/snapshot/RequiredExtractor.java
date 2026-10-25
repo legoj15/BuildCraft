@@ -136,7 +136,8 @@ public abstract class RequiredExtractor {
      * <p>The comparison encodes the held stack, so it runs only when the exact match fails, the held stack has the
      * price's components (blanking a map inside a stack changes what a component holds, never which components the
      * stack has), and the price holds a map location at all ({@link ZoneMapPortability#holdsMapLocation}, which
-     * remembers its answer per price).
+     * remembers its answer per price). What the encode finds is remembered per held stack too, so a build that stalls
+     * on a missing item does not re-encode its inventory on every attempt.
      */
     public static IStackFilter payer(ItemStack required) {
         return new Payer(required);

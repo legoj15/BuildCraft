@@ -72,12 +72,9 @@ Open questions from the 2026-10-17 Programming/Integration Table "+" work (`Robo
 ## Small cleanups
 
 Follow-ups left by the 2026-10-24 cleanup rounds; none is a known player-facing bug in normal play.
-- `SchematicBlockDefault.build` called directly in REPLACE/CLEAR over a waterlogged slab, stair or chest destroys it without drops even when the placement succeeds (`BlueprintBuilder.canPlace` passes any fluid cell); the Builder's own break-first flow avoids it. A failed placement over flowing fluid or a replaceable block (grass, snow) still rolls back to air, and a waterlogged chest's contents still spill inside `destroyBlock`.
-- `TilePump.isQueueable` runs `BlockUtil.getDrainableFluid` before the reach check, and that runs `canSurvive` on waterlogged blocks, which can read a neighbour in an absent chunk during the flood fill.
-- Robot search and path code (`SoftBlockAccess` and friends) tests chunks with `level.hasChunk`, which on a server only checks the ticket level, so robot boards other than the pump may still read absent chunks.
-- Zone maps: `RequiredExtractor.Payer` still encodes every same-item held container whenever the price holds a map location, on each extraction attempt of a stalled build; a zone map placed inside a built container keeps its carried plan until it is moved out and ticked; `ZoneMapPortability` has two near-identical walkers (`forEachZoneMap`, `forEachMapLocation`) that could be one.
-- Zone maps: ids allocated after the last save can be reissued to another zone after a crash (the store reloads `nextId` from the file); maps that carry a plan are guarded, plain zone maps are not.
-- Test helpers `check`/`unaddedRobot` are copied across `PumpUnloadedChunkTester`, `RobotPumpProtectionTester` and `RobotPumpUnloadedChunkTester`; share them in `buildcraft/lib/test`.
+- Builder over kelp: breaking kelp under an air schematic leaves water, kelp regrows into it, and the round-robin check marks it to break again, so a REPLACE build can loop; a schematic kelp loops too, since `isBuilt` compares its growth age (pre-existing; solid schematics and seagrass terminate).
+- `SchematicBlockDefault.build` over a waterlogged chest: a placement that is then undone puts the chest back empty with its contents on the ground (none lost); other block-entity data (sign text) of a displaced block is not restored. Only direct calls reach it; the Builder breaks such cells first.
+- `unaddedRobot` test helpers: the copies in `BuilderBoardTester` and `RobotActionAIsTester` are identical and `RobotPumpProtectionTester`'s differs only by a force-load; share them in `EntityArenaUtil`.
 
 ## In-client smoke 2026-09-26
 

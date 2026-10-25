@@ -8,10 +8,10 @@ package buildcraft.robotics.path;
 import java.util.function.Predicate;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 
 import buildcraft.api.core.BuildCraftAPI;
+import buildcraft.lib.misc.BlockUtil;
 
 /**
  * Block-traversability oracle for the robotics A* pathfinder.
@@ -70,9 +70,10 @@ public interface SoftBlockAccess {
     /** Production adapter: a robot may occupy a cell when its chunk is loaded and it is in-world and
      *  {@link BuildCraftAPI#isSoftBlock soft} (see {@link #loadedOnly}). */
     static SoftBlockAccess of(Level level) {
+        // Presence, not Level.hasChunk: on a server that only tests the chunk's ticket level, which holds for a chunk
+        // that is queued to load but not in memory yet, and a read there would load it (BlockUtil.isChunkPresent).
         return loadedOnly(
-                pos -> level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()),
-                        SectionPos.blockToSectionCoord(pos.getZ())),
+                pos -> BlockUtil.isChunkPresent(level, pos),
                 pos -> !level.isOutsideBuildHeight(pos) && BuildCraftAPI.isSoftBlock(level, pos));
     }
 }

@@ -541,6 +541,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:fluidmode_waterloggable_not_deferred", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWaterloggableBlockNotDeferredNearWater);
         reg.accept("buildcraftunofficial:fluidmode_no_replace_defers_fragile", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceModeDefersFragileButHandPlacementDoesNot);
         reg.accept("buildcraftunofficial:fluidmode_failed_place_keeps_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testFailedPlacementKeepsFluidSource);
+        reg.accept("buildcraftunofficial:fluidmode_placement_drops_displaced_block", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementDropsTheBlockItDisplaces);
+        reg.accept("buildcraftunofficial:fluidmode_placement_over_waterlogged_chest_drops_once", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testPlacementOverWaterloggedChestDropsChestAndContentsOnce);
+        reg.accept("buildcraftunofficial:builder_replace_breaks_waterlogged_block_before_placing", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceBuilderBreaksWaterloggedBlockBeforePlacing);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);
@@ -1161,7 +1164,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_search_goto_reaches_block", () -> buildcraft.robotics.ai.SearchAndGotoBlockTester::reachesTheFoundBlock);
         // Search and pathfinding against the real level: unloaded chunks are never read (or loaded).
         reg.accept("buildcraftunofficial:robot_search_skips_unloaded_chunks", () -> buildcraft.robotics.path.UnloadedChunkSearchTester::searchNearAnUnloadedChunkDoesNotLoadIt);
+        reg.accept("buildcraftunofficial:robot_search_skips_queued_chunk", () -> buildcraft.robotics.path.UnloadedChunkSearchTester::searchNearAQueuedChunkDoesNotLoadIt);
         reg.accept("buildcraftunofficial:robot_ground_search_skips_unloaded_columns", () -> buildcraft.robotics.ai.GroundSearchTester::groundSearchSkipsUnloadedColumns);
+        reg.accept("buildcraftunofficial:robot_ground_search_skips_queued_chunk", () -> buildcraft.robotics.ai.GroundSearchTester::groundSearchSkipsAQueuedChunk);
         reg.accept("buildcraftunofficial:robot_ground_search_empty_zone_fails", () -> buildcraft.robotics.ai.GroundSearchTester::groundSearchInAnEmptyZoneFails);
         // A random search (planter, stripes) with no candidate gives up after 7.1.x's round budget, so the board sleeps.
         reg.accept("buildcraftunofficial:robot_random_search_without_candidate_fails", () -> buildcraft.robotics.ai.RandomSearchBudgetTester::randomSearchWithNoCandidateFails);
@@ -1205,6 +1210,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_delivery_gives_up_destroyed_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterWasDestroyed);
         reg.accept("buildcraftunofficial:robot_delivery_gives_up_forbidding_requester", () -> buildcraft.robotics.boards.DeliveryUnloadedRequesterTester::deliveryGivesUpAnOrderWhoseRequesterForbidsTheRobot);
         reg.accept("buildcraftunofficial:robot_station_search_skips_unloaded_station", () -> buildcraft.robotics.RobotStationRigTester::searchSkipsAStationInAnUnloadedChunk);
+        reg.accept("buildcraftunofficial:robot_station_in_queued_chunk_is_not_read", () -> buildcraft.robotics.RobotStationRigTester::stationInAQueuedChunkIsNotReadThere);
         reg.accept("buildcraftunofficial:robot_station_pipe_filled_away_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeFilledAwayDeregistersItsStation);
         reg.accept("buildcraftunofficial:robot_station_pipe_replaced_without_station_deregisters", () -> buildcraft.robotics.RobotStationRigTester::pipeReplacedWithoutAStationDeregistersIt);
         reg.accept("buildcraftunofficial:robot_station_rig_planter_api", () -> buildcraft.robotics.RobotStationRigTester::planterApiRig);

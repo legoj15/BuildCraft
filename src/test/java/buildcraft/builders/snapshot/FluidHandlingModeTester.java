@@ -5,6 +5,13 @@
  */
 package buildcraft.builders.snapshot;
 
+import static buildcraft.builders.BuilderRefloodTester.STONE;
+import static buildcraft.builders.BuilderRefloodTester.builderQuiet;
+import static buildcraft.builders.BuilderRefloodTester.cell;
+import static buildcraft.builders.BuilderRefloodTester.drive;
+import static buildcraft.builders.BuilderRefloodTester.expect;
+import static buildcraft.builders.BuilderRefloodTester.setUpBuilder;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -14,28 +21,33 @@ import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.builders.tile.TileBuilder;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.lib.test.DropArenaUtil;
+import buildcraft.lib.test.DropArenaUtil.Drops;
 
 /**
  * Covers the Builder's fluid-handling overload on {@link SchematicBlockDefault#build(net.minecraft.world.level.Level, BlockPos, EnumFluidHandlingMode)}.
  * <p>
- * Note: the full Builder tick loop (snapshot load, check queue, break/place budgeting) isn't
- * exercised here — only the terminal {@code build} call that the place queue eventually hits.
- * That's the part of the pipeline that actually decides whether to waterlog, destroy, or
- * overwrite a fluid, and it's the piece most vulnerable to regressions when the surrounding
- * code changes.
+ * Note: most of these tests call only the terminal {@code build} call that the place queue eventually hits. That's
+ * the part of the pipeline that actually decides whether to waterlog, destroy, or overwrite a fluid, and it's the
+ * piece most vulnerable to regressions when the surrounding code changes. The one Builder tick-loop test
+ * ({@link #testReplaceBuilderBreaksWaterloggedBlockBeforePlacing}) covers the routing in front of it.
  */
 public class FluidHandlingModeTester {
 
@@ -922,7 +934,13 @@ public class FluidHandlingModeTester {
      * The block cases: a cell that holds a waterlogged block keeps it. A refused placement (the cell already holds
      * the very state, a waterlogged fence) must not be "restored" to bare water, which would delete the fence; a
      * torch that pops after replacing a waterlogged slab or stair must give the slab or stair back, where the source
-     * alone would leave plain water in its place. Every case runs and every broken one is reported.
+     * alone would leave plain water in its place.
+     * <p>
+     * And a cell that held anything else goes back as it was, never to air: flowing water (not a source), short grass
+     * and a snow layer (replaceable blocks), and both cells of a door (a lower cell, and the upper cell the door's
+     * other half overwrote). The door's lower cell holds only what stands with nothing under it (fluid, a
+     * waterlogged slab): a plant put back there would be killed by the restore of the cell above it, whatever the
+     * code under test did. Every case runs and every broken one is reported.
      */
     public static void testFailedPlacementKeepsFluidSource(GameTestHelper helper) {
         BlockPos at = new BlockPos(1, 2, 1);
@@ -934,6 +952,9 @@ public class FluidHandlingModeTester {
             BlockState wetFence = Blocks.OAK_FENCE.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
             BlockState wetSlab = Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
             BlockState wetStairs = Blocks.OAK_STAIRS.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+            BlockState flowingWater = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 3);
+            BlockState grass = Blocks.SHORT_GRASS.defaultBlockState();
+            BlockState snowLayer = Blocks.SNOW.defaultBlockState();
             List<String> broken = new ArrayList<>();
             for (EnumFluidHandlingMode mode : EnumFluidHandlingMode.values()) {
                 check(broken, () -> assertFailedPlaceLeavesCell(helper, "a fence the cell already holds", mode,
@@ -942,6 +963,21 @@ public class FluidHandlingModeTester {
                         torch, wetSlab, at));
                 check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over waterlogged stairs", mode,
                         torch, wetStairs, at));
+                // Not a source, and not a block that holds one: still what the cell held, never air.
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over flowing water", mode,
+                        torch, flowingWater, at));
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over short grass", mode,
+                        torch, grass, at));
+                check(broken, () -> assertFailedPlaceLeavesCell(helper, "torch over a snow layer", mode,
+                        torch, snowLayer, at));
+                // Both cells of a two-cell block: each goes back to what it held.
+                check(broken, () -> assertFailedPlaceLeavesCells(helper, "door over flowing water under snow", mode,
+                        door, doorAt, new BlockPos[] {doorAt, doorAt.above()}, flowingWater, snowLayer));
+                check(broken, () -> assertFailedPlaceLeavesCells(helper, "door over a waterlogged slab under grass",
+                        mode, door, doorAt, new BlockPos[] {doorAt, doorAt.above()}, wetSlab, grass));
+                check(broken, () -> assertFailedPlaceLeavesCells(helper, "door over a water source under flowing "
+                        + "water", mode, door, doorAt, new BlockPos[] {doorAt, doorAt.above()},
+                        Blocks.WATER.defaultBlockState(), flowingWater));
             }
             for (EnumFluidHandlingMode mode : new EnumFluidHandlingMode[] {
                     EnumFluidHandlingMode.REPLACE, EnumFluidHandlingMode.CLEAR}) {
@@ -996,6 +1032,173 @@ public class FluidHandlingModeTester {
         } finally {
             level.setBlock(abs, Blocks.AIR.defaultBlockState(), 3);
         }
+    }
+
+    /**
+     * {@link #assertFailedPlaceLeavesCell} for a block that fills several cells: puts {@code before[i]} in
+     * {@code cells[i]} (arena-relative), builds {@code wanted} at {@code placeAt} over an empty cell below it, and
+     * asserts the build fails and every cell holds exactly what it did. Resets the cells afterwards.
+     */
+    private static void assertFailedPlaceLeavesCells(GameTestHelper helper, String what, EnumFluidHandlingMode mode,
+            BlockState wanted, BlockPos placeAt, BlockPos[] cells, BlockState... before) {
+        Level level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(placeAt);
+        level.setBlock(abs.below(), Blocks.AIR.defaultBlockState(), 3);
+        for (int i = 0; i < cells.length; i++) {
+            level.setBlock(helper.absolutePos(cells[i]), before[i], 3);
+        }
+        boolean placed = schem(wanted).build(level, abs, mode);
+        try {
+            assertTrue(!placed, what + " has nothing to stand on, so the " + mode + " placement must fail");
+            for (int i = 0; i < cells.length; i++) {
+                BlockState after = level.getBlockState(helper.absolutePos(cells[i]));
+                assertTrue(after == before[i], what + ": a failed " + mode + " placement must leave " + before[i]
+                        + " at " + cells[i] + ", got " + after);
+            }
+        } finally {
+            for (BlockPos cell : cells) {
+                level.setBlock(helper.absolutePos(cell), Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+    }
+
+    /** A bottom oak slab, a stairs or a chest, with the water of a waterlogged block in it. */
+    private static BlockState waterlogged(Block block) {
+        return block.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true);
+    }
+
+    /**
+     * A placement that overwrites a real block must not void it. The Builder's own break would have dropped it, and
+     * a Builder in REPLACE mode places straight over a cell that holds fluid, a waterlogged slab or stair included:
+     * the slab was destroyed with no drop, by {@code destroyBlock(pos, false)} when the placed block cannot hold the
+     * water, and by the {@code setBlock} itself when it can. The block is dropped once the placement has succeeded.
+     * Four cells, each its own case, share one drop scan. The placed blocks are the ones with no collision (a
+     * pressure plate, a sign) because a drop popped into a full block that stays is pushed out of it and may leave
+     * the cell before the scan; the floor is there so the drop lands in the cell:
+     * <ul>
+     * <li>a pressure plate over a waterlogged slab (REPLACE destroys the water first): the slab drops;</li>
+     * <li>a standing sign over a waterlogged slab (REPLACE waterlogs the sign): the slab drops;</li>
+     * <li>a top slab over the waterlogged bottom slab: the same block with another state, so nothing is displaced and
+     *     nothing drops;</li>
+     * <li>a torch over a waterlogged slab with nothing under it: the torch pops, the slab goes back, and no slab
+     *     dropped, or the slab would be in the world twice.</li>
+     * </ul>
+     */
+    public static void testPlacementDropsTheBlockItDisplaces(GameTestHelper helper) {
+        BlockPos underPlate = new BlockPos(1, 2, 1);
+        BlockPos underSign = new BlockPos(4, 2, 1);
+        BlockPos underSlab = new BlockPos(1, 2, 4);
+        BlockPos underTorch = new BlockPos(4, 2, 4);
+        BlockState wetSlab = waterlogged(Blocks.OAK_SLAB);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            Level level = helper.getLevel();
+            for (BlockPos cell : new BlockPos[] {underPlate, underSign, underSlab, underTorch}) {
+                // A floor under every cell but the torch's, so a drop lands in its cell instead of falling out of it.
+                level.setBlock(helper.absolutePos(cell.below()),
+                        cell.equals(underTorch) ? Blocks.AIR.defaultBlockState() : Blocks.STONE.defaultBlockState(), 3);
+                level.setBlock(helper.absolutePos(cell), wetSlab, 3);
+            }
+            assertTrue(schem(Blocks.OAK_PRESSURE_PLATE.defaultBlockState())
+                    .build(level, helper.absolutePos(underPlate), EnumFluidHandlingMode.REPLACE),
+                    "the pressure plate must be placed over the waterlogged slab");
+            assertTrue(level.getBlockState(helper.absolutePos(underPlate)).is(Blocks.OAK_PRESSURE_PLATE),
+                    "the pressure plate must stand");
+            assertTrue(schem(Blocks.OAK_SIGN.defaultBlockState())
+                    .build(level, helper.absolutePos(underSign), EnumFluidHandlingMode.REPLACE),
+                    "the sign must be placed over the waterlogged slab");
+            assertTrue(level.getBlockState(helper.absolutePos(underSign)).is(Blocks.OAK_SIGN), "the sign must stand");
+            assertTrue(schem(Blocks.OAK_SLAB.defaultBlockState()
+                    .setValue(SlabBlock.TYPE, SlabType.TOP))
+                    .build(level, helper.absolutePos(underSlab), EnumFluidHandlingMode.REPLACE),
+                    "the top slab must be placed over the bottom one");
+            assertTrue(!schem(Blocks.TORCH.defaultBlockState())
+                    .build(level, helper.absolutePos(underTorch), EnumFluidHandlingMode.REPLACE),
+                    "a torch with nothing under it cannot be placed");
+            assertTrue(level.getBlockState(helper.absolutePos(underTorch)) == wetSlab,
+                    "the slab must be back where the torch popped");
+        }, Drops.near(underPlate, 1.5).exactly(Items.OAK_SLAB, 1)
+                .alsoNear(underSign, 1.5).exactly(Items.OAK_SLAB, 1)
+                .alsoNear(underSlab, 1.5).absent(Items.OAK_SLAB)
+                .alsoNear(underTorch, 1.5).absent(Items.OAK_SLAB)
+                .andCheck(() -> {
+                    for (BlockPos cell : new BlockPos[] {underPlate, underSign, underSlab, underTorch}) {
+                        helper.setBlock(cell, Blocks.AIR);
+                        helper.setBlock(cell.below(), Blocks.AIR);
+                    }
+                }));
+    }
+
+    /**
+     * The contents of a container the placement displaces are handled as the Builder's own break handles them: the
+     * chest's contents spill in the world (vanilla does that when the block goes), and the chest item drops with
+     * them. A waterlogged chest holding three diamonds, replaced by a pressure plate (which, unlike a full block,
+     * does not push the drops out of the cell), leaves one chest and three diamonds, each exactly once: the contents
+     * are neither lost with the block nor duplicated by the drop.
+     */
+    public static void testPlacementOverWaterloggedChestDropsChestAndContentsOnce(GameTestHelper helper) {
+        BlockPos chestAt = new BlockPos(2, 2, 2);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            Level level = helper.getLevel();
+            BlockPos abs = helper.absolutePos(chestAt);
+            // A floor, so the drops land in the cell instead of falling out of it.
+            level.setBlock(abs.below(), Blocks.STONE.defaultBlockState(), 3);
+            level.setBlock(abs, waterlogged(Blocks.CHEST), 3);
+            assertTrue(level.getBlockEntity(abs) instanceof Container,
+                    "precondition: the chest has an inventory");
+            ((Container) level.getBlockEntity(abs)).setItem(0, new ItemStack(Items.DIAMOND, 3));
+            assertTrue(schem(Blocks.OAK_PRESSURE_PLATE.defaultBlockState())
+                    .build(level, abs, EnumFluidHandlingMode.REPLACE),
+                    "the pressure plate must be placed over the waterlogged chest");
+            assertTrue(level.getBlockState(abs).is(Blocks.OAK_PRESSURE_PLATE), "the pressure plate must stand");
+        }, Drops.near(chestAt, 1.5).exactly(Items.CHEST, 1).exactly(Items.DIAMOND, 3)
+                .andCheck(() -> {
+                    helper.setBlock(chestAt, Blocks.AIR);
+                    helper.setBlock(chestAt.below(), Blocks.AIR);
+                }));
+    }
+
+    /**
+     * The Builder in REPLACE mode breaks a waterlogged block the blueprint does not want, as it breaks any wrong
+     * block, before placing over its water. The place path once took the cell as it stood (a cell holding any fluid
+     * passed {@code canPlace}), so a waterlogged slab under a stone in the blueprint was overwritten with no break:
+     * no power charged, and the slab lost instead of going into the Builder's resources. The slab must end up in the
+     * resources (8 supplied, so 9), the stone must stand, and the Builder must rest.
+     */
+    public static void testReplaceBuilderBreaksWaterloggedBlockBeforePlacing(GameTestHelper helper) {
+        int[] column = {STONE, STONE};
+        BlockPos[] walls = {new BlockPos(1, 2, 2), new BlockPos(2, 2, 1)};
+        TileBuilder tile = setUpBuilder(helper, column, walls);
+        while (tile.getFluidMode() != EnumFluidHandlingMode.REPLACE) {
+            tile.cycleFluidMode();
+        }
+        // The second cell is built already, which also walls the first one in to the south.
+        helper.setBlock(cell(1), Blocks.STONE);
+        helper.setBlock(cell(0), waterlogged(Blocks.OAK_SLAB));
+
+        boolean[] finished = {false};
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            expect(builder != null, "the Builder lost its blueprint builder");
+            BlockState first = helper.getBlockState(cell(0));
+            if (first.is(Blocks.STONE) && builderQuiet(builder)) {
+                int slabs = 0;
+                for (int slot = 0; slot < tile.invResources.getSlots(); slot++) {
+                    ItemStack held = tile.invResources.getStackInSlot(slot);
+                    if (held.is(Items.OAK_SLAB)) {
+                        slabs += held.getCount();
+                    }
+                }
+                finished[0] = true;
+                expect(slabs == 9, "the waterlogged slab the stone replaced must go into the Builder's resources "
+                        + "(8 supplied, so 9), found " + slabs);
+                helper.succeed();
+            } else {
+                expect(t < 400, "the REPLACE Builder never placed the stone over the waterlogged slab and rested; "
+                        + "cell=" + first + ", leftToBreak=" + builder.leftToBreak + ", leftToPlace="
+                        + builder.leftToPlace + ", breakTasks=" + builder.breakTasks.size() + ", placeTasks="
+                        + builder.placeTasks.size());
+            }
+        });
     }
 
     /**

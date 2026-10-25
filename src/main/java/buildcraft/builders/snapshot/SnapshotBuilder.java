@@ -1019,9 +1019,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      * <ul>
      *   <li>NO_REPLACE — skip any position that is only fluid (flowing or source; {@link #isFluidOnly}). A block
      *       holding fluid (waterlogged, seagrass, kelp) is broken, and its fluid stays.</li>
-     *   <li>REPLACE — also skip fluid-only positions; schematic-solid over fluid is handled through
+     *   <li>REPLACE — also skip fluid-only positions; schematic-solid over fluid-only is handled through
      *       the place path ({@link SchematicBlockDefault#build(net.minecraft.world.level.Level,
-     *       BlockPos, EnumFluidHandlingMode)}), which can waterlog instead of destroying.</li>
+     *       BlockPos, EnumFluidHandlingMode)}), which can waterlog instead of destroying. A block holding
+     *       fluid (a waterlogged slab, stair or chest) is broken first, like any block in the way.</li>
      *   <li>CLEAR — allow ALL fluid (both sources and flowing) through. The earlier "sources
      *       only" filter assumed flowing fluid would drain naturally once every contributing
      *       source was inside the build area, but that's not true at a leaky boundary (a build

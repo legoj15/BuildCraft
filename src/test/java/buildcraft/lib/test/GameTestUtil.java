@@ -53,6 +53,17 @@ public final class GameTestUtil {
     }
 
     /**
+     * The plain-throw assertion for a game test that reports through a {@code try/catch} around its body (or has no
+     * {@link GameTestHelper} at hand): fails with {@code "Assertion failed: " + message}. Unlike {@code helper.assert*}
+     * it needs no helper and takes a String on every node, so it is not routed through the shims above.
+     */
+    public static void check(boolean condition, String message) {
+        if (!condition) {
+            throw new IllegalStateException("Assertion failed: " + message);
+        }
+    }
+
+    /**
      * Breaks the block at {@code relativePos} the way {@code ServerPlayerGameMode.destroyBlock} does for a survival
      * player holding {@code heldItem}: {@code playerWillDestroy}, {@code removeBlock}, then {@code playerDestroy}
      * only when the held item can harvest the block. {@code helper.destroyBlock} would skip loot, and the tool gate

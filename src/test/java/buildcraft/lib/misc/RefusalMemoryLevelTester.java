@@ -5,6 +5,8 @@
  */
 package buildcraft.lib.misc;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -19,12 +21,6 @@ public class RefusalMemoryLevelTester {
 
     /** Two million blocks out: nothing in a game-test server ever loads it. */
     private static final BlockPos UNLOADED = new BlockPos(2_000_000, 64, 2_000_000);
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     public static void levelOverloadsNeverLoadAChunk(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();

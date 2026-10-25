@@ -5,6 +5,8 @@
  */
 package buildcraft.factory;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
@@ -48,12 +50,6 @@ public class PumpProtectionTester {
 
     /** Long enough for the pump to drain what it can and then sit through a dozen idle rebuilds (one per 30 ticks). */
     private static final int PUMP_TICKS = 400;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),

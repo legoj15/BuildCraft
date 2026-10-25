@@ -6,6 +6,8 @@
 
 package buildcraft.builders.snapshot;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.BitSet;
 import java.util.List;
 import java.util.Set;
@@ -60,12 +62,6 @@ public class BuilderClaimTester {
      *  builder directly, so no chunk's ticking matters to it. */
     private static final int BUILDER_WORK_TICKS = RETRY_BUDGET + 300;
     private static final int BUILDER_POLL_TICKS = EntityArenaUtil.CELL_READY_TICKS + BUILDER_WORK_TICKS;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),

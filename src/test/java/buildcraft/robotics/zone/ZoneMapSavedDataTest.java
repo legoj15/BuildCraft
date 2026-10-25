@@ -9,7 +9,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
+
+import buildcraft.lib.misc.NBTUtilBC;
 
 /** The zone-map store: every written Zone Planner map names its zone here by id, so losing an entry or reusing an id
  *  across a save silently changes or empties the zone a robot works in. */
@@ -38,6 +41,100 @@ public class ZoneMapSavedDataTest {
         Assertions.assertTrue(c.id() != a.id() && c.id() != b.id(), "a zone written after the load gets an id no saved"
                 + " map holds");
         Assertions.assertTrue(loaded.get(a).sameContent(plan(1, 2)), "and the saved zone is untouched");
+    }
+
+    /** A crash restarts the store from the last saved file, so an id handed out since that save is handed out again
+     *  there. A plain zone map holding it (no carried plan to fall back on) would then name another zone. */
+    @Test
+    public void anIdHandedOutAfterTheLastSaveIsNotReusedAfterACrash() {
+        ZoneMapSavedData store = new ZoneMapSavedData();
+        ZoneMapRef saved = store.intern(plan(1, 2));
+        CompoundTag lastSave = encode(store);
+
+        ZoneMapRef lost = store.intern(plan(40, 40)); // handed out after the last save; the crash loses its entry
+
+        ZoneMapSavedData restarted = new ZoneMapSavedData();
+        restarted.readFromTag(lastSave);
+        ZoneMapRef after = restarted.intern(plan(-9, -9));
+        Assertions.assertNotEquals(lost.id(), after.id(), "an id some map may still hold is not handed to another zone");
+        Assertions.assertNotEquals(saved.id(), after.id(), "and neither is a saved one");
+        Assertions.assertNull(restarted.get(lost), "the lost map names no zone, rather than somebody else's");
+    }
+
+    /** The reservation is written, and read back, before the first id from it is handed out: a crash with no level save
+     *  at all since the store began (the file is only what that write left) still skips every id the session used. */
+    @Test
+    public void anIdIsHandedOutOnlyOnceTheFileHoldsItsReservation() {
+        ZoneMapSavedData store = new ZoneMapSavedData();
+        CompoundTag[] file = {null};
+        int[] writes = {0};
+        store.usePersister(() -> {
+            writes[0]++;
+            return file[0] = encode(store);
+        });
+
+        Assertions.assertEquals(0, writes[0], "nothing is written until a zone needs an id");
+        int previous = -1;
+        for (int i = 0; i < 2 * ZoneMapSavedData.RESERVE_BLOCK + 3; i++) {
+            ZoneMapRef ref = store.intern(plan(i, i));
+            Assertions.assertTrue(ref.id() > previous, "ids still count up");
+            previous = ref.id();
+            Assertions.assertTrue(NBTUtilBC.getInt(file[0], "reserved", 0) > ref.id(),
+                    "when zone " + i + " got id " + ref.id() + " the file already reserved past it");
+        }
+        Assertions.assertEquals(3, writes[0], "one write per block of ids, not one per zone");
+
+        ZoneMapSavedData restarted = new ZoneMapSavedData();
+        restarted.readFromTag(file[0]);
+        Assertions.assertTrue(restarted.intern(plan(-1, -1)).id() > previous,
+                "a store restarted from that file starts above every id handed out");
+    }
+
+    /** A write that cannot be confirmed (vanilla only logs a failed one) must not stop a player writing a zone, and is
+     *  tried again after the next level save rather than trusted, and not once per zone until then. */
+    @Test
+    public void anUnconfirmedReservationStillHandsOutIdsAndIsWrittenAgain() {
+        ZoneMapSavedData store = new ZoneMapSavedData();
+        int[] writes = {0};
+        boolean[] lands = {false};
+        store.usePersister(() -> {
+            writes[0]++;
+            return lands[0] ? encode(store) : null;
+        });
+
+        ZoneMapRef first = store.intern(plan(1, 1));
+        Assertions.assertTrue(store.holds(first), "the zone is written although the file could not be confirmed");
+        Assertions.assertFalse(store.isDurable(first), "and its entry is not claimed durable");
+        store.intern(plan(2, 2));
+        Assertions.assertEquals(1, writes[0], "a file that stays unreadable is not rewritten for every zone");
+
+        store.confirmOnDisk(null);
+        lands[0] = true;
+        store.intern(plan(3, 3));
+        Assertions.assertEquals(2, writes[0], "after a level save the next id tries the write again");
+        store.intern(plan(4, 4));
+        Assertions.assertEquals(2, writes[0], "then it holds: no more writes inside the block");
+        Assertions.assertTrue(store.isDurable(first), "and the write that landed made the earlier entries durable too");
+    }
+
+    /** A file written before ids were reserved has only the counter; it must keep loading, as it always did. */
+    @Test
+    public void aFileFromBeforeTheReservationStillLoads() {
+        CompoundTag old = new CompoundTag();
+        old.putLong("token", 42L);
+        old.putInt("nextId", 5);
+        ListTag maps = new ListTag();
+        CompoundTag entry = new CompoundTag();
+        entry.putInt("id", 2);
+        plan(3, 3).writeToNBT(entry);
+        maps.add(entry);
+        old.put("maps", maps);
+
+        ZoneMapSavedData loaded = new ZoneMapSavedData();
+        loaded.readFromTag(old);
+
+        Assertions.assertEquals(1, loaded.size(), "the saved zone is back");
+        Assertions.assertTrue(loaded.intern(plan(8, 8)).id() >= 5, "and new ids count on from the saved counter");
     }
 
     @Test

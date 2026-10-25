@@ -132,7 +132,13 @@ silent (the robot just idles). Entries are content-interned, so growth is bounde
 layouts painted, roughly 1 KB gzipped per 10x10-chunk zone. If growth ever measures as a problem,
 the fix is one file per entry, not reclaim. Blueprints carry each held map's zone in the captured
 NBT (`ZoneMapPortability`) and re-intern it on build, so a map survives a build in another world;
-the zone keeps its absolute coordinates (blueprints never translate map locations).
+the zone keeps its absolute coordinates (blueprints never translate map locations). Ids are
+handed out only below a `reserved` mark already confirmed in the store's file (blocks of 32, one
+synchronous overworld saved-data write per block), so a crash can never reissue an id some saved
+map still holds. A zone map inside a container a blueprint built keeps its carried plan until a
+ticking inventory sees it after its entry is durable; this is by design: the plan is only a
+fallback (the ref is authoritative whenever it names matching content), pricing strips it, and
+dropping it at build time would need a world write inside block placement.
 
 **Networking**: Custom payloads using NeoForge's `RegisterPayloadHandlersEvent`. Payloads use
 `StreamCodec<RegistryFriendlyByteBuf, T>` for serialization. Handlers call `ctx.enqueueWork()`

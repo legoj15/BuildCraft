@@ -5,6 +5,8 @@
  */
 package buildcraft.factory.tile;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,12 +72,6 @@ public class PumpUnloadedChunkTester {
 
     /** Long enough for an idle pump's rebuilds to back off to their cap. */
     private static final int IDLE_TICKS = 1500;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     /** The isolated chunk, a row of fluid and the pump over its first cell; {@link #close} takes it all down again.
      *  The pump stands at least two blocks from a chunk border it must not read across (see

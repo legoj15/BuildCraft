@@ -36,7 +36,8 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * that use the same offset can land on neighbouring chunks, and a chunk the first one loaded is still present when the
  * second asserts that its neighbour is absent. Offsets in use, which must stay at least 8 apart: 777
  * ({@code OilGenStructureTester}), 888, 999, 1111, 1222, 1333 ({@code PumpUnloadedChunkTester}), 1444
- * ({@code RobotPumpUnloadedChunkTester}).
+ * ({@code RobotPumpUnloadedChunkTester}), 1555 ({@code UnloadedChunkSearchTester}), 1666
+ * ({@code GroundSearchTester}), 1777 ({@code RobotStationRigTester}).
  *
  * <p>The chunk is real worldgen, so what stands in it is not controlled: a test writes every cell it depends on
  * ({@link #setRaw}) and puts them back ({@link #clearRaw}) when it is done. {@code setRaw} writes straight into the chunk
@@ -44,6 +45,9 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * test is guarding against).
  */
 public final class FarChunk {
+    /** How many polls {@link #queue} spends waiting for the holder before it reports the precondition as failed. */
+    private static final int QUEUE_POLL_CAP = 8;
+
     private final ServerLevel level;
     private final int chunkX;
     private final int chunkZ;
@@ -91,8 +95,44 @@ public final class FarChunk {
         return chunk;
     }
 
-    /** Lets a {@link #hold}ing ticket go; the chunk unloads some ticks later. Does nothing for a chunk that is not
-     *  held, or that was released already. */
+    /**
+     * Queues the chunk {@code offset} chunks east and south of the test arena's to load, without loading it: a ticket at
+     * the chunk alone, and the ticket and holder updates polled ({@code ServerChunkCache.pollTask}) until the holder
+     * exists and not one poll longer, which is as far as {@code getChunk} gets before it blocks on the generation. The
+     * chunk then has a holder at the ticket level of a {@code FULL} chunk, which is the whole of what
+     * {@code Level.hasChunk} and {@code Level.isLoaded} test, and is not in memory, which is what {@code getChunkNow}
+     * (and {@code BlockUtil.isChunkPresent}) test: the state a read would answer by loading the chunk on the server
+     * thread. Its promotion to {@code FULL} runs on the server thread, so it stays queued for as long as the caller
+     * runs a single test method without polling; <b>build everything on it inside one tick</b>. The caller must
+     * {@link #release} the ticket on every exit.
+     *
+     * @throws IllegalStateException when the chunk is not queued (already in memory, or no holder yet), a precondition
+     *                               failure
+     */
+    public static FarChunk queue(GameTestHelper helper, int offset) {
+        BlockPos arena = helper.absolutePos(BlockPos.ZERO);
+        FarChunk chunk = new FarChunk(helper.getLevel(), (arena.getX() >> 4) + offset, (arena.getZ() >> 4) + offset);
+        chunk.setHeld(true);
+        try {
+            // One poll runs the distance-manager update that creates the holder, but whether that is the first task the
+            // processor hands out is not guaranteed; poll until the holder is there, and stop at once (a further poll
+            // could run the promotion to FULL, which would leave the chunk in memory and the test with no queued chunk).
+            for (int polls = 0; polls < QUEUE_POLL_CAP && !chunk.level.hasChunk(chunk.chunkX, chunk.chunkZ); polls++) {
+                chunk.level.getChunkSource().pollTask();
+            }
+            GameTestUtil.check(chunk.level.hasChunk(chunk.chunkX, chunk.chunkZ),
+                    "precondition: a queued chunk has a holder at the ticket level of a FULL chunk (hasChunk)");
+            GameTestUtil.check(chunk.isAbsent(0, 0),
+                    "precondition: a queued chunk is not in memory yet (getChunkNow)");
+        } catch (RuntimeException e) {
+            chunk.release();
+            throw e;
+        }
+        return chunk;
+    }
+
+    /** Lets a {@link #hold}ing (or {@link #queue}d) ticket go; the chunk unloads some ticks later. Does nothing for a
+     *  chunk that is not held, or that was released already. */
     public void release() {
         setHeld(false);
     }

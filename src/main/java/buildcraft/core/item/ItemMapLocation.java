@@ -470,9 +470,9 @@ public class ItemMapLocation extends Item implements IMapLocation {
      * durable} (seen in the store's file on disk): player data is saved before level data, and a level-data write can
      * fail, so dropping it sooner could leave a map whose zone is in neither file. A later read or inventory tick
      * drops it. A stack whose ref the store does not hold (from another world, or a blueprint built there) takes a ref
-     * to its plan here. So does one whose ref the store holds with a different plan: a crash that lost the entry lets
-     * the next session hand its id to another zone (ids count on from the file), and the plan the stack still carries
-     * is the zone it names. With no store (off the server thread) the stack is not touched, and the plan it carries is
+     * to its plan here. So does one whose ref the store holds with a different plan: a crash under a build from before
+     * ids were reserved ahead ({@link ZoneMapSavedData}) lost the entry and let the next session hand its id to another
+     * zone, and the plan the stack still carries is the zone it names. With no store (off the server thread) the stack is not touched, and the plan it carries is
      * returned. The carried plan is parsed and compared once per store and custom-data value
      * ({@link ZoneMapSavedData#isCheckedCarrier}), not on every inventory tick while the entry is not yet durable.
      */

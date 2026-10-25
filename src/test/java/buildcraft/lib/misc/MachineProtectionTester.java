@@ -6,6 +6,8 @@
 
 package buildcraft.lib.misc;
 
+import static buildcraft.lib.test.GameTestUtil.check;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -75,12 +77,6 @@ public class MachineProtectionTester {
      *  A literal, not computed from the window, so {@code GameTestPollBudgetTester} can read it;
      *  {@code RefusalWindowBudgetTest} fails when the window outgrows it. */
     public static final int STRIPES_RETRY_TICKS = 300;
-
-    private static void check(boolean condition, String message) {
-        if (!condition) {
-            throw new IllegalStateException("Assertion failed: " + message);
-        }
-    }
 
     private static void requireProtectionChecksOn() {
         check(!BCCoreConfig.minePlayerProtected.get(),

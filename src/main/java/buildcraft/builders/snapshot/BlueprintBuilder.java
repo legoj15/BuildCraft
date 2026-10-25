@@ -286,7 +286,14 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // or destroys the fluid in the same pass. No need to break separately first.
             // Without this short-circuit the stock schematic.canBuild check would see
             // level.isEmptyBlock == false and refuse, leaving the fluid position untouched.
-            if (mode == EnumFluidHandlingMode.REPLACE) return true;
+            // That holds for a cell of nothing but fluid. A real block that holds fluid (a waterlogged
+            // slab, stair or chest, kelp) is a block the schematic does not want here: it is broken like
+            // any other wrong block (power charged, its drops into the Builder's resources, a container's
+            // contents spilled) and the water it leaves is then placed over. canBuild refuses it (the
+            // cell is not empty), which routes it to TO_BREAK; shouldBreakQueueAcceptFluid admits it.
+            if (mode == EnumFluidHandlingMode.REPLACE && isFluidOnly(tile.getWorldBC().getBlockState(blockPos))) {
+                return true;
+            }
             // NO_REPLACE: a block that holds this very fluid itself (one the blueprint wants waterlogged) keeps it,
             // so placing it replaces nothing (see placesIntoOwnFluid).
             if (placesIntoOwnFluid(blockPos)) return true;

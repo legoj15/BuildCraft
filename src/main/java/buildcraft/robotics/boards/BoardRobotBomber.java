@@ -24,6 +24,7 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.robotics.RobotProtection;
 import buildcraft.robotics.ai.AIRobotGotoBlock;
@@ -136,6 +137,12 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
         BlockPos landing = landingBlock(level, drop);
         BlockPos aimed = aimedAt;
         aimedAt = null;
+        if (landing == null) {
+            // The drop point sits in a chunk that is not in memory (the robot hovered by a chunk border): asking
+            // whether its block may be broken would load the chunk. Nothing is dropped and nothing is refused; the
+            // board's next update searches for ground again.
+            return;
+        }
         if (!RobotProtection.canBreak(robot, level, landing)) {
             // The search tests the ground it picks, which is not the landing block when the two columns differ:
             // remembering only the landing block let the search pick the same ground, and be refused, again.
@@ -166,12 +173,19 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
     }
 
     /** The block TNT dropped at {@code drop} falls onto: the first non-empty block straight below it, within
-     *  {@link #LANDING_SCAN_DEPTH} and the loaded chunks; the cell under the drop point when there is none (it falls
-     *  out of reach, and the question is asked about where it starts). */
+     *  {@link #LANDING_SCAN_DEPTH}; the cell under the drop point when there is none (it falls out of reach, and the
+     *  question is asked about where it starts). Null when the drop point's chunk is not in memory: the whole scan is
+     *  one column, so there is nothing to read without loading it. */
+    @Nullable
     private static BlockPos landingBlock(ServerLevel level, Vec3 drop) {
         BlockPos start = BlockPos.containing(drop);
+        // In memory, not isLoaded (a ticket-level test, true for a chunk still queued to load): isEmptyBlock reads the
+        // cell, and canBreak reads the start cell after a miss.
+        if (!BlockUtil.isChunkPresent(level, start)) {
+            return null;
+        }
         BlockPos.MutableBlockPos cell = start.mutable();
-        for (int depth = 0; depth < LANDING_SCAN_DEPTH && level.isLoaded(cell); depth++, cell.move(Direction.DOWN)) {
+        for (int depth = 0; depth < LANDING_SCAN_DEPTH; depth++, cell.move(Direction.DOWN)) {
             if (!level.isEmptyBlock(cell)) {
                 return cell.immutable();
             }

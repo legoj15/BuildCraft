@@ -1,0 +1,50 @@
+{
+  "name": "marker-length",
+  "description": "Marker laser length under the crosshair. A connected 10-block volume line shows a white '10 blocks' label; stone in the sight line hides it, leaves do not; two unconnected markers 7 apart show a grey '7 blocks' only while a Marker Connector is held. The rig is cleared at the end so other marker scenarios start clean.",
+  "base": [0, 150, 0],
+  "steps": [
+    { "do": "wait", "ms": 2500 },
+    { "label": "platform, a line pair and a preview pair", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear",
+      "fill {X-8} {Y-1} {Z-4} {X+8} {Y-1} {Z+16} minecraft:smooth_stone",
+      "?fill {X-8} {Y} {Z-4} {X+8} {Y+8} {Z+16} minecraft:air",
+      "setblock {X-4} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X+5} {Y+1} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X-3} {Y+1} {Z+10} buildcraftunofficial:marker_volume",
+      "setblock {X+3} {Y+1} {Z+10} buildcraftunofficial:marker_volume"
+    ] },
+    { "do": "wait", "ms": 1500 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "tp", "at": [-4, 0, 1], "yaw": 0, "pitch": 2 },
+    { "do": "aim", "at": [-4, 1, 4] },
+    { "do": "wait", "ms": 1200 },
+    { "label": "right-click a marker to connect the line", "do": "use" },
+    { "do": "wait", "ms": 1500 },
+
+    { "do": "tp", "at": [0, 0, -1], "yaw": 0, "pitch": 0 },
+    { "do": "look", "yaw": 0, "pitch": 1.4 },
+    { "do": "wait", "ms": 600 },
+    { "name": "connected", "do": "shot", "look": "red laser along X; white '10 blocks' just below the crosshair" },
+
+    { "do": "cmd", "run": "setblock {X} {Y+1} {Z+1} minecraft:stone" },
+    { "do": "wait", "ms": 600 },
+    { "name": "behind-stone", "do": "shot", "look": "stone block under the crosshair; NO length label" },
+
+    { "do": "cmd", "run": "setblock {X} {Y+1} {Z+1} minecraft:oak_leaves[persistent=true]" },
+    { "do": "wait", "ms": 600 },
+    { "name": "behind-leaves", "do": "shot", "look": "leaves under the crosshair; the '10 blocks' label still shows" },
+
+    { "do": "tp", "at": [0, 0, 14], "yaw": 180, "pitch": 0 },
+    { "do": "look", "yaw": 180, "pitch": 1.7 },
+    { "do": "wait", "ms": 600 },
+    { "name": "preview-empty-hand", "do": "shot", "look": "two markers, no preview line between them; the label (if any) is the connected line further back, through the leaves: 10 blocks" },
+    { "do": "hold", "item": "buildcraftunofficial:marker_connector" },
+    { "do": "wait", "ms": 600 },
+    { "name": "preview-connector", "do": "shot", "look": "faint preview line between the markers; grey '7 blocks' below the crosshair" },
+
+    { "do": "hold", "item": "minecraft:air" },
+    { "label": "take the rig down", "do": "cmd", "run": [
+      "?fill {X-8} {Y} {Z-4} {X+8} {Y+8} {Z+16} minecraft:air"
+    ] }
+  ]
+}

@@ -9,7 +9,6 @@ Last audited: 2026-10-25
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
-- Show a marker connection's length while looking at it
 - Zone Planner survey view reaching beyond loaded chunks, via a server-sampled region map like 1.7.10 kept — [notes](docs/todo-details.md#zone-planner-far-map-data)
 - Editable, reclaimable marker regions in survival — [notes](docs/todo-details.md#reclaimable-marker-region)
 - Smooth shading on facades — [quick notes](docs/todo-details.md#quick-notes)

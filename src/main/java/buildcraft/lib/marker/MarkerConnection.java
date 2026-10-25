@@ -37,6 +37,9 @@ public abstract class MarkerConnection<C extends MarkerConnection<C>> {
 
     public abstract Collection<BlockPos> getMarkerPositions();
 
+    /** Every straight laser this connection draws, one per visible line. */
+    public abstract List<MarkerSegment> getSegments();
+
     public abstract void renderInWorld();
 
     public void getDebugInfo(BlockPos caller, List<String> left) {

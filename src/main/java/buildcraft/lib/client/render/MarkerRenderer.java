@@ -160,7 +160,7 @@ public class MarkerRenderer {
     /** True if the player holds a marker connector in either hand (drives the possible-connection preview
      *  beams). BuildCraft is one mod, so lib references the core item directly rather than through an
      *  injected callback (mirrors {@link #renderVolumeBoxes()} calling {@code VolumeBoxRenderer} directly). */
-    private static boolean isHoldingConnector(Player player) {
+    public static boolean isHoldingConnector(Player player) {
         return player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector
             || player.getOffhandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector;
     }

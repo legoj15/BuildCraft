@@ -209,6 +209,7 @@
     "tip.block.engine_iron": "Consumes liquid fuels to generate MJ\nOverheats if there is no coolant",
     "tip.block.marker_volume": "Link together with a wrench or marker connector to create rectangular areas or volumes",
     "tip.block.marker_path": "Link together with a marker connector to create directional paths",
+    "buildcraft.marker.length": "%s blocks",
     "tip.block.quarry": "Mines a marked volume until reaching bedrock",
     "tip.block.mining_well": "Mines straight down until reaching bedrock or a fluid",
     "tip.item.paintbrush.clean": "Can strip paint from pipes",

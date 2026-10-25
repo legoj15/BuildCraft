@@ -17,6 +17,7 @@ A robots gliding (26.3, 1.21.1, 26.2), B stripes retraction (after the client fi
 
 ## Done since the visual checks
 - 1.21.1 NeoForge 21.1.262 -> 21.1.264 (`112fed2ec`).
+- 2026-10-25 NeoForge bump, all neutral per changelogs: 1.21.1 21.1.265, 26.1.2 26.1.2.124, 26.3 26.3.0.99. Unit + game tests green on those three nodes.
 - Flake follow-ups (`127c81975`, `aeea0107e`, `5c2d593b4`): the poll-budget guard covers every game test; every drop test uses `DropArenaUtil` (waits for the cell to tick and the drops to settle, counts only inside its own cell); click-break pipe tests sit mid-cell.
 
 ## Uncommitted changes

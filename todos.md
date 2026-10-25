@@ -5,7 +5,7 @@ Last audited: 2026-10-25
 ## 🆕 New Features (version 2026.3)
 
 - Move the "Filler Planner"'s functionality to the actual Filler block for survival QoL, and remove the Filler Planner item and assets.
-- Use modern Minecraft sounds where they fit (copper grate for pipes, etc.)
+- Use modern Minecraft sounds where they fit (copper grate for metal pipes, pitched down scaffolding for wooden, pitched up cobble for stone)
 - Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)

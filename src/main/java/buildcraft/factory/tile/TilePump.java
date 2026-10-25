@@ -55,6 +55,7 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
 import buildcraft.api.tiles.IDebuggable;
@@ -660,6 +661,8 @@ public class TilePump extends TileMiner implements IDebuggable {
             // belong to the miner now, so forget them rather than let the next updateLength retract them.
             wantedLength = 0;
             currentLength = 0;
+            setChanged();
+            MessageUtil.sendUpdateToTrackingPlayers(this); // clients stop drawing the old tube now, not on the next sync
         }
         if (!queueBuilt || builtAtRevision != CONFIG_REVISION.get()) {
             buildQueue();

@@ -593,6 +593,76 @@ def filename(title):
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
+# Trigger/action pages: the book titles them with the statement's description, which each Java
+# statement class builds itself (getDescription). Statement id -> its lang key, or (key, arg) for a
+# formatted one. Keep in step with the statement classes; an unknown id warns and falls back.
+STATEMENT_LANG = {
+    **{f"buildcraft:engine.stage.{s}": f"gate.trigger.engine.{s}"
+       for s in ("blue", "green", "yellow", "red", "overheat")},
+    "buildcraft:energyStoredhigh": "gate.trigger.machine.energyStored.high",
+    "buildcraft:energyStoredlow": "gate.trigger.machine.energyStored.low",
+    "buildcraft:powerRequested": "gate.trigger.pipe.requestsEnergy",
+    "buildcraft:pipe_contains_items": "gate.trigger.pipe.containsItems",
+    "buildcraft:pipe_contains_fluids": "gate.trigger.pipe.containsFluids",
+    **{f"buildcraft:pipe.dir.{d}": ("gate.action.pipe.direction", f"direction.{d}")
+       for d in ("north", "east", "south", "west", "up", "down")},
+    **{f"buildcraft:inventory.{s}": f"gate.trigger.inventory.{s}" for s in ("empty", "contains", "space", "full")},
+    **{f"buildcraft:fluid.{s}": f"gate.trigger.fluid.{s}" for s in ("empty", "contains", "space", "full")},
+    "buildcraftunofficial:trigger.true": "gate.trigger.true",
+    "buildcraft:redstone.input.active": "gate.trigger.redstone.input.active",
+    "buildcraft:redstone.input.inactive": "gate.trigger.redstone.input.inactive",
+    "buildcraft:redstone.output": "gate.action.redstone.signal",
+    "buildcraft:work.scheduled": "gate.trigger.machine.scheduled",
+    "buildcraft:work.done": "gate.trigger.machine.done",
+    **{f"buildcraft:timer_{n}": ("gate.trigger.timer", s) for n, s in (("short", "5"), ("medium", "10"), ("long", "15"))},
+    "buildcraft:pulsar.constant": "gate.action.pulsar.constant",
+    "buildcraft:pulsar.single": "gate.action.pulsar.single",
+    "buildcraft:robot.in.station": "gate.trigger.robot.in.station",
+    "buildcraft:robot.goto_station": "gate.action.robot.goto_station",
+    "buildcraft:robot.work_in_area": "gate.action.robot.work_in_area",
+    "buildcraft:robot.wakeup": "gate.action.robot.wakeup",
+    "buildcraft:robot.linked": "gate.trigger.robot.linked",
+    "buildcraft:robot.reserved": "gate.trigger.robot.reserved",
+    **{f"buildcraft:station.{s}": f"gate.action.station.{s}"
+       for s in ("provide_items", "accept_items", "request_items", "provide_machine_request",
+                 "accept_fluids", "provide_fluids", "forbid_robot", "force_robot")},
+}
+# Where the book's title only reads right beside its icon and chapter, or can't be a wiki page
+# name (`<`, `/` and `%` break wiki links; inventory and tank share "Contains < 25%"), the wiki says
+# what the book's context shows. Keyed by statement id.
+STATEMENT_TITLE_WIKI = {
+    **{f"buildcraft:inventorylevel.below{n}": f"Inventory Below {n} Percent" for n in (25, 50, 75)},
+    **{f"buildcraft:fluidlevel.below{n}": f"Tank Below {n} Percent" for n in (25, 50, 75)},
+    "buildcraft:robot.load_unload_area": "Load or Unload in Area",
+    "buildcraft:machine.on": "Machine On",
+    "buildcraft:machine.off": "Machine Off",
+    "buildcraft:machine.loop": "Machine Loop",
+    "buildcraft:light_bright": "Light Bright",
+    "buildcraft:light_dark": "Light Dark",
+    "buildcraft:robot.sleep": "Robot Sleep",
+    "buildcraft:robot.work_filter": "Robot Filter",
+    "buildcraft:robot.work_filter_tool": "Robot Filter Tool",
+    # These two pages describe the whole family (every colour), not the one statement registered.
+    "buildcraft:pipe.color.black": LANG.get("buildcraft.guide.group.to.buildcraft.paint_pipe_colour", "Paint Passing Items"),
+    "buildcraft:extraction.preset.red": "Extraction Preset",
+}
+
+def statement_title(sid):
+    if sid in STATEMENT_TITLE_WIKI:
+        return STATEMENT_TITLE_WIKI[sid]
+    spec = STATEMENT_LANG.get(sid)
+    if spec is None:
+        warn(f"statement '{sid}' has no name mapping; add it to STATEMENT_LANG")
+        return None
+    key, arg = (spec, None) if isinstance(spec, str) else spec
+    if key not in LANG:
+        warn(f"statement '{sid}': lang key '{key}' missing")
+        return None
+    text = LANG[key]
+    if arg is not None:
+        text = text.replace("%s", LANG.get(arg, arg)).replace("%d", LANG.get(arg, arg))
+    return text
+
 # Category pages are registered in code, not guide.txt: their system and subtype come from the
 # registerCategory calls in GuideManager.java. Keep in step with those.
 CATEGORY_PLACEMENT = {
@@ -633,6 +703,8 @@ def main():
             e.title = LANG[f"buildcraft.guide.page.{e.title_key}"]
         elif e.title_key:
             e.title = prettify(e.title_key)
+        elif e.statement and statement_title(e.statement):
+            e.title = statement_title(e.statement)
         elif e.stack:
             e.title = lang_name(e.stack, is_block=(e.ptype == "block"))
         else:

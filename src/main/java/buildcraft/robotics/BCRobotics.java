@@ -101,6 +101,7 @@ import buildcraft.robotics.boards.BoardRobotShovelmanNBT;
 import buildcraft.robotics.boards.BoardRobotStripes;
 import buildcraft.robotics.boards.BoardRobotStripesNBT;
 import buildcraft.robotics.zone.ZoneMapSavedData;
+import buildcraft.robotics.zone.ZoneSurveyMap;
 
 /**
  * BuildCraft Robotics initializer. No longer a separate @Mod — called from BCCore.
@@ -192,6 +193,9 @@ public class BCRobotics {
                 ZoneMapSavedData.onLevelSave(level);
             }
         });
+
+        // The Zone Planner's far map: terrain sampled from chunks as the server loads and unloads them.
+        ZoneSurveyMap.register();
 
         LOGGER.info("BuildCraft Robotics initialized");
     }

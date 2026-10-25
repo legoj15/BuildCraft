@@ -131,6 +131,12 @@ button, which ends the stroke where right was tapped, the very symptom the scena
 - On 26.3 the `pause` step's real-Esc fallback, and any other step that brings the window to the front, can turn the
   camera (the focus grab recentres the mouse): `look` again before a shot that depends on the view.
 
+## Zone Planner far map: `zone-planner-far-map`
+
+Lower the node's `run-smoke/options.txt` `renderDistance` to 4 first (the runner keeps that file). The scenario tours a
+cross and a ring across the survey square so the server samples those chunks, returns to spawn and opens the planner:
+at survey zoom the toured strips must show past the small loaded patch, joined to it without a seam.
+
 ## Two players: `multiplayer/`
 
 What another player sees (arm swings, particles, entity sync that goes server to other clients) needs a dedicated

@@ -1,0 +1,503 @@
+{
+  "name": "zone-planner-far-map",
+  "description": "Zone Planner far map: with render distance 4, tour a cross and a ring across the planner's survey square so the server samples those chunks (as they load and unload), return to spawn, and check the planner draws the toured terrain past the client's loaded chunks at survey zoom.",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "label": "setup",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "time set 6000",
+        "weather clear",
+        "?clear @p"
+      ]
+    },
+    {
+      "label": "explore 128,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 128 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -128,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -128 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,128",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 128"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-128",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -128"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 256,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 256 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -256,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -256 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,256",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 256"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-256",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -256"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 384,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 384 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -384,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -384 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,384",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 384"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-384",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -384"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 512,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 512 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -512,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -512 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,512",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 512"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-512",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -512"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 640,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 640 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -640,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -640 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,640",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 640"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-640",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -640"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 768,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 768 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -768,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -768 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,768",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 768"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-768",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -768"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 560,0",
+      "do": "cmd",
+      "run": [
+        "tp @p 560 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 485,280",
+      "do": "cmd",
+      "run": [
+        "tp @p 485 200 280"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 280,485",
+      "do": "cmd",
+      "run": [
+        "tp @p 280 200 485"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,560",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 560"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -280,485",
+      "do": "cmd",
+      "run": [
+        "tp @p -280 200 485"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -485,280",
+      "do": "cmd",
+      "run": [
+        "tp @p -485 200 280"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -560,0",
+      "do": "cmd",
+      "run": [
+        "tp @p -560 200 0"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -485,-280",
+      "do": "cmd",
+      "run": [
+        "tp @p -485 200 -280"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore -280,-485",
+      "do": "cmd",
+      "run": [
+        "tp @p -280 200 -485"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 0,-560",
+      "do": "cmd",
+      "run": [
+        "tp @p 0 200 -560"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 280,-485",
+      "do": "cmd",
+      "run": [
+        "tp @p 280 200 -485"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "explore 485,-280",
+      "do": "cmd",
+      "run": [
+        "tp @p 485 200 -280"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "label": "back to spawn",
+      "do": "cmd",
+      "run": [
+        "spreadplayers 0 0 0 1 false @p"
+      ]
+    },
+    {
+      "label": "let far chunks unload",
+      "do": "wait",
+      "ms": 15000
+    },
+    {
+      "label": "zone planner underfoot",
+      "do": "cmd",
+      "run": [
+        "execute at @p run setblock ~ ~-1 ~ buildcraftunofficial:zone_planner"
+      ]
+    },
+    {
+      "do": "hold",
+      "item": "minecraft:air"
+    },
+    {
+      "do": "look",
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "label": "open the planner",
+      "do": "use"
+    },
+    {
+      "do": "expectScreen",
+      "contains": "GuiZonePlanner"
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "name": "default-zoom",
+      "do": "shot",
+      "look": "default zoom: terrain around the planner, from the client's own chunks"
+    },
+    {
+      "label": "zoom fully out",
+      "do": "scroll",
+      "fx": 0.466,
+      "fy": 0.271,
+      "scrollY": -1,
+      "notches": 30
+    },
+    {
+      "do": "wait",
+      "ms": 2000
+    },
+    {
+      "name": "survey-zoom",
+      "do": "shot",
+      "look": "fully zoomed out: besides the small detailed patch in the centre (render distance 4), terrain also shows along a cross and a ring ~560 blocks out where the player toured; gaps elsewhere. Far terrain is coarser (4-block cells) but placed consistently with the centre (no seams/offsets)"
+    },
+    {
+      "label": "zoom in a bit",
+      "do": "scroll",
+      "fx": 0.466,
+      "fy": 0.271,
+      "scrollY": 1,
+      "notches": 6
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "name": "mid-zoom",
+      "do": "shot",
+      "look": "intermediate zoom: the near patch joins the toured cross arms without a visible offset or height jump"
+    },
+    {
+      "do": "close"
+    }
+  ]
+}

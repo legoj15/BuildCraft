@@ -9,3 +9,4 @@
 - Looking at a marker laser shows its length in blocks under the crosshair, including the faint preview lines while holding a Marker Connector.
 - The Filler has a Preview toggle (the eye button on its screen). On, it draws see-through cubes over every spot its pattern still has to fill, for everyone near it, and hides them while it is placing or breaking blocks. It replaces the Filler Planner: the Filler Planner item and the Volume Box addon spots are gone, so Filler Planners in inventories and on Volume Boxes disappear.
 - Changing a Filler's pattern, parameters, invert toggle or box now reaches other players watching it straight away.
+- The Zone Planner's map now shows terrain past your render distance: anywhere in its survey area that someone has visited is drawn from what the server remembers, without loading any chunks.

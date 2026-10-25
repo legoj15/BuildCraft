@@ -6,15 +6,19 @@
 
 package buildcraft.robotics.container;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import io.netty.buffer.Unpooled;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.inventory.SimpleContainerData;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -22,7 +26,9 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import buildcraft.api.core.BCLog;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.tile.TileZonePlanner;
+import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.zone.ZonePlan;
+import buildcraft.robotics.zone.ZoneSurveyMap;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.slot.SlotOutput;
@@ -127,6 +133,24 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
     public static final int NET_SYNC_LAYER = 11;
     public static final int NET_PAINT_ACK = 12;
 
+    // ── Far map ──────────────────────────────────────────────────────────────────────────
+    // Past the client's own chunks the viewport draws what the server has recorded of the terrain (ZoneSurveyMap). The
+    // screen asks once as it opens (NET_FAR_MAP_REQUEST, no payload: the area is always this planner's survey square,
+    // never the client's choice), and the server answers with one NET_FAR_MAP_REGION per 32x32-chunk region it knows
+    // anything of, looking at FAR_REGIONS_PER_TICK regions a tick, so a whole square (up to 25 messages, about 600 KB
+    // altogether when every chunk of it is known) is spread over a second or so. A player is sent at most one square
+    // per ZoneSurveyMap.SEND_INTERVAL_TICKS; a request inside that waits for it instead of being dropped, so a screen
+    // resized right after opening still gets its map.
+    public static final int NET_FAR_MAP_REQUEST = 13;
+    public static final int NET_FAR_MAP_REGION = 14;
+    private static final int FAR_REGIONS_PER_TICK = 2;
+
+    /** Server side: a far map was asked for and not yet started. */
+    private boolean farRequested;
+    /** Server side: regions of the square still to send, as {@code {regionX, regionZ}}, and the square itself. */
+    private final ArrayDeque<int[]> farQueue = new ArrayDeque<>();
+    private int[] farSquare;
+
     /** Server side: the fewest ticks between two pushes of the same layer to one viewer (twice a second). A change
      *  that lands sooner than that after the last push waits for the interval to end, and everything that changed
      *  meanwhile goes down in that one push; so a viewer painting continuously costs every other viewer one layer
@@ -211,11 +235,45 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         });
     }
 
+    /** Client side: asks the server for what it knows of the terrain in this planner's survey square. */
+    public void requestFarMap() {
+        sendMessage(NET_FAR_MAP_REQUEST, buf -> {});
+    }
+
+    /** Server side: starts a requested far map when the player's interval allows, and sends the next few regions. */
+    private void sendFarMap(ServerLevel level) {
+        if (farRequested && ZoneSurveyMap.tryStartSend(level, player.getUUID())) {
+            farRequested = false;
+            farQueue.clear();
+            BlockPos pos = tile.getBlockPos();
+            farSquare = new int[] {
+                    (pos.getX() + ZonePlan.SURVEY_MIN_BLOCK) >> 4, (pos.getZ() + ZonePlan.SURVEY_MIN_BLOCK) >> 4,
+                    (pos.getX() + ZonePlan.SURVEY_MAX_BLOCK) >> 4, (pos.getZ() + ZonePlan.SURVEY_MAX_BLOCK) >> 4};
+            for (int rx = farSquare[0] >> 5; rx <= farSquare[2] >> 5; rx++) {
+                for (int rz = farSquare[1] >> 5; rz <= farSquare[3] >> 5; rz++) {
+                    farQueue.add(new int[] {rx, rz});
+                }
+            }
+        }
+        ZoneSurveyMap map = ZoneSurveyMap.of(level);
+        // Regions polled, not regions sent: an empty one costs its file read and chunk lookups all the same.
+        for (int polled = 0; polled < FAR_REGIONS_PER_TICK && !farQueue.isEmpty(); polled++) {
+            int[] r = farQueue.poll();
+            byte[] bytes = map.encodeRegion(r[0], r[1], farSquare[0], farSquare[1], farSquare[2], farSquare[3]);
+            if (bytes != null) {
+                sendMessage(NET_FAR_MAP_REGION, buf -> buf.writeBytes(bytes));
+            }
+        }
+    }
+
     @Override
     public void broadcastChanges() {
         super.broadcastChanges();
         if (tile == null || tile.getLevel() == null || tile.getLevel().isClientSide()) {
             return;
+        }
+        if (tile.getLevel() instanceof ServerLevel level) {
+            sendFarMap(level);
         }
         ZonePlan[] layers = tile.layers;
         for (int i = 0; i < layers.length; i++) {
@@ -280,6 +338,30 @@ public class ContainerZonePlanner extends ContainerBCTile<TileZonePlanner> {
         if (id == NET_PAINT_ACK && isClient) {
             int seq = buffer.readVarInt();
             pending.removeIf(stroke -> stroke.seq() <= seq);
+            return;
+        }
+        if (id == NET_FAR_MAP_REQUEST && !isClient) {
+            farRequested = true;
+            return;
+        }
+        if (id == NET_FAR_MAP_REGION && isClient) {
+            // ZonePlannerMapDataClient names no client-only type, so this branch links on a dedicated server too
+            // (where it never runs).
+            if (tile == null) {
+                return;
+            }
+            // Only chunks of this planner's survey square are kept, whatever arrives.
+            Level level = player.level();
+            BlockPos pos = tile.getBlockPos();
+            int minCX = (pos.getX() + ZonePlan.SURVEY_MIN_BLOCK) >> 4;
+            int minCZ = (pos.getZ() + ZonePlan.SURVEY_MIN_BLOCK) >> 4;
+            int maxCX = (pos.getX() + ZonePlan.SURVEY_MAX_BLOCK) >> 4;
+            int maxCZ = (pos.getZ() + ZonePlan.SURVEY_MAX_BLOCK) >> 4;
+            ZoneSurveyMap.decode(buffer, (cx, cz, heights, colours) -> {
+                if (cx >= minCX && cx <= maxCX && cz >= minCZ && cz <= maxCZ) {
+                    ZonePlannerMapDataClient.INSTANCE.acceptFarChunk(level, cx, cz, heights, colours);
+                }
+            });
             return;
         }
         super.readMessage(id, buffer, isClient, ctx);

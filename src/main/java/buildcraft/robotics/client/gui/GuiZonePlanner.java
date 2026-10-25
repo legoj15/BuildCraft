@@ -82,6 +82,9 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
     private static final double ZOOM_STEP_OUT = 1.35;
 
     private final ZoneMapCamera camera;
+    /** The terrain caches have been reset and the far map asked for: once per opening, not on every re-init (a
+     *  window resize), which would blank the far map until the server's send interval let it through again. */
+    private boolean mapRequested;
     /** The pan drag in progress, if any: owned by the left button that began it and moved by cursor moves, not drag
      *  events (see {@link ZonePanDrag} for why). */
     private final ZonePanDrag pan = new ZonePanDrag();
@@ -136,9 +139,14 @@ public class GuiZonePlanner extends GuiBC8<ContainerZonePlanner> {
 
     @Override
     protected void initGuiElements() {
-        // Terrain is rebuilt from the player's current surroundings each time the screen opens.
-        ZonePlannerMapDataClient.INSTANCE.clear();
-        ZoneMapGeometry.clearOverlayCache();
+        // Terrain is rebuilt from the player's current surroundings each time the screen opens, and what the server
+        // has recorded past them is asked for afresh.
+        if (!mapRequested) {
+            mapRequested = true;
+            ZonePlannerMapDataClient.INSTANCE.clear();
+            ZoneMapGeometry.clearOverlayCache();
+            menu.requestFarMap();
+        }
         addHelpRegions();
     }
 

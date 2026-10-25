@@ -270,10 +270,6 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.id.equals(id)).findFirst().orElse(null);
     }
 
-    public VolumeBox getCurrentEditing(Player player) {
-        return volumeBoxes.stream().filter(volumeBox -> volumeBox.isEditingBy(player)).findFirst().orElse(null);
-    }
-
     public void tick() {
         boolean dirty = false;
         for (int i = 0; i < volumeBoxes.size(); i++) {
@@ -290,8 +286,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
             }
             if (volumeBox.isEditing()) {
                 Player player = volumeBox.getPlayer(world);
-                if (player == null) {
-                    volumeBox.pauseEditing();
+                if (player == null || volumeBox.getHeld() == null || volumeBox.getOldMin() == null
+                        || volumeBox.getOldMax() == null) {
+                    // The player is not in this level any more (logged out, changed dimension), or the drag lost
+                    // its anchor: the drag is cancelled and the old size comes back. Nothing waits for them, so a
+                    // machine that owns the box is never left frozen on an edit nobody can finish.
+                    volumeBox.cancelEditing();
                     dirty = true;
                 } else {
                     AABB oldAabb = volumeBox.box.getBoundingBox();
@@ -303,7 +303,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
                                     .add(player.getLookAngle().scale(volumeBox.getDist())));
                     // No drag makes a box larger than markers could: each axis stops at the marker reach.
                     volumeBox.box.extendToEncompass(VolumeBox.clampDragTarget(volumeBox.getHeld(), lookingAt,
-                            BCCoreConfig.markerMaxDistance.get()));
+                            BCCoreConfig.markerMaxDistance.get(), volumeBox.getOldMin(), volumeBox.getOldMax()));
                     if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
                         dirty = true;
                     }

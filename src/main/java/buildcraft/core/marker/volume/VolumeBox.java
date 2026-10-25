@@ -35,8 +35,9 @@ public class VolumeBox {
     public final Level world;
     public UUID id;
     public Box box;
+    /** The player dragging a corner, or null. A drag ends when that player confirms or cancels it, or is no longer in
+     *  this box's level (logged out, changed dimension): that cancels it (see LevelSavedDataVolumeBoxes#tick). */
     private UUID player = null;
-    private UUID oldPlayer = null;
     private BlockPos held = null;
     private double dist = 0;
     private BlockPos oldMin = null, oldMax = null;
@@ -69,7 +70,6 @@ public class VolumeBox {
         box.initialize(NBTUtilBC.getCompound(nbt, "box"));
 
         player = nbt.contains("player") ? UUID.fromString(NBTUtilBC.getString(nbt, "player", "")) : null;
-        oldPlayer = nbt.contains("oldPlayer") ? UUID.fromString(NBTUtilBC.getString(nbt, "oldPlayer", "")) : null;
 
         if (nbt.contains("held")) {
             held = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "held"));
@@ -81,6 +81,11 @@ public class VolumeBox {
         }
         if (nbt.contains("oldMax")) {
             oldMax = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "oldMax"));
+        }
+        // Saves from before a drag ended with its player's absence kept such a drag "paused" under oldPlayer. It is
+        // a cancelled drag now: the old size comes back.
+        if (nbt.contains("oldPlayer") && player == null) {
+            cancelEditing();
         }
 
         if (nbt.contains("addons")) {
@@ -120,14 +125,9 @@ public class VolumeBox {
         }
     }
 
-    @SuppressWarnings("WeakerAccess")
+    /** Whether a corner is being dragged: the box's size is not final. */
     public boolean isEditing() {
         return player != null;
-    }
-
-    /** Whether a drag is under way, including one paused because its player left: the box's size is not final. */
-    public boolean hasEditInProgress() {
-        return player != null || oldPlayer != null;
     }
 
     /** Makes this box belong to the machine block at {@code pos} (see {@link #owner}). */
@@ -147,14 +147,17 @@ public class VolumeBox {
 
     /**
      * Where the dragged corner goes when the player aims at {@code target} while {@code held} stays put: each axis is
-     * kept within {@code maxSpan} blocks of the held corner, the same reach a marker connection has, so a box can
-     * never be dragged larger than markers could make it. Axes are clamped on their own.
+     * kept within {@code cap} blocks of the held corner, the same reach a marker connection has, so a box can never be
+     * dragged larger than markers could make it. An axis the box already spanned further than that when the drag
+     * started ({@code startMin}..{@code startMax}) keeps that span as its limit instead, so grabbing a corner never
+     * shrinks a box by itself. Axes are clamped on their own.
      */
-    public static BlockPos clampDragTarget(BlockPos held, BlockPos target, int maxSpan) {
+    public static BlockPos clampDragTarget(BlockPos held, BlockPos target, int cap, BlockPos startMin,
+                                           BlockPos startMax) {
         return new BlockPos(
-            clampAxis(held.getX(), target.getX(), maxSpan),
-            clampAxis(held.getY(), target.getY(), maxSpan),
-            clampAxis(held.getZ(), target.getZ(), maxSpan));
+            clampAxis(held.getX(), target.getX(), Math.max(cap, startMax.getX() - startMin.getX())),
+            clampAxis(held.getY(), target.getY(), Math.max(cap, startMax.getY() - startMin.getY())),
+            clampAxis(held.getZ(), target.getZ(), Math.max(cap, startMax.getZ() - startMin.getZ())));
     }
 
     private static int clampAxis(int held, int target, int maxSpan) {
@@ -167,11 +170,14 @@ public class VolumeBox {
         dist = 0;
     }
 
+    /** Ends the drag, putting the size from before it back (when it is known). */
     public void cancelEditing() {
         player = null;
-        box.reset();
-        box.extendToEncompass(oldMin);
-        box.extendToEncompass(oldMax);
+        if (oldMin != null && oldMax != null) {
+            box.reset();
+            box.extendToEncompass(oldMin);
+            box.extendToEncompass(oldMax);
+        }
         resetEditing();
     }
 
@@ -181,27 +187,12 @@ public class VolumeBox {
         addons.values().forEach(Addon::onVolumeBoxSizeChange);
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public void pauseEditing() {
-        oldPlayer = player;
-        player = null;
-    }
-
-    public void resumeEditing() {
-        player = oldPlayer;
-        oldPlayer = null;
-    }
-
     public void setPlayer(Player player) {
         this.player = GameProfileUtil.getId(player.getGameProfile());
     }
 
     public boolean isEditingBy(Player player) {
         return player != null && Objects.equals(this.player, GameProfileUtil.getId(player.getGameProfile()));
-    }
-
-    public boolean isPausedEditingBy(Player player) {
-        return oldPlayer != null && Objects.equals(oldPlayer, GameProfileUtil.getId(player.getGameProfile()));
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -226,6 +217,18 @@ public class VolumeBox {
         return dist;
     }
 
+    /** The box's min corner when the drag started, or null when there is no drag. */
+    @Nullable
+    public BlockPos getOldMin() {
+        return oldMin;
+    }
+
+    /** The box's max corner when the drag started, or null when there is no drag. */
+    @Nullable
+    public BlockPos getOldMax() {
+        return oldMax;
+    }
+
     public Stream<Lock.Target> getLockTargetsStream() {
         return locks.stream().flatMap(lock -> lock.targets.stream());
     }
@@ -237,9 +240,6 @@ public class VolumeBox {
 
         if (player != null) {
             nbt.putString("player", player.toString());
-        }
-        if (oldPlayer != null) {
-            nbt.putString("oldPlayer", oldPlayer.toString());
         }
         if (held != null) {
             nbt.put("held", NBTUtilBC.writeBlockPos(held));

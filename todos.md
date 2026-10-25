@@ -7,7 +7,6 @@ Last audited: 2026-10-25
 - Move the "Filler Planner"'s functionality to the actual Filler block for survival QoL, and remove the Filler Planner item and assets.
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
 - Zone Planner survey view reaching beyond loaded chunks, via a server-sampled region map like 1.7.10 kept — [notes](docs/todo-details.md#zone-planner-far-map-data)
-- Editable, reclaimable marker regions in survival — [notes](docs/todo-details.md#reclaimable-marker-region)
 - Smooth shading on facades — [quick notes](docs/todo-details.md#quick-notes)
 - Abandoned quarry frames over pre-dug holes (worldgen)
 - Make the wrench a real tool: light damage, durability, enchantable, best against BuildCraft blocks, maybe a zombie drop

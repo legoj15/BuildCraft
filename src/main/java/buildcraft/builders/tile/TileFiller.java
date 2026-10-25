@@ -324,7 +324,7 @@ public class TileFiller extends TileBC_Neptune
      * <p>
      * {@link #box} stays the area the builder works on, mirrored from the owned box only once a drag is confirmed:
      * the builder's snapshot is laid out for one fixed area, so it must never see a box that changes under it. While
-     * a drag is under way (paused ones included) the Filler waits; a confirmed new size restarts the job from scratch
+     * a drag is under way the Filler waits; a confirmed new size restarts the job from scratch
      * on the new area, and a cancelled drag puts the old size back, so nothing changes.
      *
      * @return true while the box is being dragged: the Filler does no work this tick.
@@ -334,7 +334,7 @@ public class TileFiller extends TileBC_Neptune
         if (owned == null) {
             return false;
         }
-        if (owned.hasEditInProgress()) {
+        if (owned.isEditing()) {
             return true;
         }
         if (!box.isInitialized() || !owned.box.min().equals(box.min()) || !owned.box.max().equals(box.max())) {

@@ -26,8 +26,11 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 
 import buildcraft.lib.marker.MarkerCache;
@@ -56,8 +59,10 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
  * {@link #onItemUseFirst} then does the marker work itself and consumes the click, so neither the wrench rotation
  * nor the block's own use runs (a chest or machine behind the laser would otherwise open its screen: the wrench
  * lets sneak-clicks through to blocks). The server does the work; the client only answers with the same success,
- * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before. Anything else
- * keeps the inherited wrench behaviour. The client runs the same test on its own marker caches and box list.
+ * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before, and so does a
+ * block click whose target lies behind the block; there the block in front still hides it, as it does here.
+ * Anything else keeps the inherited wrench behaviour. The client runs the same test on its own marker caches and box
+ * list.
  * <p>
  * Dragging a box corner is gated by {@link #canEditCorners()}; only the {@link ItemVolumeWrench} turns it on.
  */
@@ -95,7 +100,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
             Level level = context.getLevel();
             if (!level.isClientSide()) {
                 HANDLED_ON_BLOCK.put(player.getUUID(), level.getGameTime());
-                doMarkerClick(level, player);
+                doMarkerClick(level, player, context.getClickLocation());
             }
             return InteractionResult.SUCCESS;
         }
@@ -121,25 +126,55 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
             if (handled != null && handled == level.getGameTime()) {
                 return InteractionResult.SUCCESS;
             }
+            // A click on a block lands here too when its target was behind that block (onItemUseFirst, the block
+            // and useOn all passed), so the block in front still hides what is behind it, as in onItemUseFirst.
+            doMarkerClick(level, player, blockInFront(level, player));
         }
-        doMarkerClick(level, player);
         // Always consume the action so the player gets swing feedback
         return InteractionResult.SUCCESS;
     }
 
-    /** The marker work of a click: connect the aimed laser, else act on the volume boxes. Server side; a no-op on
-     *  the client. */
-    private void doMarkerClick(Level level, Player player) {
-        if (!level.isClientSide()) {
-            Vec3 eye = player.getEyePosition();
-            Vec3 look = player.getLookAngle();
-            for (MarkerCache<?> cache : MarkerCache.CACHES) {
-                if (connectAimedLine(cache.getSubCache(level), player, eye, look)) {
-                    return;
-                }
+    /** Where the view ray first meets a block within {@link #REACH}, or null if it meets none. */
+    @Nullable
+    private static Vec3 blockInFront(Level level, Player player) {
+        Vec3 eye = player.getEyePosition();
+        BlockHitResult hit = level.clip(new ClipContext(eye, eye.add(player.getLookAngle().scale(REACH)),
+            ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : null;
+    }
+
+    /** How far along the view ray a target may lie and still be in front of the block hit at {@code clickLocation}
+     *  (unlimited when no block was hit). */
+    private static double occlusionLimit(Vec3 eye, @Nullable Vec3 clickLocation) {
+        return clickLocation == null ? Double.POSITIVE_INFINITY : eye.distanceTo(clickLocation) + OCCLUSION_SLACK;
+    }
+
+    /**
+     * The marker work of a click, server side: a drag in progress is confirmed or cancelled wherever the click lands;
+     * otherwise the aimed laser is linked, else the aimed box target is acted on. Targets farther than the block at
+     * {@code clickLocation} are behind it and are left alone (the same rule as {@link #isAimingAtMarkerTarget}).
+     */
+    private void doMarkerClick(Level level, Player player, @Nullable Vec3 clickLocation) {
+        if (level.isClientSide()) {
+            return;
+        }
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        double limit = occlusionLimit(eye, clickLocation);
+        LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
+        VolumePick pick = pickVolume(volumeBoxes.volumeBoxes, player);
+        if (pick.kind().editInProgress) {
+            applyVolumePick(volumeBoxes, pick, player);
+            return;
+        }
+        for (MarkerCache<?> cache : MarkerCache.CACHES) {
+            if (connectAimedLine(cache.getSubCache(level), player, eye, look, Math.min(REACH, limit))) {
+                return;
             }
         }
-        onUseVolumeBoxes(level, player);
+        if (pick.kind().claimsClick && pick.distance() <= limit) {
+            applyVolumePick(volumeBoxes, pick, player);
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -157,8 +192,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
     public boolean isAimingAtMarkerTarget(Level level, Player player, @Nullable Vec3 clickLocation) {
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        double limit = clickLocation == null ? Double.POSITIVE_INFINITY
-            : eye.distanceTo(clickLocation) + OCCLUSION_SLACK;
+        double limit = occlusionLimit(eye, clickLocation);
 
         VolumePick pick = pickVolume(volumeBoxesOf(level), player);
         if (pick.kind().editInProgress) {
@@ -205,8 +239,9 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         return best;
     }
 
-    private static boolean connectAimedLine(MarkerSubCache<?> cache, Player player, Vec3 eye, Vec3 look) {
-        MarkerSegment.Aim best = aimedLine(cache, eye, look, REACH);
+    private static boolean connectAimedLine(MarkerSubCache<?> cache, Player player, Vec3 eye, Vec3 look,
+                                            double reach) {
+        MarkerSegment.Aim best = aimedLine(cache, eye, look, reach);
         if (best == null) {
             return false;
         }
@@ -228,7 +263,8 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
 
     /** What a click does to the volume boxes, given where the player is aiming. */
     private enum VolumeClick {
-        /** Nothing here for this wrench. A click aimed at a locked box lands here too: it is eaten, nothing happens. */
+        /** Nothing here for this wrench. A click aimed at a locked box lands here too: the wrench does not claim it,
+         *  so it passes on to the block (or does nothing in the air). */
         NOTHING(false, false),
         ADDON_USE(true, false),
         ADDON_REMOVE(true, false),
@@ -274,6 +310,12 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
                 break;
             }
         }
+        // A drag in progress takes the click before anything it may be aimed at (an addon included): crouching
+        // cancels it, otherwise it is confirmed.
+        if (currentEditing != null) {
+            return new VolumePick(player.isShiftKeyDown() ? VolumeClick.EDIT_CANCEL : VolumeClick.EDIT_CONFIRM,
+                currentEditing, null, null, 0);
+        }
 
         Vec3 start = player.getEyePosition();
         Vec3 end = start.add(player.getLookAngle().scale(REACH));
@@ -305,9 +347,6 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         }
 
         if (player.isShiftKeyDown()) {
-            if (currentEditing != null) {
-                return new VolumePick(VolumeClick.EDIT_CANCEL, currentEditing, null, null, 0);
-            }
             VolumeBox nearest = null;
             double nearestDist = Double.MAX_VALUE;
             for (VolumeBox box : boxes) {
@@ -326,9 +365,6 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
             return VolumePick.NOTHING;
         }
 
-        if (currentEditing != null) {
-            return new VolumePick(VolumeClick.EDIT_CONFIRM, currentEditing, null, null, 0);
-        }
         if (!canEditCorners()) {
             return VolumePick.NOTHING;
         }
@@ -357,41 +393,31 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         return new VolumePick(VolumeClick.CORNER_DRAG, bestBox, null, bestCorner, bestDist);
     }
 
-    private InteractionResult onUseVolumeBoxes(Level level, Player player) {
-        if (level.isClientSide()) {
-            return InteractionResult.PASS;
-        }
-
-        LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumePick pick = pickVolume(volumeBoxes.volumeBoxes, player);
+    /** Carries out {@code pick} on the server's boxes. */
+    private void applyVolumePick(LevelSavedDataVolumeBoxes volumeBoxes, VolumePick pick, Player player) {
         VolumeBox box = pick.box();
         switch (pick.kind()) {
             case ADDON_USE -> {
                 box.addons.get(pick.slot()).onPlayerRightClick(player);
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             case ADDON_REMOVE -> {
                 box.addons.get(pick.slot()).onRemoved();
                 box.addons.remove(pick.slot());
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             case BOX_REMOVE -> {
                 box.addons.values().forEach(Addon::onRemoved);
                 volumeBoxes.volumeBoxes.remove(box);
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             case EDIT_CANCEL -> {
                 box.cancelEditing();
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             case EDIT_CONFIRM -> {
                 box.confirmEditing();
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             case CORNER_DRAG -> {
                 box.setPlayer(player);
@@ -412,10 +438,9 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
                 }
                 box.setHeldDistOldMinOldMax(held, Math.max(1.5, pick.distance() + 0.5), box.box.min(), box.box.max());
                 volumeBoxes.markDirtyAndBroadcast();
-                return InteractionResult.SUCCESS;
             }
             default -> {
-                return InteractionResult.FAIL;
+                // NOTHING: the wrench did not claim this click
             }
         }
     }

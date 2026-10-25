@@ -398,7 +398,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
      * <p>
      * {@link #box} stays the area scanned, mirrored from the owned box only once a drag is confirmed: a scan in
      * progress indexes its buffers by the box size, so the box must not change under it. While a drag is under way
-     * (paused ones included) the table waits; a confirmed new size drops the scan in progress (and a refusal, which
+     * the table waits; a confirmed new size drops the scan in progress (and a refusal, which
      * was about the old size), and the next tick starts it again on the new area. A cancelled drag puts the old size
      * back, so nothing changes.
      *
@@ -409,7 +409,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         if (owned == null) {
             return false;
         }
-        if (owned.hasEditInProgress()) {
+        if (owned.isEditing()) {
             return true;
         }
         if (!box.isInitialized() || !owned.box.min().equals(box.min()) || !owned.box.max().equals(box.max())) {

@@ -34,20 +34,23 @@ import buildcraft.lib.misc.NBTUtilBC;
  * A used single schematic clicked onto a block a placement replaces (short grass here) takes that block out of the
  * cell before it builds. A placement that then fails, for want of the items or because the block has no room (a
  * door's upper half blocked), must put the grass back: it used to leave the cell empty, so a click that placed
- * nothing still cost the world the grass. A placement that goes through still replaces it.
+ * nothing still cost the world the grass. Seagrass too: taking it out leaves its water, which the schematic does not
+ * build into, so the click places nothing and the seagrass must come back. A placement that goes through still
+ * replaces the grass.
  */
 public class ItemSchematicSingleTester {
 
     private static final BlockPos NO_ITEMS = new BlockPos(1, 2, 1);
     private static final BlockPos DOOR_BLOCKED = new BlockPos(3, 2, 1);
     private static final BlockPos PLACES = new BlockPos(1, 2, 4);
+    private static final BlockPos SEAGRASS = new BlockPos(3, 2, 4);
 
     public static void testFailedPlacementKeepsTheClickedBlock(GameTestHelper helper) {
-        BlockPos[] grassCells = {NO_ITEMS, DOOR_BLOCKED, PLACES};
+        BlockPos[] grassCells = {NO_ITEMS, DOOR_BLOCKED, PLACES, SEAGRASS};
         try {
             for (BlockPos grass : grassCells) {
                 helper.setBlock(grass.below(), Blocks.DIRT);
-                helper.setBlock(grass, Blocks.SHORT_GRASS);
+                helper.setBlock(grass, grass == SEAGRASS ? Blocks.SEAGRASS : Blocks.SHORT_GRASS);
             }
             helper.setBlock(DOOR_BLOCKED.above(), Blocks.SKELETON_SKULL);
             List<String> broken = new ArrayList<>();
@@ -65,6 +68,12 @@ public class ItemSchematicSingleTester {
             }
             if (!helper.getBlockState(DOOR_BLOCKED.above()).is(Blocks.SKELETON_SKULL)) {
                 broken.add("the skull above the refused door became " + helper.getBlockState(DOOR_BLOCKED.above()));
+            }
+
+            click(helper, SEAGRASS, schematicOf(helper, Blocks.STONE.defaultBlockState()), new ItemStack(Items.STONE));
+            if (!helper.getBlockState(SEAGRASS).is(Blocks.SEAGRASS)) {
+                broken.add("a click that built nothing into the seagrass's water left " + helper.getBlockState(SEAGRASS)
+                        + " for the seagrass");
             }
 
             Player payer = click(helper, PLACES, schematicOf(helper, Blocks.STONE.defaultBlockState()),

@@ -156,13 +156,17 @@ public class ItemSchematicSingle extends Item {
             if (!replaceable && !placeState.canBeReplaced()) {
                 return InteractionResult.FAIL;
             }
-            // A clicked block a placement replaces (grass, a snow layer, water) is taken out first, since the
+            // A clicked block a placement replaces (grass, a snow layer, seagrass) is taken out first, since the
             // schematic builds only into an empty cell, and put back on every way out that places nothing: a click
             // that builds nothing (no items to pay, no room for a door's upper half) must not cost the world the grass.
+            // Taking out seagrass or kelp leaves its water, so "nothing was placed" is the cell still holding what
+            // the removal left, not the cell being empty.
             BlockState taken = null;
+            BlockState left = null;
             if (replaceable && !world.isEmptyBlock(placePos)) {
                 taken = clickedState;
                 world.removeBlock(placePos, false);
+                left = world.getBlockState(placePos);
             }
             try {
                 ISchematicBlock schematicBlock = getSchematic(stack);
@@ -227,7 +231,7 @@ public class ItemSchematicSingle extends Item {
                 );
                 BCLog.logger.warn("[builders.schematic] Player tried to use an invalid schematic", e);
             }
-            if (taken != null && world.isEmptyBlock(placePos)) {
+            if (taken != null && world.getBlockState(placePos) == left) {
                 world.setBlock(placePos, taken, 3);
             }
             return InteractionResult.FAIL;

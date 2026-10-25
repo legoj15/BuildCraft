@@ -55,6 +55,11 @@ public class BCCoreClient {
                 net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
                 event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
         );
+        // Marker laser length under the crosshair: pick per tick, draw per frame
+        NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
+                event -> buildcraft.core.client.MarkerLengthIndicator.onClientTick()
+        );
         // Register the fluid shard tint source for fragile fluid containers
         //? if >=1.21.10 {
         modEventBus.addListener(
@@ -102,6 +107,11 @@ public class BCCoreClient {
                     event.registerAboveAll(
                         net.minecraft.resources.Identifier.parse("buildcraftunofficial:debug_overlay"),
                         buildcraft.core.client.DebugOverlayRenderer::render
+                    );
+                    event.registerAbove(
+                        net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR,
+                        net.minecraft.resources.Identifier.parse("buildcraftunofficial:marker_length"),
+                        buildcraft.core.client.MarkerLengthIndicator::render
                     );
                 }
         );

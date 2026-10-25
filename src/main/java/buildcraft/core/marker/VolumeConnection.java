@@ -4,9 +4,12 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 package buildcraft.core.marker;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import net.minecraft.core.Direction;
@@ -17,7 +20,9 @@ import net.minecraft.core.BlockPos;
 import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserBoxRenderer;
 import buildcraft.lib.marker.MarkerConnection;
+import buildcraft.lib.marker.MarkerSegment;
 import buildcraft.lib.misc.PositionUtil;
+import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreConfig;
@@ -143,6 +148,27 @@ public class VolumeConnection extends MarkerConnection<VolumeConnection> {
     @Override
     public Collection<BlockPos> getMarkerPositions() {
         return makeup;
+    }
+
+    /** The box's edges, corner centre to corner centre — the lines {@link #renderInWorld()} draws. A flat or
+     *  single-line box collapses edges onto each other; those are listed once, and zero-length ones not at all. */
+    @Override
+    public List<MarkerSegment> getSegments() {
+        if (makeup.size() < 2) {
+            return List.of();
+        }
+        BlockPos min = box.min();
+        BlockPos max = box.max();
+        Set<MarkerSegment> edges = new LinkedHashSet<>();
+        for (BlockPos corner : PositionUtil.getCorners(min, max)) {
+            for (Axis axis : Axis.values()) {
+                int far = axis.choose(max.getX(), max.getY(), max.getZ());
+                if (corner.get(axis) != far) {
+                    edges.add(new MarkerSegment(corner, VecUtil.replaceValue(corner, axis, far)));
+                }
+            }
+        }
+        return new ArrayList<>(edges);
     }
 
     private void createBox() {

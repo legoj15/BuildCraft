@@ -6,8 +6,10 @@ package buildcraft.core.marker;
 
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 
@@ -19,6 +21,7 @@ import buildcraft.lib.client.render.MarkerRenderer;
 import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 import buildcraft.lib.marker.MarkerConnection;
+import buildcraft.lib.marker.MarkerSegment;
 import buildcraft.lib.marker.MarkerSubCache;
 import buildcraft.lib.misc.VecUtil;
 
@@ -191,6 +194,20 @@ public class PathConnection extends MarkerConnection<PathConnection> {
             return list.build();
         }
         return ImmutableList.copyOf(positions);
+    }
+
+    @Override
+    public List<MarkerSegment> getSegments() {
+        // A two-marker loop walks A, B, A: its closer is the same line again, so collect into a set.
+        Set<MarkerSegment> segments = new LinkedHashSet<>();
+        BlockPos last = null;
+        for (BlockPos p : getMarkerPositions()) {
+            if (last != null) {
+                segments.add(new MarkerSegment(last, p));
+            }
+            last = p;
+        }
+        return new ArrayList<>(segments);
     }
 
     public void reverseDirection() {

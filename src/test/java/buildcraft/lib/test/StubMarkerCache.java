@@ -18,6 +18,7 @@ import net.minecraft.world.level.Level;
 import buildcraft.lib.client.render.laser.LaserData_BC8.LaserType;
 import buildcraft.lib.marker.MarkerCache;
 import buildcraft.lib.marker.MarkerConnection;
+import buildcraft.lib.marker.MarkerSegment;
 import buildcraft.lib.marker.MarkerSubCache;
 
 /**
@@ -100,6 +101,11 @@ public final class StubMarkerCache extends MarkerCache<StubMarkerCache.SubCache>
 
         @Override
         public Collection<BlockPos> getMarkerPositions() {
+            return List.of();
+        }
+
+        @Override
+        public List<MarkerSegment> getSegments() {
             return List.of();
         }
 

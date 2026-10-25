@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
@@ -26,6 +27,7 @@ import net.minecraft.world.level.block.BubbleColumnBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.Fluid;
@@ -77,11 +79,33 @@ public class BuilderRefloodTester {
     /** An oak door's lower half: its upper half goes into the cell above (outside the one-high box), which build
      *  sets in the same call. */
     public static final int DOOR = 5;
+    /** The oak door's upper half, for a blueprint two high: the lower half's build places it, and its own schematic
+     *  places nothing. */
+    public static final int DOOR_UPPER = 6;
+    /** A floor torch: it stands only on the block below it. */
+    public static final int TORCH = 7;
+    /** A bed's foot facing +Z, and its head in the next cell along: the foot's build places the head. */
+    public static final int BED_FOOT = 8;
+    public static final int BED_HEAD = 9;
     private static final BlockState[] KIND_STATES = {
         Blocks.OAK_SLAB.defaultBlockState(), Blocks.STONE.defaultBlockState(), Blocks.AIR.defaultBlockState(),
         Blocks.SNOW.defaultBlockState(),
         Blocks.OAK_SLAB.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true),
-        Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER) };
+        Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER),
+        Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER),
+        Blocks.TORCH.defaultBlockState(), bed(BedPart.FOOT), bed(BedPart.HEAD) };
+
+    /** A bed half facing +Z: the first bed in the block registry, as each line names the colours differently. */
+    private static BlockState bed(BedPart part) {
+        for (Block block : BuiltInRegistries.BLOCK) {
+            BlockState state = block.defaultBlockState();
+            if (state.hasProperty(BlockStateProperties.BED_PART)) {
+                return state.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH)
+                        .setValue(BlockStateProperties.BED_PART, part);
+            }
+        }
+        throw new IllegalStateException("no bed is registered");
+    }
 
     public static final BlockPos BUILDER = new BlockPos(3, 2, 2);
 
@@ -110,12 +134,14 @@ public class BuilderRefloodTester {
         return new BlockPos(2, 2, 2 + i);
     }
 
-    /** One-wide blueprint along +Z; {@code column[i]} is {@link #SLAB} (dry bottom oak slab), {@link #STONE},
-     *  {@link #AIR}, {@link #SNOW} (one snow layer), {@link #WET_SLAB} or {@link #DOOR}. */
-    private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[] column,
+    /** One-wide blueprint along +Z, {@code layers[y][z]} (row 0 the bottom one, every row as long) a kind:
+     *  {@link #SLAB} (dry bottom oak slab), {@link #STONE}, {@link #AIR}, {@link #SNOW} (one snow layer),
+     *  {@link #WET_SLAB}, {@link #DOOR}, {@link #DOOR_UPPER}, {@link #TORCH}, {@link #BED_FOOT} or {@link #BED_HEAD}. */
+    private static ItemStack makeBlueprint(ServerLevel level, BlockPos samplePos, int[][] layers,
             List<ISchematicEntity> entities) {
+        int length = layers[0].length;
         Blueprint blueprint = new Blueprint();
-        blueprint.size = new BlockPos(1, 1, column.length);
+        blueprint.size = new BlockPos(1, layers.length, length);
         blueprint.facing = Direction.EAST;
         blueprint.offset = BlockPos.ZERO;
         for (int kind = 0; kind < KIND_STATES.length; kind++) {
@@ -126,9 +152,11 @@ public class BuilderRefloodTester {
                     "the schematic must resolve (and be air exactly for air) for " + state);
             blueprint.palette.add(schematic); // palette index == kind
         }
-        blueprint.data = new int[column.length];
-        for (int z = 0; z < column.length; z++) {
-            blueprint.data[blueprint.posToIndex(0, 0, z)] = column[z];
+        blueprint.data = new int[layers.length * length];
+        for (int y = 0; y < layers.length; y++) {
+            for (int z = 0; z < length; z++) {
+                blueprint.data[blueprint.posToIndex(0, y, z)] = layers[y][z];
+            }
         }
         blueprint.entities.addAll(entities);
         blueprint.computeKey();
@@ -179,6 +207,17 @@ public class BuilderRefloodTester {
      *  positions relative to the column's first cell). Their items are the caller's to load. */
     public static TileBuilder setUpBuilder(GameTestHelper helper, int[] column, BlockPos[] walls,
             List<ISchematicEntity> entities) {
+        return setUpBuilder(helper, new int[][] {column}, walls, entities);
+    }
+
+    /** {@link #setUpBuilder(GameTestHelper, int[], BlockPos[])} with a blueprint {@code layers.length} high
+     *  ({@code layers[y]} the row at the column's height plus {@code y}). */
+    public static TileBuilder setUpBuilder(GameTestHelper helper, int[][] layers, BlockPos[] walls) {
+        return setUpBuilder(helper, layers, walls, List.of());
+    }
+
+    private static TileBuilder setUpBuilder(GameTestHelper helper, int[][] layers, BlockPos[] walls,
+            List<ISchematicEntity> entities) {
         // The whole cell: the Builder, its column and the outside water sources can sit in different chunks, and
         // each ticks (and flows) only once its own chunk does. A test that waits on any of it goes through drive,
         // which starts counting only when the cell ticks.
@@ -191,7 +230,7 @@ public class BuilderRefloodTester {
         for (BlockPos wall : walls) {
             helper.setBlock(wall, Blocks.STONE);
         }
-        ItemStack blueprintStack = makeBlueprint(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5)), column,
+        ItemStack blueprintStack = makeBlueprint(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5)), layers,
                 entities);
 
         helper.setBlock(BUILDER, BCBuildersBlocks.BUILDER.get().defaultBlockState()

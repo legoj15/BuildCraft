@@ -530,6 +530,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         if (schematic instanceof SchematicBlockDefault def) {
             EnumFluidHandlingMode mode = tile.getFluidMode();
             if (def.isBuilt(tile.getWorldBC(), blockPos, mode)) return true;
+            if (isHeldUpOnlyByLeftOutBlock(blockPos, def)) return true;
             // Strict CLEAR rejected it. If the ONLY difference is that the world block is waterlogged
             // where the schematic is dry, and vanilla will flood the cell again no matter how often the
             // Builder dries it, tolerate the water: the lenient (NO_REPLACE) comparison isolates exactly
@@ -542,6 +543,49 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             return isFragileUnbuildableAt(blockPos, def);
         }
         return schematic.isBuilt(tile.getWorldBC(), blockPos);
+    }
+
+    /**
+     * Every mode: has this Builder left out (counted as built without building) a block the one here depends on, so
+     * that this one can never go in either while that holds? Either the left-out block is the two-cell block whose
+     * build places this one, as its other half (a bed's head, a door's or tall plant's upper half, whose own schematic
+     * places nothing), or this block cannot stand without it (a torch on a stone NO_REPLACE skips for the water in its
+     * cell). Left "to place", such a cell was never queued, or queued and undone on every try, and the build never
+     * finished. Every cell it depends on must be counted built already, as the place queue asks; once the left-out
+     * block is built, {@link #recheckAfterPlacing} sends this cell back to {@code TO_PLACE}.
+     */
+    private boolean isHeldUpOnlyByLeftOutBlock(BlockPos blockPos, SchematicBlockDefault def) {
+        if (def.blockState == null) return false;
+        Level world = tile.getWorldBC();
+        boolean leftOut = false;
+        boolean placesThis = false;
+        for (BlockPos offset : def.getRequiredBlockOffsets()) {
+            BlockPos pos = blockPos.offset(offset);
+            ISchematicBlock neighbour = getSchematicBlock(pos);
+            if (neighbour == null) continue;
+            if (checkResults[posToIndex(pos)] != CHECK_RESULT_CORRECT) return false;
+            if (neighbour.isBuilt(world, pos)) continue;
+            leftOut = true;
+            placesThis |= neighbour instanceof SchematicBlockDefault partner
+                    && blockPos.equals(partner.secondHalfCell(pos));
+        }
+        return leftOut && (placesThis || !def.blockState.canSurvive(world, blockPos)) && canPlace(blockPos);
+    }
+
+    /** A block just placed may have been left out until now, and a neighbour counted as built only for that
+     *  ({@link #isHeldUpOnlyByLeftOutBlock}) is asked again at once: the check sweep covers only a few cells a tick, and
+     *  until it came round the build could count as finished, and a Builder on a path move on, without it. */
+    @Override
+    protected boolean recheckAfterPlacing(BlockPos blockPos) {
+        boolean changed = false;
+        for (Direction direction : Direction.values()) {
+            BlockPos neighbour = blockPos.relative(direction);
+            if (getBuildingInfo().box.contains(neighbour)
+                    && checkResults[posToIndex(neighbour)] == CHECK_RESULT_CORRECT && check(neighbour)) {
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     /**

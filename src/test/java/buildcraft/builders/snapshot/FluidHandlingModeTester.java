@@ -6,9 +6,13 @@
 package buildcraft.builders.snapshot;
 
 import static buildcraft.builders.BuilderRefloodTester.AIR;
+import static buildcraft.builders.BuilderRefloodTester.BED_FOOT;
+import static buildcraft.builders.BuilderRefloodTester.BED_HEAD;
 import static buildcraft.builders.BuilderRefloodTester.BUILDER;
 import static buildcraft.builders.BuilderRefloodTester.DOOR;
+import static buildcraft.builders.BuilderRefloodTester.DOOR_UPPER;
 import static buildcraft.builders.BuilderRefloodTester.STONE;
+import static buildcraft.builders.BuilderRefloodTester.TORCH;
 import static buildcraft.builders.BuilderRefloodTester.builderQuiet;
 import static buildcraft.builders.BuilderRefloodTester.cell;
 import static buildcraft.builders.BuilderRefloodTester.drive;
@@ -1198,6 +1202,76 @@ public class FluidHandlingModeTester {
             helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
             helper.succeed();
         });
+    }
+
+    /**
+     * A block the Builder leaves out takes with it what only it would hold up or place, instead of leaving that "to
+     * place" for ever, which kept the build from finishing: NO_REPLACE leaves out a cell holding nothing but water, and
+     * then a door's upper half over it (only the lower half's build places it), a torch on the stone the water stands
+     * in for, and the head of a bed whose foot is in the water were never placed (the head was tried and undone on
+     * every pass) yet never counted built. Once the water is gone they are to place again. The Builder holds none of
+     * these blocks, so it queues nothing; each cell is classified directly, in the tick the water is set (it has not
+     * flowed yet).
+     */
+    public static void testWhatALeftOutBlockHoldsUpCountsAsBuilt(GameTestHelper helper) {
+        int[][] layers = {{DOOR, STONE, BED_FOOT, BED_HEAD}, {DOOR_UPPER, TORCH, AIR, AIR}};
+        TileBuilder tile = setUpBuilder(helper, layers, new BlockPos[0]);
+        for (int slot = 0; slot < tile.invResources.getSlots(); slot++) {
+            tile.setResource(slot, ItemStack.EMPTY);
+        }
+        BlockPos[] leftOut = {cell(0), cell(1), cell(2)};
+        BlockPos[] heldUp = {cell(0).above(), cell(1).above(), cell(3)};
+        String[] names = {"the door's upper half", "the torch", "the bed's head"};
+        boolean[] finished = {false};
+        drive(helper, finished, t -> {
+            SnapshotBuilder<?> builder = tile.getBuilder();
+            if (builder == null || builder.getBuildingInfo() == null) {
+                expect(t < 200, "the Builder never took up its blueprint");
+                return;
+            }
+            finished[0] = true;
+            while (tile.getFluidMode() != EnumFluidHandlingMode.NO_REPLACE) {
+                tile.cycleFluidMode();
+            }
+            List<String> broken = new ArrayList<>();
+            try {
+                for (BlockPos cell : leftOut) {
+                    helper.setBlock(cell, Blocks.WATER);
+                    expectCheck(helper, builder, cell, SnapshotBuilder.CHECK_RESULT_CORRECT,
+                            "(premise) the water-filled cell " + cell, broken);
+                }
+                for (int i = 0; i < heldUp.length; i++) {
+                    expectCheck(helper, builder, heldUp[i], SnapshotBuilder.CHECK_RESULT_CORRECT,
+                            names[i] + " over the water", broken);
+                }
+                for (BlockPos cell : leftOut) {
+                    helper.setBlock(cell, Blocks.AIR);
+                    expectCheck(helper, builder, cell, SnapshotBuilder.CHECK_RESULT_TO_PLACE,
+                            "(premise) the drained cell " + cell, broken);
+                }
+                for (int i = 0; i < heldUp.length; i++) {
+                    expectCheck(helper, builder, heldUp[i], SnapshotBuilder.CHECK_RESULT_TO_PLACE,
+                            names[i] + " once the water is gone", broken);
+                }
+            } finally {
+                for (BlockPos cell : leftOut) {
+                    helper.setBlock(cell, Blocks.AIR);
+                }
+            }
+            helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
+            helper.succeed();
+        });
+    }
+
+    /** Classifies {@code cell} and records it in {@code broken} unless it is {@code want}. */
+    private static void expectCheck(GameTestHelper helper, SnapshotBuilder<?> builder, BlockPos cell, byte want,
+            String what, List<String> broken) {
+        BlockPos abs = helper.absolutePos(cell);
+        builder.check(abs);
+        byte got = builder.checkResults[builder.posToIndex(abs)];
+        if (got != want) {
+            broken.add(what + " checked " + got + ", want " + want + " (1 built, 2 to break, 3 to place)");
+        }
     }
 
     /**

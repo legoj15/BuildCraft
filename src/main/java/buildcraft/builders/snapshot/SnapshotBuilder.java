@@ -873,6 +873,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     if (check(placeTask.pos)) {
                         checkResultsChanged = true;
                     }
+                    if (placed == PlaceResult.PLACED && recheckAfterPlacing(placeTask.pos)) {
+                        checkResultsChanged = true;
+                    }
                     iterator.remove();
                 }
             }
@@ -1120,6 +1123,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     }
 
     protected void afterChecks() {
+    }
+
+    /** After a block is placed at {@code blockPos}, classifies again at once the cells whose answer may hang on it, and
+     *  says whether any result changed. None here; the Builder asks the placed block's neighbours. */
+    protected boolean recheckAfterPlacing(BlockPos blockPos) {
+        return false;
     }
 
     public void writeToByteBuf(PacketBufferBC buffer) {

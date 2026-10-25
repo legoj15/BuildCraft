@@ -63,6 +63,10 @@
         "selectors": ["minecraft:black_bed[part=foot]"],
         "requiredExtractors": [{ "type": "constant", "items": [{ "item": "minecraft:black_bed" }] }]
     },
+    {
+        "selectors": ["minecraft:straw_bed[part=foot]"],
+        "requiredExtractors": [{ "type": "constant", "items": [{ "item": "minecraft:straw_bed" }] }]
+    },
 
     {
         "selectors": ["minecraft:oak_door[half=lower]"],
@@ -167,6 +171,7 @@
             "minecraft:green_bed[part=head]",
             "minecraft:red_bed[part=head]",
             "minecraft:black_bed[part=head]",
+            "minecraft:straw_bed[part=head]",
 
             "minecraft:oak_door[half=upper]",
             "minecraft:spruce_door[half=upper]",
@@ -220,6 +225,7 @@
             "minecraft:green_bed[part=foot]",
             "minecraft:red_bed[part=foot]",
             "minecraft:black_bed[part=foot]",
+            "minecraft:straw_bed[part=foot]",
 
             "minecraft:oak_door[half=lower]",
             "minecraft:spruce_door[half=lower]",

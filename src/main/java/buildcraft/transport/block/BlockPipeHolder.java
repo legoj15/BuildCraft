@@ -69,9 +69,9 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     private static final net.minecraft.resources.Identifier PIPE_CONTENTS_DROP
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_contents");
 
-    // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final Direction[] DIRECTIONS = Direction.values();
 
+    // Center box: 4/16 → 12/16 (i.e. 0.25→0.75)
     private static final VoxelShape CENTER = Block.box(4, 4, 4, 12, 12, 12);
     // Connection arms for each direction.
     // A 0.01-pixel epsilon gap prevents Shapes.or() from merging arms with the center,

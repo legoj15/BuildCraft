@@ -102,6 +102,13 @@ public class PipeExplosionResistanceTester {
         float hollow = level.getBlockState(abs).getShadeBrightness(level, abs);
         helper.assertTrue(hollow == 1.0F,
             "hollow obsidian beside a glass facade must cast no shade (1.0), got " + hollow);
+
+        // Darkest wins regardless of side order: DOWN is asked first and the unshaded EAST last.
+        tile.replacePluggable(Direction.DOWN, new PluggableFacade(BCSiliconPlugs.facade, tile, Direction.DOWN,
+            FacadeInstance.createSingle(obsidian, false)));
+        float mixed = level.getBlockState(abs).getShadeBrightness(level, abs);
+        helper.assertTrue(mixed == solid,
+            "an obsidian facade must shade (" + solid + ") whatever its unshaded neighbours, got " + mixed);
     }
 
     /** The same armour against a real TNT blast, whose rays ask the hook themselves: the obsidian-faced pipe with its

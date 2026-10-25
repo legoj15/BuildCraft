@@ -85,7 +85,8 @@ public class BlockUtil {
      * the chunk's ticket level <em>could</em> reach {@code FULL}, which holds for a chunk that is queued but not yet
      * loaded (the same trap {@code OilGenStructure.isChunkLoaded} documents), so the next read would load it anyway.
      * {@code getChunkNow} returns the chunk only when it is genuinely there, and never schedules a load; it answers
-     * null off the server thread, which reads as absent.
+     * null off the server thread, which reads as absent. {@code DockingStation.isChunkLoaded} in the api package
+     * carries a copy of this test (the api imports nothing from lib): change both together.
      */
     public static boolean isChunkPresent(LevelAccessor level, BlockPos pos) {
         return isChunkPresent(level, pos.getX(), pos.getZ());

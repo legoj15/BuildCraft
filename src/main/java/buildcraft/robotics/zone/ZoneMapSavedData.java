@@ -353,6 +353,19 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
         return maps.size() + " zone maps";
     }
 
+    /** The reservation is not content (a first zone's write lands before its entry, so a file can hold a mark and
+     *  no zone), so a store recovered from the pre-26.1 file over such a file keeps that file's mark: an id below
+     *  it may already be on a map. */
+    @Override
+    public void absorbBlank(SavedData blank) {
+        if (blank instanceof ZoneMapSavedData other && other.reservedUpTo > reservedUpTo) {
+            reservedUpTo = other.reservedUpTo;
+            nextId = Math.max(nextId, other.reservedUpTo);
+            reserveConfirmed = false;
+            setDirty();
+        }
+    }
+
     //? if <1.21.10 {
     /*// 1.21.1: SavedData.save(CompoundTag, Provider) is abstract (no Codec-driven SavedDataType).
     @Override

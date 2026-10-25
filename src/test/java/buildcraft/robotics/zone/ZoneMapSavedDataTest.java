@@ -43,6 +43,26 @@ public class ZoneMapSavedDataTest {
         Assertions.assertTrue(loaded.get(a).sameContent(plan(1, 2)), "and the saved zone is untouched");
     }
 
+    /** The first zone's reservation is written before its entry, so a crash between the two leaves a file holding a
+     *  mark and no zone: no content, so a world with a pre-26.1 file recovers that file over it. The recovered store
+     *  must keep the mark, or it hands out again the id the lost map already holds. */
+    @Test
+    public void aStoreRecoveredOverAReservationOnlyFileKeepsTheMark() {
+        ZoneMapSavedData first = new ZoneMapSavedData();
+        CompoundTag[] written = {null};
+        first.usePersister(() -> written[0] = encode(first));
+        ZoneMapRef lost = first.intern(plan(1, 2));
+
+        ZoneMapSavedData blank = new ZoneMapSavedData();
+        blank.readFromTag(written[0]);
+        Assertions.assertTrue(blank.hasNoContent(), "precondition: the file the crash left holds no zone");
+
+        ZoneMapSavedData recovered = new ZoneMapSavedData(); // the pre-26.1 file: no zones, no mark
+        recovered.absorbBlank(blank);
+        ZoneMapRef after = recovered.intern(plan(5, 5));
+        Assertions.assertNotEquals(lost.id(), after.id(), "an id the lost map holds is not handed to another zone");
+    }
+
     /** A crash restarts the store from the last saved file, so an id handed out since that save is handed out again
      *  there. A plain zone map holding it (no carried plan to fall back on) would then name another zone. */
     @Test

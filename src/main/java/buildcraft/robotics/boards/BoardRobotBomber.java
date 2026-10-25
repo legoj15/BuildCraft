@@ -140,7 +140,8 @@ public class BoardRobotBomber extends RedstoneBoardRobot {
         if (landing == null) {
             // The drop point sits in a chunk that is not in memory (the robot hovered by a chunk border): asking
             // whether its block may be broken would load the chunk. Nothing is dropped and nothing is refused; the
-            // board's next update searches for ground again.
+            // robot sleeps, as on every other fruitless pass, and searches for ground again when it wakes.
+            startDelegateAI(new AIRobotGotoSleep(robot));
             return;
         }
         if (!RobotProtection.canBreak(robot, level, landing)) {

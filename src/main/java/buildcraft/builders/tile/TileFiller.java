@@ -272,14 +272,13 @@ public class TileFiller extends TileBC_Neptune
         box.setMin(volumeBox.box.min());
         box.setMax(volumeBox.box.max());
         lockVolumeBox(savedBoxes, volumeBox, blockState);
-        VolumeBox.RetiredPlanner planner = volumeBox.takeRetiredPlanner();
+        // The planner's state belongs to the box and stays on it: every Filler backed onto the box built its pattern.
+        VolumeBox.RetiredPlanner planner = volumeBox.retiredPlanner();
         if (planner != null) {
             if (!planner.pattern().isEmpty()) {
                 patternStatement.readFromNbt(planner.pattern());
             }
             inverted = planner.inverted();
-            // The planner's state is spent: the next save of the boxes leaves the retired addon out.
-            savedBoxes.setDirty();
         }
         updateBuildingInfo();
         setChanged();

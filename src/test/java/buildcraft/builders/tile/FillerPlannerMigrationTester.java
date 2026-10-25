@@ -52,7 +52,7 @@ public class FillerPlannerMigrationTester {
                     filler[0] = (TileFiller) level.getBlockEntity(fillerPos);
                     helper.assertTrue(filler[0] != null, "the Filler block should have a tile");
                     box[0] = new VolumeBox(level, PlannerSaveFixtures.volumeBoxTag(
-                        level, helper.absolutePos(BOX_MIN), helper.absolutePos(BOX_MAX), fillerPos, true, true));
+                        level, helper.absolutePos(BOX_MIN), helper.absolutePos(BOX_MAX), true, fillerPos));
                     savedBoxes.volumeBoxes.add(box[0]);
                     filler[0].readData(ValueIoTestUtil.inputOf(PlannerSaveFixtures.fillerTag(fillerPos, state)));
                     helper.assertTrue(!filler[0].box.isInitialized(), "precondition: the old save has no box in the Filler");
@@ -73,7 +73,8 @@ public class FillerPlannerMigrationTester {
                     .filter(lock -> lock.cause instanceof Lock.Cause.CauseBlock cause && fillerPos.equals(cause.pos))
                     .count();
                 helper.assertTrue(locks == 1, "the box should hold the Filler's one lock, found " + locks);
-                helper.assertTrue(box[0].takeRetiredPlanner() == null, "the Filler should have consumed the planner's state");
+                helper.assertTrue(box[0].retiredPlanner() != null,
+                    "the planner's state stays with the box, for any other Filler behind it");
                 helper.succeed();
             }, "The Filler beside the planner box never took the box over", () -> {
                 if (box[0] != null) {

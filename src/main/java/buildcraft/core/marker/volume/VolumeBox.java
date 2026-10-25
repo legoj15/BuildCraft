@@ -81,9 +81,9 @@ public class VolumeBox {
         }
 
         // An "addons" list in an old save holds the Filler Planner, the only addon there ever was. The addon layer is
-        // gone, but a Filler that was driven by one needs its pattern and invert flag: they are kept here until that
-        // Filler takes them over (TileFiller.migrateOrphanedBoxOnce), and the world save (writeToDiskNBT) carries them
-        // meanwhile, so a save before that Filler's chunk loads does not lose them.
+        // gone, but every Filler that was driven by it needs its pattern and invert flag: they stay with the box, for
+        // each such Filler to copy when it loads (TileFiller.migrateOrphanedBoxOnce), and the world save
+        // (writeToDiskNBT) keeps carrying them, so a save before a Filler's chunk loads does not lose them.
         if (nbt.contains("addons")) {
             ListTag addonsList = NBTUtilBC.getList(nbt, "addons", Tag.TAG_COMPOUND);
             for (int i = 0; i < addonsList.size(); i++) {
@@ -110,15 +110,13 @@ public class VolumeBox {
     }
 
     /**
-     * The pattern and invert flag the Filler Planner of an old save held, or null when there were none or a Filler has
-     * already taken them. Handing them out clears them, so one planner migrates one Filler, once, and the world save
-     * stops carrying them.
+     * The pattern and invert flag the Filler Planner of an old save held, or null when there were none. They belong to
+     * the box, not to one Filler: in the old build every Filler backed onto the box built the planner's pattern, so
+     * every one of them reads this and none consumes it.
      */
     @Nullable
-    public RetiredPlanner takeRetiredPlanner() {
-        RetiredPlanner taken = retiredPlanner;
-        retiredPlanner = null;
-        return taken;
+    public RetiredPlanner retiredPlanner() {
+        return retiredPlanner;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -195,10 +193,11 @@ public class VolumeBox {
     }
 
     /**
-     * This box as the world save writes it: {@link #writeToNBT()} plus, while no Filler has taken it yet, the retired
-     * planner's state in the {@code addons} list in the shape the addon layer wrote it (so the one reader above
-     * handles both a save from then and a save of this build). Never sent to clients and never part of the broadcast
-     * diff: they have no use for it.
+     * This box as the world save writes it: {@link #writeToNBT()} plus, if the box came from a save with a Filler
+     * Planner on it, that planner's state in the {@code addons} list in the shape the addon layer wrote it (so the one
+     * reader above handles both a save from then and a save of this build). It is written for as long as the box
+     * exists, since any number of Fillers back onto it and one may load long after the rest. Never sent to clients and
+     * never part of the broadcast diff: they have no use for it.
      */
     public CompoundTag writeToDiskNBT() {
         CompoundTag nbt = writeToNBT();

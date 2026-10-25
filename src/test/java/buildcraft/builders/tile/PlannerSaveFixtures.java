@@ -44,11 +44,10 @@ final class PlannerSaveFixtures {
 
     /**
      * What {@code VolumeBox.writeToNBT} wrote while the planner existed: the box at {@code min}..{@code max}, with the
-     * planner addon in {@code addons} when {@code withPlanner}, and the lock the Filler at {@code fillerPos} put on it
-     * when {@code withFillerLock}.
+     * planner addon in {@code addons} when {@code withPlanner}, and the lock each Filler of {@code lockedBy} put on it.
      */
-    static CompoundTag volumeBoxTag(Level level, BlockPos min, BlockPos max, BlockPos fillerPos, boolean withPlanner,
-                                    boolean withFillerLock) {
+    static CompoundTag volumeBoxTag(Level level, BlockPos min, BlockPos max, boolean withPlanner,
+                                    BlockPos... lockedBy) {
         VolumeBox box = new VolumeBox(level, min);
         box.box.reset();
         box.box.setMin(min);
@@ -66,7 +65,7 @@ final class PlannerSaveFixtures {
         tag.put("addons", addons);
 
         ListTag locks = new ListTag();
-        if (withFillerLock) {
+        for (BlockPos fillerPos : lockedBy) {
             locks.add(fillerLock(fillerPos));
         }
         tag.put("locks", locks);

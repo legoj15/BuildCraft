@@ -30,7 +30,9 @@ import buildcraft.builders.snapshot.Template;
  * pass itself took if that was longer, so a box too big to read in {@link #RESCAN_TICKS} is scanned at most half of
  * the time instead of every frame; and at once when the Filler builds a new {@code BuildingInfo}. A changed pattern,
  * parameter, invert or box always does, and the same object identity is what makes a stale preview impossible: the old
- * cells are dropped the frame the new info shows up.
+ * cells are dropped the frame the new info shows up. A pass nobody advanced for {@link #STALL_TICKS} (the Filler was
+ * building, so the preview stood down, or it was out of view) is dropped and started again: what it had read is out of
+ * date, and its pacing and its camera would be too.
  * <p>
  * The draw order — far to near, for the translucent blend — is redone when a pass finishes or the camera has moved a
  * few blocks; it only ever sorts the kept cells.
@@ -42,6 +44,10 @@ public final class FillPreviewCache {
     /** How long the Filler must have had nothing to place or break before its preview shows, so the gaps between
      *  tasks of a running build do not flicker it. */
     public static final int IDLE_GRACE_TICKS = 20;
+    /** How many game ticks a pass may go without a frame advancing it before it is thrown away and started again: far
+     *  more than a frame takes even on a slow client, and less than any pause for a build, since the preview waits
+     *  {@link #IDLE_GRACE_TICKS} quiet ticks before it draws again. */
+    public static final int STALL_TICKS = 20;
     /** Most cubes drawn (24 vertices each) and so most cells kept: past this a pass keeps the nearest and leaves the far
      *  ones undrawn, so a huge box never costs every frame the draw of all of it. */
     public static final int MAX_CUBES = 4096;
@@ -73,6 +79,8 @@ public final class FillPreviewCache {
     private int nearestCount;
     private Vec3 passCamera = Vec3.ZERO;
     private long passStartedAt;
+    /** The game time of the last frame that advanced the pass. */
+    private long walkAdvancedAt;
 
     private long lastBusy = Long.MIN_VALUE / 2;
 
@@ -111,7 +119,9 @@ public final class FillPreviewCache {
 
     /**
      * {@link #cellsToDraw(Level, Template.BuildingInfo, Vec3)} at the game time {@code now}, which is what the other
-     * overload passes: the clock is the only thing a pass's pacing depends on.
+     * overload passes. The clock is all a pass's pacing depends on: how long a finished pass took sets how long its
+     * result is trusted, and a pass that no frame advanced for {@link #STALL_TICKS} starts over, with the camera and
+     * the clock of the frame that resumes it.
      */
     public List<BlockPos> cellsToDraw(Level level, Template.BuildingInfo info, Vec3 camera, long now) {
         if (publishedFor != null && publishedFor != info) {
@@ -121,7 +131,7 @@ public final class FillPreviewCache {
             drawOrder = List.of();
             sortedFrom = null;
         }
-        if (walk != null && walk.info() != info) {
+        if (walk != null && (walk.info() != info || now < walkAdvancedAt || now - walkAdvancedAt > STALL_TICKS)) {
             walk = null;
         }
         if (walk == null && (publishedFor != info || now < publishedAt || now - publishedAt >= trustTicks)) {
@@ -133,9 +143,12 @@ public final class FillPreviewCache {
                 nearest = new long[maxCubes];
             }
         }
-        if (walk != null && walk.advance(scanCellsPerFrame, (index, pos) -> consider(level, index, pos))) {
-            publish(info, now);
-            walk = null;
+        if (walk != null) {
+            walkAdvancedAt = now;
+            if (walk.advance(scanCellsPerFrame, (index, pos) -> consider(level, index, pos))) {
+                publish(info, now);
+                walk = null;
+            }
         }
         if (sortedFrom == null || sortedFrom.distanceToSqr(camera) > RESORT_DISTANCE_SQR) {
             drawOrder = farToNear(cells, camera);

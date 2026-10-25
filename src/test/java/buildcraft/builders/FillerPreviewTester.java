@@ -123,6 +123,8 @@ public class FillerPreviewTester {
 
         // A pass that took longer than RESCAN_TICKS is trusted for as long as it took.
         restsAsLongAsTheLastPassTook(helper, level, state);
+        // A pass the Filler's building paused starts over when the preview comes back.
+        startsAgainAfterAPassWasPaused(helper, level, state);
 
         // A block that lands in the box is not noticed until the cache scans again, which is the point of the cache.
         helper.setBlock(SECOND_STONE, Blocks.STONE);
@@ -204,6 +206,49 @@ public class FillerPreviewTester {
             drawn = cache.cellsToDraw(level, state.info, state.camera, now);
         }
         helper.assertTrue(drawn.size() == 25, "the block that landed was never noticed, got " + drawn.size() + " cells");
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
+    }
+
+    /**
+     * While the Filler builds, the preview stands down and nothing asks the cache for a while; a pass it was in the
+     * middle of must not go on when the preview comes back: the blocks it had read are out of date, the time that went
+     * by would count as the pass's own and so delay the next one by as long as the build took, and its kept cells would
+     * be the ones nearest to where the camera was. Here five frames of a pass are read from one corner of the box, 60
+     * ticks go by, and the preview returns with the camera at the opposite corner: it must keep the cells nearest to
+     * the camera it now has, and trust them for the 26 ticks the new pass took, not for the 85 since the old one began.
+     */
+    private static void startsAgainAfterAPassWasPaused(GameTestHelper helper, ServerLevel level, State state) {
+        final long start = 5000;
+        final long resume = start + 4 + 60;
+        final int passTicks = 26;
+        Vec3 near = state.camera;
+        // Beyond the box's far top corner, whose cell is the one nearest to it.
+        Vec3 far = Vec3.atLowerCornerOf(helper.absolutePos(BOX_MAX)).add(1.4, 1.9, 1.2);
+        BlockPos farCorner = helper.absolutePos(THIRD_STONE);
+        FillPreviewCache cache = new FillPreviewCache(5, 1);
+
+        for (long now = start; now < start + 5; now++) {
+            cache.cellsToDraw(level, state.info, near, now);
+        }
+        List<BlockPos> drawn = List.of();
+        for (long now = resume; now <= resume + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, far, now);
+        }
+        Set<BlockPos> expected = new HashSet<>(new FillPreviewCache(5).cellsToDraw(level, state.info, far));
+        helper.assertTrue(new HashSet<>(drawn).equals(expected) && drawn.size() == 5,
+            "the pass that was paused went on with the camera it began with: it kept " + drawn
+                + " but the 5 cells nearest the camera now are " + expected);
+        helper.assertTrue(drawn.contains(farCorner), "precondition: the far corner's cell is among the 5 nearest the camera");
+
+        // Block the nearest cell: it must drop out of the 5 once the next pass has run, and that pass must come one
+        // pass-length after the new pass, not one pass-length after the paused pass began.
+        helper.setBlock(THIRD_STONE, Blocks.STONE);
+        long published = resume + passTicks;
+        for (long now = published + 1; now <= published + 2 * passTicks + FillPreviewCache.RESCAN_TICKS; now++) {
+            drawn = cache.cellsToDraw(level, state.info, far, now);
+        }
+        helper.assertTrue(!drawn.contains(farCorner),
+            "the pause was counted into the pass: the block built at the nearest cell is still being drawn over");
         helper.setBlock(THIRD_STONE, Blocks.AIR);
     }
 

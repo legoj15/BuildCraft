@@ -201,7 +201,7 @@ public final class PipePlacementHighlight {
             BlockPos pos = renderState.pos();
             poseStack.pushPose();
             poseStack.translate(pos.getX() - cam.x, pos.getY() - cam.y, pos.getZ() - cam.z);
-            submitNodeCollector.submitShapeOutline(poseStack, shape, BCLibRenderTypes.lines(),
+            submitNodeCollector.submitShapeOutline(poseStack, shape, BCLibRenderTypes.blockOutline(),
                     ARGB.black(102), 2.5F, renderState.isTranslucent());
             poseStack.popPose();
             return true;

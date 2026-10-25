@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:builder_tall_grass_upper_linked_to_lower",
+    "function": "buildcraftunofficial:builder_two_cell_blocks_link_their_halves",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 100,

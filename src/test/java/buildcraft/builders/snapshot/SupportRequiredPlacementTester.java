@@ -5,9 +5,14 @@
  */
 package buildcraft.builders.snapshot;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CrossCollisionBlock;
 import net.minecraft.world.level.block.DoublePlantBlock;
@@ -16,6 +21,8 @@ import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.WallBlock;
 import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.WallSide;
 
@@ -389,29 +396,58 @@ public class SupportRequiredPlacementTester {
     }
 
     /**
-     * Guards the anti-loop linkage on the UPPER half. The UPPER schematic must (a) require the
-     * position directly below it (the LOWER half) so it never queues an independent place task,
-     * and (b) list no required items — the LOWER half's build places both halves with one item.
-     * Without (a) the UPPER queues on its own, sets a lone half, and updateShape destroys it on
-     * loop; without (b) the Builder consumes two plant items per plant.
+     * Guards the anti-loop linkage on every two-cell block in the game (each bed, door and double plant, a bed or door
+     * a new line adds included). The half that places both (a bed's foot, a door's or plant's lower half) must name the
+     * other half's cell, and the other half's schematic must (a) require the first half's position so it never queues
+     * an independent place task, and (b) list no required items, as the first half's build places both with one item.
+     * Without (a) the second half queues on its own, sets a lone half, and updateShape destroys it on loop; without (b)
+     * the Builder consumes two items per block. 26.3's straw bed is a bed that is not a {@code BedBlock}, and the
+     * Builder once took it for two unrelated blocks.
      */
-    public static void testTallGrassUpperHalfLinkedToLower(GameTestHelper helper) {
-        try {
-            BlockState upper = Blocks.TALL_GRASS.defaultBlockState()
-                    .setValue(DoublePlantBlock.HALF, DoubleBlockHalf.UPPER);
-            SchematicBlockDefault s = schem(upper);
+    public static void testEveryTwoCellBlockLinksItsHalves(GameTestHelper helper) {
+        List<String> broken = new ArrayList<>();
+        boolean sawBed = false;
+        boolean sawStackedHalves = false;
+        for (Block block : BuiltInRegistries.BLOCK) {
+            BlockState state = block.defaultBlockState();
+            BlockState first;
+            BlockState second;
+            BlockPos toSecond;
+            if (state.hasProperty(BlockStateProperties.BED_PART)) {
+                sawBed = true;
+                first = state.setValue(BlockStateProperties.BED_PART, BedPart.FOOT);
+                second = state.setValue(BlockStateProperties.BED_PART, BedPart.HEAD);
+                toSecond = BlockPos.ZERO.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+            } else if (state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
+                sawStackedHalves = true;
+                first = state.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.LOWER);
+                second = state.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER);
+                toSecond = BlockPos.ZERO.above();
+            } else {
+                continue;
+            }
+            String name = String.valueOf(BuiltInRegistries.BLOCK.getKey(block));
+            BlockPos named = SchematicBlockDefault.secondHalfPos(first, BlockPos.ZERO);
+            if (!toSecond.equals(named)) {
+                broken.add(name + ": the first half's build sets its other half at " + named + ", not " + toSecond);
+            }
+            SchematicBlockDefault s = schem(second);
             // Mirror what init() does for a freshly scanned schematic (the schem() helper sets
             // only blockState/placeBlock).
-            s.addClassBasedRequiredBlockOffsets(upper.getBlock(), upper);
-
-            assertTrue(s.getRequiredBlockOffsets().contains(new BlockPos(0, -1, 0)),
-                    "upper half must require the lower position so it never queues its own place task (the loop)");
-            assertTrue(s.computeRequiredItems().isEmpty(),
-                    "upper half must list no items — the lower half's build places both halves with one item");
-            helper.succeed();
-        } catch (Throwable t) {
-            helper.fail(t.getMessage() == null ? t.toString() : t.getMessage());
+            s.addClassBasedRequiredBlockOffsets(block, second);
+            BlockPos toFirst = BlockPos.ZERO.subtract(toSecond);
+            if (!s.getRequiredBlockOffsets().contains(toFirst)) {
+                broken.add(name + ": the second half requires " + s.getRequiredBlockOffsets() + ", not the first half at "
+                        + toFirst + ", so it queues its own place task (the loop)");
+            }
+            if (!s.computeRequiredItems().isEmpty()) {
+                broken.add(name + ": the second half lists " + s.computeRequiredItems()
+                        + ", so the Builder pays for the block twice");
+            }
         }
+        helper.assertTrue(sawBed && sawStackedHalves, "(premise) the registry must hold a bed and a door or tall plant");
+        helper.assertTrue(broken.isEmpty(), broken.size() + " broken: " + String.join(" | ", broken));
+        helper.succeed();
     }
 
     /**

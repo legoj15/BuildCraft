@@ -547,6 +547,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_two_cell_block_never_placeable_counts_as_built", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testTwoCellBlockItCanNeverPlaceCountsAsBuilt);
         reg.accept("buildcraftunofficial:builder_refund_to_full_grid_drops_leftover", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testRefundToAFullGridDropsTheLeftover);
         reg.accept("buildcraftunofficial:builder_noreplace_placement_leaves_fluid", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testNoReplaceBuilderPlacementLeavesFluidItDoesNotKeep);
+        reg.accept("buildcraftunofficial:builder_left_out_block_takes_what_it_holds_up", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testWhatALeftOutBlockHoldsUpCountsAsBuilt);
         reg.accept("buildcraftunofficial:blockutil_break_clears_water_source", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsWaterSource);
         reg.accept("buildcraftunofficial:blockutil_break_clears_flowing_water", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsClearsFlowingWater);
         reg.accept("buildcraftunofficial:blockutil_break_solid_blocks", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testBreakBlockAndGetDropsStillBreaksSolidBlocks);
@@ -605,7 +606,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:builder_deserialize_migrates_wall_ignored_properties", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesIgnoredPropertiesFromCurrentRules);
         reg.accept("buildcraftunofficial:builder_deserialize_migrates_leaves_ignored_properties", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testDeserializeMigratesLeavesIgnoredProperties);
         reg.accept("buildcraftunofficial:builder_tall_grass_places_both_halves", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTallGrassLowerPlacesBothHalves);
-        reg.accept("buildcraftunofficial:builder_tall_grass_upper_linked_to_lower", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testTallGrassUpperHalfLinkedToLower);
+        reg.accept("buildcraftunofficial:builder_two_cell_blocks_link_their_halves", () -> buildcraft.builders.snapshot.SupportRequiredPlacementTester::testEveryTwoCellBlockLinksItsHalves);
 
         // Container-contents capture — INCLUDE-mode invariants: the items_list extractor
         // surfaces chest contents into computeRequiredItems(), AND the build() path restores

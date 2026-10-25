@@ -230,7 +230,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * <ul>
      *   <li>{@link FallingBlock}: requires the block below (gravel, sand, anvil, concrete
      *       powder, etc.) — preserves the existing behaviour from before this refactor.</li>
-     *   <li>{@link BedBlock}: a bed is two adjacent half-blocks (FOOT + HEAD) sharing one bed
+     *   <li>A bed (any block with a {@link BlockStateProperties#BED_PART bed part}: every {@link BedBlock}, and 26.3's
+     *       straw bed, which is not one): a bed is two adjacent half-blocks (FOOT + HEAD) sharing one bed
      *       item. The architect captures both halves separately, which used to mean the
      *       Builder consumed two bed items and produced a "broken" bed if the halves placed in
      *       the wrong order or if vanilla updateShape destroyed one half mid-place. We now
@@ -253,10 +254,9 @@ public class SchematicBlockDefault implements ISchematicBlock {
         if (block instanceof FallingBlock) {
             requiredBlockOffsets.add(new BlockPos(0, -1, 0));
         }
-        if (block instanceof BedBlock && state != null
-                && state.hasProperty(BedBlock.PART) && state.hasProperty(BedBlock.FACING)) {
-            BedPart part = state.getValue(BedBlock.PART);
-            Direction facing = state.getValue(BedBlock.FACING);
+        if (isBed(state)) {
+            BedPart part = state.getValue(BlockStateProperties.BED_PART);
+            Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
             if (part == BedPart.HEAD) {
                 // FOOT is at facing.opposite from HEAD (FACING points from FOOT toward HEAD).
                 requiredBlockOffsets.add(BlockPos.ZERO.relative(facing.getOpposite()));
@@ -476,9 +476,7 @@ public class SchematicBlockDefault implements ISchematicBlock {
         // the resource panel and try to extract twice. The HEAD position never queues an
         // independent place task anyway (its requiredBlockOffsets defer it on FOOT), but
         // returning empty here ensures the resource display matches reality.
-        if (placeBlock instanceof BedBlock && blockState != null
-                && blockState.hasProperty(BedBlock.PART)
-                && blockState.getValue(BedBlock.PART) == BedPart.HEAD) {
+        if (isBed(blockState) && blockState.getValue(BlockStateProperties.BED_PART) == BedPart.HEAD) {
             return java.util.Collections.emptyList();
         }
         // Same as bed for doors: UPPER half of a door is placed atomically by LOWER's build,
@@ -584,6 +582,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
      * destroy-then-place. Only what a player's placement would replace is overwritten
      * ({@link #isOverwritable}); a real block in a cell (a waterlogged slab or chest, a skull where
      * a door's upper half goes) refuses the build and is left untouched, for the caller to break.
+     * This is a Builder placement: under {@link EnumFluidHandlingMode#NO_REPLACE} it also refuses to build over
+     * fluid the block does not keep as its own, in its own cell or its other half's.
      * A placement that fails afterwards (a torch with no floor pops) puts back whatever each cell
      * held (fluid, grass, a snow layer), in every mode.
      */
@@ -629,9 +629,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
      */
     @Nullable
     static BlockPos secondHalfPos(BlockState state, BlockPos blockPos) {
-        if (state.getBlock() instanceof BedBlock && state.hasProperty(BedBlock.PART)
-                && state.getValue(BedBlock.PART) == BedPart.FOOT) {
-            return blockPos.relative(state.getValue(BedBlock.FACING));
+        if (isBed(state) && state.getValue(BlockStateProperties.BED_PART) == BedPart.FOOT) {
+            return blockPos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING));
         }
         if (state.getBlock() instanceof DoorBlock && state.hasProperty(DoorBlock.HALF)
                 && state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
@@ -642,6 +641,13 @@ public class SchematicBlockDefault implements ISchematicBlock {
             return blockPos.above();
         }
         return null;
+    }
+
+    /** Is {@code state} half of a bed? Every bed has a bed part and faces horizontally: each {@link BedBlock}, and 26.3's
+     *  straw bed, which is not one. */
+    static boolean isBed(@Nullable BlockState state) {
+        return state != null && state.hasProperty(BlockStateProperties.BED_PART)
+                && state.hasProperty(BlockStateProperties.HORIZONTAL_FACING);
     }
 
     /**
@@ -686,8 +692,8 @@ public class SchematicBlockDefault implements ISchematicBlock {
 
     /** The other half of {@code state}, for a state {@link #secondHalfPos} names a cell for. */
     private static BlockState secondHalfState(BlockState state) {
-        if (state.getBlock() instanceof BedBlock) {
-            return state.setValue(BedBlock.PART, BedPart.HEAD);
+        if (isBed(state)) {
+            return state.setValue(BlockStateProperties.BED_PART, BedPart.HEAD);
         }
         if (state.getBlock() instanceof DoorBlock) {
             return state.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER);

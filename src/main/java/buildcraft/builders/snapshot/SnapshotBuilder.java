@@ -71,6 +71,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     public static final int FLUID_SCAN_INTERVAL = 5;
     private static final long MAX_POWER_PER_TICK = 256 * MjAPI.MJ;
 
+    /** Whether the last {@link #tick()} did real work: drew power into a task, or finished one. A queue of tasks with
+     *  nothing drawn (no power, nothing arriving) is not work. */
+    private boolean madeProgress;
+
     protected final T tile;
     // Replaced WorldEventListenerAdapter with polling approach (approved in plan review)
     public final Queue<BreakTask> breakTasks = new ArrayDeque<>();
@@ -606,6 +610,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         placeRefusals.clear();
     }
 
+    /** @return whether the last {@link #tick()} drew power into a task or finished one */
+    public boolean madeProgress() {
+        return madeProgress;
+    }
+
     /**
      * @return true if building is finished, false otherwise
      */
@@ -615,6 +624,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             cachedAreaFluidAge++;
         }
 
+        madeProgress = false;
         boolean checkResultsChanged = false;
 
         for (int i = 0; i < CHECKS_PER_TICK; i++) {
@@ -802,14 +812,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     continue;
                 }
                 long target = breakTask.getTarget();
-                breakTask.power += tile.getBattery().extractPower(
+                long drawn = tile.getBattery().extractPower(
                     0,
                     Math.min(
                         target - breakTask.power,
                         max / breakTasks.size()
                     )
                 );
+                breakTask.power += drawn;
+                if (drawn > 0) {
+                    madeProgress = true;
+                }
                 if (breakTask.power >= target) {
+                    madeProgress = true;
                     clientBreakTasksCache.add(breakTask);
                     tile.getWorldBC().destroyBlockProgress(
                         breakTask.pos.hashCode(),
@@ -855,14 +870,19 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             for (Iterator<PlaceTask> iterator = placeTasks.iterator(); iterator.hasNext(); ) {
                 PlaceTask placeTask = iterator.next();
                 long target = placeTask.getTarget();
-                placeTask.power += tile.getBattery().extractPower(
+                long drawn = tile.getBattery().extractPower(
                     0,
                     Math.min(
                         target - placeTask.power,
                         max / placeTasks.size()
                     )
                 );
+                placeTask.power += drawn;
+                if (drawn > 0) {
+                    madeProgress = true;
+                }
                 if (placeTask.power >= target) {
+                    madeProgress = true;
                     PlaceResult placed = doPlaceTask(placeTask);
                     if (placed != PlaceResult.PLACED) {
                         cancelPlaceTask(placeTask);

@@ -61,7 +61,7 @@ public class TemplateBuilder extends SnapshotBuilder<ITileForTemplateBuilder> {
      * + {@code getFluidMode}) keeps owning fluid handling — without the exclusion, NO_REPLACE
      * Fillers would start filling over water sources instead of leaving them alone.
      */
-    static boolean isFillableSlot(Level level, BlockPos pos) {
+    public static boolean isFillableSlot(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         if (state.isAir()) return true;
         return state.canBeReplaced() && state.getFluidState().isEmpty();

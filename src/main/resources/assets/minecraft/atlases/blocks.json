@@ -27,11 +27,6 @@
         },
         {
             "type": "minecraft:directory",
-            "source": "addons",
-            "prefix": "addons/"
-        },
-        {
-            "type": "minecraft:directory",
             "source": "triggers",
             "prefix": "triggers/"
         },

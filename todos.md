@@ -2,9 +2,12 @@ Last audited: 2026-10-25
 
 *One line per item. Background, file pointers, and design notes live in [docs/todo-details.md](docs/todo-details.md) (or a dedicated doc, where linked). Finished items are removed, never checked off.*
 
+## 🔧 Outstanding work
+
+- A Filler on Loop resends its full data to nearby players every tick once a cycle is done — [quick notes](docs/todo-details.md#quick-notes)
+
 ## 🆕 New Features (version 2026.3)
 
-- Move the "Filler Planner"'s functionality to the actual Filler block for survival QoL, and remove the Filler Planner item and assets.
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
 - Zone Planner survey view reaching beyond loaded chunks, via a server-sampled region map like 1.7.10 kept — [notes](docs/todo-details.md#zone-planner-far-map-data)
 - Editable, reclaimable marker regions in survival — [notes](docs/todo-details.md#reclaimable-marker-region)

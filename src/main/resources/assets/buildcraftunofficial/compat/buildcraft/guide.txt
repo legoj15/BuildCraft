@@ -341,7 +341,6 @@ paper "building" "template_clean"
 tool "building" "paintbrush"
 item_stack "building" "item" "tool" "list" "buildcraftunofficial:list"
 item_stack_creative "building" "item" "tool" "debugger"       "buildcraftunofficial:debugger"
-item_stack_creative "building" "item" "tool" "filler_planner" "buildcraftunofficial:filler_planner"
 
 // ===========================================================================
 // SYSTEM: MINING AND FLUIDS

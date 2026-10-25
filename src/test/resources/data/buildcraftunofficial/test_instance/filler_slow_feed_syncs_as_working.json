@@ -1,9 +1,9 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:filler_screen_edits_reach_planner",
+    "function": "buildcraftunofficial:filler_slow_feed_syncs_as_working",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 20,
+    "max_ticks": 110,
     "setup_ticks": 0,
     "required": true
 }

@@ -110,7 +110,6 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCBuildersItems.BLUEPRINT_CLEAN.get());
                                 output.accept(BCBuildersItems.TEMPLATE_CLEAN.get());
                                 output.accept(BCBuildersItems.SCHEMATIC_SINGLE_CLEAN.get());
-                                output.accept(BCBuildersItems.FILLER_PLANNER.get());
                                 // Builder Blocks
                                 output.accept(BCBuildersBlocks.FILLER.get());
                                 output.accept(BCBuildersBlocks.BUILDER.get());

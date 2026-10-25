@@ -7,6 +7,7 @@
 package buildcraft.builders.tile;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.core.IAreaProvider;
@@ -66,8 +68,8 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.api.core.EnumPipePart;
 
 import buildcraft.builders.BCBuildersBlockEntities;
-import buildcraft.builders.addon.AddonFillerPlanner;
 import buildcraft.builders.container.ContainerFiller;
+import buildcraft.builders.filler.FillPreviewCache;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.filler.FillerUtil;
 import buildcraft.builders.snapshot.ITileForTemplateBuilder;
@@ -84,6 +86,14 @@ public class TileFiller extends TileBC_Neptune
 
     public static final int INV_SIZE = 27;
 
+    /**
+     * How recent the builder's last real progress (power drawn into a task, a task finished) must be for the Filler to
+     * count as building, in game ticks. Four sync periods (the tile pushes its data every 5 ticks while a build runs):
+     * a Filler that is working has progressed within a tick or two of every sync, even one fed less than a single
+     * pulse a second, so a longer gap means it is waiting for power, not building.
+     */
+    public static final int PROGRESS_WINDOW_TICKS = 20;
+
     public static final Identifier ADVANCEMENT_BUILDING_FOR_THE_FUTURE =
         Identifier.parse("buildcraftunofficial:building_for_the_future");
 
@@ -96,12 +106,13 @@ public class TileFiller extends TileBC_Neptune
 
     private boolean canExcavate = true;
     public boolean inverted = false;
+    /** Whether the Filler draws translucent cubes over the cells its pattern has yet to fill (see {@link FillPreviewCache}). */
+    private boolean previewEnabled = false;
     private boolean finished = false;
     private byte lockedTicks = 0;
     private Mode mode = Mode.ON;
 
     public final Box box = new Box();
-    public AddonFillerPlanner addon;
     public boolean markerBox = true;
 
     public final FullStatement<IFillerPattern> patternStatement = new FullStatement<>(
@@ -113,7 +124,22 @@ public class TileFiller extends TileBC_Neptune
     public final ItemHandlerSimple invResources;
 
     private Template.BuildingInfo buildingInfo;
+    /** What {@link #buildingInfo} was last built from, so a client copy can tell a changed pattern from a repeated sync. */
+    private BuildKey builtFrom;
+    /** Server only: the game time of the last tick the builder made progress ({@link SnapshotBuilder#madeProgress()}). */
+    private long lastProgressTick = Long.MIN_VALUE / 2;
+    /** Client only: the server's word, sent with every sync, that the builder progressed lately. */
+    private boolean serverBuilding;
+    /** Client only: the cells the preview draws, kept between frames. */
+    public final FillPreviewCache previewCache = new FillPreviewCache();
+    /** Client only: {@link #getRenderBounds()}, and what it was made from. */
+    private AABB renderBounds;
+    private boolean renderBoundsWithBox;
+    private BlockPos renderBoundsMin, renderBoundsMax;
     public TemplateBuilder builder = new TemplateBuilder(this);
+
+    /** The inputs of {@link #buildingInfo}: the pattern with its parameters, the invert flag and the box. */
+    private record BuildKey(CompoundTag pattern, boolean inverted, @Nullable BlockPos boxMin, @Nullable BlockPos boxMax) {}
 
     @Override
     protected boolean spillsContentsOnRemoval() {
@@ -176,46 +202,21 @@ public class TileFiller extends TileBC_Neptune
         BlockEntity tile = level.getBlockEntity(offsetPos);
 
         if (volumeBox != null) {
-            // Check if the volume box has a filler planner addon
-            addon = (AddonFillerPlanner) volumeBox.addons
-                .values()
-                .stream()
-                .filter(AddonFillerPlanner.class::isInstance)
-                .findFirst()
-                .orElse(null);
-
-            if (addon != null) {
-                volumeBox.locks.add(
-                    new Lock(
-                        new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
-                        new Lock.Target.TargetAddon(addon.getSlot()),
-                        new Lock.Target.TargetRemove(),
-                        new Lock.Target.TargetResize(),
-                        new Lock.Target.TargetUsedByMachine(
-                            Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
-                        )
+            box.reset();
+            box.setMin(volumeBox.box.min());
+            box.setMax(volumeBox.box.max());
+            volumeBox.locks.add(
+                new Lock(
+                    new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
+                    new Lock.Target.TargetRemove(),
+                    new Lock.Target.TargetResize(),
+                    new Lock.Target.TargetUsedByMachine(
+                        Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
                     )
-                );
-                volumeBoxes.markDirtyAndBroadcast();
-                addon.updateBuildingInfo();
-                markerBox = false;
-            } else {
-                box.reset();
-                box.setMin(volumeBox.box.min());
-                box.setMax(volumeBox.box.max());
-                volumeBox.locks.add(
-                    new Lock(
-                        new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
-                        new Lock.Target.TargetRemove(),
-                        new Lock.Target.TargetResize(),
-                        new Lock.Target.TargetUsedByMachine(
-                            Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
-                        )
-                    )
-                );
-                volumeBoxes.markDirtyAndBroadcast();
-                markerBox = false;
-            }
+                )
+            );
+            volumeBoxes.markDirtyAndBroadcast();
+            markerBox = false;
         } else if (tile instanceof IAreaProvider provider) {
             box.reset();
             box.setMin(provider.min());
@@ -238,7 +239,11 @@ public class TileFiller extends TileBC_Neptune
         if (builder != null && getTemplateBuildingInfo() != null) {
             builder.cancel();
         }
-        buildingInfo = (hasBox() && addon == null) ? FillerUtil.createBuildingInfo(
+        // Progress on the old plan says nothing about the new one; without this a pattern change on a starved
+        // Filler would keep its new preview hidden until the old stamp ages out.
+        lastProgressTick = Long.MIN_VALUE / 2;
+        builtFrom = currentBuildKey();
+        buildingInfo = hasBox() ? FillerUtil.createBuildingInfo(
             this,
             patternStatement,
             IntStream.range(0, patternStatement.maxParams)
@@ -250,6 +255,11 @@ public class TileFiller extends TileBC_Neptune
         if (getTemplateBuildingInfo() != null && builder != null) {
             builder.updateSnapshot();
         }
+    }
+
+    private BuildKey currentBuildKey() {
+        boolean boxed = box.isInitialized();
+        return new BuildKey(patternStatement.writeToNbt(), inverted, boxed ? box.min() : null, boxed ? box.max() : null);
     }
 
     // ==================== Tick ====================
@@ -279,6 +289,9 @@ public class TileFiller extends TileBC_Neptune
                 b.onNetworkSync();
             }
             boolean done = b.tick();
+            if (b.madeProgress()) {
+                lastProgressTick = level.getGameTime();
+            }
             if (done) {
                 // Gated on !finished so the LOOP-completion advancement fires only on the
                 // false→true transition — in LOOP mode this branch re-enters every tick once
@@ -305,6 +318,12 @@ public class TileFiller extends TileBC_Neptune
     public void onStatementChange() {
         finished = false;
         updateBuildingInfo();
+        // Everyone watching rebuilds from this change: a client's copy of the pattern, parameters and invert flag only
+        // moves when the tile data reaches it, and the periodic sync stops while the Filler is idle, off or finished.
+        if (level != null && !level.isClientSide()) {
+            setChanged();
+            markForRenderUpdate();
+        }
     }
 
     // ==================== NBT ====================
@@ -315,6 +334,8 @@ public class TileFiller extends TileBC_Neptune
         output.putLong("battery_mj", battery.getStored());
         output.putBoolean("canExcavate", canExcavate);
         output.putBoolean("inverted", inverted);
+        output.putBoolean("showPreview", previewEnabled);
+        output.putBoolean("building", isBuildingNow());
         output.putBoolean("finished", finished);
         output.putByte("lockedTicks", lockedTicks);
         output.putByte("mode", (byte) mode.ordinal());
@@ -358,6 +379,8 @@ public class TileFiller extends TileBC_Neptune
         battery.setStored(stored);
         canExcavate = input.getBooleanOr("canExcavate", true);
         inverted = input.getBooleanOr("inverted", false);
+        previewEnabled = input.getBooleanOr("showPreview", false);
+        serverBuilding = input.getBooleanOr("building", false);
         finished = input.getBooleanOr("finished", false);
         lockedTicks = input.getByteOr("lockedTicks", (byte) 0);
         int modeOrdinal = input.getByteOr("mode", (byte) 0);
@@ -394,12 +417,12 @@ public class TileFiller extends TileBC_Neptune
         }
 
         // On the client during periodic network sync (level != null && level.isClientSide()),
-        // only rebuild building info if it hasn't been initialized yet.
-        // Calling updateBuildingInfo() every 5 ticks triggers cancel() which refunds items
-        // into the client inventory and resets all builder arrays, causing ghost items and
-        // item count flickering in the GUI.
+        // only rebuild building info if it hasn't been initialized yet or what it was built from has changed
+        // (pattern, parameters, invert, box) — otherwise the preview and the client builder would keep drawing the
+        // old shape. Calling updateBuildingInfo() on EVERY sync (every 5 ticks) triggers cancel() which resets all
+        // builder arrays, causing ghost items and item count flickering in the GUI.
         // On the server (disk load) or on initial client sync (buildingInfo == null), always rebuild.
-        if (level == null || !level.isClientSide() || buildingInfo == null) {
+        if (level == null || !level.isClientSide() || buildingInfo == null || !currentBuildKey().equals(builtFrom)) {
             updateBuildingInfo();
         }
 
@@ -472,7 +495,7 @@ public class TileFiller extends TileBC_Neptune
         left.add("mode = " + mode);
         left.add("is_finished = " + finished);
         left.add("lockedTicks = " + lockedTicks);
-        left.add("addon = " + addon);
+        left.add("preview = " + previewEnabled);
         left.add("markerBox = " + markerBox);
         left.add("hasBox = " + hasBox());
         left.add("isValid = " + isValid());
@@ -512,9 +535,7 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public Template.BuildingInfo getTemplateBuildingInfo() {
-        return isValid()
-            ? addon != null ? addon.buildingInfo : buildingInfo
-            : null;
+        return isValid() ? buildingInfo : null;
     }
 
     @Override
@@ -644,12 +665,12 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public boolean hasBox() {
-        return addon != null || box.isInitialized();
+        return box.isInitialized();
     }
 
     public boolean isValid() {
         if (!hasBox()) return false;
-        return (addon != null ? addon.buildingInfo : buildingInfo) != null;
+        return buildingInfo != null;
     }
 
     @Override
@@ -657,7 +678,7 @@ public class TileFiller extends TileBC_Neptune
         if (!hasBox()) {
             throw new IllegalStateException("Called getBox() when hasBox() returned false!");
         }
-        return addon != null ? addon.volumeBox.box : box;
+        return box;
     }
 
     @Override
@@ -733,6 +754,69 @@ public class TileFiller extends TileBC_Neptune
 
     public void setCanExcavate(boolean value) {
         this.canExcavate = value;
+    }
+
+    public boolean isPreviewEnabled() {
+        return previewEnabled;
+    }
+
+    /** Turns the preview on or off for everyone near the Filler (server side; the change is pushed to clients). */
+    public void setPreviewEnabled(boolean value) {
+        if (previewEnabled == value) {
+            return;
+        }
+        previewEnabled = value;
+        setChanged();
+        if (level != null && !level.isClientSide()) {
+            markForRenderUpdate();
+        }
+    }
+
+    /**
+     * Client side: the area the Filler's renderer must stay alive for: the block, or with the preview on the block and
+     * the whole box. Rebuilt only when the preview toggle or the box changes (compared by value, since every sync hands
+     * over fresh position objects), because the renderer asks every frame.
+     */
+    public AABB getRenderBounds() {
+        boolean withBox = previewEnabled && box.isInitialized();
+        BlockPos min = withBox ? box.min() : null;
+        BlockPos max = withBox ? box.max() : null;
+        if (renderBounds == null || withBox != renderBoundsWithBox || !Objects.equals(min, renderBoundsMin)
+                || !Objects.equals(max, renderBoundsMax)) {
+            AABB block = new AABB(worldPosition);
+            renderBounds = withBox ? block.minmax(box.getBoundingBox()) : block;
+            renderBoundsWithBox = withBox;
+            renderBoundsMin = min;
+            renderBoundsMax = max;
+        }
+        return renderBounds;
+    }
+
+    /** Server side: whether the builder made progress within {@link #PROGRESS_WINDOW_TICKS}, as sent with every sync. */
+    private boolean isBuildingNow() {
+        if (level == null || mode == Mode.OFF || isFinished()) {
+            return false;
+        }
+        long sinceProgress = level.getGameTime() - lastProgressTick;
+        return sinceProgress >= 0 && sinceProgress <= PROGRESS_WINDOW_TICKS;
+    }
+
+    /**
+     * Client side: true while this Filler is really placing or breaking blocks, which is what hides its preview. A
+     * queued task is not enough, and neither is power in the battery:
+     * <ul>
+     * <li>A Filler switched OFF mid-build keeps the queue it last sent, since an OFF server stops syncing; and one with
+     *     no power leaves its queue waiting for energy to spend.</li>
+     * <li>The battery a client sees is what was left after the builder drew from it, so a Filler fed less than its draw
+     *     limit (about 0.82 MJ a tick when empty) syncs 0 MJ every time while it builds.</li>
+     * </ul>
+     * So the server says it: {@code building} is set when the builder drew power or finished a task within
+     * {@link #PROGRESS_WINDOW_TICKS}. The Filler must also be running (not OFF, not finished) with blocks still queued;
+     * a gap between tasks is bridged by the grace period of {@link FillPreviewCache#IDLE_GRACE_TICKS}.
+     */
+    public boolean hasWorkInFlight() {
+        return serverBuilding && mode != Mode.OFF && !isFinished()
+            && builder != null && (!builder.clientBreakTasks.isEmpty() || !builder.clientPlaceTasks.isEmpty());
     }
 
     public boolean getFinished() {

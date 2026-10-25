@@ -31,12 +31,12 @@ import buildcraft.lib.gui.help.ElementHelpInfo.HelpPosition;
 import buildcraft.lib.misc.LocaleUtil;
 
 import java.util.List;
-import java.util.function.BooleanSupplier;
 
 public class GuiFiller extends GuiBC8<ContainerFiller> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/filler.png");
-    /** Excavate and invert toggles: 16×16, GUI-local, on the pattern row (shared with {@link GuiFillerPlanner}). */
-    static final int TOGGLE_SIZE = 16, TOGGLE_Y = 40, EXCAVATE_X = 130, INVERT_X = 152;
+    /** Excavate and invert toggles: 16×16, GUI-local, on the pattern row. The preview toggle sits above the invert
+     *  one: the row has no room for a third, the panel ending where the invert toggle does. */
+    private static final int TOGGLE_SIZE = 16, TOGGLE_Y = 40, EXCAVATE_X = 130, INVERT_X = 152, PREVIEW_X = 152, PREVIEW_Y = 20;
 
     public GuiFiller(ContainerFiller container, Inventory playerInv, Component title) {
         super(container, playerInv, Component.translatable("block.buildcraftunofficial.filler"), 176, 241);
@@ -122,11 +122,26 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
             new GuiRectangle(EXCAVATE_X, TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE).offset(mainGui.rootElement),
             new ElementHelpInfo("buildcraft.help.filler.excavate.title", 0xFFCCAA88, "buildcraft.help.filler.excavate.desc")));
 
-        addRenderableWidget(invertButton(leftPos + INVERT_X, topPos + TOGGLE_Y, menu::isInverted,
-            () -> menu.sendMessage(ContainerFiller.NET_INVERT, buf -> {})));
+        // Invert: solid square = pattern as drawn, hollow = inverted.
+        addRenderableWidget(BCButton.builder(leftPos + INVERT_X, topPos + TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE)
+            .icon(ButtonIcon.either(menu::isInverted, ButtonSprite.INVERT_ON, ButtonSprite.INVERT_OFF))
+            .tooltip(() -> Component.translatable(menu.isInverted() ? "tip.filler.invert.on" : "tip.filler.invert.off"))
+            .onPress(() -> menu.sendMessage(ContainerFiller.NET_INVERT, buf -> {}))
+            .build());
         mainGui.shownElements.add(new DummyHelpElement(
             new GuiRectangle(INVERT_X, TOGGLE_Y, TOGGLE_SIZE, TOGGLE_SIZE).offset(mainGui.rootElement),
             new ElementHelpInfo("buildcraft.help.filler.invert.title", 0xFFCCAA88, "buildcraft.help.filler.invert.desc")));
+
+        // Preview: open eye = the Filler draws what it will fill, for everyone near it.
+        addRenderableWidget(BCButton.builder(leftPos + PREVIEW_X, topPos + PREVIEW_Y, TOGGLE_SIZE, TOGGLE_SIZE)
+            .icon(ButtonIcon.either(menu::getSyncedPreview, ButtonSprite.PREVIEW_ON, ButtonSprite.PREVIEW_OFF))
+            .tooltip(() -> Component.translatable(menu.getSyncedPreview()
+                ? "tip.filler.preview.on" : "tip.filler.preview.off"))
+            .onPress(() -> menu.sendMessage(ContainerFiller.NET_PREVIEW, buf -> {}))
+            .build());
+        mainGui.shownElements.add(new DummyHelpElement(
+            new GuiRectangle(PREVIEW_X, PREVIEW_Y, TOGGLE_SIZE, TOGGLE_SIZE).offset(mainGui.rootElement),
+            new ElementHelpInfo("buildcraft.help.filler.preview.title", 0xFFCCAA88, "buildcraft.help.filler.preview.desc")));
 
         // Mode icon tooltip element
         IGuiArea controlModeArea = new GuiRectangle(28, 16, 16, 16).offset(mainGui.rootElement);
@@ -167,15 +182,6 @@ public class GuiFiller extends GuiBC8<ContainerFiller> {
                 elements.add(new ElementHelpInfo("buildcraft.help.filler.locked.title", 0xFFFFBB33, "buildcraft.help.filler.locked.desc").target(this));
             }
         });
-    }
-
-    /** The Filler's and Filler Planner's shared invert toggle: solid square = pattern as drawn, hollow = inverted. */
-    static BCButton invertButton(int x, int y, BooleanSupplier inverted, Runnable onToggle) {
-        return BCButton.builder(x, y, TOGGLE_SIZE, TOGGLE_SIZE)
-            .icon(ButtonIcon.either(inverted, ButtonSprite.INVERT_ON, ButtonSprite.INVERT_OFF))
-            .tooltip(() -> Component.translatable(inverted.getAsBoolean() ? "tip.filler.invert.on" : "tip.filler.invert.off"))
-            .onPress(onToggle)
-            .build();
     }
 
     @Override

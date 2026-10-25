@@ -13,7 +13,6 @@ import buildcraft.api.enums.EnumSnapshotType;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.neoforge.registries.DeferredBlock;
 
-import buildcraft.builders.item.ItemFillerPlanner;
 import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
 
@@ -69,11 +68,6 @@ public class BCBuildersItems {
     public static final DeferredItem<ItemSchematicSingle> SCHEMATIC_SINGLE_USED = RegistrationUtilBC.registerItem(ITEMS,
             "schematic_single_used",
             props -> new ItemSchematicSingle(props, true),
-            props -> props.stacksTo(1));
-
-    public static final DeferredItem<ItemFillerPlanner> FILLER_PLANNER = RegistrationUtilBC.registerItem(ITEMS,
-            "filler_planner",
-            ItemFillerPlanner::new,
             props -> props.stacksTo(1));
 
     public static void init(IEventBus modEventBus) {

@@ -64,6 +64,7 @@ The item-definition coverage guard compares against the DEV registry (`tasks.tes
 
 One-line technical breadcrumbs for bullets that don't need a full section:
 
+- **Loop Filler packet spam** — in `TileFiller.tick()`, LOOP mode keeps `isFinished()` false, so once `b.tick()` reports done it runs `b.onNetworkSync()` + `markForRenderUpdate()` every tick (only the advancement is edge-gated on `!finished`). Gate the sync on the transition into done. Pre-existing; found in the 2026-10-25 Filler preview reviews.
 - **Facade smooth shading** — AO infrastructure already exists in `MutableQuad`; needs facade-specific wiring.
 - **Filler mode icons** — the old `filling/` selector-icon set archived at `misc/unused_textures/filling/` is stale erroneous leftover, not a basis for the new art.
 - **Goggles texture** — `item/goggles.png` is a verbatim copy of the vanilla paper texture; the headpiece stays dev-gated until real art exists.

@@ -6,12 +6,15 @@
 
 package buildcraft.builders.client.render;
 
+import java.util.List;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
 import net.minecraft.client.Minecraft;
 //? if <1.21.10 {
-/*import net.minecraft.client.renderer.MultiBufferSource;*/
+/*import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;*/
 //?}
 //? if >=1.21.10 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -28,6 +31,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.tiles.IControllable.Mode;
 
@@ -38,6 +43,7 @@ import buildcraft.lib.client.render.tile.BCRenderState;
 import buildcraft.lib.client.render.tile.LedRenderUtil;
 import buildcraft.lib.client.render.tile.RenderPartCube;
 
+import buildcraft.builders.snapshot.Template;
 import buildcraft.builders.tile.TileFiller;
 
 /**
@@ -61,6 +67,12 @@ import buildcraft.builders.tile.TileFiller;
  *       Only reachable in ON mode — {@code isFinished()} returns false in LOOP because
  *       {@code TileFiller.isFinished()} short-circuits to {@code mode != LOOP && finished}.</li>
  * </ul>
+ * <p>
+ * Preview — with the GUI's preview toggle on and the Filler idle (nothing placing or breaking), translucent cubes are
+ * drawn over every cell the pattern still has to fill ({@link FillPreviewRenderer}; the cells come from the tile's
+ * {@code FillPreviewCache}). The box is usually bigger than the block, so this renderer is globally rendered, reports
+ * the box as its bounding box and is distance-checked against it: the preview stays up when the Filler block itself
+ * is off screen or far away.
  */
 //? if >=1.21.10 {
 public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderState> {
@@ -90,6 +102,44 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
     }
 
     public RenderFiller(BlockEntityRendererProvider.Context context) {
+    }
+
+    // A block entity renderer is only reached through its block's chunk section being on screen unless it is rendered
+    // "off screen" (globally); the preview has to outlive the Filler block leaving view, so every Filler is.
+    //? if >=1.21.10 {
+    @Override
+    public boolean shouldRenderOffScreen() {
+        return true;
+    }
+    //?} else {
+    /*@Override
+    public boolean shouldRenderOffScreen(TileFiller tile) {
+        return true;
+    }*/
+    //?}
+
+    /** The block, or — with the preview on — the block and the whole box, so the frustum test keeps the renderer alive. */
+    @Override
+    public AABB getRenderBoundingBox(TileFiller tile) {
+        return tile.getRenderBounds();
+    }
+
+    /** Every node's dispatcher asks this before drawing a BER, globally rendered or not (checked in each node's
+     *  {@code BlockEntityRenderDispatcher}), so the distance gate below applies to the preview too. */
+    @Override
+    public boolean shouldRender(TileFiller tile, Vec3 cameraPos) {
+        if (tile.isPreviewEnabled()) {
+            // Within view distance of the nearest point of the block or the box, not of the block's centre.
+            AABB bounds = tile.getRenderBounds();
+            double dx = Math.max(Math.max(bounds.minX - cameraPos.x, 0), cameraPos.x - bounds.maxX);
+            double dy = Math.max(Math.max(bounds.minY - cameraPos.y, 0), cameraPos.y - bounds.maxY);
+            double dz = Math.max(Math.max(bounds.minZ - cameraPos.z, 0), cameraPos.z - bounds.maxZ);
+            double view = getViewDistance();
+            if (dx * dx + dy * dy + dz * dz <= view * view) {
+                return true;
+            }
+        }
+        return BlockEntityRenderer.super.shouldRender(tile, cameraPos);
     }
 
     //? if >=1.21.10 {
@@ -122,14 +172,46 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
         //? if >=1.21.10 {
         collector.submitCustomGeometry(poseStack, BCLibRenderTypes.led(),
                 (pose, consumer) -> renderLEDs(tile, pose, consumer));
+        List<BlockPos> preview = previewCells(tile, cameraState.pos);
+        if (!preview.isEmpty()) {
+            BlockPos origin = tile.getBlockPos();
+            collector.submitCustomGeometry(poseStack, BCLibRenderTypes.debugFilled(),
+                    (pose, consumer) -> FillPreviewRenderer.emit(consumer, pose.pose(), preview, origin));
+        }
         //?} else {
-        /*MultiBufferSource.BufferSource bufferSource =
+        /*// Each type is flushed on its own: a bare endBatch() would flush every type pending in the frame, twice per Filler.
+        MultiBufferSource.BufferSource bufferSource =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(BCLibRenderTypes.led()));
-        bufferSource.endBatch();*/
+        RenderType led = BCLibRenderTypes.led();
+        renderLEDs(tile, poseStack.last(), bufferSource.getBuffer(led));
+        bufferSource.endBatch(led);
+        List<BlockPos> preview = previewCells(tile, Minecraft.getInstance().gameRenderer.getMainCamera().getPosition());
+        if (!preview.isEmpty()) {
+            RenderType filled = BCLibRenderTypes.debugFilled();
+            FillPreviewRenderer.emit(bufferSource.getBuffer(filled), poseStack.last().pose(), preview, tile.getBlockPos());
+            bufferSource.endBatch(filled);
+        }*/
         //?}
 
         poseStack.popPose();
+    }
+
+    /** The cubes the preview draws this frame, farthest first: none with the toggle off, while the Filler is placing or
+     *  breaking, or when nothing is left to fill. */
+    private static List<BlockPos> previewCells(TileFiller tile, Vec3 camera) {
+        if (!tile.isPreviewEnabled()) {
+            tile.previewCache.clear(); // an off preview keeps no cell lists alive
+            return List.of();
+        }
+        Level level = tile.getLevel();
+        Template.BuildingInfo info = tile.getTemplateBuildingInfo();
+        if (level == null || info == null) {
+            return List.of();
+        }
+        if (!tile.previewCache.isIdle(level.getGameTime(), tile.hasWorkInFlight())) {
+            return List.of();
+        }
+        return tile.previewCache.cellsToDraw(level, info, camera);
     }
 
     private void renderLEDs(TileFiller tile, PoseStack.Pose pose, VertexConsumer consumer) {

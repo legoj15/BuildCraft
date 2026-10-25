@@ -261,7 +261,8 @@ public abstract class DockingStation {
      *  only tests the chunk's ticket level, which a chunk still queued to load already satisfies, and the read that
      *  follows a "loaded" answer (the station's pipe, its neighbours) would then load it synchronously. Off the server
      *  thread {@code getChunkNow} answers null, which reads as not loaded; a client level answers from the chunks it
-     *  has received. */
+     *  has received. The same test as {@code buildcraft.lib.misc.BlockUtil#isChunkPresent}, copied because the api
+     *  package imports nothing from lib: change both together. */
     public boolean isChunkLoaded() {
         return world == null || world.getChunkSource().getChunkNow(SectionPos.blockToSectionCoord(pos.getX()),
                 SectionPos.blockToSectionCoord(pos.getZ())) != null;

@@ -12,16 +12,17 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
 
+import buildcraft.robotics.zone.ZoneSurveyRegion;
+
 /**
  * A top-down colour+height snapshot of one world chunk, used by the Zone Planner's 3D map viewport.
  * For every column in the 16&times;16 chunk it records the surface block's Y and its
  * {@link MapColor#col map colour} &mdash; the same data a vanilla cartographer map would show.
  *
- * <p><b>Built entirely client-side.</b> The 1.12.2 original streamed these from the server because the
- * map could be panned into chunks the client hadn't loaded; here the viewport is anchored on the
- * planner the player is standing next to, so the client's own loaded chunks cover the visible area and
- * no networking is needed. The {@link Heightmap.Types#WORLD_SURFACE} heightmap this reads is
- * {@code Usage.CLIENT}, i.e. synced to the client, so the lookup is cheap and accurate.
+ * <p>Usually built client-side from a chunk the client holds: the {@link Heightmap.Types#WORLD_SURFACE}
+ * heightmap this reads is {@code Usage.CLIENT}, i.e. synced to the client, so the lookup is cheap and
+ * accurate. Past the client's chunks the survey view draws chunks the server sampled instead
+ * ({@code ZoneSurveyMap}), coarser: one sample per {@link ZoneSurveyRegion#CELL}-block cell.
  */
 public class ZonePlannerMapChunk {
     /** Sentinel surface Y for a column with no recordable block (e.g. an all-air column). */
@@ -31,10 +32,16 @@ public class ZonePlannerMapChunk {
      *  the rare top blocks that map to {@link MapColor#NONE} (barriers, light blocks, …). */
     private static final int COLOUR_SEARCH_DEPTH = 32;
 
-    private final int[] surfaceY = new int[256];
-    private final int[] colour = new int[256];
+    /** log2 of the blocks along each side of one stored cell: 0 for a chunk scanned here (one cell per column),
+     *  2 for one the server sampled ({@link ZoneSurveyRegion#CELL}-block cells), whose every column reads its cell. */
+    private final int cellShift;
+    private final int[] surfaceY;
+    private final int[] colour;
 
     public ZonePlannerMapChunk(Level level, LevelChunk chunk, int chunkX, int chunkZ) {
+        cellShift = 0;
+        surfaceY = new int[256];
+        colour = new int[256];
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
@@ -67,8 +74,23 @@ public class ZonePlannerMapChunk {
         }
     }
 
-    private static int index(int x, int z) {
-        return (x & 15) * 16 + (z & 15);
+    /**
+     * A chunk of the server's far map ({@code ZoneSurveyMap}), from its {@link ZoneSurveyRegion#SAMPLES} samples:
+     * heights ({@link ZoneSurveyRegion#NO_DATA} for none) and vanilla map-colour ids.
+     */
+    public ZonePlannerMapChunk(short[] heights, byte[] colourIds) {
+        cellShift = Integer.numberOfTrailingZeros(ZoneSurveyRegion.CELL);
+        surfaceY = new int[ZoneSurveyRegion.SAMPLES];
+        colour = new int[ZoneSurveyRegion.SAMPLES];
+        for (int s = 0; s < ZoneSurveyRegion.SAMPLES; s++) {
+            boolean known = heights[s] != ZoneSurveyRegion.NO_DATA;
+            surfaceY[s] = known ? heights[s] : NO_DATA;
+            colour[s] = known ? MapColor.byId(colourIds[s] & 63).col : 0;
+        }
+    }
+
+    private int index(int x, int z) {
+        return ((x & 15) >> cellShift) * (16 >> cellShift) + ((z & 15) >> cellShift);
     }
 
     /** Surface Y for the column, or {@link #NO_DATA} if the column has no recordable block. */

@@ -72,9 +72,9 @@ public final class ZoneMapGeometry {
      *  pixel count instead of the world area, and sub-pixel blocks can't alias. At every zoom the scan
      *  covers the chunks that can project into the viewport ({@link ZoneMapCamera#visibleChunkWindow}), which
      *  reaches out past the ground-level span to take in terrain far below the planner: that is de-magnified,
-     *  so it shows at the viewport's edge from beyond the ground span. Only chunks the client can hold are visited
-     *  at all ({@link ZonePlannerMapDataClient#mappedChunkBounds}), so the walk follows the view distance, not the
-     *  window.
+     *  so it shows at the viewport's edge from beyond the ground span. Only chunks the map can have data for are visited
+     *  at all ({@link ZonePlannerMapDataClient#mappedChunkBounds}): the client's view distance, widened to the
+     *  planner's survey square when the server sent its far map, and never the whole window.
      *
      *  <p>Columns whose top comes within {@link ZoneMapCamera#NEAR_CLIP} of the camera's own height
      *  ({@link ZoneMapCamera#isNearClipped}) are left out, here and in the overlays, exactly as picking steps over

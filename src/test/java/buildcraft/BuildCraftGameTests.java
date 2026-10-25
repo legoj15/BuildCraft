@@ -351,6 +351,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:oilgen_surface_pool_clean_shape", () -> buildcraft.energy.generation.OilGenStructureTester::testSurfacePoolCleanShape);
         reg.accept("buildcraftunofficial:oilgen_surface_pool_clears_tall_tree_fully", () -> buildcraft.energy.generation.OilGenStructureTester::testSurfacePoolClearsTallTreeFully);
         reg.accept("buildcraftunofficial:oilgen_feature_attached_to_biomes", () -> buildcraft.energy.generation.OilGenStructureTester::testOilFeatureAttachedToBiomes);
+        reg.accept("buildcraftunofficial:oilgen_nether_cavern_spout_stops_at_first_air", () -> buildcraft.energy.generation.OilGenStructureTester::testNetherCavernSpoutStopsAtFirstAirAndKeepsRoof);
 
         // Energy Engines
         reg.accept("buildcraftunofficial:engine_redstone_dry_run", () -> buildcraft.energy.EngineTester::testRedstoneEngineDryRunHeat);

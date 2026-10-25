@@ -15,5 +15,12 @@ public interface IFuel {
 
     /** @return The amount (in micro mj) of power that this fuel will give off in 1 tick. */
     long getPowerPerCycle();
+
+    /** @return The engine heat this fuel adds in 1 tick, given as the power (in micro mj) whose heat it matches.
+     *         Defaults to {@link #getPowerPerCycle()}: heat in proportion to power. A fuel that runs hotter than
+     *         its output (BuildCraft's searing fuels) returns more. */
+    default long getHeatPerCycle() {
+        return getPowerPerCycle();
+    }
 }
 

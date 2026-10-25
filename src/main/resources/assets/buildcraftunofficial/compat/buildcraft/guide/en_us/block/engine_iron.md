@@ -12,6 +12,10 @@ With all combustible fluids, they produce different amounts of power for differe
 
 Using dirty fuels in an engine will cause it to get clogged up with residue which you would need to extract.
 
+A fuel's temperature matters too. Hot fuel gives more power than cool fuel, but searing fuel gives less, and it heats the engine so much that it needs extra coolant. Use a Heat Exchanger to bring fuel to the right temperature.
+
+Gaseous fuels are dangerous in the Nether: spill one there and it explodes.
+
 <chapter name="Engine Mechanics"/>
 BuildCraft engines have 5 temperature stages, which determines the speed the engine runs at: Blue, Green, Yellow, Red and Black.
 Combustion engines will only turn black if the engines internal power buffer fills up as the power has nowhere to go, thus the engine will overheat and needs to be wrenched to be cooled.

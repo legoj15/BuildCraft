@@ -57,11 +57,17 @@ public enum FuelRegistry implements IFuelManager {
         private final FluidStack fluid;
         private final long powerPerCycle;
         private final int totalBurningTime;
+        private final long heatPerCycle;
 
         public Fuel(FluidStack fluid, long powerPerCycle, int totalBurningTime) {
+            this(fluid, powerPerCycle, totalBurningTime, powerPerCycle);
+        }
+
+        public Fuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle) {
             this.fluid = fluid;
             this.powerPerCycle = powerPerCycle;
             this.totalBurningTime = totalBurningTime;
+            this.heatPerCycle = heatPerCycle;
         }
 
         @Override
@@ -78,13 +84,23 @@ public enum FuelRegistry implements IFuelManager {
         public int getTotalBurningTime() {
             return totalBurningTime;
         }
+
+        @Override
+        public long getHeatPerCycle() {
+            return heatPerCycle;
+        }
     }
 
     public static class DirtyFuel extends Fuel implements IDirtyFuel {
         private final FluidStack residue;
 
         public DirtyFuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, FluidStack residue) {
-            super(fluid, powerPerCycle, totalBurningTime);
+            this(fluid, powerPerCycle, totalBurningTime, powerPerCycle, residue);
+        }
+
+        public DirtyFuel(FluidStack fluid, long powerPerCycle, int totalBurningTime, long heatPerCycle,
+                FluidStack residue) {
+            super(fluid, powerPerCycle, totalBurningTime, heatPerCycle);
             this.residue = residue;
         }
 

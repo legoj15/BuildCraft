@@ -17,6 +17,7 @@ import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
+import buildcraft.lib.fluid.FuelRegistry;
 import buildcraft.lib.misc.MathUtil;
 
 /**
@@ -25,6 +26,12 @@ import buildcraft.lib.misc.MathUtil;
  */
 public class BCEnergyRecipes {
     private static final int TIME_BASE = 240_000; // multiple of 3, 5, 16, 1000
+    /** Combustion-engine power per heat tier (cool, hot, searing), in quarters of the cool rate. The curve
+     *  is deliberately non-monotonic: hot fuel burns better than cool, searing worse. */
+    private static final int[] POWER_QUARTERS_BY_HEAT = { 4, 5, 3 };
+    /** Engine heat per heat tier, in quarters of the cool fuel's power. Hot heats in step with its power;
+     *  searing heats like 1.5x the cool fuel despite its lower output, so it eats coolant. */
+    private static final int[] HEAT_QUARTERS_BY_HEAT = { 4, 5, 6 };
 
     private static boolean initialized = false;
 
@@ -197,25 +204,34 @@ public class BCEnergyRecipes {
     }
 
     private static void addFuel(String baseName, int amountDiff, int multiplier, int boostOver4) {
-        Fluid fuel = findFluid(baseName);
-        if (fuel == null) return; // disabled
-        long powerPerCycle = multiplier * MjAPI.MJ;
-        int totalTime = TIME_BASE * boostOver4 / 4 / multiplier / amountDiff;
-        BuildcraftFuelRegistry.fuel.addFuel(fuel, powerPerCycle, totalTime);
+        addFuel(baseName, amountDiff, multiplier, boostOver4, null);
     }
 
     private static void addDirtyFuel(String baseName, int amountDiff, int multiplier, int boostOver4) {
-        Fluid fuel = findFluid(baseName);
-        if (fuel == null) return; // disabled
-        long powerPerCycle = multiplier * MjAPI.MJ;
-        int totalTime = TIME_BASE * boostOver4 / 4 / multiplier / amountDiff;
         Fluid residue = findFluid("oil_residue");
-        if (residue == null) {
-            // residue disabled — register as clean fuel
-            BuildcraftFuelRegistry.fuel.addFuel(fuel, powerPerCycle, totalTime);
-        } else {
-            BuildcraftFuelRegistry.fuel.addDirtyFuel(fuel, powerPerCycle, totalTime,
-                new FluidStack(residue, 1000 / amountDiff));
+        // residue disabled — register as clean fuel
+        FluidStack residueStack = residue == null ? null : new FluidStack(residue, 1000 / amountDiff);
+        addFuel(baseName, amountDiff, multiplier, boostOver4, residueStack);
+    }
+
+    /** Registers all three heat tiers of a fuel. Burn time per bucket (and residue) come from the cool
+     *  tier and don't change with heat; only power and engine heat follow the heat curve. */
+    private static void addFuel(String baseName, int amountDiff, int multiplier, int boostOver4,
+            FluidStack residue) {
+        long coolPower = multiplier * MjAPI.MJ;
+        int totalTime = TIME_BASE * boostOver4 / 4 / multiplier / amountDiff;
+        for (int heat = 0; heat < 3; heat++) {
+            Fluid fuel = findFluidByHeat(baseName, heat);
+            if (fuel == null) continue; // disabled
+            FluidStack stack = new FluidStack(fuel, 1);
+            long power = coolPower * POWER_QUARTERS_BY_HEAT[heat] / 4;
+            long engineHeat = coolPower * HEAT_QUARTERS_BY_HEAT[heat] / 4;
+            if (residue == null) {
+                BuildcraftFuelRegistry.fuel.addFuel(new FuelRegistry.Fuel(stack, power, totalTime, engineHeat));
+            } else {
+                BuildcraftFuelRegistry.fuel.addFuel(
+                    new FuelRegistry.DirtyFuel(stack, power, totalTime, engineHeat, residue));
+            }
         }
     }
 

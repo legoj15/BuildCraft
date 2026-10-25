@@ -31,6 +31,8 @@ import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyConfig;
+import buildcraft.energy.BCEnergyFluids;
+import buildcraft.energy.BCEnergyFluids.FluidEntry;
 import buildcraft.energy.generation.OilGenStructure.GenByPredicate;
 import buildcraft.energy.generation.OilGenStructure.ReplaceType;
 
@@ -68,6 +70,15 @@ public class OilGenerator {
             return false;
         }
         return !isDimensionExcluded(level.dimension());
+    }
+
+    /**
+     * The one rule for which crude oil generates (and springs regenerate) in a biome: searing in the Nether,
+     * cool everywhere else. Worldgen and {@code BlockSpring}'s late-bound liquid resolver both go through here,
+     * so a Nether spring keeps pumping the searing crude its deposit was placed with.
+     */
+    public static FluidEntry crudeOilFor(Holder<Biome> biome) {
+        return biome.is(BiomeTags.IS_NETHER) ? BCEnergyFluids.OIL_SEARING : BCEnergyFluids.OIL_COOL;
     }
 
     /**
@@ -261,6 +272,13 @@ public class OilGenerator {
             return ImmutableList.of();
         }
 
+        // The Nether has its own roll and deposit shapes (searing crude only). Branching here, after the shared
+        // x/z draws and biome checks and before any overworld roll, leaves the overworld path's RNG consumption
+        // untouched, so existing worlds keep tiling seamlessly.
+        if (biomeHolder.is(BiomeTags.IS_NETHER)) {
+            return getNetherStructures(level, biomeHolder, biomeId, cx, cz, x, z, rand, log);
+        }
+
         // Five-tier surface-deposit classification (config-driven):
         //   richBiome       → eligible for the dedicated rich-tier rate structure
         //                     below. Defaults to deep oceans + desert + badlands.
@@ -284,10 +302,7 @@ public class OilGenerator {
 
         // Global multipliers applied across every roll path (rich land's own rates or
         // the base-rate-times-tier-bonus path used by every other biome category).
-        double globalMul = BCEnergyConfig.oilWellGenerationRate.get();
-        if (BCEnergyConfig.getForceExcessiveOilBiomes().contains(biomeId)) {
-            globalMul *= 30.0;
-        }
+        double globalMul = globalOilRateMultiplier(biomeId);
 
         final GenType type;
         if (richLand) {
@@ -424,17 +439,7 @@ public class OilGenerator {
                     maxHeight = BCEnergyConfig.finiteSpoutMaxHeight.get();
                     radius = 0;
                 }
-                final int height;
-                if (maxHeight == minHeight) {
-                    height = maxHeight;
-                } else {
-                    if (maxHeight < minHeight) {
-                        int t = maxHeight;
-                        maxHeight = minHeight;
-                        minHeight = t;
-                    }
-                    height = minHeight + rand.nextInt(maxHeight - minHeight);
-                }
+                final int height = rollSpoutHeight(minHeight, maxHeight, rand);
                 structures.add(createSpout(new BlockPos(x, wellY, z), height, radius));
             }
 
@@ -447,10 +452,116 @@ public class OilGenerator {
             if (hasSpring) {
                 int tubeStart = level.getMinY() + 2;
                 int tubeLength = wellY - tubeStart;
-                structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, radius, Axis.Y));
+                // Radius 1 explicitly: `radius` above is only narrowed to 1 inside the spout branch, so with
+                // spouts disabled it would still hold the sphere's 4-16 and carve a giant oil column.
+                structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, 1, Axis.Y));
                 if (BCCoreBlocks.SPRING_OIL != null) {
                     structures.add(createSpring(new BlockPos(x, level.getMinY(), z)));
                 }
+            }
+        }
+        return structures;
+    }
+
+    /** The rate multiplier shared by every roll path: the configured generation rate, times 30 in a
+     *  force-excessive biome. */
+    private static double globalOilRateMultiplier(Identifier biomeId) {
+        double globalMul = BCEnergyConfig.oilWellGenerationRate.get();
+        if (BCEnergyConfig.getForceExcessiveOilBiomes().contains(biomeId)) {
+            globalMul *= 30.0;
+        }
+        return globalMul;
+    }
+
+    /** Rolls a spout height in {@code [min, max)} (a reversed pair is swapped; equal bounds draw nothing). */
+    private static int rollSpoutHeight(int minHeight, int maxHeight, Random rand) {
+        if (maxHeight == minHeight) {
+            return maxHeight;
+        }
+        if (maxHeight < minHeight) {
+            int t = maxHeight;
+            maxHeight = minHeight;
+            minHeight = t;
+        }
+        return minHeight + rand.nextInt(maxHeight - minHeight);
+    }
+
+    /** Highest block a Nether-style (roofed) spout may reach in this level: the dimension's logical top, which in
+     *  the Nether is the bedrock roof rather than the 256-high build limit above it. */
+    private static int roofCeilingY(WorldGenLevel level) {
+        return Math.min(level.getMaxY(), level.getMinY() + level.getLevel().dimensionType().logicalHeight() - 1);
+    }
+
+    /**
+     * The Nether's roll and deposit shapes. Always searing crude; no biome tiers (the Nether has no ocean/desert
+     * split), just the configured LARGE/MEDIUM chunk rates at the standard 1.0 bonus. A hit places, in order:
+     * <ul>
+     *   <li>a <b>slick</b> on the lava sea (only lava sources are replaced, so it appears only where the origin sits
+     *       over the sea),</li>
+     *   <li>a buried <b>pocket</b> sphere that fills rock and lava but never air or bedrock,</li>
+     *   <li>a <b>spout</b> ({@link OilGenStructure.CavernSpout}) from the pocket up to the first open air, when spouts
+     *       are enabled, and</li>
+     *   <li>for a LARGE roll in a {@link BCEnergyConfig#getNetherSpringBiomes spring biome} (Crimson Forest by
+     *       default), the connecting tube and the infinite <b>spring</b> at the bedrock floor.</li>
+     * </ul>
+     * The overworld formations don't carry over: their surface pools search for the terrain top (the Nether's is the
+     * bedrock roof) and their spout scans down from the build limit (it would punch an oil pillar through the roof).
+     */
+    private static List<OilGenStructure> getNetherStructures(WorldGenLevel level, Holder<Biome> biomeHolder,
+            Identifier biomeId, int cx, int cz, int x, int z, Random rand, boolean log) {
+        double effectiveRate = globalOilRateMultiplier(biomeId);
+        final boolean large;
+        if (rand.nextDouble() <= BCEnergyConfig.largeOilGenProb.get() * effectiveRate) {
+            large = true;
+        } else if (rand.nextDouble() <= BCEnergyConfig.mediumOilGenProb.get() * effectiveRate) {
+            large = false;
+        } else {
+            if (DEBUG_OILGEN_ALL & log) {
+                BCLog.logger.info("[energy.oilgen] Not generating oil in chunk " + cx + ", " + cz
+                    + " because none of the random numbers were above the thresholds.");
+            }
+            return ImmutableList.of();
+        }
+        if (DEBUG_OILGEN_BASIC & log) {
+            BCLog.logger.info("[energy.oilgen] Generating a Nether oil well (" + (large ? "large" : "medium")
+                + ") in chunk " + cx + ", " + cz + " at " + x + ", " + z);
+        }
+
+        FluidEntry oil = crudeOilFor(biomeHolder);
+        int minY = level.getMinY();
+        List<OilGenStructure> structures = new ArrayList<>();
+
+        // Lava-sea slick: lava fills the Nether's open caverns below the generator's sea level, so the topmost lava
+        // source is one block under it. Placed first so the pocket below can still overwrite lava it overlaps.
+        int slickRadius = large ? 8 + rand.nextInt(5) : 4 + rand.nextInt(4);
+        int lavaTopY = level.getLevel().getChunkSource().getGenerator().getSeaLevel() - 1;
+        structures.add(createLavaSlick(new BlockPos(x, lavaTopY, z), slickRadius, rand, oil));
+
+        // Buried pocket, centred 18..25 above the world floor: clear of the bedrock gradient (radius <= 8) and well
+        // under the lava sea's surface.
+        int wellY = minY + 18 + rand.nextInt(8);
+        int pocketRadius = large ? 5 + rand.nextInt(4) : 3 + rand.nextInt(3);
+        structures.add(createSphere(new BlockPos(x, wellY, z), pocketRadius, ReplaceType.NOT_AIR_OR_BEDROCK, oil));
+
+        // An infinite spring needs a LARGE roll in a spring biome; it then gets the tall radius-1 spout like the
+        // overworld's rich formations, everything else the short 1x1 one.
+        boolean hasSpring = large && BCEnergyConfig.getNetherSpringBiomes().contains(biomeId);
+
+        if (BCEnergyConfig.enableOilSpouts.get()) {
+            int height = hasSpring
+                ? rollSpoutHeight(BCEnergyConfig.largeSpoutMinHeight.get(), BCEnergyConfig.largeSpoutMaxHeight.get(), rand)
+                : rollSpoutHeight(BCEnergyConfig.finiteSpoutMinHeight.get(), BCEnergyConfig.finiteSpoutMaxHeight.get(), rand);
+            structures.add(new OilGenStructure.CavernSpout(new BlockPos(x, wellY, z), ReplaceType.NOT_BEDROCK,
+                hasSpring ? 1 : 0, height, roofCeilingY(level), oil));
+        }
+
+        // Same spring formation as the overworld: the tube carves through the floor's bedrock gradient from minY+2
+        // up to the pocket centre, the spring block replaces the floor layer itself.
+        if (hasSpring) {
+            int tubeStart = minY + 2;
+            structures.add(createTube(new BlockPos(x, tubeStart, z), wellY - tubeStart, 1, Axis.Y, ReplaceType.ALWAYS, oil));
+            if (BCCoreBlocks.SPRING_OIL != null) {
+                structures.add(createSpring(new BlockPos(x, minY, z), oil));
             }
         }
         return structures;
@@ -470,7 +581,11 @@ public class OilGenerator {
     }
 
     public static OilGenStructure createSpring(BlockPos at) {
-        return new OilGenStructure.Spring(at);
+        return createSpring(at, BCEnergyFluids.OIL_COOL);
+    }
+
+    public static OilGenStructure createSpring(BlockPos at, FluidEntry oil) {
+        return new OilGenStructure.Spring(at, oil);
     }
 
     public static OilGenStructure createTube(BlockPos center, int length, int radius, Axis axis) {
@@ -478,20 +593,29 @@ public class OilGenerator {
     }
 
     public static OilGenStructure createTube(BlockPos center, int length, int radius, Axis axis, ReplaceType replaceType) {
+        return createTube(center, length, radius, axis, replaceType, BCEnergyFluids.OIL_COOL);
+    }
+
+    public static OilGenStructure createTube(BlockPos center, int length, int radius, Axis axis, ReplaceType replaceType,
+        FluidEntry oil) {
         int valForAxis = VecUtil.getValue(center, axis);
         BlockPos min = VecUtil.replaceValue(center.offset(-radius, -radius, -radius), axis, valForAxis);
         BlockPos max = VecUtil.replaceValue(center.offset(radius, radius, radius), axis, valForAxis + length);
         double radiusSq = radius * radius;
         int toReplace = valForAxis;
         Predicate<BlockPos> tester = p -> VecUtil.replaceValue(p, axis, toReplace).distSqr(center) <= radiusSq;
-        return new GenByPredicate(new Box(min, max), replaceType, tester);
+        return new GenByPredicate(new Box(min, max), replaceType, tester, oil);
     }
 
     public static OilGenStructure createSphere(BlockPos center, int radius) {
+        return createSphere(center, radius, ReplaceType.ALWAYS, BCEnergyFluids.OIL_COOL);
+    }
+
+    public static OilGenStructure createSphere(BlockPos center, int radius, ReplaceType replaceType, FluidEntry oil) {
         Box box = new Box(center.offset(-radius, -radius, -radius), center.offset(radius, radius, radius));
         double radiusSq = radius * radius + 0.01;
         Predicate<BlockPos> tester = p -> p.distSqr(center) <= radiusSq;
-        return new GenByPredicate(box, ReplaceType.ALWAYS, tester);
+        return new GenByPredicate(box, replaceType, tester, oil);
     }
 
     /**
@@ -554,6 +678,27 @@ public class OilGenerator {
      * radius (which itself comes from the caller's one-draw {@code nextInt}).
      */
     private static OilGenStructure createSurfacePool(BlockPos center, int baseRadius, Random rand) {
+        boolean[][] pattern = discPattern(baseRadius, rand);
+        int depth = rand.nextDouble() < 0.5 ? 1 : 2;
+        BlockPos start = center.offset(-(baseRadius + 1), 0, -(baseRadius + 1));
+        return OilGenStructure.SurfacePool.create(start, ReplaceType.IS_FOR_LAKE, pattern, depth);
+    }
+
+    /**
+     * A flat slick of oil at a fixed height, on the Nether's lava sea: the same noisy disc as
+     * {@link #createSurfacePool}, but laid at {@code center.getY()} (its top layer) rather than on a searched
+     * surface, and replacing only lava sources, so it exists only where the origin sits over the sea.
+     */
+    public static OilGenStructure createLavaSlick(BlockPos center, int baseRadius, Random rand, FluidEntry oil) {
+        boolean[][] pattern = discPattern(baseRadius, rand);
+        int depth = rand.nextDouble() < 0.5 ? 1 : 2;
+        BlockPos start = center.offset(-(baseRadius + 1), 0, -(baseRadius + 1));
+        return OilGenStructure.FlatPattern.create(start, ReplaceType.LAVA_SOURCE, pattern, depth, oil);
+    }
+
+    /** The footprint of {@link #createSurfacePool}: a disc with ±1 block radial noise, one random draw per cell of
+     *  the {@code 2 * (baseRadius + 1) + 1} square, so the draw count is fixed by the base radius. */
+    private static boolean[][] discPattern(int baseRadius, Random rand) {
         int maxRadius = baseRadius + 1;
         int diameter = maxRadius * 2 + 1;
         boolean[][] pattern = new boolean[diameter][diameter];
@@ -567,9 +712,7 @@ public class OilGenerator {
                 pattern[centerIdx + dx][centerIdx + dz] = distSq <= effectiveR * effectiveR;
             }
         }
-        int depth = rand.nextDouble() < 0.5 ? 1 : 2;
-        BlockPos start = center.offset(-maxRadius, 0, -maxRadius);
-        return OilGenStructure.SurfacePool.create(start, ReplaceType.IS_FOR_LAKE, pattern, depth);
+        return pattern;
     }
 
     private static void fillPatternIfProba(Random rand, float proba, int x, int z, boolean[][] pattern) {

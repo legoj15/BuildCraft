@@ -6,8 +6,6 @@ Last audited: 2026-10-25
 
 - Move the "Filler Planner"'s functionality to the actual Filler block for survival QoL, and remove the Filler Planner item and assets.
 - Use modern Minecraft sounds where they fit (copper grate for metal pipes, pitched down scaffolding for wooden, pitched up cobble for stone)
-- Fuel heat changes engine output; the route to a Nether start — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
-- Oil spawns in the Nether — [design](docs/todo-details.md#heat-tiered-fuel-and-nether-oil)
 - A Pump on top of a Mining Well or Quarry drains the fluid blocking the dig — [notes](docs/todo-details.md#pump-on-top-of-miners)
 - Show a marker connection's length while looking at it
 - Zone Planner survey view reaching beyond loaded chunks, via a server-sampled region map like 1.7.10 kept — [notes](docs/todo-details.md#zone-planner-far-map-data)
@@ -16,7 +14,7 @@ Last audited: 2026-10-25
 - Abandoned quarry frames over pre-dug holes (worldgen)
 - Make the wrench a real tool: light damage, durability, enchantable, best against BuildCraft blocks, maybe a zombie drop
 - Let resource packs reshape plugs via standard model files — [notes](docs/todo-details.md#plug-model-unification)
-- Exploding and flammable fluids (gaseous fuel, oils)
+- Exploding and flammable fluids outside the Nether (gaseous fuel, oils)
 - Cauldrons act as small tanks for pipes and pumps — [quick notes](docs/todo-details.md#quick-notes)
 - Empty "to" slot on the Replacer flips its button to "Remove" (useful for clearing grass tufts)
 - Builder highlights blocks it can't place yet, so a stalled build is legible — [quick notes](docs/todo-details.md#quick-notes)

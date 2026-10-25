@@ -188,7 +188,8 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
                         }
                     }
                     addPower(currentFuel.getPowerPerCycle());
-                    heat += (float) (currentFuel.getPowerPerCycle() * HEAT_PER_MJ / MjAPI.MJ);
+                    // Heat follows the fuel's heat rating, not its output: searing fuel heats more than it pays.
+                    heat += (float) (currentFuel.getHeatPerCycle() * HEAT_PER_MJ / MjAPI.MJ);
                 }
             } else if (lastPowered) {
                 lastPowered = false;

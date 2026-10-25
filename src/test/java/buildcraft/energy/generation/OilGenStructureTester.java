@@ -11,7 +11,9 @@ import java.util.Random;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.lib.misc.data.Box;
@@ -231,6 +233,120 @@ public class OilGenStructureTester {
                 }
             }
         });
+    }
+
+    /** Relative y the cavern-spout columns are measured against: the spout may reach {@code CAVERN_CEILING_REL_Y - 8}
+     *  (the structure keeps {@link OilGenStructure.CavernSpout#CEILING_MARGIN} blocks clear of the roof), which
+     *  puts its limit on relative y 5 inside the 7-tall cell. */
+    private static final int CAVERN_CEILING_REL_Y = 5 + OilGenStructure.CavernSpout.CEILING_MARGIN;
+
+    /** Ticks the cavern-spout test is given once its cell ticks (the generation itself is synchronous). */
+    private static final int CAVERN_WORK_TICKS = 10;
+
+    /** The four oil columns of the cavern-spout test, as relative x/z (y is ignored). */
+    private static final BlockPos[] CAVERN_COLUMNS = {
+        new BlockPos(1, 0, 2), new BlockPos(3, 0, 2), new BlockPos(5, 0, 2), new BlockPos(1, 0, 4)
+    };
+
+    /**
+     * The Nether's spout scans UP from the buried pocket to the first open air and stops its solid tube there,
+     * then raises a column of {@code height} above it, and it never writes through the roof. The overworld
+     * {@link OilGenStructure.Spout} scans DOWN from the build limit instead: under a bedrock roof that finds the
+     * roof and fills every cavern in between with an oil pillar up to it. Four stone columns under a ceiling in
+     * the test cell (relative x/z, y 1..6; the structure's limit is relative y 5):
+     * <ul>
+     *   <li>(1,2) stone y1-2, air y3-5, bedrock y6, height 2: oil y1..4 only, so the gap above the column is
+     *       still air and the roof is still bedrock;</li>
+     *   <li>(3,2) the same with a STONE roof and height 6: the column is cut off at the limit, y6 stays stone;</li>
+     *   <li>(5,2) bedrock at y2 between the pocket and the air above it: nothing is placed;</li>
+     *   <li>(1,4) stone y1-5 and the first air only at y6, past the limit: nothing is placed.</li>
+     * </ul>
+     * Every oil block must be searing crude (the Nether's), never the cool crude the plain spout places.
+     */
+    public static void testNetherCavernSpoutStopsAtFirstAirAndKeepsRoof(GameTestHelper helper) {
+        // Writes go through the chunk-presence guard, so every chunk the cell touches must be there before the
+        // structure runs: the cell crosses a chunk border in about 57% of runs.
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + CAVERN_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, CAVERN_WORK_TICKS, () -> true),
+                () -> {
+                    int ceilingAbs = helper.absolutePos(new BlockPos(0, CAVERN_CEILING_REL_Y, 0)).getY();
+
+                    // Column A: pocket rock, an air gap, a bedrock roof.
+                    buildCavernColumn(helper, 1, 2, Blocks.BEDROCK);
+                    runCavernSpout(helper, new BlockPos(1, 1, 2), 2, ceilingAbs);
+                    assertCavernOil(helper, 1, 2, 1, 4);
+                    assertCavernBlock(helper, new BlockPos(1, 5, 2), Blocks.AIR, "the gap above the column");
+                    assertCavernBlock(helper, new BlockPos(1, 6, 2), Blocks.BEDROCK, "the bedrock roof");
+
+                    // Column B: a stone roof, a column taller than the room under the limit.
+                    buildCavernColumn(helper, 3, 2, Blocks.STONE);
+                    runCavernSpout(helper, new BlockPos(3, 1, 2), 6, ceilingAbs);
+                    assertCavernOil(helper, 3, 2, 1, 5);
+                    assertCavernBlock(helper, new BlockPos(3, 6, 2), Blocks.STONE, "the stone roof past the limit");
+
+                    // Column C: bedrock between the pocket and the first air.
+                    buildCavernColumn(helper, 5, 2, Blocks.BEDROCK);
+                    helper.setBlock(new BlockPos(5, 2, 2), Blocks.BEDROCK);
+                    runCavernSpout(helper, new BlockPos(5, 1, 2), 2, ceilingAbs);
+                    assertCavernBlock(helper, new BlockPos(5, 1, 2), Blocks.STONE, "the pocket rock under bedrock");
+                    assertCavernBlock(helper, new BlockPos(5, 3, 2), Blocks.AIR, "the air above the bedrock");
+
+                    // Column D: solid up to the limit, air only beyond it.
+                    for (int y = 1; y <= 5; y++) {
+                        helper.setBlock(new BlockPos(1, y, 4), Blocks.STONE);
+                    }
+                    runCavernSpout(helper, new BlockPos(1, 1, 4), 2, ceilingAbs);
+                    for (int y = 1; y <= 5; y++) {
+                        assertCavernBlock(helper, new BlockPos(1, y, 4), Blocks.STONE, "solid rock with no air in reach");
+                    }
+                    assertCavernBlock(helper, new BlockPos(1, 6, 4), Blocks.AIR, "the air beyond the limit");
+                    helper.succeed();
+                },
+                "The arena cell never started ticking",
+                () -> {
+                    for (BlockPos column : CAVERN_COLUMNS) {
+                        for (int y = 0; y < EntityArenaUtil.CELL_SIZE_Y; y++) {
+                            helper.setBlock(new BlockPos(column.getX(), y, column.getZ()), Blocks.AIR);
+                        }
+                    }
+                });
+    }
+
+    /** Stone at y1-2, air at y3-5 and {@code roof} at y6 over the column at relative (x, z). */
+    private static void buildCavernColumn(GameTestHelper helper, int x, int z, Block roof) {
+        helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+        helper.setBlock(new BlockPos(x, 2, z), Blocks.STONE);
+        for (int y = 3; y <= 5; y++) {
+            helper.setBlock(new BlockPos(x, y, z), Blocks.AIR);
+        }
+        helper.setBlock(new BlockPos(x, 6, z), roof);
+    }
+
+    /** Runs a radius-0 searing cavern spout from {@code startRel} against its own box. */
+    private static void runCavernSpout(GameTestHelper helper, BlockPos startRel, int height, int ceilingAbs) {
+        OilGenStructure spout = new OilGenStructure.CavernSpout(helper.absolutePos(startRel),
+                OilGenStructure.ReplaceType.NOT_BEDROCK, 0, height, ceilingAbs, BCEnergyFluids.OIL_SEARING);
+        spout.generate(helper.getLevel(), spout.box);
+    }
+
+    /** Every block of the column at relative (x, z) from y {@code from} to {@code to} must be a searing crude
+     *  source. */
+    private static void assertCavernOil(GameTestHelper helper, int x, int z, int from, int to) {
+        for (int y = from; y <= to; y++) {
+            BlockPos rel = new BlockPos(x, y, z);
+            BlockState state = helper.getBlockState(rel);
+            if (!state.is(BCEnergyFluids.OIL_SEARING.block().get()) || !state.getFluidState().isSource()) {
+                helper.fail("Expected a searing crude oil source at " + rel + " but found " + state);
+            }
+        }
+    }
+
+    private static void assertCavernBlock(GameTestHelper helper, BlockPos rel, Block expected, String what) {
+        BlockState state = helper.getBlockState(rel);
+        if (!state.is(expected)) {
+            helper.fail("Expected " + what + " (" + expected + ") at " + rel + " to be untouched but found " + state);
+        }
     }
 
     /**

@@ -111,6 +111,8 @@ public class TileFiller extends TileBC_Neptune
     private boolean finished = false;
     private byte lockedTicks = 0;
     private Mode mode = Mode.ON;
+    /** Server only, not saved: whether {@link #migrateOrphanedBoxOnce} has had its one look this load. */
+    private boolean orphanedBoxChecked;
 
     public final Box box = new Box();
     public boolean markerBox = true;
@@ -205,17 +207,7 @@ public class TileFiller extends TileBC_Neptune
             box.reset();
             box.setMin(volumeBox.box.min());
             box.setMax(volumeBox.box.max());
-            volumeBox.locks.add(
-                new Lock(
-                    new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
-                    new Lock.Target.TargetRemove(),
-                    new Lock.Target.TargetResize(),
-                    new Lock.Target.TargetUsedByMachine(
-                        Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
-                    )
-                )
-            );
-            volumeBoxes.markDirtyAndBroadcast();
+            lockVolumeBox(volumeBoxes, volumeBox, blockState);
             markerBox = false;
         } else if (tile instanceof IAreaProvider provider) {
             box.reset();
@@ -227,6 +219,70 @@ public class TileFiller extends TileBC_Neptune
         updateBuildingInfo();
         setChanged();
         // Sync to client so the box data reaches the renderer (BER outline) — no chunk re-mesh needed.
+        if (level != null && !level.isClientSide()) {
+            markForRenderUpdate();
+        }
+    }
+
+    /** Pins {@code volumeBox} to this Filler's block (no remove, no resize) unless a lock of this very block is already there. */
+    private void lockVolumeBox(LevelSavedDataVolumeBoxes volumeBoxes, VolumeBox volumeBox, BlockState blockState) {
+        boolean locked = volumeBox.locks.stream().anyMatch(lock ->
+            lock.cause instanceof Lock.Cause.CauseBlock cause
+                && worldPosition.equals(cause.pos) && cause.block == blockState.getBlock());
+        if (locked) {
+            return;
+        }
+        volumeBox.locks.add(
+            new Lock(
+                new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
+                new Lock.Target.TargetRemove(),
+                new Lock.Target.TargetResize(),
+                new Lock.Target.TargetUsedByMachine(
+                    Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
+                )
+            )
+        );
+        volumeBoxes.markDirtyAndBroadcast();
+    }
+
+    /**
+     * Server, the first tick after this Filler loads: a Filler that was driven by a Filler Planner (a Volume Box addon,
+     * since removed) is bound to its box ({@code markerBox} false) yet never copied the box into itself, so it loads with
+     * no box and does nothing while the box stays pinned by its lock. This takes the box over exactly as
+     * {@link #onPlacedBy} does, together with the pattern and invert flag the planner held. Every other Filler (one
+     * placed with nothing behind it, or one that already holds its box) is left alone, and it never looks again this
+     * load. {@code volumeBoxes} is asked for only when there is something to look for.
+     */
+    void migrateOrphanedBoxOnce(java.util.function.Supplier<LevelSavedDataVolumeBoxes> volumeBoxes) {
+        if (orphanedBoxChecked) {
+            return;
+        }
+        orphanedBoxChecked = true;
+        if (box.isInitialized() || markerBox) {
+            return;
+        }
+        BlockState blockState = getBlockState();
+        Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
+        LevelSavedDataVolumeBoxes savedBoxes = volumeBoxes.get();
+        VolumeBox volumeBox = savedBoxes.getVolumeBoxAt(worldPosition.relative(facing.getOpposite()));
+        if (volumeBox == null) {
+            return;
+        }
+        box.reset();
+        box.setMin(volumeBox.box.min());
+        box.setMax(volumeBox.box.max());
+        lockVolumeBox(savedBoxes, volumeBox, blockState);
+        VolumeBox.RetiredPlanner planner = volumeBox.takeRetiredPlanner();
+        if (planner != null) {
+            if (!planner.pattern().isEmpty()) {
+                patternStatement.readFromNbt(planner.pattern());
+            }
+            inverted = planner.inverted();
+            // The planner's state is spent: the next save of the boxes leaves the retired addon out.
+            savedBoxes.setDirty();
+        }
+        updateBuildingInfo();
+        setChanged();
         if (level != null && !level.isClientSide()) {
             markForRenderUpdate();
         }
@@ -275,6 +331,7 @@ public class TileFiller extends TileBC_Neptune
             }
             return;
         }
+        migrateOrphanedBoxOnce(() -> LevelSavedDataVolumeBoxes.get(level));
         battery.tick(level, worldPosition);
         lockedTicks--;
         if (lockedTicks < 0) {

@@ -34,6 +34,7 @@ public class FillerPreviewTester {
     private static final BlockPos FILLER = new BlockPos(5, 1, 5);
     private static final BlockPos FIRST_STONE = new BlockPos(3, 2, 3);
     private static final BlockPos SECOND_STONE = new BlockPos(2, 1, 2);
+    private static final BlockPos THIRD_STONE = new BlockPos(4, 3, 4);
 
     /** The wait, once the cell ticks, before the box is set up (immediate: the gate's condition is already true). */
     private static final int READY_WORK_TICKS = 10;
@@ -120,6 +121,9 @@ public class FillerPreviewTester {
         // A changed pattern builds new building info, and what was kept for the old one must never be drawn again.
         switchesPatternWithoutDrawingTheOldCells(helper, level, filler, state);
 
+        // A pass that took longer than RESCAN_TICKS is trusted for as long as it took.
+        restsAsLongAsTheLastPassTook(helper, level, state);
+
         // A block that lands in the box is not noticed until the cache scans again, which is the point of the cache.
         helper.setBlock(SECOND_STONE, Blocks.STONE);
         helper.assertTrue(state.cache.cellsToDraw(level, state.info, state.camera).size() == 26,
@@ -170,6 +174,39 @@ public class FillerPreviewTester {
             "the frame's pass is done: exactly its 20 cells, not what the abandoned fill pass had found");
     }
 
+    /**
+     * A box too big to read in {@code RESCAN_TICKS} keeps a pass running for many ticks; the wait after it used to be
+     * the fixed {@code RESCAN_TICKS}, so the next pass was under way for most of the time and a client read a slice of
+     * the box every frame. Here one cell is read per "frame" and one frame happens per tick, on an explicit clock: the
+     * pass over the 27 cells takes 26 ticks. A block that lands right after it must not show until the idle gap, as
+     * long as the pass took, is over and the pass after it has read all 27 cells (a gap of {@code RESCAN_TICKS} would
+     * show it 26 ticks earlier), and it must show eventually.
+     */
+    private static void restsAsLongAsTheLastPassTook(GameTestHelper helper, ServerLevel level, State state) {
+        final long start = 1000;
+        final int passTicks = 26;
+        FillPreviewCache cache = new FillPreviewCache(30, 1);
+        List<BlockPos> drawn = List.of();
+        for (long now = start; now <= start + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+        }
+        helper.assertTrue(drawn.size() == 26, "the pass over the 27 cells ends with the 26 empty ones, got " + drawn.size());
+
+        helper.setBlock(THIRD_STONE, Blocks.STONE);
+        // Idle for passTicks (26): the next pass starts at start + 52 and ends at start + 78.
+        for (long now = start + passTicks + 1; now < start + 2 * passTicks + passTicks; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+            helper.assertTrue(drawn.size() == 26, "tick " + (now - start) + ": the 26 tick pass was followed by less than 26 idle ticks,"
+                + " the new block is already shown");
+        }
+        // The gap is "at least" the pass: given a few ticks more than that, the rescan must have come.
+        for (long now = start + 3 * passTicks; now <= start + 3 * passTicks + FillPreviewCache.RESCAN_TICKS; now++) {
+            drawn = cache.cellsToDraw(level, state.info, state.camera, now);
+        }
+        helper.assertTrue(drawn.size() == 25, "the block that landed was never noticed, got " + drawn.size() + " cells");
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
+    }
+
     private static void secondLook(GameTestHelper helper, State state) {
         ServerLevel level = helper.getLevel();
         BlockPos second = helper.absolutePos(SECOND_STONE);
@@ -191,6 +228,7 @@ public class FillerPreviewTester {
         helper.setBlock(FILLER, Blocks.AIR);
         helper.setBlock(FIRST_STONE, Blocks.AIR);
         helper.setBlock(SECOND_STONE, Blocks.AIR);
+        helper.setBlock(THIRD_STONE, Blocks.AIR);
     }
 
     private static double distance(BlockPos cell, Vec3 camera) {

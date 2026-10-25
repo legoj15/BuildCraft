@@ -100,7 +100,8 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         );
     }
 
-    static LevelSavedDataVolumeBoxes fromNbt(CompoundTag nbt, Level world) {
+    /** The boxes as the world save wrote them. */
+    public static LevelSavedDataVolumeBoxes fromNbt(CompoundTag nbt, Level world) {
         LevelSavedDataVolumeBoxes instance = new LevelSavedDataVolumeBoxes(world);
         if (nbt.contains("volumeBoxes")) {
             ListTag listTag = NBTUtilBC.getList(nbt, "volumeBoxes", Tag.TAG_COMPOUND);
@@ -116,11 +117,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return instance;
     }
 
-    private static CompoundTag toNbt(LevelSavedDataVolumeBoxes data) {
+    /** The boxes as the world save writes them. */
+    public static CompoundTag toNbt(LevelSavedDataVolumeBoxes data) {
         CompoundTag nbt = new CompoundTag();
         ListTag listTag = new ListTag();
         for (VolumeBox volumeBox : data.volumeBoxes) {
-            listTag.add(volumeBox.writeToNBT());
+            listTag.add(volumeBox.writeToDiskNBT());
         }
         nbt.put("volumeBoxes", listTag);
         return nbt;

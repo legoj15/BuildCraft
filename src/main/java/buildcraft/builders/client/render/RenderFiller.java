@@ -104,8 +104,13 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
     public RenderFiller(BlockEntityRendererProvider.Context context) {
     }
 
-    // A block entity renderer is only reached through its block's chunk section being on screen unless it is rendered
-    // "off screen" (globally); the preview has to outlive the Filler block leaving view, so every Filler is.
+    // A block entity renderer is otherwise only reached through its block's chunk section being visible; rendered "off
+    // screen" (globally) skips that section test, which the preview needs to outlive the Filler block leaving view.
+    // It keeps the frustum test of getRenderBoundingBox on every node (block-sized with the preview off, so a Filler
+    // that is out of view is never extracted) and shouldRender's distance gate. All a preview-off Filler gives up is
+    // the section's occlusion culling: one inside the frustum but hidden behind terrain still draws its LEDs. It cannot
+    // be narrowed per tile: 1.21.10 and later ask once per renderer when a tile is added (ClientLevel.onBlockEntityAdded),
+    // and 1.21.1 asks per tile but only when a section compiles, which a preview toggle (no re-mesh) never triggers.
     //? if >=1.21.10 {
     @Override
     public boolean shouldRenderOffScreen() {

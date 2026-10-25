@@ -11,4 +11,4 @@
 - The Filler has a Preview toggle (the eye button on its screen). On, it draws see-through cubes over every spot its pattern still has to fill, for everyone near it, and hides them while it is placing or breaking blocks. It replaces the Filler Planner: the Filler Planner item and the Volume Box addon spots are gone, so Filler Planners in inventories and on Volume Boxes disappear.
 - Changing a Filler's pattern, parameters, invert toggle or box now reaches other players watching it straight away.
 - The Zone Planner's map now shows terrain past your render distance: anywhere in its survey area that someone has visited is drawn from what the server remembers, without loading any chunks.
-- Facades cast the same soft corner shadows as the blocks they copy, so a wall or floor of facades blends with real blocks instead of each facade looking flat-lit. Hollow facades stay unshaded.
+- Facades cast soft corner shadows like the blocks they copy, so a wall or floor of facades blends with real blocks instead of each facade looking flat-lit. A pipe with any solid facade shades the blocks on all its sides, like a full block would; hollow facades cast none.

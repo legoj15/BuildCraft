@@ -162,31 +162,45 @@ public class TileFillerPreviewTest {
         Assertions.assertSame(first, client.getTemplateBuildingInfo(), "nothing changed, so nothing should be rebuilt");
     }
 
+    /** What the server sends for a builder that drew power lately (its own builder is not run here; the game test
+     *  {@code filler_slow_feed_syncs_as_working} runs a real one and checks the flag is what it sends). */
+    private static void building(CompoundTag data) {
+        data.putBoolean("building", true);
+    }
+
     @Test
-    public void aQueueAloneIsNotWorkOnlyARunningPoweredFillerWithOneIs() {
+    public void aQueueIsOnlyWorkWhileTheServerSaysTheFillerIsBuilding() {
         TileFiller server = server();
         TileFiller client = client();
 
         sync(server, client);
         queueAPlacement(client);
-        Assertions.assertFalse(client.hasWorkInFlight(), "no power in the battery: the queue is waiting, not placing");
+        Assertions.assertFalse(client.hasWorkInFlight(), "the server has seen no progress: the queue is waiting, not placing");
 
         server.getBattery().setStored(5 * MjAPI.MJ);
         sync(server, client);
         queueAPlacement(client);
-        Assertions.assertTrue(client.hasWorkInFlight(), "a running, powered Filler with a block queued is working");
+        Assertions.assertFalse(client.hasWorkInFlight(),
+                "power in the battery is no sign of work: what a builder draws is gone before the battery is synced");
 
-        sync(server, client);
+        sync(server, client, TileFillerPreviewTest::building);
+        queueAPlacement(client);
+        Assertions.assertTrue(client.hasWorkInFlight(), "a Filler the server says is building, with a block queued, is working");
+
+        sync(server, client, TileFillerPreviewTest::building);
         Assertions.assertFalse(client.hasWorkInFlight(), "nothing queued: nothing is being placed");
 
         server.setControlMode(Mode.OFF);
-        sync(server, client);
+        sync(server, client, TileFillerPreviewTest::building);
         queueAPlacement(client);
         Assertions.assertFalse(client.hasWorkInFlight(),
                 "switched OFF mid-build: the synced queue stays, but nothing is placed, so the preview must show");
 
         server.setControlMode(Mode.ON);
-        sync(server, client, data -> data.putBoolean("finished", true));
+        sync(server, client, data -> {
+            building(data);
+            data.putBoolean("finished", true);
+        });
         queueAPlacement(client);
         Assertions.assertFalse(client.hasWorkInFlight(), "a finished Filler places nothing, whatever its queue holds");
     }

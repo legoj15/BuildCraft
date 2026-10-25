@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:filler_slow_feed_syncs_as_working",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 110,
+    "setup_ticks": 0,
+    "required": true
+}

@@ -117,10 +117,57 @@ public class FillerPreviewTester {
         helper.assertTrue(state.slow.cellsToDraw(level, state.info, state.camera).size() == 26,
             "27 of 27 cells read: the pass is done and shows the 26 empty cells");
 
+        // A changed pattern builds new building info, and what was kept for the old one must never be drawn again.
+        switchesPatternWithoutDrawingTheOldCells(helper, level, filler, state);
+
         // A block that lands in the box is not noticed until the cache scans again, which is the point of the cache.
         helper.setBlock(SECOND_STONE, Blocks.STONE);
         helper.assertTrue(state.cache.cellsToDraw(level, state.info, state.camera).size() == 26,
             "the box was walked again within the cache's trust window");
+    }
+
+    /**
+     * The Filler's pattern goes from a solid fill to a frame, and both caches are 8-cells-a-frame so a pass takes
+     * several frames. The cell in the middle of a face is in the fill and not in the frame: seeing it after the switch
+     * means the old cells were drawn. Two cases, one per identity check in the cache: the old pass had finished (the
+     * kept cells must go the moment the new info shows up), and the old pass was still running (it must be dropped,
+     * not carried on into the new info's result).
+     */
+    private static void switchesPatternWithoutDrawingTheOldCells(GameTestHelper helper, ServerLevel level,
+                                                                   TileFiller filler, State state) {
+        BlockPos oldOnly = helper.absolutePos(new BlockPos(3, 2, 2));
+        filler.patternStatement.set(BCBuildersStatements.PATTERN_FRAME);
+        filler.onStatementChange();
+        Template.BuildingInfo frame = filler.getTemplateBuildingInfo();
+        helper.assertTrue(frame != null && frame != state.info, "a new pattern should give new building info");
+        Set<BlockPos> frameCells = new HashSet<>(FillPreview.collect(frame, pos -> FillPreview.isFillable(level, pos)));
+        helper.assertTrue(frameCells.size() == 20 && !frameCells.contains(oldOnly),
+            "the frame of the 3x3x3 box is its 20 edge cells, none of them a face's middle, got " + frameCells.size());
+
+        // The old pass had finished.
+        FillPreviewCache finished = new FillPreviewCache(30, 8);
+        for (int frameNumber = 1; frameNumber <= 4; frameNumber++) {
+            finished.cellsToDraw(level, state.info, state.camera);
+        }
+        helper.assertTrue(finished.cellsToDraw(level, state.info, state.camera).contains(oldOnly),
+            "precondition: the solid fill's cells are being drawn");
+        helper.assertTrue(finished.cellsToDraw(level, frame, state.camera).isEmpty(),
+            "8 of the frame's 20 cells read: none of the old fill may be drawn while the new pass runs");
+        helper.assertTrue(finished.cellsToDraw(level, frame, state.camera).isEmpty(),
+            "16 of the frame's 20 cells read: none of the old fill may be drawn while the new pass runs");
+        helper.assertTrue(new HashSet<>(finished.cellsToDraw(level, frame, state.camera)).equals(frameCells),
+            "the frame's pass is done: exactly its 20 cells");
+
+        // The old pass was only 8 of 27 cells in.
+        FillPreviewCache midPass = new FillPreviewCache(30, 8);
+        helper.assertTrue(midPass.cellsToDraw(level, state.info, state.camera).isEmpty(),
+            "precondition: 8 of the fill's 27 cells read, nothing to show yet");
+        helper.assertTrue(midPass.cellsToDraw(level, frame, state.camera).isEmpty(),
+            "8 of the frame's 20 cells read: the old pass must not be carried on");
+        helper.assertTrue(midPass.cellsToDraw(level, frame, state.camera).isEmpty(),
+            "16 of the frame's 20 cells read: the old pass must not be carried on");
+        helper.assertTrue(new HashSet<>(midPass.cellsToDraw(level, frame, state.camera)).equals(frameCells),
+            "the frame's pass is done: exactly its 20 cells, not what the abandoned fill pass had found");
     }
 
     private static void secondLook(GameTestHelper helper, State state) {

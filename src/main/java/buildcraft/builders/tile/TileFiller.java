@@ -7,6 +7,7 @@
 package buildcraft.builders.tile;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -85,6 +86,14 @@ public class TileFiller extends TileBC_Neptune
 
     public static final int INV_SIZE = 27;
 
+    /**
+     * How recent the builder's last real progress (power drawn into a task, a task finished) must be for the Filler to
+     * count as building, in game ticks. Four sync periods (the tile pushes its data every 5 ticks while a build runs):
+     * a Filler that is working has progressed within a tick or two of every sync, even one fed less than a single
+     * pulse a second, so a longer gap means it is waiting for power, not building.
+     */
+    public static final int PROGRESS_WINDOW_TICKS = 20;
+
     public static final Identifier ADVANCEMENT_BUILDING_FOR_THE_FUTURE =
         Identifier.parse("buildcraftunofficial:building_for_the_future");
 
@@ -117,6 +126,10 @@ public class TileFiller extends TileBC_Neptune
     private Template.BuildingInfo buildingInfo;
     /** What {@link #buildingInfo} was last built from, so a client copy can tell a changed pattern from a repeated sync. */
     private BuildKey builtFrom;
+    /** Server only: the game time of the last tick the builder made progress ({@link SnapshotBuilder#madeProgress()}). */
+    private long lastProgressTick = Long.MIN_VALUE / 2;
+    /** Client only: the server's word, sent with every sync, that the builder progressed lately. */
+    private boolean serverBuilding;
     /** Client only: the cells the preview draws, kept between frames. */
     public final FillPreviewCache previewCache = new FillPreviewCache();
     /** Client only: {@link #getRenderBounds()}, and what it was made from. */
@@ -273,6 +286,9 @@ public class TileFiller extends TileBC_Neptune
                 b.onNetworkSync();
             }
             boolean done = b.tick();
+            if (b.madeProgress()) {
+                lastProgressTick = level.getGameTime();
+            }
             if (done) {
                 // Gated on !finished so the LOOP-completion advancement fires only on the
                 // false→true transition — in LOOP mode this branch re-enters every tick once
@@ -316,6 +332,7 @@ public class TileFiller extends TileBC_Neptune
         output.putBoolean("canExcavate", canExcavate);
         output.putBoolean("inverted", inverted);
         output.putBoolean("showPreview", previewEnabled);
+        output.putBoolean("building", isBuildingNow());
         output.putBoolean("finished", finished);
         output.putByte("lockedTicks", lockedTicks);
         output.putByte("mode", (byte) mode.ordinal());
@@ -360,6 +377,7 @@ public class TileFiller extends TileBC_Neptune
         canExcavate = input.getBooleanOr("canExcavate", true);
         inverted = input.getBooleanOr("inverted", false);
         previewEnabled = input.getBooleanOr("showPreview", false);
+        serverBuilding = input.getBooleanOr("building", false);
         finished = input.getBooleanOr("finished", false);
         lockedTicks = input.getByteOr("lockedTicks", (byte) 0);
         int modeOrdinal = input.getByteOr("mode", (byte) 0);
@@ -753,13 +771,15 @@ public class TileFiller extends TileBC_Neptune
 
     /**
      * Client side: the area the Filler's renderer must stay alive for: the block, or with the preview on the block and
-     * the whole box. Kept until the preview toggle or the box changes, since the renderer asks every frame.
+     * the whole box. Rebuilt only when the preview toggle or the box changes (compared by value, since every sync hands
+     * over fresh position objects), because the renderer asks every frame.
      */
     public AABB getRenderBounds() {
         boolean withBox = previewEnabled && box.isInitialized();
         BlockPos min = withBox ? box.min() : null;
         BlockPos max = withBox ? box.max() : null;
-        if (renderBounds == null || withBox != renderBoundsWithBox || min != renderBoundsMin || max != renderBoundsMax) {
+        if (renderBounds == null || withBox != renderBoundsWithBox || !Objects.equals(min, renderBoundsMin)
+                || !Objects.equals(max, renderBoundsMax)) {
             AABB block = new AABB(worldPosition);
             renderBounds = withBox ? block.minmax(box.getBoundingBox()) : block;
             renderBoundsWithBox = withBox;
@@ -769,16 +789,27 @@ public class TileFiller extends TileBC_Neptune
         return renderBounds;
     }
 
+    /** Server side: whether the builder made progress within {@link #PROGRESS_WINDOW_TICKS}, as sent with every sync. */
+    private boolean isBuildingNow() {
+        return level != null && mode != Mode.OFF && !isFinished()
+            && level.getGameTime() - lastProgressTick <= PROGRESS_WINDOW_TICKS;
+    }
+
     /**
-     * Client side: true while this Filler is really placing or breaking blocks, which is what hides its preview.
-     * A queued task is not enough. The queue a client holds is only what the server last sent: a Filler switched OFF
-     * mid-build keeps it for good (an OFF server stops syncing), a finished one can too, and one with no power in its
-     * battery leaves it waiting for the energy to spend. So the Filler must also be running (not OFF, not finished) and
-     * have power in its battery (synced with every update); a battery that reads empty for a moment between engine
-     * pulses is bridged by the grace period of {@link FillPreviewCache#IDLE_GRACE_TICKS}.
+     * Client side: true while this Filler is really placing or breaking blocks, which is what hides its preview. A
+     * queued task is not enough, and neither is power in the battery:
+     * <ul>
+     * <li>A Filler switched OFF mid-build keeps the queue it last sent, since an OFF server stops syncing; and one with
+     *     no power leaves its queue waiting for energy to spend.</li>
+     * <li>The battery a client sees is what was left after the builder drew from it, so a Filler fed less than its draw
+     *     limit (about 0.82 MJ a tick when empty) syncs 0 MJ every time while it builds.</li>
+     * </ul>
+     * So the server says it: {@code building} is set when the builder drew power or finished a task within
+     * {@link #PROGRESS_WINDOW_TICKS}. The Filler must also be running (not OFF, not finished) with blocks still queued;
+     * a gap between tasks is bridged by the grace period of {@link FillPreviewCache#IDLE_GRACE_TICKS}.
      */
     public boolean hasWorkInFlight() {
-        return mode != Mode.OFF && !isFinished() && hasPower()
+        return serverBuilding && mode != Mode.OFF && !isFinished()
             && builder != null && (!builder.clientBreakTasks.isEmpty() || !builder.clientPlaceTasks.isEmpty());
     }
 

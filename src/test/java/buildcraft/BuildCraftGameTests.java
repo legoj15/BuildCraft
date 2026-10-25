@@ -410,6 +410,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:filler_block_item_filter", () -> buildcraft.builders.FillerInventoryTester::testFillerBlockItemFilter);
         // The Filler's preview cubes: only cells still empty, farthest first, the nearest kept past the cap, scanned rarely.
         reg.accept("buildcraftunofficial:filler_preview_draws_only_empty_cells_farthest_first", () -> buildcraft.builders.FillerPreviewTester::previewDrawsOnlyWhatIsStillEmptyFarthestFirst);
+        // A weakly fed Filler spends its power as it arrives: the work signal clients get must still read as working.
+        reg.accept("buildcraftunofficial:filler_slow_feed_syncs_as_working", () -> buildcraft.builders.tile.FillerProgressTester::aSlowlyFedFillerSyncsAsWorkingAndAStarvedOneDoesNot);
 
         // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
         reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);

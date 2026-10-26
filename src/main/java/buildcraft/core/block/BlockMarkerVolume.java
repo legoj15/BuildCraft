@@ -18,6 +18,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import javax.annotation.Nullable;
 
 import buildcraft.lib.block.BlockMarkerBase;
+
+import buildcraft.core.item.ItemMarkerConnector;
 import buildcraft.core.tile.TileMarkerVolume;
 
 public class BlockMarkerVolume extends BlockMarkerBase {
@@ -35,7 +37,9 @@ public class BlockMarkerVolume extends BlockMarkerBase {
             Player player, BlockHitResult hitResult) {
         if (!world.isClientSide()) {
             BlockEntity tile = world.getBlockEntity(pos);
-            if (tile instanceof TileMarkerVolume volume) {
+            if (tile instanceof TileMarkerVolume volume
+                && !(player.getMainHandItem().getItem() instanceof ItemMarkerConnector
+                    && ItemMarkerConnector.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
                 volume.onManualConnectionAttempt(player);
             }
         }

@@ -7,6 +7,7 @@
 package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -19,11 +20,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.data.Box;
+
+import buildcraft.core.tile.TileMarkerVolume;
 
 public class VolumeBox {
     /** The registered name of the Filler Planner addon in the {@code addonClass} of an old save's {@code addons} entry. */
@@ -40,6 +45,13 @@ public class VolumeBox {
     public final List<Lock> locks = new ArrayList<>();
     @Nullable
     private RetiredPlanner retiredPlanner = null;
+    /**
+     * True for a box lifted off volume markers with the Marker Connector: a machine takes it the way it takes markers
+     * (copies the area and removes the box) instead of locking it, so it is used once.
+     */
+    private boolean oneShot = false;
+    /** The markers still backing a one-shot box that has not been confirmed yet; empty once they broke. */
+    private final List<BlockPos> sourceMarkers = new ArrayList<>();
 
     /**
      * What the retired Filler Planner addon kept for the Filler beside its box: the pattern statement (as
@@ -98,6 +110,14 @@ public class VolumeBox {
             }
         }
 
+        oneShot = NBTUtilBC.getBoolean(nbt, "oneShot", false);
+        if (nbt.contains("sourceMarkers")) {
+            ListTag markerList = NBTUtilBC.getList(nbt, "sourceMarkers", Tag.TAG_COMPOUND);
+            for (int i = 0; i < markerList.size(); i++) {
+                sourceMarkers.add(NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(markerList, i)));
+            }
+        }
+
         if (nbt.contains("locks")) {
             ListTag locksList = NBTUtilBC.getList(nbt, "locks", Tag.TAG_COMPOUND);
             for (int i = 0; i < locksList.size(); i++) {
@@ -117,6 +137,51 @@ public class VolumeBox {
     @Nullable
     public RetiredPlanner retiredPlanner() {
         return retiredPlanner;
+    }
+
+    /** A box lifted off the markers at {@code markers}, spanning {@code min}..{@code max}. */
+    public static VolumeBox fromMarkers(Level world, BlockPos min, BlockPos max, Collection<BlockPos> markers) {
+        VolumeBox volumeBox = new VolumeBox(world, min);
+        volumeBox.box.extendToEncompass(max);
+        volumeBox.oneShot = true;
+        volumeBox.sourceMarkers.addAll(markers);
+        return volumeBox;
+    }
+
+    public boolean isOneShot() {
+        return oneShot;
+    }
+
+    /** True while markers still back this box: it has not been confirmed with a new size yet. */
+    public boolean hasSourceMarkers() {
+        return !sourceMarkers.isEmpty();
+    }
+
+    /** True while editing, when the box no longer spans what it spanned when editing began. */
+    public boolean sizeChangedWhileEditing() {
+        return oldMin != null && oldMax != null && !(box.min().equals(oldMin) && box.max().equals(oldMax));
+    }
+
+    /** True when the volume marker at {@code pos} still backs this box. */
+    public boolean isBackedBy(BlockPos pos) {
+        return sourceMarkers.contains(pos);
+    }
+
+    /**
+     * Breaks the volume markers that still back this box, dropping each as an item, as a machine taking them does.
+     * Returns how many were still there to break.
+     */
+    public int breakSourceMarkers() {
+        int broken = 0;
+        for (BlockPos p : sourceMarkers) {
+            if (world.getBlockEntity(p) instanceof TileMarkerVolume) {
+                Block.popResource(world, p, new ItemStack(world.getBlockState(p).getBlock()));
+                world.destroyBlock(p, false);
+                broken++;
+            }
+        }
+        sourceMarkers.clear();
+        return broken;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -237,6 +302,17 @@ public class VolumeBox {
         }
         if (oldMax != null) {
             nbt.put("oldMax", NBTUtilBC.writeBlockPos(oldMax));
+        }
+
+        if (oneShot) {
+            nbt.putBoolean("oneShot", true);
+        }
+        if (!sourceMarkers.isEmpty()) {
+            ListTag markerList = new ListTag();
+            for (BlockPos p : sourceMarkers) {
+                markerList.add(NBTUtilBC.writeBlockPos(p));
+            }
+            nbt.put("sourceMarkers", markerList);
         }
 
         ListTag locksList = new ListTag();

@@ -1265,6 +1265,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:legacy_saved_data_volume_boxes_use_storage_level", () -> buildcraft.lib.misc.LegacySavedDataTester::volumeBoxesTypeBuildsForTheStoragesLevel);
         // Removing a box that was on disk at load reaches the clients (no ghost box until rejoin).
         reg.accept("buildcraftunofficial:volume_box_loaded_removal_reaches_clients", () -> buildcraft.core.marker.volume.VolumeBoxSyncTester::removingABoxLoadedFromDiskReachesClients);
+        reg.accept("buildcraftunofficial:volume_box_one_shot_taken_once", () -> buildcraft.core.marker.volume.VolumeBoxOneShotTester::markerBoxIsTakenOnceAfterTheMarkersBreak);
         reg.accept("buildcraftunofficial:robot_charging_latch_rules", () -> buildcraft.robotics.entity.RobotChargingLatchTester::chargingLatchFollowsAcceptedPowerAndDrains);
 
         // Robotics removal sweep — every reservation a robot holds is freed when it unloads or dies, and the

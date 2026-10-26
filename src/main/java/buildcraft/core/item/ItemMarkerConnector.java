@@ -34,10 +34,12 @@ import buildcraft.lib.misc.PositionUtil.LineSkewResult;
 import buildcraft.lib.misc.VecUtil;
 
 import buildcraft.core.marker.PathSubCache;
+import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
+import buildcraft.core.tile.TileMarkerVolume;
 
 public class ItemMarkerConnector extends Item {
 
@@ -113,7 +115,7 @@ public class ItemMarkerConnector extends Item {
         ).didInteract();
     }
 
-    private InteractionResult onUseVolumeBoxes(Level level, Player player) {
+    private static InteractionResult onUseVolumeBoxes(Level level, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.PASS;
         }
@@ -141,7 +143,12 @@ public class ItemMarkerConnector extends Item {
                     }
                 }
             } else {
-                currentEditing.cancelEditing();
+                if (currentEditing.hasSourceMarkers()) {
+                    // Cancelling a box lifted off markers drops the box; the markers keep working.
+                    volumeBoxes.volumeBoxes.remove(currentEditing);
+                } else {
+                    currentEditing.cancelEditing();
+                }
                 volumeBoxes.markDirtyAndBroadcast();
                 return InteractionResult.SUCCESS;
             }
@@ -198,12 +205,72 @@ public class ItemMarkerConnector extends Item {
                     return InteractionResult.SUCCESS;
                 }
             } else {
+                if (currentEditing.hasSourceMarkers()) {
+                    // The markers no longer match: they break as if a machine took them, and the box stays. If none
+                    // were left to break (a machine took them, or they were broken by hand), the box goes too.
+                    if (!currentEditing.sizeChangedWhileEditing() || currentEditing.breakSourceMarkers() == 0) {
+                        // Same size as the markers (they already describe it), or nothing left to take it from.
+                        volumeBoxes.volumeBoxes.remove(currentEditing);
+                    }
+                }
                 currentEditing.confirmEditing();
                 volumeBoxes.markDirtyAndBroadcast();
                 return InteractionResult.SUCCESS;
             }
         }
         return InteractionResult.FAIL;
+    }
+
+    /**
+     * Server: the Marker Connector used on the volume marker at {@code markerPos}, hit at {@code hit}. While the player
+     * drags a box this confirms it, as a click anywhere else does. Otherwise, when that marker is a corner of a
+     * connected volume no box already covers or lifted, the markers' box is lifted into a one-shot {@link VolumeBox}
+     * and resizing starts from that corner. Returns false when the click was neither, so the marker handles it.
+     */
+    public static boolean onUseOnVolumeMarker(Level level, Player player, BlockPos markerPos, Vec3 hit) {
+        if (level.isClientSide() || player.isShiftKeyDown()
+            || !(level.getBlockEntity(markerPos) instanceof TileMarkerVolume marker)) {
+            return false;
+        }
+        LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
+        VolumeBox editing = volumeBoxes.getCurrentEditing(player);
+        if (editing != null) {
+            // Its own markers sit on the corners of a lifted box, so a click on one is a confirm; while dragging any
+            // other box, a click on a marker still connects it.
+            return editing.hasSourceMarkers() && onUseVolumeBoxes(level, player).consumesAction();
+        }
+        VolumeConnection connection = marker.getCurrentConnection();
+        if (connection == null || !connection.getBox().isCorner(markerPos)) {
+            return false;
+        }
+        if (volumeBoxes.getVolumeBoxAt(markerPos) != null
+            || volumeBoxes.volumeBoxes.stream().anyMatch(box -> box.isBackedBy(markerPos))) {
+            return false;
+        }
+        BlockPos min = connection.getBox().min();
+        BlockPos max = connection.getBox().max();
+        VolumeBox lifted = VolumeBox.fromMarkers(level, min, max, connection.getMarkerPositions());
+        // Hold the corner opposite the clicked one, so the clicked corner follows the player's look.
+        BlockPos held = new BlockPos(
+            markerPos.getX() == min.getX() ? max.getX() : min.getX(),
+            markerPos.getY() == min.getY() ? max.getY() : min.getY(),
+            markerPos.getZ() == min.getZ() ? max.getZ() : min.getZ());
+        // Drag at the middle of the look ray's run through the marker's block, so the corner starts on the marker. The
+        // usual 1.5 floor would put it a block past a marker clicked from closer than that, and the hit point itself
+        // can sit on the block's face.
+        Vec3 eye = player.position().add(0, player.getEyeHeight(), 0);
+        Vec3 far = eye.add(player.getLookAngle().scale(hit.distanceTo(eye) + 2));
+        AABB block = new AABB(markerPos);
+        Optional<Vec3> entry = block.clip(eye, far);
+        Optional<Vec3> exit = block.clip(far, eye);
+        double dist = entry.isPresent() && exit.isPresent()
+            ? (entry.get().distanceTo(eye) + exit.get().distanceTo(eye)) / 2
+            : hit.distanceTo(eye) + 0.05;
+        lifted.setPlayer(player);
+        lifted.setHeldDistOldMinOldMax(held, dist, min, max);
+        volumeBoxes.volumeBoxes.add(lifted);
+        volumeBoxes.markDirtyAndBroadcast();
+        return true;
     }
 
     @SuppressWarnings("WeakerAccess")

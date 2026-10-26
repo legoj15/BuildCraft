@@ -84,6 +84,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.core.marker.VolumeCache;
 import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
+import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.tile.TileMarkerVolume;
 
 @SuppressWarnings("this-escape")
@@ -275,7 +276,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         BlockPos areaPos = worldPosition.relative(facing.getOpposite());
         BlockEntity tile = level.getBlockEntity(areaPos);
         BlockPos min = null, max = null;
-        if (tile instanceof IAreaProvider provider) {
+        IAreaProvider provider = tile instanceof IAreaProvider p ? p
+            : LevelSavedDataVolumeBoxes.get(level).getOneShotAreaAt(areaPos);
+        if (provider != null) {
             min = provider.min();
             max = provider.max();
             int dx = max.getX() - min.getX();

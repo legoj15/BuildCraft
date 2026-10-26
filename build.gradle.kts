@@ -319,6 +319,11 @@ dependencies {
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge-api:$jeiVersion")
     runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
 
+    // GuideME (AE2's guide library), opt-in for dev runs: `./gradlew :26.3:runClient -PwithGuideMe` loads it so the
+    // generated guide under assets/buildcraftunofficial/guides/ can be checked in-game. BC has no code dependency
+    // on it (the guide is resources only), so it stays off the default runtime and the test runs.
+    if (project.hasProperty("withGuideMe")) runtimeOnly("org.appliedenergistics:guideme:${property("guideme_version")}")
+
     // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the
     // 21.10.x line does not put it on the compile classpath — add it explicitly for that node.
     if (isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")

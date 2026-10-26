@@ -455,8 +455,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         if (connection == null || !connection.getBox().isCorner(markerPos)) {
             return false;
         }
-        if (volumeBoxes.getVolumeBoxAt(markerPos) != null
-            || volumeBoxes.volumeBoxes.stream().anyMatch(box -> box.isBackedBy(markerPos))) {
+        if (volumeBoxes.isReservedMarker(marker)) {
             return false;
         }
         BlockPos min = connection.getBox().min();

@@ -7,7 +7,6 @@
 package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +30,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -38,14 +38,13 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
-import net.minecraft.world.level.block.entity.BlockEntity;
-
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.IAreaProvider;
 
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.data.Box;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.core.marker.VolumeConnection;
@@ -163,12 +162,14 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
 
     /**
      * The box at {@code pos} a machine may lock and share (never a one-shot box, nor one another machine owns), or
-     * null. Boxes that machines already lock are included: Fillers backed onto one box from an old save share it.
+     * null. Boxes that machines already lock are included: Fillers backed onto one box from an old save share it. A
+     * box someone is dragging is not: its size is not settled yet.
      */
     @Nullable
     public VolumeBox getLockableVolumeBoxAt(BlockPos pos) {
         return volumeBoxes.stream()
-            .filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.getOwner() == null && volumeBox.box.contains(pos))
+            .filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.getOwner() == null && !volumeBox.isEditing()
+                && volumeBox.box.contains(pos))
             .findFirst().orElse(null);
     }
 
@@ -232,14 +233,18 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     /**
      * Whether the markers of {@code marker}'s connection are spoken for, so a machine placed against them takes
      * nothing. That is so when one of them backs a lifted box (a marker joined to the connection after the lift is not
-     * on the box's list, yet taking it takes the whole connection, the lifted markers included), and when one stands
-     * inside a volume box already (a confirmed floating box covers the area, and taking the markers would put a second
-     * box over it): the refusal a lift of such a marker makes too.
+     * on the box's list, yet taking it takes the whole connection, the lifted markers included), and when a volume box
+     * already overlaps the connection's area (taking the markers, or lifting them, would put a second box over it).
+     * Machines and the Marker Wrench's lift both ask this.
      */
     public boolean isReservedMarker(TileMarkerVolume marker) {
         VolumeConnection connection = marker.getCurrentConnection();
-        Collection<BlockPos> positions = connection == null ? List.of(marker.getBlockPos()) : connection.getMarkerPositions();
-        return positions.stream().anyMatch(pos -> isBackingLiftedBox(pos) || getVolumeBoxAt(pos) != null);
+        if (connection == null) {
+            return isBackingLiftedBox(marker.getBlockPos()) || getVolumeBoxAt(marker.getBlockPos()) != null;
+        }
+        Box area = connection.getBox();
+        return connection.getMarkerPositions().stream().anyMatch(this::isBackingLiftedBox)
+            || volumeBoxes.stream().anyMatch(volumeBox -> volumeBox.box.doesIntersectWith(area));
     }
 
     /**

@@ -150,6 +150,10 @@ public class VolumeBox {
                 CompoundTag lockTag = NBTUtilBC.getCompound(locksList, i);
                 Lock lock = new Lock();
                 lock.readFromNBT(lockTag);
+                // Same as the owner: a machine lock with no position could never be checked, only crash the tick.
+                if (lock.cause instanceof Lock.Cause.CauseBlock causeBlock && causeBlock.pos == null) {
+                    continue;
+                }
                 locks.add(lock);
             }
         }

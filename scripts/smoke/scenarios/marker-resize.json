@@ -1,0 +1,73 @@
+{
+  "name": "marker-resize",
+  "description": "Issue #32: a connected marker area lifted with the Marker Connector, confirmed unchanged (markers stay, no box), lifted again and stretched two blocks east (markers drop, a floating box remains), then taken by a Filler placed against it (the box is used up and does not come back when the Filler is broken). Markers A (0,0,4), B (4,0,4), C (0,0,8); B is dragged to (6,0,4) from (5,0,1), where B and the target are the same distance from the eye. A failed run can leave a floating box over x0-6 z4-8 in the save, which then refuses the lift: delete run-smoke/saves to start over.",
+  "base": [40, 150, 40],
+  "steps": [
+    { "do": "wait", "ms": 2500 },
+    { "label": "platform and three markers in an L", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear",
+      "?forceload add {X-8} {Z-4} {X+12} {Z+14}",
+      "fill {X-6} {Y-1} {Z-3} {X+10} {Y-1} {Z+12} minecraft:smooth_stone",
+      "?fill {X-6} {Y} {Z-3} {X+10} {Y+6} {Z+12} minecraft:air",
+      "?kill @e[type=item,x={X-6},y={Y-1},z={Z-3},dx=16,dy=8,dz=15]",
+      "setblock {X} {Y} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X+4} {Y} {Z+4} buildcraftunofficial:marker_volume",
+      "setblock {X} {Y} {Z+8} buildcraftunofficial:marker_volume"
+    ] },
+    { "do": "wait", "ms": 1500 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "tp", "at": [0, 0, 1], "yaw": 0, "pitch": 30 },
+    { "do": "aim", "at": [0, 0, 4] },
+    { "do": "wait", "ms": 800 },
+    { "label": "right-click marker A to connect the area", "do": "use" },
+    { "do": "wait", "ms": 1200 },
+
+    { "do": "tp", "at": [5, 0, 1], "yaw": 0, "pitch": 25 },
+    { "do": "hold", "item": "buildcraftunofficial:marker_connector" },
+    { "do": "aim", "at": [4, 0, 4] },
+    { "do": "wait", "ms": 800 },
+    { "name": "connected", "do": "shot", "look": "three markers with red lasers along the area's two near edges (A-B along x, A-C along z); no volume box" },
+    { "label": "lift the area at marker B", "do": "use" },
+    { "do": "wait", "ms": 1000 },
+    { "name": "lifted", "do": "shot", "look": "a volume box outline over exactly the marker area (x0-4, z4-8, one block tall), its corner at B under the crosshair; the markers still stand" },
+    { "label": "confirm without moving (aiming at B still)", "do": "use" },
+    { "do": "wait", "ms": 1000 },
+    { "label": "B still stands after an unchanged confirm (expect: Test passed)", "do": "cmd", "run": "execute if block {X+4} {Y} {Z+4} buildcraftunofficial:marker_volume", "echo": true, "allowFail": true },
+    { "name": "unchanged-confirm", "do": "shot", "look": "same as 'connected': markers and their lasers, NO volume box outline, no dropped marker items" },
+
+    { "label": "lift again at B", "do": "use" },
+    { "do": "wait", "ms": 800 },
+    { "do": "aim", "at": [6.5, 0.5, 4.5], "exact": true },
+    { "do": "wait", "ms": 1000 },
+    { "name": "stretched", "do": "shot", "look": "the volume box now reaches two blocks further east (x0-6, z4-8) past marker B; markers still stand" },
+    { "label": "confirm the new size", "do": "use" },
+    { "do": "wait", "ms": 1200 },
+    { "label": "B is gone after a changed confirm (expect: Test failed)", "do": "cmd", "run": "execute if block {X+4} {Y} {Z+4} buildcraftunofficial:marker_volume", "echo": true, "allowFail": true },
+    { "label": "A is gone too (expect: Test failed)", "do": "cmd", "run": "execute if block {X} {Y} {Z+4} buildcraftunofficial:marker_volume", "echo": true, "allowFail": true },
+    { "do": "look", "yaw": 0, "pitch": 25 },
+    { "do": "wait", "ms": 500 },
+    { "name": "confirmed", "do": "shot", "look": "the markers are gone, three marker items lie on the floor where they stood, and a floating volume box outline spans x0-6, z4-8" },
+
+    { "do": "tp", "at": [3, 0, 1], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "buildcraftunofficial:filler" },
+    { "do": "aim", "at": [3.5, -0.001, 3.5], "exact": true },
+    { "do": "wait", "ms": 600 },
+    { "label": "place a Filler against the box's north face", "do": "use" },
+    { "do": "wait", "ms": 1200 },
+    { "label": "the Filler's box starts at the old marker A (expect box_minX 40)", "do": "cmd", "run": "data get block {X+3} {Y} {Z+3} box_minX", "echo": true },
+    { "label": "and reaches the stretched corner (expect box_maxX 46)", "do": "cmd", "run": "data get block {X+3} {Y} {Z+3} box_maxX", "echo": true },
+    { "do": "look", "yaw": 0, "pitch": 25 },
+    { "do": "wait", "ms": 600 },
+    { "name": "filler-took-it", "do": "shot", "look": "the Filler in the foreground; its own box over x0-6 z4-8; the floating volume box outline is GONE (no second, striped outline)" },
+
+    { "label": "break the Filler", "do": "cmd", "run": "setblock {X+3} {Y} {Z+3} minecraft:air" },
+    { "do": "wait", "ms": 1200 },
+    { "name": "filler-broken", "do": "shot", "look": "empty floor with the dropped items; NO volume box outline came back" },
+
+    { "do": "hold", "item": "minecraft:air" },
+    { "label": "take the rig down", "do": "cmd", "run": [
+      "?fill {X-6} {Y} {Z-3} {X+10} {Y+6} {Z+12} minecraft:air",
+      "?kill @e[type=item,x={X-6},y={Y-1},z={Z-3},dx=16,dy=8,dz=15]"
+    ] }
+  ]
+}

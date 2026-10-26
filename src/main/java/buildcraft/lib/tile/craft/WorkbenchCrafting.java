@@ -44,7 +44,7 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  *
  *  <p>Two opt-in features, both built on one idea (swap every grid slot holding a given blueprint item for another
  *  item, then re-check the recipes) and both off by default, so the Auto Workbench, which shares this engine, behaves
- *  exactly as before (its blueprint is not the player's to rewrite):
+ *  exactly as before (only the Advanced Crafting Table turns either on):
  *  <ul>
  *  <li>{@link #enableVariants}: the output-cycle list also offers the recipes the grid would match with one of its
  *      items swapped for another member of a configured item tag (the other woods' stairs for a plank stair grid).
@@ -197,8 +197,10 @@ public class WorkbenchCrafting {
      *  @return true if the selection changed. */
     public boolean cycleOutput(int dir) {
         if (isBlueprintDirty) {
-            // A grid edit in the same tick must win: never apply a variant built from the pre-edit blueprint.
-            tick();
+            // A grid edit in the same tick must win: never apply a variant built from the pre-edit blueprint. Drop
+            // the click rather than tick() here, which would swallow the "changed" signal the tile's own tick() uses
+            // to refresh its result preview and material filters.
+            return false;
         }
         if (matches.size() <= 1) {
             return false;

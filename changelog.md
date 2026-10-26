@@ -12,4 +12,5 @@
 - Changing a Filler's pattern, parameters, invert toggle or box now reaches other players watching it straight away.
 - The Zone Planner's map now shows terrain past your render distance: anywhere in its survey area that someone has visited is drawn from what the server remembers, without loading any chunks.
 - Facades cast soft corner shadows like the blocks they copy, so a wall or floor of facades blends with real blocks instead of each facade looking flat-lit. A pipe with any solid facade shades the blocks on all its sides, like a full block would; hollow facades cast none.
+- With GuideME (the guide mod Applied Energistics 2 uses) installed, the BuildCraft guide is also available as a GuideME book: GuideME's open-guide key (G by default) on a BuildCraft item's tooltip jumps to its page.
 - Fixed a Filler on Loop resending its full data to nearby players every tick after finishing a cycle.

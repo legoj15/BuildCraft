@@ -68,6 +68,8 @@ Every step may carry `"label"` (report text) and `"nodes": ["26.2", ...]` (run o
 
 A scenario can play a world of its own: top-level `"save": "<folder>"` quick-plays that save instead of `bc-smoke`, and `"saveSeed": "bc-smoke"` copies the seed to it when it is missing. Without a seed the save must already be there (a world carried over from another node); the runner refuses to boot otherwise.
 
+A scenario that needs an optional dev-runtime mod names its Gradle switch in a top-level `"gradleProperties": ["withGuideMe"]`; each becomes a `-P` flag on the node's `runClient` (`guideme-guide` uses it to load GuideME and page through the generated guide).
+
 A scenario that visits a second world names it in a top-level `"extraSaves": ["bc-smoke-b"]`: before boot the runner copies the `bc-smoke` save to each missing name (so the first run on a node, which only creates `bc-smoke`, needs a second run). The world list is sorted by last played, so the world just left is entry one and `click` `x:213, y:100` picks entry two (see `scenarios/marker-relog.json`, which leaves a world, joins the other and comes back).
 
 A failing step records its error, takes a `NN-FAILED.png`, closes any open screen and the run continues.

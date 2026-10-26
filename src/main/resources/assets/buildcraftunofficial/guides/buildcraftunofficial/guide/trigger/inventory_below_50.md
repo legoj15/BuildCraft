@@ -1,0 +1,26 @@
+---
+navigation:
+  title: "Inventory Below 50 Percent"
+  parent: contents/transport/inventory.md
+  position: 17
+---
+
+# Inventory Below 50 Percent
+
+Does the chest have less than 50% of the items it could have?
+
+## Requirements
+
+When selected, the connected actions will only be activated when the connected inventory is at less than 50% capacity.
+
+## Parameters
+
+When Contains less than 50% and the gate installed has parameters available, the Filter slots next to it becomes available as a parameter.
+
+Placing Items in the filter slots allows you check if the inventory has less than 50% of the items selected in filters slots before triggering.
+
+## Trigger directions
+
+Gates may show the Contains less than 50% trigger multiple times in different colours to represent each of the different connected inventories.
+
+The colour of the Trigger represents the direction on the inventory in relation of the pipe so you can differentiate between each inventory.

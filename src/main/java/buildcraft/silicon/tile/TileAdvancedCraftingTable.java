@@ -23,6 +23,7 @@ import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 import buildcraft.silicon.BCSiliconBlockEntities;
+import buildcraft.silicon.BCSiliconConfig;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 
 @SuppressWarnings("this-escape")
@@ -42,6 +43,8 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         invMaterials = itemManager.addInvHandler("materials", 5 * 3, EnumAccess.INSERT, EnumPipePart.VALUES);
         invResults = itemManager.addInvHandler("result", 3 * 3, EnumAccess.EXTRACT, EnumPipePart.VALUES);
         crafting = new WorkbenchCrafting(3, 3, this, invBlueprint, invMaterials, invResults);
+        // The blueprint is a phantom pattern here, so the cycle may offer other woods/materials and rewrite it.
+        crafting.enableVariants(BCSiliconConfig::getCraftingVariantTags);
 
         // Wire inventory change callbacks to WorkbenchCrafting
         invBlueprint.setCallback((handler, slot, before, after) -> {
@@ -103,7 +106,8 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
     }
 
     /** Cycles which output the blueprint produces when 2+ recipes match (server-side; dir +1/-1) and
-     *  re-syncs the result preview to clients. Called from the container's cycle-output button. */
+     *  re-syncs the result preview to clients. Landing on a material variant (another wood's stairs) rewrites the
+     *  phantom blueprint to that material. Called from the container's cycle-output button. */
     public void cycleCraftingOutput(int dir) {
         if (level == null || level.isClientSide()) {
             return;
@@ -125,6 +129,20 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         return crafting.getSelectedIndex();
     }
 
+    /** Turns the "accept substitute materials" mode on or off: when on, the table may craft the selected recipe
+     *  from materials other than the blueprint's items, as long as they still satisfy that recipe (another wood for
+     *  a planks recipe). Server-side; called from the container's toggle button. */
+    public void setAcceptSubstitutes(boolean accept) {
+        if (crafting.isAcceptSubstitutes() != accept) {
+            crafting.setAcceptSubstitutes(accept);
+            setChanged();
+        }
+    }
+
+    public boolean isAcceptingSubstitutes() {
+        return crafting.isAcceptSubstitutes();
+    }
+
     // --- Save / Load ---
 
     @Override
@@ -134,6 +152,7 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
             output.store("resultClient", ItemStack.CODEC, resultClient);
         }
         output.putString("selectedRecipe", crafting.getSelectedRecipeId());
+        output.putBoolean("acceptSubstitutes", crafting.isAcceptSubstitutes());
     }
 
     @Override
@@ -141,6 +160,7 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
         super.readData(input);
         resultClient = input.read("resultClient", ItemStack.CODEC).orElse(ItemStack.EMPTY);
         crafting.setPendingSelectedRecipeId(input.getStringOr("selectedRecipe", ""));
+        crafting.setAcceptSubstitutes(input.getBooleanOr("acceptSubstitutes", false));
     }
 
     @Override

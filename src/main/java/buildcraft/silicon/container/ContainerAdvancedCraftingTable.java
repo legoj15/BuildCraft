@@ -42,9 +42,13 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
 
     /** Message id for the client→server "cycle output" button (above the base ids in ContainerBC_Neptune). */
     public static final int NET_CYCLE_OUTPUT = 104;
+    /** Message id for the client→server "accept substitute materials" toggle: one boolean, the wanted state. */
+    public static final int NET_SET_ACCEPT_SUBSTITUTES = 105;
     /** Client-synced copies of the tile's match count + selected index (server fills these via DataSlots). */
     private int clientMatchCount;
     private int clientSelectedIndex;
+    /** Client-synced copy of the tile's accept-substitutes toggle (0/1). */
+    private int clientAcceptSubstitutes;
 
     // Client-side constructor (from network)
     public ContainerAdvancedCraftingTable(int containerId, Inventory playerInv, FriendlyByteBuf buf) {
@@ -90,6 +94,10 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
             @Override public int get() { return tile.getCraftingSelectedIndex(); }
             @Override public void set(int value) { clientSelectedIndex = value; }
         });
+        addDataSlot(new net.minecraft.world.inventory.DataSlot() {
+            @Override public int get() { return tile.isAcceptingSubstitutes() ? 1 : 0; }
+            @Override public void set(int value) { clientAcceptSubstitutes = value; }
+        });
 
         addFullPlayerInventory(8, 153);
     }
@@ -101,6 +109,8 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
         if (id == NET_CYCLE_OUTPUT && !isClient) {
             boolean next = buffer.readBoolean();
             tile.cycleCraftingOutput(next ? 1 : -1);
+        } else if (id == NET_SET_ACCEPT_SUBSTITUTES && !isClient) {
+            tile.setAcceptSubstitutes(buffer.readBoolean());
         } else {
             super.readMessage(id, buffer, isClient, ctx);
         }
@@ -114,6 +124,11 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
     /** Index of the selected output among the matches, synced from the server. */
     public int getSyncedSelectedIndex() {
         return clientSelectedIndex;
+    }
+
+    /** Whether the table accepts substitute materials, synced from the server (the toggle button's state). */
+    public boolean isAcceptSubstitutesSynced() {
+        return clientAcceptSubstitutes != 0;
     }
 
     // --- Recipe Book Support ---

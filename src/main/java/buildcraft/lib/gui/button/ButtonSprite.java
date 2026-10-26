@@ -22,6 +22,9 @@ public record ButtonSprite(Identifier id, int size) {
     /** Auto Workbench / Advanced Crafting Table: cycle the chosen output between conflicting recipes. */
     public static final ButtonSprite CYCLE = of("cycle", 10);
 
+    /** Advanced Crafting Table: a solid square in front of a hollow one (a stand-in). Latched = it may craft from materials other than the blueprint's. */
+    public static final ButtonSprite SUBSTITUTES = of("substitutes", 10);
+
     /** Diamond-wood (emerald) pipe filter modes. White bars = list of what passes; hollow bars = what is held back. */
     public static final ButtonSprite WHITELIST = of("whitelist", 16);
     public static final ButtonSprite BLACKLIST = of("blacklist", 16);

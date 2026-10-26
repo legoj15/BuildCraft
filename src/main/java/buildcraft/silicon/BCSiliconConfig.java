@@ -6,6 +6,8 @@
 
 package buildcraft.silicon;
 
+import java.util.List;
+
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
@@ -17,6 +19,18 @@ public class BCSiliconConfig {
 
     /** See {@link #buildGeneral} for the full semantics. */
     public static ModConfigSpec.BooleanValue disableFacadeGeneration;
+
+    /** The item tags whose members the Advanced Crafting Table's cycle-output button offers as variants. */
+    public static final List<String> DEFAULT_CRAFTING_VARIANT_TAGS = List.of(
+        "minecraft:planks",
+        "minecraft:logs",
+        "minecraft:wool",
+        "minecraft:stone_crafting_materials",
+        "c:cobblestones",
+        "minecraft:wooden_slabs");
+
+    /** See {@link #buildGeneral}; read through {@link #getCraftingVariantTags()}. */
+    public static ModConfigSpec.ConfigValue<List<? extends String>> craftingVariantTags;
 
     /**
      * How a Laser searches for nearby tables (Assembly / Integration / Advanced Crafting) to power.
@@ -52,5 +66,33 @@ public class BCSiliconConfig {
                         "load-time toggles this takes effect on the next launch or world load."
                 )
                 .define("disableFacadeGeneration", false);
+        craftingVariantTags = builder
+                .comment(
+                        "Item tags whose members the Advanced Crafting Table offers as variants of the recipe in its",
+                        "blueprint grid. When the grid holds an item from one of these tags, the table's cycle-output",
+                        "button also steps through the recipes the grid would match with that item swapped for another",
+                        "member of the tag (oak planks in a stair pattern also offer the other woods' stairs). Picking one",
+                        "rewrites the blueprint to that material. Entries are item tag ids such as minecraft:planks.",
+                        "Empty the list to turn variants off; the cycle then offers only same-grid recipe conflicts."
+                )
+                .defineListAllowEmpty(
+                        "craftingVariantTags",
+                        DEFAULT_CRAFTING_VARIANT_TAGS,
+                        () -> "",
+                        s -> s instanceof String
+                );
+    }
+
+    /** The configured variant tags, read live. Falls back to the defaults while the config is not loaded (headless
+     *  unit tests, very early startup). */
+    public static List<? extends String> getCraftingVariantTags() {
+        if (craftingVariantTags != null) {
+            try {
+                return craftingVariantTags.get();
+            } catch (IllegalStateException notLoaded) {
+                // The spec has not been loaded yet: use the defaults below.
+            }
+        }
+        return DEFAULT_CRAFTING_VARIANT_TAGS;
     }
 }

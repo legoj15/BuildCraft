@@ -152,6 +152,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:painted_pipe_two_pink_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testTwoPinkFluidPipesConnect);
         reg.accept("buildcraftunofficial:painted_pipe_different_colours_do_not_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testDifferentColouredFluidPipesDoNotConnect);
         reg.accept("buildcraftunofficial:painted_pipe_no_fluid_stuck_toward_different_colour", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testNoFluidStuckTowardDifferentColouredNeighbour);
+        // Block-entity-less capability neighbours (#37): cauldrons as small tanks for fluid pipes, composters for item pipes.
+        reg.accept("buildcraftunofficial:pipe_fluid_fills_cauldron", () -> buildcraft.transport.pipe.CauldronPipeTester::testPipeFillsCauldron);
+        reg.accept("buildcraftunofficial:pipe_wood_fluid_drains_cauldron", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeDrainsCauldron);
+        reg.accept("buildcraftunofficial:pipe_wood_fluid_keeps_its_fluid", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeKeepsItsFluid);
+        reg.accept("buildcraftunofficial:pipe_item_feeds_composter", () -> buildcraft.transport.pipe.CauldronPipeTester::testItemPipeFeedsComposter);
 
         // Wire connectivity predicate gating the logic_transportation advancement
         reg.accept("buildcraftunofficial:wire_connectivity_isolated", () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);

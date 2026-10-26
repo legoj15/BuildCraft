@@ -297,12 +297,18 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         FluidResource resource;
         if (filter != null && !filter.isEmpty()) {
             resource = FluidResource.of(filter);
+        } else if (!currentFluid.isEmpty()) {
+            // The pipe holds one fluid: pull only more of it, never whatever the handler lists first.
+            resource = FluidResource.of(currentFluid);
         } else {
             // Extract whatever the handler has
             resource = handler.getResource(0);
             if (resource == null || resource.isEmpty()) {
                 return null;
             }
+        }
+        if (!currentFluid.isEmpty() && !resource.matches(currentFluid)) {
+            return null;
         }
 
         if (simulate) {
@@ -327,12 +333,18 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         FluidStack drainFilter;
         if (filter != null && !filter.isEmpty()) {
             drainFilter = filter;
+        } else if (!currentFluid.isEmpty()) {
+            // The pipe holds one fluid: pull only more of it, never whatever the handler lists first.
+            drainFilter = currentFluid;
         } else {
             // Extract whatever the handler has
             drainFilter = handler.getFluidInTank(0);
             if (drainFilter == null || drainFilter.isEmpty()) {
                 return null;
             }
+        }
+        if (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, drainFilter)) {
+            return null;
         }
 
         FluidStack drained = handler.drain(drainFilter.copyWithAmount(millibuckets),
@@ -643,7 +655,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
         for (int i = 0; i < handler.size(); i++) {
             FluidResource res = handler.getResource(i);
-            if (res == null || res.isEmpty()) {
+            // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
+            if (res == null || res.isEmpty() || (!currentFluid.isEmpty() && !res.matches(currentFluid))) {
                 continue;
             }
             if (filter.matches(res.toStack(1))) {
@@ -658,7 +671,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
         for (int i = 0; i < handler.getTanks(); i++) {
             FluidStack inTank = handler.getFluidInTank(i);
-            if (inTank == null || inTank.isEmpty()) {
+            // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
+            if (inTank == null || inTank.isEmpty()
+                    || (!currentFluid.isEmpty() && !FluidStack.isSameFluidSameComponents(currentFluid, inTank))) {
                 continue;
             }
             if (filter.matches(inTank)) {
@@ -942,6 +957,21 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                         if (filled > 0) {
                             section.drainInternal(filled, true);
                             section.ticksInDirection = COOLDOWN_OUTPUT;
+                        } else if (section.getSettled() > maxDrain
+                                && pipe.getConnectedType(part.face) == IPipe.ConnectedType.TILE) {
+                            // A target that only takes whole steps larger than one tick's transfer (a cauldron moves
+                            // 1000 mB) refused the slice: offer it everything that has settled in this section.
+                            // Never a pipe neighbour: a full pipe refuses every amount, and this would fire its
+                            // TryInsert event twice a tick.
+                            int settled = section.getSettled();
+                            try (Transaction tx = Transaction.openRoot()) {
+                                filled = handler.insert(resource, settled, tx);
+                                tx.commit();
+                            }
+                            if (filled > 0) {
+                                section.amount -= Math.min(filled, settled);
+                                section.ticksInDirection = COOLDOWN_OUTPUT;
+                            }
                         }
                     }
                     //?} else {
@@ -953,6 +983,18 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                         if (filled > 0) {
                             section.drainInternal(filled, true);
                             section.ticksInDirection = COOLDOWN_OUTPUT;
+                        } else if (section.getSettled() > maxDrain
+                                && pipe.getConnectedType(part.face) == IPipe.ConnectedType.TILE) {
+                            // A target that only takes whole steps larger than one tick's transfer (a cauldron moves
+                            // 1000 mB) refused the slice: offer it everything that has settled in this section.
+                            // Never a pipe neighbour: a full pipe refuses every amount, and this would fire its
+                            // TryInsert event twice a tick.
+                            int settled = section.getSettled();
+                            filled = handler.fill(currentFluid.copyWithAmount(settled), IFluidHandler.FluidAction.EXECUTE);
+                            if (filled > 0) {
+                                section.amount -= Math.min(filled, settled);
+                                section.ticksInDirection = COOLDOWN_OUTPUT;
+                            }
                         }
                     }
                     *///?}
@@ -1237,7 +1279,12 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         int getMaxDrained() {
-            return Math.min(amount - incomingTotalCache, fluidTransferInfo.transferPerTick);
+            return Math.min(getSettled(), fluidTransferInfo.transferPerTick);
+        }
+
+        /** The fluid that has finished travelling into this section (not still in its incoming delay line). */
+        int getSettled() {
+            return amount - incomingTotalCache;
         }
 
         int fill(int maxFill, boolean doFill) {

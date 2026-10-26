@@ -13,4 +13,5 @@
 - The Zone Planner's map now shows terrain past your render distance: anywhere in its survey area that someone has visited is drawn from what the server remembers, without loading any chunks.
 - Facades cast soft corner shadows like the blocks they copy, so a wall or floor of facades blends with real blocks instead of each facade looking flat-lit. A pipe with any solid facade shades the blocks on all its sides, like a full block would; hollow facades cast none.
 - A marker volume can be resized: right-click one of its corner markers with the Marker Connector, drag, and right-click to confirm. The markers drop and a floating box replaces them, which the next Quarry, Filler or Architect Table placed against it uses up. Sneak-right-click cancels, or throws away an unused box.
+- Fluid pipes connect to cauldrons: a pipe fills one with water or lava a bucket at a time, and a wooden fluid pipe drains it. Item pipes likewise connect to composters.
 - Fixed a Filler on Loop resending its full data to nearby players every tick after finishing a cycle.

@@ -1011,6 +1011,8 @@ public class BuildCraftGameTests {
         // the Auto Workbench (same engine) offers neither.
         reg.accept("buildcraftunofficial:cycle_output_act_substitutes_toggle", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesToggleCraftsFromOtherMaterial);
         reg.accept("buildcraftunofficial:cycle_output_act_substitutes_rules", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesSelectionRules);
+        reg.accept("buildcraftunofficial:cycle_output_act_substitutes_keep_data", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesKeepResultData);
+        reg.accept("buildcraftunofficial:cycle_output_act_substitutes_two_items", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesSwapTwoItems);
         reg.accept("buildcraftunofficial:cycle_output_act_variants_rewrite_blueprint", () -> buildcraft.lib.CraftingOutputCycleTester::testVariantsRewriteBlueprint);
         reg.accept("buildcraftunofficial:cycle_output_autoworkbench_no_variants", () -> buildcraft.lib.CraftingOutputCycleTester::testAutoWorkbenchOffersNoVariants);
 

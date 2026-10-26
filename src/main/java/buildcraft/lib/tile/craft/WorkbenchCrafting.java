@@ -518,14 +518,16 @@ public class WorkbenchCrafting {
         return false;
     }
 
-    /** Whether {@code trial} still satisfies the selected recipe and assembles the same result item. */
+    /** Whether {@code trial} still satisfies the selected recipe and assembles exactly the previewed result: same item,
+     *  count and data, so a substitute can never craft something other than what the table shows (a healing potion
+     *  standing in for the harming one of a tipped-arrow blueprint would otherwise make healing arrows). */
     private boolean acceptedBySelectedRecipe(List<ItemStack> trial) {
         CraftingInput input = CraftingInput.of(width, height, trial);
         if (!currentRecipe.value().matches(input, tile.getLevel())) {
             return false;
         }
         ItemStack result = assemble(currentRecipe, input);
-        return !result.isEmpty() && result.getItem() == assumedResult.getItem();
+        return !result.isEmpty() && ItemStack.matches(result, assumedResult);
     }
 
     private boolean hasExactStacks(List<ItemStack> grid) {

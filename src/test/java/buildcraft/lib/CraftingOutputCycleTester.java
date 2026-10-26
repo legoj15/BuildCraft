@@ -16,6 +16,8 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -234,6 +236,73 @@ public final class CraftingOutputCycleTester {
         //?}
         if (tile.isAcceptingSubstitutes()) {
             helper.fail("The accept-substitutes toggle (off) must survive a save/load round trip");
+        }
+        helper.succeed();
+    }
+
+    /** A substitute that changes the result's data is refused: a healing lingering potion must not stand in for the
+     *  harming one of a tipped-arrow blueprint, because the table would craft healing arrows under a harming preview. */
+    public static void testSubstitutesKeepResultData(GameTestHelper helper) {
+        TileAdvancedCraftingTable tile = placeTable(helper);
+        if (tile == null) {
+            return;
+        }
+        for (int s = 0; s < 9; s++) {
+            tile.invBlueprint.setStackInSlot(s, s == 4
+                ? PotionContents.createItemStack(Items.LINGERING_POTION, Potions.HARMING)
+                : new ItemStack(Items.ARROW));
+        }
+        tile.invMaterials.setStackInSlot(0, new ItemStack(Items.ARROW, 8));
+        tile.invMaterials.setStackInSlot(1, PotionContents.createItemStack(Items.LINGERING_POTION, Potions.HEALING));
+        tile.setAcceptSubstitutes(true);
+        chargeTable(tile);
+        tile.serverTick();
+
+        if (tile.getCurrentRecipeOutput().getItem() != Items.TIPPED_ARROW) {
+            helper.fail("Precondition: arrows around a lingering potion must resolve to tipped arrows, got "
+                + tile.getCurrentRecipeOutput());
+        }
+        tile.serverTick();
+        if (count(tile.invResults, Items.TIPPED_ARROW) != 0 || tile.getTarget() != 0) {
+            helper.fail("A healing potion must not substitute for the harming potion the preview shows, crafted "
+                + count(tile.invResults, Items.TIPPED_ARROW) + " tipped arrows");
+        }
+        helper.succeed();
+    }
+
+    /** Two different blueprint items swap at once: a campfire blueprint of coal and oak logs crafts from charcoal and
+     *  birch logs, neither swap being enough alone, and consumes exactly those materials. */
+    public static void testSubstitutesSwapTwoItems(GameTestHelper helper) {
+        TileAdvancedCraftingTable tile = placeTable(helper);
+        if (tile == null) {
+            return;
+        }
+        for (int s : new int[] { 1, 3, 5 }) {
+            tile.invBlueprint.setStackInSlot(s, new ItemStack(Items.STICK));
+        }
+        tile.invBlueprint.setStackInSlot(4, new ItemStack(Items.COAL));
+        for (int s : new int[] { 6, 7, 8 }) {
+            tile.invBlueprint.setStackInSlot(s, new ItemStack(Items.OAK_LOG));
+        }
+        tile.invMaterials.setStackInSlot(0, new ItemStack(Items.STICK, 3));
+        tile.invMaterials.setStackInSlot(1, new ItemStack(Items.CHARCOAL));
+        tile.invMaterials.setStackInSlot(2, new ItemStack(Items.BIRCH_LOG, 3));
+        tile.setAcceptSubstitutes(true);
+        chargeTable(tile);
+        tile.serverTick();
+
+        if (tile.getCurrentRecipeOutput().getItem() != Items.CAMPFIRE) {
+            helper.fail("Precondition: the campfire pattern must resolve to a campfire, got "
+                + tile.getCurrentRecipeOutput());
+        }
+        tile.serverTick();
+        if (count(tile.invResults, Items.CAMPFIRE) != 1) {
+            helper.fail("Charcoal and birch logs together must substitute for coal and oak logs, got "
+                + count(tile.invResults, Items.CAMPFIRE) + " campfires");
+        }
+        if (count(tile.invMaterials, Items.CHARCOAL) != 0 || count(tile.invMaterials, Items.BIRCH_LOG) != 0
+            || count(tile.invMaterials, Items.STICK) != 0) {
+            helper.fail("The craft must consume the sticks, the charcoal and all three birch logs");
         }
         helper.succeed();
     }

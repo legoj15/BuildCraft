@@ -497,8 +497,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
     }
 
-    /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it. Lava that flowed
-     *  into the pit counts: the pump finds the source it flows from. */
+    /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it or its chunk has
+     *  left memory. Lava that flowed into the pit counts: the pump finds the source it flows from. */
     private void noteBlockingFluid(BlockPos pos) {
         if (isThickFluid(pos) && (blockingFluid == null || !BlockUtil.isChunkPresent(level, blockingFluid)
                 || !isThickFluid(blockingFluid))) {

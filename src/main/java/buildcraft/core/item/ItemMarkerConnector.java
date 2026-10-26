@@ -160,8 +160,10 @@ public class ItemMarkerConnector extends Item {
 
                 for (VolumeBox volumeBox :
                     volumeBoxes.volumeBoxes.stream()
-                        .filter(box ->
-                            box.getLockTargetsStream()
+                        // A box another player is dragging is theirs: grabbing it would take over their drag (and,
+                        // for a box lifted off markers, let this player's confirm break them).
+                        .filter(box -> !box.isEditing()
+                            && box.getLockTargetsStream()
                                 .noneMatch(Lock.Target.TargetResize.class::isInstance)
                         )
                         .collect(Collectors.toList())

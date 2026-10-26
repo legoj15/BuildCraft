@@ -71,7 +71,8 @@ public class BCEnergyConfig {
                 .comment("Set true to let placed oils and fuels burn with vanilla fire. Heavier oils catch rarely and",
                          "burn down slowly, lighter fuels catch quickly and fire races across a pool, and a heated",
                          "oil or fuel burns faster than a cool one. Residue never burns. Tanks and pipes are",
-                         "unaffected; only fluid placed in the world burns.")
+                         "unaffected; only fluid placed in the world burns. Gaseous fuels still explode when lit",
+                         "unless gasExplodes is off.")
                 .define("canBurn", true);
 
         gasExplodes = builder

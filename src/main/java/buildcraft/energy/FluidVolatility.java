@@ -47,8 +47,8 @@ import buildcraft.lib.misc.BlockUtil;
  * as <b>block ticks</b> (a delay of 2 to 5 ticks) on the explosive sources in the shell out to {@link #CHAIN_REACH}.
  * Liquid blocks have explosion resistance 100, so a blast never removes one itself. The ticks are the guaranteed
  * way a detonation spreads, and one block tick per position (scheduled ticks dedupe) caps how often a source can be
- * asked; a source that a blast already cleared simply never ticks. The blast also sets fires like TNT, and gas next
- * to one of those goes off on its next fluid tick, so a big spill can carry on past {@link #CHAIN_REACH}, but only
+ * asked; a source that a blast already cleared simply never ticks. The blast also sets fires like TNT, and a gas source
+ * next to one of those goes off on its next fluid tick, so a big spill can carry on past {@link #CHAIN_REACH}, but only
  * at fluid-tick pace, never all at once.
  */
 public final class FluidVolatility {
@@ -192,11 +192,13 @@ public final class FluidVolatility {
      * only goes on to replace the cell with fire or air, and it is the only way to fire a block that fire is about to
      * replace (a block tick scheduled here would find the cell already gone).
      *
-     * <p>Gas answers to {@code gasExplodes} alone, as it does on the fluid-tick path; {@code canBurn} only decides
-     * whether the liquids burn.
+     * <p>Once something calls this on a gas source, {@code gasExplodes} alone decides whether it detonates, as on the
+     * fluid-tick path. {@code canBurn} off still keeps spreading fire from catching gas at all, since the block then
+     * reports no flammability.
      *
      * @return whether the block caught fire, which is what {@code onCaughtFire} reports: {@code true} for anything
-     *         that can burn (a source that exploded included), {@code false} when burning is switched off.
+     *         that can burn and for a source that exploded, {@code false} for residue and, short of a detonation,
+     *         when burning is switched off.
      */
     public static boolean catchFire(Level level, BlockPos pos, BlockState state, Band band) {
         if (band == Band.EXPLOSIVE && !level.isClientSide() && state.getFluidState().isSource()
@@ -247,7 +249,7 @@ public final class FluidVolatility {
 
         level.explode(null, centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5, BLAST_POWER, true,
             Level.ExplosionInteraction.BLOCK);
-        // Flowing gas left beside the cleared cube recedes, and gas beside the blast's fires notices them.
+        // The cube was cleared without updates; tell its neighbours now so flowing gas left beside it recedes.
         for (BlockPos pos : cleared) {
             level.updateNeighborsAt(pos, Blocks.AIR);
         }

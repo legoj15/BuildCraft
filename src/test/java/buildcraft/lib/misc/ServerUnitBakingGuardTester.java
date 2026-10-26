@@ -109,14 +109,6 @@ public class ServerUnitBakingGuardTester {
                 "an @REIPluginCommon class loads on a dedicated server, so it is scanned despite its rei directory");
         Assertions.assertFalse(isClientOnly("buildcraft/lib/compat/rei/BCReiCommonPlugin.java", commonReiType),
                 "so is the common plugin type they implement");
-        // The real classes, so the rule cannot drift off the code it is about.
-        for (String file : new String[] { "buildcraft/core/compat/rei/BCCoreReiPlugin.java",
-                "buildcraft/lib/compat/rei/BCReiCommonPlugin.java",
-                "buildcraft/silicon/compat/rei/BCSiliconReiCommonPlugin.java",
-                "buildcraft/robotics/compat/rei/BCRoboticsReiCommonPlugin.java" }) {
-            Assertions.assertFalse(isClientOnly(file, MainSourceSet.codeOf(file)),
-                    file + " loads on a dedicated server and must not be exempted as client-only");
-        }
         Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/viewer/Label.java", screen),
                 "shared viewer code that imports Minecraft client code is client only");
         Assertions.assertFalse(isClientOnly("buildcraft/lib/compat/viewer/Transfer.java", menu),

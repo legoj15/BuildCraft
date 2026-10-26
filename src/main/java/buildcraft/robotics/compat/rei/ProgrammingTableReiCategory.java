@@ -63,7 +63,8 @@ public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeJe
                         Role.RENDER_ONLY, List.of(grid.get(i)));
             }
         }
-        layout.text(POWER_X, POWER_Y, () -> MjLabel.text("gui.jei.category.buildcraftunofficial.programming_table.power",
+        layout.text(POWER_X, POWER_Y, () -> MjLabel.text(
+                "gui.jei.category.buildcraftunofficial.programming_table.power",
                 recipe.microJoules()));
     }
 }

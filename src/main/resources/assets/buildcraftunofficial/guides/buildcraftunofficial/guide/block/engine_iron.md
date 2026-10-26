@@ -30,7 +30,7 @@ Using dirty fuels in an engine will cause it to get clogged up with residue whic
 
 A fuel's temperature matters too. Hot fuel gives more power than cool fuel, but searing fuel gives less, and it heats the engine so much that it needs extra coolant. Use a Heat Exchanger to bring fuel to the right temperature.
 
-Gaseous fuels are dangerous in the Nether: spill one there and it explodes.
+Gaseous fuels explode. Spill one next to fire, lava or a lit campfire and it goes off, and in the Nether it goes off by itself, setting off any gas close by. Liquid oil and fuel burn instead, and the lighter the fuel the faster.
 
 ## Engine Mechanics
 

@@ -237,9 +237,9 @@ public class ItemMarkerConnector extends Item {
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         VolumeBox editing = volumeBoxes.getCurrentEditing(player);
         if (editing != null) {
-            // Its own markers sit on the corners of a lifted box, so a click on one is a confirm; while dragging any
-            // other box, a click on a marker still connects it.
-            return editing.hasSourceMarkers() && onUseVolumeBoxes(level, player).consumesAction();
+            // Its own markers sit on the corners of a lifted box, so a click on one is a confirm; a click on any other
+            // marker still connects it, whatever box is being dragged.
+            return editing.isBackedBy(markerPos) && onUseVolumeBoxes(level, player).consumesAction();
         }
         VolumeConnection connection = marker.getCurrentConnection();
         if (connection == null || !connection.getBox().isCorner(markerPos)) {

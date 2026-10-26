@@ -6,7 +6,7 @@
 
 package buildcraft.silicon;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -71,7 +71,7 @@ public class BCSiliconRecipes {
     private static void registerPlugRecipes() {
         // Pulsar: redstone engine + 2 iron ingots (matches 1.12.2 behavior).
         {
-            Set<IngredientStack> input = new HashSet<>();
+            Set<IngredientStack> input = new LinkedHashSet<>(); // insertion-ordered: the JEI "+" fills in this order
             input.add(new IngredientStack(Ingredient.of(BCCoreBlocks.ENGINE_REDSTONE.get())));
             input.add(new IngredientStack(Ingredient.of(Items.IRON_INGOT), 2));
             ItemStack output = new ItemStack(BCSiliconItems.PLUG_PULSAR.get());

@@ -292,7 +292,7 @@ public class NBTUtilBC {
     // itemStackFromNBT) and silently dropped every data component, which broke the Assembly Table JEI "+"
     // transfer for any component-carrying ingredient. For disk/NBT use ItemStack.CODEC through
     // registryAwareOps(); for the wire use ItemStack.OPTIONAL_STREAM_CODEC on a RegistryFriendlyByteBuf
-    // (see AssemblyTableTransfer).
+    // (see BCContainerSupport.registryBuf, used by the ghost-slot drop and AssemblyTableTransfer).
 
     // ───────────────────────────────────────────────────────────────────────────
     // Version-neutral NBT accessors. On 1.21.5+ the vanilla CompoundTag/ListTag getX

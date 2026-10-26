@@ -31,7 +31,7 @@ public class JeiTransferTester {
         inv.setItem(0, new ItemStack(Items.REDSTONE, 8));
 
         ItemHandlerSimple dest = new ItemHandlerSimple(12);
-        int moved = TransferUtil.moveMatchingToHandler(inv, new ItemStack(Items.REDSTONE, 4), 4, dest);
+        int moved = TransferUtil.moveMatchingToHandler(inv, stack -> stack.is(Items.REDSTONE), 4, dest);
 
         if (moved != 4) {
             throw new IllegalStateException("Expected to move 4 redstone, moved " + moved);
@@ -72,7 +72,7 @@ public class JeiTransferTester {
         Inventory inv = player.getInventory(); // empty
 
         ItemHandlerSimple dest = new ItemHandlerSimple(12);
-        int moved = TransferUtil.moveMatchingToHandler(inv, new ItemStack(Items.DIAMOND, 2), 2, dest);
+        int moved = TransferUtil.moveMatchingToHandler(inv, stack -> stack.is(Items.DIAMOND), 2, dest);
         if (moved != 0) {
             throw new IllegalStateException("Nothing should move when the player lacks the item, moved " + moved);
         }

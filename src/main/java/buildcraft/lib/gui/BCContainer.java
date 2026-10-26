@@ -9,6 +9,7 @@ package buildcraft.lib.gui;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -37,6 +38,11 @@ public interface BCContainer {
     /** Send a container message to the other side (client↔server). */
     default void sendMessage(int id, IPayloadWriter writer) {
         bcSupport().sendMessage(id, writer);
+    }
+
+    /** Client side: a recipe viewer dropped {@code stack} on the phantom slot at menu index {@code slotIndex}. */
+    default void sendGhostSlot(int slotIndex, ItemStack stack) {
+        bcSupport().sendGhostSlot(slotIndex, stack);
     }
 
     /** Register a sync widget (fluid tanks, progress, …). */

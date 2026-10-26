@@ -88,15 +88,10 @@ public class BCGhostIngredientHandler<T extends GuiBC8<?>> implements IGhostIngr
 
         @Override
         public void accept(I ingredient) {
-            if (ingredient instanceof ItemStack stack) {
-                // Send the item's registry name to the server.
-                // The server will construct a count-1 ItemStack from it.
-                String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                        .getKey(stack.getItem()).toString();
-                container.sendMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buf -> {
-                    buf.writeShort(slotIndex);
-                    buf.writeUtf(itemId);
-                });
+            if (ingredient instanceof ItemStack stack && !stack.isEmpty()) {
+                // The whole stack goes to the server, so a data-carrying item (a configured List) keeps its data;
+                // the server stores it as a count-1 template.
+                container.sendGhostSlot(slotIndex, stack);
             }
         }
     }

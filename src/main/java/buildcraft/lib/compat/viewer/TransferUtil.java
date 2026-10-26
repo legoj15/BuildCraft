@@ -6,6 +6,9 @@
 
 package buildcraft.lib.compat.viewer;
 
+import java.util.function.Predicate;
+
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -39,25 +42,38 @@ public final class TransferUtil {
     }
 
     /**
-     * Move up to {@code max} of {@code want} (by item + components) from the player's inventory into
-     * {@code dest}, respecting {@code dest}'s per-slot capacity. Inserts into {@code dest} first,
-     * then debits the player by exactly the amount inserted. Returns the number moved.
+     * Move up to {@code max} items from the stacks of {@code playerInv} that {@code accepts} into {@code dest},
+     * respecting {@code dest}'s per-slot capacity. Walks the inventory in slot order; for each accepted stack it
+     * inserts into {@code dest} first, then debits that stack by exactly the amount inserted, so what the player
+     * loses is what the machine gained. Returns the number moved.
+     *
+     * <p>{@code accepts} is the machine's own test (an ingredient's {@code test}, an exact stack match, ...), so a
+     * transfer takes the stacks the machine would have taken if the player had placed them by hand.
      */
-    public static int moveMatchingToHandler(Inventory playerInv, ItemStack want, int max, ItemHandlerSimple dest) {
-        if (want.isEmpty() || max <= 0) return 0;
-        int toMove = Math.min(max, countMatching(playerInv, want));
-        if (toMove <= 0) return 0;
+    public static int moveMatchingToHandler(Container playerInv, Predicate<ItemStack> accepts, int max,
+            ItemHandlerSimple dest) {
+        if (max <= 0) return 0;
+        int moved = 0;
+        for (int i = 0; i < playerInv.getContainerSize() && moved < max; i++) {
+            ItemStack held = playerInv.getItem(i);
+            if (held.isEmpty() || !accepts.test(held)) continue;
 
-        int remaining = toMove;
-        for (int slot = 0; slot < dest.getSlots() && remaining > 0; slot++) {
-            ItemStack attempt = want.copy();
-            attempt.setCount(remaining);
-            ItemStack leftover = dest.insertItem(slot, attempt, false);
-            remaining -= (attempt.getCount() - leftover.getCount());
+            int offered = Math.min(max - moved, held.getCount());
+            ItemStack leftover = held.copyWithCount(offered);
+            for (int slot = 0; slot < dest.getSlots() && !leftover.isEmpty(); slot++) {
+                leftover = dest.insertItem(slot, leftover, false);
+            }
+            int inserted = offered - leftover.getCount();
+            if (inserted > 0) {
+                held.shrink(inserted);
+                if (held.isEmpty()) {
+                    playerInv.setItem(i, ItemStack.EMPTY);
+                }
+                moved += inserted;
+            }
         }
-        int moved = toMove - remaining;
         if (moved > 0) {
-            removeFromInventory(playerInv, want, moved);
+            playerInv.setChanged();
         }
         return moved;
     }
@@ -90,20 +106,5 @@ public final class TransferUtil {
             return false; // couldn't insert (slot capacity) — nothing taken
         }
         return false;
-    }
-
-    private static void removeFromInventory(Inventory playerInv, ItemStack want, int count) {
-        int remaining = count;
-        for (int i = 0; i < playerInv.getContainerSize() && remaining > 0; i++) {
-            ItemStack s = playerInv.getItem(i);
-            if (s.isEmpty() || !ItemStack.isSameItemSameComponents(s, want)) continue;
-            int take = Math.min(remaining, s.getCount());
-            s.shrink(take);
-            remaining -= take;
-            if (s.isEmpty()) {
-                playerInv.setItem(i, ItemStack.EMPTY);
-            }
-        }
-        playerInv.setChanged();
     }
 }

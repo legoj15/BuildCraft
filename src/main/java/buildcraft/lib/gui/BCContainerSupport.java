@@ -14,8 +14,9 @@ import com.google.common.collect.ImmutableList;
 
 import io.netty.buffer.Unpooled;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -24,11 +25,11 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.gui.slot.SlotPhantom;
-import buildcraft.lib.misc.RegistryUtilBC;
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.MessageContainerPayload;
 import buildcraft.lib.net.PacketBufferBC;
@@ -115,7 +116,7 @@ public class BCContainerSupport {
     }
 
     /**
-     * Handle the container-agnostic message IDs (widget sync + JEI ghost-slot set). Returns
+     * Handle the container-agnostic message IDs (widget sync + recipe-viewer ghost-slot set). Returns
      * {@code true} if it consumed the message; the calling base then handles its own IDs (recipe-book
      * placement on {@link ContainerBCCrafting}, machine-specific transfers on the subclasses).
      */
@@ -139,20 +140,54 @@ public class BCContainerSupport {
             }
             return true;
         } else if (id == ContainerBC_Neptune.NET_GHOST_SLOT_SET && !isClient) {
-            // Server-side: JEI ghost ingredient dropped on a phantom slot.
-            int slotIdx = buffer.readUnsignedShort();
-            String itemId = buffer.readUtf();
-            List<Slot> slots = menu.slots;
-            if (slotIdx >= 0 && slotIdx < slots.size() && slots.get(slotIdx) instanceof SlotPhantom phantom) {
-                net.minecraft.world.item.Item ghostItem = RegistryUtilBC.getValue(
-                    BuiltInRegistries.ITEM, Identifier.parse(itemId));
-                if (ghostItem != null) {
-                    phantom.set(new ItemStack(ghostItem, 1));
+            // Server-side: a recipe viewer's ghost ingredient dropped on a phantom slot.
+            try {
+                GhostDrop drop = readGhostSlot(buffer, player.level().registryAccess());
+                List<Slot> slots = menu.slots;
+                if (!drop.stack().isEmpty() && drop.slot() < slots.size()
+                        && slots.get(drop.slot()) instanceof SlotPhantom phantom) {
+                    // A phantom slot holds a template; the count is the slot's own business, never the drag's.
+                    phantom.set(drop.stack().copyWithCount(1));
                 }
+            } catch (RuntimeException e) {
+                BCLog.logger.warn("[lib.container] Ignoring a malformed ghost-slot drop", e);
             }
             return true;
         }
         return false;
+    }
+
+    // --- Ghost-ingredient drops (JEI / REI onto a phantom slot) ---
+
+    /** A decoded ghost-slot drop: the menu slot index and the stack dragged onto it (as sent, count included). */
+    public record GhostDrop(int slot, ItemStack stack) {}
+
+    /** Wraps {@code buf} so {@link ItemStack#OPTIONAL_STREAM_CODEC} can resolve registry-backed components
+     *  (enchantments, ...): {@code registries} is the sender's level on the client, the player's on the server. */
+    public static RegistryFriendlyByteBuf registryBuf(FriendlyByteBuf buf, RegistryAccess registries) {
+        return new RegistryFriendlyByteBuf(buf, registries, ConnectionType.NEOFORGE);
+    }
+
+    /** Writes a {@link ContainerBC_Neptune#NET_GHOST_SLOT_SET} payload: the slot index, then the WHOLE dragged stack
+     *  through {@link ItemStack#OPTIONAL_STREAM_CODEC}, so a data-carrying item (a configured List) arrives with its
+     *  data. The one writer JEI, REI and the tests use. */
+    public static void writeGhostSlot(FriendlyByteBuf buf, RegistryAccess registries, int slotIndex,
+            ItemStack stack) {
+        buf.writeShort(slotIndex);
+        ItemStack.OPTIONAL_STREAM_CODEC.encode(registryBuf(buf, registries), stack);
+    }
+
+    /** Reads a payload written by {@link #writeGhostSlot}. Throws on a malformed one; the receiver catches that. */
+    public static GhostDrop readGhostSlot(FriendlyByteBuf buf, RegistryAccess registries) {
+        int slot = buf.readUnsignedShort();
+        return new GhostDrop(slot, ItemStack.OPTIONAL_STREAM_CODEC.decode(registryBuf(buf, registries)));
+    }
+
+    /** Client side: tells the server a viewer dropped {@code stack} on the phantom slot at menu index
+     *  {@code slotIndex}. */
+    public void sendGhostSlot(int slotIndex, ItemStack stack) {
+        RegistryAccess registries = player.level().registryAccess();
+        sendMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buf -> writeGhostSlot(buf, registries, slotIndex, stack));
     }
 
     // --- Slot layout / movement (protected AbstractContainerMenu ops via callbacks) ---

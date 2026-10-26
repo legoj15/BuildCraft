@@ -87,8 +87,10 @@ public abstract class AbstractTransferHandler<C extends AbstractContainerMenu & 
             case OK -> null;
             case MISSING -> helper.createUserErrorWithTooltip(
                     Component.translatable("gui.jei.transfer.buildcraftunofficial.missing"));
+            case ONLY_PROGRAMMED -> helper.createUserErrorWithTooltip(
+                    Component.translatable("gui.jei.transfer.buildcraftunofficial.only_programmed"));
             case BUSY -> helper.createUserErrorWithTooltip(
-                    Component.translatable("gui.jei.transfer.buildcraftunofficial.table_busy"));
+                    Component.translatable("gui.jei.transfer.buildcraftunofficial.inventory_full"));
             case INVALID -> helper.createInternalError();
         };
     }

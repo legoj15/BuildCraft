@@ -110,6 +110,7 @@ public final class AssemblyRecipeCollector {
             String id = recipe.getRegistryName() + ":" + outputKey(output);
             out.add(new AssemblyRecipeEntry(
                     id,
+                    recipe.getRegistryName(),
                     inputSlots,
                     List.of(output),
                     recipe.getRequiredMicroJoulesFor(output)
@@ -165,8 +166,10 @@ public final class AssemblyRecipeCollector {
         // instead of cycling independently and pairing leaves with the
         // emerald-ore facade. See JEI's createFocusLink javadoc.
         return List.of(
-                new AssemblyRecipeEntry(facade.getRegistryName() + ":basic", inputSlots, basicOutputs, mjCost, 1),
-                new AssemblyRecipeEntry(facade.getRegistryName() + ":hollow", inputSlots, hollowOutputs, mjCost, 1)
+                new AssemblyRecipeEntry(facade.getRegistryName() + ":basic", facade.getRegistryName(), inputSlots,
+                        basicOutputs, mjCost, 1),
+                new AssemblyRecipeEntry(facade.getRegistryName() + ":hollow", facade.getRegistryName(), inputSlots,
+                        hollowOutputs, mjCost, 1)
         );
     }
 

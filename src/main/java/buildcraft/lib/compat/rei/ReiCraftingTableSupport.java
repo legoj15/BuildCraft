@@ -25,7 +25,6 @@ import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -33,7 +32,6 @@ import net.minecraft.world.level.ItemLike;
 
 import buildcraft.lib.compat.viewer.BlueprintRecipeTransfer;
 import buildcraft.lib.gui.BCContainer;
-import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.slot.IPhantomSlot;
 
@@ -170,12 +168,8 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
                     int x = gui.windowLeft() + slot.x;
                     int y = gui.windowTop() + slot.y;
                     if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-                        String itemId = BuiltInRegistries.ITEM.getKey(itemStack.getItem()).toString();
-                        final int slotIdx = i;
-                        container.sendMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buf -> {
-                            buf.writeShort(slotIdx);
-                            buf.writeUtf(itemId);
-                        });
+                        // The whole stack goes to the server, so a data-carrying item keeps its data.
+                        container.sendGhostSlot(i, itemStack);
                         return DraggedAcceptorResult.ACCEPTED;
                     }
                 }

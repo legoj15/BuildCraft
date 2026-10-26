@@ -254,6 +254,17 @@ def convert_body(md, page, ex):
     s = re.sub(r"\x00(\d+)\x00", lambda m: stash[int(m.group(1))], s)
     return paragraphs(s)
 
+CYCLE_NOTE = "@@cycle "     # recipe_cycle's count, worded by paragraphs() once its <Row> closes
+NUMBER_WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"]
+
+def cycle_notes(counts):
+    out = []
+    for n in sorted(set(counts)):
+        k = counts.count(n)
+        out.append(f"*One of these recipes stands for {n} of its kind.*" if k == 1 else
+                   f"*{NUMBER_WORDS[k] if k < len(NUMBER_WORDS) else k} of these recipes each stand for {n} of their kind.*")
+    return out
+
 def paragraphs(s):
     """The book renders every source line as its own line; Markdown would run them together, so
     separate lines with blank ones. Runs of list items stay a single list, and runs of single
@@ -261,7 +272,11 @@ def paragraphs(s):
     out = []
     prev = None
     in_code = False
+    cycles = []
     for ln in s.splitlines():
+        if ln.startswith(CYCLE_NOTE):
+            cycles.append(int(ln[len(CYCLE_NOTE):]))
+            continue
         if ln.startswith("```"):
             in_code = not in_code
             out.append(ln)
@@ -275,6 +290,9 @@ def paragraphs(s):
         kind = "list" if ln.startswith("- ") else "recipe" if ln.startswith("<Recipe") else None
         if prev == "recipe" and kind != "recipe":
             out.append("</Row>")
+            for note in cycle_notes(cycles):
+                out += ["", note]
+            cycles = []
         if not (kind and kind == prev):
             if out:
                 out.append("")
@@ -284,6 +302,8 @@ def paragraphs(s):
         prev = kind
     if prev == "recipe":
         out.append("</Row>")
+        for note in cycle_notes(cycles):
+            out += ["", note]
     return "\n".join(out).strip()
 
 def item_link(item_id, ex):
@@ -339,7 +359,8 @@ def single_recipe(rid, ex, kind=None):
     if r is None or r.get("type") not in DRAWABLE_RECIPE_TYPES:
         if kind != "assembling":    # assembly recipes are registered in code; anything else is a typo
             warn(f"recipe {rid}: no drawable data recipe with that id")
-        ex.dropped_recipes += 1
+        else:
+            ex.dropped_recipes += 1
         return ""
     return f'\n<Recipe id="{NS}:{r["_id"]}" fallbackText="" />\n'
 
@@ -353,12 +374,13 @@ def recipe_cycle(a, ex):
     if a.get("type") == "assembling" or not matches:
         if a.get("type") != "assembling":
             warn(f"recipe_cycle match={match!r}: no drawable data recipe matches")
-        ex.dropped_recipes += 1
+        else:
+            ex.dropped_recipes += 1
         return ""
     shown = single_recipe(f"{NS}:{matches[0]['_id']}", ex)
     if len(matches) == 1:
         return shown
-    return f"{shown}\n*One of {len(matches)} recipes of this kind.*\n"
+    return f"{shown}\n{CYCLE_NOTE}{len(matches)}\n"
 
 
 # --------------------------------------------------------------------------- #

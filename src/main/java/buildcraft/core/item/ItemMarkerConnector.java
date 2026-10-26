@@ -133,7 +133,9 @@ public class ItemMarkerConnector extends Item {
                     VolumeBox volumeBox = iterator.next();
                     Optional<Vec3> clip = volumeBox.box.getBoundingBox().clip(start, end);
                     if (clip.isPresent()) {
-                        if (volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
+                        // Like a locked box, a box another player is dragging is not this player's to throw away.
+                        if (!volumeBox.isEditing()
+                            && volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
                             iterator.remove();
                             volumeBoxes.markDirtyAndBroadcast();
                             return InteractionResult.SUCCESS;
@@ -160,8 +162,10 @@ public class ItemMarkerConnector extends Item {
 
                 for (VolumeBox volumeBox :
                     volumeBoxes.volumeBoxes.stream()
-                        .filter(box ->
-                            box.getLockTargetsStream()
+                        // A box another player is dragging is theirs: grabbing it would take over their drag (and,
+                        // for a box lifted off markers, let this player's confirm break them).
+                        .filter(box -> !box.isEditing()
+                            && box.getLockTargetsStream()
                                 .noneMatch(Lock.Target.TargetResize.class::isInstance)
                         )
                         .collect(Collectors.toList())
@@ -235,9 +239,9 @@ public class ItemMarkerConnector extends Item {
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         VolumeBox editing = volumeBoxes.getCurrentEditing(player);
         if (editing != null) {
-            // Its own markers sit on the corners of a lifted box, so a click on one is a confirm; while dragging any
-            // other box, a click on a marker still connects it.
-            return editing.hasSourceMarkers() && onUseVolumeBoxes(level, player).consumesAction();
+            // Its own markers sit on the corners of a lifted box, so a click on one is a confirm; a click on any other
+            // marker still connects it, whatever box is being dragged.
+            return editing.isBackedBy(markerPos) && onUseVolumeBoxes(level, player).consumesAction();
         }
         VolumeConnection connection = marker.getCurrentConnection();
         if (connection == null || !connection.getBox().isCorner(markerPos)) {

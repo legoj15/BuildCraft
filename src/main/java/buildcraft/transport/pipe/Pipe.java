@@ -294,10 +294,13 @@ public final class Pipe implements IPipe, IDebuggable {
             if (plug != null && plug.isBlocking()) {
                 continue;
             }
-            BlockEntity oTile = getHolder().getNeighbourTile(facing);
-            if (oTile == null) {
+            BlockPos nPos = holder.getPipePos().relative(facing);
+            if (!holder.getPipeWorld().isLoaded(nPos)) {
                 continue;
             }
+            // Null for a neighbour with no block entity: a vanilla cauldron still exposes a block-only fluid
+            // capability, so the flow's capability check below decides, not the tile's presence.
+            BlockEntity oTile = getHolder().getNeighbourTile(facing);
             IPipe oPipe = getHolder().getNeighbourPipe(facing);
             if (oPipe != null) {
                 PipeBehaviour oBehaviour = oPipe.getBehaviour();
@@ -319,19 +322,17 @@ public final class Pipe implements IPipe, IDebuggable {
                 }
             }
 
-            BlockPos nPos = holder.getPipePos().relative(facing);
-            var neighbour = holder.getPipeWorld().getBlockState(nPos);
-
-            ICustomPipeConnection cust = PipeConnectionAPI.getCustomConnection(neighbour.getBlock());
-            if (cust == null) {
-                cust = DefaultPipeConnection.INSTANCE;
-            }
-            float ext = DEFAULT_CONNECTION_DISTANCE
-                + cust.getExtension(holder.getPipeWorld(), nPos, facing.getOpposite(), neighbour);
-
             if (behaviour.shouldForceConnection(facing, oTile) || flow.shouldForceConnection(facing, oTile)
                 || (behaviour.canConnect(facing, oTile) && flow.canConnect(facing, oTile))) {
-                connected.put(facing, ext);
+                // The extension reads the neighbour's shape, so it is worked out only for a face that connects (most
+                // faces are now air or terrain, which used to be skipped for having no block entity).
+                var neighbour = holder.getPipeWorld().getBlockState(nPos);
+                ICustomPipeConnection cust = PipeConnectionAPI.getCustomConnection(neighbour.getBlock());
+                if (cust == null) {
+                    cust = DefaultPipeConnection.INSTANCE;
+                }
+                connected.put(facing, DEFAULT_CONNECTION_DISTANCE
+                    + cust.getExtension(holder.getPipeWorld(), nPos, facing.getOpposite(), neighbour));
                 types.put(facing, ConnectedType.TILE);
             }
         }
@@ -402,7 +403,12 @@ public final class Pipe implements IPipe, IDebuggable {
     public BlockEntity getConnectedTile(Direction side) {
         if (connected.containsKey(side)) {
             BlockEntity offset = getHolder().getNeighbourTile(side);
-            if (offset == null && !getHolder().getPipeWorld().isClientSide()) {
+            // A missing tile is stale only where the block should carry one: a cauldron or composter connects
+            // through a block-only capability and has none. Read only a loaded neighbour (an off-tick caller).
+            BlockPos nPos = getHolder().getPipePos().relative(side);
+            if (offset == null && !getHolder().getPipeWorld().isClientSide()
+                    && getHolder().getPipeWorld().isLoaded(nPos)
+                    && getHolder().getPipeWorld().getBlockState(nPos).hasBlockEntity()) {
                 markForUpdate();
             } else {
                 return offset;

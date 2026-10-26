@@ -39,9 +39,15 @@ public abstract class AbstractBCSyncedBlockEntity extends AbstractBCBlockEntity 
 
     // --- Network sync ---
 
+    // A tile that has components (an enchanted Quarry's enchantments) sends them with its own data; one without sends
+    // the plain tag, with no empty "components" entry. The client applies the packet with loadWithComponents, which
+    // replaces its components, so a tile whose components never reached it would read as unenchanted there: client
+    // code that prices a break (the quarry's break animation) would use Efficiency 0 against the server's Efficiency V,
+    // and before 1.21.10 the creative pick-block (ctrl + middle click), which builds the picked item from the client's
+    // copy of the tile, would pick a bare machine.
     @Override
     public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
-        return this.saveCustomOnly(registries);
+        return components().isEmpty() ? this.saveCustomOnly(registries) : this.saveWithoutMetadata(registries);
     }
 
     @Nullable

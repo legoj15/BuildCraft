@@ -1,0 +1,20 @@
+---
+navigation:
+  title: "Engine Blue"
+  parent: contents/power/engine.md
+  position: 4
+---
+
+# Engine Blue
+
+What colour is the engine next to the gate? Is it blue?
+
+## Requirements
+
+When selected, the connected actions will only be activated when the adjacent engine is at its blue temperature stage.
+
+## Trigger directions
+
+Gates may show the Engine Blue trigger multiple times in different colours to represent each of the different connected engines.
+
+The colour of the Trigger represents the direction of the engine in relation of the pipe so you can differentiate between each engine.

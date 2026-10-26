@@ -12,7 +12,8 @@ import buildcraft.builders.BCBuildersBlocks;
 
 /**
  * Pins the "a finished quarry releases its engines" contract: {@link TileQuarry}'s MJ receiver only
- * requests power while there is actual work queued ({@link TileQuarry#hasPendingWork()}). A quarry
+ * requests power while there is actual work queued ({@link TileQuarry#wantsPower()}: pending work, or a Pump on it
+ * drawing on its battery; this test has no pump). A quarry
  * that has mined out — or one freshly placed with nothing to do yet — must request zero rather than
  * keep pulling MJ to top its 24k battery off. (Holding the battery full after the job just overheats
  * the feeding engines and is voided when the quarry is torn down.)
@@ -49,7 +50,7 @@ public class TileQuarryIdlePowerTester {
             // is null under the default MJ_ONLY power mode, but the gate logic is mode-independent.
             //? if >=1.21.10 {
             buildcraft.lib.mj.MjBatteryEnergyHandler feHandler =
-                    new buildcraft.lib.mj.MjBatteryEnergyHandler(quarry.getBattery(), quarry::hasPendingWork);
+                    new buildcraft.lib.mj.MjBatteryEnergyHandler(quarry.getBattery(), quarry::wantsPower);
             try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
                     net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                 int insertedIdle = feHandler.insert(1000, tx);

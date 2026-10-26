@@ -77,6 +77,7 @@ public class BCEnergyFluids {
             int viscosity,
             int temperature,
             boolean gaseous,
+            FluidVolatility.Band volatility,
             int tintColor,
             int texLight,
             int texDark,
@@ -89,6 +90,7 @@ public class BCEnergyFluids {
 
     // ─── 1.12 fluid data table ────────────────────────────────────────
     //                          density, viscosity, boil, spread, tex_light,   tex_dark,  sticky, flammable
+    // flammable (col 7) is 0 only for residue: it decides FluidVolatility.Band.INERT. sticky (col 6) is still unread.
     private static final int[][] FLUID_DATA = {
         { 4000,  4000,  3,  6, 0x50_50_50, 0x05_05_05,  1,  1 }, // 0: Crude Oil
         { 6000,  8000,  3,  4, 0x10_0F_10, 0x42_10_42,  1,  0 }, // 1: Residue
@@ -139,10 +141,12 @@ public class BCEnergyFluids {
             int texDark        = data[5];
 
             int baseSpread = data[3];
+            boolean flammable = data[7] != 0;
 
             for (int heat = 0; heat < 3; heat++) {
                 FluidEntry entry = registerFluidVariant(
-                        baseName, heat, baseDensity, baseViscosity, boilPoint, baseSpread, texLight, texDark);
+                        baseName, heat, baseDensity, baseViscosity, boilPoint, baseSpread, texLight, texDark,
+                        flammable);
                 ALL_ENTRIES.add(entry);
 
                 // Store convenience reference for crude oil cool
@@ -209,44 +213,21 @@ public class BCEnergyFluids {
         }
     }
 
-    /** TNT-strength, the same blast upstream 7.1.x used. */
-    private static final float NETHER_GAS_BLAST = 4.0F;
-
-    /**
-     * Gaseous BuildCraft fluids (every fluid past its boil point) explode as soon as they flow in the
-     * Nether. Upstream 7.1.x did this for every flammable fluid (#3497); here only gases do, so Nether oil
-     * and the liquid fuels refined from it stay usable for a Nether start. Tanks and pipes are safe: only
-     * a placed fluid block ticks. Runs from the fluid tick that {@code LiquidBlock.onPlace} schedules, not
-     * from {@code onPlace} itself, so the blast never fires mid-{@code setBlock}.
-     *
-     * @return whether the fluid was consumed by the blast (the caller must stop ticking it).
-     */
-    static boolean igniteGasInNether(net.minecraft.world.level.Level level, BlockPos pos, Fluid fluid) {
-        if (fluid.getFluidType().getDensity() >= 0 || level.dimension() != net.minecraft.world.level.Level.NETHER) {
-            return false;
-        }
-        // Clear first without block updates (as upstream did), so the blast sees an empty cell and
-        // neighbouring gas doesn't re-tick against a half-removed block.
-        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(),
-            net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
-        level.explode(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, NETHER_GAS_BLAST, true,
-            net.minecraft.world.level.Level.ExplosionInteraction.BLOCK);
-        return true;
-    }
-
     // ─── Factory method ───────────────────────────────────────────────
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static FluidEntry registerFluidVariant(
             String baseName, int heat,
             int baseDensity, int baseViscosity, int boilPoint,
-            int baseSpread, int texLight, int texDark) {
+            int baseSpread, int texLight, int texDark, boolean flammable) {
 
         // 1.12 formulas
         int viscosity   = baseViscosity * (5 - heat) / 5;
         int density     = baseDensity * (heat >= boilPoint ? -1 : 1);
         int temperature = 300 + 20 * heat;
         boolean gaseous = density < 0;
+        FluidVolatility.Band volatility = FluidVolatility.derive(flammable, boilPoint, heat, gaseous);
+        boolean dense = isDenseBase(baseName);
 
         // 1.12 quanta formula: baseSpread + heat bonus
         int quanta = baseSpread + (baseSpread > 6 ? heat : heat / 2);
@@ -292,12 +273,12 @@ public class BCEnergyFluids {
         sourceHolder[0] = FLUIDS.register(regName,
                 () -> new BCCustomSourceFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0], viscosity, quanta)));
+                        blockHolder[0], bucketHolder[0], viscosity, quanta), volatility, dense));
 
         flowingHolder[0] = FLUIDS.register(regName + "_flowing",
                 () -> new BCCustomFlowingFluid(makeProps(
                         fluidType, sourceHolder[0], flowingHolder[0],
-                        blockHolder[0], bucketHolder[0], viscosity, quanta)));
+                        blockHolder[0], bucketHolder[0], viscosity, quanta), dense));
 
         // Block
         MapColor mapColor = gaseous ? MapColor.NONE : MapColor.COLOR_BLACK;
@@ -315,7 +296,7 @@ public class BCEnergyFluids {
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)
-                , heat), () -> BlockBehaviour.Properties.of());
+                , heat, volatility), () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = RegistrationUtilBC.registerItem(ITEMS, regName + "_bucket",
@@ -325,9 +306,15 @@ public class BCEnergyFluids {
                 ), () -> new Item.Properties());
 
         return new FluidEntry(
-                regName, baseName, heat, density, viscosity, temperature, gaseous, tintColor,
+                regName, baseName, heat, density, viscosity, temperature, gaseous, volatility, tintColor,
                 texLight, texDark,
                 fluidType, sourceHolder[0], flowingHolder[0], blockHolder[0], bucketHolder[0]);
+    }
+
+    /** The dense oils sink through water ({@link #displaceWaterBelow}) instead of floating on it: heavy oil, dense oil
+     *  and residue, at every heat. Decided once per variant at registration. */
+    private static boolean isDenseBase(String baseName) {
+        return baseName.equals("oil_heavy") || baseName.equals("oil_dense") || baseName.equals("oil_residue");
     }
 
     private static BaseFlowingFluid.Properties makeProps(
@@ -379,17 +366,15 @@ public class BCEnergyFluids {
     // ─── Custom Fluid Classes ─────────────────────────────────────────
     
     public static class BCCustomFlowingFluid extends BaseFlowingFluid.Flowing {
-        public BCCustomFlowingFluid(Properties properties) {
+        private final boolean dense;
+
+        public BCCustomFlowingFluid(Properties properties, boolean dense) {
             super(properties);
+            this.dense = dense;
         }
 
         private boolean isDenseFluid() {
-            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
-            if (loc != null) {
-                String path = loc.getPath();
-                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
-            }
-            return false;
+            return dense;
         }
 
         @Override
@@ -398,9 +383,8 @@ public class BCEnergyFluids {
         //?} else {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
-            if (igniteGasInNether(level, pos, this)) {
-                return;
-            }
+            // Never a source, so never a detonation of its own (FluidVolatility.igniteExposedGas): flowing gas burns
+            // or is cleared by a neighbouring blast.
             if (isDenseFluid()) {
                 displaceWaterBelow(level, pos);
             }
@@ -467,17 +451,17 @@ public class BCEnergyFluids {
     }
 
     public static class BCCustomSourceFluid extends BaseFlowingFluid.Source {
-        public BCCustomSourceFluid(Properties properties) {
+        private final FluidVolatility.Band volatility;
+        private final boolean dense;
+
+        public BCCustomSourceFluid(Properties properties, FluidVolatility.Band volatility, boolean dense) {
             super(properties);
+            this.volatility = volatility;
+            this.dense = dense;
         }
 
         private boolean isDenseFluid() {
-            net.minecraft.resources.Identifier loc = net.minecraft.core.registries.BuiltInRegistries.FLUID.getKey(this);
-            if (loc != null) {
-                String path = loc.getPath();
-                return path.contains("oil_heavy") || path.contains("oil_dense") || path.contains("oil_residue");
-            }
-            return false;
+            return dense;
         }
 
         @Override
@@ -486,7 +470,7 @@ public class BCEnergyFluids {
         //?} else {
         /*public void tick(net.minecraft.world.level.Level level, BlockPos pos, FluidState fluidState) {*/
         //?}
-            if (igniteGasInNether(level, pos, this)) {
+            if (FluidVolatility.igniteExposedGas(level, pos, fluidState, volatility)) {
                 return;
             }
             if (isDenseFluid()) {

@@ -11,7 +11,6 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
@@ -24,6 +23,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
+import buildcraft.lib.misc.MachineEnchantments;
 import buildcraft.lib.tile.IPumpHost;
 
 /**
@@ -73,8 +73,10 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
     protected void mine() {
         if (currentPos != null && canBreak()) {
             shouldCheck = true;
-            long target = BlockUtil.computeBlockBreakPower(level, currentPos);
-            progress += (int) battery.extractPower(0, target - progress);
+            long target = BlockUtil.computeBlockBreakPower(level, currentPos, MachineEnchantments.efficiency(this));
+            // Clamped like the quarry's power request: a target that drops mid-break (Efficiency switched on, a
+            // softer block flowing in) would otherwise pass a negative max and push power back past capacity.
+            progress += (int) battery.extractPower(0, Math.max(0, target - progress));
             if (progress >= target) {
                 progress = 0;
                 level.destroyBlockProgress(currentPos.hashCode(), currentPos, -1);
@@ -84,12 +86,14 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
                     // ancient debris / netherite-tier blocks rather than chewing through
                     // them yielding nothing — the loot context's match_tool condition
                     // would otherwise fail and the block would destroy without drops.
+                    // The pickaxe carries the well's Silk Touch / Fortune, so the loot roll
+                    // sees them as on a player's pickaxe.
                     // breakBlockAndGetDropsWithXp captures the BlockEntity + BlockState
                     // BEFORE destroying so XP / container-drops are computed correctly.
                     BlockUtil.breakBlockAndGetDropsWithXp(
                         serverLevel,
                         currentPos,
-                        new ItemStack(Items.IRON_PICKAXE),
+                        MachineEnchantments.tool(Items.IRON_PICKAXE, this),
                         getOwner()
                     ).ifPresent(result -> {
                         result.drops().forEach(stack ->

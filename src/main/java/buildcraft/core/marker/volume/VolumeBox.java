@@ -8,8 +8,10 @@ package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -172,8 +174,26 @@ public class VolumeBox {
      * Returns how many were still there to break.
      */
     public int breakSourceMarkers() {
-        int broken = 0;
+        // A marker placed or connected on the lifted area while the box was dragged joined the same connection: it goes
+        // too. Markers of another volume the connection merged with lie outside that area and are left alone.
+        Set<BlockPos> toBreak = new LinkedHashSet<>(sourceMarkers);
+        Box lifted = new Box();
+        if (oldMin != null && oldMax != null) {
+            lifted.extendToEncompass(oldMin);
+            lifted.extendToEncompass(oldMax);
+        }
         for (BlockPos p : sourceMarkers) {
+            if (lifted.isInitialized() && world.getBlockEntity(p) instanceof TileMarkerVolume marker
+                && marker.getCurrentConnection() != null) {
+                for (BlockPos joined : marker.getCurrentConnection().getMarkerPositions()) {
+                    if (lifted.contains(joined)) {
+                        toBreak.add(joined);
+                    }
+                }
+            }
+        }
+        int broken = 0;
+        for (BlockPos p : toBreak) {
             if (world.getBlockEntity(p) instanceof TileMarkerVolume) {
                 Block.popResource(world, p, new ItemStack(world.getBlockState(p).getBlock()));
                 world.destroyBlock(p, false);

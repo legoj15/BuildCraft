@@ -19,6 +19,7 @@ public class BCCoreConfig {
     public static ModConfigSpec.IntValue networkUpdateRate;
     public static ModConfigSpec.DoubleValue miningMultiplier;
     public static ModConfigSpec.IntValue miningMaxDepth;
+    public static ModConfigSpec.BooleanValue machineEnchantments;
 
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         minePlayerProtected = builder
@@ -60,6 +61,11 @@ public class BCCoreConfig {
         miningMaxDepth = builder
                 .comment("How deep can mining machines dig?")
                 .defineInRange("miningMaxDepth", 512, 1, 2048);
+
+        machineEnchantments = builder
+                .comment("Quarries and Mining Wells accept Silk Touch, Fortune and Efficiency from an anvil.",
+                         "Off: the anvil refuses them and enchanted machines mine as if unenchanted, keeping their enchantments.")
+                .define("machineEnchantments", true);
     }
 
     public static void buildWorldgen(ModConfigSpec.Builder builder) {

@@ -19,6 +19,9 @@ public class BCEnergyConfig {
     public static ModConfigSpec.BooleanValue enableOilGeneration;
     public static ModConfigSpec.DoubleValue oilWellGenerationRate;
 
+    public static ModConfigSpec.BooleanValue canBurn;
+    public static ModConfigSpec.BooleanValue gasExplodes;
+
     public static ModConfigSpec.BooleanValue enableOilSpouts;
     public static ModConfigSpec.IntValue finiteSpoutMinHeight;
     public static ModConfigSpec.IntValue finiteSpoutMaxHeight;
@@ -63,8 +66,21 @@ public class BCEnergyConfig {
                 .comment("Multiplier for oil well generation rate")
                 .defineInRange("oilWellGenerationRate", 1.0, 0.0, 100.0);
 
-        // enableOilBurn removed — oil flammability isn't implemented in 26.1.1's fluid registration
-        // (BCEnergyFluids ignores it). Re-add when oil burn behaviour is ported.
+        // 1.12.2 called this worldgen.oil.can_burn; the volatility bands it gates live in FluidVolatility.
+        canBurn = builder
+                .comment("Set true to let placed oils and fuels burn with vanilla fire. Heavier oils catch rarely and",
+                         "burn down slowly, lighter fuels catch quickly and fire races across a pool, and a heated",
+                         "oil or fuel burns faster than a cool one. Residue never burns. Tanks and pipes are",
+                         "unaffected; only fluid placed in the world burns. Gaseous fuels still explode when lit",
+                         "unless gasExplodes is off.")
+                .define("canBurn", true);
+
+        gasExplodes = builder
+                .comment("Set true to let gaseous fuels explode when something ignites them: fire catching them, or",
+                         "fire, soul fire, lava or a lit campfire beside them. A dimension that evaporates water",
+                         "(the Nether) ignites gas on its own. Each blast sets off the gas close by a few ticks later.",
+                         "Liquid oil and fuels never explode. This also controls the Nether case.")
+                .define("gasExplodes", true);
 
         builder.push("spouts");
 
@@ -264,6 +280,33 @@ public class BCEnergyConfig {
                         "set false to get the compact 'MJ/s'/'FE/t'/'mB/t' form back."
                 )
                 .define("useFullUnitNames", true);
+    }
+
+    // ---- Fire behaviour -----------------------------------------------------------------------------------
+    //
+    // Both flags are read from places that can run before the COMMON spec has loaded or on a client JVM that never
+    // loads the server's copy (fire asks the block for its flammability on either side), where get() would throw.
+    // Not loaded yet answers with the default, true, so the feature is on until the file says otherwise.
+
+    /** Whether placed oils and fuels burn ({@code canBurn}); read live, never cached. */
+    public static boolean canBurnEnabled() {
+        return readFlag(canBurn);
+    }
+
+    /** Whether gaseous fuels explode ({@code gasExplodes}), the Nether case included; read live, never cached. */
+    public static boolean gasExplodesEnabled() {
+        return readFlag(gasExplodes);
+    }
+
+    private static boolean readFlag(ModConfigSpec.BooleanValue flag) {
+        if (flag == null) {
+            return true;
+        }
+        try {
+            return flag.get();
+        } catch (IllegalStateException notLoadedYet) {
+            return true;
+        }
     }
 
     // ---- FE/RF naming -------------------------------------------------------------------------------------

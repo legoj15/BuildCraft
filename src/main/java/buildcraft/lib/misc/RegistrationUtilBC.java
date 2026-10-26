@@ -5,10 +5,12 @@
  */
 package buildcraft.lib.misc;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -71,5 +73,19 @@ public class RegistrationUtilBC {
             DeferredRegister.Items reg, String name,
             Function<Item.Properties, ? extends I> factory) {
         return reg.registerItem(name, factory);
+    }
+
+    /** A {@link BlockItem} of a class of BuildCraft's own for {@code block}, named after the block and set up as
+     *  {@code registerSimpleBlockItem} sets one up (1.21.10+ takes its description from the block). */
+    public static <B extends Block, I extends BlockItem> DeferredItem<I> registerBlockItem(
+            DeferredRegister.Items reg, DeferredBlock<B> block,
+            BiFunction<B, Item.Properties, ? extends I> factory) {
+        return registerItem(reg, block.getId().getPath(),
+                props -> factory.apply(block.get(), props),
+                //? if >=1.21.10 {
+                props -> props.useBlockDescriptionPrefix());
+                //?} else {
+                /*props -> props);*/
+                //?}
     }
 }

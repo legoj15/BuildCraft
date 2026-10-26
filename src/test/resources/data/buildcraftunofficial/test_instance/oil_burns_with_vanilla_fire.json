@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:oil_burns_with_vanilla_fire",
+    "environment": "buildcraftunofficial:oil_burns_with_vanilla_fire",
+    "structure": "minecraft:empty",
+    "max_ticks": 370,
+    "setup_ticks": 0,
+    "required": true
+}

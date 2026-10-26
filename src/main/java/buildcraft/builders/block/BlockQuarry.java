@@ -16,11 +16,15 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+//? if >=1.21.10 {
+import net.minecraft.world.level.redstone.Orientation;
+//?}
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
@@ -64,6 +68,25 @@ public class BlockQuarry extends BlockBCTile_Directional<TileQuarry> {
     @Override
     protected BlockEntityTicker<TileQuarry> getClientTicker() {
         return (lvl, pos, st, tile) -> tile.tick();
+    }
+
+    @Override
+    //? if >=1.21.10 {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            @Nullable Orientation orientation, boolean movedByPiston) {
+    //?} else {
+    /*protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+            BlockPos neighborPos, boolean movedByPiston) {*/
+    //?}
+        //? if >=1.21.10 {
+        super.neighborChanged(state, level, pos, neighborBlock, orientation, movedByPiston);
+        //?} else {
+        /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
+        //?}
+        // A redstone signal pauses the quarry: the change beside it may have started or ended one, so re-read it
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TileQuarry quarry) {
+            quarry.refreshRedstonePause();
+        }
     }
 
     @Override

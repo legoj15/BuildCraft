@@ -89,8 +89,11 @@ public class BlockPump extends BlockBCTile_Neptune<TilePump> {
         //?} else {
         /*super.neighborChanged(state, level, pos, neighborBlock, neighborPos, movedByPiston);*/
         //?}
-        // An idle pump backs its flood-fill rebuilds off; a block changing beside it makes it re-check its column
+        // An idle pump backs its flood-fill rebuilds off; a block changing beside it makes it re-check its column.
+        // The same change may start or end a redstone signal beside it: read that first, then wake it, which is what
+        // sets a pump the signal just left back to work.
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof TilePump pump) {
+            pump.refreshRedstonePause();
             pump.wake(); // (TilePump#wake)
         }
     }

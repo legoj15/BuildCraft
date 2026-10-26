@@ -53,11 +53,36 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     /** Alias for {@link #mjPower}'s battery, so hot-path mining code reads {@code battery.extractPower(...)}. */
     protected final MjBattery battery = mjPower.getBattery();
 
+    /** A redstone signal beside the machine pauses it in place (see {@link #serverTick()}). Cached: the block's
+     *  neighbour update calls {@link #refreshRedstonePause()}, and the first server tick after a load reads it once.
+     *  Not saved, so it is always the world's answer. */
+    private boolean redstonePaused;
+    /** Whether {@link #redstonePaused} has been read from the world since this tile was created. */
+    private boolean redstoneRead;
+
     public TileMiner(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
     protected abstract void mine();
+
+    /** Re-reads the signal beside the machine. Server only; the block's neighbour-change hook calls it, and then wakes
+     *  the machine itself, which is what ends the wait on resuming. */
+    public void refreshRedstonePause() {
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+        redstonePaused = level.hasNeighborSignal(worldPosition);
+        redstoneRead = true;
+    }
+
+    /** Whether a redstone signal is pausing the machine: it does no work and spends no power, and keeps its progress. */
+    public boolean isRedstonePaused() {
+        if (!redstoneRead) {
+            refreshRedstonePause();
+        }
+        return redstonePaused;
+    }
 
     /** Builds this miner's MJ receiver over its battery: the mining well takes a plain battery receiver,
      *  the pump a redstone one. Called once, when {@link #mjPower} is constructed. */
@@ -73,6 +98,11 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
             MessageUtil.sendUpdateToTrackingPlayers(this);
         }
 
+        // A redstone signal pauses the work only: the battery above keeps taking power, and nothing is torn down or
+        // reset, so the machine picks up where it was when the signal goes.
+        if (isRedstonePaused()) {
+            return;
+        }
         mine();
     }
 

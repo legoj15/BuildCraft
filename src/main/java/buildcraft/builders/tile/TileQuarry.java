@@ -158,6 +158,12 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private double blockPercentSoFar;
     private double moveDistanceSoFar;
     private boolean advancementGranted = false;
+    /** A redstone signal beside the quarry pauses it in place (see {@link #tick()}). Cached: the block's neighbour
+     *  update calls {@link #refreshRedstonePause()}, and the first server tick after a load reads it once. Not saved,
+     *  so it is always the world's answer. (The Pump and Mining Well keep the same flag in TileMiner.) */
+    private boolean redstonePaused;
+    /** Whether {@link #redstonePaused} has been read from the world since this tile was created. */
+    private boolean redstoneRead;
     // Last game-time tick on which this quarry was running in unrestricted-power mode
     // (battery > capacity/2, unlocking MAX_POWER_PER_TICK) AND actively mining (a non-
     // frame-placement task was queued). Read by BCBuildersEventDist.findOwnersToAward
@@ -783,6 +789,23 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         chunksForced = want;
     }
 
+    /** Re-reads the signal beside the quarry. Server only; the block's neighbour-change hook calls it. */
+    public void refreshRedstonePause() {
+        if (level == null || level.isClientSide()) {
+            return;
+        }
+        redstonePaused = level.hasNeighborSignal(worldPosition);
+        redstoneRead = true;
+    }
+
+    /** Whether a redstone signal is pausing the quarry: it does no work and spends no power, and keeps its job. */
+    public boolean isRedstonePaused() {
+        if (!redstoneRead) {
+            refreshRedstonePause();
+        }
+        return redstonePaused;
+    }
+
     /** Called once per tick by the BlockEntityTicker. */
     public void tick() {
         if (level == null) return;
@@ -802,6 +825,17 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
 
         if (!frameBox.isInitialized() || !miningBox.isInitialized()) {
+            return;
+        }
+
+        // A redstone signal pauses the quarry in place: no frame scan, no frame building, no mining, no drill move, no
+        // task progress, and no power spent; its tasks, queues, drill and box stay as they are, so it picks up where
+        // it was when the signal goes. Its MJ receiver is not touched (it takes power as before), and hasPendingWork()
+        // is unchanged: a paused quarry still has work, so a Pump on it keeps to its own power. The rig stays built
+        // (a quarry loaded paused still needs its collision rig), and it keeps the chunk tickets it holds while it
+        // has work.
+        if (isRedstonePaused()) {
+            updateRigs();
             return;
         }
 
@@ -1343,6 +1377,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     public void getDebugInfo(List<String> left, List<String> right, Direction side) {
         left.add("battery = " + battery.getDebugString());
         left.add("rate = " + LocaleUtil.localizeMjFlow(debugPowerRate));
+        // The cached flag is server-only; the client half reads the signal itself so the two halves still line up
+        left.add("paused by redstone = "
+                + (level != null && level.isClientSide() ? level.hasNeighborSignal(worldPosition) : isRedstonePaused()));
         left.add("frameBox");
         left.add(" - min = " + frameBox.min());
         left.add(" - max = " + frameBox.max());

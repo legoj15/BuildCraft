@@ -40,6 +40,11 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.VecUtil;
 
+import buildcraft.api.enums.EnumOptionalSnapshotType;
+
+import buildcraft.builders.block.BlockBuilder;
+import buildcraft.builders.client.render.StallHighlights;
+import buildcraft.builders.snapshot.StalledCell;
 import buildcraft.builders.tile.TileArchitectTable;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
@@ -713,6 +718,12 @@ public enum BCBuildersEventDist {
             buildcraft.builders.snapshot.SnapshotBuilder<?> active = builder.getBuilder();
             if (active == null) continue;
 
+            // The cells a stalled build is skipping, outlined for a player holding a wrench or wearing Goggles. Drawn
+            // before the robot, whose absence (nothing is being broken or placed) is what a stall looks like.
+            if (!active.getStalledCells().isEmpty() && hasSnapshot(builder) && showStalls(mc)) {
+                renderStalledCells(poseStack, active, cameraPos, collector);
+            }
+
             Vec3 robotPos = active.visualRobotPos;
             if (robotPos == null) continue;
             if (active.visualPrevRobotPos != null) {
@@ -748,6 +759,34 @@ public enum BCBuildersEventDist {
             //? if <26.1 {
             /*renderPlaceTaskCubes(active, cameraPos, poseStack, partialTicks);*/
             //?}
+        }
+    }
+
+    /** Whether the local player is shown the outlines of stalled cells (see {@link StallHighlights#canSee}). Client
+     *  only: kept out of any path the dedicated server runs (this class is loaded there). */
+    private static boolean showStalls(Minecraft mc) {
+        return StallHighlights.canSee(mc.player);
+    }
+
+    /** A synced Builder whose block state says it holds a snapshot: a client whose Builder lost its snapshot may be
+     *  slow to hear (the BE update only follows the periodic sync), but the block state is sent at once. */
+    private static boolean hasSnapshot(TileBuilder builder) {
+        return !builder.getBlockState().hasProperty(BlockBuilder.SNAPSHOT_TYPE)
+            || builder.getBlockState().getValue(BlockBuilder.SNAPSHOT_TYPE) != EnumOptionalSnapshotType.NONE;
+    }
+
+    /** Outlines every cell {@code active} reports as stalled, in the colour of its reason: one laser box per cell, the
+     *  same beams the build box is drawn with, so no render path of its own on any node. */
+    //? if >=26.1 {
+    private static void renderStalledCells(PoseStack poseStack, buildcraft.builders.snapshot.SnapshotBuilder<?> active,
+            Vec3 cameraPos, net.minecraft.client.renderer.SubmitNodeCollector collector) {
+    //?} else {
+    /*private static void renderStalledCells(PoseStack poseStack, buildcraft.builders.snapshot.SnapshotBuilder<?> active,
+            Vec3 cameraPos, Object collector) {*/
+    //?}
+        for (StalledCell cell : active.getStalledCells()) {
+            laserBox(poseStack, new buildcraft.lib.misc.data.Box(cell.pos(), cell.pos()),
+                StallHighlights.laserFor(cell.reason()), false, false, cameraPos, collector);
         }
     }
 

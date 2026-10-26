@@ -321,8 +321,27 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         return isFluidOnly(world) && there.isSource() && there.getType().isSame(own.getType());
     }
 
+    /** Where a placement stands before it is queued: see {@link #placementReadiness}. */
+    private enum Readiness {
+        READY,
+        /** Waiting on the cells it depends on (a support not built yet): ordinary, and over once they are. */
+        WAITING,
+        /** Its dependencies are met, yet the block cannot stand, or cannot go in, as things are. */
+        CANT_STAND
+    }
+
     @Override
     protected boolean isReadyToPlace(BlockPos blockPos) {
+        return placementReadiness(blockPos) == Readiness.READY;
+    }
+
+    /** A block that waits for nothing but cannot stand is a stalled build's red cell; one that only waits is not. */
+    @Override
+    protected EnumStallReason placementStallReason(BlockPos blockPos) {
+        return placementReadiness(blockPos) == Readiness.CANT_STAND ? EnumStallReason.CANT_STAND : null;
+    }
+
+    private Readiness placementReadiness(BlockPos blockPos) {
         // noinspection ConstantConditions
         ISchematicBlock self = getSchematicBlock(blockPos);
         boolean selfIsFluid = self instanceof SchematicBlockFluid;
@@ -342,7 +361,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                 if (selfIsFluid && neighbour instanceof SchematicBlockFluid) return true;
                 return false;
             }) && self.isReadyToBuild(tile.getWorldBC(), blockPos);
-        if (!dependenciesMet) return false;
+        if (!dependenciesMet) return Readiness.WAITING;
         // Pre-check canSurvive against the current world. Without this, blocks like snow-on-air
         // (where the schematic itself has air at the support position, so requiredBlockOffsets
         // is vacuously CORRECT but no real support exists) or snow-on-partial-snow-below (where
@@ -357,7 +376,7 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // placement, but we never get there. If you hit it, manually placing the torch works.
         if (self instanceof SchematicBlockDefault def && def.blockState != null
                 && !def.blockState.canSurvive(tile.getWorldBC(), blockPos)) {
-            return false;
+            return Readiness.CANT_STAND;
         }
         // The same for a bed, door or tall plant whose other half's cell holds a block (a torch, a skull): build
         // would refuse it and the item would only fly out and back. Inside the box, with excavation on, that block is
@@ -366,9 +385,9 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
         // outside the box, or fluid in NO_REPLACE) is caught here too when it changed since the last check sweep.
         if (self instanceof SchematicBlockDefault def && (!def.hasRoomForSecondHalf(tile.getWorldBC(), blockPos)
                 || isSecondHalfBlocked(def, blockPos))) {
-            return false;
+            return Readiness.CANT_STAND;
         }
-        return true;
+        return Readiness.READY;
     }
 
     /** Also asks again a two-cell block whose other half's cell holds fluid: its check depends on the mode too

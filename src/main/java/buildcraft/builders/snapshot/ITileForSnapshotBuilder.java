@@ -34,6 +34,15 @@ public interface ITileForSnapshotBuilder extends IPlayerOwned {
     }
 
     /**
+     * Whether the machine shows players the cells a stalled build is skipping, so its {@link SnapshotBuilder}
+     * diagnoses a stall (see {@link SnapshotBuilder#getStalledCells()}) and has the result synced. Only the Builder
+     * does; the Filler keeps the default and pays nothing for it.
+     */
+    default boolean reportsStalls() {
+        return false;
+    }
+
+    /**
      * Whether the placed container blocks (chests, hoppers, barrels, shulkers, the furnace
      * family, dispensers/droppers, brewing stands, …) keep their captured inventory contents or
      * are placed empty. Default is {@link EnumContainerContentsMode#INCLUDE} so non-builder tiles

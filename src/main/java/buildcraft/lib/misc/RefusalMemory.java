@@ -32,9 +32,9 @@ import net.minecraft.world.level.block.state.BlockState;
  *     <td>{@link #QUARRY_FRAME}</td><td>fixed 200 ticks; refused cells are re-probed as they come due
  *     ({@link #takeExpired}), even by an idle quarry</td><td>none: the cells held are cells of the frame box</td>
  *     <td>tile owner</td><td>-</td></tr>
- * <tr><td>Builder and Filler placements</td><td>{@link #BUILDER_PLACE}</td><td>fixed 200 ticks; a refused cell is
- *     parked (skipped when queuing placements) and asked again once its window ends</td><td>none: the cells held
- *     are cells of the build box</td><td>tile owner</td><td>-</td></tr>
+ * <tr><td>Builder and Filler placements, and the blocks they may not break</td><td>{@link #BUILDER_PLACE}</td>
+ *     <td>fixed 200 ticks; a refused cell is parked (skipped when queuing placements or breaks) and asked again once
+ *     its window ends</td><td>none: the cells held are cells of the build box</td><td>tile owner</td><td>-</td></tr>
  * <tr><td>Stripes pipe</td><td>{@link #STRIPES}</td><td>fixed 200 ticks</td><td>4 (it faces one block at a
  *     time)</td><td>pipe owner</td><td>the block the current break cycle charges</td></tr>
  * <tr><td>Robot search boards (lumberjack, miner, ...)</td><td>{@link #ROBOT_SEARCH}</td><td>fixed 1200 ticks</td>

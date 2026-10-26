@@ -22,6 +22,6 @@ public final class BlueprintRecipeTransfer {
 
     public static void send(BCContainer container, Identifier recipeId) {
         String recipeIdStr = recipeId.toString();
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER, buf -> buf.writeUtf(recipeIdStr));
+        container.sendMessage(ContainerBC_Neptune.NET_RECIPE_TRANSFER, buf -> buf.writeUtf(recipeIdStr));
     }
 }

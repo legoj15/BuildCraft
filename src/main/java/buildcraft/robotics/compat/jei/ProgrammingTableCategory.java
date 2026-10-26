@@ -22,8 +22,8 @@ import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.robotics.container.ProgrammingTableLayout;
-import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 
 /**
@@ -37,7 +37,7 @@ import buildcraft.silicon.BCSiliconItems;
  * tooltips but are not indexed, so they don't make every entry a "use" of every board. The laser-energy cost spans
  * almost two orders of magnitude between boards, so it is printed under the panel like the Assembly Table's.
  */
-public class ProgrammingTableCategory extends AbstractRecipeCategory<ProgrammingRecipeJei> {
+public class ProgrammingTableCategory extends AbstractRecipeCategory<ProgrammingRecipeEntry> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/programming_table.png");
 
     // The layout's viewer crop of the GUI texture: the board slots, the option grid and the power bar. Package-visible
@@ -75,10 +75,10 @@ public class ProgrammingTableCategory extends AbstractRecipeCategory<Programming
 
     @Override
     //? if >=26.1 {
-    public void draw(ProgrammingRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+    public void draw(ProgrammingRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
     //?} else {
-    /*public void draw(ProgrammingRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+    /*public void draw(ProgrammingRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
@@ -88,7 +88,7 @@ public class ProgrammingTableCategory extends AbstractRecipeCategory<Programming
     }
 
     @Override
-    public void setRecipe(IRecipeLayoutBuilder builder, ProgrammingRecipeJei recipe, IFocusGroup focuses) {
+    public void setRecipe(IRecipeLayoutBuilder builder, ProgrammingRecipeEntry recipe, IFocusGroup focuses) {
         // addItemStacks (not addItemStack/add) throughout: the single-stack forms fork at the JEI 20 cliff —
         // addItemStack is deprecated for removal on 20+, and its add(ItemStack) successor is absent on 1.21.1's 19.x.
         builder.addInputSlot(INPUT_X, INPUT_Y).addItemStacks(recipe.inputs());

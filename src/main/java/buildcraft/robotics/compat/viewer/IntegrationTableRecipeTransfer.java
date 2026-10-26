@@ -12,7 +12,6 @@ import buildcraft.lib.compat.viewer.TransferResult;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 import buildcraft.robotics.container.RoboticsTableTransfer;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 import buildcraft.silicon.tile.TileIntegrationTable;
@@ -23,14 +22,14 @@ import buildcraft.silicon.tile.TileIntegrationTable;
  * carries no other state, so the request is just the board's program.
  */
 public final class IntegrationTableRecipeTransfer
-        extends RecipeTransfer<ContainerIntegrationTable, IntegrationRecipeJei> {
+        extends RecipeTransfer<ContainerIntegrationTable, IntegrationRecipeEntry> {
 
     public IntegrationTableRecipeTransfer() {
         super(ContainerIntegrationTable.class, BCSiliconMenuTypes.INTEGRATION_TABLE::get);
     }
 
     @Override
-    protected TransferResult check(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
+    protected TransferResult check(ContainerIntegrationTable container, IntegrationRecipeEntry recipe, Player player,
             boolean maxTransfer) {
         TileIntegrationTable table = container.tile;
         String boardId = recipe.boardId();
@@ -41,9 +40,9 @@ public final class IntegrationTableRecipeTransfer
     }
 
     @Override
-    protected void send(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
+    protected void send(ContainerIntegrationTable container, IntegrationRecipeEntry recipe, Player player,
             boolean maxTransfer) {
         String boardId = recipe.boardId();
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
+        container.sendMessage(ContainerBC_Neptune.NET_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
     }
 }

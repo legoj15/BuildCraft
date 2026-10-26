@@ -11,18 +11,18 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
 
-/** Holds the JEI recipe type for the Integration Table; every entry is an {@link IntegrationRecipeJei}. JEI 20+
+/** Holds the JEI recipe type for the Integration Table; every entry is an {@link IntegrationRecipeEntry}. JEI 20+
  *  (the {@code >=1.21.10} nodes) deprecated {@code RecipeType} for removal in favour of {@code IRecipeType}; the
  *  1.21.1 node's JEI 19.x predates {@code IRecipeType}, so it keeps the class. */
 public final class IntegrationRecipeJeiTypes {
     //? if >=1.21.10 {
-    public static final IRecipeType<IntegrationRecipeJei> INTEGRATION = IRecipeType.create(
-            "buildcraftunofficial", "integration_table", IntegrationRecipeJei.class);
+    public static final IRecipeType<IntegrationRecipeEntry> INTEGRATION = IRecipeType.create(
+            "buildcraftunofficial", "integration_table", IntegrationRecipeEntry.class);
     //?} else {
-    /*public static final RecipeType<IntegrationRecipeJei> INTEGRATION = RecipeType.create(
-            "buildcraftunofficial", "integration_table", IntegrationRecipeJei.class);*/
+    /*public static final RecipeType<IntegrationRecipeEntry> INTEGRATION = RecipeType.create(
+            "buildcraftunofficial", "integration_table", IntegrationRecipeEntry.class);*/
     //?}
 
     private IntegrationRecipeJeiTypes() {}

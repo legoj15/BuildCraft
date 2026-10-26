@@ -31,7 +31,7 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
  * required buckets (fluid already in a tank or pipe has no item to move).
  *
  * <p>Subclasses supply the recipe → (slot, bucket) mapping via {@link #getRequiredBuckets}; this class performs the
- * availability check ({@link #check}) and the {@link ContainerBC_Neptune#NET_JEI_TRANSFER_BUCKETS} network send
+ * availability check ({@link #check}) and the {@link ContainerBC_Neptune#NET_TRANSFER_BUCKETS} network send
  * ({@link #send}) inside the shared {@link RecipeTransfer} skeleton. A transfer that cannot be done is always
  * {@link TransferResult#MISSING}.
  *
@@ -80,7 +80,7 @@ public abstract class BucketRecipeTransfer<C extends AbstractContainerMenu & BCC
     @Override
     protected void send(C container, R recipe, Player player, boolean maxTransfer) {
         List<BucketSlot> required = getRequiredBuckets(recipe);
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_BUCKETS, buf -> {
+        container.sendMessage(ContainerBC_Neptune.NET_TRANSFER_BUCKETS, buf -> {
             buf.writeVarInt(required.size());
             for (BucketSlot req : required) {
                 buf.writeVarInt(req.slot());

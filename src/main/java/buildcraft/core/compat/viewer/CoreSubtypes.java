@@ -15,7 +15,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.core.item.ItemFragileFluidContainer;
 
 /** The recipe-viewer identity (JEI subtype key, REI item comparator) of the core items with a hand-written key, kept
- *  viewer-free so it is unit-testable ({@code JeiSubtypeKeysTest}). Its {@code toString()} doubles as 1.21.1's legacy bookmark text, so it is pinned. */
+ *  viewer-free so it is unit-testable ({@code SubtypeKeysTest}). Its {@code toString()} doubles as 1.21.1's legacy bookmark text, so it is pinned. */
 public final class CoreSubtypes {
     private CoreSubtypes() {}
 

@@ -20,8 +20,8 @@ import net.minecraft.resources.Identifier;
 import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
-import buildcraft.robotics.recipe.IntegrationRecipeCollector;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.IntegrationTableLayout;
 
@@ -34,7 +34,7 @@ import buildcraft.silicon.container.IntegrationTableLayout;
  * <p>The preview slot repeats the result {@code RENDER_ONLY}, as the table shows it before crafting; it is not
  * indexed. The laser-energy cost is printed under the panel like the other laser tables'.
  */
-public class IntegrationTableCategory extends AbstractRecipeCategory<IntegrationRecipeJei> {
+public class IntegrationTableCategory extends AbstractRecipeCategory<IntegrationRecipeEntry> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/integration_table.png");
 
     // The layout's viewer crop of the GUI texture: the ring, the preview, the result and the power bar.
@@ -68,10 +68,10 @@ public class IntegrationTableCategory extends AbstractRecipeCategory<Integration
 
     @Override
     //? if >=26.1 {
-    public void draw(IntegrationRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+    public void draw(IntegrationRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
     //?} else {
-    /*public void draw(IntegrationRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+    /*public void draw(IntegrationRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
@@ -79,7 +79,7 @@ public class IntegrationTableCategory extends AbstractRecipeCategory<Integration
     }
 
     @Override
-    public void setRecipe(IRecipeLayoutBuilder builder, IntegrationRecipeJei recipe, IFocusGroup focuses) {
+    public void setRecipe(IRecipeLayoutBuilder builder, IntegrationRecipeEntry recipe, IFocusGroup focuses) {
         // addItemStacks throughout: the single-stack forms fork at the JEI 20 cliff (see ProgrammingTableCategory).
         builder.addInputSlot(ringX(IntegrationTableLayout.CENTRE_COL), ringY(IntegrationTableLayout.CENTRE_ROW))
                 .addItemStacks(List.of(recipe.center()));

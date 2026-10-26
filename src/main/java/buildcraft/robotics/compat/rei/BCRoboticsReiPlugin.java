@@ -21,10 +21,10 @@ import buildcraft.robotics.client.gui.GuiProgrammingTable;
 import buildcraft.robotics.compat.viewer.IntegrationTableRecipeTransfer;
 import buildcraft.robotics.compat.viewer.ProgrammingTableRecipeTransfer;
 import buildcraft.robotics.container.ProgrammingTableLayout;
-import buildcraft.robotics.recipe.IntegrationRecipeCollector;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
-import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.IntegrationTableLayout;
 import buildcraft.silicon.gui.GuiIntegrationTable;
@@ -56,10 +56,10 @@ public class BCRoboticsReiPlugin implements REIClientPlugin {
         // The registry is filled at ServerAboutToStart (integrated server) or LoggingIn (multiplayer client); the
         // order of the latter and REI's reload is not ours to rely on, and the call is once-per-JVM.
         BCRoboticsRecipes.ensureInitialized();
-        for (ProgrammingRecipeJei recipe : ProgrammingRecipeCollector.collect()) {
+        for (ProgrammingRecipeEntry recipe : ProgrammingRecipeCollector.collect()) {
             registry.add(PROGRAMMING.display(recipe));
         }
-        for (IntegrationRecipeJei recipe : IntegrationRecipeCollector.collect()) {
+        for (IntegrationRecipeEntry recipe : IntegrationRecipeCollector.collect()) {
             registry.add(INTEGRATION.display(recipe));
         }
     }

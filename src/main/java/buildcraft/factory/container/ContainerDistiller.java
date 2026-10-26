@@ -53,7 +53,7 @@ public class ContainerDistiller extends ContainerBCTile<TileDistiller_BC8> {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_JEI_TRANSFER_BUCKETS && !isClient && tile != null) {
+        if (id == NET_TRANSFER_BUCKETS && !isClient && tile != null) {
             // JEI "+" pressed on a distillation recipe: move a bucket of the input fluid into the
             // input container slot; the tile drains it into the input tank.
             int count = buffer.readVarInt();

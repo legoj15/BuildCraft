@@ -191,7 +191,7 @@ public class AssemblyTableTransferTester {
         PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
         try {
             AssemblyTableTransfer.write(buffer, helper.getLevel().registryAccess(), maxTransfer, need);
-            menu.readMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS, buffer, false, null);
+            menu.readMessage(ContainerBC_Neptune.NET_TRANSFER_ITEMS, buffer, false, null);
         } finally {
             buffer.release();
         }

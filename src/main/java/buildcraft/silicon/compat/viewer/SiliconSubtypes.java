@@ -14,7 +14,7 @@ import buildcraft.silicon.item.ItemPluggableGate;
 import buildcraft.silicon.item.ItemPluggableLens;
 
 /** The recipe-viewer identity (JEI subtype key, REI item comparator) of the silicon pluggable items, kept viewer-free so
- *  it is unit-testable ({@code JeiSubtypeKeysTest}).
+ *  it is unit-testable ({@code SubtypeKeysTest}).
  *
  *  <p>Each key is the smallest value that uniquely identifies a <em>visual</em> variant — equal keys merge into one
  *  JEI entry, different keys get their own entry and their own recipe lookup. Without them JEI collapses every

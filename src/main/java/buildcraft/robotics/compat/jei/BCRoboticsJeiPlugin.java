@@ -21,9 +21,9 @@ import buildcraft.robotics.BCRoboticsItems;
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.client.gui.GuiProgrammingTable;
 import buildcraft.robotics.container.ProgrammingTableLayout;
-import buildcraft.robotics.recipe.IntegrationRecipeCollector;
-import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
-import buildcraft.robotics.recipe.RoboticsJeiSubtypes;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.viewer.RoboticsSubtypes;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.IntegrationTableLayout;
 import buildcraft.silicon.gui.GuiIntegrationTable;
@@ -34,7 +34,7 @@ import buildcraft.silicon.gui.GuiIntegrationTable;
  * both tables as catalysts, click-throughs on their GUIs' power bars, and subtype keys that tell
  * boards and robots apart by program (robots also by charged vs drained) — without those, JEI merges every board into
  * one entry (and every robot into another) because the program rides in {@code CUSTOM_DATA}. See
- * {@link RoboticsJeiSubtypes}.
+ * {@link RoboticsSubtypes}.
  */
 @JeiPlugin
 public class BCRoboticsJeiPlugin implements IModPlugin {
@@ -47,8 +47,8 @@ public class BCRoboticsJeiPlugin implements IModPlugin {
 
     @Override
     public void registerItemSubtypes(ISubtypeRegistration registration) {
-        JeiSubtypes.register(registration, BCRoboticsItems.REDSTONE_BOARD.get(), RoboticsJeiSubtypes::boardKey);
-        JeiSubtypes.register(registration, BCRoboticsItems.ROBOT.get(), RoboticsJeiSubtypes::robotKey);
+        JeiSubtypes.register(registration, BCRoboticsItems.REDSTONE_BOARD.get(), RoboticsSubtypes::boardKey);
+        JeiSubtypes.register(registration, BCRoboticsItems.ROBOT.get(), RoboticsSubtypes::robotKey);
     }
 
     @Override

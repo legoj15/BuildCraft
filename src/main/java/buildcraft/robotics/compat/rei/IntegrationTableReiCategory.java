@@ -17,7 +17,7 @@ import buildcraft.lib.compat.rei.ReiDisplay;
 import buildcraft.lib.compat.rei.ReiLayout;
 import buildcraft.lib.compat.rei.ReiLayout.Role;
 import buildcraft.lib.compat.viewer.MjLabel;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.IntegrationTableLayout;
 
@@ -25,8 +25,8 @@ import buildcraft.silicon.container.IntegrationTableLayout;
  * REI category for the Integration Table, laid out as JEI's {@code IntegrationTableCategory}: the table's own GUI with
  * the item in the centre of the ring, the ingredients around it, the preview (shown only) and the result.
  */
-public class IntegrationTableReiCategory extends ReiCategory<IntegrationRecipeJei> {
-    public static final CategoryIdentifier<ReiDisplay<IntegrationRecipeJei>> ID =
+public class IntegrationTableReiCategory extends ReiCategory<IntegrationRecipeEntry> {
+    public static final CategoryIdentifier<ReiDisplay<IntegrationRecipeEntry>> ID =
             CategoryIdentifier.of("buildcraftunofficial", "integration_table");
 
     private static final Identifier TEXTURE =
@@ -42,7 +42,7 @@ public class IntegrationTableReiCategory extends ReiCategory<IntegrationRecipeJe
     }
 
     @Override
-    protected void layout(IntegrationRecipeJei recipe, ReiLayout layout) {
+    protected void layout(IntegrationRecipeEntry recipe, ReiLayout layout) {
         layout.background(TEXTURE, TEX_U, TEX_V, TEX_W, TEX_H);
         layout.item(ringX(IntegrationTableLayout.CENTRE_COL), ringY(IntegrationTableLayout.CENTRE_ROW), Role.INPUT,
                 List.of(recipe.center()));

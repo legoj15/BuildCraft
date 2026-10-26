@@ -172,7 +172,7 @@ local JVM's copy, which on a remote client is its own unsynced file.
 silicon, robotics), shared machinery in `lib/compat/jei`. Each category follows the Assembly Table
 shape: a JEI-free record + collector (unit-testable — `ProgrammingRecipeCollectorTester` is the
 model; where the guide book reads the same entries, as for the robotics tables, they live outside
-`compat/jei` — `robotics/recipe` — and `GuideJeiIndependenceTest` keeps the guide off that package),
+`compat/jei` — `robotics/compat/viewer` — and `GuideJeiIndependenceTest` keeps the guide off that package),
 a `*JeiTypes` holder, and a category that crops the machine's own GUI texture and prints the
 MJ cost through `MjLabel`. Cross-node API rules, all enforced by a clean
 `-PbcLint=deprecation` sweep since 2026-09-26: recipe types are `IRecipeType` on the JEI 20+ nodes
@@ -186,7 +186,7 @@ nodes (the paintbrush — with `JeiSubtypes` as its 1.21.1 fallback); put single
 `add(ItemStack)` successor does not exist on 19.x.
 
 **REI** mirrors every JEI registration from `<subsystem>/compat/rei`; neither viewer's package imports
-the other's. What both read lives in `<subsystem>/compat/viewer` (and `robotics/recipe`): the
+the other's. What both read lives in `<subsystem>/compat/viewer`: the
 entry records and collectors, the subtype keys, `FluidContainerAliases`, `MjLabel`, and the "+"
 transfer cores — `lib/compat/viewer/RecipeTransfer` (check, then send on a real press) with one
 subclass per machine, which JEI's `AbstractTransferHandler` and REI's `ReiRecipeTransferHandler`

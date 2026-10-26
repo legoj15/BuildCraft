@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.robotics.recipe;
+package buildcraft.robotics.compat.viewer;
 
 import java.util.Objects;
 
@@ -16,9 +16,9 @@ import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 
-/** The JEI identity of the two program-carrying robotics items, kept JEI-free so it is unit-testable. It sits in
- *  {@code buildcraft.robotics.recipe}, not {@code compat.jei}, because the guide book's table lookups
- *  ({@code buildcraft.robotics.client.guide}) match stacks by the same identity and must not depend on JEI's package.
+/** The recipe-viewer identity of the two program-carrying robotics items, kept viewer-free so it is unit-testable.
+ *  JEI and REI both register these keys, and the guide book's table lookups ({@code buildcraft.robotics.client.guide})
+ *  match stacks by the same identity, so none of them may own it.
  *
  *  <p>Both items keep their program in {@code CUSTOM_DATA}, which JEI ignores by default — without these keys every
  *  board and every robot collapsed into ONE entry each (JEI logged 51 duplicates in the robots tab), so "recipe" on a
@@ -31,10 +31,10 @@ import buildcraft.robotics.item.ItemRobot;
  *  so one key for both would make JEI hide one and flag them as duplicates; a per-level key would split every robot
  *  into countless entries instead. The blank robot hides its charge everywhere ({@link ItemRobot#hasEmptyBoard}), so
  *  charge never splits it. */
-public final class RoboticsJeiSubtypes {
+public final class RoboticsSubtypes {
     private static final String CHARGED_SUFFIX = "#charged";
 
-    private RoboticsJeiSubtypes() {}
+    private RoboticsSubtypes() {}
 
     /** @return The board's program id, or null when no board registry exists yet. */
     @Nullable
@@ -56,7 +56,7 @@ public final class RoboticsJeiSubtypes {
     }
 
     /** Whether the collector should treat {@code a} and {@code b} as the same stack when deciding that a programming
-     *  option is a no-op: same item, and — for boards and robots — the same JEI key. Any other item counts as the
+     *  option is a no-op: same item, and — for boards and robots — the same subtype key. Any other item counts as the
      *  same only when its components match exactly. That is deliberately STRICTER than JEI, which merges every stack
      *  of an item it has no key for: an addon recipe that rewrites such an item's components is still a real
      *  conversion (the tooltips differ), so it keeps its entry rather than being hidden as a no-op. The guide book's

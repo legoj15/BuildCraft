@@ -19,7 +19,7 @@ import buildcraft.lib.compat.rei.ReiLayout;
 import buildcraft.lib.compat.rei.ReiLayout.Role;
 import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.robotics.container.ProgrammingTableLayout;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 
 /**
@@ -28,8 +28,8 @@ import buildcraft.silicon.BCSiliconItems;
  * so a lookup on a programmed board lands on exactly its entry. Only the two boards are indexed; the grid cells are
  * shown only.
  */
-public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeJei> {
-    public static final CategoryIdentifier<ReiDisplay<ProgrammingRecipeJei>> ID =
+public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeEntry> {
+    public static final CategoryIdentifier<ReiDisplay<ProgrammingRecipeEntry>> ID =
             CategoryIdentifier.of("buildcraftunofficial", "programming_table");
 
     private static final Identifier TEXTURE =
@@ -45,7 +45,7 @@ public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeJe
     }
 
     @Override
-    protected void layout(ProgrammingRecipeJei recipe, ReiLayout layout) {
+    protected void layout(ProgrammingRecipeEntry recipe, ReiLayout layout) {
         layout.background(TEXTURE, TEX_U, TEX_V, TEX_W, TEX_H);
         // The table GUI's own selection frame, under the option's item as in the GUI.
         int cell = recipe.gridIndex();

@@ -8,6 +8,7 @@ package buildcraft.lib.compat.rei;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
@@ -119,8 +120,23 @@ public final class ReiLayout {
 
     /** A line of text, left-aligned at {@code (x, y)} in the label grey, without a shadow. */
     public ReiLayout text(int x, int y, Component text) {
-        elements.add((ox, oy, t) -> Widgets.createLabel(new Point(ox + x, oy + y), text).leftAligned().noShadow()
-                .color(TEXT_LIGHT, TEXT_DARK));
+        return text(x, y, () -> text);
+    }
+
+    /**
+     * As {@link #text(int, int, Component)}, but {@code text} is asked again every frame, the way JEI's
+     * {@code MjLabel.draw} resolves per frame: a unit-name setting change, or the RF mode arriving from the server
+     * after the display was built, shows without a REI reload.
+     */
+    public ReiLayout text(int x, int y, Supplier<Component> text) {
+        elements.add((ox, oy, t) -> Widgets.createLabel(new Point(ox + x, oy + y), text.get()).leftAligned().noShadow()
+                .color(TEXT_LIGHT, TEXT_DARK).onRender((graphics, label) -> {
+                    Component now = text.get();
+                    // setMessage drops REI's cached text layout, so only call it when the text changed.
+                    if (!now.equals(label.getMessage())) {
+                        label.setMessage(now);
+                    }
+                }));
         return this;
     }
 

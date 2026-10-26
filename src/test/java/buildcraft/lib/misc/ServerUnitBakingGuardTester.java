@@ -58,19 +58,26 @@ public class ServerUnitBakingGuardTester {
     private static final Pattern TOUCHES_MINECRAFT_CLIENT = Pattern.compile(
             "(?m)^\\s*import\\s+(?:static\\s+)?net\\.minecraft\\.client\\.|\\bextends\\s+\\w*Screen\\b");
 
+    /** REI's common-side plugin classes, which sit in a {@code compat/rei} package yet load on a dedicated server: the
+     *  {@code @REIPluginCommon} annotation, or the {@code BCReiCommonPlugin} type they implement. */
+    private static final Pattern COMMON_REI_PLUGIN = Pattern.compile("\\b(?:REIPluginCommon|BCReiCommonPlugin)\\b");
+
     /** Code that only ever runs in a client JVM, where reading the client config is exactly right: the client
-     *  packages and the JEI and REI plugins by their path (REI's {@code @REIPluginCommon} classes there also load on a
-     *  server, but only register item comparators). A {@code gui} package is not enough on its own: the server-side
-     *  menus, widgets and slots live in {@code buildcraft/lib/gui} too, so a file there is client-only only when its
-     *  own code says so ({@link #TOUCHES_MINECRAFT_CLIENT}), and anything else in it is scanned like any other. The
-     *  same goes for {@code compat/viewer}, the data both viewers share, which the server-side transfers read too.
+     *  packages and the JEI and REI plugins by their path, except the REI common-side plugins
+     *  ({@link #COMMON_REI_PLUGIN}), which a server loads too and which are scanned like any other code. A
+     *  {@code gui} package is not enough on its own: the server-side menus, widgets and slots live in
+     *  {@code buildcraft/lib/gui} too, so a file there is client-only only when its own code says so
+     *  ({@link #TOUCHES_MINECRAFT_CLIENT}), and anything else in it is scanned like any other. The same goes for
+     *  {@code compat/viewer}, the data both viewers share, which the server-side transfers read too.
      *
      * @param code the file's live code ({@link MainSourceSet#codeOnly}) */
     static boolean isClientOnly(String relativePath, String code) {
         String path = "/" + relativePath;
-        if (path.contains("/client/") || path.contains("/compat/jei/") || path.contains("/compat/rei/")
-                || relativePath.equals(CLIENT_RESOLVER)) {
+        if (path.contains("/client/") || path.contains("/compat/jei/") || relativePath.equals(CLIENT_RESOLVER)) {
             return true;
+        }
+        if (path.contains("/compat/rei/")) {
+            return !COMMON_REI_PLUGIN.matcher(code).find();
         }
         return (path.contains("/gui/") || path.contains("/compat/viewer/"))
                 && TOUCHES_MINECRAFT_CLIENT.matcher(code).find();
@@ -93,6 +100,23 @@ public class ServerUnitBakingGuardTester {
                 "everything under a client package is exempt whatever it imports");
         Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/jei/Label.java", menu), "jei is client only");
         Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/rei/Label.java", menu), "so is rei");
+        String commonReiPlugin = source("package buildcraft.core.compat.rei;",
+                "import me.shedaniel.rei.forge.REIPluginCommon;", "@REIPluginCommon",
+                "public class BCCoreReiPlugin implements BCReiCommonPlugin {}");
+        String commonReiType = source("package buildcraft.lib.compat.rei;",
+                "public interface BCReiCommonPlugin extends REICommonPlugin {}");
+        Assertions.assertFalse(isClientOnly("buildcraft/core/compat/rei/BCCoreReiPlugin.java", commonReiPlugin),
+                "an @REIPluginCommon class loads on a dedicated server, so it is scanned despite its rei directory");
+        Assertions.assertFalse(isClientOnly("buildcraft/lib/compat/rei/BCReiCommonPlugin.java", commonReiType),
+                "so is the common plugin type they implement");
+        // The real classes, so the rule cannot drift off the code it is about.
+        for (String file : new String[] { "buildcraft/core/compat/rei/BCCoreReiPlugin.java",
+                "buildcraft/lib/compat/rei/BCReiCommonPlugin.java",
+                "buildcraft/silicon/compat/rei/BCSiliconReiCommonPlugin.java",
+                "buildcraft/robotics/compat/rei/BCRoboticsReiCommonPlugin.java" }) {
+            Assertions.assertFalse(isClientOnly(file, MainSourceSet.codeOf(file)),
+                    file + " loads on a dedicated server and must not be exempted as client-only");
+        }
         Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/viewer/Label.java", screen),
                 "shared viewer code that imports Minecraft client code is client only");
         Assertions.assertFalse(isClientOnly("buildcraft/lib/compat/viewer/Transfer.java", menu),

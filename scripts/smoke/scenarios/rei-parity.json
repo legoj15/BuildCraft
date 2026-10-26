@@ -29,6 +29,7 @@
     { "do": "tp", "at": [0, 0, 3], "yaw": 180, "pitch": 30 },
     { "do": "hold", "item": "minecraft:air" },
 
+    { "do": "tp", "at": [-4, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [-4, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Assembly Table", "do": "use" },
     { "do": "expectScreen", "contains": "GuiAssemblyTable" },
@@ -39,6 +40,7 @@
     { "name": "asm-rei", "do": "widgets" },
     { "do": "close" },
 
+    { "do": "tp", "at": [-3, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [-3, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Auto Workbench", "do": "use" },
     { "do": "expectScreen", "contains": "GuiAutoCraft" },
@@ -47,6 +49,7 @@
     { "name": "awb-rei", "do": "shot", "look": "REI Crafting category, Auto Workbench listed as a workstation, '+' beside each recipe" },
     { "do": "close" },
 
+    { "do": "tp", "at": [-2, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [-2, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Distiller", "do": "use" },
     { "do": "expectScreen", "contains": "GuiDistiller" },
@@ -55,6 +58,7 @@
     { "name": "dist-rei", "do": "shot", "look": "REI Distiller category: one fluid in, gas and liquid fractions out, MJ cost, Distiller workstation" },
     { "do": "close" },
 
+    { "do": "tp", "at": [-1, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [-1, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Heat Exchanger", "do": "use" },
     { "do": "expectScreen", "contains": "GuiHeatExchange" },
@@ -63,6 +67,7 @@
     { "name": "hx-rei", "do": "shot", "look": "REI Heat Exchanger category: cold in/out and hot in/out fluid pairs" },
     { "do": "close" },
 
+    { "do": "tp", "at": [0, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [0, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Stirling Engine", "do": "use" },
     { "do": "expectScreen", "contains": "ScreenEngineStone" },
@@ -71,6 +76,7 @@
     { "name": "stirling-rei", "do": "shot", "look": "REI Stirling fuel category listing furnace fuels with burn times (not empty)" },
     { "do": "close" },
 
+    { "do": "tp", "at": [1, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [1, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Combustion Engine", "do": "use" },
     { "do": "expectScreen", "contains": "ScreenEngineIron" },
@@ -79,6 +85,7 @@
     { "name": "combustion-rei", "do": "shot", "look": "REI Combustion fuel (and coolant tab): fuels with MJ/t and burn time, Combustion Engine workstation" },
     { "do": "close" },
 
+    { "do": "tp", "at": [2, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [2, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Programming Table", "do": "use" },
     { "do": "expectScreen", "contains": "GuiProgrammingTable" },
@@ -87,6 +94,7 @@
     { "name": "prog-rei", "do": "shot", "look": "REI Programming Table category: board in, programmed board out, MJ cost" },
     { "do": "close" },
 
+    { "do": "tp", "at": [3, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [3, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Integration Table", "do": "use" },
     { "do": "expectScreen", "contains": "GuiIntegrationTable" },
@@ -95,6 +103,7 @@
     { "name": "integ-rei", "do": "shot", "look": "REI Integration Table category: target + components, result, MJ cost" },
     { "do": "close" },
 
+    { "do": "tp", "at": [4, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [4, 0, 0] }, { "do": "wait", "ms": 300 },
     { "label": "open Advanced Crafting Table", "do": "use" },
     { "do": "expectScreen", "contains": "GuiAdvancedCraftingTable" },
@@ -104,7 +113,7 @@
     { "name": "act-rei", "do": "shot", "look": "REI Crafting category with the Advanced Crafting Table as a workstation" },
     { "do": "close" },
 
-    { "do": "aim", "at": [5, 0, 0], "exact": true }, { "do": "wait", "ms": 300 },
+    { "do": "tp", "at": [5, 0, 2], "yaw": 180, "pitch": 30 },
     { "do": "aim", "at": [5, 0, 0.45], "exact": true }, { "do": "wait", "ms": 300 },
     { "label": "open the gate", "do": "use" },
     { "do": "expectScreen", "contains": "GuiGate" },

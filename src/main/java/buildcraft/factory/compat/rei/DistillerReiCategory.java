@@ -38,7 +38,7 @@ public class DistillerReiCategory extends ReiCategory<IDistillationRecipe> {
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
 
     public DistillerReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.distiller", BCFactoryItems.DISTILLER.get(), TEX_W,
+        super(ID, "gui.jei.category.buildcraftunofficial.distiller", BCFactoryItems.DISTILLER::get, TEX_W,
                 TEX_H + 12);
     }
 
@@ -48,7 +48,7 @@ public class DistillerReiCategory extends ReiCategory<IDistillationRecipe> {
         layout.fluid(TANK_IN_X, TANK_IN_Y, TANK_IN_W, TANK_IN_H, Role.INPUT, recipe.in());
         layout.fluid(TANK_GAS_X, TANK_GAS_Y, TANK_GAS_W, TANK_GAS_H, Role.OUTPUT, recipe.outGas());
         layout.fluid(TANK_LIQ_X, TANK_LIQ_Y, TANK_LIQ_W, TANK_LIQ_H, Role.OUTPUT, recipe.outLiquid());
-        layout.text(POWER_X, POWER_Y, MjLabel.text("gui.jei.category.buildcraftunofficial.distiller.power",
+        layout.text(POWER_X, POWER_Y, () -> MjLabel.text("gui.jei.category.buildcraftunofficial.distiller.power",
                 recipe.powerRequired()));
     }
 }

@@ -90,12 +90,18 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
                 return TransferHandler.Result.createNotApplicable();
             }
 
+            // A display with no recipe id cannot be sent to the server; leave it to REI's other handlers rather
+            // than show a "+" that does nothing.
+            var recipeId = display.getDisplayLocation();
+            if (recipeId.isEmpty()) {
+                return TransferHandler.Result.createNotApplicable();
+            }
+
             if (!context.isActuallyCrafting()) {
                 return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
             }
 
-            display.getDisplayLocation().ifPresent(
-                    id -> BlueprintRecipeTransfer.send(guiClass.cast(containerScreen).getMenu(), id));
+            BlueprintRecipeTransfer.send(guiClass.cast(containerScreen).getMenu(), recipeId.get());
 
             return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
         });

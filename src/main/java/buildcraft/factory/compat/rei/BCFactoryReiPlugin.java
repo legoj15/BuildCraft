@@ -15,6 +15,7 @@ import me.shedaniel.rei.api.common.util.EntryStacks;
 import me.shedaniel.rei.forge.REIPluginClient;
 
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
+import buildcraft.energy.BCEnergyRecipes;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.client.gui.GuiDistiller;
@@ -73,6 +74,8 @@ public class BCFactoryReiPlugin implements REIClientPlugin {
 
     @Override
     public void registerDisplays(DisplayRegistry registry) {
+        // A multiplayer client fills the refinery registries at LoggingIn; REI's reload may come first.
+        BCEnergyRecipes.ensureInitialized();
         for (HeatExchangerRecipePair pair : RefineryRecipeCollector.heatExchangerPairs()) {
             registry.add(HEAT_EXCHANGER.display(pair));
         }

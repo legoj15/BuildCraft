@@ -33,14 +33,14 @@ public class StirlingFuelReiCategory extends ReiCategory<StirlingFuel> {
     private static final int IN_X = 8, IN_Y = 4;
 
     public StirlingFuelReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.stirling_engine_fuel", BCEnergyItems.ENGINE_STONE.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.stirling_engine_fuel", BCEnergyItems.ENGINE_STONE::get,
                 176, 48);
     }
 
     @Override
     protected void layout(StirlingFuel recipe, ReiLayout layout) {
         layout.item(IN_X, IN_Y, Role.INPUT, List.of(recipe.fuel()));
-        layout.text(30, IN_Y + 1, Component.translatable(
+        layout.text(30, IN_Y + 1, () -> Component.translatable(
                 "gui.jei.category.buildcraftunofficial.stirling_engine_fuel.rate",
                 LocaleUtil.localizeMjFlow(MjAPI.MJ)));
         layout.text(30, IN_Y + 11, Component.translatable(

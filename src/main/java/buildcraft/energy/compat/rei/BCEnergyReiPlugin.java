@@ -29,6 +29,7 @@ import me.shedaniel.rei.forge.REIPluginClient;
 import buildcraft.api.fuels.IFuel;
 
 import buildcraft.energy.BCEnergyItems;
+import buildcraft.energy.BCEnergyRecipes;
 import buildcraft.energy.client.gui.ScreenEngineIron;
 import buildcraft.energy.client.gui.ScreenEngineStone;
 import buildcraft.energy.compat.viewer.CombustionCoolant;
@@ -66,6 +67,8 @@ public class BCEnergyReiPlugin implements REIClientPlugin {
 
     @Override
     public void registerDisplays(DisplayRegistry registry) {
+        // A multiplayer client fills the registries at LoggingIn; REI's reload may come first.
+        BCEnergyRecipes.ensureInitialized();
         for (IFuel fuel : EngineFuelCollector.combustionFuels()) {
             registry.add(COMBUSTION_FUEL.display(fuel));
         }

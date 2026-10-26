@@ -25,6 +25,7 @@ import buildcraft.lib.compat.rei.ReiScreens;
 import buildcraft.lib.gui.IGuiElement;
 import buildcraft.lib.gui.statement.GuiElementStatementSource;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.silicon.BCSiliconRecipes;
 import buildcraft.silicon.compat.viewer.AssemblyRecipeCollector;
 import buildcraft.silicon.compat.viewer.AssemblyRecipeEntry;
 import buildcraft.silicon.compat.viewer.AssemblyTableRecipeTransfer;
@@ -33,6 +34,7 @@ import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAdvancedCraftingTable;
 import buildcraft.silicon.gui.GuiAssemblyTable;
 import buildcraft.silicon.gui.GuiGate;
+import buildcraft.silicon.plug.FacadeStateManager;
 
 /**
  * REI integration plugin for BuildCraft Silicon, REI's twin of {@code BCSiliconJeiPlugin}: the Advanced Crafting
@@ -75,6 +77,11 @@ public class BCSiliconReiPlugin implements REIClientPlugin {
 
     @Override
     public void registerDisplays(DisplayRegistry registry) {
+        // The facade states and the assembly registry are filled at ServerAboutToStart (integrated server) or
+        // LoggingIn (multiplayer client); the order of the latter and REI's reload is not ours to rely on, and both
+        // calls are once-per-JVM.
+        FacadeStateManager.ensureInitialized();
+        BCSiliconRecipes.ensureInitialized();
         for (AssemblyRecipeEntry entry : AssemblyRecipeCollector.collect()) {
             registry.add(ASSEMBLY.display(entry));
         }

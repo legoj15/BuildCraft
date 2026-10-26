@@ -8,6 +8,7 @@ package buildcraft.lib.compat.rei;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.gui.Renderer;
@@ -33,14 +34,16 @@ public abstract class ReiCategory<R> implements DisplayCategory<ReiDisplay<R>> {
 
     private final CategoryIdentifier<ReiDisplay<R>> id;
     private final Component title;
-    private final ItemLike icon;
+    private final Supplier<? extends ItemLike> icon;
     private final int width;
     private final int height;
 
-    /** @param width  the content width, as the JEI category's
+    /** @param icon   resolved when REI asks for the icon, not here: a category sits in a plugin's static field, which
+     *                initialises as soon as REI loads the plugin class
+     *  @param width  the content width, as the JEI category's
      *  @param height the content height, as the JEI category's */
-    protected ReiCategory(CategoryIdentifier<ReiDisplay<R>> id, String titleKey, ItemLike icon, int width,
-            int height) {
+    protected ReiCategory(CategoryIdentifier<ReiDisplay<R>> id, String titleKey, Supplier<? extends ItemLike> icon,
+            int width, int height) {
         this.id = id;
         this.title = Component.translatable(titleKey);
         this.icon = icon;
@@ -70,7 +73,7 @@ public abstract class ReiCategory<R> implements DisplayCategory<ReiDisplay<R>> {
 
     @Override
     public final Renderer getIcon() {
-        return EntryStacks.of(icon);
+        return EntryStacks.of(icon.get());
     }
 
     @Override

@@ -87,5 +87,12 @@ public class BCEnergyClient {
             net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingIn.class,
             event -> buildcraft.energy.BCEnergyRecipes.ensureInitialized()
         );
+        //? if >=26.3 {
+        // The server-sent Stirling fuel list belongs to the world just left.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+            net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut.class,
+            event -> buildcraft.energy.compat.viewer.StirlingFuelSync.clearReceived()
+        );
+        //?}
     }
 }

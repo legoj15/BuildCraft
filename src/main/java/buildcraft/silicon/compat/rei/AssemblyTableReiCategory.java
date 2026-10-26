@@ -39,7 +39,7 @@ public class AssemblyTableReiCategory extends ReiCategory<AssemblyRecipeEntry> {
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
 
     public AssemblyTableReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.assembly_table", BCSiliconItems.ASSEMBLY_TABLE.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.assembly_table", BCSiliconItems.ASSEMBLY_TABLE::get,
                 OUTPUT_X + 24, TEX_H + 12);
     }
 
@@ -52,7 +52,7 @@ public class AssemblyTableReiCategory extends ReiCategory<AssemblyRecipeEntry> {
                     inputs.get(i));
         }
         layout.result(OUTPUT_X, OUTPUT_Y, recipe.outputs());
-        layout.text(POWER_X, POWER_Y, MjLabel.text("gui.jei.category.buildcraftunofficial.assembly_table.power",
+        layout.text(POWER_X, POWER_Y, () -> MjLabel.text("gui.jei.category.buildcraftunofficial.assembly_table.power",
                 recipe.microJoules()));
     }
 }

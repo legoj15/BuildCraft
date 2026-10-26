@@ -338,6 +338,9 @@ dependencies {
     compileOnly("net.fabricmc:fabric-loader:0.16.9") { isTransitive = false }
     if (recipeViewer == "rei") {
         runtimeOnly("me.shedaniel:RoughlyEnoughItems-neoforge:$reiVersion")
+        // REI's POM pins an older architectury than players get; 22.0.3 fails a mixin on our 26.3 pin. Run the
+        // line's newest instead (Gradle resolves the higher of the two).
+        runtimeOnly("dev.architectury:architectury-neoforge:${property("architectury_version")}")
     } else {
         runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
     }

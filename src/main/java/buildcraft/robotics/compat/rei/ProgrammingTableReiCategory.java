@@ -40,7 +40,7 @@ public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeJe
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
 
     public ProgrammingTableReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.programming_table", BCSiliconItems.PROGRAMMING_TABLE.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.programming_table", BCSiliconItems.PROGRAMMING_TABLE::get,
                 TEX_W, TEX_H + 12);
     }
 
@@ -63,7 +63,7 @@ public class ProgrammingTableReiCategory extends ReiCategory<ProgrammingRecipeJe
                         Role.RENDER_ONLY, List.of(grid.get(i)));
             }
         }
-        layout.text(POWER_X, POWER_Y, MjLabel.text("gui.jei.category.buildcraftunofficial.programming_table.power",
+        layout.text(POWER_X, POWER_Y, () -> MjLabel.text("gui.jei.category.buildcraftunofficial.programming_table.power",
                 recipe.microJoules()));
     }
 }

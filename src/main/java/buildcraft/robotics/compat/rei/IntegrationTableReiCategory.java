@@ -37,7 +37,7 @@ public class IntegrationTableReiCategory extends ReiCategory<IntegrationRecipeJe
     private static final int POWER_X = 4, POWER_Y = TEX_H + 2;
 
     public IntegrationTableReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.integration_table", BCSiliconItems.INTEGRATION_TABLE.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.integration_table", BCSiliconItems.INTEGRATION_TABLE::get,
                 TEX_W, TEX_H + 12);
     }
 
@@ -55,7 +55,7 @@ public class IntegrationTableReiCategory extends ReiCategory<IntegrationRecipeJe
                 Role.RENDER_ONLY, List.of(recipe.outputs().get(0)));
         layout.item(IntegrationTableLayout.RESULT_X - TEX_U, IntegrationTableLayout.RESULT_Y - TEX_V, Role.OUTPUT,
                 recipe.outputs());
-        layout.text(POWER_X, POWER_Y, MjLabel.text("gui.jei.category.buildcraftunofficial.integration_table.power",
+        layout.text(POWER_X, POWER_Y, () -> MjLabel.text("gui.jei.category.buildcraftunofficial.integration_table.power",
                 recipe.microJoules()));
     }
 

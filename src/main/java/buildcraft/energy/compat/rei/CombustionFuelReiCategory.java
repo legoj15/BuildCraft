@@ -37,7 +37,7 @@ public class CombustionFuelReiCategory extends ReiCategory<IFuel> {
     private static final int RUNS_HOT_X = 60;
 
     public CombustionFuelReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.combustion_engine_fuel", BCEnergyItems.ENGINE_IRON.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.combustion_engine_fuel", BCEnergyItems.ENGINE_IRON::get,
                 176, 66);
     }
 
@@ -49,7 +49,7 @@ public class CombustionFuelReiCategory extends ReiCategory<IFuel> {
             layout.fluid(RESIDUE_X, RESIDUE_Y, TANK_W, TANK_H, Role.OUTPUT, residue);
         }
         // getPowerPerCycle() is already micro-MJ per tick, which localizeMjFlow expects.
-        layout.text(IN_X, 48, Component.literal(LocaleUtil.localizeMjFlow(recipe.getPowerPerCycle())));
+        layout.text(IN_X, 48, () -> Component.literal(LocaleUtil.localizeMjFlow(recipe.getPowerPerCycle())));
         layout.text(IN_X, 58, Component.translatable(
                 "gui.jei.category.buildcraftunofficial.combustion_engine_fuel.burn", recipe.getTotalBurningTime()));
         if (recipe.getHeatPerCycle() > recipe.getPowerPerCycle()) {

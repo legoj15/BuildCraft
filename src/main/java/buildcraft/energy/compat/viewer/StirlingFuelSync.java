@@ -59,6 +59,11 @@ public record StirlingFuelSync(List<StirlingFuel> fuels) implements CustomPacket
         return received;
     }
 
+    /** Drops the list on disconnect, so a viewer opened in the next world never shows the last server's fuels. */
+    public static void clearReceived() {
+        received = List.of();
+    }
+
     public static void registerPayload(RegisterPayloadHandlersEvent event) {
         event.registrar("1").playToClient(TYPE, STREAM_CODEC, StirlingFuelSync::handle);
     }

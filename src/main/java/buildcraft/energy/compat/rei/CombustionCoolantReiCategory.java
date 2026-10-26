@@ -33,7 +33,7 @@ public class CombustionCoolantReiCategory extends ReiCategory<CombustionCoolant>
     private static final int OUT_X = 40, OUT_Y = 4;
 
     public CombustionCoolantReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.combustion_engine_coolant", BCEnergyItems.ENGINE_IRON.get(),
+        super(ID, "gui.jei.category.buildcraftunofficial.combustion_engine_coolant", BCEnergyItems.ENGINE_IRON::get,
                 176, 58);
     }
 

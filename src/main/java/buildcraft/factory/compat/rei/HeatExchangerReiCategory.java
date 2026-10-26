@@ -38,7 +38,7 @@ public class HeatExchangerReiCategory extends ReiCategory<HeatExchangerRecipePai
     private static final int END_OUT_X = 98 - TEX_U, END_OUT_Y = 12 - TEX_V, END_OUT_W = 34, END_OUT_H = 17;
 
     public HeatExchangerReiCategory() {
-        super(ID, "gui.jei.category.buildcraftunofficial.heat_exchanger", BCFactoryItems.HEAT_EXCHANGE.get(), TEX_W,
+        super(ID, "gui.jei.category.buildcraftunofficial.heat_exchanger", BCFactoryItems.HEAT_EXCHANGE::get, TEX_W,
                 TEX_H);
     }
 

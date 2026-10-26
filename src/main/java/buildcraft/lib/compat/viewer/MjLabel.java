@@ -26,7 +26,8 @@ public final class MjLabel {
 
     private MjLabel() {}
 
-    /** The label's text: {@code translationKey} filled with the cost in MJ (one decimal) and the unit name. */
+    /** The label's text: {@code translationKey} filled with the cost in MJ (one decimal) and the unit name. The unit
+     *  is read now, so a recipe viewer that keeps a label across frames calls this each frame. */
     public static Component text(String translationKey, long microJoules) {
         double mj = microJoules / (double) MjAPI.MJ;
         return Component.translatable(translationKey, LocaleUtil.formatDouble(mj, 1), LocaleUtil.mjUnit());

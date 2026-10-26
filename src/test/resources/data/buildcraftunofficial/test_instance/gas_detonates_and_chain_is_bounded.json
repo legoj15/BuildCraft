@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:gas_detonates_and_chain_is_bounded",
+    "environment": "buildcraftunofficial:gas_detonates_and_chain_is_bounded",
+    "structure": "minecraft:empty",
+    "max_ticks": 1010,
+    "setup_ticks": 0,
+    "required": true
+}

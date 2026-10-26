@@ -694,6 +694,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through", () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
+        reg.accept("buildcraftunofficial:flood_gate_respects_claimed_cells", () -> buildcraft.factory.FloodGateTester::testRefusedCellIsNotFlooded);
 
         // The wrenches as real tools (issue #34): mining rules, wear, and the zombies that carry or drop one
         reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);

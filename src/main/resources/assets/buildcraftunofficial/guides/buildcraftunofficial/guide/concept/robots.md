@@ -3,8 +3,6 @@ navigation:
   title: "Getting Started with Robots"
   parent: contents/robots/robot.md
   position: 2
-item_ids:
-  - buildcraftunofficial:map_location
 ---
 
 # Getting Started with Robots

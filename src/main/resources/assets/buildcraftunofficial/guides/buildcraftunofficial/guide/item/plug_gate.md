@@ -21,8 +21,15 @@ Redstone takes up a lot of space nowadays. Why not have finer control over your 
 <Recipe id="buildcraftunofficial:gate_iron_and_lapis" fallbackText="" />
 <Recipe id="buildcraftunofficial:gate_iron_and_quartz" fallbackText="" />
 <Recipe id="buildcraftunofficial:gate_swap_gold_and_diamond_to_or" fallbackText="" />
+</Row>
+
+*One of 12 recipes of this kind.*
+
+<Row>
 <Recipe id="buildcraftunofficial:gate_swap_gold_or_diamond_to_and" fallbackText="" />
 </Row>
+
+*One of 12 recipes of this kind.*
 
 ## Gate Placement
 

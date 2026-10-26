@@ -5,6 +5,7 @@ navigation:
   position: 14
   icon: buildcraftunofficial:zone_planner
 item_ids:
+  - buildcraftunofficial:map_location
   - buildcraftunofficial:zone_planner
 ---
 

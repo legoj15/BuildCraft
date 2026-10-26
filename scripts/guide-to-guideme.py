@@ -18,7 +18,7 @@ guide-to-wiki.py. What the conversion does with the parts GuideME has no equival
     GuideME can only draw recipe types it has a mapping for, and we ship no code for it;
   * the config book and the book's own `config/` pages are skipped (they describe this file format).
 
-scripts/guide-to-guideme.stamp records a hash of every input and of the output; the unit test
+scripts/guide-to-guideme.stamp records a hash of every file it reads and of the output; the unit test
 GuideMeExportStalenessTest fails when the two drift apart, so the export never silently goes stale.
 
 Usage:  python3 scripts/guide-to-guideme.py           regenerate the export and the stamp
@@ -82,12 +82,15 @@ class Export:
         for e in self.entries:
             if e.stack and guide.by_stack.get(e.stack) is e:
                 self.item_page[e.stack] = e
-        # An item with no page of its own is adopted by the first page that links it (the wire
-        # colours by Pipe Wires, Map Location by the Zone Planner), so its <ItemLink> has a target.
-        for e in self.entries:
-            for t in re.findall(r'<link\b[^>]*?(?:to|inline)="([^"]+)"[^>]*type="item_stack"', e.md):
-                if split_id(t)[0] == NS:
-                    self.item_page.setdefault(t, e)
+        # An item with no page of its own is adopted by a page that links it (the wire colours by
+        # Pipe Wires, Map Location by the Zone Planner), so its <ItemLink> has a target. Block and
+        # item pages go first: a concept page that mentions an item is rarely where it is explained.
+        for e in sorted(self.entries, key=lambda e: e.path.startswith("concept/")):
+            for t in re.findall(r"<link\b[^>]*>", visible_body(e.md)):
+                a = attrs_of(t)
+                target = a.get("to") or a.get("inline") or ""
+                if a.get("type") == "item_stack" and split_id(target)[0] == NS:
+                    self.item_page.setdefault(target, e)
         self.recipes_by_result = {}
         for r in guide.all_recipes:
             if r.get("type") in DRAWABLE_RECIPE_TYPES and recipe_result_id(r):
@@ -150,18 +153,43 @@ def rel_link(from_page, to_page):
 # Body conversion
 # --------------------------------------------------------------------------- #
 SOURCE_TAG = re.compile(r"</?[a-z_]+\b[^>]*?/?>")
+INLINE_STYLE = tuple(COLOUR_HEX) + ("bold", "italic", "strikethrough")
+INLINE_TAG = re.compile(r"<(/?)(" + "|".join(INLINE_STYLE) + r")>")
 
-def convert_body(md, page, ex):
+def visible_body(md):
+    """The page as the book shows it by default: no `//` comments, lore shown, hints and details
+    hidden (XmlPageLoader SHOW_LORE=true, SHOW_HINTS=false, SHOW_DETAIL=false)."""
     s = strip_comment_lines(md)
-
-    # Toggled content: the book's defaults (XmlPageLoader SHOW_LORE=true, SHOW_HINTS=false,
-    # SHOW_DETAIL=false).
     s = keep_block("lore", s)
     s = drop_block("no_lore", s)
     s = drop_block("hint", s)
     s = keep_block("no_hint", s)
     s = drop_block("detail", s)
-    s = keep_block("no_detail", s)
+    return keep_block("no_detail", s)
+
+def scope_inline_tags(line):
+    """Colour and emphasis are per line in the book (XmlPageLoader resets them each line), and every
+    line becomes its own paragraph here, which an MDX tag cannot span. So close whatever is still open
+    at the line end, drop a close with nothing open, and keep crossed tags properly nested."""
+    out, pos, open_ = [], 0, []
+    for m in INLINE_TAG.finditer(line):
+        out.append(line[pos:m.start()])
+        pos = m.end()
+        closing, name = m.group(1) == "/", m.group(2)
+        if not closing:
+            open_.append(name)
+            out.append(m.group(0))
+        elif name in open_:
+            i = len(open_) - 1 - open_[::-1].index(name)
+            above = open_[i + 1:]
+            out += [f"</{n}>" for n in reversed(above)] + [f"</{name}>"] + [f"<{n}>" for n in above]
+            del open_[i]
+    out.append(line[pos:])
+    out += [f"</{n}>" for n in reversed(open_)]
+    return "".join(out)
+
+def convert_body(md, page, ex):
+    s = visible_body(md)
 
     stash = []
     def put(text):
@@ -182,13 +210,7 @@ def convert_body(md, page, ex):
     s = re.sub(r"^[ \t]*(#+)[ \t]+", lambda m: put("#" * min(len(m.group(1)) + 1, 6) + " "),
                s, flags=re.MULTILINE)
 
-    # A colour span the book carries across lines must close at each line end: every line becomes its
-    # own paragraph, and an MDX tag cannot span paragraphs.
-    for c in COLOUR_HEX:
-        s = re.sub(rf"<{c}>(.*?)</{c}>",
-                   lambda m, c=c: "\n".join(f"<{c}>{ln}</{c}>" if ln.strip() else ln
-                                            for ln in m.group(1).split("\n")),
-                   s, flags=re.DOTALL)
+    s = "\n".join(scope_inline_tags(ln) for ln in s.split("\n"))
 
     def tag(m):
         t = m.group(0)
@@ -321,16 +343,18 @@ def single_recipe(rid, ex):
 
 def recipe_cycle(a, ex):
     """The book cycles one panel through every recipe whose id contains `match`; GuideME has no
-    cycling panel, so show the first. Assembling cycles name code-registered recipes: none here."""
+    cycling panel, so show the first drawable one and say how many it stands for. Assembling cycles
+    name code-registered recipes: none here."""
     match = a.get("match", "")
-    if a.get("type") == "assembling" or not match:
+    matches = [r for sid, r in sorted(ex.guide.by_id.items())
+               if match and match in sid and r.get("type") in DRAWABLE_RECIPE_TYPES]
+    if a.get("type") == "assembling" or not matches:
         ex.dropped_recipes += 1
         return ""
-    for sid in sorted(ex.guide.by_id):
-        if match in sid:
-            return single_recipe(f"{NS}:{sid}", ex)
-    ex.dropped_recipes += 1
-    return ""
+    shown = single_recipe(f"{NS}:{matches[0]['_id']}", ex)
+    if len(matches) == 1:
+        return shown
+    return f"{shown}\n*One of {len(matches)} recipes of this kind.*\n"
 
 
 # --------------------------------------------------------------------------- #

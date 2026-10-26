@@ -763,9 +763,11 @@ public enum BCBuildersEventDist {
     }
 
     /** Whether the local player is shown the outlines of stalled cells (see {@link StallHighlights#canSee}). Client
-     *  only: kept out of any path the dedicated server runs (this class is loaded there). */
+     *  only: kept out of any path the dedicated server runs (this class is loaded there). The {@code mc.player} read
+     *  (a LocalPlayer handed to a Player parameter) stays in StallHighlights: written here, the bytecode verifier
+     *  loads LocalPlayer when this class links, and the dedicated server's dist cleaner rejects that client class. */
     private static boolean showStalls(Minecraft mc) {
-        return StallHighlights.canSee(mc.player);
+        return StallHighlights.canSeeLocal(mc);
     }
 
     /** A synced Builder whose block state says it holds a snapshot: a client whose Builder lost its snapshot may be

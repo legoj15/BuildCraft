@@ -35,6 +35,12 @@ public final class StallHighlights {
             || player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ItemGoggles;
     }
 
+    /** {@link #canSee} for the local player. Here and not in the caller so the caller never names LocalPlayer: it is
+     *  loaded on the dedicated server, and a LocalPlayer passed as a Player makes its verifier load the client class. */
+    public static boolean canSeeLocal(net.minecraft.client.Minecraft mc) {
+        return canSee(mc.player);
+    }
+
     /** The outline a reason is drawn with: red for what the player has to change, yellow for supplies, blue for fluid
      *  (the colours of the power beams: low, medium and full). */
     public static LaserType laserFor(EnumStallReason reason) {

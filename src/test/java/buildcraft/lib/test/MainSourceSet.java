@@ -42,17 +42,13 @@ public final class MainSourceSet {
         return dirs("buildcraft.test.mainClassesDirs", true);
     }
 
-    /** Every main {@code .java} file javac actually compiled on this node. {@code compat/rei/**} is skipped because
-     *  the build excludes it from compilation (no REI for the current lines), so its imports never resolve. */
+    /** Every main {@code .java} file javac actually compiled on this node. */
     public static List<SourceFile> javaFiles() {
         List<SourceFile> files = new ArrayList<>();
         for (Path root : sourceDirs()) {
             try (Stream<Path> walk = Files.walk(root)) {
                 for (Path p : (Iterable<Path>) walk.filter(f -> f.toString().endsWith(".java"))::iterator) {
                     String rel = root.relativize(p).toString().replace('\\', '/');
-                    if (rel.contains("/compat/rei/")) {
-                        continue;
-                    }
                     files.add(new SourceFile(rel, Files.readString(p, StandardCharsets.UTF_8)));
                 }
             } catch (IOException e) {

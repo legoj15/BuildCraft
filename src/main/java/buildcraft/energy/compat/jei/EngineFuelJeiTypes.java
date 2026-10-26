@@ -12,6 +12,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
+import buildcraft.energy.compat.viewer.StirlingFuel;
+import buildcraft.energy.compat.viewer.CombustionCoolant;
 import buildcraft.api.fuels.IFuel;
 
 /**
@@ -33,20 +35,20 @@ public final class EngineFuelJeiTypes {
     public static final IRecipeType<IFuel> COMBUSTION_FUEL = IRecipeType.create(
             "buildcraftunofficial", "combustion_engine_fuel", IFuel.class);
 
-    public static final IRecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = IRecipeType.create(
-            "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolantJei.class);
+    public static final IRecipeType<CombustionCoolant> COMBUSTION_COOLANT = IRecipeType.create(
+            "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolant.class);
 
-    public static final IRecipeType<StirlingFuelJei> STIRLING_FUEL = IRecipeType.create(
-            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);
+    public static final IRecipeType<StirlingFuel> STIRLING_FUEL = IRecipeType.create(
+            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuel.class);
     //?} else {
     /*public static final RecipeType<IFuel> COMBUSTION_FUEL = RecipeType.create(
             "buildcraftunofficial", "combustion_engine_fuel", IFuel.class);
 
-    public static final RecipeType<CombustionCoolantJei> COMBUSTION_COOLANT = RecipeType.create(
-            "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolantJei.class);
+    public static final RecipeType<CombustionCoolant> COMBUSTION_COOLANT = RecipeType.create(
+            "buildcraftunofficial", "combustion_engine_coolant", CombustionCoolant.class);
 
-    public static final RecipeType<StirlingFuelJei> STIRLING_FUEL = RecipeType.create(
-            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuelJei.class);*/
+    public static final RecipeType<StirlingFuel> STIRLING_FUEL = RecipeType.create(
+            "buildcraftunofficial", "stirling_engine_fuel", StirlingFuel.class);*/
     //?}
 
     private EngineFuelJeiTypes() {}

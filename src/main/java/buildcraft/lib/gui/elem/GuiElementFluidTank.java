@@ -91,11 +91,6 @@ public class GuiElementFluidTank implements IInteractionElement {
     }
 
     private void drawFluid(BCGraphics graphics, FluidStack fluid, int amount, int capacity) {
-        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
-        if (sprite == null) return;
-
-        int tintColor = FluidSprites.tint(fluid);
-
         int x = (int) area.getX();
         int y = (int) area.getY();
         int w = (int) area.getWidth();
@@ -105,7 +100,17 @@ public class GuiElementFluidTank implements IInteractionElement {
         int fillHeight = (int) ((float) amount / capacity * h);
         if (fillHeight <= 0 && amount > 0) fillHeight = 1;
 
-        int fillY = y + h - fillHeight;
+        drawTiledFluid(graphics, fluid, x, y + h - fillHeight, w, fillHeight);
+    }
+
+    /** Fills the {@code w} x {@code h} rectangle at {@code (x, fillY)} with {@code fluid}'s still sprite, tiled 16x16
+     *  from the top-left and tinted by the fluid's colour. Also draws the REI categories' tanks (REI's own fluid
+     *  renderer draws nothing from 21.9 on). */
+    public static void drawTiledFluid(BCGraphics graphics, FluidStack fluid, int x, int fillY, int w, int fillHeight) {
+        TextureAtlasSprite sprite = FluidSprites.stillSprite(fluid);
+        if (sprite == null || w <= 0 || fillHeight <= 0) return;
+
+        int tintColor = FluidSprites.tint(fluid);
 
         // Compute atlas dimensions from sprite UVs
         int spriteSize = 16;

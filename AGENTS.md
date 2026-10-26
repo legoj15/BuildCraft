@@ -20,6 +20,7 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # Run the client / server
 ./gradlew :26.3:runClient
 ./gradlew :26.3:runServer
+./gradlew :26.3:runClient -Precipe_viewer=rei   # dev runtime gets REI instead of JEI (default jei; never both)
 
 # Unit tests / headless game tests
 ./gradlew :26.3:test

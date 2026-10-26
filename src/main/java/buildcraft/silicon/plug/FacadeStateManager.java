@@ -195,7 +195,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
         return new ItemStack(item);
     }
 
-    public static void init() {
+    public static synchronized void init() {
         if (initialized) {
             return;
         }

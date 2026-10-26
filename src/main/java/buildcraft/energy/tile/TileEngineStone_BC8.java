@@ -224,8 +224,7 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
         // 26.3: fuel is the COOKING_FUEL component; its burn time is a datapack provider resolved
         // through a ServerLevel loot context, so there is no answer off the server.
         if (!(level instanceof ServerLevel serverLevel)) return 0;
-        return ResolvableInt.getFromItem(stack, DataComponents.COOKING_FUEL, CookingFuel::burnTime,
-                createFuelContext(serverLevel, stack), 0);
+        return burnTime(serverLevel, this, stack);
         //?} elif >=1.21.10 {
         /*return stack.getBurnTime(null, level.fuelValues());
         *///?} else {
@@ -235,15 +234,23 @@ public class TileEngineStone_BC8 extends TileEngineBase_BC8 {
     }
 
     //? if >=26.3 {
+    /** The burn time {@code engine} gets from {@code stack} in {@code serverLevel}. Static so the REI Stirling-fuel
+     *  list can ask it of a template engine through the integrated server, the only place a client can resolve it. */
+    public static int burnTime(ServerLevel serverLevel, TileEngineStone_BC8 engine, ItemStack stack) {
+        return ResolvableInt.getFromItem(stack, DataComponents.COOKING_FUEL, CookingFuel::burnTime,
+                createFuelContext(serverLevel, engine, stack), 0);
+    }
+
     // The same context vanilla's furnace builds (BaseContainerBlockEntity#getLootContext), so
     // datapack fuel providers see a familiar container_process shape. The engine is not a vanilla
     // container, so the CONTAINER parameter exposes no slots; the queried stack is the fuel itself.
-    private LootContext createFuelContext(ServerLevel serverLevel, ItemStack stack) {
+    private static LootContext createFuelContext(ServerLevel serverLevel, TileEngineStone_BC8 engine,
+            ItemStack stack) {
         return new LootContext.Builder(
                 new LootParams.Builder(serverLevel)
-                        .withParameter(LootContextParams.BLOCK_STATE, getBlockState())
-                        .withParameter(LootContextParams.BLOCK_ENTITY, this)
-                        .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(getBlockPos()))
+                        .withParameter(LootContextParams.BLOCK_STATE, engine.getBlockState())
+                        .withParameter(LootContextParams.BLOCK_ENTITY, engine)
+                        .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(engine.getBlockPos()))
                         .withParameter(LootContextParams.CONTAINER, slot -> null)
                         .withOptionalParameter(NeoForgeLootContextParams.QUERIED_STACK, stack)
                         .create(LootContextParamSets.CONTAINER_PROCESS))

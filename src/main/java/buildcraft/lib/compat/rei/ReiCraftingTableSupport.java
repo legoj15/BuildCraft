@@ -31,6 +31,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 
+import buildcraft.lib.compat.viewer.BlueprintRecipeTransfer;
 import buildcraft.lib.gui.BCContainer;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.GuiBC8;
@@ -42,12 +43,8 @@ import buildcraft.lib.gui.slot.IPhantomSlot;
  * the chosen recipe's id to the server, a click area over the progress arrow, ghost drag-and-drop onto
  * the phantom slots, and a workstation catalyst — differing only in the screen/menu type, the
  * workstation item, and the click-area rectangle. Each subsystem's {@code REIClientPlugin} holds one of
- * these and delegates its three register callbacks here.
- *
- * <p><b>NOTE:</b> the whole {@code compat/rei} tree is currently compile-excluded (no MC 26.1-compatible
- * REI build yet — see the {@code exclude("**}{@code /compat/rei/**")} in build.gradle.kts and the
- * commented-out REI dependency), so this class is <i>not</i> built by the compile/test gate. Keep it in
- * sync with the REI + Minecraft APIs by hand until REI is re-enabled.
+ * these and delegates its three register callbacks here. The "+" press sends the same message as JEI's
+ * {@code BlueprintTransferHandler}, through {@link BlueprintRecipeTransfer}.
  *
  * @param <G> the screen type (a {@link GuiBC8})
  * @param <M> its menu type
@@ -93,15 +90,18 @@ public final class ReiCraftingTableSupport<G extends GuiBC8<M>, M extends Abstra
                 return TransferHandler.Result.createNotApplicable();
             }
 
+            // A display with no recipe id cannot be sent to the server; leave it to REI's other handlers rather
+            // than show a "+" that does nothing.
+            var recipeId = display.getDisplayLocation();
+            if (recipeId.isEmpty()) {
+                return TransferHandler.Result.createNotApplicable();
+            }
+
             if (!context.isActuallyCrafting()) {
                 return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
             }
 
-            if (display.getDisplayLocation().isPresent()) {
-                String recipeIdStr = display.getDisplayLocation().get().toString();
-                M container = guiClass.cast(containerScreen).getMenu();
-                container.sendMessage(ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER, buf -> buf.writeUtf(recipeIdStr));
-            }
+            BlueprintRecipeTransfer.send(guiClass.cast(containerScreen).getMenu(), recipeId.get());
 
             return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
         });

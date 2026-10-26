@@ -502,50 +502,49 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
                 }
                 case TILE: {
                     // Insert items into the adjacent tile's item handler
-                    BlockEntity tile = pipe.getConnectedTile(item.side);
-                    if (tile != null) {
-                        ItemStack injectedBefore = excess.copy();
-                        Level level = holder.getPipeWorld();
-                        BlockPos neighborPos = holder.getPipePos().relative(item.side);
-                        // Tick-only raw lookup, safe for the reason TilePipeHolder.getNeighbourTile documents.
-                        //? if >=1.21.10 {
-                        var tileHandler = level.getCapability(
-                            Capabilities.Item.BLOCK, neighborPos, oppositeSide);
-                        if (tileHandler != null) {
-                            ItemResource resource = ItemResource.of(excess);
-                            // insertStacking fills partially-filled slots before empty ones — parity with the
-                            // <1.21.10 ItemHandlerHelper.insertItemStacked branch below and every other BC ejector
-                            // (InventoryUtil.addToRandomInventory, TileChute). Passing null opens+auto-commits a
-                            // transaction. Bare insert() used plain index order and fragmented target stacks.
-                            int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
-                                    tileHandler, resource, excess.getCount(), null);
-                            if (inserted > 0) {
-                                excess.shrink(inserted);
-                                if (excess.isEmpty()) {
-                                    excess = ItemStack.EMPTY;
-                                }
+                    // Null for a block-only item handler (a composter): the capability lookup below decides.
+                    BlockEntity tile = holder.getNeighbourTile(item.side);
+                    ItemStack injectedBefore = excess.copy();
+                    Level level = holder.getPipeWorld();
+                    BlockPos neighborPos = holder.getPipePos().relative(item.side);
+                    // Tick-only raw lookup, safe for the reason TilePipeHolder.getNeighbourTile documents.
+                    //? if >=1.21.10 {
+                    var tileHandler = level.getCapability(
+                        Capabilities.Item.BLOCK, neighborPos, oppositeSide);
+                    if (tileHandler != null) {
+                        ItemResource resource = ItemResource.of(excess);
+                        // insertStacking fills partially-filled slots before empty ones — parity with the
+                        // <1.21.10 ItemHandlerHelper.insertItemStacked branch below and every other BC ejector
+                        // (InventoryUtil.addToRandomInventory, TileChute). Passing null opens+auto-commits a
+                        // transaction. Bare insert() used plain index order and fragmented target stacks.
+                        int inserted = net.neoforged.neoforge.transfer.ResourceHandlerUtil.insertStacking(
+                                tileHandler, resource, excess.getCount(), null);
+                        if (inserted > 0) {
+                            excess.shrink(inserted);
+                            if (excess.isEmpty()) {
+                                excess = ItemStack.EMPTY;
                             }
                         }
-                        //?} else {
-                        /*var tileHandler = level.getCapability(
-                            Capabilities.ItemHandler.BLOCK, neighborPos, oppositeSide);
-                        if (tileHandler != null) {
-                            ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(tileHandler, excess.copy(), false);
-                            int inserted = excess.getCount() - leftover.getCount();
-                            if (inserted > 0) {
-                                excess.shrink(inserted);
-                                if (excess.isEmpty()) {
-                                    excess = ItemStack.EMPTY;
-                                }
-                            }
-                        }*/
-                        //?}
-                        // 1.12.2 parity: fire Ejected.IntoTile so handlers can observe/modify the ejection.
-                        PipeEventItem.Ejected.IntoTile ejected =
-                            new PipeEventItem.Ejected.IntoTile(holder, this, injectedBefore, excess, item.side, tile);
-                        holder.fireEvent(ejected);
-                        excess = ejected.getExcess();
                     }
+                    //?} else {
+                    /*var tileHandler = level.getCapability(
+                        Capabilities.ItemHandler.BLOCK, neighborPos, oppositeSide);
+                    if (tileHandler != null) {
+                        ItemStack leftover = net.neoforged.neoforge.items.ItemHandlerHelper.insertItemStacked(tileHandler, excess.copy(), false);
+                        int inserted = excess.getCount() - leftover.getCount();
+                        if (inserted > 0) {
+                            excess.shrink(inserted);
+                            if (excess.isEmpty()) {
+                                excess = ItemStack.EMPTY;
+                            }
+                        }
+                    }*/
+                    //?}
+                    // 1.12.2 parity: fire Ejected.IntoTile so handlers can observe/modify the ejection.
+                    PipeEventItem.Ejected.IntoTile ejected =
+                        new PipeEventItem.Ejected.IntoTile(holder, this, injectedBefore, excess, item.side, tile);
+                    holder.fireEvent(ejected);
+                    excess = ejected.getExcess();
                     break;
                 }
             }

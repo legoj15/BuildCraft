@@ -1,0 +1,109 @@
+/*
+ * Copyright (c) 2026 the BuildCraftUnofficial contributors
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+package buildcraft.lib.compat.rei;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+import me.shedaniel.math.Rectangle;
+import me.shedaniel.rei.api.client.gui.Renderer;
+import me.shedaniel.rei.api.client.gui.widgets.Widget;
+import me.shedaniel.rei.api.client.gui.widgets.Widgets;
+import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
+import me.shedaniel.rei.api.client.registry.display.DisplayCategory;
+import me.shedaniel.rei.api.common.category.CategoryIdentifier;
+import me.shedaniel.rei.api.common.util.EntryStacks;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.ItemLike;
+
+/**
+ * Base of every BuildCraft REI category. A subclass only states what one recipe shows ({@link #layout}), in the same
+ * coordinates as its JEI twin; this class turns that into the display's indexed entries ({@link #display}) and, when
+ * REI lays the display out, into widgets on REI's recipe panel with a {@value #PADDING}-pixel margin.
+ *
+ * @param <R> the recipe-viewer entry type
+ */
+public abstract class ReiCategory<R> implements DisplayCategory<ReiDisplay<R>> {
+
+    private static final int PADDING = 4;
+    private static final int OFF_SCREEN = -10_000;
+
+    private final CategoryIdentifier<ReiDisplay<R>> id;
+    private final Component title;
+    private final Supplier<? extends ItemLike> icon;
+    private final int width;
+    private final int height;
+
+    /** @param icon   resolved when REI asks for the icon, not here: a category sits in a plugin's static field, which
+     *                initialises as soon as REI loads the plugin class
+     *  @param width  the content width, as the JEI category's
+     *  @param height the content height, as the JEI category's */
+    protected ReiCategory(CategoryIdentifier<ReiDisplay<R>> id, String titleKey, Supplier<? extends ItemLike> icon,
+            int width, int height) {
+        this.id = id;
+        this.title = Component.translatable(titleKey);
+        this.icon = icon;
+        this.width = width;
+        this.height = height;
+    }
+
+    /** Adds what {@code recipe} shows to {@code layout}. Called once per recipe, when its display is made. */
+    protected abstract void layout(R recipe, ReiLayout layout);
+
+    /** The display for {@code recipe}, ready for {@code DisplayRegistry.add}. */
+    public final ReiDisplay<R> display(R recipe) {
+        ReiLayout layout = new ReiLayout();
+        layout(recipe, layout);
+        return new ReiDisplay<>(id, recipe, layout);
+    }
+
+    @Override
+    public final CategoryIdentifier<ReiDisplay<R>> getCategoryIdentifier() {
+        return id;
+    }
+
+    @Override
+    public final Component getTitle() {
+        return title;
+    }
+
+    @Override
+    public final Renderer getIcon() {
+        return EntryStacks.of(icon.get());
+    }
+
+    @Override
+    public final List<Widget> setupDisplay(ReiDisplay<R> display, Rectangle bounds) {
+        List<Widget> widgets = new ArrayList<>();
+        widgets.add(Widgets.createRecipeBase(bounds));
+        widgets.addAll(display.layout().widgets(bounds.x + PADDING, bounds.y + PADDING));
+        return widgets;
+    }
+
+    @Override
+    public final int getDisplayHeight() {
+        return height + 2 * PADDING;
+    }
+
+    @Override
+    public final int getDisplayWidth(ReiDisplay<R> display) {
+        // Never narrower than the JEI category, but wide enough for text that runs past it (a long unit name or
+        // translation), which JEI lets spill over its frame and REI would clip at the card's edge.
+        return Math.max(width, display.layout().textWidth()) + 2 * PADDING;
+    }
+
+    /**
+     * Keeps REI's plus ("move items") button off {@code category}'s displays, for a category with no transfer handler:
+     * there REI shows a dead "!" button where JEI shows nothing. REI no longer lets a category drop the button (a
+     * {@code null} area falls back to the default corner), so the area is put far off screen instead.
+     */
+    public static void hidePlusButton(CategoryRegistry registry, CategoryIdentifier<?> category) {
+        registry.setPlusButtonArea(category, bounds -> new Rectangle(OFF_SCREEN, OFF_SCREEN, 10, 10));
+    }
+}

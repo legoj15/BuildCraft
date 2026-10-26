@@ -36,6 +36,10 @@ public final class ProgrammingTableLayout {
     /** Top-left of the player inventory block. */
     public static final int PLAYER_INV_X = 8, PLAYER_INV_Y = 123;
 
+    /** The part of the GUI texture the recipe viewers (JEI and REI) show as the Programming Table category's panel:
+     *  the board slots, the option grid and the energy bar, leaving out the title strip and the player inventory. */
+    public static final int VIEWER_U = 3, VIEWER_V = 27, VIEWER_W = 169, VIEWER_H = 86;
+
     /** Options per page: one grid's worth. */
     public static final int PAGE_SIZE = TileProgrammingTable.OPTION_COLS * TileProgrammingTable.OPTION_ROWS;
 

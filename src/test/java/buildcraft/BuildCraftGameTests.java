@@ -152,6 +152,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:painted_pipe_two_pink_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testTwoPinkFluidPipesConnect);
         reg.accept("buildcraftunofficial:painted_pipe_different_colours_do_not_connect", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testDifferentColouredFluidPipesDoNotConnect);
         reg.accept("buildcraftunofficial:painted_pipe_no_fluid_stuck_toward_different_colour", () -> buildcraft.transport.pipe.PaintedPipeConnectionTester::testNoFluidStuckTowardDifferentColouredNeighbour);
+        // Block-entity-less capability neighbours (#37): cauldrons as small tanks for fluid pipes, composters for item pipes.
+        reg.accept("buildcraftunofficial:pipe_fluid_fills_cauldron", () -> buildcraft.transport.pipe.CauldronPipeTester::testPipeFillsCauldron);
+        reg.accept("buildcraftunofficial:pipe_wood_fluid_drains_cauldron", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeDrainsCauldron);
+        reg.accept("buildcraftunofficial:pipe_wood_fluid_keeps_its_fluid", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeKeepsItsFluid);
+        reg.accept("buildcraftunofficial:pipe_item_feeds_composter", () -> buildcraft.transport.pipe.CauldronPipeTester::testItemPipeFeedsComposter);
 
         // Wire connectivity predicate gating the logic_transportation advancement
         reg.accept("buildcraftunofficial:wire_connectivity_isolated", () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);
@@ -237,6 +242,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
+        reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
+        reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
 
         // Inventory Transactors
         reg.accept("buildcraftunofficial:item_transactor_simple_moving", () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);
@@ -527,6 +534,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:blueprint_replace_no_match", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testNoMatchLeavesPaletteUnchanged);
         reg.accept("buildcraftunofficial:blueprint_count_matching_cells", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testCountMatchingCellsCountsBlocks);
         reg.accept("buildcraftunofficial:blueprint_replace_null_noop", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testReplaceNullIsNoOp);
+        reg.accept("buildcraftunofficial:replacer_empty_to_removes_matches", () -> buildcraft.builders.tile.TileReplacerRemoveTester::emptyToSlotRemovesMatches);
 
         // Builder fluid-handling mode (waterlog/destroy at place sites; enum sanity).
         reg.accept("buildcraftunofficial:fluidmode_replace_water_waterloggable", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceWaterSourceWithWaterloggableBlock);
@@ -724,6 +732,20 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_pump_drains_blocking_lava", () -> buildcraft.factory.tile.TileMiningWellPumpTester::testPumpOnWellDrainsBlockingLava);
         // A Pump on a Quarry drains the lava its sweep skipped, and the quarry goes back for the column under it.
         reg.accept("buildcraftunofficial:quarry_pump_drains_skipped_lava", () -> buildcraft.builders.tile.TileQuarryPumpTester::testPumpOnQuarryDrainsSkippedLava);
+
+        // Enchantable Quarry / Mining Well (issue #42): Silk Touch, Fortune and Efficiency from an anvil ride on the
+        // machine's components into its pretend pickaxe and its break cost.
+        reg.accept("buildcraftunofficial:mining_well_silk_touch_yields_stone", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testSilkTouchWellYieldsStone);
+        reg.accept("buildcraftunofficial:mining_well_efficiency_breaks_on_less_power", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testEfficiencyWellBreaksOnLessPower);
+        reg.accept("buildcraftunofficial:mining_well_option_off_mines_plain_keeps_enchantments", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testOptionOffMinesPlainAndKeepsEnchantments);
+        reg.accept("buildcraftunofficial:quarry_silk_touch_yields_stone", () -> buildcraft.builders.tile.TileQuarryEnchantTester::testSilkTouchQuarryYieldsStone);
+        reg.accept("buildcraftunofficial:quarry_efficiency_halves_the_target", () -> buildcraft.builders.tile.TileQuarryEnchantTester::testEfficiencyQuarryHalvesTheTarget);
+        reg.accept("buildcraftunofficial:machine_enchantments_anvil_takes_only_mining_enchantments", () -> buildcraft.lib.misc.MachineEnchantmentTester::testAnvilTakesOnlyMiningEnchantments);
+        reg.accept("buildcraftunofficial:machine_enchantments_only_mining_enchantments_are_used", () -> buildcraft.lib.misc.MachineEnchantmentTester::testOnlyMiningEnchantmentsAreUsed);
+        reg.accept("buildcraftunofficial:machine_enchantments_quarry_keeps_them_when_broken", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPlacedQuarryKeepsEnchantmentsWhenBroken);
+        reg.accept("buildcraftunofficial:machine_enchantments_mining_well_keeps_them_when_broken", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPlacedMiningWellKeepsEnchantmentsWhenBroken);
+        reg.accept("buildcraftunofficial:machine_enchantments_pick_block_keeps_them", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPickBlockKeepsEnchantments);
+        reg.accept("buildcraftunofficial:machine_enchantments_client_copy_sees_efficiency", () -> buildcraft.lib.misc.MachineEnchantmentTester::testClientCopySeesTheEfficiency);
 
         // The miner tube is waterloggable: drilling a bore through a pond keeps the water inside the tube and
         // retracting (or breaking the well) puts the source back, instead of deleting a column of the pond.

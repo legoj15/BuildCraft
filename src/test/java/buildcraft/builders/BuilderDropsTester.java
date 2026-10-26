@@ -103,9 +103,10 @@ public class BuilderDropsTester {
 
     /**
      * Pins the Builder's consumed path-marker chain through the NBT round-trip the periodic BE
-     * update packet uses ({@code saveCustomOnly → loadCustomOnly}). Without the path being
-     * serialized, two things break silently: the client never sees the route and the path-laser
-     * render is dead code; and the server itself loses the route on chunk reload, collapsing
+     * update packet uses ({@code saveCustomOnly → loadCustomOnly}: a Builder with no components,
+     * like this one, sends exactly that on every node). Without the path being serialized, two
+     * things break silently: the client never sees the route and the path-laser render is dead
+     * code; and the server itself loses the route on chunk reload, collapsing
      * {@link TileBuilder#updateBasePoses()} to the single-position fallback.
      */
     public static void testBuilderPathSurvivesNbtRoundTrip(GameTestHelper helper) {

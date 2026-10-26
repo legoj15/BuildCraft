@@ -13,6 +13,7 @@ import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
+import buildcraft.factory.compat.viewer.HeatExchangerRecipePair;
 import buildcraft.lib.gui.BCGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -21,7 +22,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
 import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
-import buildcraft.lib.compat.jei.FluidContainerAliases;
+import buildcraft.lib.compat.jei.JeiFluidAliases;
 
 /**
  * Single JEI category for the heat exchanger. Each entry is a complete
@@ -98,7 +99,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?} else {
                     /*.addFluidStack(hIn.getFluid(), hIn.getAmount(), hIn.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, hIn, RecipeIngredientRole.INPUT);
+            JeiFluidAliases.addAliases(builder, hIn, RecipeIngredientRole.INPUT);
         }
         FluidStack cIn = coolable.in();
         if (!cIn.isEmpty()) {
@@ -109,7 +110,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?} else {
                     /*.addFluidStack(cIn.getFluid(), cIn.getAmount(), cIn.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, cIn, RecipeIngredientRole.INPUT);
+            JeiFluidAliases.addAliases(builder, cIn, RecipeIngredientRole.INPUT);
         }
 
         // Outputs cross diagonally — matches TileHeatExchange.craft() (c_out =
@@ -125,7 +126,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?} else {
                     /*.addFluidStack(hOut.getFluid(), hOut.getAmount(), hOut.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, hOut, RecipeIngredientRole.OUTPUT);
+            JeiFluidAliases.addAliases(builder, hOut, RecipeIngredientRole.OUTPUT);
         }
         FluidStack cOut = coolable.out();
         if (cOut != null && !cOut.isEmpty()) {
@@ -136,7 +137,7 @@ public class HeatExchangerCategory extends AbstractRecipeCategory<HeatExchangerR
                     //?} else {
                     /*.addFluidStack(cOut.getFluid(), cOut.getAmount(), cOut.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, cOut, RecipeIngredientRole.OUTPUT);
+            JeiFluidAliases.addAliases(builder, cOut, RecipeIngredientRole.OUTPUT);
         }
     }
 }

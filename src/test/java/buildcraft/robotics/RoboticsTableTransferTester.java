@@ -24,7 +24,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.recipes.IProgrammingRecipe;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.lib.compat.jei.TransferResult;
+import buildcraft.lib.compat.viewer.TransferResult;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;

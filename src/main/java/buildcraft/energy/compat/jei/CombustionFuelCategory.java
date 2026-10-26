@@ -22,7 +22,7 @@ import buildcraft.api.fuels.IFuel;
 import buildcraft.api.fuels.IFuelManager.IDirtyFuel;
 
 import buildcraft.energy.BCEnergyItems;
-import buildcraft.lib.compat.jei.FluidContainerAliases;
+import buildcraft.lib.compat.jei.JeiFluidAliases;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -64,7 +64,7 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
             // Let players find this recipe by pressing U on the fuel's bucket/shard, not just the
             // bare fluid — JEI looks up item and fluid ingredients separately. (Mirrors the heat
             // exchanger / distiller categories.)
-            FluidContainerAliases.addAliases(builder, fuel, RecipeIngredientRole.INPUT);
+            JeiFluidAliases.addAliases(builder, fuel, RecipeIngredientRole.INPUT);
         }
         if (recipe instanceof IDirtyFuel dirty) {
             FluidStack residue = dirty.getResidue();
@@ -78,7 +78,7 @@ public class CombustionFuelCategory extends AbstractRecipeCategory<IFuel> {
                         //?}
                 // Pressing R on the residue bucket (e.g. Cool Residue, produced here) now surfaces
                 // this engine recipe instead of only the heat exchanger.
-                FluidContainerAliases.addAliases(builder, residue, RecipeIngredientRole.OUTPUT);
+                JeiFluidAliases.addAliases(builder, residue, RecipeIngredientRole.OUTPUT);
             }
         }
     }

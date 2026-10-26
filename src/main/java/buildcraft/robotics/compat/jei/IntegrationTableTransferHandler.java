@@ -11,28 +11,22 @@ import mezz.jei.api.recipe.types.IRecipeType;
 //?} else {
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
-import net.minecraft.world.entity.player.Player;
 
 import buildcraft.lib.compat.jei.AbstractTransferHandler;
-import buildcraft.lib.compat.jei.TransferResult;
-import buildcraft.lib.gui.ContainerBC_Neptune;
 
-import buildcraft.robotics.container.RoboticsTableTransfer;
+import buildcraft.robotics.compat.viewer.IntegrationTableRecipeTransfer;
 import buildcraft.robotics.recipe.IntegrationRecipeJei;
-import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.container.ContainerIntegrationTable;
-import buildcraft.silicon.tile.TileIntegrationTable;
 
 /**
  * JEI "+" recipe transfer for the Integration Table: moves a blank robot into the centre slot and the entry's board
- * into a ring slot. The server does the work ({@link RoboticsTableTransfer#integrate}); the recipe carries no other
- * state, so the request is just the board's program.
+ * into a ring slot. The work is the shared {@link IntegrationTableRecipeTransfer} core.
  */
 public class IntegrationTableTransferHandler
         extends AbstractTransferHandler<ContainerIntegrationTable, IntegrationRecipeJei> {
 
     public IntegrationTableTransferHandler(IRecipeTransferHandlerHelper helper) {
-        super(helper, ContainerIntegrationTable.class, BCSiliconMenuTypes.INTEGRATION_TABLE::get);
+        super(helper, new IntegrationTableRecipeTransfer());
     }
 
     @Override
@@ -42,23 +36,5 @@ public class IntegrationTableTransferHandler
     /*public RecipeType<IntegrationRecipeJei> getRecipeType() {*/
     //?}
         return IntegrationRecipeJeiTypes.INTEGRATION;
-    }
-
-    @Override
-    protected TransferResult check(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
-            boolean maxTransfer) {
-        TileIntegrationTable table = container.tile;
-        String boardId = recipe.boardId();
-        if (table == null || boardId == null) {
-            return TransferResult.INVALID;
-        }
-        return RoboticsTableTransfer.integrate(player.getInventory(), table, boardId, false);
-    }
-
-    @Override
-    protected void send(ContainerIntegrationTable container, IntegrationRecipeJei recipe, Player player,
-            boolean maxTransfer) {
-        String boardId = recipe.boardId();
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
     }
 }

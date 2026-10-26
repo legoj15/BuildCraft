@@ -19,14 +19,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-import buildcraft.lib.compat.jei.JeiMjLabel;
+import buildcraft.silicon.compat.viewer.AssemblyRecipeEntry;
+import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.container.AssemblyTableLayout;
 
 /**
- * Single JEI category for the Assembly Table. Each {@link AssemblyRecipeJei}
+ * Single JEI category for the Assembly Table. Each {@link AssemblyRecipeEntry}
  * entry maps 1:1 to one displayed recipe — chipsets, gates, lenses, plugs, and
  * the gate copier each contribute one entry per output, while the entire
  * facade family collapses into one cycling entry to avoid spamming the JEI
@@ -39,14 +40,14 @@ import buildcraft.silicon.container.AssemblyTableLayout;
  * for a Gold AND Gate) so the number is a load-bearing recipe property the
  * player needs to see.
  */
-public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipeJei> {
-    // Crop the GUI (see AssemblyTableLayout) to just the input grid + power bar. The 3×4 column of output
+public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipeEntry> {
+    // The layout's viewer crop of the GUI: just the input grid + power bar. The 3×4 column of output
     // display slots in the real GUI is omitted because it shows recipe-state
     // overlays at runtime, not crafting outputs — JEI's output slot is its own
-    // thing on the right, drawn with a vanilla output-slot background. The one geometry this category owns;
-    // package-visible so AssemblyTableLayoutTest can check the crop still frames everything the layout puts in it.
-    static final int TEX_U = 3, TEX_V = 27;
-    static final int TEX_W = 89, TEX_H = 86;
+    // thing on the right, drawn with a vanilla output-slot background. Package-visible so AssemblyTableLayoutTest
+    // can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = AssemblyTableLayout.VIEWER_U, TEX_V = AssemblyTableLayout.VIEWER_V;
+    static final int TEX_W = AssemblyTableLayout.VIEWER_W, TEX_H = AssemblyTableLayout.VIEWER_H;
 
     // Input slot positions inside the cropped texture are the layout's input grid, shifted by (-TEX_U, -TEX_V).
     private static final int MAX_INPUT_SLOTS = AssemblyTableLayout.GRID_CELLS;
@@ -79,19 +80,19 @@ public class AssemblyTableCategory extends AbstractRecipeCategory<AssemblyRecipe
 
     @Override
     //? if >=26.1 {
-    public void draw(AssemblyRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+    public void draw(AssemblyRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
     //?} else {
-    /*public void draw(AssemblyRecipeJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+    /*public void draw(AssemblyRecipeEntry recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
-        JeiMjLabel.draw(new BCGraphics(graphics), "gui.jei.category.buildcraftunofficial.assembly_table.power",
+        MjLabel.draw(new BCGraphics(graphics), "gui.jei.category.buildcraftunofficial.assembly_table.power",
                 recipe.microJoules(), POWER_X, POWER_Y);
     }
 
     @Override
-    public void setRecipe(IRecipeLayoutBuilder builder, AssemblyRecipeJei recipe, IFocusGroup focuses) {
+    public void setRecipe(IRecipeLayoutBuilder builder, AssemblyRecipeEntry recipe, IFocusGroup focuses) {
         List<List<ItemStack>> inputs = recipe.inputSlots();
         int inputCount = Math.min(inputs.size(), MAX_INPUT_SLOTS);
         IRecipeSlotBuilder[] inputSlotBuilders = new IRecipeSlotBuilder[inputCount];

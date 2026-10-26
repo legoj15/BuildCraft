@@ -45,11 +45,11 @@ public abstract class PipeBehaviour {
         return true;
     }
 
-    public boolean canConnect(Direction face, BlockEntity oTile) {
+    public boolean canConnect(Direction face, @Nullable BlockEntity oTile) {
         return true;
     }
 
-    public boolean shouldForceConnection(Direction face, BlockEntity oTile) {
+    public boolean shouldForceConnection(Direction face, @Nullable BlockEntity oTile) {
         return false;
     }
 

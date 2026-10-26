@@ -11,6 +11,14 @@ plugins {
 val minecraftVersion = property("minecraft_version") as String
 val neoVersion = property("neo_version") as String
 val jeiVersion = property("jei_version") as String
+val reiVersion = property("rei_version") as String
+// Which recipe viewer the dev runs (client, server, game tests, unit tests) load: JEI by default,
+// `-Precipe_viewer=rei` swaps in REI instead. Both are compiled against on every node; only one is
+// ever on the runtime classpath, since the two would fight over the same keys and screen space.
+val recipeViewer = (findProperty("recipe_viewer") as String?)?.lowercase() ?: "jei"
+if (recipeViewer != "jei" && recipeViewer != "rei") {
+    throw GradleException("recipe_viewer must be 'jei' or 'rei', not '$recipeViewer'")
+}
 val modVersion = property("mod_version") as String
 // Per-node Java toolchain: 26.1+ needs Java 25; the 1.21.11 node (pre-CalVer) overrides to 21.
 val javaVersion = property("java_version") as String
@@ -173,6 +181,11 @@ repositories {
     maven("https://maven.neoforged.net/releases")
     maven("https://maven.blamejared.com")
     maven("https://maven.shedaniel.me/")
+    // Fabric's maven, for fabric-loader alone (see the REI dependency below).
+    exclusiveContent {
+        forRepository { maven("https://maven.fabricmc.net/") }
+        filter { includeModule("net.fabricmc", "fabric-loader") }
+    }
     mavenCentral()
 }
 
@@ -314,17 +327,32 @@ neoForge {
 }
 
 dependencies {
-    // JEI
+    // Recipe viewers: both APIs on every node; the runtime jar is the one `recipe_viewer` picks.
     compileOnly("mezz.jei:jei-$minecraftVersion-common-api:$jeiVersion")
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge-api:$jeiVersion")
-    runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+    // REI's api POM brings cloth-config and architectury along (its fluid entries are architectury FluidStacks).
+    compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:$reiVersion")
+    // REI's classes keep Fabric's @Environment(EnvType.CLIENT); without the enum on the compile classpath javac
+    // prints "unknown enum constant EnvType.CLIENT" for every one it reads, a warning no -Xlint flag silences.
+    // Only those two annotation types are wanted, never Fabric code: compile-only, without dependencies.
+    compileOnly("net.fabricmc:fabric-loader:0.16.9") { isTransitive = false }
+    if (recipeViewer == "rei") {
+        runtimeOnly("me.shedaniel:RoughlyEnoughItems-neoforge:$reiVersion")
+        // REI's POM pins an older architectury than players get; 22.0.3 fails a mixin on our 26.3 pin. Run the
+        // line's newest instead (Gradle resolves the higher of the two).
+        runtimeOnly("dev.architectury:architectury-neoforge:${property("architectury_version")}")
+    } else {
+        runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+    }
+
+    // GuideME (AE2's guide library), opt-in for dev runs: `./gradlew :26.3:runClient -PwithGuideMe` loads it so the
+    // generated guide under assets/buildcraftunofficial/guides/ can be checked in-game. BC has no code dependency
+    // on it (the guide is resources only), so it stays off the default runtime and the test runs.
+    if (project.hasProperty("withGuideMe")) runtimeOnly("org.appliedenergistics:guideme:${property("guideme_version")}")
 
     // jspecify @Nullable/@NonNull: NeoForge exposes it transitively on 1.21.11+ / 26.1, but the
     // 21.10.x line does not put it on the compile classpath — add it explicitly for that node.
     if (isPre1_21_11) compileOnly("org.jspecify:jspecify:1.0.0")
-
-    // REI — No compatible versions for MC 26.1 yet
-    // compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:16.0.799")
 
     // Testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
@@ -333,9 +361,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-// Exclude REI compat modules from compilation — no MC 26.1 versions available
 tasks.withType<JavaCompile>().configureEach {
-    exclude("**/compat/rei/**")
     // Surface the full cross-cliff error set during the 1.21.11 port (javac caps at 100 by default).
     options.compilerArgs.addAll(listOf("-Xmaxerrs", "2000", "-Xmaxwarns", "200"))
     // Opt-in lint audit: `-PbcLint=deprecation` (also =all, =unchecked, =removal, ...) surfaces the

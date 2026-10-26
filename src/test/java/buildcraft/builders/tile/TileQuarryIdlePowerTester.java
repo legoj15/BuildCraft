@@ -50,7 +50,7 @@ public class TileQuarryIdlePowerTester {
             // is null under the default MJ_ONLY power mode, but the gate logic is mode-independent.
             //? if >=1.21.10 {
             buildcraft.lib.mj.MjBatteryEnergyHandler feHandler =
-                    new buildcraft.lib.mj.MjBatteryEnergyHandler(quarry.getBattery(), quarry::hasPendingWork);
+                    new buildcraft.lib.mj.MjBatteryEnergyHandler(quarry.getBattery(), quarry::wantsPower);
             try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
                     net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
                 int insertedIdle = feHandler.insert(1000, tx);

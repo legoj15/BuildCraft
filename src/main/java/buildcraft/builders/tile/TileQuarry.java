@@ -59,6 +59,7 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.BoundingBoxUtil;
 import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.LocaleUtil;
+import buildcraft.lib.misc.MachineEnchantments;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RefusalMemory;
@@ -495,8 +496,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         }
     }
 
-    /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it. Lava that flowed
-     *  into the pit counts: the pump finds the source it flows from. */
+    /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it or its chunk has
+     *  left memory. Lava that flowed into the pit counts: the pump finds the source it flows from. */
     private void noteBlockingFluid(BlockPos pos) {
         if (isThickFluid(pos) && (blockingFluid == null || !BlockUtil.isChunkPresent(level, blockingFluid)
                 || !isThickFluid(blockingFluid))) {
@@ -1434,7 +1435,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
         @Override
         public long getTarget() {
-            return BlockUtil.computeBlockBreakPower(level, breakPos);
+            // Efficiency is read from the quarry's components on every call, so the progress sum and the power
+            // request (both ask for the target, several times a tick) always agree.
+            return BlockUtil.computeBlockBreakPower(level, breakPos, MachineEnchantments.efficiency(TileQuarry.this));
         }
 
         @Override
@@ -1484,9 +1487,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 // Destruction-laser blocks (above the mining surface) and mining-laser blocks
                 // (the proper mining column) share this code path; per the user's spec, both
                 // tiers route drops "as if mined by the rig itself," i.e. through the same
-                // addToBestAcceptor pipeline the quarry already uses for its harvest.
+                // addToBestAcceptor pipeline the quarry already uses for its harvest. The pickaxe carries the
+                // quarry's Silk Touch / Fortune, so the loot roll sees them as on a player's pickaxe.
                 Optional<BlockUtil.BreakResult> result = BlockUtil.breakBlockAndGetDropsWithXp(
-                    serverLevel, breakPos, new ItemStack(Items.DIAMOND_PICKAXE), getOwner()
+                    serverLevel, breakPos, MachineEnchantments.tool(Items.DIAMOND_PICKAXE, TileQuarry.this), getOwner()
                 );
                 if (result.isPresent()) {
                     result.get().drops().forEach(stack ->

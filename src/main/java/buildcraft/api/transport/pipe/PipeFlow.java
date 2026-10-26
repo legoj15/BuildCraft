@@ -3,6 +3,7 @@ package buildcraft.api.transport.pipe;
 import java.io.IOException;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -77,14 +78,15 @@ public abstract class PipeFlow {
 
     public abstract boolean canConnect(Direction face, PipeFlow other);
 
-    public abstract boolean canConnect(Direction face, BlockEntity oTile);
+    /** @param oTile the neighbour's block entity, or null when it has none (a vanilla cauldron) */
+    public abstract boolean canConnect(Direction face, @Nullable BlockEntity oTile);
 
     /**
      * Used to force a connection to a given tile, even if the {@link PipeBehaviour}
      * wouldn't normally connect to
      * it.
      */
-    public boolean shouldForceConnection(Direction face, BlockEntity oTile) {
+    public boolean shouldForceConnection(Direction face, @Nullable BlockEntity oTile) {
         return false;
     }
 

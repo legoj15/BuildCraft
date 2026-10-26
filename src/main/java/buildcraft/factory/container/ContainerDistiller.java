@@ -18,7 +18,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileDistiller_BC8;
-import buildcraft.lib.compat.jei.JeiTransferUtil;
+import buildcraft.lib.compat.viewer.TransferUtil;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
 import buildcraft.lib.net.PacketBufferBC;
@@ -60,7 +60,7 @@ public class ContainerDistiller extends ContainerBCTile<TileDistiller_BC8> {
             for (int i = 0; i < count; i++) {
                 int slot = buffer.readVarInt();
                 Item bucket = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, Identifier.parse(buffer.readUtf()));
-                JeiTransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
+                TransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
             }
             return;
         }

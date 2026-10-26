@@ -166,7 +166,7 @@ the server's two values into the payload and the client converts with them
 (`LocaleUtil.localizeMjFlow(amount, displayRf, mjPerRf)`); the no-argument formatters read the
 local JVM's copy, which on a remote client is its own unsynced file.
 
-**Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
+**Recipes**: `BuildcraftRecipeRegistry` for refinery recipes; JEI and REI integration for display.
 
 **JEI**: one `@JeiPlugin` per subsystem under `<subsystem>/compat/jei` (core, energy, factory,
 silicon, robotics), shared machinery in `lib/compat/jei`. Each category follows the Assembly Table
@@ -174,7 +174,7 @@ shape: a JEI-free record + collector (unit-testable — `ProgrammingRecipeCollec
 model; where the guide book reads the same entries, as for the robotics tables, they live outside
 `compat/jei` — `robotics/recipe` — and `GuideJeiIndependenceTest` keeps the guide off that package),
 a `*JeiTypes` holder, and a category that crops the machine's own GUI texture and prints the
-MJ cost through `JeiMjLabel`. Cross-node API rules, all enforced by a clean
+MJ cost through `MjLabel`. Cross-node API rules, all enforced by a clean
 `-PbcLint=deprecation` sweep since 2026-09-26: recipe types are `IRecipeType` on the JEI 20+ nodes
 (`>=1.21.10`) and `RecipeType` only on 1.21.1 (its JEI 19.x predates `IRecipeType`) — one
 `//? if >=1.21.10` directive per holder/handler; hand-written item subtype keys register only
@@ -184,3 +184,21 @@ while a key that is exactly one data component uses `registerFromDataComponentTy
 nodes (the paintbrush — with `JeiSubtypes` as its 1.21.1 fallback); put single stacks in slots with
 `addItemStacks(List.of(stack))` — `addItemStack` is deprecated for removal on JEI 20+ and its
 `add(ItemStack)` successor does not exist on 19.x.
+
+**REI** mirrors every JEI registration from `<subsystem>/compat/rei`; neither viewer's package imports
+the other's. What both read lives in `<subsystem>/compat/viewer` (and `robotics/recipe`): the
+entry records and collectors, the subtype keys, `FluidContainerAliases`, `MjLabel`, and the "+"
+transfer cores — `lib/compat/viewer/RecipeTransfer` (check, then send on a real press) with one
+subclass per machine, which JEI's `AbstractTransferHandler` and REI's `ReiRecipeTransferHandler`
+both wrap, so the two send the same container messages. A REI category extends
+`lib/compat/rei/ReiCategory` and only fills a `ReiLayout` in its JEI twin's coordinates (crops
+shared through the `*TableLayout.VIEWER_*` constants); the layout is the display's indexed entries
+(fluid slots add their bucket/shard forms without drawing them) and becomes REI widgets. Displays
+are client-side only (`registerDisplays`, null serializer). Comparators go through
+`ReiSubtypes.register` on `@REIPluginCommon` classes implementing `BCReiCommonPlugin`, the one
+fork (REI 16 on 1.21.1 names the common plugin `REIServerPlugin`). REI ignores
+`c:hidden_from_recipe_viewers`, so `BCCoreReiClientPlugin` drops BuildCraft's tagged items itself.
+26.3's Stirling list needs a server to resolve burn times, so `StirlingFuelSync` computes it on the
+server thread and sends it on every datapack sync (login and `/reload`); REI's Stirling category
+there is a dynamic generator over that cache, so a list arriving after REI's reload still shows. JEI
+keeps copying its own furnace-fuel category.

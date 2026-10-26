@@ -12,6 +12,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
+import buildcraft.factory.compat.viewer.HeatExchangerRecipePair;
+
 /**
  * Holds the JEI recipe type for the heat exchanger ({@code IRecipeType} on the
  * JEI 20+ nodes, where {@code RecipeType} is deprecated for removal; 1.21.1's

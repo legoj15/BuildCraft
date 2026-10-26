@@ -6,8 +6,6 @@
 
 package buildcraft.factory.compat.jei;
 
-import java.util.List;
-
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 //? if >=1.21.10 {
 import mezz.jei.api.recipe.types.IRecipeType;
@@ -15,21 +13,20 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
-import buildcraft.factory.BCFactoryMenuTypes;
+import buildcraft.factory.compat.viewer.HeatExchangerRecipePair;
+import buildcraft.factory.compat.viewer.HeatExchangerRecipeTransfer;
 import buildcraft.factory.container.ContainerHeatExchange;
-import buildcraft.lib.compat.jei.AbstractBucketTransferHandler;
+import buildcraft.lib.compat.jei.AbstractTransferHandler;
 
 /**
- * JEI "+" recipe transfer for the Heat Exchanger: moves a filled bucket of the heatable input into
- * container slot 0 (hot in) and a bucket of the coolable input into slot 1 (cold in), which the
- * tile drains into its tanks. Enabled only when the player holds both buckets. See
- * {@link AbstractBucketTransferHandler} for the shared machinery.
+ * JEI "+" recipe transfer for the Heat Exchanger: moves a filled bucket of each input fluid into the machine's input
+ * container slots. The work is the shared {@link HeatExchangerRecipeTransfer} core.
  */
 public class HeatExchangerTransferHandler
-        extends AbstractBucketTransferHandler<ContainerHeatExchange, HeatExchangerRecipePair> {
+        extends AbstractTransferHandler<ContainerHeatExchange, HeatExchangerRecipePair> {
 
     public HeatExchangerTransferHandler(IRecipeTransferHandlerHelper helper) {
-        super(helper, ContainerHeatExchange.class, BCFactoryMenuTypes.HEAT_EXCHANGE::get);
+        super(helper, new HeatExchangerRecipeTransfer());
     }
 
     @Override
@@ -39,18 +36,5 @@ public class HeatExchangerTransferHandler
     /*public RecipeType<HeatExchangerRecipePair> getRecipeType() {*/
     //?}
         return HeatExchangerRecipeTypes.PAIR;
-    }
-
-    @Override
-    protected List<BucketSlot> getRequiredBuckets(HeatExchangerRecipePair pair) {
-        // Slot→tank mapping (see TileHeatExchange's drain logic): container slot 0 → END.tankInput
-        // drains the HOT fluid (coolable.in() — the fluid being cooled); slot 1 → START.tankInput
-        // drains the COLD fluid (heatable.in() — the fluid being heated). "heatable"/"coolable" name
-        // the role of the fluid, which is the opposite of its temperature, so the buckets cross
-        // relative to those names.
-        return List.of(
-            BucketSlot.of(0, pair.coolable().in()), // hot in
-            BucketSlot.of(1, pair.heatable().in())  // cold in
-        );
     }
 }

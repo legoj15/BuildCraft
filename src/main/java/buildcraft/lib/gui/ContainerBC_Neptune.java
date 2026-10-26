@@ -49,7 +49,7 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu implemen
     public static final int NET_GHOST_SLOT_SET = 101;
     /** Container message ID: JEI "+" transfer of real items into a machine's input inventory
      *  (Assembly Table). Payload: boolean maxTransfer, varInt count, then each chosen stack as NBT.
-     *  Handled by the container subclass; see {@link buildcraft.lib.compat.jei.JeiTransferUtil}. */
+     *  Handled by the container subclass; see {@link buildcraft.lib.compat.viewer.TransferUtil}. */
     public static final int NET_JEI_TRANSFER_ITEMS = 102;
     /** Container message ID: JEI "+" transfer of filled fluid buckets into a machine's container
      *  slots (Distiller, Heat Exchanger). Payload: varInt count, then (varInt slotIndex, utf bucketItemId) pairs. */

@@ -11,6 +11,7 @@ import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.core.compat.viewer.CoreSubtypes;
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
 import buildcraft.lib.compat.jei.JeiSubtypes;
@@ -47,8 +48,8 @@ public class BCCoreJeiPlugin implements IModPlugin {
                 stack -> stack.get(BCCore.BRUSH_COLOR.get()));*/
         //?}
 
-        // Differentiate fragile fluid shards by their stored fluid, ignoring the amount (see CoreJeiSubtypes).
-        JeiSubtypes.register(registration, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), CoreJeiSubtypes::fragileFluidKey);
+        // Differentiate fragile fluid shards by their stored fluid, ignoring the amount (see CoreSubtypes).
+        JeiSubtypes.register(registration, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), CoreSubtypes::fragileFluidKey);
     }
 
     @Override

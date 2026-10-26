@@ -33,6 +33,7 @@ import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.ClientSnapshots;
+import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.Snapshot;
 
 /**
@@ -52,9 +53,10 @@ import buildcraft.builders.snapshot.Snapshot;
  *
  * <p>Design notes the user cares about:
  * <ul>
- *   <li>The 3D preview renders the <b>hypothetical post-replace</b> blueprint when all three
- *       slots are filled, so the player sees what they're about to create. When any schematic
- *       slot is empty the unmodified blueprint is rendered instead.</li>
+ *   <li>The 3D preview renders the <b>hypothetical post-replace</b> blueprint when the blueprint
+ *       and "from" slots are filled, so the player sees what they're about to create. An empty "to" slot
+ *       previews (and the button performs) removal of the matches; without a "from" the
+ *       unmodified blueprint is rendered.</li>
  *   <li>The EditBox is seeded from the current blueprint's name. Typed changes are
  *       <b>client-side only</b> — the server never sees them until the Replace button is
  *       clicked, at which point the current text is shipped in the NET_REPLACE payload.</li>
@@ -194,21 +196,24 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     }
 
     /**
-     * Enable Replace iff all three slots are filled AND the blueprint is resolvable on the
-     * client side AND both schematic stacks have readable NBT. A 0-match case is a harmless
+     * Enable Replace iff the blueprint and "from" slots are filled (an empty "to" slot turns the
+     * button into Remove) AND the blueprint item has a header AND the schematic stacks present
+     * have readable NBT (an air "from", which only a forged item carries, is refused as the server
+     * refuses it). The blueprint need not be client-resolved yet. A 0-match case is a harmless
      * server no-op so we intentionally don't check counts here — walking the palette every
      * frame just to maybe-grey-out the button isn't worth the cost.
      */
     private void updateReplaceButtonActive() {
         if (replaceButton == null) return;
         replaceButton.active = canReplace();
+        replaceButton.setMessage(Component.translatable(isRemoving()
+                ? "gui.buildcraftunofficial.replacer.remove"
+                : "gui.buildcraftunofficial.replacer.replace"));
     }
 
     private boolean canReplace() {
         ItemStack snap = menu.getSlot(0).getItem();
-        ItemStack from = menu.getSlot(1).getItem();
-        ItemStack to = menu.getSlot(2).getItem();
-        if (snap.isEmpty() || from.isEmpty() || to.isEmpty()) {
+        if (snap.isEmpty()) {
             return false;
         }
         Snapshot.Header header = ItemSnapshot.getHeader(snap);
@@ -217,9 +222,36 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         }
         // Don't require ClientSnapshots to have resolved yet — the request fires on first
         // access and the user's click will still succeed server-side regardless. Just verify
-        // the NBT of both schematics parses.
-        return ItemSchematicSingle.getSchematicSafe(from) != null
-            && ItemSchematicSingle.getSchematicSafe(to) != null;
+        // the NBT of the schematics parses.
+        return pendingFind() != null && pendingReplacement() != null;
+    }
+
+    /**
+     * The schematic the "from" slot asks to find, or null when the slot is empty, unreadable, or
+     * holds air (only a forged item can: capture refuses air, and {@code TileReplacer#doReplace}
+     * refuses it too).
+     */
+    private ISchematicBlock pendingFind() {
+        ItemStack fromStack = menu.getSlot(1).getItem();
+        if (fromStack.isEmpty()) {
+            return null;
+        }
+        ISchematicBlock from = ItemSchematicSingle.getSchematicSafe(fromStack);
+        return from == null || from.isAir() ? null : from;
+    }
+
+    /**
+     * The schematic the "to" slot proposes: its captured block, or air when the slot is empty (the
+     * Replace button becomes Remove, and {@code TileReplacer#doReplace} makes the same substitution).
+     * Null only when a stack is present but unreadable.
+     */
+    private ISchematicBlock pendingReplacement() {
+        ItemStack toStack = menu.getSlot(2).getItem();
+        return toStack.isEmpty() ? new SchematicBlockAir() : ItemSchematicSingle.getSchematicSafe(toStack);
+    }
+
+    private boolean isRemoving() {
+        return !menu.getSlot(1).getItem().isEmpty() && menu.getSlot(2).getItem().isEmpty();
     }
 
     private Snapshot.Key currentBlueprintKey() {
@@ -254,8 +286,8 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
             return;
         }
 
-        // If we have both from/to schematics, render a client-side hypothetical blueprint with
-        // the proposed palette swap applied. The server re-runs the authoritative match when
+        // With a "from" schematic loaded, render a client-side hypothetical blueprint with the
+        // proposed swap (or removal, when "to" is empty) applied. The server re-runs the authoritative match when
         // Replace is clicked; this is purely a UX affordance.
         Blueprint toRender = maybeApplyPendingReplacement(blueprint);
         BlueprintRenderer.renderSnapshot(graphics, toRender,
@@ -273,17 +305,12 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     }
 
     /**
-     * If the player has loaded both schematic slots, produce a copy of {@code blueprint} with
-     * the proposed palette swap applied. Otherwise return {@code blueprint} unchanged.
+     * If the player has loaded a "from" schematic, produce a copy of {@code blueprint} with the
+     * proposed swap (or removal) applied. Otherwise return {@code blueprint} unchanged.
      */
     private Blueprint maybeApplyPendingReplacement(Blueprint blueprint) {
-        ItemStack fromStack = menu.getSlot(1).getItem();
-        ItemStack toStack = menu.getSlot(2).getItem();
-        if (fromStack.isEmpty() || toStack.isEmpty()) {
-            return blueprint;
-        }
-        ISchematicBlock from = ItemSchematicSingle.getSchematicSafe(fromStack);
-        ISchematicBlock to = ItemSchematicSingle.getSchematicSafe(toStack);
+        ISchematicBlock from = pendingFind();
+        ISchematicBlock to = pendingReplacement();
         if (from == null || to == null) {
             return blueprint;
         }
@@ -306,15 +333,10 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         }
     }
 
-    /** @return the "5 × Oak Log → Stone" text, or null if any precondition is unmet. */
+    /** @return the "5 × Oak Log → Stone" (or "5 × Short Grass removed") text, or null if a precondition is unmet. */
     private String buildSummaryText() {
-        ItemStack fromStack = menu.getSlot(1).getItem();
-        ItemStack toStack = menu.getSlot(2).getItem();
-        if (fromStack.isEmpty() || toStack.isEmpty()) {
-            return null;
-        }
-        ISchematicBlock from = ItemSchematicSingle.getSchematicSafe(fromStack);
-        ISchematicBlock to = ItemSchematicSingle.getSchematicSafe(toStack);
+        ISchematicBlock from = pendingFind();
+        ISchematicBlock to = pendingReplacement();
         if (from == null || to == null) {
             return null;
         }
@@ -324,6 +346,10 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         }
         int count = blueprint.countMatchingCells(from);
         String fromName = schematicDisplayName(from);
+        if (isRemoving()) {
+            return Component.translatable("gui.buildcraftunofficial.replacer.summary_remove",
+                    count, fromName).getString();
+        }
         String toName = schematicDisplayName(to);
         return Component.translatable("gui.buildcraftunofficial.replacer.summary",
                 count, fromName, toName).getString();

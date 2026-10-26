@@ -23,7 +23,7 @@ public class FluidPhysicsTest {
         // vanilla's entity-fluid-interaction patches for 26.2 (26.2.0.49-beta); its 26.1.x backport
         // PR #3303 shipped in 26.1.2.95, closing the last divergence — 26.1.2 was previously tag-based,
         // a regression from the 26.1 port dropping those patches. Crude oil is built
-        // isWaterLike(false)/canSwim(false) on purpose (turnOffSplashes in BCEnergyFluids — thick crude
+        // isWaterLike(false)/canSwim(false) on purpose (the waterLike flag in BCEnergyFluids — thick crude
         // shouldn't be swimmable), so the pig never counts as in water, FloatGoal never engages, and it
         // does NOT bob — the correct behaviour everywhere, and what we assert. The minecraft:water tag
         // still lists every BC oil: it stays load-bearing for BCEnergyFluids' water-merge spread logic
@@ -105,10 +105,10 @@ public class FluidPhysicsTest {
     }
 
     /**
-     * Pins crude oil's deliberate non-water-like configuration (the {@code turnOffSplashes} branch in
+     * Pins crude oil's deliberate non-water-like configuration (the {@code waterLike} flag in
      * {@link BCEnergyFluids}). Crude oil ("oil") is built with {@code isWaterLike(false)/canSwim(false)}
-     * so thick crude doesn't behave like swimmable water, while every refined fluid (heavy/dense/distilled
-     * oil, fuels) stays water-like. {@code isInWater()} gates on {@code FluidType.getIsWaterLike()} on
+     * so thick crude doesn't behave like swimmable water, and so is residue; every other refined fluid
+     * (heavy/dense/distilled oil, fuels) stays water-like. {@code isInWater()} gates on {@code FluidType.getIsWaterLike()} on
      * every line (NeoForge PR #3249; the 26.1.x backport PR #3303 shipped in 26.1.2.95), so this flag,
      * not the minecraft:water tag, decides whether mobs bob/swim. Deterministic; no entity physics.
      */
@@ -116,18 +116,38 @@ public class FluidPhysicsTest {
         net.neoforged.neoforge.fluids.FluidType crude = BCEnergyFluids.OIL_COOL.fluidType().get();
         //? if >=1.21.10 {
         if (crude.getIsWaterLike() || crude.canSwim(null)) {
-            helper.fail("crude oil must be non-water-like and non-swimmable (turnOffSplashes): isWaterLike="
+            helper.fail("crude oil must be non-water-like and non-swimmable: isWaterLike="
                 + crude.getIsWaterLike() + " canSwim=" + crude.canSwim(null));
             return;
         }
         //?} else {
         /*// 1.21.1: FluidType has no getIsWaterLike() (the isWaterLike property predates this NeoForge line);
-        // assert only the swim flag that exists here. Crude must be non-swimmable (turnOffSplashes).
+        // assert only the swim flag that exists here. Crude must be non-swimmable.
         if (crude.canSwim(null)) {
-            helper.fail("crude oil must be non-swimmable (turnOffSplashes): canSwim=" + crude.canSwim(null));
+            helper.fail("crude oil must be non-swimmable: canSwim=" + crude.canSwim(null));
             return;
         }*/
         //?}
+        // Residue is the other thick fluid, at every heat. Its base name is "oil_residue": a compare against
+        // "residue" once silently left it water-like (issue #59).
+        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
+            if (!entry.baseName().equals("oil_residue")) {
+                continue;
+            }
+            net.neoforged.neoforge.fluids.FluidType residue = entry.fluidType().get();
+            //? if >=1.21.10 {
+            if (residue.getIsWaterLike() || residue.canSwim(null)) {
+                helper.fail(entry.name() + " must be non-water-like and non-swimmable: isWaterLike="
+                    + residue.getIsWaterLike() + " canSwim=" + residue.canSwim(null));
+                return;
+            }
+            //?} else {
+            /*if (residue.canSwim(null)) {
+                helper.fail(entry.name() + " must be non-swimmable: canSwim=" + residue.canSwim(null));
+                return;
+            }*/
+            //?}
+        }
         net.neoforged.neoforge.fluids.FluidType heavy = BCEnergyFluids.ALL.stream()
             .filter(e -> e.baseName().equals("oil_heavy")).findFirst().orElseThrow().fluidType().get();
         //? if >=1.21.10 {

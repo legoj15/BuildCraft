@@ -244,7 +244,9 @@ public class BCEnergyFluids {
         // Registry name: "oil" for heat_0, "oil_heat_1" for heat_1, etc.
         String regName = baseName + (heat == 0 ? "" : "_heat_" + heat);
 
-        boolean turnOffSplashes = baseName.equals("oil") || baseName.equals("residue");
+        // Crude oil and residue are too thick to swim in or to count as water (no swim event, riptide, conduit,
+        // water damage, underwater music...); every other BC fluid stays water-like.
+        boolean waterLike = !baseName.equals("oil") && !baseName.equals("oil_residue");
 
         // FluidType
         DeferredHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
@@ -254,11 +256,11 @@ public class BCEnergyFluids {
                         .temperature(temperature)
                         .canExtinguish(false)
                         .canConvertToSource(false)
-                        .canSwim(!turnOffSplashes)
+                        .canSwim(waterLike)
                         .canPushEntity(true)
                         .canDrown(true)
                         //? if >=1.21.10 {
-                        .isWaterLike(!turnOffSplashes)
+                        .isWaterLike(waterLike)
                         //?}
                         .sound(SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)
                         .sound(SoundActions.BUCKET_EMPTY, SoundEvents.BUCKET_EMPTY)

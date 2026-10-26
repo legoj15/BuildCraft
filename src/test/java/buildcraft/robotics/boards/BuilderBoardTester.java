@@ -342,8 +342,10 @@ public class BuilderBoardTester {
      *  {@code robot_builder_board_gives_up_on_unreachable_builder}, reproduced on 26.3). */
     private static void whenCellIsEntityTicking(GameTestHelper helper, Runnable body) {
         EntityArenaUtil.forceLoadCell(helper);
-        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,
-                "the arena cell never became entity-ticking");
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS,
+                () -> EntityArenaUtil.isCellEntityTicking(helper), body,
+                "the arena cell never became entity-ticking: its chunks were still being promoted, which is the"
+                        + " machine's load and not the code under test");
     }
 
     /** How many of {@code item} lie on the ground within a block of {@code centre}; with {@code discard} they are
@@ -1015,7 +1017,10 @@ public class BuilderBoardTester {
                     if (robot[0] == null) {
                         DockingStation station = RobotManager.registryProvider.getRegistry(level)
                                 .getStation(pipeAbs, Direction.UP);
-                        if (station != null && station.canRobotExtractItem(new ItemStack(Items.STONE))) {
+                        // The gate's policy AND the inventory the load reads (it resolves through the wooden pipe's
+                        // extraction side): AIRobotLoad fails on a null input just as on a refused stack.
+                        if (station != null && station.canRobotExtractItem(new ItemStack(Items.STONE))
+                                && station.getItemInput() != null) {
                             // Zone-pinned to this cell: the board searches every Builder loaded in the level, and
                             // other tests leave needy ones behind.
                             robot[0] = new ZonePinnedRobot(helper, BoardRobotBuilderNBT.INSTANCE);
@@ -1034,8 +1039,10 @@ public class BuilderBoardTester {
                     return false;
                 }, () -> {
                     if (robot[0] == null) {
-                        return RobotManager.registryProvider.getRegistry(level).getStation(pipeAbs, Direction.UP) == null
-                                ? "the supply station never registered"
+                        DockingStation station = RobotManager.registryProvider.getRegistry(level)
+                                .getStation(pipeAbs, Direction.UP);
+                        return station == null ? "the supply station never registered"
+                                : station.getItemInput() == null ? "the supply station has no inventory to load from"
                                 : "the supply station registered but never provided the stone";
                     }
                     if (robot[0].getBoard() instanceof BoardRobotBuilder board) {

@@ -754,6 +754,7 @@
     "buildcraftunofficial.configuration.networkUpdateRate": "Network Update Rate",
     "buildcraftunofficial.configuration.miningMultiplier": "Mining Multiplier",
     "buildcraftunofficial.configuration.miningMaxDepth": "Mining Max Depth",
+    "buildcraftunofficial.configuration.machineEnchantments": "Enchantable Mining Machines",
     "buildcraftunofficial.configuration.disableRfPipe": "Disable RF Pipe",
     "buildcraftunofficial.configuration.pipes": "Pipes",
     "buildcraftunofficial.configuration.builders": "Builders",

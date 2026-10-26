@@ -630,6 +630,15 @@ public class BlockUtil {
 
     /** Computes the MJ power required to break a block, based on its hardness. */
     public static long computeBlockBreakPower(Level world, BlockPos pos) {
+        return computeBlockBreakPower(world, pos, 0);
+    }
+
+    /**
+     * {@link #computeBlockBreakPower(Level, BlockPos)} for a machine with Efficiency: each level divides the cost by
+     * one more {@link MachineEnchantments#EFFICIENCY_COST_STEP}, {@code cost / (1 + 0.25 * level)}. Level 0 is the
+     * plain cost to the MJ. A fluid block stays at its flat 1 MJ, which has nothing to be efficient about.
+     */
+    public static long computeBlockBreakPower(Level world, BlockPos pos, int efficiencyLevel) {
         BlockState state = world.getBlockState(pos);
         // Vanilla pure-fluid blocks (water/lava and modded LiquidBlock instances) ship with
         // strength=100 — that's their *explosion resistance*, not break time; vanilla treats
@@ -645,7 +654,8 @@ public class BlockUtil {
             return MjAPI.MJ;
         }
         float hardness = state.getDestroySpeed(world, pos);
-        return (long) Math.floor(16 * MjAPI.MJ * ((hardness + 1) * 2) * miningMultiplier);
+        return (long) Math.floor(16 * MjAPI.MJ * ((hardness + 1) * 2) * miningMultiplier
+                / (1 + MachineEnchantments.EFFICIENCY_COST_STEP * Math.max(0, efficiencyLevel)));
     }
 
     /**

@@ -12,4 +12,5 @@
 - Changing a Filler's pattern, parameters, invert toggle or box now reaches other players watching it straight away.
 - The Zone Planner's map now shows terrain past your render distance: anywhere in its survey area that someone has visited is drawn from what the server remembers, without loading any chunks.
 - Facades cast soft corner shadows like the blocks they copy, so a wall or floor of facades blends with real blocks instead of each facade looking flat-lit. A pipe with any solid facade shades the blocks on all its sides, like a full block would; hollow facades cast none.
+- Quarries and Mining Wells can be enchanted at an anvil with Silk Touch, Fortune or Efficiency. Silk Touch and Fortune work on what the machine mines as they would on a pickaxe (Silk Touch keeps ores and stone whole, Fortune adds drops from ores and the like), and Efficiency cuts the power each block takes (Efficiency V mines on under half). The machines keep their enchantments, and their shine, when broken. The `machineEnchantments` option turns this off.
 - Fixed a Filler on Loop resending its full data to nearby players every tick after finishing a cycle.

@@ -709,6 +709,20 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_mines_waterlogged_block", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellMinesWaterloggedBlock);
         reg.accept("buildcraftunofficial:mining_well_pump_drains_blocking_lava", () -> buildcraft.factory.tile.TileMiningWellPumpTester::testPumpOnWellDrainsBlockingLava);
 
+        // Enchantable Quarry / Mining Well (issue #42): Silk Touch, Fortune and Efficiency from an anvil ride on the
+        // machine's components into its pretend pickaxe and its break cost.
+        reg.accept("buildcraftunofficial:mining_well_silk_touch_yields_stone", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testSilkTouchWellYieldsStone);
+        reg.accept("buildcraftunofficial:mining_well_efficiency_breaks_on_less_power", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testEfficiencyWellBreaksOnLessPower);
+        reg.accept("buildcraftunofficial:mining_well_option_off_mines_plain_keeps_enchantments", () -> buildcraft.factory.tile.TileMiningWellEnchantTester::testOptionOffMinesPlainAndKeepsEnchantments);
+        reg.accept("buildcraftunofficial:quarry_silk_touch_yields_stone", () -> buildcraft.builders.tile.TileQuarryEnchantTester::testSilkTouchQuarryYieldsStone);
+        reg.accept("buildcraftunofficial:quarry_efficiency_halves_the_target", () -> buildcraft.builders.tile.TileQuarryEnchantTester::testEfficiencyQuarryHalvesTheTarget);
+        reg.accept("buildcraftunofficial:machine_enchantments_anvil_takes_only_mining_enchantments", () -> buildcraft.lib.misc.MachineEnchantmentTester::testAnvilTakesOnlyMiningEnchantments);
+        reg.accept("buildcraftunofficial:machine_enchantments_only_mining_enchantments_are_used", () -> buildcraft.lib.misc.MachineEnchantmentTester::testOnlyMiningEnchantmentsAreUsed);
+        reg.accept("buildcraftunofficial:machine_enchantments_quarry_keeps_them_when_broken", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPlacedQuarryKeepsEnchantmentsWhenBroken);
+        reg.accept("buildcraftunofficial:machine_enchantments_mining_well_keeps_them_when_broken", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPlacedMiningWellKeepsEnchantmentsWhenBroken);
+        reg.accept("buildcraftunofficial:machine_enchantments_pick_block_keeps_them", () -> buildcraft.lib.misc.MachineEnchantmentTester::testPickBlockKeepsEnchantments);
+        reg.accept("buildcraftunofficial:machine_enchantments_client_copy_sees_efficiency", () -> buildcraft.lib.misc.MachineEnchantmentTester::testClientCopySeesTheEfficiency);
+
         // The miner tube is waterloggable: drilling a bore through a pond keeps the water inside the tube and
         // retracting (or breaking the well) puts the source back, instead of deleting a column of the pond.
         reg.accept("buildcraftunofficial:mining_well_tube_keeps_water", () -> buildcraft.factory.tile.TileMinerTubeWaterTester::testTubeKeepsWaterInBore);

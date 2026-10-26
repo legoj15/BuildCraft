@@ -7,6 +7,7 @@
 package buildcraft.builders.snapshot;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -122,6 +123,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
      *  build inside a claim neither re-asks every pass nor drops the cell for good (the build stays unfinished and
      *  goes on once the claim is lifted). Server side only, never saved: a reloaded builder asks once more. */
     protected final RefusalMemory placeRefusals = new RefusalMemory(RefusalMemory.BUILDER_PLACE);
+    /** Cells a protection mod forbids this builder to break (see {@link #isBreakBlocked}), parked the same way as
+     *  {@link #placeRefusals}: not asked about again until the block there changes or the window ends. */
+    private final RefusalMemory breakRefusals = new RefusalMemory(RefusalMemory.BUILDER_PLACE);
 
     @SuppressWarnings("WeakerAccess")
     protected SnapshotBuilder(T tile) {
@@ -445,6 +449,171 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         return fluidSweeps;
     }
 
+    // ── Stall diagnosis ──────────────────────────────────────────────────────────────────────────
+    // A build is STALLED when it is unfinished, has nothing queued and did no work for STALL_TICKS ticks in a row.
+    // (A build with tasks queued but no power is not stalled: it is waiting on power, which the machine already shows.)
+    // While stalled, every STALL_DIAGNOSE_INTERVAL ticks the builder walks the cells it is still to break or place and
+    // notes the first thing in the way of each, in the order the queue filters ask. The diagnosis runs on the server only
+    // and is no part of the builder's saved state (serializeNBT); the client reads the same list back from the sync
+    // (loadClientNBT) so it can outline the cells.
+
+    /** Consecutive ticks a build must be unfinished with nothing queued and nothing done before it counts as stalled. */
+    public static final int STALL_TICKS = 40;
+    /** How often a stalled build is looked over again for the cells it is skipping. */
+    public static final int STALL_DIAGNOSE_INTERVAL = 20;
+    /** The most skipped cells a stalled build lists (and so syncs); the per-reason totals still count every one. */
+    public static final int STALL_CELL_CAP = 64;
+
+    private static final EnumStallReason[] STALL_REASONS = EnumStallReason.values();
+
+    /** Consecutive ticks the build has been idle (saturates at {@link #STALL_TICKS}). */
+    private int idleTicks;
+    /** Ticks until a stalled build is diagnosed again; at or below 0 it is diagnosed on its next tick. */
+    private int diagnoseIn;
+    /** The skipped cells: the diagnosis on the server, the last sync on the client. At most {@link #STALL_CELL_CAP},
+     *  the red reasons first (the order of {@link EnumStallReason}). */
+    private final List<StalledCell> stalledCells = new ArrayList<>();
+    private final List<StalledCell> stalledCellsView = Collections.unmodifiableList(stalledCells);
+    /** How many cells are skipped for each reason, past the cap too. */
+    private final int[] stalledCounts = new int[STALL_REASONS.length];
+
+    /** The cells a stalled build is skipping and why: empty unless the build is stalled (and the machine reports
+     *  stalls, see {@link ITileForSnapshotBuilder#reportsStalls()}), and then at most {@link #STALL_CELL_CAP} of them. */
+    public List<StalledCell> getStalledCells() {
+        return stalledCellsView;
+    }
+
+    /** How many cells are skipped for {@code reason}, counting the ones past the list's cap too. */
+    public int getStalledCount(EnumStallReason reason) {
+        return stalledCounts[reason.ordinal()];
+    }
+
+    private void clearStall() {
+        if (!stalledCells.isEmpty()) {
+            stalledCells.clear();
+            Arrays.fill(stalledCounts, 0);
+        }
+    }
+
+    /** Forgets the stalled cells (a client whose Builder lost its snapshot has nothing left to outline). */
+    public void clearStalledCells() {
+        clearStall();
+    }
+
+    /** One tick's worth of stall tracking, run at the end of {@link #tick()}. */
+    private void trackStall(boolean idle) {
+        if (!tile.reportsStalls()) {
+            return;
+        }
+        if (!idle) {
+            idleTicks = 0;
+            clearStall();
+            return;
+        }
+        if (idleTicks < STALL_TICKS) {
+            idleTicks++;
+            if (idleTicks < STALL_TICKS) {
+                // Also drops a list that arrived with a save or a sync while the build was not (yet) stalled.
+                clearStall();
+                return;
+            }
+            diagnoseIn = 0;
+        }
+        if (diagnoseIn <= 0) {
+            diagnoseIn = STALL_DIAGNOSE_INTERVAL;
+            diagnoseStall();
+        }
+        diagnoseIn--;
+    }
+
+    /** Looks over every cell still to break or place and notes why the Builder is skipping it. Runs only while
+     *  stalled, so both queues are empty and every cell it finds was filtered out of them. */
+    private void diagnoseStall() {
+        if (getBuildingInfo() == null || checkResults == null || placeOrder == null || breakOrder == null) {
+            clearStall();
+            return;
+        }
+        StallTally tally = new StallTally(STALL_CELL_CAP);
+        if (tile.canExcavate()) {
+            for (int i : breakOrder) {
+                if (checkResults[i] != CHECK_RESULT_TO_BREAK) continue;
+                BlockPos pos = indexToPos(i);
+                // The break queue's own filters, in its order: fluid the mode never removes, then a block that cannot
+                // be broken.
+                tally.note(!shouldBreakQueueAcceptFluid(pos) ? EnumStallReason.FLUID
+                    : isBreakBlocked(pos) ? EnumStallReason.UNBREAKABLE : null, pos);
+            }
+        }
+        EnumFluidHandlingMode fluidMode = getFluidMode();
+        for (int i : placeOrder) {
+            if (checkResults[i] != CHECK_RESULT_TO_PLACE) continue;
+            BlockPos pos = indexToPos(i);
+            EnumStallReason reason;
+            // The place queue's own filters, in its order. A cell that only waits on another cell (a dependency) is
+            // ordinary, and left unreported (placementStallReason says null).
+            if (!hasRequiredItems(i)) {
+                reason = EnumStallReason.MISSING_ITEMS;
+            } else if (isPlaceParked(pos)) {
+                reason = EnumStallReason.REFUSED;
+            } else if (!passesFluidGate(fluidMode, pos)) {
+                reason = EnumStallReason.FLUID;
+            } else {
+                reason = placementStallReason(pos);
+            }
+            tally.note(reason, pos);
+        }
+        stalledCells.clear();
+        stalledCells.addAll(tally.cells());
+        for (EnumStallReason reason : STALL_REASONS) {
+            stalledCounts[reason.ordinal()] = tally.count(reason);
+        }
+    }
+
+    /**
+     * Why the Builder will not queue the placement at {@code blockPos} once it has the items, is not parked and the
+     * fluid gate lets it through, or {@code null} when nothing but a passing wait is in the way: a cell that only waits
+     * for the cells it depends on is ordinary, and a build is not stalled by it. Default none; a Blueprint reports a
+     * block that cannot stand there.
+     */
+    protected EnumStallReason placementStallReason(BlockPos blockPos) {
+        return null;
+    }
+
+    /** The cached "has the Builder what this cell needs" of the place queue (see {@link #resourcesChanged}). */
+    private boolean hasRequiredItems(int i) {
+        if (requiredCache[i] != REQUIRED_UNKNOWN) {
+            return requiredCache[i] == REQUIRED_TRUE;
+        }
+        boolean has = hasEnoughToPlaceItems(indexToPos(i));
+        requiredCache[i] = has ? REQUIRED_TRUE : REQUIRED_FALSE;
+        return has;
+    }
+
+    /**
+     * Whether the cell may not be broken as things stand: an unbreakable block (bedrock), or one a protection mod
+     * forbids breaking (asked once, then remembered for {@link RefusalMemory#BUILDER_PLACE}'s window like a refused
+     * placement, so a protected area is not asked about on every tick). The break queue skips such a cell: queuing it
+     * only to drain it as impossible on the next step left the queue never empty, and a placement waits for an empty
+     * break queue, so one bedrock block in the box stopped every placement.
+     */
+    private boolean isBreakBlocked(BlockPos pos) {
+        Level world = tile.getWorldBC();
+        if (BlockUtil.isUnbreakableBlock(world, pos, tile.getOwner())) {
+            return true;
+        }
+        if (!(world instanceof ServerLevel serverLevel)) {
+            return false;
+        }
+        if (breakRefusals.isRefused(serverLevel, pos, tile.getOwner())) {
+            return true;
+        }
+        if (!BlockUtil.canMachineBreak(serverLevel, pos, tile.getOwner())) {
+            breakRefusals.remember(serverLevel, pos, tile.getOwner());
+            return true;
+        }
+        return false;
+    }
+
     public void validate() {
         // No-op: Using polling approach instead of WorldEventListener
     }
@@ -543,6 +712,9 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         Arrays.fill(checkResults, CHECK_RESULT_UNKNOWN);
         cachedAreaFluid = null;
         replaceCensusKnown = false;
+        // A new snapshot is a new build: what the last one was stalled on says nothing about it.
+        idleTicks = 0;
+        clearStall();
         requiredCache = new byte[
             getBuildingInfo().box.size().getX() *
                 getBuildingInfo().box.size().getY() *
@@ -608,6 +780,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         // Refusals parked under the torn-down build belong to it: a new build (new snapshot, pattern, box or base
         // pos) asks its cells afresh instead of waiting out the old window.
         placeRefusals.clear();
+        breakRefusals.clear();
+        idleTicks = 0;
+        diagnoseIn = 0;
+        clearStall();
     }
 
     /** @return whether the last {@link #tick()} drew power into a task or finished one */
@@ -653,9 +829,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         boolean isDone = true;
 
         // Can't be done if any blocks haven't been scanned yet
+        boolean unclassified = false;
         for (byte result : checkResults) {
             if (result == CHECK_RESULT_UNKNOWN) {
                 isDone = false;
+                unclassified = true;
                 break;
             }
         }
@@ -687,10 +865,16 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             // Re-sort the candidates so source-fluid positions go first, then flowing-fluid
             // positions, then everything else; within each tier the original distance order is
             // preserved (Stream sort is stable).
+            // A block that can never be broken (bedrock, or a protection mod's refusal) is left out here: it stays
+            // "left to break" and keeps the build unfinished, but must not be queued. Queuing it only to drain it as
+            // impossible at execution (below) put it back every tick, so the break queue was never empty and the
+            // place-task add (which waits for an empty break queue) never ran. The filter sits after the sort and
+            // before the limit so it asks about no more cells than the queue has room for.
             Arrays.stream(blocks)
                 .mapToObj(this::indexToPos)
                 .filter(this::shouldBreakQueueAcceptFluid)
                 .sorted(Comparator.comparingInt(this::breakPriorityTier))
+                .filter(blockPos -> !isBreakBlocked(blockPos))
                 .map(blockPos ->
                     new BreakTask(
                         blockPos,
@@ -766,14 +950,7 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
                     isDone = false;
                 }
                 Arrays.stream(blocks)
-                    .filter(i -> {
-                        if (requiredCache[i] != REQUIRED_UNKNOWN) {
-                            return requiredCache[i] == REQUIRED_TRUE;
-                        }
-                        boolean has = hasEnoughToPlaceItems(indexToPos(i));
-                        requiredCache[i] = has ? REQUIRED_TRUE : REQUIRED_FALSE;
-                        return has;
-                    })
+                    .filter(this::hasRequiredItems)
                     .mapToObj(this::indexToPos)
                     .filter(pos -> !isPlaceParked(pos))
                     .filter(pos -> passesFluidGate(fluidMode, pos))
@@ -904,6 +1081,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         if (checkResultsChanged) {
             afterChecks();
         }
+
+        // Unfinished, nothing queued and nothing done this tick: the build is not going anywhere on its own. Not while
+        // the check sweep is still classifying the box for the first time (a big freshly loaded build spends many ticks
+        // with nothing found to queue yet), or that would pass for a stall.
+        trackStall(!unclassified && !isDone && !madeProgress && breakTasks.isEmpty() && placeTasks.isEmpty());
 
         return isDone;
     }
@@ -1186,6 +1368,23 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         CompoundTag nbt = new CompoundTag();
         nbt.put("breakTasks", NBTUtilBC.writeCompoundList(clientBreakTasksCache.stream().map(BreakTask::writeToNBT)));
         nbt.put("placeTasks", NBTUtilBC.writeCompoundList(placeTasks.stream().map(PlaceTask::writeToNBT)));
+        // Absent unless stalled, so the steady-state sync carries nothing extra. (This tag is also what the tile saves
+        // as its client data, so a stalled Builder's list is saved with it; the server drops what it loads again on its
+        // first tick, see trackStall.)
+        if (!stalledCells.isEmpty()) {
+            int[] positions = new int[stalledCells.size() * 3];
+            byte[] reasons = new byte[stalledCells.size()];
+            for (int i = 0; i < stalledCells.size(); i++) {
+                StalledCell cell = stalledCells.get(i);
+                positions[i * 3] = cell.pos().getX();
+                positions[i * 3 + 1] = cell.pos().getY();
+                positions[i * 3 + 2] = cell.pos().getZ();
+                reasons[i] = (byte) cell.reason().ordinal();
+            }
+            nbt.putIntArray("stalledPos", positions);
+            nbt.putByteArray("stalledReason", reasons);
+            nbt.putIntArray("stalledCounts", stalledCounts.clone());
+        }
         return nbt;
     }
 
@@ -1232,6 +1431,28 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         NBTUtilBC.readCompoundList(tag.get("breakTasks")).map(BreakTask::new).forEach(serverBreak::add);
         NBTUtilBC.readCompoundList(tag.get("placeTasks")).map(PlaceTask::new).forEach(serverPlace::add);
         receiveServerTaskData(serverBreak, serverPlace, savedClientBreak, savedClientPlace);
+        loadStalledCells(tag);
+    }
+
+    /** Reads the stalled cells {@link #serializeClientNBT()} wrote (none when the tag carries none, which empties the
+     *  list: a sync from a build that is no longer stalled must clear the client's outlines). */
+    private void loadStalledCells(CompoundTag tag) {
+        stalledCells.clear();
+        Arrays.fill(stalledCounts, 0);
+        int[] positions = NBTUtilBC.getIntArray(tag, "stalledPos", new int[0]);
+        byte[] reasons = NBTUtilBC.getByteArray(tag, "stalledReason", new byte[0]);
+        int count = Math.min(Math.min(positions.length / 3, reasons.length), STALL_CELL_CAP);
+        for (int i = 0; i < count; i++) {
+            EnumStallReason reason = EnumStallReason.fromOrdinal(reasons[i]);
+            if (reason != null) {
+                stalledCells.add(new StalledCell(
+                    new BlockPos(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]), reason));
+            }
+        }
+        int[] counts = NBTUtilBC.getIntArray(tag, "stalledCounts", new int[0]);
+        for (int i = 0; i < Math.min(counts.length, stalledCounts.length); i++) {
+            stalledCounts[i] = Math.max(0, counts[i]);
+        }
     }
 
     public class BreakTask {

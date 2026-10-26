@@ -8,6 +8,7 @@ package buildcraft.builders.gui;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
@@ -25,6 +26,8 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 
 import buildcraft.builders.container.ContainerBuilder;
 import buildcraft.builders.snapshot.EnumContainerContentsMode;
+import buildcraft.builders.snapshot.EnumStallReason;
+import buildcraft.builders.snapshot.SnapshotBuilder;
 import buildcraft.builders.tile.TileBuilder;
 
 public class GuiBuilder extends GuiBC8<ContainerBuilder> {
@@ -69,6 +72,9 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
     private static final int CONTENTS_BUTTON_X = FLUID_BUTTON_X - FLUID_BUTTON_SIZE;
     private static final int CONTENTS_BUTTON_Y = FLUID_BUTTON_Y;
     private static final int CONTENTS_BUTTON_SIZE = FLUID_BUTTON_SIZE;
+
+    // The "left to break / left to place" readout, and the hover area of its stall summary.
+    private static final int READOUT_X = 10, READOUT_Y = 50, READOUT_LINE = 10, READOUT_W = 110;
 
     // Help-ledger rectangles. Mirror ContainerBuilder's slot positions so the hover-highlight
     // covers the visible cells exactly (1.12.2 used the same coordinates).
@@ -194,20 +200,54 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         // full-width one.
         int leftToBreak = menu.getSyncedLeftToBreak();
         int leftToPlace = menu.getSyncedLeftToPlace();
-        int y = 50;
+        // A stalled build reads in red; hovering the readout says what it is stalled on (see drawTooltipLayer).
+        ChatFormatting readoutColour = stallSummary() != null ? ChatFormatting.DARK_RED : ChatFormatting.DARK_GRAY;
+        int y = READOUT_Y;
         if (leftToBreak > 0) {
             graphics.text(font,
                     Component.translatable("gui.leftToBreak").append(": " + leftToBreak)
-                            .withStyle(ChatFormatting.DARK_GRAY),
-                    10, y, 0xFF404040, false);
-            y += 10;
+                            .withStyle(readoutColour),
+                    READOUT_X, y, 0xFF404040, false);
+            y += READOUT_LINE;
         }
         if (leftToPlace > 0) {
             graphics.text(font,
                     Component.translatable("gui.leftToPlace").append(": " + leftToPlace)
-                            .withStyle(ChatFormatting.DARK_GRAY),
-                    10, y, 0xFF404040, false);
+                            .withStyle(readoutColour),
+                    READOUT_X, y, 0xFF404040, false);
         }
+    }
+
+    /** Hovering the progress readout of a stalled build says why it is stalled, as one summary line. Only over the
+     *  lines the readout actually draws (see {@link #drawForegroundLayer}): none drawn, nothing to hover. */
+    @Override
+    protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
+        Component summary = stallSummary();
+        if (summary == null) return;
+        int lines = (menu.getSyncedLeftToBreak() > 0 ? 1 : 0) + (menu.getSyncedLeftToPlace() > 0 ? 1 : 0);
+        if (lines == 0) return;
+        int x = leftPos + READOUT_X;
+        int y = topPos + READOUT_Y;
+        if (mouseX >= x && mouseX < x + READOUT_W && mouseY >= y && mouseY < y + lines * READOUT_LINE) {
+            GuiIcon.getGuiGraphics().setTooltipForNextFrame(font, summary, mouseX, mouseY);
+        }
+    }
+
+    /** "Stalled: 3 can't stand, 2 missing items", or null while the Builder is not stalled on anything it can name
+     *  (the synced list is empty). The counts include cells past the synced list's cap. */
+    private Component stallSummary() {
+        SnapshotBuilder<?> builder = menu.tile == null ? null : menu.tile.getBuilder();
+        if (builder == null || builder.getStalledCells().isEmpty()) return null;
+        MutableComponent parts = Component.empty();
+        for (EnumStallReason reason : EnumStallReason.values()) {
+            int count = builder.getStalledCount(reason);
+            if (count <= 0) continue;
+            if (!parts.getSiblings().isEmpty()) {
+                parts.append(", ");
+            }
+            parts.append(Component.translatable(reason.langKey(), count));
+        }
+        return Component.translatable("gui.buildcraftunofficial.builder.stalled", parts);
     }
 
 }

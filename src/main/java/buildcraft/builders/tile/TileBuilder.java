@@ -812,9 +812,14 @@ public class TileBuilder extends TileBC_Neptune
         SnapshotBuilder<?> active = getBuilder();
         if (active != null) {
             input.read("builderState", CompoundTag.CODEC).ifPresent(active::deserializeNBT);
-            input.read("builderClientData", CompoundTag.CODEC).ifPresent(tag ->
-                applyBuilderClientData(active, tag, savedBreak, savedPlace)
-            );
+            Optional<CompoundTag> clientData = input.read("builderClientData", CompoundTag.CODEC);
+            if (clientData.isPresent()) {
+                applyBuilderClientData(active, clientData.get(), savedBreak, savedPlace);
+            } else {
+                // A sync from a Builder with no snapshot carries no client data: outlines of the last build's
+                // stalled cells must not linger on a client that still has the old builder.
+                active.clearStalledCells();
+            }
         }
     }
 
@@ -876,6 +881,12 @@ public class TileBuilder extends TileBC_Neptune
     @Override
     public EnumFluidHandlingMode getFluidMode() {
         return fluidMode;
+    }
+
+    /** The Builder outlines the cells a stalled build is skipping (the Filler does not). */
+    @Override
+    public boolean reportsStalls() {
+        return true;
     }
 
     /**

@@ -50,7 +50,8 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  *      items swapped for another member of a configured item tag (the other woods' stairs for a plank stair grid).
  *      Selecting such a variant rewrites the blueprint to the swapped grid, so what is shown is what is crafted.</li>
  *  <li>{@link #setAcceptSubstitutes}: when the exact blueprint items are not in the materials, the selected recipe may
- *      be crafted from other materials whose swap keeps the recipe satisfied and the result the same item.</li>
+ *      be crafted from other materials whose swap keeps the recipe satisfied and assembles exactly the previewed
+ *      result (item, count and data).</li>
  *  </ul> */
 public class WorkbenchCrafting {
 
@@ -132,7 +133,7 @@ public class WorkbenchCrafting {
     }
 
     /** Lets {@link #craft()} use materials other than the blueprint's items when they keep the selected recipe
-     *  satisfied and its result the same item. Off by default. */
+     *  satisfied and assemble exactly the previewed result. Off by default. */
     public void setAcceptSubstitutes(boolean accept) {
         if (acceptSubstitutes != accept) {
             acceptSubstitutes = accept;
@@ -435,10 +436,10 @@ public class WorkbenchCrafting {
     }
 
     /** Searches the swaps of {@code grid} the materials can supply and the selected recipe still accepts. Candidates
-     *  per distinct blueprint stack are that stack itself first, then every stack type in the materials whose swap
-     *  alone (all its slots, so woods are never mixed) keeps the recipe matching with the same result item; the joint
-     *  choice over all blueprint stacks is then searched, original-first, for the first grid the materials can fully
-     *  supply. Bounded by {@link #MAX_SUBSTITUTE_COMBINATIONS}. */
+     *  per distinct blueprint stack are that stack itself (only when the materials hold enough of it), then every stack
+     *  type in the materials whose swap alone (all its slots, so woods are never mixed) keeps the recipe matching and
+     *  assembles exactly the previewed result; the joint choice over all blueprint stacks is then searched, the
+     *  materials' slot order deciding among equals, for the first grid the materials can fully supply. Bounded by {@link #MAX_SUBSTITUTE_COMBINATIONS}. */
     @Nullable
     private List<ItemStack> findSubstituteGrid(List<ItemStack> grid) {
         // Slot order, so the substitute picked among several valid ones is stable rather than hash order.
@@ -471,7 +472,11 @@ public class WorkbenchCrafting {
         List<List<ItemStackKey>> candidates = new ArrayList<>();
         for (ItemStackKey blueprintKey : blueprintKeys) {
             List<ItemStackKey> options = new ArrayList<>();
-            options.add(blueprintKey);
+            // The original only when the buffer can supply it: a missing one would keep every combination holding it
+            // dead and spend the search budget on grids that can never pass the supply check.
+            if (available.getOrDefault(blueprintKey, 0) >= needed.get(blueprintKey)) {
+                options.add(blueprintKey);
+            }
             for (Map.Entry<ItemStackKey, Integer> material : available.entrySet()) {
                 ItemStackKey candidate = material.getKey();
                 // A stack type with fewer items than the slots need could never supply the swap on its own.
@@ -482,13 +487,16 @@ public class WorkbenchCrafting {
                     options.add(candidate);
                 }
             }
+            if (options.isEmpty()) {
+                return null; // the buffer holds neither this blueprint item nor any swap for it the recipe accepts
+            }
             candidates.add(options);
         }
 
         int[] pick = new int[blueprintKeys.size()];
         for (int tried = 0; tried < MAX_SUBSTITUTE_COMBINATIONS; tried++) {
-            if (!nextCombination(pick, candidates)) {
-                return null; // every combination (the original-only one was ruled out by the caller) is spent
+            if (tried > 0 && !nextCombination(pick, candidates)) {
+                return null; // every combination is spent
             }
             List<ItemStack> trial = new ArrayList<>(grid.size());
             for (int s = 0; s < keys.length; s++) {
@@ -507,7 +515,7 @@ public class WorkbenchCrafting {
     }
 
     /** Advances {@code pick} (one candidate index per blueprint stack, last stack fastest) to the next combination.
-     *  @return false when it wrapped around to all-original, i.e. every combination has been visited. */
+     *  @return false when it wrapped around to the first combination, i.e. every combination has been visited. */
     private static boolean nextCombination(int[] pick, List<List<ItemStackKey>> candidates) {
         for (int d = pick.length - 1; d >= 0; d--) {
             if (++pick[d] < candidates.get(d).size()) {
@@ -518,14 +526,16 @@ public class WorkbenchCrafting {
         return false;
     }
 
-    /** Whether {@code trial} still satisfies the selected recipe and assembles the same result item. */
+    /** Whether {@code trial} still satisfies the selected recipe and assembles exactly the previewed result: same item,
+     *  count and data, so a substitute can never craft something other than what the table shows (a healing potion
+     *  standing in for the harming one of a tipped-arrow blueprint would otherwise make healing arrows). */
     private boolean acceptedBySelectedRecipe(List<ItemStack> trial) {
         CraftingInput input = CraftingInput.of(width, height, trial);
         if (!currentRecipe.value().matches(input, tile.getLevel())) {
             return false;
         }
         ItemStack result = assemble(currentRecipe, input);
-        return !result.isEmpty() && result.getItem() == assumedResult.getItem();
+        return !result.isEmpty() && ItemStack.matches(result, assumedResult);
     }
 
     private boolean hasExactStacks(List<ItemStack> grid) {

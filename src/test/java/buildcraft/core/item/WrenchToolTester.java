@@ -227,6 +227,10 @@ public class WrenchToolTester {
             DamageSource bare = level.damageSources().generic();
             check(drops(level, zombie, bare, false).isEmpty(), "a zombie killed by something else dropped a wrench");
             check(drops(level, cow, bare, true).isEmpty(), "a cow dropped a wrench");
+            // A carrier already drops its wrench as equipment, so the extra drop never adds a second one.
+            zombie.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(BCCoreItems.WRENCH.get()));
+            check(drops(level, zombie, bare, true).isEmpty(), "a zombie carrying a wrench dropped a second one");
+            zombie.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
 
             List<ItemStack> plain = drops(level, zombie, bare, true);
             check(plain.size() >= 1, "no zombie out of " + TRIALS + " player kills dropped a wrench");

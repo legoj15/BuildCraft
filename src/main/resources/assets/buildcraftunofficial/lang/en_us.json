@@ -208,7 +208,7 @@
     "tip.block.engine_redstone": "Slowly generates small amounts of MJ for free\nDoes not overheat",
     "tip.block.engine_stone": "Burns solid fuels to generate MJ\nOverheats if it can't output power",
     "tip.block.engine_iron": "Consumes liquid fuels to generate MJ\nOverheats if there is no coolant",
-    "tip.block.marker_volume": "Click to link with markers in line, or aim a Marker Wrench at the laser between two\nLinked markers create rectangular areas or volumes",
+    "tip.block.marker_volume": "Click to link with markers in line, or aim a Marker Wrench at the laser between two markers\nLinked markers create rectangular areas or volumes",
     "tip.block.marker_path": "Link together with a Marker Wrench to create directional paths",
     "buildcraft.marker.length": "%s blocks",
     "tip.block.quarry": "Mines a marked volume until reaching bedrock",

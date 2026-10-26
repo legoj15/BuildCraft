@@ -114,7 +114,9 @@ public final class ZombieWrenches {
     @SubscribeEvent
     public static void onDrops(LivingDropsEvent event) {
         LivingEntity victim = event.getEntity();
-        if (!event.isRecentlyHit() || !(victim.level() instanceof ServerLevel level) || !isCarrier(victim)) {
+        // A zombie carrying a wrench already drops it as vanilla equipment; one kill yields at most one.
+        if (!event.isRecentlyHit() || !(victim.level() instanceof ServerLevel level) || !isCarrier(victim)
+            || victim.getMainHandItem().getItem() instanceof ItemWrench_Neptune) {
             return;
         }
         RandomSource random = victim.getRandom();

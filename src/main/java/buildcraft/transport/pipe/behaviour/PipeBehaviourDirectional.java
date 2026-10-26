@@ -125,8 +125,10 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
                 current = Direction.values()[nextOrd];
             }
             if (canFaceDirection(current)) {
+                // With one valid face the loop comes back to the current one: nothing turned, so a wrench click is free.
+                boolean changed = current != currentDir.face;
                 setCurrentDir(current);
-                return true;
+                return changed;
             }
         }
         return false;

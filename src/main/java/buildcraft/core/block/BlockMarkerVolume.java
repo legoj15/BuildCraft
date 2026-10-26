@@ -38,7 +38,8 @@ public class BlockMarkerVolume extends BlockMarkerBase {
         if (!world.isClientSide()) {
             BlockEntity tile = world.getBlockEntity(pos);
             if (tile instanceof TileMarkerVolume volume
-                && !(player.getMainHandItem().getItem() instanceof ItemMarkerWrench
+                && !((player.getMainHandItem().getItem() instanceof ItemMarkerWrench
+                        || player.getOffhandItem().getItem() instanceof ItemMarkerWrench)
                     && ItemMarkerWrench.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
                 volume.onManualConnectionAttempt(player);
             }

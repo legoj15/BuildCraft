@@ -86,8 +86,9 @@ public class BCBuilders {
         var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         // Quarry — advertises as an MJ connector too so kinesis pipes route power to it (a receiver IS a
-        // connector), and gates FE insertion on the same "has work" predicate as the MJ receiver, so a
-        // finished quarry refuses FE pushes instead of topping its battery off (MJ/FE parity).
+        // connector), and gates FE insertion on the same wantsPower predicate as the MJ receiver, so a
+        // finished quarry refuses FE pushes instead of topping its battery off, unless a Pump on it is
+        // drawing on that battery (MJ/FE parity).
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.QUARRY.get(),
             quarry -> quarry.getMjReceiver(), energyCap,
             quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::wantsPower));

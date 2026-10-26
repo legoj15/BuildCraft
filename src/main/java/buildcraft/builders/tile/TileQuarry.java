@@ -1324,6 +1324,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             frameBox.reset();
             miningBox.reset();
             drillPos = null;
+            // A quarry with no box never walks again: give a Pump on it nothing to drain.
+            blockingFluid = null;
+            drainedSinceWalk = false;
         }
     }
 

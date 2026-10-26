@@ -35,6 +35,8 @@
     "buildcraftunofficial:filtered_buffer",
     "buildcraftunofficial:pipe_holder",
     { "id": "buildcraftunofficial:zone_planner", "required": false },
-    { "id": "buildcraftunofficial:requester", "required": false }
+    { "id": "buildcraftunofficial:requester", "required": false },
+    "buildcraftunofficial:power_tester",
+    "buildcraftunofficial:programming_table"
   ]
 }

@@ -705,6 +705,52 @@ public class EngineTester {
     }
 
     /**
+     * A wrench clears an overheated engine through the block's own {@code useItemOn} (the wrench item's {@code useOn} is
+     * never reached), and that is a wrench action like a rotation: it wears the wrench exactly one use.
+     */
+    public static void testWrenchClearOverheatWearsOnce(GameTestHelper helper) {
+        BlockPos enginePos = new BlockPos(2, 2, 2);
+        EntityArenaUtil.forceLoadCell(helper);
+        helper.setBlock(enginePos, BCEnergyBlocks.ENGINE_STONE.get());
+        ItemStack wrench = new ItemStack(buildcraft.core.BCCoreItems.WRENCH.get());
+
+        EntityArenaUtil.tickUntilThen(helper,
+                EntityArenaUtil.CELL_READY_TICKS + TILE_WORK_TICKS + CLEAR_OVERHEAT_SETTLE_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, TILE_WORK_TICKS,
+                        () -> engineAt(helper, enginePos) != null, () -> "no engine block entity at " + enginePos),
+                () -> {
+                    TileEngineBase_BC8 engine = engineAt(helper, enginePos);
+                    fastForwardEnergy(engine, 1.0f);
+                    if (engine.getPowerStage() != EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("Engine should be OVERHEAT before the wrench. Found: " + engine.getPowerStage());
+                    }
+                    BlockPos abs = helper.absolutePos(enginePos);
+                    BlockState state = helper.getBlockState(enginePos);
+                    net.minecraft.world.phys.BlockHitResult hit = new net.minecraft.world.phys.BlockHitResult(
+                            net.minecraft.world.phys.Vec3.atCenterOf(abs), Direction.UP, abs, false);
+                    try {
+                        java.lang.reflect.Method useItemOn = net.minecraft.world.level.block.state.BlockBehaviour.class
+                                .getDeclaredMethod("useItemOn", ItemStack.class, BlockState.class,
+                                        net.minecraft.world.level.Level.class, BlockPos.class, Player.class,
+                                        net.minecraft.world.InteractionHand.class,
+                                        net.minecraft.world.phys.BlockHitResult.class);
+                        useItemOn.setAccessible(true);
+                        useItemOn.invoke(state.getBlock(), wrench, state, helper.getLevel(), abs,
+                                helper.makeMockPlayer(GameType.SURVIVAL), net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException("Failed to invoke useItemOn reflectively", e);
+                    }
+                    if (engine.getPowerStage() == EnumPowerStage.OVERHEAT) {
+                        throw new IllegalStateException("The wrench should have cleared the overheat. Found: " + engine.getPowerStage());
+                    }
+                    if (wrench.getDamageValue() != 1) {
+                        throw new IllegalStateException("Clearing an overheat wears the wrench exactly one use, has lost "
+                                + wrench.getDamageValue());
+                    }
+                }, CLEAR_OVERHEAT_SETTLE_TICKS, helper::succeed, "The engine never appeared");
+    }
+
+    /**
      * The {@code hasAlternateReceiver} helper returns false for an isolated engine. Used by
      * block-side wrench handling to detect the "nothing to rotate to" UX case. The true-case
      * (rotation available → return PASS so the wrench item rotates + awards advancement) is

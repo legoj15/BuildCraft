@@ -87,6 +87,8 @@ public class RobotWearablesTester {
                     "the wrench peels one wearable, leaving one, got " + robot.getWearables().size());
             helper.assertTrue(robot.getWearables().get(0).is(Items.DIAMOND_HELMET),
                     "the peel takes the LAST wearable (the skull), keeping the helmet");
+            helper.assertTrue(player.getMainHandItem().getDamageValue() == 1,
+                    "dismantling is a wrench action: it wears the wrench one use");
             // The peeled skull drops into the world; keep it out of sibling arenas.
             for (var item : EntityArenaUtil.droppedItems(helper, robotRel, 3)) {
                 item.discard();

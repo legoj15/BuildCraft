@@ -240,6 +240,8 @@ public class PipeFilterPersistenceTester {
         helper.assertTrue(behaviour.onPipeActivate(wrencher, hitOn(tile), 0f, 0f, 0f, EnumPipePart.NORTH),
                 "the wrench click on a side was consumed");
         helper.assertTrue(behaviour.getCurrentDir() == Direction.NORTH, "the wrench re-aimed the pipe");
+        helper.assertTrue(wrencher.getMainHandItem().getDamageValue() == 1,
+                "re-aiming a pipe is a wrench action: it wears the wrench one use");
         helper.assertTrue(chunk.isUnsaved(), "a wrench re-aim must mark the chunk dirty");
         helper.assertTrue(((PipeBehaviourDaizuli) reloadedBehaviour(tile)).getCurrentDir() == Direction.NORTH,
                 "the facing survives the pipe's saved NBT");
@@ -250,6 +252,8 @@ public class PipeFilterPersistenceTester {
                 "the wrench click on the centre was consumed");
         DyeColor cycled = DyeColor.byId(DyeColor.WHITE.getId() + 1);
         helper.assertTrue(savedColour(behaviour) == cycled, "the wrench advanced the colour");
+        helper.assertTrue(wrencher.getMainHandItem().getDamageValue() == 2,
+                "cycling the colour is a second wrench action: one more use");
         helper.assertTrue(chunk.isUnsaved(), "a wrench colour cycle must mark the chunk dirty");
         helper.assertTrue(savedColour(reloadedBehaviour(tile)) == cycled, "the colour survives the pipe's saved NBT");
 

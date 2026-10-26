@@ -83,6 +83,10 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         super(properties);
     }
 
+    protected ItemMarkerWrench(Item.Properties properties, WrenchTier tier) {
+        super(properties, tier);
+    }
+
     /** Whether this wrench may pick up a volume box's corner to drag it. Confirming or cancelling a drag in
      *  progress, removing a box and lifting a connected marker volume are open to every marker wrench. */
     protected boolean canEditCorners() {

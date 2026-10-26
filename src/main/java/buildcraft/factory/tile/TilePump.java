@@ -363,7 +363,9 @@ public class TilePump extends TileMiner implements IDebuggable {
             return probeDown(level, worldPosition, BCCoreConfig.miningMaxDepth.get());
         }
         BlockPos blocking = host.getBlockingFluid();
-        Fluid fluid = blocking == null ? null : BlockUtil.getFluidWithFlowing(level, blocking);
+        // A Quarry's cell can sit in a chunk the finished quarry let unload: never read (so load) it.
+        Fluid fluid = blocking == null || !BlockUtil.isChunkPresent(level, blocking) ? null
+                : BlockUtil.getFluidWithFlowing(level, blocking);
         // The host's cell is cached between its scans: fluid the miner would pass (water flowed in after the lava
         // was scooped) is not in its way, so it is nothing to drain.
         if (fluid == null || BlockUtil.isPassableFluid(fluid)) {

@@ -126,6 +126,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     private BlockPos blockingFluid;
     private boolean drainedSinceWalk;
     private int ticksSinceWalk;
+    /** The walk about to start is a revisit; the last revisit found nothing to dig (the next one waits the slow
+     *  cadence, so a spring that keeps the noted cell flickering clear does not re-walk the box every second). */
+    private boolean revisitPending;
+    private boolean lastRevisitFruitless;
     private long pumpWantsPowerUntil = Long.MIN_VALUE;
     public final List<BlockPos> framePoses = new ArrayList<>();
     private int frameBoxPosesCount = 0;
@@ -496,7 +500,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it. Lava that flowed
      *  into the pit counts: the pump finds the source it flows from. */
     private void noteBlockingFluid(BlockPos pos) {
-        if (isThickFluid(pos) && (blockingFluid == null || !isThickFluid(blockingFluid))) {
+        if (isThickFluid(pos) && (blockingFluid == null || !BlockUtil.isChunkPresent(level, blockingFluid)
+                || !isThickFluid(blockingFluid))) {
             blockingFluid = pos;
         }
     }
@@ -536,17 +541,17 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     }
 
     /** Whether the finished sweep should start over: a pump has been draining what the sweep skipped, so columns it
-     *  covered may be open now. Soon once the noted cell is clear, at the slower cadence while it is not; a noted cell
-     *  whose chunk is not loaded is not read (that would load it). */
+     *  covered may be open now. Soon once the noted cell is clear, at the slower cadence while it is not or after a
+     *  revisit that found nothing; a noted cell whose chunk is not in memory is not read (that would load it). */
     private boolean shouldRevisit() {
         if (!drainedSinceWalk || currentTask != null || boxIterator == null || boxIterator.hasNext()
-                || ticksSinceWalk < REVISIT_MIN_TICKS) {
+                || ticksSinceWalk < (lastRevisitFruitless ? REVISIT_MAX_TICKS : REVISIT_MIN_TICKS)) {
             return false;
         }
         if (ticksSinceWalk >= REVISIT_MAX_TICKS || blockingFluid == null) {
             return true;
         }
-        return level.isLoaded(blockingFluid) && !isThickFluid(blockingFluid);
+        return BlockUtil.isChunkPresent(level, blockingFluid) && !isThickFluid(blockingFluid);
     }
 
     // True when the frame-box cell holds a real block that must be broken before the frame can go in (false for
@@ -835,6 +840,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         ticksSinceWalk = Math.min(ticksSinceWalk + 1, REVISIT_MAX_TICKS);
         if (shouldRevisit()) {
             boxIterator = null;
+            revisitPending = true;
         }
 
         // Capture the unrestricted-power gate at tick start — the power_loop below drains
@@ -928,6 +934,10 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                 drainedSinceWalk = false;
                 ticksSinceWalk = 0;
                 skipUnworkableCells();
+                if (revisitPending || boxIterator.hasNext()) {
+                    lastRevisitFruitless = revisitPending && !boxIterator.hasNext();
+                }
+                revisitPending = false;
                 // Only seed the drill at the mining-box corner when it has no position yet (initial
                 // setup after the frame is built). The boxIterator isn't persisted, so it is ALWAYS
                 // recreated on load — but drillPos IS persisted (saveAdditional/readData), and on a world

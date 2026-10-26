@@ -39,6 +39,7 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
+import buildcraft.api.robots.RobotManager;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
@@ -335,6 +336,16 @@ public class BuilderBoardTester {
         return count;
     }
 
+    /** Runs {@code body} once the whole arena cell is entity-ticking. A test whose board drops its cargo (the dispose)
+     *  and counts it on the same tick must: an item added to a chunk whose entities are not loaded yet is invisible
+     *  to the scan, so the count reads 0 although the robot emptied its hold (the ~1-in-8 flake of
+     *  {@code robot_builder_board_gives_up_on_unreachable_builder}, reproduced on 26.3). */
+    private static void whenCellIsEntityTicking(GameTestHelper helper, Runnable body) {
+        EntityArenaUtil.forceLoadCell(helper);
+        EntityArenaUtil.tickUntil(helper, 80, () -> EntityArenaUtil.isCellEntityTicking(helper), body,
+                "the arena cell never became entity-ticking");
+    }
+
     /** How many of {@code item} lie on the ground within a block of {@code centre}; with {@code discard} they are
      *  also removed (the board's dispose drops cargo it cannot unload, right at the robot, and a leaked item entity
      *  fails other tests). The radius is small on purpose: arena cells are 6 blocks apart and a neighbour's items
@@ -554,6 +565,10 @@ public class BuilderBoardTester {
      *  the robot carries: with none, the cargo is returned (disposed of), never delivered to a machine that did not
      *  ask for it. */
     public static void builderBoardDoesNotDumpCargoIntoABuilderThatWantsSomethingElse(GameTestHelper helper) {
+        whenCellIsEntityTicking(helper, () -> doesNotDumpCargoIntoABuilderThatWantsSomethingElse(helper));
+    }
+
+    private static void doesNotDumpCargoIntoABuilderThatWantsSomethingElse(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos stoneRel = new BlockPos(4, 2, 2);
         BlockPos dirtRel = new BlockPos(1, 2, 2);
@@ -851,6 +866,10 @@ public class BuilderBoardTester {
      *  {@link BoardRobotBuilder#MAX_FAILED_DELIVERIES} failed deliveries of the same cargo the robot now returns it
      *  (the dispose), and the machine stays benched for the longer give-up window. */
     public static void builderBoardGivesUpOnABuilderItCanNeverReach(GameTestHelper helper) {
+        whenCellIsEntityTicking(helper, () -> givesUpOnABuilderItCanNeverReach(helper));
+    }
+
+    private static void givesUpOnABuilderItCanNeverReach(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos builderRel = new BlockPos(4, 2, 2);
         BlockPos cellRel = new BlockPos(2, 14, 2);
@@ -982,24 +1001,49 @@ public class BuilderBoardTester {
         TileBuilder builder = placeBuilder(helper, builderRel,
                 makeSingleStoneBlueprint(level, helper.absolutePos(new BlockPos(3, 1, 2))));
 
-        // Zone-pinned to this cell: the board searches every Builder loaded in the level, and other tests leave
-        // needy ones behind.
-        EntityRobot robot = new ZonePinnedRobot(helper, BoardRobotBuilderNBT.INSTANCE);
-        Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
-        robot.setPos(pos.x, pos.y, pos.z);
-        robot.getBattery().addPower(SEEDED_CHARGE, false);
-        level.addFreshEntity(robot);
+        // The robot is spawned only once the pipe's station is registered and its gate provides the stone. The
+        // station registers on the pipe's own tick; a robot that runs its first pass before that finds no supply,
+        // and a failed fetch benches the Builder for UNREACHABLE_RETRY_TICKS (600), past this poll's whole work
+        // budget: the test then times out with a robot that was never going to try again in time.
+        BlockPos pipeAbs = helper.absolutePos(pipeRel);
+        EntityRobot[] robot = { null };
 
         // The assertions live in the success block. They used to follow the tickUntil call, which only SCHEDULES
         // the poll, so they ran on the test's first tick against an empty grid and the test passed at once.
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + SUPPLY_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, SUPPLY_WORK_TICKS, () -> {
+                    if (robot[0] == null) {
+                        DockingStation station = RobotManager.registryProvider.getRegistry(level)
+                                .getStation(pipeAbs, Direction.UP);
+                        if (station != null && station.canRobotExtractItem(new ItemStack(Items.STONE))) {
+                            // Zone-pinned to this cell: the board searches every Builder loaded in the level, and
+                            // other tests leave needy ones behind.
+                            robot[0] = new ZonePinnedRobot(helper, BoardRobotBuilderNBT.INSTANCE);
+                            Vec3 pos = Vec3.atCenterOf(helper.absolutePos(robotRel));
+                            robot[0].setPos(pos.x, pos.y, pos.z);
+                            robot[0].getBattery().addPower(SEEDED_CHARGE, false);
+                            level.addFreshEntity(robot[0]);
+                        }
+                        return false;
+                    }
                     for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
                         if (!builder.getResource(slot).isEmpty()) {
                             return true;
                         }
                     }
                     return false;
+                }, () -> {
+                    if (robot[0] == null) {
+                        return RobotManager.registryProvider.getRegistry(level).getStation(pipeAbs, Direction.UP) == null
+                                ? "the supply station never registered"
+                                : "the supply station registered but never provided the stone";
+                    }
+                    if (robot[0].getBoard() instanceof BoardRobotBuilder board) {
+                        return "robot at " + robot[0].blockPosition() + " carrying " + carried(robot[0], Items.STONE)
+                                + " stone, Builder benched: " + board.isSkipped(builder, board.gameTime())
+                                + ", delegate " + board.getDelegateAI();
+                    }
+                    return "robot board " + robot[0].getBoard();
                 }), () -> {
             for (int slot = 0; slot < TileBuilder.RESOURCE_SLOTS; slot++) {
                 ItemStack stack = builder.getResource(slot);
@@ -1008,6 +1052,6 @@ public class BuilderBoardTester {
             }
             helper.succeed();
         }, "the builder-board robot must fetch the stone and deliver it to the machine's grid",
-                () -> EntityArenaUtil.discard(robot));
+                () -> EntityArenaUtil.discard(robot[0]));
     }
 }

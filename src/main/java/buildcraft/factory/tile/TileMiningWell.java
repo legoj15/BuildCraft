@@ -74,7 +74,9 @@ public class TileMiningWell extends TileMiner implements IPumpHost {
         if (currentPos != null && canBreak()) {
             shouldCheck = true;
             long target = BlockUtil.computeBlockBreakPower(level, currentPos, MachineEnchantments.efficiency(this));
-            progress += (int) battery.extractPower(0, target - progress);
+            // Clamped like the quarry's power request: a target that drops mid-break (Efficiency switched on, a
+            // softer block flowing in) would otherwise pass a negative max and push power back past capacity.
+            progress += (int) battery.extractPower(0, Math.max(0, target - progress));
             if (progress >= target) {
                 progress = 0;
                 level.destroyBlockProgress(currentPos.hashCode(), currentPos, -1);

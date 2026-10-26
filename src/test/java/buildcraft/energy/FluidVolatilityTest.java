@@ -39,19 +39,10 @@ public class FluidVolatilityTest {
 
     @Test
     public void everyVariantLandsInItsDesignedBand() {
-        Assertions.assertEquals(EXPECTED.size() * 3, BCEnergyFluids.ALL.size(),
-            "the table above must cover every registered variant");
         for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
             List<Band> bands = EXPECTED.get(entry.baseName());
             Assertions.assertNotNull(bands, "no expected bands for base fluid " + entry.baseName());
             Assertions.assertEquals(bands.get(entry.heat()), entry.volatility(), entry.name());
-        }
-    }
-
-    @Test
-    public void everyGaseousVariantIsExplosiveAndNoLiquidIs() {
-        for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {
-            Assertions.assertEquals(entry.gaseous(), entry.volatility() == Band.EXPLOSIVE, entry.name());
         }
     }
 

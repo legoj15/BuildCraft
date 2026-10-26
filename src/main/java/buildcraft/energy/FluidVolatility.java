@@ -6,6 +6,9 @@
 
 package buildcraft.energy;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
@@ -42,9 +45,11 @@ import buildcraft.lib.misc.BlockUtil;
  * <p>A detonation is bounded so a spilled refinery cannot freeze the server: one blast clears every explosive fluid
  * block in the 3x3x3 around its trigger and fires <i>one</i> {@link #BLAST_POWER} explosion; the chain then goes on
  * as <b>block ticks</b> (a delay of 2 to 5 ticks) on the explosive sources in the shell out to {@link #CHAIN_REACH}.
- * Liquid blocks have explosion resistance 100, so a blast never removes one itself: the ticks are the only way a
- * detonation spreads, and one block tick per position (scheduled ticks dedupe) caps how often a source can be
- * asked. A source that a blast already cleared simply never ticks.
+ * Liquid blocks have explosion resistance 100, so a blast never removes one itself. The ticks are the guaranteed
+ * way a detonation spreads, and one block tick per position (scheduled ticks dedupe) caps how often a source can be
+ * asked; a source that a blast already cleared simply never ticks. The blast also sets fires like TNT, and gas next
+ * to one of those goes off on its next fluid tick, so a big spill can carry on past {@link #CHAIN_REACH}, but only
+ * at fluid-tick pace, never all at once.
  */
 public final class FluidVolatility {
 
@@ -187,18 +192,19 @@ public final class FluidVolatility {
      * only goes on to replace the cell with fire or air, and it is the only way to fire a block that fire is about to
      * replace (a block tick scheduled here would find the cell already gone).
      *
+     * <p>Gas answers to {@code gasExplodes} alone, as it does on the fluid-tick path; {@code canBurn} only decides
+     * whether the liquids burn.
+     *
      * @return whether the block caught fire, which is what {@code onCaughtFire} reports: {@code true} for anything
      *         that can burn (a source that exploded included), {@code false} when burning is switched off.
      */
     public static boolean catchFire(Level level, BlockPos pos, BlockState state, Band band) {
-        if (band == Band.INERT || !BCEnergyConfig.canBurnEnabled()) {
-            return false;
-        }
         if (band == Band.EXPLOSIVE && !level.isClientSide() && state.getFluidState().isSource()
                 && BCEnergyConfig.gasExplodesEnabled()) {
             detonate(level, pos);
+            return true;
         }
-        return true;
+        return band != Band.INERT && BCEnergyConfig.canBurnEnabled();
     }
 
     /**
@@ -225,13 +231,15 @@ public final class FluidVolatility {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
 
         // Clear first without block updates (as upstream did), so the blast sees an empty cell and neighbouring gas
-        // does not re-tick against a half-removed block.
+        // does not re-tick against a half-removed block. The neighbours are told once the blast is over.
+        List<BlockPos> cleared = new ArrayList<>();
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dz = -1; dz <= 1; dz++) {
                     cursor.setWithOffset(centre, dx, dy, dz);
                     if (BlockUtil.isChunkPresent(level, cursor) && isExplosive(level.getBlockState(cursor))) {
                         level.setBlock(cursor, air, Block.UPDATE_CLIENTS);
+                        cleared.add(cursor.immutable());
                     }
                 }
             }
@@ -239,6 +247,10 @@ public final class FluidVolatility {
 
         level.explode(null, centre.getX() + 0.5, centre.getY() + 0.5, centre.getZ() + 0.5, BLAST_POWER, true,
             Level.ExplosionInteraction.BLOCK);
+        // Flowing gas left beside the cleared cube recedes, and gas beside the blast's fires notices them.
+        for (BlockPos pos : cleared) {
+            level.updateNeighborsAt(pos, Blocks.AIR);
+        }
 
         // The chain: block ticks, not fluid ticks (LiquidBlock keeps those for flow), one per position at most.
         for (int dx = -CHAIN_REACH; dx <= CHAIN_REACH; dx++) {

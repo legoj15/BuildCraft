@@ -687,6 +687,9 @@ public class BuildCraftGameTests {
         // Survival markers a Filler takes over become a volume box it owns: no wrench removes it, and it goes with the Filler.
         reg.accept("buildcraftunofficial:filler_owns_box_from_survival_markers", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::survivalMarkersBecomeABoxTheFillerOwns);
         reg.accept("buildcraftunofficial:filler_owns_box_from_floating_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::floatingBoxBecomesTheFillersOwnedBox);
+        reg.accept("buildcraftunofficial:machines_leave_markers_backing_lifted_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::machinesLeaveMarkersBackingALiftedBox);
+        reg.accept("buildcraftunofficial:filler_lone_marker_gets_no_owned_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::aLoneMarkerGivesTheFillerNoOwnedBox);
+        reg.accept("buildcraftunofficial:sneak_use_leaves_box_another_player_drags", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::sneakUseLeavesABoxAnotherPlayerDrags);
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);

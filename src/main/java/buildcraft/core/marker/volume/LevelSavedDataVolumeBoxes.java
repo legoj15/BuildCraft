@@ -7,6 +7,7 @@
 package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -37,6 +38,8 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
+import net.minecraft.world.level.block.entity.BlockEntity;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.api.core.IAreaProvider;
@@ -45,8 +48,10 @@ import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.item.ItemMarkerWrench;
 import buildcraft.core.item.ItemVolumeWrench;
+import buildcraft.core.tile.TileMarkerVolume;
 
 public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedData.Recoverable {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
@@ -169,13 +174,13 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
 
     /**
      * A free box containing {@code pos}: what a machine placed against it may adopt. A box another machine owns or
-     * has already adopted (a machine lock) is that machine's working area, never a second machine's, and a one-shot
-     * box is not locked at all (see {@link #getOneShotAreaAt}).
+     * has already adopted (a machine lock) is that machine's working area, never a second machine's, a one-shot box
+     * is not locked at all (see {@link #getOneShotAreaAt}), and a box someone is dragging has no size to adopt yet.
      */
     @Nullable
     public VolumeBox getFreeVolumeBoxAt(BlockPos pos) {
         return volumeBoxes.stream().filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.getOwner() == null
-                && volumeBox.box.contains(pos)
+                && !volumeBox.isEditing() && volumeBox.box.contains(pos)
                 && volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetUsedByMachine.class::isInstance))
             .findFirst().orElse(null);
     }
@@ -214,6 +219,42 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
                 markDirtyAndBroadcast();
             }
         };
+    }
+
+    /**
+     * Whether the volume marker at {@code pos} still backs a lifted box: a resize is under way and its size is not
+     * confirmed, so the lift owns the marker until it is confirmed or cancelled.
+     */
+    public boolean isBackingLiftedBox(BlockPos pos) {
+        return volumeBoxes.stream().anyMatch(volumeBox -> volumeBox.isBackedBy(pos));
+    }
+
+    /**
+     * Whether the markers of {@code marker}'s connection are spoken for, so a machine placed against them takes
+     * nothing. That is so when one of them backs a lifted box (a marker joined to the connection after the lift is not
+     * on the box's list, yet taking it takes the whole connection, the lifted markers included), and when one stands
+     * inside a volume box already (a confirmed floating box covers the area, and taking the markers would put a second
+     * box over it): the refusal a lift of such a marker makes too.
+     */
+    public boolean isReservedMarker(TileMarkerVolume marker) {
+        VolumeConnection connection = marker.getCurrentConnection();
+        Collection<BlockPos> positions = connection == null ? List.of(marker.getBlockPos()) : connection.getMarkerPositions();
+        return positions.stream().anyMatch(pos -> isBackingLiftedBox(pos) || getVolumeBoxAt(pos) != null);
+    }
+
+    /**
+     * The area a machine placed against {@code pos} takes: the markers there (their whole connection), else a
+     * confirmed one-shot box covering it ({@link #getOneShotAreaAt}). Null when there is none, and when the markers
+     * are spoken for ({@link #isReservedMarker}): a resize in progress, or a box over them already, is not a machine's
+     * to take, so the machine finds nothing there.
+     */
+    @Nullable
+    public IAreaProvider getTakeableAreaAt(BlockPos pos) {
+        BlockEntity tile = world.getBlockEntity(pos);
+        if (tile instanceof IAreaProvider provider) {
+            return tile instanceof TileMarkerVolume marker && isReservedMarker(marker) ? null : provider;
+        }
+        return getOneShotAreaAt(pos);
     }
 
     /** The box the machine at {@code ownerPos} owns, or null. */

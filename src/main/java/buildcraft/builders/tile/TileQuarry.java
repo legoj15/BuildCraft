@@ -35,7 +35,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.resources.Identifier;
@@ -296,10 +295,9 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         super.onPlacedBy(placer, stack);
         Direction facing = level.getBlockState(worldPosition).getValue(HorizontalDirectionalBlock.FACING);
         BlockPos areaPos = worldPosition.relative(facing.getOpposite());
-        BlockEntity tile = level.getBlockEntity(areaPos);
+        LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         BlockPos min = null, max = null;
-        IAreaProvider provider = tile instanceof IAreaProvider p ? p
-            : LevelSavedDataVolumeBoxes.get(level).getOneShotAreaAt(areaPos);
+        IAreaProvider provider = volumeBoxes.getTakeableAreaAt(areaPos);
         if (provider != null) {
             min = provider.min();
             max = provider.max();
@@ -322,7 +320,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
                     continue;
                 }
                 VolumeConnection connection = marker.getCurrentConnection();
-                if (connection == null) {
+                if (connection == null || volumeBoxes.isReservedMarker(marker)) {
                     continue;
                 }
                 Box volBox = connection.getBox();

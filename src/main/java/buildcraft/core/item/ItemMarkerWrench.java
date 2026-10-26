@@ -341,8 +341,9 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
                 }
             }
             // A box a machine holds on to (Remove), or uses as it is (Resize), stays. A box a machine owns is
-            // locked against removal only: it goes with its machine, never by a wrench.
-            if (nearest != null && nearest.getLockTargetsStream().noneMatch(
+            // locked against removal only: it goes with its machine, never by a wrench. A box another player is
+            // dragging stays with that player, whose drag the removal would orphan.
+            if (nearest != null && !nearest.isEditing() && nearest.getLockTargetsStream().noneMatch(
                 target -> target instanceof Lock.Target.TargetRemove || target instanceof Lock.Target.TargetResize)) {
                 return new VolumePick(VolumeClick.BOX_REMOVE, nearest, null, nearestDist);
             }

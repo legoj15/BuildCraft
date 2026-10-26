@@ -79,6 +79,7 @@ import buildcraft.builders.snapshot.TemplateBuilder;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
+import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.builders.BCBuildersEventDist;
 
 public class TileFiller extends TileBC_Neptune
@@ -208,8 +209,7 @@ public class TileFiller extends TileBC_Neptune
         // Try volume box system first. A box another machine owns is that machine's area, not one to adopt.
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
         VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
-        BlockEntity tile = level.getBlockEntity(offsetPos);
-        IAreaProvider area = tile instanceof IAreaProvider provider ? provider : volumeBoxes.getOneShotAreaAt(offsetPos);
+        IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
         if (volumeBox != null) {
             box.reset();
@@ -218,16 +218,20 @@ public class TileFiller extends TileBC_Neptune
             lockVolumeBox(volumeBoxes, volumeBox, blockState);
             markerBox = false;
         } else if (area != null) {
+            // A lone marker has no connection: the Filler works on its one cell, but there is nothing to take over.
+            boolean taken = !(area instanceof TileMarkerVolume marker) || marker.getCurrentConnection() != null;
             box.reset();
             box.setMin(area.min());
             box.setMax(area.max());
             area.removeFromWorld();
-            // The markers, or the floating box lifted off them, become a box this Filler owns, which the Volume
-            // Wrench can resize. A Quarry just consumes such a box; this one is kept as the Filler's own, so no
-            // second box is left behind. markerBox stays on: the renderer leaves the area to the box while there is
-            // one (a copy of this tile has none).
-            volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
-                Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE);
+            if (taken) {
+                // The markers, or the floating box lifted off them, become a box this Filler owns, which the Volume
+                // Wrench can resize. A Quarry just consumes such a box; this one is kept as the Filler's own, so no
+                // second box is left behind. markerBox stays on: the renderer leaves the area to the box while there
+                // is one (a copy of this tile has none).
+                volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
+                    Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE);
+            }
         }
 
         updateBuildingInfo();

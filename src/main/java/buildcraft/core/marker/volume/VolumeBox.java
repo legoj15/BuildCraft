@@ -138,6 +138,10 @@ public class VolumeBox {
         if (nbt.contains("owner")) {
             owner = new Lock.Cause.CauseBlock();
             owner.readFromNBT(NBTUtilBC.getCompound(nbt, "owner"));
+            if (owner.pos == null) {
+                // No machine position to keep the box for: every later check of the owner would fail on it.
+                owner = null;
+            }
         }
 
         if (nbt.contains("locks")) {

@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:machines_leave_markers_backing_lifted_box",
+    "environment":  "buildcraftunofficial:machines_leave_markers_backing_lifted_box",
+    "structure":  "minecraft:empty",
+    "max_ticks":  350,
+    "setup_ticks":  0,
+    "required":  true
+}

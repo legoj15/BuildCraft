@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 
-/** Dragging a volume-box corner stops at the marker reach on each axis, measured from the corner that stays put. */
+/** Dragging a volume-box corner stops at the marker reach on each axis, measured from the corner that stays put, or
+ *  at the box's span on that axis when the drag started if that is wider, so a drag never shrinks a box by itself. */
 public class VolumeBoxDragClampTest {
 
     private static final BlockPos HELD = new BlockPos(100, 64, -40);

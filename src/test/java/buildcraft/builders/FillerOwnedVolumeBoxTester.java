@@ -16,9 +16,12 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.core.BCCoreBlocks;
@@ -92,13 +95,23 @@ public class FillerOwnedVolumeBoxTester {
                         throw new IllegalStateException("The Filler's working area is not its box");
                     }
 
-                    // Sneak-use a Volume Wrench, aimed straight down at the box from above: the removal path.
+                    // Sneak-use a Volume Wrench in the air, aimed west along the empty z=2 row into the box's east
+                    // face: the removal path. Air clicks only act when no block is in reach, so check that first.
                     Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-                    BlockPos centre = arena.abs(new BlockPos(2, 2, 2));
-                    player.setPos(centre.getX() + 0.5, centre.getY() + 3 - player.getEyeHeight(), centre.getZ() + 0.5);
-                    player.setXRot(90);
-                    player.setYRot(0);
+                    BlockPos eyeBlock = arena.abs(new BlockPos(5, 2, 2));
+                    player.setPos(eyeBlock.getX() + 0.8, eyeBlock.getY() + 0.5 - player.getEyeHeight(), eyeBlock.getZ() + 0.5);
+                    player.setXRot(0);
+                    player.setYRot(90);
                     player.setShiftKeyDown(true);
+                    Vec3 eye = player.getEyePosition();
+                    Vec3 reach = eye.add(player.getLookAngle().scale(player.blockInteractionRange()));
+                    if (level.clip(new ClipContext(eye, reach, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player))
+                            .getType() != HitResult.Type.MISS) {
+                        throw new IllegalStateException("Precondition: a block is in reach, so the air click would do nothing");
+                    }
+                    if (owned.box.getBoundingBox().clip(eye, reach).isEmpty()) {
+                        throw new IllegalStateException("Precondition: the click does not aim at the box");
+                    }
                     ItemStack wrench = new ItemStack(BCCoreItems.VOLUME_WRENCH.get());
                     player.setItemInHand(InteractionHand.MAIN_HAND, wrench);
                     wrench.getItem().use(level, player, InteractionHand.MAIN_HAND);
@@ -109,6 +122,16 @@ public class FillerOwnedVolumeBoxTester {
                     arena.remove(fillerRel);
                     if (boxes.getOwnedBy(fillerAbs) != null || boxes.volumeBoxes.contains(owned)) {
                         throw new IllegalStateException("The Filler is gone but its box is still there");
+                    }
+
+                    // Control: the same click on a free box does remove it, so the check above reached removal.
+                    boxes.addVolumeBox(arena.abs(new BlockPos(4, 2, 2)));
+                    VolumeBox free = boxes.getVolumeBoxAt(arena.abs(new BlockPos(4, 2, 2)));
+                    wrench.getItem().use(level, player, InteractionHand.MAIN_HAND);
+                    if (boxes.volumeBoxes.contains(free)) {
+                        boxes.volumeBoxes.remove(free);
+                        boxes.markDirtyAndBroadcast();
+                        throw new IllegalStateException("Control: the sneak-click did not remove a free box either");
                     }
                 } finally {
                     // Never leave a box in the dimension's saved data, whatever failed.

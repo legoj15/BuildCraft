@@ -397,10 +397,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
      * position, not by an id saved on the tile, so a copy of this tile's data can never point a second table at it.
      * <p>
      * {@link #box} stays the area scanned, mirrored from the owned box only once a drag is confirmed: a scan in
-     * progress indexes its buffers by the box size, so the box must not change under it. While a drag is under way
-     * the table waits; a confirmed new size drops the scan in progress (and a refusal, which
-     * was about the old size), and the next tick starts it again on the new area. A cancelled drag puts the old size
-     * back, so nothing changes.
+     * progress indexes its buffers by the box size, so the box must not change under it. While a drag is under way,
+     * the table waits; a confirmed new size drops the scan in progress (and a refusal, which was about the old size),
+     * and the next tick starts it again on the new area. A cancelled drag puts the old size back, so nothing changes.
      *
      * @return true while the box is being dragged: the table does no work this tick.
      */

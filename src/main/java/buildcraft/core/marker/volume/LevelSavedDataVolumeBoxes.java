@@ -40,6 +40,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.core.BCCoreConfig;
+import buildcraft.core.item.ItemVolumeWrench;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -286,11 +287,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
             }
             if (volumeBox.isEditing()) {
                 Player player = volumeBox.getPlayer(world);
-                if (player == null || volumeBox.getHeld() == null || volumeBox.getOldMin() == null
-                        || volumeBox.getOldMax() == null) {
-                    // The player is not in this level any more (logged out, changed dimension), or the drag lost
-                    // its anchor: the drag is cancelled and the old size comes back. Nothing waits for them, so a
-                    // machine that owns the box is never left frozen on an edit nobody can finish.
+                if (player == null || player.isSpectator() || !holdsVolumeWrench(player)
+                        || volumeBox.getHeld() == null || volumeBox.getOldMin() == null || volumeBox.getOldMax() == null) {
+                    // The drag is cancelled and the old size comes back when its player can no longer finish it: not
+                    // in this level any more (logged out, changed dimension), a spectator (who cannot use items), or
+                    // no longer holding a Volume Wrench; or when the drag lost its anchor. Nothing waits for them, so
+                    // a machine that owns the box is never left frozen on an edit nobody can finish.
                     volumeBox.cancelEditing();
                     dirty = true;
                 } else {
@@ -324,6 +326,11 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
             broadcastToDimension();
         }
     }
+    private static boolean holdsVolumeWrench(Player player) {
+        return player.getMainHandItem().getItem() instanceof ItemVolumeWrench
+            || player.getOffhandItem().getItem() instanceof ItemVolumeWrench;
+    }
+
     public static LevelSavedDataVolumeBoxes get(Level world) {
         if (world.isClientSide()) {
             throw new IllegalArgumentException("Tried to create a world saved data instance on the client!");

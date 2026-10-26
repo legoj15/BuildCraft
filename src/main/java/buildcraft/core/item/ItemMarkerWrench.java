@@ -8,13 +8,10 @@ package buildcraft.core.item;
 
 import net.minecraft.resources.Identifier;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -59,8 +56,9 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
  * {@link #onItemUseFirst} then does the marker work itself and consumes the click, so neither the wrench rotation
  * nor the block's own use runs (a chest or machine behind the laser would otherwise open its screen: the wrench
  * lets sneak-clicks through to blocks). The server does the work; the client only answers with the same success,
- * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before, and so does a
- * block click whose target lies behind the block; there the block in front still hides it, as it does here.
+ * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before; on the server
+ * {@code use} acts only when no block lies within the player's reach, so a block click (one whose target lay behind
+ * the block included) is never acted on a second time or through the block.
  * Anything else keeps the inherited wrench behaviour. The client runs the same test on its own marker caches and box
  * list.
  * <p>
@@ -86,20 +84,12 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         return false;
     }
 
-    /**
-     * The server tick on which each player's last marker click was handled from {@link #onItemUseFirst}. Should the
-     * client have disagreed about the target (its caches lag the server's by a packet) and gone on to send a
-     * {@code use} for the same click, {@link #use} finds the click handled and does not act on it a second time.
-     */
-    private static final Map<UUID, Long> HANDLED_ON_BLOCK = new HashMap<>();
-
     @Override
     public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         Player player = context.getPlayer();
         if (player != null && isAimingAtMarkerTarget(context.getLevel(), player, context.getClickLocation())) {
             Level level = context.getLevel();
             if (!level.isClientSide()) {
-                HANDLED_ON_BLOCK.put(player.getUUID(), level.getGameTime());
                 doMarkerClick(level, player, context.getClickLocation());
             }
             return InteractionResult.SUCCESS;
@@ -121,26 +111,25 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
     //?}
 
     private InteractionResult useImpl(Level level, Player player) {
-        if (!level.isClientSide()) {
-            Long handled = HANDLED_ON_BLOCK.remove(player.getUUID());
-            if (handled != null && handled == level.getGameTime()) {
-                return InteractionResult.SUCCESS;
-            }
-            // A click on a block lands here too when its target was behind that block (onItemUseFirst, the block
-            // and useOn all passed), so the block in front still hides what is behind it, as in onItemUseFirst.
-            doMarkerClick(level, player, blockInFront(level, player));
+        // Only a true air click is this method's: a click that met a block within reach belongs to onItemUseFirst,
+        // which acted on it if it was meant for a marker target. A block click whose target lay behind the block
+        // also lands here (onItemUseFirst, the block and useOn all passed) and must not reach through the block; a
+        // client that still sends a use for a click onItemUseFirst handled must not act twice. Both are kept out by
+        // this one rule. Past block reach nothing can hide a target, which lies within REACH, so no occlusion limit.
+        if (!level.isClientSide() && !hitsBlock(level, player)) {
+            doMarkerClick(level, player, null);
         }
         // Always consume the action so the player gets swing feedback
         return InteractionResult.SUCCESS;
     }
 
-    /** Where the view ray first meets a block within {@link #REACH}, or null if it meets none. */
-    @Nullable
-    private static Vec3 blockInFront(Level level, Player player) {
+    /** Whether the view ray meets a block within the player's block interaction range: the click was a block click. */
+    private static boolean hitsBlock(Level level, Player player) {
         Vec3 eye = player.getEyePosition();
-        BlockHitResult hit = level.clip(new ClipContext(eye, eye.add(player.getLookAngle().scale(REACH)),
+        BlockHitResult hit = level.clip(new ClipContext(eye,
+            eye.add(player.getLookAngle().scale(player.blockInteractionRange())),
             ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
-        return hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : null;
+        return hit.getType() == HitResult.Type.BLOCK;
     }
 
     /** How far along the view ray a target may lie and still be in front of the block hit at {@code clickLocation}
@@ -372,7 +361,8 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         BlockPos bestCorner = null;
         double bestDist = Double.MAX_VALUE;
         for (VolumeBox box : boxes) {
-            if (box.getLockTargetsStream().anyMatch(Lock.Target.TargetResize.class::isInstance)) {
+            // A box being dragged (by anyone) stays with its dragger; a resize-locked one cannot be dragged at all.
+            if (box.isEditing() || box.getLockTargetsStream().anyMatch(Lock.Target.TargetResize.class::isInstance)) {
                 continue;
             }
             for (BlockPos p : PositionUtil.getCorners(box.box.min(), box.box.max())) {

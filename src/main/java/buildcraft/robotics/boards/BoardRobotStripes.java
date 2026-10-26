@@ -95,7 +95,11 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     @Override
     public void update() {
-        if (robot.getHeldItem().isEmpty()) {
+        if (robot.containsItems()) {
+            // Only an item given back (giveUpHeldItem) rides in the cargo, and a dispose held back by Forbid Robot
+            // left it there: try again now the sleep is over.
+            startDelegateAI(new AIRobotDisposeItems(robot));
+        } else if (robot.getHeldItem().isEmpty()) {
             startDelegateAI(new AIRobotFetchAndEquipItemStack(robot, this::worthEquipping));
         } else {
             startDelegateAI(new AIRobotSearchAndGotoBlock(robot, true, pos ->
@@ -107,7 +111,10 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        if (ai instanceof AIRobotSearchAndGotoBlock searchAI) {
+        if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
+            // Only stations that forbid this robot would take the item back: keep it and sleep, then try again.
+            startDelegateAI(new AIRobotGotoSleep(robot));
+        } else if (ai instanceof AIRobotSearchAndGotoBlock searchAI) {
             if (searchAI.success()) {
                 blockFound.adopt(searchAI.getBlockFound(), searchAI.holdsReservation());
                 startDelegateAI(new AIRobotStripesHandler(robot, blockFound.job()));

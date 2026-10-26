@@ -195,7 +195,10 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
 
     @Override
     public void delegateAIEnded(AIRobot ai) {
-        if (ai instanceof AIRobotGotoStationAndLoad) {
+        if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
+            // Only stations that forbid this robot would take the cargo back: keep it and sleep, then try again.
+            startDelegateAI(new AIRobotGotoSleep(robot));
+        } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {
                 // No station could stock this machine's delivery (none holds the item, or none the delivery
                 // flight could leave for it). Keeping the machine chosen would repeat the same fetch on every

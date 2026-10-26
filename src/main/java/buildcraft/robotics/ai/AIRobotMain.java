@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.robots.AIRobot;
+import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 
 /** The robot's top-level controller, held in {@code EntityRobot.mainAI}. Every cycle it first checks the
@@ -56,8 +57,24 @@ public class AIRobotMain extends AIRobot {
         if (overrideCooldown > 0) {
             overrideCooldown--;
         }
+        DockingStation dock = robot.getDockingStation();
+        if (dock != null && dock.isRobotForbidden(robot) && !(ai instanceof AIRobotShutdown)) {
+            // Forbid Robot evicts (not 7.1.x, where a robot already docked kept loading, unloading and charging at a
+            // station that forbade it). Whatever the robot was doing there is abandoned and rethought from the top:
+            // every station search and flight now passes this station by, home included, so the board finds another
+            // station or sleeps elsewhere. The home link is kept, and the robot goes back once the forbid lifts; one
+            // that needs a charge no other station gives waits for that (AIRobotWaitForHome) rather than shut down.
+            robot.undock();
+            if (ai != null && ai == overridingAI) {
+                // A redirect cut short here is not restarted: its target may be the station that now forbids it.
+                overridingAI = null;
+            }
+            abortDelegateAI();
+            return;
+        }
         if (robot.getPower() <= IRobotAccess.SHUTDOWN_POWER
-                && (robot.getDockingStation() == null || !robot.getDockingStation().providesPower())) {
+                && (robot.getDockingStation() == null || !robot.getDockingStation().providesPower())
+                && !AIRobotWaitForHome.homeForbids(robot)) {
             if (!(ai instanceof AIRobotShutdown)) {
                 BCLog.logger.info("Shutting down robot " + robot + " - no power");
                 startDelegateAI(new AIRobotShutdown(robot));

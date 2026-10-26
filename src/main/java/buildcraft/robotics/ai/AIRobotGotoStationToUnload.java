@@ -9,7 +9,6 @@
 package buildcraft.robotics.ai;
 
 import buildcraft.api.robots.AIRobot;
-import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.robotics.IStationFilter;
 
@@ -25,7 +24,7 @@ public class AIRobotGotoStationToUnload extends AIRobot {
     public void start() {
         // Home counts even outside the zone; trying every station keeps an unreachable home from hiding a
         // reachable in-zone one.
-        startDelegateAI(new AIRobotSearchAndGotoStation(robot, new StationInventory(),
+        startDelegateAI(new AIRobotSearchAndGotoStation(robot, takesCargo(robot),
                 robot.getZoneToLoadUnload(), true).homeIgnoresZone());
     }
 
@@ -37,10 +36,14 @@ public class AIRobotGotoStationToUnload extends AIRobot {
         }
     }
 
-    private class StationInventory implements IStationFilter {
-        @Override
-        public boolean matches(DockingStation station) {
-            return AIRobotUnload.unload(robot, station, false);
-        }
+    /** Whether the robot is held back from unloading only by Forbid Robot: a station it could unload at, searched
+     *  for as this AI searches, exists, and every one forbids it. */
+    static boolean onlyForbiddingStationsTakeCargo(IRobotAccess robot) {
+        return AIRobotSearchStation.onlyForbiddingStationsMatch(robot, takesCargo(robot),
+                robot.getZoneToLoadUnload(), true);
+    }
+
+    private static IStationFilter takesCargo(IRobotAccess robot) {
+        return station -> AIRobotUnload.unload(robot, station, false);
     }
 }

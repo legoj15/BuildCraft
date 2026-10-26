@@ -100,7 +100,10 @@ public class AIRobotGotoStation extends AIRobot {
         }
         DockingStation station = robot.getRegistry().getStation(stationIndex, stationSide);
 
-        if (station == null) {
+        if (station == null || station.isRobotForbidden(robot)) {
+            // A station whose gate forbids the robot is not one it may dock at (not 7.1.x, which flew there and then
+            // ignored the forbid); AIRobotMain would evict it on arrival. A robot sent home to sleep this way docks
+            // at another powered station in reach instead, or sleeps in place (AIRobotGotoSleep).
             terminate();
         } else if (station == robot.getDockingStation()) {
             setSuccess(true);
@@ -164,6 +167,12 @@ public class AIRobotGotoStation extends AIRobot {
                 terminate();
             }
         } else {
+            if (station.isRobotForbidden(robot)) {
+                // The forbid came on during the flight.
+                setSuccess(false);
+                terminate();
+                return;
+            }
             if (takeAsMain && !JobClaim.promoteToHome(visit, station)) {
                 // The claim was lost under the flight (another robot cannot take a held station, so only a forced
                 // release gets here): docking beside whoever holds it now is not this goto's to do.

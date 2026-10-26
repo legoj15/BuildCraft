@@ -136,6 +136,48 @@ public class AIRobotMainTest {
                 "with the home loaded the robot does not wait");
     }
 
+    /** A low robot whose home forbids it (Forbid Robot, which evicted it from there) and that finds no other charger
+     *  waits at no cost instead of working on until it shuts down, which no lifted forbid would ever undo. Once the
+     *  forbid lifts the recharge is retried at once, and the home is a charger it may use again. */
+    @Test
+    public void aLowRobotWhoseHomeForbidsItWaitsForTheForbidToLift() {
+        robot.getBattery().setStored(MjAPI.MJ);
+        HomeStub home = new HomeStub();
+        home.loaded = true;
+        home.forbidden = true;
+        robot.setLinkedStation(home);
+        AIRobotMain main = new AIRobotMain(robot);
+
+        main.cycle(); // the recharge finds nowhere it may charge
+        for (int i = 0; i < 300; i++) { // past two recharge retries
+            main.cycle();
+        }
+        Assertions.assertInstanceOf(AIRobotWaitForHome.class, main.getDelegateAI(),
+                "with its home forbidding it, the robot waits rather than going back to work");
+        Assertions.assertEquals(MjAPI.MJ, robot.getPower(), "waiting costs nothing");
+
+        home.forbidden = false;
+        main.cycle(); // the wait sees the forbid gone and ends
+        Assertions.assertEquals(0, rechargeCooldown(main), "the forbid lifted, so the recharge is retried at once");
+    }
+
+    /** The same robot already flat when it was evicted: it waits too, where it would otherwise shut down for good. */
+    @Test
+    public void aFlatRobotWhoseHomeForbidsItWaitsInsteadOfShuttingDown() {
+        robot.getBattery().setStored(0);
+        HomeStub home = new HomeStub();
+        home.loaded = true;
+        home.forbidden = true;
+        robot.setLinkedStation(home);
+        AIRobotMain main = new AIRobotMain(robot);
+
+        for (int i = 0; i < 10; i++) {
+            main.cycle();
+        }
+        Assertions.assertInstanceOf(AIRobotWaitForHome.class, main.getDelegateAI(),
+                "a flat robot whose home forbids it waits for the forbid to lift, not shut down");
+    }
+
     // ---- the overriding AI across a save/load ----
 
     /** Saves {@code main} and reads it back the way the robot entity does. */
@@ -371,9 +413,15 @@ public class AIRobotMainTest {
         }
     }
 
-    /** A home station whose chunk is loaded only when the test says so. */
+    /** A home station whose chunk is loaded, and whose gate forbids the robot, only when the test says so. */
     private static class HomeStub extends buildcraft.api.robots.DockingStation {
         boolean loaded;
+        boolean forbidden;
+
+        @Override
+        public boolean isRobotForbidden(buildcraft.api.robots.IRobotAccess robot) {
+            return forbidden;
+        }
 
         @Override
         public Iterable<buildcraft.api.statements.StatementSlot> getActiveActions() {

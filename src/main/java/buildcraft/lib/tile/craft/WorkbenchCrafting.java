@@ -436,10 +436,10 @@ public class WorkbenchCrafting {
     }
 
     /** Searches the swaps of {@code grid} the materials can supply and the selected recipe still accepts. Candidates
-     *  per distinct blueprint stack are that stack itself first, then every stack type in the materials whose swap
-     *  alone (all its slots, so woods are never mixed) keeps the recipe matching with the same result item; the joint
-     *  choice over all blueprint stacks is then searched, original-first, for the first grid the materials can fully
-     *  supply. Bounded by {@link #MAX_SUBSTITUTE_COMBINATIONS}. */
+     *  per distinct blueprint stack are that stack itself (only when the materials hold enough of it), then every stack
+     *  type in the materials whose swap alone (all its slots, so woods are never mixed) keeps the recipe matching and
+     *  assembles exactly the previewed result; the joint choice over all blueprint stacks is then searched, the
+     *  materials' slot order deciding among equals, for the first grid the materials can fully supply. Bounded by {@link #MAX_SUBSTITUTE_COMBINATIONS}. */
     @Nullable
     private List<ItemStack> findSubstituteGrid(List<ItemStack> grid) {
         // Slot order, so the substitute picked among several valid ones is stable rather than hash order.
@@ -488,7 +488,7 @@ public class WorkbenchCrafting {
                 }
             }
             if (options.isEmpty()) {
-                return null; // neither this blueprint item nor any substitute for it is in the buffer
+                return null; // the buffer holds neither this blueprint item nor any swap for it the recipe accepts
             }
             candidates.add(options);
         }

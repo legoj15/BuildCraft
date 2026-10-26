@@ -533,20 +533,15 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             clearStall();
             return;
         }
-        List<List<BlockPos>> found = new ArrayList<>(STALL_REASONS.length);
-        for (int i = 0; i < STALL_REASONS.length; i++) {
-            found.add(new ArrayList<>());
-        }
-        int[] counts = new int[STALL_REASONS.length];
+        StallTally tally = new StallTally(STALL_CELL_CAP);
         if (tile.canExcavate()) {
             for (int i : breakOrder) {
                 if (checkResults[i] != CHECK_RESULT_TO_BREAK) continue;
                 BlockPos pos = indexToPos(i);
                 // The break queue's own filters, in its order: fluid the mode never removes, then a block that cannot
                 // be broken.
-                EnumStallReason reason = !shouldBreakQueueAcceptFluid(pos) ? EnumStallReason.FLUID
-                    : isBreakBlocked(pos) ? EnumStallReason.UNBREAKABLE : null;
-                noteStall(found, counts, reason, pos);
+                tally.note(!shouldBreakQueueAcceptFluid(pos) ? EnumStallReason.FLUID
+                    : isBreakBlocked(pos) ? EnumStallReason.UNBREAKABLE : null, pos);
             }
         }
         EnumFluidHandlingMode fluidMode = getFluidMode();
@@ -565,28 +560,12 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             } else {
                 reason = placementStallReason(pos);
             }
-            noteStall(found, counts, reason, pos);
+            tally.note(reason, pos);
         }
         stalledCells.clear();
-        listing:
+        stalledCells.addAll(tally.cells());
         for (EnumStallReason reason : STALL_REASONS) {
-            for (BlockPos pos : found.get(reason.ordinal())) {
-                if (stalledCells.size() >= STALL_CELL_CAP) {
-                    break listing;
-                }
-                stalledCells.add(new StalledCell(pos, reason));
-            }
-        }
-        System.arraycopy(counts, 0, stalledCounts, 0, counts.length);
-    }
-
-    private static void noteStall(List<List<BlockPos>> found, int[] counts, EnumStallReason reason, BlockPos pos) {
-        if (reason == null) return;
-        counts[reason.ordinal()]++;
-        List<BlockPos> list = found.get(reason.ordinal());
-        // Each reason keeps at most the cap, so the merge by priority has what it needs and memory stays bounded.
-        if (list.size() < STALL_CELL_CAP) {
-            list.add(pos);
+            stalledCounts[reason.ordinal()] = tally.count(reason);
         }
     }
 
@@ -850,9 +829,11 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
         boolean isDone = true;
 
         // Can't be done if any blocks haven't been scanned yet
+        boolean unclassified = false;
         for (byte result : checkResults) {
             if (result == CHECK_RESULT_UNKNOWN) {
                 isDone = false;
+                unclassified = true;
                 break;
             }
         }
@@ -1101,8 +1082,10 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             afterChecks();
         }
 
-        // Unfinished, nothing queued and nothing done this tick: the build is not going anywhere on its own.
-        trackStall(!isDone && !madeProgress && breakTasks.isEmpty() && placeTasks.isEmpty());
+        // Unfinished, nothing queued and nothing done this tick: the build is not going anywhere on its own. Not while
+        // the check sweep is still classifying the box for the first time (a big freshly loaded build spends many ticks
+        // with nothing found to queue yet), or that would pass for a stall.
+        trackStall(!unclassified && !isDone && !madeProgress && breakTasks.isEmpty() && placeTasks.isEmpty());
 
         return isDone;
     }

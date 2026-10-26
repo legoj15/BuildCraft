@@ -218,12 +218,14 @@ public class GuiBuilder extends GuiBC8<ContainerBuilder> {
         }
     }
 
-    /** Hovering the progress readout of a stalled build says why it is stalled, as one summary line. */
+    /** Hovering the progress readout of a stalled build says why it is stalled, as one summary line. Only over the
+     *  lines the readout actually draws (see {@link #drawForegroundLayer}): none drawn, nothing to hover. */
     @Override
     protected void drawTooltipLayer(int mouseX, int mouseY, float partialTick) {
         Component summary = stallSummary();
         if (summary == null) return;
-        int lines = Math.max(1, (menu.getSyncedLeftToBreak() > 0 ? 1 : 0) + (menu.getSyncedLeftToPlace() > 0 ? 1 : 0));
+        int lines = (menu.getSyncedLeftToBreak() > 0 ? 1 : 0) + (menu.getSyncedLeftToPlace() > 0 ? 1 : 0);
+        if (lines == 0) return;
         int x = leftPos + READOUT_X;
         int y = topPos + READOUT_Y;
         if (mouseX >= x && mouseX < x + READOUT_W && mouseY >= y && mouseY < y + lines * READOUT_LINE) {

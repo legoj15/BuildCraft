@@ -270,7 +270,7 @@ public class BuildCraftGameTests {
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.
         reg.accept("buildcraftunofficial:builder_stall_floating_torch_cant_stand", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderReportsAFloatingTorchAsCantStand);
         reg.accept("buildcraftunofficial:builder_stall_unbreakable_does_not_block_placing", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderPlacesAroundUnbreakableBlockAndReportsIt);
-        reg.accept("buildcraftunofficial:builder_stall_list_capped_red_first", () -> buildcraft.builders.snapshot.BuilderStallTester::stalledListIsCappedKeepsRedFirstAndCountsEverything);
+        reg.accept("buildcraftunofficial:builder_stall_list_red_first_counts_all", () -> buildcraft.builders.snapshot.BuilderStallTester::stalledListPutsRedFirstCountsEveryCellAndSkipsDependencyWaits);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksBeforeBreaking);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_backs_off", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeBacksOffFromARefusedBlock);
         reg.accept("buildcraftunofficial:machine_protection_stripes_pipe_asks_again_for_new_target", () -> buildcraft.lib.misc.MachineProtectionTester::stripesPipeAsksAgainForANewTarget);

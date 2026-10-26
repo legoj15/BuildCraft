@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:builder_stall_list_capped_red_first",
+    "function": "buildcraftunofficial:builder_stall_list_red_first_counts_all",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 710,

@@ -72,6 +72,31 @@ public class BuilderStallTester {
         return builder.getStalledCells() + " (counts: " + counts(builder) + ")";
     }
 
+    /**
+     * What a stall test writes into its cell, taken out again on every way out of the poll (the test's own, or its
+     * timeout): the Builder, the blueprint's cells ({@code rows} high and {@code length} long from
+     * {@code (2, 2, 2)}) and the floor, all inside the arena's 6x7 cell. The snapshot goes first (a task still in
+     * flight refunds its items into the resources), then the contents are wiped, so removing the Builder spills
+     * nothing into the world for a neighbouring test to find.
+     */
+    private static Runnable cleanup(GameTestHelper helper, TileBuilder tile, int rows, int length) {
+        return () -> {
+            tile.setSnapshot(ItemStack.EMPTY);
+            tile.clearContent();
+            helper.setBlock(BuilderRefloodTester.BUILDER, Blocks.AIR);
+            for (int y = 0; y < rows; y++) {
+                for (int z = 0; z < length; z++) {
+                    helper.setBlock(new BlockPos(2, 2 + y, 2 + z), Blocks.AIR);
+                }
+            }
+            for (int x = 0; x <= 4; x++) {
+                for (int z = 0; z <= 5; z++) {
+                    helper.setBlock(new BlockPos(x, 1, z), Blocks.AIR);
+                }
+            }
+        };
+    }
+
     private static String counts(SnapshotBuilder<?> builder) {
         StringBuilder out = new StringBuilder();
         for (EnumStallReason reason : EnumStallReason.values()) {
@@ -130,7 +155,8 @@ public class BuilderStallTester {
                             "a sync that carries no stalled cells must clear the client's list: " + describe(client));
                     helper.succeed();
                 },
-                "the floating torch is diagnosed once the Builder has gone quiet");
+                "the floating torch is diagnosed once the Builder has gone quiet",
+                cleanup(helper, tile, layers.length, layers[0].length));
     }
 
     /**
@@ -171,29 +197,34 @@ public class BuilderStallTester {
                             + "leftToBreak=" + tile.getBuilder().leftToBreak);
                     helper.succeed();
                 },
-                "the stone around the bedrock is built and the bedrock is diagnosed once the Builder has gone quiet");
+                "the stone around the bedrock is built and the bedrock is diagnosed once the Builder has gone quiet",
+                cleanup(helper, tile, layers.length, layers[0].length));
     }
 
     /**
-     * 69 stone cells with no stone to build them from, a floating torch at the very top, and a second torch standing
-     * on a stone cell that is itself unbuilt: the list is cut to {@link SnapshotBuilder#STALL_CELL_CAP}, keeps the red
-     * torch (it would sit past the cap in the order the cells are walked) ahead of the yellow cells, and the
-     * per-reason totals still count every cell. The cap bounds what a big stalled build puts on the wire every five
-     * ticks. The second torch cannot stand either (nothing is under it yet), but it only waits on the stone it stands
-     * on, which is ordinary and unreported: a count of two red cells would mean a dependency wait was reported.
+     * Nineteen stone cells with no stone to build them from, a floating torch at the very top, and a second torch
+     * standing on a stone cell that is itself unbuilt. What only a world shows: the red torch heads the list though it
+     * is the last cell the Builder reaches (the walk goes by height); every stone cell is listed and counted, so the
+     * total is the number of cells; and the second torch is NOT reported: it cannot stand either (nothing is under it
+     * yet), but it only waits on the stone it stands on, which is ordinary, and a count of two red cells would mean a
+     * dependency wait was reported. The cap and the ordering under it are {@link StallTallyTest}'s.
      */
-    public static void stalledListIsCappedKeepsRedFirstAndCountsEverything(GameTestHelper helper) {
-        // 5 wide (the arena cell's z runs 2..6), 15 high: rows 0..12 stone, row 13 stone with a gap, row 14 the torch
-        // over the gap.
-        int[][] layers = new int[15][5];
-        for (int y = 0; y < layers.length; y++) {
+    public static void stalledListPutsRedFirstCountsEveryCellAndSkipsDependencyWaits(GameTestHelper helper) {
+        // layers[y][z], 5 high and 5 long: all of it inside the arena cell (the Builder's column runs from
+        // (2, 2, 2), so the top row is at y=6). Rows 0..3 are stone but for a gap at the last cell of row 3; row 4
+        // holds a torch over that gap (floating) and a torch over the stone at row 3's first cell (waiting for it).
+        int[][] layers = new int[5][5];
+        for (int y = 0; y < 4; y++) {
             for (int z = 0; z < 5; z++) {
-                layers[y][z] = y < 14 ? STONE : AIR;
+                layers[y][z] = STONE;
             }
         }
-        layers[13][4] = AIR;
-        layers[14][4] = TORCH;
-        layers[14][0] = TORCH; // on layers[13][0], stone with none to build it from: only waiting
+        layers[3][4] = AIR;
+        for (int z = 0; z < 5; z++) {
+            layers[4][z] = AIR;
+        }
+        layers[4][0] = TORCH;
+        layers[4][4] = TORCH;
         int stones = 0;
         for (int[] row : layers) {
             for (int kind : row) {
@@ -202,12 +233,11 @@ public class BuilderStallTester {
                 }
             }
         }
-        check(stones == 69 && stones > SnapshotBuilder.STALL_CELL_CAP, "premise: more stone cells than the cap, got "
-                + stones);
         TileBuilder tile = BuilderRefloodTester.setUpBuilder(helper, layers, new BlockPos[0]);
         tile.setResource(1, ItemStack.EMPTY);
         tile.setResource(3, new ItemStack(Items.TORCH, 4));
-        BlockPos torch = helper.absolutePos(new BlockPos(2, 2 + 14, 2 + 4));
+        BlockPos floatingTorch = helper.absolutePos(new BlockPos(2, 2 + 4, 2 + 4));
+        BlockPos waitingTorch = helper.absolutePos(new BlockPos(2, 2 + 4, 2));
         int expectedStones = stones;
 
         BooleanSupplier settled = builtAndQuiet(tile, () -> true);
@@ -217,20 +247,23 @@ public class BuilderStallTester {
                 () -> {
                     SnapshotBuilder<?> builder = builderOf(tile);
                     List<StalledCell> cells = builder.getStalledCells();
-                    check(cells.size() == SnapshotBuilder.STALL_CELL_CAP, "the list is cut to the cap of "
-                            + SnapshotBuilder.STALL_CELL_CAP + ", got " + cells.size() + ": " + describe(builder));
-                    check(cells.get(0).equals(new StalledCell(torch, EnumStallReason.CANT_STAND)),
+                    check(cells.size() == expectedStones + 1, "every stone cell and the floating torch are listed, "
+                            + "and nothing else: " + describe(builder));
+                    check(cells.get(0).equals(new StalledCell(floatingTorch, EnumStallReason.CANT_STAND)),
                             "the red cell comes first, though it is the last the Builder reaches: " + cells.get(0));
                     for (int i = 1; i < cells.size(); i++) {
                         check(cells.get(i).reason() == EnumStallReason.MISSING_ITEMS,
                                 "the rest are the cells with no stone to be built from: " + cells.get(i));
                     }
+                    check(cells.stream().noneMatch(cell -> cell.pos().equals(waitingTorch)),
+                            "a torch that only waits for the stone it stands on is not reported: " + describe(builder));
                     check(builder.getStalledCount(EnumStallReason.MISSING_ITEMS) == expectedStones,
-                            "the total counts every cell, not only the listed ones: " + counts(builder));
+                            "the total counts every cell: " + counts(builder));
                     check(builder.getStalledCount(EnumStallReason.CANT_STAND) == 1, "one torch cannot stand, the "
                             + "other only waits for its stone: " + counts(builder));
                     helper.succeed();
                 },
-                "the stalled list is capped, red first, with full totals");
+                "the stalled list puts red first, counts every cell and skips dependency waits",
+                cleanup(helper, tile, layers.length, layers[0].length));
     }
 }

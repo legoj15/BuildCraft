@@ -35,6 +35,10 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import javax.annotation.Nullable;
+
+import buildcraft.api.core.IAreaProvider;
+
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
 
@@ -146,6 +150,47 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.box.contains(pos)).findFirst().orElse(null);
     }
 
+    /** The box at {@code pos} a machine locks and shares (never a one-shot box), or null. */
+    @Nullable
+    public VolumeBox getLockableVolumeBoxAt(BlockPos pos) {
+        return volumeBoxes.stream().filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.box.contains(pos))
+            .findFirst().orElse(null);
+    }
+
+    /**
+     * The confirmed one-shot box at {@code pos} as an area a machine takes the way it takes markers: removing it from
+     * the world removes the box. Null when there is none, or when it is still being edited or still backed by markers.
+     */
+    @Nullable
+    public IAreaProvider getOneShotAreaAt(BlockPos pos) {
+        VolumeBox found = volumeBoxes.stream()
+            .filter(volumeBox -> volumeBox.isOneShot() && !volumeBox.isEditing() && !volumeBox.hasSourceMarkers()
+                && volumeBox.box.contains(pos))
+            .findFirst().orElse(null);
+        if (found == null) {
+            return null;
+        }
+        BlockPos min = found.box.min();
+        BlockPos max = found.box.max();
+        return new IAreaProvider() {
+            @Override
+            public BlockPos min() {
+                return min;
+            }
+
+            @Override
+            public BlockPos max() {
+                return max;
+            }
+
+            @Override
+            public void removeFromWorld() {
+                volumeBoxes.remove(found);
+                markDirtyAndBroadcast();
+            }
+        };
+    }
+
     public void addVolumeBox(BlockPos pos) {
         volumeBoxes.add(new VolumeBox(world, pos));
         setDirty();
@@ -222,7 +267,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
             VolumeBox volumeBox = volumeBoxes.get(i);
             if (volumeBox.isEditing()) {
                 Player player = volumeBox.getPlayer(world);
-                if (player == null) {
+                if (player == null && volumeBox.hasSourceMarkers()) {
+                    // A box lifted off markers is not kept for a player who left: the markers keep working.
+                    volumeBoxes.remove(i--);
+                    dirty = true;
+                    continue;
+                } else if (player == null) {
                     volumeBox.pauseEditing();
                     dirty = true;
                 } else {

@@ -270,8 +270,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
 
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumeBox volumeBox = volumeBoxes.getVolumeBoxAt(offsetPos);
+        VolumeBox volumeBox = volumeBoxes.getLockableVolumeBoxAt(offsetPos);
         BlockEntity tile = level.getBlockEntity(offsetPos);
+        IAreaProvider area = tile instanceof IAreaProvider provider ? provider : volumeBoxes.getOneShotAreaAt(offsetPos);
 
         if (volumeBox != null) {
             box.reset();
@@ -289,13 +290,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 )
             );
             volumeBoxes.markDirtyAndBroadcast();
-        } else if (tile instanceof IAreaProvider provider) {
+        } else if (area != null) {
             box.reset();
-            box.setMin(provider.min());
-            box.setMax(provider.max());
+            box.setMin(area.min());
+            box.setMax(area.max());
             markerBox = true;
             isValid = true;
-            provider.removeFromWorld();
+            area.removeFromWorld();
         } else {
             isValid = false;
         }

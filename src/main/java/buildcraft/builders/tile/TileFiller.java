@@ -200,8 +200,9 @@ public class TileFiller extends TileBC_Neptune
 
         // Try volume box system first
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumeBox volumeBox = volumeBoxes.getVolumeBoxAt(offsetPos);
+        VolumeBox volumeBox = volumeBoxes.getLockableVolumeBoxAt(offsetPos);
         BlockEntity tile = level.getBlockEntity(offsetPos);
+        IAreaProvider area = tile instanceof IAreaProvider provider ? provider : volumeBoxes.getOneShotAreaAt(offsetPos);
 
         if (volumeBox != null) {
             box.reset();
@@ -209,11 +210,11 @@ public class TileFiller extends TileBC_Neptune
             box.setMax(volumeBox.box.max());
             lockVolumeBox(volumeBoxes, volumeBox, blockState);
             markerBox = false;
-        } else if (tile instanceof IAreaProvider provider) {
+        } else if (area != null) {
             box.reset();
-            box.setMin(provider.min());
-            box.setMax(provider.max());
-            provider.removeFromWorld();
+            box.setMin(area.min());
+            box.setMax(area.max());
+            area.removeFromWorld();
         }
 
         updateBuildingInfo();
@@ -264,7 +265,7 @@ public class TileFiller extends TileBC_Neptune
         BlockState blockState = getBlockState();
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         LevelSavedDataVolumeBoxes savedBoxes = volumeBoxes.get();
-        VolumeBox volumeBox = savedBoxes.getVolumeBoxAt(worldPosition.relative(facing.getOpposite()));
+        VolumeBox volumeBox = savedBoxes.getLockableVolumeBoxAt(worldPosition.relative(facing.getOpposite()));
         if (volumeBox == null) {
             return;
         }

@@ -253,8 +253,6 @@ public class FluidFireTester {
         Block gas = entry("fuel_gaseous").block().get();
         boolean canBurnBefore = BCEnergyConfig.canBurnEnabled();
         boolean gasExplodesBefore = BCEnergyConfig.gasExplodesEnabled();
-        BCEnergyConfig.canBurn.set(true);
-        BCEnergyConfig.gasExplodes.set(true);
 
         // What counts as an ignition source: fire, soul fire, lava and a lit campfire, nothing else.
         require(FluidVolatility.isIgnitionSource(Blocks.FIRE.defaultBlockState()), "fire must ignite gas");
@@ -278,6 +276,9 @@ public class FluidFireTester {
         require(!FluidVolatility.isUltraWarm(level, helper.absolutePos(BlockPos.ZERO)),
             "the test world's overworld must not count as ultra-warm");
 
+        // Set only once the synchronous checks above have passed: the restore below exists from here on.
+        BCEnergyConfig.canBurn.set(true);
+        BCEnergyConfig.gasExplodes.set(true);
         EntityArenaUtil.forceLoadCell(helper);
         int[] stage = { 0 };
         int[] stageStart = { 0 };

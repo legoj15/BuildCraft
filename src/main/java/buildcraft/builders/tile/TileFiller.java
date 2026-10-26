@@ -348,18 +348,21 @@ public class TileFiller extends TileBC_Neptune
             if (b.madeProgress()) {
                 lastProgressTick = level.getGameTime();
             }
-            if (done) {
-                // Gated on !finished so the LOOP-completion advancement fires only on the
-                // false→true transition — in LOOP mode this branch re-enters every tick once
-                // the builder has nothing left to do.
-                if (!finished && mode == Mode.LOOP && getOwner() != null) {
+            if (!done) {
+                // LOOP keeps ticking after a cycle completes; once it finds work again, re-arm
+                // so the next completion syncs (and awards) again.
+                finished = false;
+            } else if (!finished) {
+                // Gated on the false→true transition: LOOP's isFinished() stays false, so this
+                // method keeps reaching here every tick once the builder has nothing left to do.
+                if (mode == Mode.LOOP && getOwner() != null) {
                     AdvancementUtil.unlockAdvancement(GameProfileUtil.getId(getOwner()), level, ADVANCEMENT_BUILDING_FOR_THE_FUTURE);
                 }
                 finished = true;
                 // Clear stale render cache so the client receives empty task lists
                 b.onNetworkSync();
                 // Sync immediately so the client sees the finished state
-                // (next tick's isFinished() early return will prevent further syncs).
+                // (in ON mode next tick's isFinished() early return prevents further syncs).
                 // Same no-re-mesh path as the periodic sendUpdateToTrackingPlayers below.
                 markForRenderUpdate();
             }

@@ -24,6 +24,7 @@ import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.lib.mj.MjBatteryReceiver;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.InventoryUtil;
+import buildcraft.lib.tile.IPumpHost;
 
 /**
  * Mining well tile entity. Drills straight down one block at a time,

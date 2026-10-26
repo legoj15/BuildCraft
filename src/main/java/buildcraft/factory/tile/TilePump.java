@@ -59,6 +59,7 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.mj.MjRedstoneBatteryReceiver;
+import buildcraft.lib.tile.IPumpHost;
 import buildcraft.api.tiles.IDebuggable;
 
 /**
@@ -377,6 +378,7 @@ public class TilePump extends TileMiner implements IDebuggable {
         long got = battery.extractPower(0, wanted);
         IPumpHost host = getHost();
         if (got < wanted && host != null && !host.hasWork() && sharesOwner(host)) {
+            host.onPumpWantsPower();
             got += host.getBattery().extractPower(0, wanted - got);
         }
         return got;

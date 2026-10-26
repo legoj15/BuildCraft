@@ -90,7 +90,7 @@ public class BCBuilders {
         // finished quarry refuses FE pushes instead of topping its battery off (MJ/FE parity).
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.QUARRY.get(),
             quarry -> quarry.getMjReceiver(), energyCap,
-            quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::hasPendingWork));
+            quarry -> MjBatteryEnergyHandler.createIfRfEnabled(quarry.getBattery(), quarry::wantsPower));
         //? if >=1.21.10 {
         event.registerBlockEntity(itemCap, BCBuildersBlockEntities.QUARRY.get(),
             (quarry, direction) -> net.neoforged.neoforge.transfer.EmptyResourceHandler.instance());

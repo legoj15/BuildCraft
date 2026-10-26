@@ -6,24 +6,26 @@
 package buildcraft.core.compat.rei;
 
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
-import me.shedaniel.rei.api.common.plugins.REICommonPlugin;
 import me.shedaniel.rei.forge.REIPluginCommon;
 
+import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreItems;
+import buildcraft.core.compat.viewer.CoreSubtypes;
+import buildcraft.lib.compat.rei.BCReiCommonPlugin;
+import buildcraft.lib.compat.rei.ReiSubtypes;
 
 /**
- * REI integration plugin for BuildCraft Core.
- * Registers component-based item comparators so REI can distinguish
- * items that share the same item ID but differ by component
- * (e.g. coloured paintbrushes).
+ * REI integration plugin for BuildCraft Core: the item comparators that tell apart stacks sharing an item id, with the
+ * same keys JEI's subtype interpreters use ({@code BCCoreJeiPlugin}).
  */
 @REIPluginCommon
-public class BCCoreReiPlugin implements REICommonPlugin {
+public class BCCoreReiPlugin implements BCReiCommonPlugin {
 
     @Override
     public void registerItemComparators(ItemComparatorRegistry registry) {
-        // Tell REI to differentiate paintbrush stacks by their DataComponent values.
-        // This covers brush_color, brush_uses, and custom_model_data automatically.
-        registry.registerComponents(BCCoreItems.PAINTBRUSH.get());
+        // Paintbrushes by colour alone: the uses left on a brush must not split it into its own entry.
+        ReiSubtypes.register(registry, BCCoreItems.PAINTBRUSH.get(), stack -> stack.get(BCCore.BRUSH_COLOR.get()));
+        // Fragile fluid shards by their stored fluid, ignoring the amount (see CoreSubtypes).
+        ReiSubtypes.register(registry, BCCoreItems.FRAGILE_FLUID_CONTAINER.get(), CoreSubtypes::fragileFluidKey);
     }
 }

@@ -17,7 +17,7 @@ import mezz.jei.api.recipe.category.AbstractRecipeCategory;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
-import buildcraft.lib.compat.jei.JeiMjLabel;
+import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.robotics.recipe.IntegrationRecipeCollector;
@@ -37,11 +37,10 @@ import buildcraft.silicon.container.IntegrationTableLayout;
 public class IntegrationTableCategory extends AbstractRecipeCategory<IntegrationRecipeJei> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/integration_table.png");
 
-    // Crop the GUI texture (see IntegrationTableLayout) to the ring, the preview, the result and the power bar,
-    // leaving out the title strip and the player inventory. The one geometry this category owns; package-visible so
-    // TableLayoutTest can check the crop still frames everything the layout puts in it.
-    static final int TEX_U = 12, TEX_V = 18;
-    static final int TEX_W = 160, TEX_H = 78;
+    // The layout's viewer crop of the GUI texture: the ring, the preview, the result and the power bar.
+    // Package-visible so TableLayoutTest can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = IntegrationTableLayout.VIEWER_U, TEX_V = IntegrationTableLayout.VIEWER_V;
+    static final int TEX_W = IntegrationTableLayout.VIEWER_W, TEX_H = IntegrationTableLayout.VIEWER_H;
 
     // Slot positions from IntegrationTableLayout, shifted by (-TEX_U, -TEX_V).
     private static final int PREVIEW_X = IntegrationTableLayout.PREVIEW_X - TEX_U,
@@ -76,7 +75,7 @@ public class IntegrationTableCategory extends AbstractRecipeCategory<Integration
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
-        JeiMjLabel.draw(new BCGraphics(graphics), POWER_KEY, recipe.microJoules(), POWER_X, POWER_Y);
+        MjLabel.draw(new BCGraphics(graphics), POWER_KEY, recipe.microJoules(), POWER_X, POWER_Y);
     }
 
     @Override

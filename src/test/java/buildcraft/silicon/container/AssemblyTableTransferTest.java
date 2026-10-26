@@ -26,7 +26,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 
 import buildcraft.VanillaSetupBaseTester;
-import buildcraft.lib.compat.jei.TransferResult;
+import buildcraft.lib.compat.viewer.TransferResult;
 import buildcraft.lib.net.PacketBufferBC;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.gate.EnumGateLogic;

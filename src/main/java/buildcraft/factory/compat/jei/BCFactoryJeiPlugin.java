@@ -6,9 +6,6 @@
 
 package buildcraft.factory.compat.jei;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.constants.RecipeTypes;
@@ -20,15 +17,12 @@ import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.resources.Identifier;
 
-import buildcraft.api.recipes.BuildcraftRecipeRegistry;
-import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
-import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
-import buildcraft.api.recipes.IRefineryRecipeManager.IHeatableRecipe;
 import buildcraft.factory.BCFactoryItems;
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.client.gui.GuiAutoCraftItems;
 import buildcraft.factory.client.gui.GuiDistiller;
 import buildcraft.factory.client.gui.GuiHeatExchange;
+import buildcraft.factory.compat.viewer.RefineryRecipeCollector;
 import buildcraft.factory.container.ContainerAutoCraftItems;
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
@@ -59,44 +53,8 @@ public class BCFactoryJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        registration.addRecipes(HeatExchangerRecipeTypes.PAIR, enumerateHeatExchangerPairs());
-        registration.addRecipes(DistillerRecipeTypes.DISTILLER, enumerateDistillationRecipes());
-    }
-
-    /**
-     * Cross every heatable with every coolable hotter than it. The runtime
-     * pairing rule in {@code TileHeatExchange.craft()} is exactly
-     * {@code coolable.heatFrom() > heatable.heatFrom()}, so each pair we
-     * yield is a real operation the machine can run.
-     */
-    private static List<HeatExchangerRecipePair> enumerateHeatExchangerPairs() {
-        List<HeatExchangerRecipePair> pairs = new ArrayList<>();
-        for (IHeatableRecipe h : BuildcraftRecipeRegistry.refineryRecipes.getHeatableRegistry().getAllRecipes()) {
-            for (ICoolableRecipe c : BuildcraftRecipeRegistry.refineryRecipes.getCoolableRegistry().getAllRecipes()) {
-                if (c.heatFrom() > h.heatFrom()) {
-                    pairs.add(new HeatExchangerRecipePair(h, c));
-                }
-            }
-        }
-        return pairs;
-    }
-
-    /**
-     * Every registered distillation recipe with at least one valid input and
-     * one valid output. The defensive filter guards against config-disabled
-     * fluids slipping into the registry — the runtime would refuse to run
-     * such a recipe anyway, so showing it in JEI would only mislead.
-     */
-    private static List<IDistillationRecipe> enumerateDistillationRecipes() {
-        List<IDistillationRecipe> recipes = new ArrayList<>();
-        for (IDistillationRecipe r : BuildcraftRecipeRegistry.refineryRecipes.getDistillationRegistry().getAllRecipes()) {
-            if (r.in() == null || r.in().isEmpty()) continue;
-            boolean hasGas = r.outGas() != null && !r.outGas().isEmpty();
-            boolean hasLiquid = r.outLiquid() != null && !r.outLiquid().isEmpty();
-            if (!hasGas && !hasLiquid) continue;
-            recipes.add(r);
-        }
-        return recipes;
+        registration.addRecipes(HeatExchangerRecipeTypes.PAIR, RefineryRecipeCollector.heatExchangerPairs());
+        registration.addRecipes(DistillerRecipeTypes.DISTILLER, RefineryRecipeCollector.distillationRecipes());
     }
 
     @Override

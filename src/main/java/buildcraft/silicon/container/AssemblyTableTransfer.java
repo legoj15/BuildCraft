@@ -18,8 +18,8 @@ import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.network.connection.ConnectionType;
 
-import buildcraft.lib.compat.jei.JeiTransferUtil;
-import buildcraft.lib.compat.jei.TransferResult;
+import buildcraft.lib.compat.viewer.TransferUtil;
+import buildcraft.lib.compat.viewer.TransferResult;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.silicon.tile.TileAssemblyTable;
 
@@ -136,7 +136,7 @@ public final class AssemblyTableTransfer {
         int moved = 0;
         for (ItemStack want : request.stacks()) {
             int limit = request.maxTransfer() ? Integer.MAX_VALUE : want.getCount();
-            moved += JeiTransferUtil.moveMatchingToHandler(playerInv, want, limit, dest);
+            moved += TransferUtil.moveMatchingToHandler(playerInv, want, limit, dest);
         }
         return moved;
     }

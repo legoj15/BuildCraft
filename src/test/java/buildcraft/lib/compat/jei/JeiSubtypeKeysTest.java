@@ -17,10 +17,10 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.core.BCCoreItems;
-import buildcraft.core.compat.jei.CoreJeiSubtypes;
+import buildcraft.core.compat.viewer.CoreSubtypes;
 import buildcraft.core.item.ItemFragileFluidContainer;
 import buildcraft.silicon.BCSiliconItems;
-import buildcraft.silicon.compat.jei.SiliconJeiSubtypes;
+import buildcraft.silicon.compat.viewer.SiliconSubtypes;
 import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
 import buildcraft.silicon.gate.EnumGateModifier;
@@ -52,12 +52,12 @@ public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
     @Test
     public void lensKeyIsColourAndMode() {
         var lens = BCSiliconItems.PLUG_LENS.get();
-        Assertions.assertEquals("red:false", SiliconJeiSubtypes.lensKey(lens.getStack(DyeColor.RED, false)));
-        Assertions.assertEquals("red:true", SiliconJeiSubtypes.lensKey(lens.getStack(DyeColor.RED, true)));
-        Assertions.assertEquals("clear:false", SiliconJeiSubtypes.lensKey(lens.getStack(null, false)));
-        Assertions.assertEquals("clear:true", SiliconJeiSubtypes.lensKey(lens.getStack(null, true)));
+        Assertions.assertEquals("red:false", SiliconSubtypes.lensKey(lens.getStack(DyeColor.RED, false)));
+        Assertions.assertEquals("red:true", SiliconSubtypes.lensKey(lens.getStack(DyeColor.RED, true)));
+        Assertions.assertEquals("clear:false", SiliconSubtypes.lensKey(lens.getStack(null, false)));
+        Assertions.assertEquals("clear:true", SiliconSubtypes.lensKey(lens.getStack(null, true)));
         Assertions.assertEquals("light_blue:false",
-            SiliconJeiSubtypes.lensKey(lens.getStack(DyeColor.LIGHT_BLUE, false)),
+            SiliconSubtypes.lensKey(lens.getStack(DyeColor.LIGHT_BLUE, false)),
             "multi-word colours key on the dye's serialized name");
     }
 
@@ -66,12 +66,12 @@ public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
     @Test
     public void gateKeyIsTheVariantName() {
         var gate = BCSiliconItems.PLUG_GATE.get();
-        Assertions.assertEquals("clay_brick", SiliconJeiSubtypes.gateKey(gate.getStack(
+        Assertions.assertEquals("clay_brick", SiliconSubtypes.gateKey(gate.getStack(
             new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER))),
             "the basic gate cannot be modified, so its key is the material alone");
-        Assertions.assertEquals("iron_and_no_modifier", SiliconJeiSubtypes.gateKey(gate.getStack(
+        Assertions.assertEquals("iron_and_no_modifier", SiliconSubtypes.gateKey(gate.getStack(
             new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.NO_MODIFIER))));
-        Assertions.assertEquals("iron_or_diamond", SiliconJeiSubtypes.gateKey(gate.getStack(
+        Assertions.assertEquals("iron_or_diamond", SiliconSubtypes.gateKey(gate.getStack(
             new GateVariant(EnumGateLogic.OR, EnumGateMaterial.IRON, EnumGateModifier.DIAMOND))));
     }
 
@@ -86,10 +86,10 @@ public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
 
     @Test
     public void facadeKeyIsStructuralAndSeparatesVariants() {
-        Object stoneA = SiliconJeiSubtypes.facadeKey(facade(Blocks.STONE, false));
-        Object stoneB = SiliconJeiSubtypes.facadeKey(facade(Blocks.STONE, false));
-        Object obsidian = SiliconJeiSubtypes.facadeKey(facade(Blocks.OBSIDIAN, false));
-        Object hollowStone = SiliconJeiSubtypes.facadeKey(facade(Blocks.STONE, true));
+        Object stoneA = SiliconSubtypes.facadeKey(facade(Blocks.STONE, false));
+        Object stoneB = SiliconSubtypes.facadeKey(facade(Blocks.STONE, false));
+        Object obsidian = SiliconSubtypes.facadeKey(facade(Blocks.OBSIDIAN, false));
+        Object hollowStone = SiliconSubtypes.facadeKey(facade(Blocks.STONE, true));
 
         Assertions.assertEquals(stoneA, stoneB, "two stone facades must share one JEI entry");
         Assertions.assertEquals(stoneA.hashCode(), stoneB.hashCode());
@@ -105,7 +105,7 @@ public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
         FacadeStateManager.ensureInitialized();
         FacadeInstance instance = FacadeInstance.createSingle(FacadeStateManager.getInfoForBlock(Blocks.STONE), false);
         ItemStack stack = BCSiliconItems.PLUG_FACADE.get().createItemStack(instance);
-        Assertions.assertEquals(instance.writeToNbt(), SiliconJeiSubtypes.facadeKey(stack));
+        Assertions.assertEquals(instance.writeToNbt(), SiliconSubtypes.facadeKey(stack));
     }
 
     // ── Fragile fluid shard ─────────────────────────────────────────────────
@@ -118,12 +118,12 @@ public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
 
     @Test
     public void fragileShardKeysOnFluidIdOnly() {
-        Object full = CoreJeiSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 1000)));
-        Object half = CoreJeiSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 500)));
+        Object full = CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 1000)));
+        Object half = CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.WATER, 500)));
         Assertions.assertEquals(full, half, "a shard's amount must not split it into a new JEI entry");
         Assertions.assertEquals("minecraft:water", full.toString());
-        Assertions.assertNotEquals(full, CoreJeiSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.LAVA, 1000))));
-        Assertions.assertNull(CoreJeiSubtypes.fragileFluidKey(shard(FluidStack.EMPTY)),
+        Assertions.assertNotEquals(full, CoreSubtypes.fragileFluidKey(shard(new FluidStack(Fluids.LAVA, 1000))));
+        Assertions.assertNull(CoreSubtypes.fragileFluidKey(shard(FluidStack.EMPTY)),
             "an empty shard has no subtype (JeiSubtypes maps null to JEI's 'none' on every node)");
     }
 }

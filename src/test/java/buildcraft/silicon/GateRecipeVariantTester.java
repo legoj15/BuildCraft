@@ -186,8 +186,8 @@ public final class GateRecipeVariantTester {
      * actually experiences in JEI.
      */
     public static void testBasicGateAppearsAsInputInModifierRecipes(GameTestHelper helper) {
-        java.util.List<buildcraft.silicon.compat.jei.AssemblyRecipeJei> entries =
-            buildcraft.silicon.compat.jei.AssemblyRecipeCollector.collect();
+        java.util.List<buildcraft.silicon.compat.viewer.AssemblyRecipeEntry> entries =
+            buildcraft.silicon.compat.viewer.AssemblyRecipeCollector.collect();
 
         for (EnumGateMaterial mat : new EnumGateMaterial[] {
                 EnumGateMaterial.IRON, EnumGateMaterial.NETHER_BRICK, EnumGateMaterial.GOLD }) {
@@ -196,7 +196,7 @@ public final class GateRecipeVariantTester {
                 String basicKey = buildcraft.silicon.item.ItemPluggableGate.getVariant(basic)
                     .getVariantName();
                 int matchingEntries = 0;
-                for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+                for (buildcraft.silicon.compat.viewer.AssemblyRecipeEntry entry : entries) {
                     boolean inputMatches = false;
                     for (java.util.List<ItemStack> slot : entry.inputSlots()) {
                         for (ItemStack candidate : slot) {
@@ -231,8 +231,8 @@ public final class GateRecipeVariantTester {
      * on a higher-level gate doesn't show its assembly table recipe."
      */
     public static void testHigherLevelGateAppearsAsOutputInModifierRecipes(GameTestHelper helper) {
-        java.util.List<buildcraft.silicon.compat.jei.AssemblyRecipeJei> entries =
-            buildcraft.silicon.compat.jei.AssemblyRecipeCollector.collect();
+        java.util.List<buildcraft.silicon.compat.viewer.AssemblyRecipeEntry> entries =
+            buildcraft.silicon.compat.viewer.AssemblyRecipeCollector.collect();
 
         for (EnumGateMaterial mat : new EnumGateMaterial[] {
                 EnumGateMaterial.IRON, EnumGateMaterial.NETHER_BRICK, EnumGateMaterial.GOLD }) {
@@ -243,7 +243,7 @@ public final class GateRecipeVariantTester {
                     String canonicalKey = buildcraft.silicon.item.ItemPluggableGate
                         .getVariant(canonical).getVariantName();
                     boolean found = false;
-                    for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+                    for (buildcraft.silicon.compat.viewer.AssemblyRecipeEntry entry : entries) {
                         for (ItemStack out : entry.outputs()) {
                             if (out.getItem() != BCSiliconItems.PLUG_GATE.get()) continue;
                             String outKey = buildcraft.silicon.item.ItemPluggableGate
@@ -272,10 +272,10 @@ public final class GateRecipeVariantTester {
      * matching entry for each.
      */
     public static void testBasicGateRecipeExistsAndCollectorEmitsIt(GameTestHelper helper) {
-        java.util.List<buildcraft.silicon.compat.jei.AssemblyRecipeJei> entries =
-            buildcraft.silicon.compat.jei.AssemblyRecipeCollector.collect();
+        java.util.List<buildcraft.silicon.compat.viewer.AssemblyRecipeEntry> entries =
+            buildcraft.silicon.compat.viewer.AssemblyRecipeCollector.collect();
         int totalGateOutputs = 0;
-        for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+        for (buildcraft.silicon.compat.viewer.AssemblyRecipeEntry entry : entries) {
             for (ItemStack o : entry.outputs()) {
                 if (o.getItem() == BCSiliconItems.PLUG_GATE.get()) {
                     totalGateOutputs++;
@@ -303,7 +303,7 @@ public final class GateRecipeVariantTester {
                 //    the slot JEI uses for R-lookup; if no entry has a matching output, R
                 //    returns nothing).
                 boolean found = false;
-                for (buildcraft.silicon.compat.jei.AssemblyRecipeJei entry : entries) {
+                for (buildcraft.silicon.compat.viewer.AssemblyRecipeEntry entry : entries) {
                     for (ItemStack o : entry.outputs()) {
                         if (ItemStack.matches(canonical, o)) {
                             found = true;

@@ -59,6 +59,13 @@ public class BCEnergy {
             onServerAboutToStart(event);
         });
 
+        //? if >=26.3 {
+        // 26.3 clients cannot resolve fuel burn times, so the server sends the Stirling engine's list to the recipe
+        // viewer whenever it syncs datapacks (login and /reload).
+        modEventBus.addListener(buildcraft.energy.compat.viewer.StirlingFuelSync::registerPayload);
+        NeoForge.EVENT_BUS.addListener(buildcraft.energy.compat.viewer.StirlingFuelSync::onDatapackSync);
+        //?}
+
         LOGGER.info("BuildCraft Energy initialized");
     }
 

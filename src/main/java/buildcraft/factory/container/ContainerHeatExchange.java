@@ -25,7 +25,7 @@ import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSection;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionEnd;
 import buildcraft.factory.tile.TileHeatExchange.ExchangeSectionStart;
-import buildcraft.lib.compat.jei.JeiTransferUtil;
+import buildcraft.lib.compat.viewer.TransferUtil;
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
 import buildcraft.lib.gui.widget.WidgetFluidTank;
@@ -80,7 +80,7 @@ public class ContainerHeatExchange extends ContainerBCTile<TileHeatExchange> {
             for (int i = 0; i < count; i++) {
                 int slot = buffer.readVarInt();
                 Item bucket = buildcraft.lib.misc.RegistryUtilBC.getValue(BuiltInRegistries.ITEM, Identifier.parse(buffer.readUtf()));
-                JeiTransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
+                TransferUtil.moveBucketToSlot(player.getInventory(), bucket, tile.containerSlots, slot);
             }
             return;
         }

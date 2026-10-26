@@ -193,6 +193,8 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
     $before = if (Test-Path $BridgeFile) { (Get-Item $BridgeFile).LastWriteTimeUtc } else { [datetime]::MinValue }
     $gradleArgs = @(":${Node}:runClient", '-PbcRunDir=run-smoke', '--console=plain')
     if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$PlaySave" }
+    # A scenario's "recipeViewer" ("rei") boots that viewer in place of the default JEI.
+    if ($ScenarioData.PSObject.Properties['recipeViewer']) { $gradleArgs += "-Precipe_viewer=$($ScenarioData.recipeViewer)" }
     $proc = Start-Process -FilePath (Join-Path $Repo 'gradlew.bat') -ArgumentList $gradleArgs -WorkingDirectory $Repo `
         -RedirectStandardOutput (Join-Path $LogDir 'gradle.out.log') -RedirectStandardError (Join-Path $LogDir 'gradle.err.log') `
         -WindowStyle Hidden -PassThru

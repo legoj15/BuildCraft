@@ -37,6 +37,10 @@ public final class AssemblyTableLayout {
     /** Top-left of the player inventory block. */
     public static final int PLAYER_INV_X = 8, PLAYER_INV_Y = 123;
 
+    /** The part of the GUI texture the recipe viewers (JEI and REI) show as the Assembly Table category's panel: the
+     *  input grid and the energy bar, leaving out the recipe display cells and the player inventory. */
+    public static final int VIEWER_U = 3, VIEWER_V = 27, VIEWER_W = 89, VIEWER_H = 86;
+
     /** The vertical laser-energy bar between the grids, and where its fill sprite sits in the texture (the strip just
      *  right of the GUI image). */
     public static final int BAR_X = 86, BAR_Y = 36, BAR_W = 4, BAR_H = 70;

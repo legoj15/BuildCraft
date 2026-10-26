@@ -4,14 +4,12 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.lib.compat.jei;
+package buildcraft.lib.compat.viewer;
 
 import java.util.List;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
-
-import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.player.Player;
@@ -27,25 +25,24 @@ import buildcraft.lib.gui.BCContainer;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 
 /**
- * Shared base for the JEI "+" recipe-transfer handlers that move filled buckets of a recipe's input
+ * Shared core for the "+" recipe transfers (JEI and REI alike) that move filled buckets of a recipe's input
  * fluids from the player's inventory into a machine's container slots (Distiller, Heat Exchanger) —
  * the tile then drains those buckets into its input tanks. Enabled only when the player is holding the
  * required buckets (fluid already in a tank or pipe has no item to move).
  *
- * <p>Subclasses supply the JEI {@code getRecipeType()} and the recipe → (slot, bucket) mapping via
- * {@link #getRequiredBuckets}; this class performs the availability check ({@link #check}) and the
- * {@link ContainerBC_Neptune#NET_JEI_TRANSFER_BUCKETS} network send ({@link #send}) inside the shared
- * {@link AbstractTransferHandler} skeleton. A transfer that cannot be done is always {@link TransferResult#MISSING}.
+ * <p>Subclasses supply the recipe → (slot, bucket) mapping via {@link #getRequiredBuckets}; this class performs the
+ * availability check ({@link #check}) and the {@link ContainerBC_Neptune#NET_JEI_TRANSFER_BUCKETS} network send
+ * ({@link #send}) inside the shared {@link RecipeTransfer} skeleton. A transfer that cannot be done is always
+ * {@link TransferResult#MISSING}.
  *
  * @param <C> the machine's container menu type (a {@link BCContainer})
- * @param <R> the JEI recipe type
+ * @param <R> the recipe-viewer entry type
  */
-public abstract class AbstractBucketTransferHandler<C extends AbstractContainerMenu & BCContainer, R>
-        extends AbstractTransferHandler<C, R> {
+public abstract class BucketRecipeTransfer<C extends AbstractContainerMenu & BCContainer, R>
+        extends RecipeTransfer<C, R> {
 
-    protected AbstractBucketTransferHandler(IRecipeTransferHandlerHelper helper, Class<C> containerClass,
-            Supplier<MenuType<C>> menuType) {
-        super(helper, containerClass, menuType);
+    protected BucketRecipeTransfer(Class<C> containerClass, Supplier<MenuType<C>> menuType) {
+        super(containerClass, menuType);
     }
 
     /**
@@ -73,7 +70,7 @@ public abstract class AbstractBucketTransferHandler<C extends AbstractContainerM
                     needed++;
                 }
             }
-            if (JeiTransferUtil.countMatching(player.getInventory(), new ItemStack(req.bucket())) < needed) {
+            if (TransferUtil.countMatching(player.getInventory(), new ItemStack(req.bucket())) < needed) {
                 return TransferResult.MISSING;
             }
         }

@@ -10,7 +10,6 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.crafting.CraftingRecipe;
@@ -30,19 +29,15 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
+import buildcraft.lib.compat.viewer.BlueprintRecipeTransfer;
 import buildcraft.lib.gui.BCContainer;
-import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.misc.RegistryKeyUtil;
 
 /**
  * A reusable JEI recipe transfer handler for BuildCraft machines that use
  * phantom/blueprint slots. When the user clicks JEI's "+" button, this handler
- * sends a custom container message with the recipe's resource location to the
- * server, which looks up the recipe and calls
- * {@code CraftingUtil.placeRecipeInBlueprint()} to set the phantom blueprint slots.
- *
- * <p>This avoids the vanilla {@code ServerboundPlaceRecipePacket} which requires
- * a {@code RecipeDisplayId} that we don't have from JEI's API.
+ * sends the recipe's id to the server through the shared {@link BlueprintRecipeTransfer}
+ * (REI's crafting-table support sends the same message).
  *
  * @param <C> the container type
  */
@@ -109,13 +104,7 @@ public class BlueprintTransferHandler<C extends AbstractContainerMenu>
         }
 
         if (container instanceof BCContainer bcContainer) {
-            // Send a custom container message with the recipe's resource location.
-            // The server-side handler in ContainerBCCrafting will look up the recipe
-            // and call CraftingUtil.placeRecipeInBlueprint().
-            String recipeIdStr = RegistryKeyUtil.id(recipe.id()).toString();
-            bcContainer.sendMessage(ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER, buf -> {
-                buf.writeUtf(recipeIdStr);
-            });
+            BlueprintRecipeTransfer.send(bcContainer, RegistryKeyUtil.id(recipe.id()));
         }
 
         return null;

@@ -12,20 +12,22 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
+import buildcraft.silicon.compat.viewer.AssemblyRecipeEntry;
+
 /**
  * Holds the JEI recipe type for the Assembly Table ({@code IRecipeType} on the
  * JEI 20+ nodes, where {@code RecipeType} is deprecated for removal; 1.21.1's
  * JEI 19.x predates it). Every entry in the category — chipsets, gates, lenses,
  * plugs, gate copier, and the unified cycling facade entry — is an
- * {@link AssemblyRecipeJei}.
+ * {@link AssemblyRecipeEntry}.
  */
 public final class AssemblyRecipeJeiTypes {
     //? if >=1.21.10 {
-    public static final IRecipeType<AssemblyRecipeJei> ASSEMBLY = IRecipeType.create(
-            "buildcraftunofficial", "assembly_table", AssemblyRecipeJei.class);
+    public static final IRecipeType<AssemblyRecipeEntry> ASSEMBLY = IRecipeType.create(
+            "buildcraftunofficial", "assembly_table", AssemblyRecipeEntry.class);
     //?} else {
-    /*public static final RecipeType<AssemblyRecipeJei> ASSEMBLY = RecipeType.create(
-            "buildcraftunofficial", "assembly_table", AssemblyRecipeJei.class);*/
+    /*public static final RecipeType<AssemblyRecipeEntry> ASSEMBLY = RecipeType.create(
+            "buildcraftunofficial", "assembly_table", AssemblyRecipeEntry.class);*/
     //?}
 
     private AssemblyRecipeJeiTypes() {}

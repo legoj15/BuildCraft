@@ -39,6 +39,10 @@ public final class IntegrationTableLayout {
     /** Top-left of the player inventory block. */
     public static final int PLAYER_INV_X = 8, PLAYER_INV_Y = 109;
 
+    /** The part of the GUI texture the recipe viewers (JEI and REI) show as the Integration Table category's panel:
+     *  the ring, the preview, the result and the energy bar, leaving out the title strip and the player inventory. */
+    public static final int VIEWER_U = 12, VIEWER_V = 18, VIEWER_W = 160, VIEWER_H = 78;
+
     /** The vertical laser-energy bar on the GUI, and where its fill sprite sits in the texture (it is the strip just
      *  right of the GUI image, at the top). */
     public static final int BAR_X = 164, BAR_Y = 22, BAR_W = 4, BAR_H = 70;

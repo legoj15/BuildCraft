@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.lib.compat.jei;
+package buildcraft.lib.compat.viewer;
 
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
@@ -14,7 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
 
 /**
- * Server-side helpers behind the JEI "+" recipe-transfer handlers for BuildCraft machines that use
+ * Server-side helpers behind the JEI and REI "+" recipe-transfer handlers for BuildCraft machines that use
  * <em>real</em> input inventories (Assembly Table, Distiller, Heat Exchanger), plus a client-side
  * inventory counter the handlers use to decide whether to enable the button.
  *
@@ -22,8 +22,8 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  * player's inventory in the same call, and the server only ever moves what the player actually has —
  * so a tampered client can at most rearrange its own items, never duplicate them.
  */
-public final class JeiTransferUtil {
-    private JeiTransferUtil() {}
+public final class TransferUtil {
+    private TransferUtil() {}
 
     /** Total count of stacks in {@code playerInv} matching {@code want} by item + components. */
     public static int countMatching(Inventory playerInv, ItemStack want) {

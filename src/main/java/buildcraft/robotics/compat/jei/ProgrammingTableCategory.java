@@ -18,7 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-import buildcraft.lib.compat.jei.JeiMjLabel;
+import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 import buildcraft.robotics.container.ProgrammingTableLayout;
@@ -40,11 +40,10 @@ import buildcraft.silicon.BCSiliconItems;
 public class ProgrammingTableCategory extends AbstractRecipeCategory<ProgrammingRecipeJei> {
     private static final Identifier TEXTURE = Identifier.parse("buildcraftunofficial:textures/gui/programming_table.png");
 
-    // Crop the GUI texture (see ProgrammingTableLayout) to the board slots, the option grid and the power bar,
-    // leaving out the title strip and the player inventory. The one geometry this category owns; package-visible so
-    // TableLayoutTest can check the crop still frames everything the layout puts in it.
-    static final int TEX_U = 3, TEX_V = 27;
-    static final int TEX_W = 169, TEX_H = 86;
+    // The layout's viewer crop of the GUI texture: the board slots, the option grid and the power bar. Package-visible
+    // so TableLayoutTest can check the crop still frames everything the layout puts in it.
+    static final int TEX_U = ProgrammingTableLayout.VIEWER_U, TEX_V = ProgrammingTableLayout.VIEWER_V;
+    static final int TEX_W = ProgrammingTableLayout.VIEWER_W, TEX_H = ProgrammingTableLayout.VIEWER_H;
 
     // Slot positions from ProgrammingTableLayout, shifted by (-TEX_U, -TEX_V).
     private static final int INPUT_X = ProgrammingTableLayout.BOARD_X - TEX_U,
@@ -85,7 +84,7 @@ public class ProgrammingTableCategory extends AbstractRecipeCategory<Programming
         background.draw(graphics);
         // JEI draws slot contents after this, so the frame sits under the item, as in the table's own GUI.
         selected.draw(graphics, cellX(recipe.gridIndex()), cellY(recipe.gridIndex()));
-        JeiMjLabel.draw(new BCGraphics(graphics), POWER_KEY, recipe.microJoules(), POWER_X, POWER_Y);
+        MjLabel.draw(new BCGraphics(graphics), POWER_KEY, recipe.microJoules(), POWER_X, POWER_Y);
     }
 
     @Override

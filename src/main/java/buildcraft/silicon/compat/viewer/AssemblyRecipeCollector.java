@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.silicon.compat.jei;
+package buildcraft.silicon.compat.viewer;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,8 +31,8 @@ import buildcraft.silicon.plug.FacadeStateManager;
 import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
 
 /**
- * Walks {@link AssemblyRecipeRegistry#REGISTRY} once at JEI plugin init and
- * emits a flat list of {@link AssemblyRecipeJei} entries.
+ * Walks {@link AssemblyRecipeRegistry#REGISTRY} once at JEI or REI plugin init and
+ * emits a flat list of {@link AssemblyRecipeEntry} entries.
  *
  * <p>Two paths:
  * <ul>
@@ -51,14 +51,14 @@ import buildcraft.silicon.recipe.FacadeAssemblyRecipes;
  *       MJ cost from {@code getRequiredMicroJoulesFor(output)}.</li>
  * </ul>
  *
- * <p>Sorted by the synthetic {@link AssemblyRecipeJei#id() id} so JEI's
+ * <p>Sorted by the synthetic {@link AssemblyRecipeEntry#id() id} so the viewer's
  * recipe order is deterministic between runs.
  */
 public final class AssemblyRecipeCollector {
     private AssemblyRecipeCollector() {}
 
-    public static List<AssemblyRecipeJei> collect() {
-        List<AssemblyRecipeJei> out = new ArrayList<>();
+    public static List<AssemblyRecipeEntry> collect() {
+        List<AssemblyRecipeEntry> out = new ArrayList<>();
 
         for (AssemblyRecipe recipe : AssemblyRecipeRegistry.REGISTRY.values()) {
             if (recipe instanceof FacadeAssemblyRecipes facade) {
@@ -68,11 +68,11 @@ public final class AssemblyRecipeCollector {
             collectStandard(recipe, out);
         }
 
-        out.sort(Comparator.comparing(AssemblyRecipeJei::id));
+        out.sort(Comparator.comparing(AssemblyRecipeEntry::id));
         return out;
     }
 
-    private static void collectStandard(AssemblyRecipe recipe, List<AssemblyRecipeJei> out) {
+    private static void collectStandard(AssemblyRecipe recipe, List<AssemblyRecipeEntry> out) {
         // Empty context: the SlotDisplay flavors we hit here — Composite,
         // ItemSlotDisplay, ItemStackSlotDisplay (the DataComponentIngredient one)
         // — don't read REGISTRIES from it, so no Level handle is needed at JEI
@@ -108,7 +108,7 @@ public final class AssemblyRecipeCollector {
             if (inputSlots.isEmpty()) continue;
 
             String id = recipe.getRegistryName() + ":" + outputKey(output);
-            out.add(new AssemblyRecipeJei(
+            out.add(new AssemblyRecipeEntry(
                     id,
                     inputSlots,
                     List.of(output),
@@ -117,7 +117,7 @@ public final class AssemblyRecipeCollector {
         }
     }
 
-    private static List<AssemblyRecipeJei> collectFacade(FacadeAssemblyRecipes facade) {
+    private static List<AssemblyRecipeEntry> collectFacade(FacadeAssemblyRecipes facade) {
         // Slot 0: 3x structure pipe (the base requirement, fixed across every facade).
         // We don't try to fall back to the cobblestone-wall placeholder used inside
         // FacadeAssemblyRecipes — if structure pipe isn't registered, JEI would
@@ -165,8 +165,8 @@ public final class AssemblyRecipeCollector {
         // instead of cycling independently and pairing leaves with the
         // emerald-ore facade. See JEI's createFocusLink javadoc.
         return List.of(
-                new AssemblyRecipeJei(facade.getRegistryName() + ":basic", inputSlots, basicOutputs, mjCost, 1),
-                new AssemblyRecipeJei(facade.getRegistryName() + ":hollow", inputSlots, hollowOutputs, mjCost, 1)
+                new AssemblyRecipeEntry(facade.getRegistryName() + ":basic", inputSlots, basicOutputs, mjCost, 1),
+                new AssemblyRecipeEntry(facade.getRegistryName() + ":hollow", inputSlots, hollowOutputs, mjCost, 1)
         );
     }
 

@@ -20,17 +20,18 @@ import net.minecraft.network.chat.Component;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.energy.compat.viewer.CombustionCoolant;
 import buildcraft.energy.BCEnergyItems;
-import buildcraft.lib.compat.jei.FluidContainerAliases;
+import buildcraft.lib.compat.jei.JeiFluidAliases;
 import buildcraft.lib.gui.BCGraphics;
 import buildcraft.lib.misc.LocaleUtil;
 
 /**
- * JEI category for the combustion engine's coolants. Two shapes (see {@link CombustionCoolantJei}):
+ * JEI category for the combustion engine's coolants. Two shapes (see {@link CombustionCoolant}):
  * a fluid coolant (water) shows its fluid + cooling rate; a solid coolant (ice family) shows the
  * solid item melting into its produced water amount.
  */
-public class CombustionCoolantCategory extends AbstractRecipeCategory<CombustionCoolantJei> {
+public class CombustionCoolantCategory extends AbstractRecipeCategory<CombustionCoolant> {
     private static final int WIDTH = 176, HEIGHT = 58;
     private static final int BUCKET = 1000;
     private static final int TEXT_COLOR = 0xFF404040;
@@ -49,7 +50,7 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
     }
 
     @Override
-    public void setRecipe(IRecipeLayoutBuilder builder, CombustionCoolantJei recipe, IFocusGroup focuses) {
+    public void setRecipe(IRecipeLayoutBuilder builder, CombustionCoolant recipe, IFocusGroup focuses) {
         if (recipe.isSolid()) {
             builder.addInputSlot(IN_X, SOLID_Y).addItemStacks(List.of(recipe.item()));
             FluidStack water = recipe.fluid();
@@ -61,7 +62,7 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
                         //?} else {
                         /*.addFluidStack(water.getFluid(), water.getAmount(), water.getComponentsPatch());*/
                         //?}
-                FluidContainerAliases.addAliases(builder, water, RecipeIngredientRole.OUTPUT);
+                JeiFluidAliases.addAliases(builder, water, RecipeIngredientRole.OUTPUT);
             }
         } else {
             FluidStack fluid = recipe.fluid();
@@ -75,17 +76,17 @@ public class CombustionCoolantCategory extends AbstractRecipeCategory<Combustion
                         //?}
                 // Clicking a water bucket now also surfaces the engine-coolant recipe, matching the
                 // heat exchanger / distiller fluid lookups.
-                FluidContainerAliases.addAliases(builder, fluid, RecipeIngredientRole.INPUT);
+                JeiFluidAliases.addAliases(builder, fluid, RecipeIngredientRole.INPUT);
             }
         }
     }
 
     @Override
     //? if >=26.1 {
-    public void draw(CombustionCoolantJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+    public void draw(CombustionCoolant recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
     //?} else {
-    /*public void draw(CombustionCoolantJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+    /*public void draw(CombustionCoolant recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
                      double mouseX, double mouseY) {*/
     //?}
         Font font = Minecraft.getInstance().font;

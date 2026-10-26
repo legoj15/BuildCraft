@@ -18,7 +18,7 @@ import buildcraft.api.boards.RedstoneBoardRegistry;
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.recipes.IProgrammingRecipe;
 import buildcraft.api.recipes.IntegrationRecipe;
-import buildcraft.lib.compat.jei.TransferResult;
+import buildcraft.lib.compat.viewer.TransferResult;
 import buildcraft.lib.recipe.IntegrationRecipeRegistry;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
 import buildcraft.lib.tile.item.ItemHandlerSimple;

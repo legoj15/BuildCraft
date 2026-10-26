@@ -17,6 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 
+import buildcraft.energy.compat.viewer.StirlingFuel;
 import buildcraft.api.mj.MjAPI;
 
 import buildcraft.energy.BCEnergyItems;
@@ -29,7 +30,7 @@ import buildcraft.lib.misc.LocaleUtil;
  * PID-regulated up to a {@code MjAPI.MJ} (1 MJ/t) ceiling regardless of fuel, so the rate line is
  * the constant ceiling ("≤ 1 MJ/t"); only the burn time varies per fuel.
  */
-public class StirlingFuelCategory extends AbstractRecipeCategory<StirlingFuelJei> {
+public class StirlingFuelCategory extends AbstractRecipeCategory<StirlingFuel> {
     private static final int WIDTH = 176, HEIGHT = 48;
     private static final int TEXT_COLOR = 0xFF404040;
 
@@ -45,16 +46,16 @@ public class StirlingFuelCategory extends AbstractRecipeCategory<StirlingFuelJei
     }
 
     @Override
-    public void setRecipe(IRecipeLayoutBuilder builder, StirlingFuelJei recipe, IFocusGroup focuses) {
+    public void setRecipe(IRecipeLayoutBuilder builder, StirlingFuel recipe, IFocusGroup focuses) {
         builder.addInputSlot(IN_X, IN_Y).addItemStacks(List.of(recipe.fuel()));
     }
 
     @Override
     //? if >=26.1 {
-    public void draw(StirlingFuelJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+    public void draw(StirlingFuel recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphicsExtractor graphics,
                      double mouseX, double mouseY) {
     //?} else {
-    /*public void draw(StirlingFuelJei recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
+    /*public void draw(StirlingFuel recipe, IRecipeSlotsView slots, net.minecraft.client.gui.GuiGraphics graphics,
                      double mouseX, double mouseY) {*/
     //?}
         Font font = Minecraft.getInstance().font;

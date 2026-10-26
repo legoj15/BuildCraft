@@ -19,8 +19,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.recipes.IRefineryRecipeManager.IDistillationRecipe;
 import buildcraft.factory.BCFactoryItems;
-import buildcraft.lib.compat.jei.FluidContainerAliases;
-import buildcraft.lib.compat.jei.JeiMjLabel;
+import buildcraft.lib.compat.jei.JeiFluidAliases;
+import buildcraft.lib.compat.viewer.MjLabel;
 import buildcraft.lib.gui.BCGraphics;
 
 /**
@@ -87,7 +87,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                      double mouseX, double mouseY) {*/
     //?}
         background.draw(graphics);
-        JeiMjLabel.draw(new BCGraphics(graphics), "gui.jei.category.buildcraftunofficial.distiller.power",
+        MjLabel.draw(new BCGraphics(graphics), "gui.jei.category.buildcraftunofficial.distiller.power",
                 recipe.powerRequired(), POWER_X, POWER_Y);
     }
 
@@ -102,7 +102,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                     //?} else {
                     /*.addFluidStack(in.getFluid(), in.getAmount(), in.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, in, RecipeIngredientRole.INPUT);
+            JeiFluidAliases.addAliases(builder, in, RecipeIngredientRole.INPUT);
         }
         FluidStack outGas = recipe.outGas();
         if (outGas != null && !outGas.isEmpty()) {
@@ -113,7 +113,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                     //?} else {
                     /*.addFluidStack(outGas.getFluid(), outGas.getAmount(), outGas.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, outGas, RecipeIngredientRole.OUTPUT);
+            JeiFluidAliases.addAliases(builder, outGas, RecipeIngredientRole.OUTPUT);
         }
         FluidStack outLiquid = recipe.outLiquid();
         if (outLiquid != null && !outLiquid.isEmpty()) {
@@ -124,7 +124,7 @@ public class DistillerCategory extends AbstractRecipeCategory<IDistillationRecip
                     //?} else {
                     /*.addFluidStack(outLiquid.getFluid(), outLiquid.getAmount(), outLiquid.getComponentsPatch());*/
                     //?}
-            FluidContainerAliases.addAliases(builder, outLiquid, RecipeIngredientRole.OUTPUT);
+            JeiFluidAliases.addAliases(builder, outLiquid, RecipeIngredientRole.OUTPUT);
         }
     }
 }

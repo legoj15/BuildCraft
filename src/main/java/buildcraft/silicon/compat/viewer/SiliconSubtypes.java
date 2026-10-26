@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.silicon.compat.jei;
+package buildcraft.silicon.compat.viewer;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.DyeColor;
@@ -13,15 +13,16 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.silicon.item.ItemPluggableGate;
 import buildcraft.silicon.item.ItemPluggableLens;
 
-/** The JEI identity of the silicon pluggable items, kept JEI-free so it is unit-testable ({@code JeiSubtypeKeysTest}).
+/** The recipe-viewer identity (JEI subtype key, REI item comparator) of the silicon pluggable items, kept viewer-free so
+ *  it is unit-testable ({@code JeiSubtypeKeysTest}).
  *
  *  <p>Each key is the smallest value that uniquely identifies a <em>visual</em> variant — equal keys merge into one
  *  JEI entry, different keys get their own entry and their own recipe lookup. Without them JEI collapses every
  *  variant into a single entry, so R/U on any lens, gate or facade showed the recipes for all of them at once. Each
  *  key's {@code toString()} is also the legacy subtype text 1.21.1's JEI matches old bookmarks against, so the
  *  strings are pinned: change one and those bookmarks stop resolving. */
-public final class SiliconJeiSubtypes {
-    private SiliconJeiSubtypes() {}
+public final class SiliconSubtypes {
+    private SiliconSubtypes() {}
 
     /** Lens / filter: colour × mode, as {@code "<colour>:<isFilter>"}; "clear" stands in for the no-colour lens. */
     public static String lensKey(ItemStack stack) {

@@ -4,31 +4,30 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.lib.compat.jei;
+package buildcraft.lib.compat.viewer;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.fluids.FluidStack;
 
-import mezz.jei.api.gui.builder.IIngredientAcceptor;
-import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
-import mezz.jei.api.recipe.RecipeIngredientRole;
-
 import buildcraft.core.BCCoreItems;
 import buildcraft.core.item.ItemFragileFluidContainer;
 
 /**
- * Shared "alternate-form" lookup for fluid recipe slots. A fluid recipe in JEI
- * normally only matches when the player presses U/R on the bare fluid; this
- * utility lets each category register every <em>item</em> form of the fluid
- * (vanilla bucket, fragile shard, modded clay buckets, etc.) as an invisible
- * lookup ingredient, so the player can still find the recipe with what they
- * actually have in hand.
+ * Shared "alternate-form" lookup for fluid recipe slots. A fluid recipe in a
+ * recipe viewer normally only matches when the player presses U/R on the bare
+ * fluid; this utility lists every <em>item</em> form of the fluid (vanilla
+ * bucket, fragile shard, modded clay buckets, etc.) so each category can add
+ * them as invisible lookup ingredients (JEI: {@code JeiFluidAliases}; REI:
+ * extra display entries), and the player can still find the recipe with what
+ * they actually have in hand.
  *
  * <p>Two providers are registered out of the box:
  * <ul>
@@ -40,7 +39,7 @@ import buildcraft.core.item.ItemFragileFluidContainer;
  * </ul>
  *
  * <p>Other mods can plug in their own container forms by calling
- * {@link #registerProvider(Provider)} from their own JEI plugin lifecycle.
+ * {@link #registerProvider(Provider)} from their own JEI or REI plugin lifecycle.
  */
 public final class FluidContainerAliases {
 
@@ -59,9 +58,9 @@ public final class FluidContainerAliases {
         // BuildCraft fragile fluid shard. The shard stores the fluid in the
         // FLUID_CONTENT data component, so we have to construct an ItemStack
         // with the component set rather than passing a bare Item. Amount is
-        // pinned to MAX_FLUID_HELD because the JEI subtype interpreter for the
-        // shard ignores amount — any-mB shard the player holds will still
-        // match this alias.
+        // pinned to MAX_FLUID_HELD because the shard's subtype key (JEI
+        // interpreter, REI comparator) ignores amount — any-mB shard the
+        // player holds will still match this alias.
         registerProvider((fluidStack, sink) -> {
             if (BCCoreItems.FRAGILE_FLUID_CONTAINER == null) {
                 return;
@@ -83,7 +82,7 @@ public final class FluidContainerAliases {
 
     /**
      * Register an additional provider. Called once per provider, typically
-     * from a {@code @JeiPlugin}'s lifecycle. Registration order does not
+     * from a recipe-viewer plugin's lifecycle. Registration order does not
      * matter because providers are consumed at recipe-display time.
      */
     public static void registerProvider(Provider provider) {
@@ -91,26 +90,21 @@ public final class FluidContainerAliases {
     }
 
     /**
-     * Run every registered provider against {@code stack} and add their
-     * emitted item forms to {@code builder} as invisible ingredients with
-     * the given role. No-op for empty fluids.
+     * Every item form the registered providers emit for {@code stack}, in provider order; empty for an empty fluid.
      */
-    public static void addAliases(IRecipeLayoutBuilder builder, FluidStack stack, RecipeIngredientRole role) {
+    public static List<ItemStack> itemForms(@Nullable FluidStack stack) {
+        List<ItemStack> forms = new ArrayList<>();
         if (stack == null || stack.isEmpty()) {
-            return;
+            return forms;
         }
-        IIngredientAcceptor<?> slot = builder.addInvisibleIngredients(role);
         for (Provider provider : providers) {
             provider.addAliases(stack, alias -> {
                 if (alias != null && !alias.isEmpty()) {
-                    //? if >=1.21.10 {
-                    slot.add(alias);
-                    //?} else {
-                    /*slot.addItemStack(alias);*/
-                    //?}
+                    forms.add(alias);
                 }
             });
         }
+        return forms;
     }
 
     @FunctionalInterface

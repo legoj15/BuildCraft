@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.energy.compat.jei;
+package buildcraft.energy.compat.viewer;
 
 import net.minecraft.world.item.ItemStack;
 
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.fluids.FluidStack;
  *     melts into (with its produced amount, e.g. 1500 mB water for ice), {@code coolingPerMb} 0.</li>
  * </ul>
  */
-public record CombustionCoolantJei(ItemStack item, FluidStack fluid, float coolingPerMb) {
+public record CombustionCoolant(ItemStack item, FluidStack fluid, float coolingPerMb) {
     public boolean isSolid() {
         return !item.isEmpty();
     }

@@ -4,20 +4,20 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.silicon.compat.jei;
+package buildcraft.silicon.compat.viewer;
 
 import java.util.List;
 
 import net.minecraft.world.item.ItemStack;
 
 /**
- * One JEI entry for the Assembly Table. Both regular single-output recipes
+ * One recipe-viewer entry (JEI recipe, REI display) for the Assembly Table. Both regular single-output recipes
  * (chipsets, gates, lenses, plugs) and the cycling facade recipe collapse into
  * this shape: each input slot is a list of acceptable stacks (size &gt; 1
  * implies cycling), and the output column is a list (single-element for
  * regular recipes, many for facades).
  *
- * <p>{@code id} is the lookup key for {@link AssemblyRecipeJeiTypes#ASSEMBLY}
+ * <p>{@code id} is the entry's lookup key in the viewer's Assembly Table category
  * and must be unique per entry — for regular recipes it's
  * {@code registryName + ":" + outputItemId}, for the facade recipes it's the
  * recipe's registry name plus {@code :basic} or {@code :hollow}.
@@ -30,14 +30,14 @@ import net.minecraft.world.item.ItemStack;
  * output already has one stack and cycling is per-slot. The facade entries
  * pass {@code 1} (the block slot, not the structure-pipe base slot).
  */
-public record AssemblyRecipeJei(
+public record AssemblyRecipeEntry(
         String id,
         List<List<ItemStack>> inputSlots,
         List<ItemStack> outputs,
         long microJoules,
         int focusLinkInputIndex
 ) {
-    public AssemblyRecipeJei(String id, List<List<ItemStack>> inputSlots, List<ItemStack> outputs, long microJoules) {
+    public AssemblyRecipeEntry(String id, List<List<ItemStack>> inputSlots, List<ItemStack> outputs, long microJoules) {
         this(id, inputSlots, outputs, microJoules, -1);
     }
 }

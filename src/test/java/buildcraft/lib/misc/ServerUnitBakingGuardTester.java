@@ -59,17 +59,21 @@ public class ServerUnitBakingGuardTester {
             "(?m)^\\s*import\\s+(?:static\\s+)?net\\.minecraft\\.client\\.|\\bextends\\s+\\w*Screen\\b");
 
     /** Code that only ever runs in a client JVM, where reading the client config is exactly right: the client
-     *  packages and the JEI plugins by their path. A {@code gui} package is not enough on its own: the server-side
+     *  packages and the JEI and REI plugins by their path (REI's {@code @REIPluginCommon} classes there also load on a
+     *  server, but only register item comparators). A {@code gui} package is not enough on its own: the server-side
      *  menus, widgets and slots live in {@code buildcraft/lib/gui} too, so a file there is client-only only when its
-     *  own code says so ({@link #TOUCHES_MINECRAFT_CLIENT}), and anything else in it is scanned like any other.
+     *  own code says so ({@link #TOUCHES_MINECRAFT_CLIENT}), and anything else in it is scanned like any other. The
+     *  same goes for {@code compat/viewer}, the data both viewers share, which the server-side transfers read too.
      *
      * @param code the file's live code ({@link MainSourceSet#codeOnly}) */
     static boolean isClientOnly(String relativePath, String code) {
         String path = "/" + relativePath;
-        if (path.contains("/client/") || path.contains("/compat/jei/") || relativePath.equals(CLIENT_RESOLVER)) {
+        if (path.contains("/client/") || path.contains("/compat/jei/") || path.contains("/compat/rei/")
+                || relativePath.equals(CLIENT_RESOLVER)) {
             return true;
         }
-        return path.contains("/gui/") && TOUCHES_MINECRAFT_CLIENT.matcher(code).find();
+        return (path.contains("/gui/") || path.contains("/compat/viewer/"))
+                && TOUCHES_MINECRAFT_CLIENT.matcher(code).find();
     }
 
     @Test
@@ -88,6 +92,11 @@ public class ServerUnitBakingGuardTester {
         Assertions.assertTrue(isClientOnly("buildcraft/energy/client/gui/ScreenFoo.java", menu),
                 "everything under a client package is exempt whatever it imports");
         Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/jei/Label.java", menu), "jei is client only");
+        Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/rei/Label.java", menu), "so is rei");
+        Assertions.assertTrue(isClientOnly("buildcraft/lib/compat/viewer/Label.java", screen),
+                "shared viewer code that imports Minecraft client code is client only");
+        Assertions.assertFalse(isClientOnly("buildcraft/lib/compat/viewer/Transfer.java", menu),
+                "shared viewer code without client imports is scanned");
         Assertions.assertFalse(isClientOnly("buildcraft/core/item/ItemFoo.java", screen),
                 "outside gui, client packages and jei the path alone decides, whatever the file imports");
     }

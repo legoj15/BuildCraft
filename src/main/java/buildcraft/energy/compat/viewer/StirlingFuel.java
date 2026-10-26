@@ -4,7 +4,7 @@
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
 
-package buildcraft.energy.compat.jei;
+package buildcraft.energy.compat.viewer;
 
 import net.minecraft.world.item.ItemStack;
 
@@ -14,4 +14,4 @@ import net.minecraft.world.item.ItemStack;
  * {@code MjAPI.MJ} (1 MJ/t) ceiling — see {@code TileEngineStone_BC8} — so the power rate is a
  * constant the category prints rather than a per-fuel field.
  */
-public record StirlingFuelJei(ItemStack fuel, int burnTime) {}
+public record StirlingFuel(ItemStack fuel, int burnTime) {}

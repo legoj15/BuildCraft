@@ -18,6 +18,8 @@ import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import net.minecraft.resources.Identifier;
 
+import buildcraft.silicon.compat.viewer.SiliconSubtypes;
+import buildcraft.silicon.compat.viewer.AssemblyRecipeCollector;
 import buildcraft.lib.compat.jei.BCGhostIngredientHandler;
 import buildcraft.lib.compat.jei.BlueprintTransferHandler;
 import buildcraft.lib.compat.jei.JeiSubtypes;
@@ -65,10 +67,10 @@ public class BCSiliconJeiPlugin implements IModPlugin {
         // key are merged in JEI, two with different keys get their own entry and their own
         // recipe lookup.
 
-        // The keys themselves (and why each is shaped as it is) live in SiliconJeiSubtypes.
-        JeiSubtypes.register(registration, BCSiliconItems.PLUG_LENS.get(), SiliconJeiSubtypes::lensKey);
-        JeiSubtypes.register(registration, BCSiliconItems.PLUG_GATE.get(), SiliconJeiSubtypes::gateKey);
-        JeiSubtypes.register(registration, BCSiliconItems.PLUG_FACADE.get(), SiliconJeiSubtypes::facadeKey);
+        // The keys themselves (and why each is shaped as it is) live in SiliconSubtypes.
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_LENS.get(), SiliconSubtypes::lensKey);
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_GATE.get(), SiliconSubtypes::gateKey);
+        JeiSubtypes.register(registration, BCSiliconItems.PLUG_FACADE.get(), SiliconSubtypes::facadeKey);
     }
 
     @Override

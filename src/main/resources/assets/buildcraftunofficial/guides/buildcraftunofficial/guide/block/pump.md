@@ -26,9 +26,9 @@ As with most machines, it requires power. The more power you supply it, the fast
 
 Applying a redstone signal to the pump will stop the pump from pumping so be careful where you place your levers.
 
-## On a Mining Well
+## On a Mining Well or Quarry
 
-Placed on top of a Mining Well, the pump stops pumping below itself and instead drains the lava, oil or other thick liquid that has stopped the well, spending its own stored power first and then the well's (only a well with the same owner shares its power). Its status light turns blue while it sits there: bright while it has liquid lined up to drain, dim while it has none. It cannot clear a solid block such as obsidian. Pipe the pumped liquid away, or the pump stops once its tank is half full.
+Placed on top of a Mining Well or a Quarry, the pump stops pumping below itself and instead drains the lava, oil or other thick liquid in the machine's way, spending its own stored power first and then the machine's once the machine has nothing else to dig (only a machine with the same owner shares its power). A Quarry goes back for the blocks the liquid was covering once it is drained. Its status light turns blue while it sits there: bright while it has liquid lined up to drain, dim while it has none. It cannot clear a solid block such as obsidian. Pipe the pumped liquid away, or the pump stops once its tank is half full.
 
 <Row>
 <RecipesFor id="buildcraftunofficial:pump" fallbackText="" />

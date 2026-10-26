@@ -28,6 +28,8 @@ The Quarry continues until it reaches bedrock or runs out of unmineable blocks. 
 
 The Quarry's head harvests blocks as if wielding a diamond pickaxe. It will only skip mining if it encounters an impassible fluid (such as lava or oil), or a block that cannot be successfully mined by a diamond pick.
 
+A [Pump](./pump.md) placed on top of the Quarry drains the lava or oil it skipped. Once the liquid is gone and the Quarry has finished the rest of its run, it goes back for the blocks that were under it.
+
 Experience orbs from breaks (redstone ore, lapis, diamond, coal, etc.) spawn at the Quarry block itself, not in the pit, so you can collect XP at the machine without rappelling down to bedrock.
 
 ## Power

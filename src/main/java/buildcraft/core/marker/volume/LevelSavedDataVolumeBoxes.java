@@ -150,11 +150,12 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.box.contains(pos)).findFirst().orElse(null);
     }
 
-    /** A free (not machine-owned) box containing {@code pos}: what a machine placed against it may adopt. A box
-     *  another machine owns is that machine's working area, never a second machine's. */
+    /** A free box containing {@code pos}: what a machine placed against it may adopt. A box another machine owns or
+     *  has already adopted (a machine lock) is that machine's working area, never a second machine's. */
     @Nullable
     public VolumeBox getFreeVolumeBoxAt(BlockPos pos) {
-        return volumeBoxes.stream().filter(volumeBox -> volumeBox.getOwner() == null && volumeBox.box.contains(pos))
+        return volumeBoxes.stream().filter(volumeBox -> volumeBox.getOwner() == null && volumeBox.box.contains(pos)
+                && volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetUsedByMachine.class::isInstance))
             .findFirst().orElse(null);
     }
 

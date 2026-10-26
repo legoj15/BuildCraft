@@ -46,8 +46,7 @@ import buildcraft.transport.BCTransportBlocks;
  * <p>
  * The rest of the wear rules are asserted where the action already is: a wrench turning a vanilla block
  * ({@code VanillaRotationTester}), a pipe ({@code PipeFilterPersistenceTester#daizuliEditsMarkChunkDirty}) and a robot
- * ({@code RobotWearablesTester}) wears it; lifting a marker corner and removing a volume box
- * ({@code FillerOwnedVolumeBoxTester}) do not.
+ * ({@code RobotWearablesTester}) wears it; removing a volume box ({@code FillerOwnedVolumeBoxTester}) does not.
  */
 public class WrenchToolTester {
 
@@ -139,7 +138,8 @@ public class WrenchToolTester {
             Player player = helper.makeMockPlayer(GameType.SURVIVAL);
             ItemStack wrench = new ItemStack(BCCoreItems.WRENCH.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, wrench);
-            wrench.hurtEnemy(cow, player);
+            // Player#attack calls postHurtEnemy only when hurtEnemy answers true.
+            check(wrench.hurtEnemy(cow, player), "a hit with the wrench counts as a weapon hit");
             wrench.postHurtEnemy(cow, player);
             check(wrench.getDamageValue() == 1, "one hit costs one use, has lost " + wrench.getDamageValue());
         } finally {

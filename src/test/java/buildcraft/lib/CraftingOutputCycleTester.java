@@ -385,9 +385,14 @@ public final class CraftingOutputCycleTester {
             helper.fail("Precondition: the oak planks stair pattern must resolve to oak stairs, got "
                 + tile.crafting.getAssumedResult());
         }
-        if (tile.getCraftingMatchCount() != 1) {
-            helper.fail("The Auto Workbench must not offer wood variants, match count was "
-                + tile.getCraftingMatchCount());
+        List<ItemStack> grid = new ArrayList<>();
+        for (int s = 0; s < 9; s++) {
+            grid.add(tile.invBlueprint.getStackInSlot(s));
+        }
+        int sameGrid = CraftingUtil.findMatchingRecipes(CraftingInput.of(3, 3, grid), helper.getLevel()).size();
+        if (tile.getCraftingMatchCount() != sameGrid) {
+            helper.fail("The Auto Workbench must only cycle same-grid matches (" + sameGrid
+                + "), not wood variants; match count was " + tile.getCraftingMatchCount());
         }
         tile.cycleCraftingOutput(1);
         tile.serverTick();

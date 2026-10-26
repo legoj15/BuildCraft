@@ -43,7 +43,7 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
     /** Message id for the client→server "cycle output" button (above the base ids in ContainerBC_Neptune). */
     public static final int NET_CYCLE_OUTPUT = 104;
     /** Message id for the client→server "accept substitute materials" toggle: one boolean, the wanted state. */
-    public static final int NET_SET_ACCEPT_SUBSTITUTES = 105;
+    public static final int NET_SET_ACCEPT_SUBSTITUTES = 107;
     /** Client-synced copies of the tile's match count + selected index (server fills these via DataSlots). */
     private int clientMatchCount;
     private int clientSelectedIndex;

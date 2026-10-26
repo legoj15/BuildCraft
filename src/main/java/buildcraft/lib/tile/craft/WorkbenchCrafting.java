@@ -11,7 +11,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -197,6 +196,10 @@ public class WorkbenchCrafting {
      *  variant rewrites the blueprint to that variant's items and recomputes at once.
      *  @return true if the selection changed. */
     public boolean cycleOutput(int dir) {
+        if (isBlueprintDirty) {
+            // A grid edit in the same tick must win: never apply a variant built from the pre-edit blueprint.
+            tick();
+        }
         if (matches.size() <= 1) {
             return false;
         }

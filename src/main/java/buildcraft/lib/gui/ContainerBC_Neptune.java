@@ -65,6 +65,7 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu implemen
      *  integrate. The server moves one blank robot into the centre slot and that board into a ring slot. Handled by
      *  {@code ContainerIntegrationTable}; see {@code RoboticsTableTransfer}. */
     public static final int NET_JEI_TRANSFER_INTEGRATION = 106;
+    // 107 is the Advanced Crafting Table's own NET_SET_ACCEPT_SUBSTITUTES; new shared ids start at 108.
 
     public final Player player;
     private final BCContainerSupport support;

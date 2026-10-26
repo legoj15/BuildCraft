@@ -430,6 +430,24 @@ public final class CraftingOutputCycleTester {
                     + " from birch expected " + expected + ", got " + out);
             }
         }
+
+        // A click landing on a grid edited in the same tick is dropped: it must not write a variant computed from
+        // the pre-edit grid over the player's edit.
+        for (int slot : STAIR_SLOTS) {
+            tile.invBlueprint.setStackInSlot(slot, new ItemStack(Items.SPRUCE_PLANKS));
+        }
+        tile.cycleCraftingOutput(1);
+        for (int slot : STAIR_SLOTS) {
+            if (!tile.invBlueprint.getStackInSlot(slot).is(Items.SPRUCE_PLANKS)) {
+                helper.fail("A cycle click on a just-edited grid must not rewrite it, slot " + slot + " holds "
+                    + tile.invBlueprint.getStackInSlot(slot));
+            }
+        }
+        tile.serverTick();
+        if (tile.getCurrentRecipeOutput().getItem() != Items.SPRUCE_STAIRS) {
+            helper.fail("After the dropped click the edited grid must resolve to spruce stairs, got "
+                + tile.getCurrentRecipeOutput());
+        }
         helper.succeed();
     }
 

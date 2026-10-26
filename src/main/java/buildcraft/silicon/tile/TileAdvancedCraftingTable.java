@@ -130,8 +130,8 @@ public class TileAdvancedCraftingTable extends TileLaserTableBase {
     }
 
     /** Turns the "accept substitute materials" mode on or off: when on, the table may craft the selected recipe
-     *  from materials other than the blueprint's items, as long as they still satisfy that recipe (another wood for
-     *  a planks recipe). Server-side; called from the container's toggle button. */
+     *  from materials other than the blueprint's items, as long as they still satisfy that recipe and make exactly
+     *  the previewed result (another wood for a planks recipe). Server-side; called from the container's toggle button. */
     public void setAcceptSubstitutes(boolean accept) {
         if (crafting.isAcceptSubstitutes() != accept) {
             crafting.setAcceptSubstitutes(accept);

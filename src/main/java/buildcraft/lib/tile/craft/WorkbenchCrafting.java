@@ -50,7 +50,8 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  *      items swapped for another member of a configured item tag (the other woods' stairs for a plank stair grid).
  *      Selecting such a variant rewrites the blueprint to the swapped grid, so what is shown is what is crafted.</li>
  *  <li>{@link #setAcceptSubstitutes}: when the exact blueprint items are not in the materials, the selected recipe may
- *      be crafted from other materials whose swap keeps the recipe satisfied and the result the same item.</li>
+ *      be crafted from other materials whose swap keeps the recipe satisfied and assembles exactly the previewed
+ *      result (item, count and data).</li>
  *  </ul> */
 public class WorkbenchCrafting {
 
@@ -132,7 +133,7 @@ public class WorkbenchCrafting {
     }
 
     /** Lets {@link #craft()} use materials other than the blueprint's items when they keep the selected recipe
-     *  satisfied and its result the same item. Off by default. */
+     *  satisfied and assemble exactly the previewed result. Off by default. */
     public void setAcceptSubstitutes(boolean accept) {
         if (acceptSubstitutes != accept) {
             acceptSubstitutes = accept;
@@ -471,7 +472,11 @@ public class WorkbenchCrafting {
         List<List<ItemStackKey>> candidates = new ArrayList<>();
         for (ItemStackKey blueprintKey : blueprintKeys) {
             List<ItemStackKey> options = new ArrayList<>();
-            options.add(blueprintKey);
+            // The original only when the buffer can supply it: a missing one would keep every combination holding it
+            // dead and spend the search budget on grids that can never pass the supply check.
+            if (available.getOrDefault(blueprintKey, 0) >= needed.get(blueprintKey)) {
+                options.add(blueprintKey);
+            }
             for (Map.Entry<ItemStackKey, Integer> material : available.entrySet()) {
                 ItemStackKey candidate = material.getKey();
                 // A stack type with fewer items than the slots need could never supply the swap on its own.
@@ -482,13 +487,16 @@ public class WorkbenchCrafting {
                     options.add(candidate);
                 }
             }
+            if (options.isEmpty()) {
+                return null; // neither this blueprint item nor any substitute for it is in the buffer
+            }
             candidates.add(options);
         }
 
         int[] pick = new int[blueprintKeys.size()];
         for (int tried = 0; tried < MAX_SUBSTITUTE_COMBINATIONS; tried++) {
-            if (!nextCombination(pick, candidates)) {
-                return null; // every combination (the original-only one was ruled out by the caller) is spent
+            if (tried > 0 && !nextCombination(pick, candidates)) {
+                return null; // every combination is spent
             }
             List<ItemStack> trial = new ArrayList<>(grid.size());
             for (int s = 0; s < keys.length; s++) {
@@ -507,7 +515,7 @@ public class WorkbenchCrafting {
     }
 
     /** Advances {@code pick} (one candidate index per blueprint stack, last stack fastest) to the next combination.
-     *  @return false when it wrapped around to all-original, i.e. every combination has been visited. */
+     *  @return false when it wrapped around to the first combination, i.e. every combination has been visited. */
     private static boolean nextCombination(int[] pick, List<List<ItemStackKey>> candidates) {
         for (int d = pick.length - 1; d >= 0; d--) {
             if (++pick[d] < candidates.get(d).size()) {

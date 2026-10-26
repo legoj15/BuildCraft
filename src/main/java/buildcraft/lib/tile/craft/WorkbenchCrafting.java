@@ -43,8 +43,8 @@ import buildcraft.lib.tile.item.ItemHandlerSimple;
  *  matches recipes, extracts materials, and produces crafting results.
  *
  *  <p>Two opt-in features, both built on one idea (swap every grid slot holding a given blueprint item for another
- *  item, then re-check the recipes) and both off by default, so the Auto Workbench, which shares this engine and whose
- *  blueprint may hold real items, behaves exactly as before:
+ *  item, then re-check the recipes) and both off by default, so the Auto Workbench, which shares this engine, behaves
+ *  exactly as before (its blueprint is not the player's to rewrite):
  *  <ul>
  *  <li>{@link #enableVariants}: the output-cycle list also offers the recipes the grid would match with one of its
  *      items swapped for another member of a configured item tag (the other woods' stairs for a plank stair grid).
@@ -439,7 +439,8 @@ public class WorkbenchCrafting {
      *  supply. Bounded by {@link #MAX_SUBSTITUTE_COMBINATIONS}. */
     @Nullable
     private List<ItemStack> findSubstituteGrid(List<ItemStack> grid) {
-        Map<ItemStackKey, Integer> available = new HashMap<>();
+        // Slot order, so the substitute picked among several valid ones is stable rather than hash order.
+        Map<ItemStackKey, Integer> available = new LinkedHashMap<>();
         for (int s = 0; s < invMaterials.getSlots(); s++) {
             ItemStack stack = invMaterials.getStackInSlot(s);
             if (!stack.isEmpty()) {

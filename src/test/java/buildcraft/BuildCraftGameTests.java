@@ -1006,6 +1006,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:cycle_output_find_matching_recipes", () -> buildcraft.lib.CraftingOutputCycleTester::testFindMatchingRecipesConflicts);
         reg.accept("buildcraftunofficial:cycle_output_advanced_crafting_table", () -> buildcraft.lib.CraftingOutputCycleTester::testAdvancedCraftingTableCyclesOutput);
 
+        // Advanced Crafting Table swap features (issue #41): the accept-substitutes toggle crafts the selected
+        // recipe from other materials; the cycle also offers other woods/materials and rewrites the blueprint;
+        // the Auto Workbench (same engine) offers neither.
+        reg.accept("buildcraftunofficial:cycle_output_act_substitutes_toggle", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesToggleCraftsFromOtherMaterial);
+        reg.accept("buildcraftunofficial:cycle_output_act_substitutes_rules", () -> buildcraft.lib.CraftingOutputCycleTester::testSubstitutesSelectionRules);
+        reg.accept("buildcraftunofficial:cycle_output_act_variants_rewrite_blueprint", () -> buildcraft.lib.CraftingOutputCycleTester::testVariantsRewriteBlueprint);
+        reg.accept("buildcraftunofficial:cycle_output_autoworkbench_no_variants", () -> buildcraft.lib.CraftingOutputCycleTester::testAutoWorkbenchOffersNoVariants);
+
         reg.accept("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects", () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
         reg.accept("buildcraftunofficial:autoworkbench_clay_pipe_inserts", () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
         reg.accept("buildcraftunofficial:architect_wood_pipe_extracts", () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFinishedBlueprintFromArchitect);

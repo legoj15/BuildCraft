@@ -22,6 +22,10 @@ The 5×3 buffer on the left is the materials supply. Ingredients can be piped in
 
 Any recipe usable in a crafting table will work.
 
+When a grid could make more than one thing, the button above the result slot cycles through the options. It also offers the same recipe in other materials: with oak planks laid out as stairs it steps through every wood's stairs, and picking one rewrites the blueprint grid to that wood, so the grid always shows what is being crafted. The item tags that count as interchangeable are listed in the craftingVariantTags config option.
+
+The button beside it makes the table accept substitute materials. Normally the buffer must hold the blueprint's exact items. With the toggle on, the table may craft the selected recipe from any other material that still fits it, such as birch planks for an oak planks blueprint. It uses one material for every slot of a given blueprint item (never a mix of woods) and prefers the blueprint's own items when the buffer has them.
+
 <Row>
 <RecipesFor id="buildcraftunofficial:advanced_crafting_table" fallbackText="" />
 </Row>

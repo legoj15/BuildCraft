@@ -22,6 +22,7 @@ import net.minecraft.world.entity.player.Inventory;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.GuiIcon;
 import buildcraft.lib.gui.button.BCButton;
+import buildcraft.lib.gui.button.ButtonSprite;
 import buildcraft.lib.gui.button.CycleOutputButton;
 import buildcraft.lib.gui.ledger.LedgerOwnership;
 import buildcraft.lib.gui.pos.GuiRectangle;
@@ -35,11 +36,14 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
     private static final GuiIcon ICON_GUI = new GuiIcon(TEXTURE_BASE, 0, 0, SIZE_X, SIZE_Y);
     private static final GuiIcon ICON_PROGRESS = new GuiIcon(TEXTURE_BASE, SIZE_X, 0, 4, 70);
     private static final GuiRectangle RECT_PROGRESS = new GuiRectangle(164, 7, 4, 70);
+    /** The two buttons above the result slot, side by side (right of the slot's column, clear of the progress bar). */
+    private static final int CYCLE_BUTTON_X = 128, SUBSTITUTES_BUTTON_X = 146, BUTTON_Y = 14;
 
     private BCRecipeBookComponent<ContainerAdvancedCraftingTable> recipeBookComponent;
     private ImageButton recipeBookButton;
     private boolean widthTooNarrow;
     private BCButton cycleButton;
+    private BCButton substitutesButton;
 
     public GuiAdvancedCraftingTable(ContainerAdvancedCraftingTable container, Inventory playerInventory,
         Component title) {
@@ -115,9 +119,25 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         // (e.g. a BuildCraft tank vs another mod's tank from the same 8-glass grid; GitHub issue #20).
         // Always shown; greyed + unclickable (with its own tooltip) unless 2+ recipes match — the button
         // reads the synced match count itself. Its position follows leftPos each tick (the recipe book).
-        this.cycleButton = CycleOutputButton.create(this.leftPos + 128, this.topPos + 14, menu::getSyncedMatchCount,
+        this.cycleButton = CycleOutputButton.create(this.leftPos + CYCLE_BUTTON_X, this.topPos + BUTTON_Y,
+            menu::getSyncedMatchCount,
             () -> menu.sendMessage(ContainerAdvancedCraftingTable.NET_CYCLE_OUTPUT, buf -> buf.writeBoolean(true)));
         addRenderableWidget(this.cycleButton);
+
+        // Accept-substitutes toggle beside it: latched while the table may craft the selected recipe from materials
+        // other than the blueprint's items (another wood for a planks recipe). The state is the server's, synced
+        // through the container; a press asks for the opposite of what is shown.
+        this.substitutesButton = BCButton.builder(this.leftPos + SUBSTITUTES_BUTTON_X, this.topPos + BUTTON_Y,
+                CycleOutputButton.SIZE, CycleOutputButton.SIZE)
+            .icon(ButtonSprite.SUBSTITUTES)
+            .latched(menu::isAcceptSubstitutesSynced)
+            .tooltip(() -> Component.translatable(menu.isAcceptSubstitutesSynced()
+                ? "gui.buildcraftunofficial.accept_substitutes.on"
+                : "gui.buildcraftunofficial.accept_substitutes.off"))
+            .onPress(() -> menu.sendMessage(ContainerAdvancedCraftingTable.NET_SET_ACCEPT_SUBSTITUTES,
+                buf -> buf.writeBoolean(!menu.isAcceptSubstitutesSynced())))
+            .build();
+        addRenderableWidget(this.substitutesButton);
     }
 
     private ScreenPosition getRecipeBookButtonPosition() {
@@ -131,13 +151,16 @@ public class GuiAdvancedCraftingTable extends GuiBC8<ContainerAdvancedCraftingTa
         if (this.recipeBookComponent != null) {
             this.recipeBookComponent.tick();
         }
-        updateCycleButton();
+        updateButtons();
     }
 
-    /** Keeps the cycle-output button aligned: the recipe book shifts leftPos. */
-    private void updateCycleButton() {
+    /** Keeps the cycle-output and substitutes buttons aligned: the recipe book shifts leftPos. */
+    private void updateButtons() {
         if (this.cycleButton != null) {
-            this.cycleButton.setPosition(this.leftPos + 128, this.topPos + 14);
+            this.cycleButton.setPosition(this.leftPos + CYCLE_BUTTON_X, this.topPos + BUTTON_Y);
+        }
+        if (this.substitutesButton != null) {
+            this.substitutesButton.setPosition(this.leftPos + SUBSTITUTES_BUTTON_X, this.topPos + BUTTON_Y);
         }
     }
 

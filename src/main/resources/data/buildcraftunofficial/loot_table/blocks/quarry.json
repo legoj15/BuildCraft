@@ -12,7 +12,8 @@
                         "source": "block_entity",
                         "include": [
                             "minecraft:enchantments",
-                            "minecraft:repair_cost"
+                            "minecraft:repair_cost",
+                            "minecraft:custom_name"
                         ]
                     }
                 }

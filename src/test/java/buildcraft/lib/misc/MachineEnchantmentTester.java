@@ -16,6 +16,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
@@ -175,8 +176,8 @@ public class MachineEnchantmentTester {
     }
 
     /**
-     * A machine placed from an enchanted item and then broken drops its own item with the enchantments (and the repair
-     * cost the anvil set) it was placed with, so the shine and the effect survive a trip through the inventory. This
+     * A machine placed from an enchanted item and then broken drops its own item with the enchantments, the repair
+     * cost and the name the anvil set, so the shine, the effect and the name survive a trip through the inventory. This
      * is vanilla's placement copying the item's components onto the block entity, then the machine's loot table
      * copying them back onto the drop, on every node's loot-table format.
      */
@@ -188,6 +189,7 @@ public class MachineEnchantmentTester {
             ItemStack held = MachineEnchantTestSupport.enchantedItem(helper, item, Enchantments.SILK_TOUCH, 1);
             held.enchant(MachineEnchantTestSupport.enchantment(helper, Enchantments.EFFICIENCY), 3);
             held.set(DataComponents.REPAIR_COST, 7);
+            held.set(DataComponents.CUSTOM_NAME, Component.literal("Big Dig"));
             placeOnTopOf(helper, held, floor);
 
             assertTrue(helper.getLevel().getBlockState(helper.absolutePos(pos)).is(block),
@@ -222,6 +224,8 @@ public class MachineEnchantmentTester {
                     "the dropped machine must keep the anvil's repair cost, got "
                             + dropped.getOrDefault(DataComponents.REPAIR_COST, 0));
             assertTrue(dropped.isEnchanted(), "the dropped machine must keep its enchantment glint");
+            assertTrue(Component.literal("Big Dig").equals(dropped.get(DataComponents.CUSTOM_NAME)),
+                    "the dropped machine must keep its anvil name, got " + dropped.get(DataComponents.CUSTOM_NAME));
         }));
     }
 

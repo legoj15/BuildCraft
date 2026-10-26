@@ -1,0 +1,76 @@
+{
+  "name": "replacer-remove",
+  "description": "Replacer Remove (issue #38). An Architect scans a 3x3 stone pad with five grass tufts into a blueprint; the Replacer gets the blueprint, then a captured short-grass schematic with the 'to' slot empty. Shots: blueprint only (button reads Replace, greyed), grass in 'from' (button reads Remove, preview without tufts, summary '5 x Short Grass removed'), after clicking Remove (blueprint item swapped for the new one, echoed).",
+  "base": [0, 150, 0],
+  "steps": [
+    { "do": "wait", "ms": 2500 },
+    { "label": "clear, floor, pad with tufts", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear", "?clear @p",
+      "?forceload add {X-16} {Z-16} {X+16} {Z+16}",
+      "?fill {X-6} {Y} {Z-8} {X+10} {Y+6} {Z+8} minecraft:air",
+      "fill {X-6} {Y-1} {Z-8} {X+10} {Y-1} {Z+8} minecraft:smooth_stone",
+      "fill {X} {Y} {Z} {X+2} {Y} {Z+2} minecraft:stone",
+      "setblock {X} {Y+1} {Z} minecraft:short_grass",
+      "setblock {X+2} {Y+1} {Z} minecraft:short_grass",
+      "setblock {X+1} {Y+1} {Z+1} minecraft:short_grass",
+      "setblock {X} {Y+1} {Z+2} minecraft:short_grass",
+      "setblock {X+2} {Y+1} {Z+2} minecraft:short_grass"
+    ] },
+    { "label": "architect scans the pad", "do": "cmd", "run": [
+      "setblock {X+1} {Y} {Z-2} buildcraftunofficial:architect[facing=north]",
+      "data merge block {X+1} {Y} {Z-2} {box_initialized:1b,box_minX:{X},box_minY:{Y},box_minZ:{Z},box_maxX:{X+2},box_maxY:{Y+1},box_maxZ:{Z+2},isValid:1b,name:\"tufts\",items:{in:{items:[{stack:{id:\"buildcraftunofficial:blueprint_clean\",count:1}}]},out:{items:[]}}}"
+    ] },
+    { "label": "architect finished", "do": "waitCmd", "run": "data get block {X+1} {Y} {Z-2} items.out.items[0].stack.id", "match": "blueprint_used", "timeoutSec": 40 },
+    { "label": "replacer with the blueprint only", "do": "cmd", "run": [
+      "setblock {X+5} {Y} {Z-2} buildcraftunofficial:replacer",
+      "data merge block {X+5} {Y} {Z-2} {items:{snapshot:{items:[{stack:{id:\"minecraft:stone\",count:1}}]},schematicFrom:{items:[]},schematicTo:{items:[]}}}",
+      "data modify block {X+5} {Y} {Z-2} items.snapshot.items[0].stack merge from block {X+1} {Y} {Z-2} items.out.items[0].stack"
+    ] },
+    { "label": "replacer contents", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items" },
+
+    { "do": "tp", "at": [5, 0, -5], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [5, 0, -2] },
+    { "do": "wait", "ms": 400 },
+    { "label": "open the Replacer", "do": "use" },
+    { "do": "expectScreen", "contains": "Replacer" },
+    { "do": "wait", "ms": 2500 },
+    { "do": "widgets", "name": "blueprint-only" },
+    { "do": "shot", "name": "blueprint-only", "look": "Preview shows the stone pad WITH five grass tufts; button reads 'Replace' and is greyed; no summary line." },
+    { "do": "close" },
+
+    { "do": "tp", "at": [1, 0, 4], "yaw": 180, "pitch": 30 },
+    { "do": "hold", "item": "buildcraftunofficial:schematic_single_clean" },
+    { "do": "aim", "at": [1, 1, 1] },
+    { "do": "wait", "ms": 400 },
+    { "label": "capture the centre tuft", "do": "use" },
+    { "do": "wait", "ms": 400 },
+    { "label": "captured schematic in the inventory (expect a schematic_single_used entry)", "do": "cmd", "echo": true, "run": "data get entity @p Inventory[{id:\"buildcraftunofficial:schematic_single_used\"}]" },
+    { "label": "schematic into the Replacer's 'from' slot", "do": "cmd", "run": [
+      "data modify block {X+5} {Y} {Z-2} items.schematicFrom.items set value [{stack:{id:\"minecraft:stone\",count:1}}]",
+      "data modify block {X+5} {Y} {Z-2} items.schematicFrom.items[0].stack merge from entity @p Inventory[{id:\"buildcraftunofficial:schematic_single_used\"}]"
+    ] },
+
+    { "label": "CHECK replacer still present", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items.schematicFrom" },
+    { "do": "tp", "at": [5, 0, -5], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [5, 0, -2] },
+    { "do": "wait", "ms": 400 },
+    { "label": "open the Replacer again", "do": "use" },
+    { "do": "expectScreen", "contains": "Replacer" },
+    { "do": "wait", "ms": 2500 },
+    { "do": "widgets", "name": "remove-ready" },
+    { "do": "shot", "name": "remove-ready", "look": "Button reads 'Remove' and is active; preview shows the bare stone pad (no tufts); summary reads '5 × Short Grass removed'." },
+    { "label": "CHECK (screen open) replacer still present", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items.schematicFrom" },
+    { "do": "hover", "widgetText": "Remove" },
+    { "do": "shot", "name": "remove-hover", "look": "Remove button in its hover state." },
+    { "label": "CHECK (after hover) replacer still present", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items.schematicFrom" },
+    { "label": "click Remove", "do": "click", "widgetText": "Remove" },
+    { "label": "CHECK (after click) replacer still present", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items.schematicFrom" },
+    { "do": "wait", "ms": 2500 },
+    { "do": "shot", "name": "after-remove", "look": "Preview still shows the bare pad (the new blueprint); 'from' schematic still in its slot; summary now '0 × Short Grass removed'." },
+    { "do": "close" },
+    { "label": "blueprint header after Remove (key differs from the first echo)", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items" },
+    { "label": "release the chunks", "do": "cmd", "run": ["?forceload remove {X-16} {Z-16} {X+16} {Z+16}"] }
+  ]
+}

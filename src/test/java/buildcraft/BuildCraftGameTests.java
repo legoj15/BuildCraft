@@ -526,6 +526,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:blueprint_replace_no_match", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testNoMatchLeavesPaletteUnchanged);
         reg.accept("buildcraftunofficial:blueprint_count_matching_cells", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testCountMatchingCellsCountsBlocks);
         reg.accept("buildcraftunofficial:blueprint_replace_null_noop", () -> buildcraft.builders.snapshot.BlueprintReplaceTester::testReplaceNullIsNoOp);
+        reg.accept("buildcraftunofficial:replacer_empty_to_removes_matches", () -> buildcraft.builders.tile.TileReplacerRemoveTester::emptyToSlotRemovesMatches);
 
         // Builder fluid-handling mode (waterlog/destroy at place sites; enum sanity).
         reg.accept("buildcraftunofficial:fluidmode_replace_water_waterloggable", () -> buildcraft.builders.snapshot.FluidHandlingModeTester::testReplaceWaterSourceWithWaterloggableBlock);

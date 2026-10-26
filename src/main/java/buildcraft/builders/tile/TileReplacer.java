@@ -15,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.api.core.BCLog;
@@ -36,6 +37,7 @@ import buildcraft.builders.item.ItemSchematicSingle;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Blueprint;
 import buildcraft.builders.snapshot.GlobalSavedDataSnapshots;
+import buildcraft.builders.snapshot.SchematicBlockAir;
 import buildcraft.builders.snapshot.Snapshot;
 
 public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
@@ -72,6 +74,7 @@ public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
      * Unlike the 1.12.2 version this does <b>not</b> consume the single-block schematics — the
      * same from/to pair can be reused on a different blueprint. On success the slot-0 blueprint
      * item is swapped for a new one referencing the newly-built blueprint's {@code Snapshot.Key}.
+     * An empty "to" slot removes the matches instead: they become air, which a Builder clears.
      *
      * @param newName optional rename for the produced blueprint. {@code null} or blank keeps
      *                the original blueprint's name.
@@ -81,8 +84,7 @@ public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
             return;
         }
         if (invSnapshot.getStackInSlot(0).isEmpty()
-                || invSchematicFrom.getStackInSlot(0).isEmpty()
-                || invSchematicTo.getStackInSlot(0).isEmpty()) {
+                || invSchematicFrom.getStackInSlot(0).isEmpty()) {
             return;
         }
         Snapshot.Header header = ItemSnapshot.getHeader(invSnapshot.getStackInSlot(0));
@@ -95,8 +97,12 @@ public class TileReplacer extends TileBC_Neptune implements IBCMenuProvider {
         }
         try {
             ISchematicBlock from = ItemSchematicSingle.getSchematic(invSchematicFrom.getStackInSlot(0));
-            ISchematicBlock to = ItemSchematicSingle.getSchematic(invSchematicTo.getStackInSlot(0));
-            if (from == null || to == null) {
+            ItemStack toStack = invSchematicTo.getStackInSlot(0);
+            ISchematicBlock to = toStack.isEmpty()
+                    ? new SchematicBlockAir()
+                    : ItemSchematicSingle.getSchematic(toStack);
+            // Capture never makes an air "from", but a forged item could: it would match every air cell.
+            if (from == null || from.isAir() || to == null) {
                 return;
             }
             Blueprint newBlueprint = blueprint.copy();

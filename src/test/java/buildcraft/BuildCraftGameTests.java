@@ -708,6 +708,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_stays_complete_over_water", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testFinishedWellStaysCompleteOverWater);
         reg.accept("buildcraftunofficial:mining_well_mines_waterlogged_block", () -> buildcraft.factory.tile.TileMiningWellFluidTester::testWellMinesWaterloggedBlock);
         reg.accept("buildcraftunofficial:mining_well_pump_drains_blocking_lava", () -> buildcraft.factory.tile.TileMiningWellPumpTester::testPumpOnWellDrainsBlockingLava);
+        // A Pump on a Quarry drains the lava its sweep skipped, and the quarry goes back for the column under it.
+        reg.accept("buildcraftunofficial:quarry_pump_drains_skipped_lava", () -> buildcraft.builders.tile.TileQuarryPumpTester::testPumpOnQuarryDrainsSkippedLava);
 
         // The miner tube is waterloggable: drilling a bore through a pond keeps the water inside the tube and
         // retracting (or breaking the well) puts the source back, instead of deleting a column of the pond.

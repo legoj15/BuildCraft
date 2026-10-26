@@ -10,6 +10,7 @@ The Quarry continues until it reaches bedrock or runs out of unmineable blocks. 
 <recipes_usages stack="buildcraftunofficial:quarry"/>
 <chapter name="Mining Tier"/>
 The Quarry's head harvests blocks as if wielding a diamond pickaxe. It will only skip mining if it encounters an impassible fluid (such as lava or oil), or a block that cannot be successfully mined by a diamond pick.
+A <link inline="buildcraftunofficial:block/pump"/> placed on top of the Quarry drains the lava or oil it skipped, and once the liquid is gone the Quarry returns to dig the blocks that were under it.
 Experience orbs from breaks (redstone ore, lapis, diamond, coal, etc.) spawn at the Quarry block itself, not in the pit, so you can collect XP at the machine without rappelling down to bedrock.
 <chapter name="Power"/>
 As with the Mining Well, more power means faster mining. Redstone signal pauses the Quarry without resetting its progress.

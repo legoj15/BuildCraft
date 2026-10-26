@@ -69,6 +69,7 @@ import buildcraft.lib.misc.data.Box;
 import buildcraft.lib.misc.data.BoxIterator;
 import buildcraft.lib.misc.data.EnumAxisOrder;
 import buildcraft.lib.mj.MjBatteryReceiver;
+import buildcraft.lib.tile.IPumpHost;
 import buildcraft.lib.tile.TileBC_Neptune;
 
 import net.minecraft.world.level.block.Block;
@@ -87,7 +88,7 @@ import buildcraft.core.marker.VolumeSubCache;
 import buildcraft.core.tile.TileMarkerVolume;
 
 @SuppressWarnings("this-escape")
-public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget {
+public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoadingTile, IAdvDebugTarget, IPumpHost {
     public static final boolean DEBUG_QUARRY = BCDebugging.shouldDebugLog("builders.quarry");
     private static final long MAX_POWER_PER_TICK = 512 * MjAPI.MJ;
     private static final Identifier DIGGY_DIGGY_HOLE = Identifier.parse("buildcraftunofficial:diggy_diggy_hole");
@@ -96,11 +97,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // A finished quarry has nothing to spend power on, so its receiver stops requesting MJ once
     // work runs out (see hasPendingWork) instead of topping the 24k buffer off forever — which
     // only overheats the feeding engines and is voided when the quarry is torn down. It resumes
-    // the instant real work is queued again.
+    // the instant real work is queued again, or while a Pump on top is running on its battery (see wantsPower).
     private final MjBatteryReceiver mjReceiver = new MjBatteryReceiver(battery) {
         @Override
         public long getPowerRequested() {
-            return hasPendingWork() ? super.getPowerRequested() : 0;
+            return wantsPower() ? super.getPowerRequested() : 0;
         }
     };
     /** The most refused cells probed in one tick, so a large claimed volume is re-asked a few cells at a time. */
@@ -108,6 +109,23 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     public final Box frameBox = new Box();
     final Box miningBox = new Box();
     private BoxIterator boxIterator;
+    /** A Pump on the quarry drained some fluid: once the sweep has finished, walk the box again, no sooner than
+     *  {@link #REVISIT_MIN_TICKS} after the last walk began once the noted cell is clear, and every
+     *  {@link #REVISIT_MAX_TICKS} while the pump works through the pool (it drains the noted cell last, and a cell in a
+     *  claim it may not drain never clears). A walk that finds nothing reads every cell of the box, so it is never run
+     *  once per bucket. */
+    static final int REVISIT_MIN_TICKS = 20;
+    static final int REVISIT_MAX_TICKS = 200;
+    /** How long a Pump's last call for power keeps a finished quarry taking power. */
+    static final int PUMP_POWER_GRACE_TICKS = 40;
+    /** A thick-fluid cell a sweep skipped (in the drill's way, or over a column it could not reach), for a Pump on the
+     *  quarry; null until a sweep meets one. It may since have been drained: the pump checks the cell itself. Not
+     *  saved: the walk a loaded quarry starts with notes it again. */
+    @Nullable
+    private BlockPos blockingFluid;
+    private boolean drainedSinceWalk;
+    private int ticksSinceWalk;
+    private long pumpWantsPowerUntil = Long.MIN_VALUE;
     public final List<BlockPos> framePoses = new ArrayList<>();
     private int frameBoxPosesCount = 0;
     private final LinkedList<BlockPos> toCheck = new LinkedList<>();
@@ -440,13 +458,92 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
     // high-viscosity fluid). A per-tick cache would go stale the moment the quarry breaks a block this
     // tick, and a cross-tick cache would miss fluid that flowed into the already-cleared column. The
     // measured cost is warm chunk-array reads (~maxTasks per tick); leave it scanning.
-    private boolean canMoveDownTo(BlockPos blockPos) {
+    // Returns the highest cell above blockPos the drill cannot pass, or null when it can reach blockPos.
+    @Nullable
+    private BlockPos firstObstacleAbove(BlockPos blockPos) {
         for (int y = miningBox.max().getY(); y > blockPos.getY(); y--) {
-            if (!canMoveThrough(VecUtil.replaceValue(blockPos, Axis.Y, y))) {
-                return false;
+            BlockPos above = VecUtil.replaceValue(blockPos, Axis.Y, y);
+            if (!canMoveThrough(above)) {
+                return above;
             }
         }
-        return true;
+        return null;
+    }
+
+    /** Advances the box iterator past every cell the drill cannot work now (passable, unmineable, or under something
+     *  it cannot descend through), noting a thick fluid in its way for a Pump on the quarry. */
+    private void skipUnworkableCells() {
+        while (boxIterator.hasNext()) {
+            BlockPos pos = boxIterator.getCurrent();
+            if (!canMoveThrough(pos)) {
+                if (!canMine(pos)) {
+                    noteBlockingFluid(pos);
+                } else {
+                    BlockPos obstacle = firstObstacleAbove(pos);
+                    if (obstacle == null) {
+                        return;
+                    }
+                    noteBlockingFluid(obstacle);
+                }
+            }
+            boxIterator.advance();
+        }
+    }
+
+    /** Keeps the first thick-fluid cell the sweep meets, and replaces it once a pump has drained it. Lava that flowed
+     *  into the pit counts: the pump finds the source it flows from. */
+    private void noteBlockingFluid(BlockPos pos) {
+        if (isThickFluid(pos) && (blockingFluid == null || !isThickFluid(blockingFluid))) {
+            blockingFluid = pos;
+        }
+    }
+
+    private boolean isThickFluid(BlockPos pos) {
+        Fluid fluid = BlockUtil.getFluidWithFlowing(level, pos);
+        return fluid != null && !BlockUtil.isPassableFluid(fluid);
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getBlockingFluid() {
+        return blockingFluid;
+    }
+
+    @Override
+    public boolean hasWork() {
+        return hasPendingWork();
+    }
+
+    @Override
+    public void onBlockingFluidDrained() {
+        drainedSinceWalk = true;
+    }
+
+    @Override
+    public void onPumpWantsPower() {
+        if (level != null) {
+            pumpWantsPowerUntil = level.getGameTime() + PUMP_POWER_GRACE_TICKS;
+        }
+    }
+
+    /** Whether the quarry takes power: while it has work, or while a Pump on top is drawing on its battery. Gates the
+     *  MJ receiver and the FE handler alike. */
+    public boolean wantsPower() {
+        return hasPendingWork() || (level != null && level.getGameTime() < pumpWantsPowerUntil);
+    }
+
+    /** Whether the finished sweep should start over: a pump has been draining what the sweep skipped, so columns it
+     *  covered may be open now. Soon once the noted cell is clear, at the slower cadence while it is not; a noted cell
+     *  whose chunk is not loaded is not read (that would load it). */
+    private boolean shouldRevisit() {
+        if (!drainedSinceWalk || currentTask != null || boxIterator == null || boxIterator.hasNext()
+                || ticksSinceWalk < REVISIT_MIN_TICKS) {
+            return false;
+        }
+        if (ticksSinceWalk >= REVISIT_MAX_TICKS || blockingFluid == null) {
+            return true;
+        }
+        return level.isLoaded(blockingFluid) && !isThickFluid(blockingFluid);
     }
 
     // True when the frame-box cell holds a real block that must be broken before the frame can go in (false for
@@ -628,7 +725,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
      * frame break/place work, or unmined cells left in the box. A completed quarry returns false,
      * which gates {@link #getMjReceiver()} so it stops pulling power (see the receiver's
      * {@code getPowerRequested} override) rather than holding its battery topped off after the job.
-     * The FE/RF energy handler is gated on the same predicate (see {@code BCBuilders}) for parity.
+     * Both power inputs are gated on {@link #wantsPower()}, which adds a Pump drawing on the battery.
      */
     public boolean hasPendingWork() {
         return currentTask != null
@@ -730,6 +827,13 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
         retryRefusedFrameCells();
 
+        // A Pump on the finished quarry has been draining what the sweep skipped: walk the box again (the power loop
+        // below starts the new walk), so the columns the fluid blocked get dug and the quarry takes power again.
+        ticksSinceWalk = Math.min(ticksSinceWalk + 1, REVISIT_MAX_TICKS);
+        if (shouldRevisit()) {
+            boxIterator = null;
+        }
+
         // Capture the unrestricted-power gate at tick start — the power_loop below drains
         // up to MAX_POWER_PER_TICK from the battery, which can cross the half-capacity
         // threshold downward and falsely look "not at full speed" by the time we stamp.
@@ -816,14 +920,11 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
 
             if (boxIterator == null || drillPos == null) {
                 boxIterator = createBoxIterator();
-                while (
-                    canMoveThrough(boxIterator.getCurrent()) || !canMine(boxIterator.getCurrent())
-                    || !canMoveDownTo(boxIterator.getCurrent())
-                ) {
-                    if (boxIterator.advance() == null) {
-                        break;
-                    }
-                }
+                // A fresh walk covers whatever a pending revisit would have. The noted cell stays, so a pump keeps its
+                // target through a frame repair; the walk replaces it once it is drained (noteBlockingFluid).
+                drainedSinceWalk = false;
+                ticksSinceWalk = 0;
+                skipUnworkableCells();
                 // Only seed the drill at the mining-box corner when it has no position yet (initial
                 // setup after the frame is built). The boxIterator isn't persisted, so it is ALWAYS
                 // recreated on load — but drillPos IS persisted (saveAdditional/readData), and on a world
@@ -839,14 +940,7 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
             }
 
             if (boxIterator != null && boxIterator.hasNext()) {
-                while (
-                    canMoveThrough(boxIterator.getCurrent()) || !canMine(boxIterator.getCurrent())
-                    || !canMoveDownTo(boxIterator.getCurrent())
-                ) {
-                    if (boxIterator.advance() == null) {
-                        break;
-                    }
-                }
+                skipUnworkableCells();
 
                 if (boxIterator.hasNext()) {
                     boolean found = false;
@@ -1245,6 +1339,8 @@ public class TileQuarry extends TileBC_Neptune implements IDebuggable, IChunkLoa
         left.add("firstChecked = " + firstChecked);
         BoxIterator iter = boxIterator;
         left.add("current = " + (iter == null ? "null" : iter.getCurrent()));
+        left.add("blocking fluid = " + (blockingFluid == null ? "none" : blockingFluid)
+                + (drainedSinceWalk ? " (drained, revisit due)" : ""));
         Task task = currentTask;
         if (task != null) {
             left.add("task:");

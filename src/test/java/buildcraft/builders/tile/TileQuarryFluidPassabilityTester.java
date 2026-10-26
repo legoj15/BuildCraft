@@ -70,7 +70,7 @@ public class TileQuarryFluidPassabilityTester {
             assertTrue(!quarry.canMoveThrough(loggedAbs),
                     "a waterlogged slab is a block, not water: the drill must mine it, not slide past it");
             // The other half of that contract: the box iterator skips any cell where canMoveThrough is true OR
-            // canMine is false, and canMoveDownTo refuses every cell under an impassable one. So a waterlogged
+            // canMine is false, and firstObstacleAbove stops every cell under an impassable one. So a waterlogged
             // slab the drill can't pass MUST be mineable, or the whole column beneath it is silently abandoned.
             assertTrue(quarry.canMine(loggedAbs),
                     "the quarry must be able to mine a waterlogged slab (else the column under it is abandoned)");

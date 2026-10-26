@@ -168,6 +168,16 @@ function Initialize-RunDir([string]$Node) {
     $lines = @(Get-Content -LiteralPath $options | Where-Object { $_ -notmatch '^(guiScale|particles):' }) +
         "guiScale:$scale" + 'particles:0'
     $lines | Set-Content -LiteralPath $options -Encoding utf8
+    # NeoForge's "mods loaded with warnings" screen blocks quick-play (REI trips it on 26.3 with @OnlyIn). The log
+    # keeps the warnings; NeoForge fills in the rest of a file that only holds this key.
+    $neoClient = Join-Path $runDir 'config/neoforge-client.toml'
+    if (Test-Path $neoClient) {
+        (Get-Content -LiteralPath $neoClient) -replace '^showLoadWarnings\s*=.*', 'showLoadWarnings = false' |
+            Set-Content -LiteralPath $neoClient -Encoding utf8
+    } else {
+        New-Item -ItemType Directory -Force -Path (Split-Path $neoClient) | Out-Null
+        'showLoadWarnings = false' | Set-Content -LiteralPath $neoClient -Encoding utf8
+    }
     [pscustomobject]@{ RunDir = $runDir; Jar = $jar.Name }
 }
 

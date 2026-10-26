@@ -8,6 +8,7 @@ package buildcraft.lib.compat.rei;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import me.shedaniel.math.Point;
@@ -19,6 +20,7 @@ import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.util.EntryIngredients;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -53,6 +55,7 @@ public final class ReiLayout {
     private final List<Element> elements = new ArrayList<>();
     private final List<EntryIngredient> inputs = new ArrayList<>();
     private final List<EntryIngredient> outputs = new ArrayList<>();
+    private final List<IntSupplier> textRightEdges = new ArrayList<>();
     private boolean textured;
 
     /** Draws a 256x256 texture's region at the origin as the display's panel. Slots then draw no frame of their own. */
@@ -108,8 +111,12 @@ public final class ReiLayout {
                 index(role, EntryIngredients.ofItemStacks(forms));
             }
         }
+        // BC draws the tank itself (REI's fluid renderer is a no-op from 21.9 on), and with no frame: REI's slot frame
+        // is a fixed 18x18 blit that breaks up on a tank-sized slot. JEI draws tanks unframed too.
+        var plain = EntryStacks.of(fluid.getFluid(), amount);
+        var tank = EntryStacks.of(fluid.getFluid(), amount).withRenderer(new ReiFluidTankRenderer<>(fluid, plain));
         elements.add((ox, oy, t) -> mark(Widgets.createSlot(new Rectangle(ox + x - 1, oy + y - 1, width + 2,
-                height + 2)), role, t).entry(EntryStacks.of(fluid.getFluid(), amount)));
+                height + 2)), role, t).disableBackground().entry(tank));
         return this;
     }
 
@@ -129,6 +136,7 @@ public final class ReiLayout {
      * after the display was built, shows without a REI reload.
      */
     public ReiLayout text(int x, int y, Supplier<Component> text) {
+        textRightEdges.add(() -> x + Minecraft.getInstance().font.width(text.get()));
         elements.add((ox, oy, t) -> Widgets.createLabel(new Point(ox + x, oy + y), text.get()).leftAligned().noShadow()
                 .color(TEXT_LIGHT, TEXT_DARK).onRender((graphics, label) -> {
                     Component now = text.get();
@@ -146,6 +154,21 @@ public final class ReiLayout {
 
     public List<EntryIngredient> outputs() {
         return outputs;
+    }
+
+    /** How far right the display's text reaches now, in its own coordinates, so a category can widen the display
+     *  to fit a long translation or unit name instead of letting the text run off the card. 0 off the render thread:
+     *  REI also asks for display widths while validating displays on its reload thread, and measuring text there
+     *  bakes font glyphs, which uploads to the GPU and throws (or worse) off the render thread. */
+    public int textWidth() {
+        if (!Minecraft.getInstance().isSameThread()) {
+            return 0;
+        }
+        int widest = 0;
+        for (IntSupplier edge : textRightEdges) {
+            widest = Math.max(widest, edge.getAsInt());
+        }
+        return widest;
     }
 
     /** The widgets for a display whose content starts at {@code (originX, originY)}, in drawing order. */

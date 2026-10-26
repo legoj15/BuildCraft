@@ -14,7 +14,7 @@
       "setblock {X-4} {Y} {Z} buildcraftunofficial:assembly_table",
       "setblock {X-3} {Y} {Z} buildcraftunofficial:autoworkbench_item",
       "setblock {X-2} {Y} {Z} buildcraftunofficial:distiller",
-      "setblock {X-1} {Y} {Z} buildcraftunofficial:heat_exchange",
+      "fill {X-1} {Y} {Z-3} {X+1} {Y} {Z-3} buildcraftunofficial:heat_exchange[facing=north]",
       "setblock {X} {Y} {Z} buildcraftunofficial:engine_stone",
       "setblock {X+1} {Y} {Z} buildcraftunofficial:engine_iron",
       "setblock {X+2} {Y} {Z} buildcraftunofficial:programming_table",
@@ -58,8 +58,8 @@
     { "name": "dist-rei", "do": "shot", "look": "REI Distiller category: one fluid in, gas and liquid fractions out, MJ cost, Distiller workstation" },
     { "do": "close" },
 
-    { "do": "tp", "at": [-1, 0, 2], "yaw": 180, "pitch": 30 },
-    { "do": "aim", "at": [-1, 0, 0] }, { "do": "wait", "ms": 300 },
+    { "do": "tp", "at": [0, 0, -1], "yaw": 180, "pitch": 30 },
+    { "do": "aim", "at": [0, 0, -3] }, { "do": "wait", "ms": 300 },
     { "label": "open Heat Exchanger", "do": "use" },
     { "do": "expectScreen", "contains": "GuiHeatExchange" },
     { "label": "click the exchange arrows", "do": "click", "x": 213, "y": 80 },
@@ -114,7 +114,7 @@
     { "do": "close" },
 
     { "do": "tp", "at": [5, 0, 2], "yaw": 180, "pitch": 30 },
-    { "do": "aim", "at": [5, 0, 0.45], "exact": true }, { "do": "wait", "ms": 300 },
+    { "do": "aim", "at": [5.5, 0.5, 0.85], "exact": true }, { "do": "wait", "ms": 300 },
     { "label": "open the gate", "do": "use" },
     { "do": "expectScreen", "contains": "GuiGate" },
     { "name": "gate-gui", "do": "shot", "look": "gate GUI: the trigger/action source lists on its sides are not covered by REI's panel" },

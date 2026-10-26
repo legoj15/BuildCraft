@@ -35,6 +35,7 @@ import buildcraft.energy.client.gui.ScreenEngineStone;
 import buildcraft.energy.compat.viewer.CombustionCoolant;
 import buildcraft.energy.compat.viewer.EngineFuelCollector;
 import buildcraft.energy.compat.viewer.StirlingFuel;
+import buildcraft.lib.compat.rei.ReiCategory;
 import buildcraft.lib.compat.rei.ReiScreens;
 
 /**
@@ -63,6 +64,10 @@ public class BCEnergyReiPlugin implements REIClientPlugin {
         registry.addWorkstations(CombustionFuelReiCategory.ID, EntryStacks.of(BCEnergyItems.ENGINE_IRON.get()));
         registry.addWorkstations(CombustionCoolantReiCategory.ID, EntryStacks.of(BCEnergyItems.ENGINE_IRON.get()));
         registry.addWorkstations(StirlingFuelReiCategory.ID, EntryStacks.of(BCEnergyItems.ENGINE_STONE.get()));
+        // No transfer handler for any of them, so no plus button (JEI shows none either).
+        ReiCategory.hidePlusButton(registry, CombustionFuelReiCategory.ID);
+        ReiCategory.hidePlusButton(registry, CombustionCoolantReiCategory.ID);
+        ReiCategory.hidePlusButton(registry, StirlingFuelReiCategory.ID);
     }
 
     @Override

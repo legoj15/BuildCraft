@@ -14,6 +14,7 @@ import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.gui.Renderer;
 import me.shedaniel.rei.api.client.gui.widgets.Widget;
 import me.shedaniel.rei.api.client.gui.widgets.Widgets;
+import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayCategory;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.util.EntryStacks;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.ItemLike;
 public abstract class ReiCategory<R> implements DisplayCategory<ReiDisplay<R>> {
 
     private static final int PADDING = 4;
+    private static final int OFF_SCREEN = -10_000;
 
     private final CategoryIdentifier<ReiDisplay<R>> id;
     private final Component title;
@@ -91,6 +93,17 @@ public abstract class ReiCategory<R> implements DisplayCategory<ReiDisplay<R>> {
 
     @Override
     public final int getDisplayWidth(ReiDisplay<R> display) {
-        return width + 2 * PADDING;
+        // Never narrower than the JEI category, but wide enough for text that runs past it (a long unit name or
+        // translation), which JEI lets spill over its frame and REI would clip at the card's edge.
+        return Math.max(width, display.layout().textWidth()) + 2 * PADDING;
+    }
+
+    /**
+     * Keeps REI's plus ("move items") button off {@code category}'s displays, for a category with no transfer handler:
+     * there REI shows a dead "!" button where JEI shows nothing. REI no longer lets a category drop the button (a
+     * {@code null} area falls back to the default corner), so the area is put far off screen instead.
+     */
+    public static void hidePlusButton(CategoryRegistry registry, CategoryIdentifier<?> category) {
+        registry.setPlusButtonArea(category, bounds -> new Rectangle(OFF_SCREEN, OFF_SCREEN, 10, 10));
     }
 }

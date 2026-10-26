@@ -133,7 +133,9 @@ public class ItemMarkerConnector extends Item {
                     VolumeBox volumeBox = iterator.next();
                     Optional<Vec3> clip = volumeBox.box.getBoundingBox().clip(start, end);
                     if (clip.isPresent()) {
-                        if (volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
+                        // Like a locked box, a box another player is dragging is not this player's to throw away.
+                        if (!volumeBox.isEditing()
+                            && volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetResize.class::isInstance)) {
                             iterator.remove();
                             volumeBoxes.markDirtyAndBroadcast();
                             return InteractionResult.SUCCESS;

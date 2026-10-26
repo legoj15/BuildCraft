@@ -785,6 +785,8 @@
     "buildcraftunofficial.configuration.oil": "Oil Generation",
     "buildcraftunofficial.configuration.enableOilGeneration": "Enable Oil Generation",
     "buildcraftunofficial.configuration.oilWellGenerationRate": "Oil Well Generation Rate",
+    "buildcraftunofficial.configuration.canBurn": "Oils and Fuels Burn",
+    "buildcraftunofficial.configuration.gasExplodes": "Gaseous Fuels Explode",
     "buildcraftunofficial.configuration.spouts": "Oil Spouts",
     "buildcraftunofficial.configuration.enableOilSpouts": "Enable Oil Spouts",
     "buildcraftunofficial.configuration.finiteSpoutMinHeight": "Finite Spout Min Height",

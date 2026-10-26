@@ -39,8 +39,9 @@ public class VolumeBox {
     public final Level world;
     public UUID id;
     public Box box;
+    /** The player dragging a corner, or null. A drag ends when that player confirms or cancels it, or is no longer in
+     *  this box's level (logged out, changed dimension): that cancels it (see LevelSavedDataVolumeBoxes#tick). */
     private UUID player = null;
-    private UUID oldPlayer = null;
     private BlockPos held = null;
     private double dist = 0;
     private BlockPos oldMin = null, oldMax = null;
@@ -48,12 +49,22 @@ public class VolumeBox {
     @Nullable
     private RetiredPlanner retiredPlanner = null;
     /**
-     * True for a box lifted off volume markers with the Marker Connector: a machine takes it the way it takes markers
-     * (copies the area and removes the box) instead of locking it, so it is used once.
+     * True for a box lifted off volume markers with the Marker Wrench: a machine takes it the way it takes markers
+     * (copies the area and removes the box) instead of locking it, so it is used once. A Quarry consumes it; a Filler
+     * or Architect Table turns it into the box it owns (see {@link #owner}), as it does the markers themselves.
      */
     private boolean oneShot = false;
     /** The markers still backing a one-shot box that has not been confirmed yet; empty once they broke. */
     private final List<BlockPos> sourceMarkers = new ArrayList<>();
+    /**
+     * The machine this box belongs to, or null for a free box (one placed with the Volume Box item). A Filler or
+     * Architect Table that takes over survival markers, or a box lifted off them, turns them into a box it owns: the
+     * box lives exactly as long as the machine (removed with it, never by a wrench) and is the machine's editable
+     * working area. Saved under {@code owner}; absent in saves from before ownership existed, which load as free
+     * boxes, as they were.
+     */
+    @Nullable
+    private Lock.Cause.CauseBlock owner = null;
 
     /**
      * What the retired Filler Planner addon kept for the Filler beside its box: the pattern statement (as
@@ -80,7 +91,6 @@ public class VolumeBox {
         box.initialize(NBTUtilBC.getCompound(nbt, "box"));
 
         player = nbt.contains("player") ? UUID.fromString(NBTUtilBC.getString(nbt, "player", "")) : null;
-        oldPlayer = nbt.contains("oldPlayer") ? UUID.fromString(NBTUtilBC.getString(nbt, "oldPlayer", "")) : null;
 
         if (nbt.contains("held")) {
             held = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "held"));
@@ -92,6 +102,11 @@ public class VolumeBox {
         }
         if (nbt.contains("oldMax")) {
             oldMax = NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(nbt, "oldMax"));
+        }
+        // Saves from before a drag ended with its player's absence kept such a drag "paused" under oldPlayer. It is
+        // a cancelled drag now: the old size comes back.
+        if (nbt.contains("oldPlayer") && player == null) {
+            cancelEditing();
         }
 
         // An "addons" list in an old save holds the Filler Planner, the only addon there ever was. The addon layer is
@@ -118,6 +133,11 @@ public class VolumeBox {
             for (int i = 0; i < markerList.size(); i++) {
                 sourceMarkers.add(NBTUtilBC.readBlockPos(NBTUtilBC.getCompound(markerList, i)));
             }
+        }
+
+        if (nbt.contains("owner")) {
+            owner = new Lock.Cause.CauseBlock();
+            owner.readFromNBT(NBTUtilBC.getCompound(nbt, "owner"));
         }
 
         if (nbt.contains("locks")) {
@@ -193,9 +213,43 @@ public class VolumeBox {
         return broken;
     }
 
-    @SuppressWarnings("WeakerAccess")
+    /** Whether a corner is being dragged: the box's size is not final. */
     public boolean isEditing() {
         return player != null;
+    }
+
+    /** Makes this box belong to the machine block at {@code pos} (see {@link #owner}). */
+    public void setOwner(BlockPos pos, Block block) {
+        owner = new Lock.Cause.CauseBlock(pos.immutable(), block);
+    }
+
+    /** The machine this box belongs to, or null for a free box. */
+    @Nullable
+    public Lock.Cause.CauseBlock getOwner() {
+        return owner;
+    }
+
+    public boolean isOwnedBy(BlockPos pos) {
+        return owner != null && owner.pos.equals(pos);
+    }
+
+    /**
+     * Where the dragged corner goes when the player aims at {@code target} while {@code held} stays put: each axis is
+     * kept within {@code cap} blocks of the held corner, the same reach a marker connection has, so a box can never be
+     * dragged larger than markers could make it. An axis the box already spanned further than that when the drag
+     * started ({@code startMin}..{@code startMax}) keeps that span as its limit instead, so grabbing a corner never
+     * shrinks a box by itself. Axes are clamped on their own.
+     */
+    public static BlockPos clampDragTarget(BlockPos held, BlockPos target, int cap, BlockPos startMin,
+                                           BlockPos startMax) {
+        return new BlockPos(
+            clampAxis(held.getX(), target.getX(), Math.max(cap, startMax.getX() - startMin.getX())),
+            clampAxis(held.getY(), target.getY(), Math.max(cap, startMax.getY() - startMin.getY())),
+            clampAxis(held.getZ(), target.getZ(), Math.max(cap, startMax.getZ() - startMin.getZ())));
+    }
+
+    private static int clampAxis(int held, int target, int maxSpan) {
+        return Math.max(held - maxSpan, Math.min(held + maxSpan, target));
     }
 
     private void resetEditing() {
@@ -204,11 +258,14 @@ public class VolumeBox {
         dist = 0;
     }
 
+    /** Ends the drag, putting the size from before it back (when it is known). */
     public void cancelEditing() {
         player = null;
-        box.reset();
-        box.extendToEncompass(oldMin);
-        box.extendToEncompass(oldMax);
+        if (oldMin != null && oldMax != null) {
+            box.reset();
+            box.extendToEncompass(oldMin);
+            box.extendToEncompass(oldMax);
+        }
         resetEditing();
     }
 
@@ -217,27 +274,12 @@ public class VolumeBox {
         resetEditing();
     }
 
-    @SuppressWarnings("WeakerAccess")
-    public void pauseEditing() {
-        oldPlayer = player;
-        player = null;
-    }
-
-    public void resumeEditing() {
-        player = oldPlayer;
-        oldPlayer = null;
-    }
-
     public void setPlayer(Player player) {
         this.player = GameProfileUtil.getId(player.getGameProfile());
     }
 
     public boolean isEditingBy(Player player) {
         return player != null && Objects.equals(this.player, GameProfileUtil.getId(player.getGameProfile()));
-    }
-
-    public boolean isPausedEditingBy(Player player) {
-        return oldPlayer != null && Objects.equals(oldPlayer, GameProfileUtil.getId(player.getGameProfile()));
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -260,6 +302,18 @@ public class VolumeBox {
     @SuppressWarnings("WeakerAccess")
     public double getDist() {
         return dist;
+    }
+
+    /** The box's min corner when the drag started, or null when there is no drag. */
+    @Nullable
+    public BlockPos getOldMin() {
+        return oldMin;
+    }
+
+    /** The box's max corner when the drag started, or null when there is no drag. */
+    @Nullable
+    public BlockPos getOldMax() {
+        return oldMax;
     }
 
     public Stream<Lock.Target> getLockTargetsStream() {
@@ -299,9 +353,6 @@ public class VolumeBox {
         if (player != null) {
             nbt.putString("player", player.toString());
         }
-        if (oldPlayer != null) {
-            nbt.putString("oldPlayer", oldPlayer.toString());
-        }
         if (held != null) {
             nbt.put("held", NBTUtilBC.writeBlockPos(held));
         }
@@ -329,6 +380,9 @@ public class VolumeBox {
             locksList.add(lock.writeToNBT());
         }
         nbt.put("locks", locksList);
+        if (owner != null) {
+            nbt.put("owner", owner.writeToNBT(new CompoundTag()));
+        }
         return nbt;
     }
 

@@ -19,7 +19,7 @@ import javax.annotation.Nullable;
 
 import buildcraft.lib.block.BlockMarkerBase;
 
-import buildcraft.core.item.ItemMarkerConnector;
+import buildcraft.core.item.ItemMarkerWrench;
 import buildcraft.core.tile.TileMarkerVolume;
 
 public class BlockMarkerVolume extends BlockMarkerBase {
@@ -38,8 +38,8 @@ public class BlockMarkerVolume extends BlockMarkerBase {
         if (!world.isClientSide()) {
             BlockEntity tile = world.getBlockEntity(pos);
             if (tile instanceof TileMarkerVolume volume
-                && !(player.getMainHandItem().getItem() instanceof ItemMarkerConnector
-                    && ItemMarkerConnector.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
+                && !(player.getMainHandItem().getItem() instanceof ItemMarkerWrench
+                    && ItemMarkerWrench.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
                 volume.onManualConnectionAttempt(player);
             }
         }

@@ -2,7 +2,7 @@
   "parent": "minecraft:recipes/root",
   "rewards": {
     "recipes": [
-      "buildcraftunofficial:marker_connector"
+      "buildcraftunofficial:marker_wrench"
     ]
   },
   "criteria": {

@@ -79,6 +79,7 @@ public abstract class AbstractBCSyncedBlockEntity extends AbstractBCBlockEntity 
         super.preRemoveSideEffects(pos, state);
         if (level != null && !level.isClientSide()) {
             dropContentsOnRemoval(level, pos);
+            onBlockRemoved(level, pos);
         }
     }
     //?}

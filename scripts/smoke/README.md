@@ -103,7 +103,7 @@ tooltips, the translucent cubes in the box after Fill is picked, the cubes still
 view, the toggle off again with the cubes gone, and `data get block ... showPreview` echoes of the saved flag), `f3` a
 digging Shovelman's exhaust on All and then on Minimal particles (switched in Video Settings).
 Volume boxes live in saved data no command reaches, so `f2` sneak-clicks away the box an earlier run left (the opening
-clear-and-floor fill has already taken the Filler that locked it) and drags a new one to 3x3x3 with the Marker Connector;
+clear-and-floor fill has already taken the Filler that locked it) and drags a new one to 3x3x3 with the Volume Wrench;
 the generator solves that drag (`solve_drag`) and fails if a layout change leaves no solution. A Filler finds its box when
 a player places it, so `f2` right-clicks the floor with the Filler item rather than using `setblock`. Patterns are
 dragged from the Filler's list, which the bridge cannot do, so `f2` takes the Fill that an in-place click on the pattern

@@ -45,6 +45,7 @@ import buildcraft.builders.tile.TileBuilder;
 import buildcraft.builders.tile.TileFiller;
 import buildcraft.builders.tile.TileQuarry;
 import buildcraft.core.client.BuildCraftLaserManager;
+import buildcraft.core.marker.volume.ClientVolumeBoxes;
 
 /** Event distribution for BCBuilders. Handles quarry tracking and rendering. */
 @SuppressWarnings({"rawtypes", "unchecked"})  // SnapshotBuilder<T>'s BreakTask/PlaceTask inner classes
@@ -531,7 +532,9 @@ public enum BCBuildersEventDist {
                     iter.remove();
                     continue;
                 }
-                if (table.getIsValid() && table.markerBox && table.box.isInitialized()) {
+                // A table that owns a volume box has its area drawn by the box (VolumeBoxRenderer, in this colour).
+                if (table.getIsValid() && table.markerBox && table.box.isInitialized()
+                        && !ClientVolumeBoxes.INSTANCE.hasBoxOwnedBy(table.getBlockPos())) {
                     laserBox(
                         poseStack, table.box,
                         BuildCraftLaserManager.STRIPES_READ,
@@ -861,7 +864,9 @@ public enum BCBuildersEventDist {
                 iter.remove();
                 continue;
             }
-            if (filler.markerBox && filler.box.isInitialized()) {
+            // A Filler that owns a volume box has its area drawn by the box (VolumeBoxRenderer, in this colour).
+            if (filler.markerBox && filler.box.isInitialized()
+                    && !ClientVolumeBoxes.INSTANCE.hasBoxOwnedBy(filler.getBlockPos())) {
                 laserBox(
                     poseStack, filler.box,
                     BuildCraftLaserManager.STRIPES_WRITE,

@@ -81,8 +81,8 @@ public class MarkerRenderer {
             }
         }
 
-        // Render preview beams for potential connections when holding a marker connector
-        if (isHoldingConnector(player)) {
+        // Render preview beams for potential connections when holding a marker wrench
+        if (isHoldingMarkerWrench(player)) {
             renderPossibleConnections(player);
         }
 
@@ -99,7 +99,7 @@ public class MarkerRenderer {
     /**
      * Renders preview beams between markers that can be validly connected.
      * These thin "possible" lasers show the player where connections can be made
-     * before actually clicking the marker connector item.
+     * before actually clicking with the marker wrench.
      */
     private static void renderPossibleConnections(Player player) {
         // Track rendered pairs to avoid drawing the same beam twice (A->B and B->A)
@@ -157,12 +157,13 @@ public class MarkerRenderer {
         buildcraft.core.client.VolumeBoxRenderer.renderAll();
     }
 
-    /** True if the player holds a marker connector in either hand (drives the possible-connection preview
-     *  beams). BuildCraft is one mod, so lib references the core item directly rather than through an
-     *  injected callback (mirrors {@link #renderVolumeBoxes()} calling {@code VolumeBoxRenderer} directly). */
-    public static boolean isHoldingConnector(Player player) {
-        return player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector
-            || player.getOffhandItem().getItem() instanceof buildcraft.core.item.ItemMarkerConnector;
+    /** True if the player holds a marker wrench (or its volume wrench subclass) in either hand (drives the
+     *  possible-connection preview beams). BuildCraft is one mod, so lib references the core item directly rather
+     *  than through an injected callback (mirrors {@link #renderVolumeBoxes()} calling {@code VolumeBoxRenderer}
+     *  directly). */
+    public static boolean isHoldingMarkerWrench(Player player) {
+        return player.getMainHandItem().getItem() instanceof buildcraft.core.item.ItemMarkerWrench
+            || player.getOffhandItem().getItem() instanceof buildcraft.core.item.ItemMarkerWrench;
     }
 
     /** Called by connection renderInWorld() implementations to get the current PoseStack */

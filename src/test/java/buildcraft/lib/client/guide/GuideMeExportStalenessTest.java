@@ -93,7 +93,7 @@ class GuideMeExportStalenessTest {
             .getAsJsonObject();
         for (String key : langKeys) {
             JsonElement v = lang.get(key);
-            String value = v == null ? "\0" : v.getAsString();
+            String value = v == null || v.isJsonNull() ? "\0" : v.getAsString();
             h.update((key + "=" + value + "\n").getBytes(StandardCharsets.UTF_8));
         }
         return hex(h);

@@ -318,7 +318,7 @@ def link(a, page, ex):
 def recipe_tags(name, a, ex):
     stack = a.get("stack")
     if not stack and a.get("id"):
-        return single_recipe(a["id"], ex)
+        return single_recipe(a["id"], ex, a.get("type"))
     if not stack:
         return ""
     parts = []
@@ -334,10 +334,12 @@ def recipe_tags(name, a, ex):
             parts.append(f"**Used to craft:** {links}{more}")
     return "\n" + "\n\n".join(parts) + "\n" if parts else ""
 
-def single_recipe(rid, ex):
+def single_recipe(rid, ex, kind=None):
     r = ex.guide.by_id.get(split_id(rid)[1])
     if r is None or r.get("type") not in DRAWABLE_RECIPE_TYPES:
-        ex.dropped_recipes += 1     # registered in code (assembly table)
+        if kind != "assembling":    # assembly recipes are registered in code; anything else is a typo
+            warn(f"recipe {rid}: no drawable data recipe with that id")
+        ex.dropped_recipes += 1
         return ""
     return f'\n<Recipe id="{NS}:{r["_id"]}" fallbackText="" />\n'
 
@@ -349,6 +351,8 @@ def recipe_cycle(a, ex):
     matches = [r for sid, r in sorted(ex.guide.by_id.items())
                if match and match in sid and r.get("type") in DRAWABLE_RECIPE_TYPES]
     if a.get("type") == "assembling" or not matches:
+        if a.get("type") != "assembling":
+            warn(f"recipe_cycle match={match!r}: no drawable data recipe matches")
         ex.dropped_recipes += 1
         return ""
     shown = single_recipe(f"{NS}:{matches[0]['_id']}", ex)

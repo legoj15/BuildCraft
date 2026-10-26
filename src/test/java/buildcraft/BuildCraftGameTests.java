@@ -364,6 +364,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_overheat_no_explode_default", () -> buildcraft.energy.EngineTester::testStirlingEngineOverheatNoExplodeDefault);
         reg.accept("buildcraftunofficial:engine_overheat_explodes_when_configured", () -> buildcraft.energy.EngineTester::testStirlingEngineExplodesWhenConfigured);
         reg.accept("buildcraftunofficial:engine_clear_overheat_api", () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
+        reg.accept("buildcraftunofficial:engine_wrench_clear_overheat_wears_once", () -> buildcraft.energy.EngineTester::testWrenchClearOverheatWearsOnce);
         reg.accept("buildcraftunofficial:engine_has_alternate_receiver_isolated", () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
         reg.accept("buildcraftunofficial:engine_redstone_no_fe_autoconvert", () -> buildcraft.energy.EngineTester::testRedstoneEngineDoesNotAutoconvertToFe);
         // Upstream 7.1.x tail sweep regression pins (autoworkbench #3307, comparator output).
@@ -681,6 +682,13 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through", () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
+
+        // The wrenches as real tools (issue #34): mining rules, wear, and the zombies that carry or drop one
+        reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);
+        reg.accept("buildcraftunofficial:wrench_wear_follows_wrench_actions", () -> buildcraft.core.item.WrenchToolTester::wearFollowsWrenchActions);
+        reg.accept("buildcraftunofficial:wrench_hit_on_a_mob_wears_one_use", () -> buildcraft.core.item.WrenchToolTester::hitOnAMobWearsOneUse);
+        reg.accept("buildcraftunofficial:zombies_sometimes_carry_a_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesCarryAWrench);
+        reg.accept("buildcraftunofficial:zombies_sometimes_drop_a_worn_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesDropAWornWrench);
 
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);

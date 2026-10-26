@@ -384,6 +384,9 @@ public class FillerOwnedVolumeBoxTester {
             if (boxes.volumeBoxes.contains(free)) {
                 throw new IllegalStateException("Control: the sneak-click did not remove an undragged box either");
             }
+            if (wrench.getDamageValue() != 0) {
+                throw new IllegalStateException("Removing a volume box wore the Volume Wrench");
+            }
             helper.succeed();
         } finally {
             if (boxes.volumeBoxes.remove(free)) {
@@ -479,6 +482,9 @@ public class FillerOwnedVolumeBoxTester {
                         boxes.volumeBoxes.remove(free);
                         boxes.markDirtyAndBroadcast();
                         throw new IllegalStateException("Control: the sneak-click did not remove a free box either");
+                    }
+                    if (wrench.getDamageValue() != 0) {
+                        throw new IllegalStateException("Removing a volume box wore the Volume Wrench");
                     }
                 } finally {
                     // Never leave a box in the dimension's saved data, whatever failed.

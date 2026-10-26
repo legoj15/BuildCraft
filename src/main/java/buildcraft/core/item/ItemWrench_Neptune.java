@@ -24,11 +24,26 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
 
+/**
+ * The basic wrench, and a real tool: it has durability, can be enchanted and mended, and hits like a light tool.
+ * Every {@link #wrenchUsed} costs one use; the {@link WrenchTier} says what else it is made of.
+ */
 public class ItemWrench_Neptune extends Item implements IToolWrench {
     private static final Identifier ADVANCEMENT = Identifier.parse("buildcraftunofficial:wrenched");
 
+    //? if <1.21.10 {
+    /*private final WrenchTier tier;*/
+    //?}
+
     public ItemWrench_Neptune(Item.Properties properties) {
-        super(properties);
+        this(properties, WrenchTier.IRON);
+    }
+
+    protected ItemWrench_Neptune(Item.Properties properties, WrenchTier tier) {
+        super(tier.apply(properties));
+        //? if <1.21.10 {
+        /*this.tier = tier;*/
+        //?}
     }
 
     @Override
@@ -37,12 +52,46 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
         return true;
     }
 
+    /**
+     * The durability hook {@link IToolWrench#wrenchUsed} documents: one use per successful wrench action. The swing
+     * comes first because breaking the wrench empties the stack the swing animation is read from. A creative
+     * player's wrench does not wear (the stack's own rule), and nothing may read {@code wrench} afterwards: it can be
+     * empty.
+     */
     @Override
     public void wrenchUsed(Player player, net.minecraft.world.InteractionHand hand, ItemStack wrench,
             HitResult rayTrace) {
         AdvancementUtil.unlockAdvancement(player, ADVANCEMENT);
         EntityUtil.swing(player, hand);
+        wrench.hurtAndBreak(1, player, hand == net.minecraft.world.InteractionHand.MAIN_HAND
+            ? net.minecraft.world.entity.EquipmentSlot.MAINHAND : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
     }
+
+    //? if <1.21.10 {
+    /*// 1.21.1 has no enchantable/repairable/weapon components: the item answers those questions itself.
+    @Override
+    public int getEnchantmentValue(ItemStack stack) {
+        return tier.enchantmentValue();
+    }
+
+    @Override
+    public boolean isValidRepairItem(ItemStack stack, ItemStack repairWith) {
+        return tier.repairs(repairWith) || super.isValidRepairItem(stack, repairWith);
+    }
+
+    @Override
+    public boolean hurtEnemy(ItemStack stack, net.minecraft.world.entity.LivingEntity target,
+            net.minecraft.world.entity.LivingEntity attacker) {
+        return true;
+    }
+
+    // One use per hit on a mob (a vanilla tool costs two); the 1.21.10+ twin is the weapon component.
+    @Override
+    public void postHurtEnemy(ItemStack stack, net.minecraft.world.entity.LivingEntity target,
+            net.minecraft.world.entity.LivingEntity attacker) {
+        stack.hurtAndBreak(1, attacker, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+    }*/
+    //?}
 
     @Override
     public boolean doesSneakBypassUse(ItemStack stack, net.minecraft.world.level.LevelReader level,

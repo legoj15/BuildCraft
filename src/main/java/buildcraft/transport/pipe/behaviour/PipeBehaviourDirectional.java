@@ -78,12 +78,18 @@ public abstract class PipeBehaviourDirectional extends PipeBehaviour {
         EnumPipePart part) {
         // 1.12.2: only respond when player holds a wrench (EntityUtil.getWrenchHand)
         if (isHoldingWrench(player)) {
+            boolean turned = false;
             if (part == EnumPipePart.CENTER) {
-                return advanceFacing();
+                turned = advanceFacing();
             } else if (part.face != getCurrentDir() && canFaceDirection(part.face)) {
                 setCurrentDir(part.face);
-                return true;
+                turned = true;
             }
+            if (turned && !pipe.getHolder().getPipeWorld().isClientSide()) {
+                // 1.12.2 fired the wrench callback here too: the swing, the `wrenched` advancement and the wear.
+                buildcraft.lib.misc.EntityUtil.activateWrench(player, trace);
+            }
+            return turned;
         }
         return false;
     }

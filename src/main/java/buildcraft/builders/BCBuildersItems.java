@@ -7,6 +7,7 @@ package buildcraft.builders;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import buildcraft.lib.item.ItemEnchantableMachine;
 import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.api.enums.EnumSnapshotType;
@@ -37,8 +38,8 @@ public class BCBuildersItems {
     public static final DeferredItem<BlockItem> REPLACER = ITEMS
             .registerSimpleBlockItem(BCBuildersBlocks.REPLACER);
 
-    public static final DeferredItem<BlockItem> QUARRY = ITEMS
-            .registerSimpleBlockItem(BCBuildersBlocks.QUARRY);
+    public static final DeferredItem<ItemEnchantableMachine> QUARRY = RegistrationUtilBC.registerBlockItem(ITEMS,
+            BCBuildersBlocks.QUARRY, ItemEnchantableMachine::new);
 
     public static final DeferredItem<ItemSnapshot> BLUEPRINT_CLEAN = RegistrationUtilBC.registerItem(ITEMS,
             "blueprint_clean",

@@ -20,10 +20,14 @@ import java.io.File
 // authored in the 26.3 form and every node below 26.3 rewrites its COPIED output here (src stays
 // canonical; the 26.3 node only validates).
 //
+// An entry's loot function is the same split: 26.3 takes ONE "modifier" object dispatched on "type", every
+// older node a "functions" list dispatched on "function".
+//
 // Deliberately narrow: only the shapes BC ships are converted (composite loot entries recurse through
-// "children"). Anything else (functions/"modifier", entity_properties predicates, predicate references,
-// untested triggers, a non-object root/criteria/conditions) fails the build with a message naming the
-// file, so a new data file cannot silently mis-load on one side.
+// "children"). Anything else (a pool's or the table's "modifier", an unverified function, a function's own
+// conditions, entity_properties predicates, predicate references, untested triggers, a non-object
+// root/criteria/conditions) fails the build with a message naming the file, so a new data file cannot silently
+// mis-load on one side.
 //
 // validate=true on every node: the 26.3-form check also catches an old-form key added to src,
 // which 26.3 would otherwise ignore without a word.
@@ -38,6 +42,13 @@ object DataDownportPre263 {
         "minecraft:all_of",
         "minecraft:any_of",
         "minecraft:inverted"
+    )
+
+    // Loot functions whose own fields are spelled identically on every node (verified in .neoforge-ref for
+    // 1.21.1 .. 26.3: copy_components takes "source", "include" and "exclude" everywhere, and "block_entity"
+    // is a valid source name on every node); only the dispatch key and the list-vs-single wrapping differ.
+    private val STABLE_FUNCTIONS = setOf(
+        "minecraft:copy_components"
     )
 
     // Triggers whose condition fields (besides "player" and recipe_crafted's "recipes") read the same
@@ -75,11 +86,32 @@ object DataDownportPre263 {
         return out
     }
 
-    // A loot pool or entry: "condition" -> "conditions": [...]; functions are not supported.
+    // 26.3 entry modifier object -> pre-26.3 function object (renames the dispatch key).
     @Suppress("UNCHECKED_CAST")
-    private fun convertConditionHolder(ctx: Ctx, m: MutableMap<String, Any?>) {
+    private fun convertFunction(ctx: Ctx, node: Any?): Map<String, Any?> {
+        val m = node as? Map<String, Any?>
+            ?: ctx.fail("loot modifier must be one inline object, got: $node (function lists and references are not down-ported)")
+        if (m.containsKey("function")) ctx.fail("loot modifier uses the pre-26.3 \"function\" key; author it with \"type\": $m")
+        val type = m["type"] as? String ?: ctx.fail("loot modifier has no \"type\": $m")
+        if (type !in STABLE_FUNCTIONS) ctx.fail("loot function $type has no verified down-port; check its codec on every node and add it to STABLE_FUNCTIONS")
+        if (m.containsKey("condition") || m.containsKey("conditions")) ctx.fail("a loot function's own conditions have no down-port yet: $m")
+        val out = linkedMapOf<String, Any?>("function" to type)
+        for ((k, v) in m) {
+            if (k != "type") out[k] = v
+        }
+        return out
+    }
+
+    // A loot pool or entry: "condition" -> "conditions": [...]. An entry's "modifier" -> "functions": [...]
+    // (allowModifier); a pool's or the table's has no down-port.
+    @Suppress("UNCHECKED_CAST")
+    private fun convertConditionHolder(ctx: Ctx, m: MutableMap<String, Any?>, allowModifier: Boolean) {
         if (m.containsKey("conditions")) ctx.fail("uses the pre-26.3 \"conditions\" list; author a single \"condition\" object")
-        if (m.containsKey("functions") || m.containsKey("modifier")) ctx.fail("loot functions/modifiers have no down-port yet")
+        if (m.containsKey("functions")) ctx.fail("uses the pre-26.3 \"functions\" list; author a single \"modifier\" object")
+        if (m.containsKey("modifier")) {
+            if (!allowModifier) ctx.fail("a pool's or table's loot modifier has no down-port yet (only an entry's)")
+            m["functions"] = listOf(convertFunction(ctx, m.remove("modifier")))
+        }
         if (m.containsKey("condition")) {
             m["conditions"] = listOf(convertCondition(ctx, m.remove("condition")))
         }
@@ -91,7 +123,7 @@ object DataDownportPre263 {
     @Suppress("UNCHECKED_CAST")
     private fun convertEntry(ctx: Ctx, e: Any?) {
         val entry = e as? MutableMap<String, Any?> ?: ctx.fail("entry is not an object")
-        convertConditionHolder(ctx, entry)
+        convertConditionHolder(ctx, entry, allowModifier = true)
         if (entry.containsKey("children")) {
             val children = entry["children"] as? List<Any?> ?: ctx.fail("entry \"children\" must be a list: ${entry["children"]}")
             children.forEach { convertEntry(ctx, it) }
@@ -103,7 +135,7 @@ object DataDownportPre263 {
         if (root.containsKey("functions") || root.containsKey("modifier")) ctx.fail("loot functions/modifiers have no down-port yet")
         (root["pools"] as? List<Any?>)?.forEach { p ->
             val pool = p as? MutableMap<String, Any?> ?: ctx.fail("pool is not an object")
-            convertConditionHolder(ctx, pool)
+            convertConditionHolder(ctx, pool, allowModifier = false)
             (pool["entries"] as? List<Any?>)?.forEach { convertEntry(ctx, it) }
         }
     }

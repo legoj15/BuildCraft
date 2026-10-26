@@ -620,6 +620,7 @@
     "buildcraftunofficial.configuration.mediumOilGenProb": "中型石油生成概率",
     "buildcraftunofficial.configuration.minePlayerProtected": "开采受玩家保护的方块",
     "buildcraftunofficial.configuration.miningMaxDepth": "最大开采深度",
+    "buildcraftunofficial.configuration.machineEnchantments": "采石场与矿井可附魔",
     "buildcraftunofficial.configuration.miningMultiplier": "开采倍率",
     "buildcraftunofficial.configuration.mjPerItem": "每物品 MJ 消耗",
     "buildcraftunofficial.configuration.mjPerMillibucket": "每 mB 流体 MJ 消耗",

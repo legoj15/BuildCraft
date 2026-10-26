@@ -13,6 +13,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
 import buildcraft.factory.item.ItemWaterGel;
+import buildcraft.lib.item.ItemEnchantableMachine;
 
 public class BCFactoryItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCFactory.MODID);
@@ -20,8 +21,8 @@ public class BCFactoryItems {
     public static final DeferredItem<BlockItem> AUTOWORKBENCH_ITEM = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.AUTOWORKBENCH_ITEM);
 
-    public static final DeferredItem<BlockItem> MINING_WELL = ITEMS.registerSimpleBlockItem(
-            BCFactoryBlocks.MINING_WELL);
+    public static final DeferredItem<ItemEnchantableMachine> MINING_WELL = RegistrationUtilBC.registerBlockItem(ITEMS,
+            BCFactoryBlocks.MINING_WELL, ItemEnchantableMachine::new);
 
     public static final DeferredItem<BlockItem> PUMP = ITEMS.registerSimpleBlockItem(
             BCFactoryBlocks.PUMP);

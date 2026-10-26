@@ -403,7 +403,12 @@ public final class Pipe implements IPipe, IDebuggable {
     public BlockEntity getConnectedTile(Direction side) {
         if (connected.containsKey(side)) {
             BlockEntity offset = getHolder().getNeighbourTile(side);
-            if (offset == null && !getHolder().getPipeWorld().isClientSide()) {
+            // A missing tile is stale only where the block should carry one: a cauldron or composter connects
+            // through a block-only capability and has none. Read only a loaded neighbour (an off-tick caller).
+            BlockPos nPos = getHolder().getPipePos().relative(side);
+            if (offset == null && !getHolder().getPipeWorld().isClientSide()
+                    && getHolder().getPipeWorld().isLoaded(nPos)
+                    && getHolder().getPipeWorld().getBlockState(nPos).hasBlockEntity()) {
                 markForUpdate();
             } else {
                 return offset;

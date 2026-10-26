@@ -961,8 +961,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                                 && pipe.getConnectedType(part.face) == IPipe.ConnectedType.TILE) {
                             // A target that only takes whole steps larger than one tick's transfer (a cauldron moves
                             // 1000 mB) refused the slice: offer it everything that has settled in this section.
-                            // Never a pipe neighbour: a full pipe refuses every amount, and this would fire its
-                            // TryInsert event twice a tick.
+                            // TILE faces only, so never a pipe neighbour (a full pipe refuses every amount, and this
+                            // would fire its TryInsert event twice a tick). A pipe face is TILE only behind the
+                            // neighbour's blocking plug, where BCTransport's pipe_holder provider gives no fluid handler.
                             int settled = section.getSettled();
                             try (Transaction tx = Transaction.openRoot()) {
                                 filled = handler.insert(resource, settled, tx);
@@ -987,8 +988,9 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                                 && pipe.getConnectedType(part.face) == IPipe.ConnectedType.TILE) {
                             // A target that only takes whole steps larger than one tick's transfer (a cauldron moves
                             // 1000 mB) refused the slice: offer it everything that has settled in this section.
-                            // Never a pipe neighbour: a full pipe refuses every amount, and this would fire its
-                            // TryInsert event twice a tick.
+                            // TILE faces only, so never a pipe neighbour (a full pipe refuses every amount, and this
+                            // would fire its TryInsert event twice a tick). A pipe face is TILE only behind the
+                            // neighbour's blocking plug, where BCTransport's pipe_holder provider gives no fluid handler.
                             int settled = section.getSettled();
                             filled = handler.fill(currentFluid.copyWithAmount(settled), IFluidHandler.FluidAction.EXECUTE);
                             if (filled > 0) {

@@ -59,6 +59,11 @@ public class CauldronPipeTester {
         pipe.onTick();
         helper.assertTrue(pipe.isConnected(TO_CAULDRON) && pipe.getConnectedType(TO_CAULDRON) == ConnectedType.TILE,
             "Fluid pipe should connect to the cauldron as a TILE neighbour");
+        // Its other faces see air, which has no block entity either and must still not connect.
+        for (Direction face : Direction.values()) {
+            helper.assertTrue(face == TO_CAULDRON || !pipe.isConnected(face),
+                "Fluid pipe must not connect to the air on its " + face + " face");
+        }
         return pipe;
     }
 

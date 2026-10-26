@@ -1,6 +1,6 @@
 # Written by scripts/guide-to-guideme.py; GuideMeExportStalenessTest checks it. Do not edit.
-inputs 6b1c3308c230f3e17838b393605251cb6900f9d3c61a6c9a50e90a36da65959b
-outputs 865a458c7f754b16411f79fd6db71e8b7f58a4a96a903233b356613e2c633cd3
+inputs f529c0199b9559eea12845a88056dc38f09342549d6ffb83e7a575306b61eebf
+outputs 8c3a529c1d8640bfb72534ce77ec771d9c67ffe872997a6a089f8cc5dafd11e2
 lang 10
 lang 15
 lang 5
@@ -157,7 +157,7 @@ lang item.buildcraftunofficial.gear_wood
 lang item.buildcraftunofficial.gelled_water
 lang item.buildcraftunofficial.guide
 lang item.buildcraftunofficial.list
-lang item.buildcraftunofficial.marker_connector
+lang item.buildcraftunofficial.marker_wrench
 lang item.buildcraftunofficial.paintbrush
 lang item.buildcraftunofficial.pipe_clay_fluid
 lang item.buildcraftunofficial.pipe_clay_item
@@ -218,5 +218,6 @@ lang item.buildcraftunofficial.robot_station
 lang item.buildcraftunofficial.schematic_single_used
 lang item.buildcraftunofficial.template_clean
 lang item.buildcraftunofficial.volume_box
+lang item.buildcraftunofficial.volume_wrench
 lang item.buildcraftunofficial.waterproof
 lang item.buildcraftunofficial.wrench

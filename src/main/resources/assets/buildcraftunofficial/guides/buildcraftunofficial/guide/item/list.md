@@ -2,7 +2,7 @@
 navigation:
   title: "List"
   parent: contents/building/tool.md
-  position: 19
+  position: 20
   icon: buildcraftunofficial:list
 item_ids:
   - buildcraftunofficial:list

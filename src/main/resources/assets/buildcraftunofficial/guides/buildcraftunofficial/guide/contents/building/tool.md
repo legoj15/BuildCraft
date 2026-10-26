@@ -2,7 +2,7 @@
 navigation:
   title: "Tools"
   parent: contents/building.md
-  position: 17
+  position: 18
   icon: buildcraftunofficial:debugger
 ---
 

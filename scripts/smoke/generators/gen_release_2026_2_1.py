@@ -350,8 +350,9 @@ print("wrote %s (%d steps)" % (os.path.normpath(OUT), len(S)))
 
 # ══ F: what the 2026-09-26 smoke still owed (its own scenario, release-2026-2-1-f) ═════════════════════════════
 # Volume boxes live in the level's saved data, which no command reaches, so the rig is made by hand each run: a
-# sneak-click with the Marker Connector first removes the box an earlier run left (the clear-and-floor fill has already
-# taken away the Filler that locked it), then a Volume Box makes a 1x1x1 box and a connector drag grows it to 3x3x3.
+# sneak-click with the Marker Wrench first removes the box an earlier run left (the clear-and-floor fill has already
+# taken away the Filler that locked it), then a Volume Box makes a 1x1x1 box and a Volume Wrench drag grows it to 3x3x3
+# (a Marker Wrench cannot pick up a creative box's corner).
 # While a corner is held the server puts it at floor(eye + look * dist), where dist is fixed by the click that grabbed
 # it (max(1.5, hit distance + 0.5)), so the drag is solved here: the release aim must land deep inside the target block.
 # A Filler finds its box when it is PLACED (onPlacedBy: the block behind it is inside a volume box), so it is placed by
@@ -518,8 +519,8 @@ def f2_view_away(settle=1500):
     fwait(settle)
 
 
-fstep(label="F2: go to the drag spot with the Marker Connector", do="tp", at=list(FP1), yaw=0, pitch=20)
-fstep(do="hold", item="buildcraftunofficial:marker_connector")
+fstep(label="F2: go to the drag spot with the Marker Wrench", do="tp", at=list(FP1), yaw=0, pitch=20)
+fstep(do="hold", item="buildcraftunofficial:marker_wrench")
 fstep(label="F2: sneak (removes the box an earlier run left)", do="keybind", key="key.sneak", action="press")
 faim(FCENTRE)
 for i in range(3):  # a stale drag cancels first, then the box
@@ -530,9 +531,9 @@ fstep(do="hold", item="buildcraftunofficial:volume_box")
 faim((FB[0] + 0.5, FB[1] - 0.001, FB[2] + 0.5))
 fstep(label="F2: a Volume Box on the floor's top face makes a 1x1x1 box above it", do="use")
 fwait(500)
-fstep(do="hold", item="buildcraftunofficial:marker_connector")
+fstep(do="hold", item="buildcraftunofficial:volume_wrench")
 faim(FGRAB)
-fstep(label="F2: grab the box's corner with the Marker Connector", do="use")
+fstep(label="F2: grab the box's corner with the Volume Wrench", do="use")
 faim(FRELEASE)
 fwait(800)
 fstep(label="F2: release it two blocks over, up and back (a 3x3x3 box)", do="use")

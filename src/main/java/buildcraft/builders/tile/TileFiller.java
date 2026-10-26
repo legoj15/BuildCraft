@@ -79,6 +79,7 @@ import buildcraft.builders.snapshot.TemplateBuilder;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
+import buildcraft.core.tile.TileMarkerVolume;
 import buildcraft.builders.BCBuildersEventDist;
 
 public class TileFiller extends TileBC_Neptune
@@ -183,6 +184,13 @@ public class TileFiller extends TileBC_Neptune
         BCBuildersEventDist.INSTANCE.validateFiller(this);
     }
 
+    /** The box this Filler owns goes with it (see {@link #followOwnedBox}). */
+    @Override
+    public void onBlockRemoved(Level level, BlockPos pos) {
+        super.onBlockRemoved(level, pos);
+        LevelSavedDataVolumeBoxes.get(level).removeOwnedBy(pos);
+    }
+
     // ==================== Placement ====================
 
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
@@ -198,11 +206,10 @@ public class TileFiller extends TileBC_Neptune
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
 
-        // Try volume box system first
+        // Try volume box system first. A box another machine owns is that machine's area, not one to adopt.
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumeBox volumeBox = volumeBoxes.getLockableVolumeBoxAt(offsetPos);
-        BlockEntity tile = level.getBlockEntity(offsetPos);
-        IAreaProvider area = tile instanceof IAreaProvider provider ? provider : volumeBoxes.getOneShotAreaAt(offsetPos);
+        VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
+        IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
         if (volumeBox != null) {
             box.reset();
@@ -211,10 +218,20 @@ public class TileFiller extends TileBC_Neptune
             lockVolumeBox(volumeBoxes, volumeBox, blockState);
             markerBox = false;
         } else if (area != null) {
+            // A lone marker has no connection: the Filler works on its one cell, but there is nothing to take over.
+            boolean taken = !(area instanceof TileMarkerVolume marker) || marker.getCurrentConnection() != null;
             box.reset();
             box.setMin(area.min());
             box.setMax(area.max());
             area.removeFromWorld();
+            if (taken) {
+                // The markers, or the floating box lifted off them, become a box this Filler owns, which the Volume
+                // Wrench can resize. A Quarry just consumes such a box; this one is kept as the Filler's own, so no
+                // second box is left behind. markerBox stays on: the renderer leaves the area to the box while there
+                // is one (a copy of this tile has none).
+                volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
+                    Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE);
+            }
         }
 
         updateBuildingInfo();
@@ -265,7 +282,14 @@ public class TileFiller extends TileBC_Neptune
         BlockState blockState = getBlockState();
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         LevelSavedDataVolumeBoxes savedBoxes = volumeBoxes.get();
-        VolumeBox volumeBox = savedBoxes.getLockableVolumeBoxAt(worldPosition.relative(facing.getOpposite()));
+        BlockPos behind = worldPosition.relative(facing.getOpposite());
+        VolumeBox dragged = savedBoxes.getVolumeBoxAt(behind);
+        if (dragged != null && dragged.isEditing()) {
+            // Saved mid-drag: the drag ends on a later tick (cancelled once its player is found missing), look again then.
+            orphanedBoxChecked = false;
+            return;
+        }
+        VolumeBox volumeBox = savedBoxes.getLockableVolumeBoxAt(behind);
         if (volumeBox == null) {
             return;
         }
@@ -337,6 +361,9 @@ public class TileFiller extends TileBC_Neptune
         if (lockedTicks < 0) {
             lockedTicks = 0;
         }
+        if (followOwnedBox()) {
+            return;
+        }
         if (mode == Mode.OFF || isFinished()) {
             return;
         }
@@ -371,6 +398,42 @@ public class TileFiller extends TileBC_Neptune
                 MessageUtil.sendUpdateToTrackingPlayers(this);
             }
         }
+    }
+
+    // ==================== Owned box ====================
+
+    /**
+     * Keeps the working area in step with the volume box this Filler owns, if it owns one (it does when it took over
+     * survival markers or a floating box lifted off them; a Filler from before boxes were owned has none and keeps its
+     * area as it is). The box is
+     * looked up by its owner position rather than by an id saved on the tile, so a copy of this tile's data (a
+     * blueprint, a structure) can never point a second Filler at it.
+     * <p>
+     * {@link #box} stays the area the builder works on, mirrored from the owned box only once a drag is confirmed:
+     * the builder's snapshot is laid out for one fixed area, so it must never see a box that changes under it. While
+     * a drag is under way, the Filler waits; a confirmed new size restarts the job from scratch on the new area, and a
+     * cancelled drag puts the old size back, so nothing changes.
+     *
+     * @return true while the box is being dragged: the Filler does no work this tick.
+     */
+    private boolean followOwnedBox() {
+        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getOwnedBy(worldPosition);
+        if (owned == null) {
+            return false;
+        }
+        if (owned.isEditing()) {
+            return true;
+        }
+        if (!box.isInitialized() || !owned.box.min().equals(box.min()) || !owned.box.max().equals(box.max())) {
+            box.reset();
+            box.setMin(owned.box.min());
+            box.setMax(owned.box.max());
+            finished = false;
+            updateBuildingInfo();
+            setChanged();
+            markForRenderUpdate();
+        }
+        return false;
     }
 
     // ==================== Statement Change ====================

@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:function",
+    "function":  "buildcraftunofficial:filler_lone_marker_gets_no_owned_box",
+    "environment":  "buildcraftunofficial:filler_lone_marker_gets_no_owned_box",
+    "structure":  "minecraft:empty",
+    "max_ticks":  350,
+    "setup_ticks":  0,
+    "required":  true
+}

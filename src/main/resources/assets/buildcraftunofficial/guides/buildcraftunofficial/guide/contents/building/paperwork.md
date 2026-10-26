@@ -2,7 +2,7 @@
 navigation:
   title: "Paperwork"
   parent: contents/building.md
-  position: 13
+  position: 14
   icon: buildcraftunofficial:blueprint_clean
 ---
 

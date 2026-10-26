@@ -2,7 +2,7 @@
 navigation:
   title: "Template"
   parent: contents/building/paperwork.md
-  position: 16
+  position: 17
   icon: buildcraftunofficial:template_clean
 item_ids:
   - buildcraftunofficial:template_clean

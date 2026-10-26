@@ -35,7 +35,7 @@ import buildcraft.lib.marker.MarkerSubCache;
 
 /**
  * Shows the length of the marker laser under the crosshair, just below it. Connected lasers always count; the
- * thin "possible connection" previews count only while a marker connector is held, the same time they are drawn.
+ * thin "possible connection" previews count only while a marker wrench is held, the same time they are drawn.
  * The pick runs once a client tick; the GUI layer only draws the result.
  */
 public final class MarkerLengthIndicator {
@@ -74,7 +74,7 @@ public final class MarkerLengthIndicator {
                 }
             }
         }
-        if (MarkerRenderer.isHoldingConnector(player)) {
+        if (MarkerRenderer.isHoldingMarkerWrench(player)) {
             for (MarkerCache<? extends MarkerSubCache<?>> cache : MarkerCache.CACHES) {
                 MarkerSubCache<?> subCache = cache.getSubCache(mc.level);
                 if (subCache.getPossibleLaserType() == null) {

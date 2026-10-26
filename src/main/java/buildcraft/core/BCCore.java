@@ -182,7 +182,7 @@ public class BCCore {
             }
         );
 
-        // Volume Box: send initial state to player on login, resume any paused edits
+        // Volume Box: send initial state to player on login
         NeoForge.EVENT_BUS.addListener(
             net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent.class,
             loginEvent -> {
@@ -191,9 +191,6 @@ public class BCCore {
                     buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes data =
                         buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl);
                     data.sendTo(sp);
-                    data.volumeBoxes.stream()
-                        .filter(vb -> vb.isPausedEditingBy(sp))
-                        .forEach(buildcraft.core.marker.volume.VolumeBox::resumeEditing);
                 }
             }
         );

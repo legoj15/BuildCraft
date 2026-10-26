@@ -101,10 +101,11 @@ public class BCCoreCreativeTabs {
                                 for (DyeColor color : DyeColor.values()) {
                                     output.accept(ItemPaintbrush_BC8.createColoredStack(BCCoreItems.PAINTBRUSH.get(), color));
                                 }
-                                // List, Map, Connector, Volume Box
+                                // List, Map, Marker and Volume Wrenches, Volume Box
                                 output.accept(BCCoreItems.LIST.get());
                                 output.accept(BCCoreItems.MAP_LOCATION.get());
-                                output.accept(BCCoreItems.MARKER_CONNECTOR.get());
+                                output.accept(BCCoreItems.MARKER_WRENCH.get());
+                                output.accept(BCCoreItems.VOLUME_WRENCH.get());
                                 output.accept(BCCoreItems.VOLUME_BOX.get());
                                 // Snapshots
                                 output.accept(BCBuildersItems.BLUEPRINT_CLEAN.get());

@@ -731,10 +731,11 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
                 return InteractionResult.PASS;
             }
             if (level().isClientSide()) {
-                // Just the swing: EntityUtil.wrenchUsed wants a HitResult that an entity interaction has no
-                // honest one of, and a BuildCraft wrench's own callback is about blocks.
+                // Just the swing here; the server's wrenchUsed below swings for the others and wears the wrench.
                 EntityUtil.swing(player, hand);
             } else {
+                // Dismantling is a wrench action like a rotation: it costs the wrench one use.
+                EntityUtil.wrenchUsed(player, hand, stack, new net.minecraft.world.phys.EntityHitResult(this));
                 onRobotHit(false);
             }
             return InteractionResult.SUCCESS;

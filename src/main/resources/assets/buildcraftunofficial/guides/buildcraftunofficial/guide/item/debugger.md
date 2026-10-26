@@ -2,7 +2,7 @@
 navigation:
   title: "Debugger"
   parent: contents/building/tool.md
-  position: 18
+  position: 19
   icon: buildcraftunofficial:debugger
 item_ids:
   - buildcraftunofficial:debugger

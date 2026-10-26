@@ -144,6 +144,9 @@ public final class LegacyAliases {
         // 1.12.2 pre-flatten item renames.
         item(id(CORE, "fragile_fluid_shard"), bc("fragile_fluid_container"));
         item(id(FACTORY, "gel"), bc("gelled_water"));
+        // The marker connector became the marker wrench (second of the three wrench tiers).
+        item(bc("marker_connector"), bc("marker_wrench"));
+        item(id(CORE, "marker_connector"), bc("marker_wrench"));
     }
 
     // ─── 1.12.2 metadata families → primary variant ─────────────────────

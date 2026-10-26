@@ -1,5 +1,7 @@
 {
   "values": [
-    "buildcraftunofficial:wrench"
+    "buildcraftunofficial:wrench",
+    "buildcraftunofficial:marker_wrench",
+    "buildcraftunofficial:volume_wrench"
   ]
 }

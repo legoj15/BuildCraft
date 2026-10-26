@@ -371,6 +371,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:engine_overheat_no_explode_default", () -> buildcraft.energy.EngineTester::testStirlingEngineOverheatNoExplodeDefault);
         reg.accept("buildcraftunofficial:engine_overheat_explodes_when_configured", () -> buildcraft.energy.EngineTester::testStirlingEngineExplodesWhenConfigured);
         reg.accept("buildcraftunofficial:engine_clear_overheat_api", () -> buildcraft.energy.EngineTester::testEngineClearOverheatApi);
+        reg.accept("buildcraftunofficial:engine_wrench_clear_overheat_wears_once", () -> buildcraft.energy.EngineTester::testWrenchClearOverheatWearsOnce);
         reg.accept("buildcraftunofficial:engine_has_alternate_receiver_isolated", () -> buildcraft.energy.EngineTester::testEngineHasAlternateReceiverIsolated);
         reg.accept("buildcraftunofficial:engine_redstone_no_fe_autoconvert", () -> buildcraft.energy.EngineTester::testRedstoneEngineDoesNotAutoconvertToFe);
         // Upstream 7.1.x tail sweep regression pins (autoworkbench #3307, comparator output).
@@ -690,8 +691,21 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
 
+        // The wrenches as real tools (issue #34): mining rules, wear, and the zombies that carry or drop one
+        reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);
+        reg.accept("buildcraftunofficial:wrench_wear_follows_wrench_actions", () -> buildcraft.core.item.WrenchToolTester::wearFollowsWrenchActions);
+        reg.accept("buildcraftunofficial:wrench_hit_on_a_mob_wears_one_use", () -> buildcraft.core.item.WrenchToolTester::hitOnAMobWearsOneUse);
+        reg.accept("buildcraftunofficial:zombies_sometimes_carry_a_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesCarryAWrench);
+        reg.accept("buildcraftunofficial:zombies_sometimes_drop_a_worn_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesDropAWornWrench);
+
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
+        // Survival markers a Filler takes over become a volume box it owns: no wrench removes it, and it goes with the Filler.
+        reg.accept("buildcraftunofficial:filler_owns_box_from_survival_markers", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::survivalMarkersBecomeABoxTheFillerOwns);
+        reg.accept("buildcraftunofficial:filler_owns_box_from_floating_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::floatingBoxBecomesTheFillersOwnedBox);
+        reg.accept("buildcraftunofficial:machines_leave_markers_backing_lifted_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::machinesLeaveMarkersBackingALiftedBox);
+        reg.accept("buildcraftunofficial:filler_lone_marker_gets_no_owned_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::aLoneMarkerGivesTheFillerNoOwnedBox);
+        reg.accept("buildcraftunofficial:sneak_use_leaves_box_another_player_drags", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::sneakUseLeavesABoxAnotherPlayerDrags);
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);

@@ -32,7 +32,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
@@ -76,6 +75,7 @@ import buildcraft.builders.snapshot.Template;
 import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
+import buildcraft.core.tile.TileMarkerVolume;
 
 public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, IBCMenuProvider {
 
@@ -259,6 +259,13 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         buildcraft.builders.BCBuildersEventDist.INSTANCE.validateArchitectTable(this);
     }
 
+    /** The box this table owns goes with it (see {@link #followOwnedBox}). */
+    @Override
+    public void onBlockRemoved(net.minecraft.world.level.Level level, BlockPos pos) {
+        super.onBlockRemoved(level, pos);
+        LevelSavedDataVolumeBoxes.get(level).removeOwnedBy(pos);
+    }
+
 
     public void onPlacedBy(@Nullable LivingEntity placer, ItemStack stack) {
         if (level == null || level.isClientSide()) return;
@@ -269,10 +276,10 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         BlockPos offsetPos = worldPosition.relative(facing.getOpposite());
 
+        // A box another machine owns is that machine's area, not one to adopt.
         LevelSavedDataVolumeBoxes volumeBoxes = LevelSavedDataVolumeBoxes.get(level);
-        VolumeBox volumeBox = volumeBoxes.getLockableVolumeBoxAt(offsetPos);
-        BlockEntity tile = level.getBlockEntity(offsetPos);
-        IAreaProvider area = tile instanceof IAreaProvider provider ? provider : volumeBoxes.getOneShotAreaAt(offsetPos);
+        VolumeBox volumeBox = volumeBoxes.getFreeVolumeBoxAt(offsetPos);
+        IAreaProvider area = volumeBoxes.getTakeableAreaAt(offsetPos);
 
         if (volumeBox != null) {
             box.reset();
@@ -291,12 +298,22 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             );
             volumeBoxes.markDirtyAndBroadcast();
         } else if (area != null) {
+            // A lone marker has no connection: the table scans its one cell, but there is nothing to take over.
+            boolean taken = !(area instanceof TileMarkerVolume marker) || marker.getCurrentConnection() != null;
             box.reset();
             box.setMin(area.min());
             box.setMax(area.max());
-            markerBox = true;
             isValid = true;
             area.removeFromWorld();
+            markerBox = true;
+            if (taken) {
+                // The markers, or the floating box lifted off them, become a box this table owns, which the Volume
+                // Wrench can resize. A Quarry just consumes such a box; this one is kept as the table's own, so no
+                // second box is left behind. markerBox stays on: the renderer leaves the area to the box while there
+                // is one (a copy of this tile has none).
+                volumeBoxes.addOwnedBox(box.min(), box.max(), worldPosition, blockState.getBlock(),
+                    Lock.Target.TargetUsedByMachine.EnumType.STRIPES_READ);
+            }
         } else {
             isValid = false;
         }
@@ -315,6 +332,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     public void tick() {
         if (level == null) return;
         if (level.isClientSide()) return;
+        if (followOwnedBox()) return;
 
         ItemStack stackIn = invSnapshotIn.getStackInSlot(0);
         if (!stackIn.isEmpty() && invSnapshotOut.getStackInSlot(0).isEmpty() && isValid) {
@@ -377,6 +395,46 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
             );
             scannedThisTick.clear();
         }
+    }
+
+    /**
+     * Keeps the scan area in step with the volume box this table owns, if it owns one (it does when it took over
+     * survival markers or a floating box lifted off them; a table from before boxes were owned has none and keeps its
+     * area). Looked up by owner
+     * position, not by an id saved on the tile, so a copy of this tile's data can never point a second table at it.
+     * <p>
+     * {@link #box} stays the area scanned, mirrored from the owned box only once a drag is confirmed: a scan in
+     * progress indexes its buffers by the box size, so the box must not change under it. While a drag is under way,
+     * the table waits; a confirmed new size drops the scan in progress (and a refusal, which was about the old size),
+     * and the next tick starts it again on the new area. A cancelled drag puts the old size back, so nothing changes.
+     *
+     * @return true while the box is being dragged: the table does no work this tick.
+     */
+    private boolean followOwnedBox() {
+        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getOwnedBy(worldPosition);
+        if (owned == null) {
+            return false;
+        }
+        if (owned.isEditing()) {
+            return true;
+        }
+        if (!box.isInitialized() || !owned.box.min().equals(box.min()) || !owned.box.max().equals(box.max())) {
+            box.reset();
+            box.setMin(owned.box.min());
+            box.setMax(owned.box.max());
+            cachedLivePreview = null;
+            scanning = false;
+            scanInitialized = false;
+            scanRefused = false;
+            resetScanBuffers();
+            scannedThisTick.clear();
+            scanProgress = 0;
+            scanTotal = 0;
+            dropCountdown = 0;
+            setChanged();
+            markForRenderUpdate();
+        }
+        return false;
     }
 
     private void scanMultipleBlocks() {

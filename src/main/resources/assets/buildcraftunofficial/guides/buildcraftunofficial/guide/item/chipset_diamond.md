@@ -14,4 +14,4 @@ item_ids:
 
 The most refined and physically complex chipset. The density allows for gates to have three slot parameters.
 
-**Used to craft:** <ItemLink id="buildcraftunofficial:robot" />
+**Used to craft:** <ItemLink id="buildcraftunofficial:robot" />, <ItemLink id="buildcraftunofficial:volume_wrench" />

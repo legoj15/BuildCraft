@@ -70,7 +70,8 @@ public class BlockEngineStone_BC8 extends BlockEngineBase_BC8 {
                 engine.clearOverheat(player);
                 SoundUtil.playSlideSound(level, pos, state, InteractionResult.SUCCESS);
             }
-            EntityUtil.swing(player, hand);
+            // A successful wrench action like a rotation: swings, awards `wrenched`, and wears the wrench.
+            EntityUtil.wrenchUsed(player, hand, stack, hitResult);
             return BlockUtil.itemUseConsume();
         }
 

@@ -14,7 +14,8 @@ import net.minecraft.world.entity.EquipmentSlot;
 import buildcraft.core.item.ItemGoggles;
 import buildcraft.core.item.ItemWrench_Neptune;
 import buildcraft.core.item.ItemFragileFluidContainer;
-import buildcraft.core.item.ItemMarkerConnector;
+import buildcraft.core.item.ItemMarkerWrench;
+import buildcraft.core.item.ItemVolumeWrench;
 import buildcraft.core.item.ItemVolumeBox;
 import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
@@ -32,9 +33,13 @@ public class BCCoreItems {
                         "fragile_fluid_container",
                         ItemFragileFluidContainer::new, props -> props);
 
-        public static final DeferredItem<ItemMarkerConnector> MARKER_CONNECTOR = RegistrationUtilBC.registerItem(ITEMS,
-                        "marker_connector",
-                        ItemMarkerConnector::new, props -> props.stacksTo(1));
+        public static final DeferredItem<ItemMarkerWrench> MARKER_WRENCH = RegistrationUtilBC.registerItem(ITEMS,
+                        "marker_wrench",
+                        ItemMarkerWrench::new, props -> props.stacksTo(1));
+
+        public static final DeferredItem<ItemVolumeWrench> VOLUME_WRENCH = RegistrationUtilBC.registerItem(ITEMS,
+                        "volume_wrench",
+                        ItemVolumeWrench::new, props -> props.stacksTo(1));
 
         public static final DeferredItem<ItemVolumeBox> VOLUME_BOX = RegistrationUtilBC.registerItem(ITEMS,
                         "volume_box",

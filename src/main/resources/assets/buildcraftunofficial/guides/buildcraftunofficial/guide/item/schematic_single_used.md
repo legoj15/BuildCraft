@@ -2,7 +2,7 @@
 navigation:
   title: "Single Block Schematic"
   parent: contents/building/paperwork.md
-  position: 15
+  position: 16
   icon: buildcraftunofficial:schematic_single_used
 item_ids:
   - buildcraftunofficial:schematic_single_used

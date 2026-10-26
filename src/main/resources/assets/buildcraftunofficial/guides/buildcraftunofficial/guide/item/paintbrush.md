@@ -2,7 +2,7 @@
 navigation:
   title: "Paintbrush"
   parent: contents/building/tool.md
-  position: 20
+  position: 21
   icon: buildcraftunofficial:paintbrush
 item_ids:
   - buildcraftunofficial:paintbrush

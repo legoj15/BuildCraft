@@ -20,4 +20,4 @@ Its only made of wood so it must be upgraded for more demanding tasks...
 <RecipesFor id="buildcraftunofficial:gear_wood" fallbackText="" />
 </Row>
 
-**Used to craft:** <ItemLink id="buildcraftunofficial:engine_redstone" />, <ItemLink id="buildcraftunofficial:guide" />, <ItemLink id="buildcraftunofficial:marker_connector" />, <ItemLink id="buildcraftunofficial:paintbrush" />
+**Used to craft:** <ItemLink id="buildcraftunofficial:engine_redstone" />, <ItemLink id="buildcraftunofficial:guide" />, <ItemLink id="buildcraftunofficial:marker_wrench" />, <ItemLink id="buildcraftunofficial:paintbrush" />

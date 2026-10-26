@@ -20,4 +20,4 @@ Due to its strength, diamond gears allows for the most demanding of tasks to be 
 <RecipesFor id="buildcraftunofficial:gear_diamond" fallbackText="" />
 </Row>
 
-**Used to craft:** <ItemLink id="buildcraftunofficial:architect" />, <ItemLink id="buildcraftunofficial:assembly_table" />, <ItemLink id="buildcraftunofficial:builder" />, <ItemLink id="buildcraftunofficial:distiller" />, <ItemLink id="buildcraftunofficial:programming_table" />, <ItemLink id="buildcraftunofficial:quarry" />, <ItemLink id="buildcraftunofficial:zone_planner" />
+**Used to craft:** <ItemLink id="buildcraftunofficial:architect" />, <ItemLink id="buildcraftunofficial:assembly_table" />, <ItemLink id="buildcraftunofficial:builder" />, <ItemLink id="buildcraftunofficial:distiller" />, <ItemLink id="buildcraftunofficial:programming_table" />, <ItemLink id="buildcraftunofficial:quarry" />, <ItemLink id="buildcraftunofficial:volume_wrench" />, <ItemLink id="buildcraftunofficial:zone_planner" />

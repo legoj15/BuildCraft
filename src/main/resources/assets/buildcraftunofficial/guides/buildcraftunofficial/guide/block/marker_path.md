@@ -16,11 +16,11 @@ Instead of binding yourself to volumes, this alternative technology allows for t
 
 ## Information
 
-To connect path markers together, hold out a Marker Connector, and you will see the potential links.
+To connect path markers together, hold out a Marker Wrench, and you will see the potential links.
 
-- [Marker Connector](../item/marker_connector.md)
+- [Marker Wrench](../item/marker_wrench.md)
 
-While aimed at one of the links, interact with the marker connector and it will create the path between those two path markers. Interact with one of the path markers themselves to change the direction of the path.
+While aimed at one of the links, interact with the Marker Wrench and it will create the path between those two path markers. Interact with one of the path markers themselves to change the direction of the path.
 
 ## Used by
 

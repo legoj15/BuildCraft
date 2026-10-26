@@ -337,6 +337,7 @@ public class VanillaRotationTester {
                 "non-crouch wrench on trapdoor must PASS so block's useWithoutItem runs, got " + r1);
         assertTrue(helper.getBlockState(pos).getValue(TrapDoorBlock.FACING) == Direction.NORTH,
                 "non-crouch must NOT rotate the trapdoor — that would steal the open/close gesture");
+        assertTrue(wrench.getDamageValue() == 0, "a click that turned nothing must not wear the wrench");
 
         // --- Crouch: onItemUseFirst claims the interaction and rotates. ---
         net.minecraft.world.entity.player.Player crouch =
@@ -354,6 +355,8 @@ public class VanillaRotationTester {
                 "crouch wrench should rotate NORTH→EAST, got " + after.getValue(TrapDoorBlock.FACING));
         assertTrue(!after.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.OPEN),
                 "crouch rotate must not toggle OPEN");
+        assertTrue(wrench.getDamageValue() == 1,
+                "a rotation wears the wrench exactly one use, has lost " + wrench.getDamageValue());
         helper.succeed();
     }
 
@@ -450,6 +453,8 @@ public class VanillaRotationTester {
         assertTrue(r == InteractionResult.SUCCESS, "wrench useOn on furnace should SUCCEED, got " + r);
         Direction got = helper.getBlockState(pos).getValue(FurnaceBlock.FACING);
         assertTrue(got == Direction.EAST, "furnace should rotate NORTH→EAST via wrench useOn, got " + got);
+        assertTrue(wrench.getDamageValue() == 1,
+                "a rotation wears the wrench exactly one use, has lost " + wrench.getDamageValue());
         helper.succeed();
     }
 }

@@ -8,11 +8,14 @@ package buildcraft.core.marker.volume;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -26,6 +29,8 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -35,12 +40,17 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
-
 import buildcraft.api.core.IAreaProvider;
 
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.data.Box;
+
+import buildcraft.core.BCCoreConfig;
+import buildcraft.core.marker.VolumeConnection;
+import buildcraft.core.item.ItemMarkerWrench;
+import buildcraft.core.item.ItemVolumeWrench;
+import buildcraft.core.tile.TileMarkerVolume;
 
 public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedData.Recoverable {
     private static final String DATA_NAME = "buildcraft_volume_boxes";
@@ -150,16 +160,37 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.box.contains(pos)).findFirst().orElse(null);
     }
 
-    /** The box at {@code pos} a machine locks and shares (never a one-shot box), or null. */
+    /**
+     * The box at {@code pos} a machine may lock and share (never a one-shot box, nor one another machine owns), or
+     * null. Boxes that machines already lock are included: Fillers backed onto one box from an old save share it. A
+     * box someone is dragging is not: its size is not settled yet.
+     */
     @Nullable
     public VolumeBox getLockableVolumeBoxAt(BlockPos pos) {
-        return volumeBoxes.stream().filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.box.contains(pos))
+        return volumeBoxes.stream()
+            .filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.getOwner() == null && !volumeBox.isEditing()
+                && volumeBox.box.contains(pos))
+            .findFirst().orElse(null);
+    }
+
+    /**
+     * A free box containing {@code pos}: what a machine placed against it may adopt. A box another machine owns or
+     * has already adopted (a machine lock) is that machine's working area, never a second machine's, a one-shot box
+     * is not locked at all (see {@link #getOneShotAreaAt}), and a box someone is dragging has no size to adopt yet.
+     */
+    @Nullable
+    public VolumeBox getFreeVolumeBoxAt(BlockPos pos) {
+        return volumeBoxes.stream().filter(volumeBox -> !volumeBox.isOneShot() && volumeBox.getOwner() == null
+                && !volumeBox.isEditing() && volumeBox.box.contains(pos)
+                && volumeBox.getLockTargetsStream().noneMatch(Lock.Target.TargetUsedByMachine.class::isInstance))
             .findFirst().orElse(null);
     }
 
     /**
      * The confirmed one-shot box at {@code pos} as an area a machine takes the way it takes markers: removing it from
      * the world removes the box. Null when there is none, or when it is still being edited or still backed by markers.
+     * A Filler or Architect Table that takes it makes it the box it owns ({@link #addOwnedBox}); a Quarry just
+     * consumes it.
      */
     @Nullable
     public IAreaProvider getOneShotAreaAt(BlockPos pos) {
@@ -191,10 +222,96 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         };
     }
 
+    /**
+     * Whether the volume marker at {@code pos} still backs a lifted box: a resize is under way and its size is not
+     * confirmed, so the lift owns the marker until it is confirmed or cancelled.
+     */
+    public boolean isBackingLiftedBox(BlockPos pos) {
+        return volumeBoxes.stream().anyMatch(volumeBox -> volumeBox.isBackedBy(pos));
+    }
+
+    /**
+     * Whether the markers of {@code marker}'s connection are spoken for, so a machine placed against them takes
+     * nothing. That is so when one of them backs a lifted box (a marker joined to the connection after the lift is not
+     * on the box's list, yet taking it takes the whole connection, the lifted markers included), and when a volume box
+     * already overlaps the connection's area (taking the markers, or lifting them, would put a second box over it).
+     * Machines and the Marker Wrench's lift both ask this.
+     */
+    public boolean isReservedMarker(TileMarkerVolume marker) {
+        VolumeConnection connection = marker.getCurrentConnection();
+        if (connection == null) {
+            return isBackingLiftedBox(marker.getBlockPos()) || getVolumeBoxAt(marker.getBlockPos()) != null;
+        }
+        Box area = connection.getBox();
+        return connection.getMarkerPositions().stream().anyMatch(this::isBackingLiftedBox)
+            || volumeBoxes.stream().anyMatch(volumeBox -> volumeBox.box.doesIntersectWith(area));
+    }
+
+    /**
+     * The area a machine placed against {@code pos} takes: the markers there (their whole connection), else a
+     * confirmed one-shot box covering it ({@link #getOneShotAreaAt}). Null when there is none, and when the markers
+     * are spoken for ({@link #isReservedMarker}): a resize in progress, or a box over them already, is not a machine's
+     * to take, so the machine finds nothing there.
+     */
+    @Nullable
+    public IAreaProvider getTakeableAreaAt(BlockPos pos) {
+        BlockEntity tile = world.getBlockEntity(pos);
+        if (tile instanceof IAreaProvider provider) {
+            return tile instanceof TileMarkerVolume marker && isReservedMarker(marker) ? null : provider;
+        }
+        return getOneShotAreaAt(pos);
+    }
+
+    /** The box the machine at {@code ownerPos} owns, or null. */
+    @Nullable
+    public VolumeBox getOwnedBy(BlockPos ownerPos) {
+        for (VolumeBox volumeBox : volumeBoxes) {
+            if (volumeBox.isOwnedBy(ownerPos)) {
+                return volumeBox;
+            }
+        }
+        return null;
+    }
+
     public void addVolumeBox(BlockPos pos) {
         volumeBoxes.add(new VolumeBox(world, pos));
         setDirty();
         broadcastToDimension();
+    }
+
+    /**
+     * Creates the box a machine owns from the area it took over (survival markers), replacing any box already owned
+     * from that position. Locked against removal and marked as in use by the machine; not against resizing, so the
+     * Volume Wrench can drag its corners and the machine follows (see {@link VolumeBox#getOwner()}).
+     */
+    public VolumeBox addOwnedBox(BlockPos min, BlockPos max, BlockPos ownerPos, Block ownerBlock,
+                                 Lock.Target.TargetUsedByMachine.EnumType use) {
+        removeOwnedBy(ownerPos);
+        VolumeBox volumeBox = new VolumeBox(world, min);
+        volumeBox.box.extendToEncompass(max);
+        volumeBox.setOwner(ownerPos, ownerBlock);
+        volumeBox.locks.add(new Lock(
+            new Lock.Cause.CauseBlock(ownerPos.immutable(), ownerBlock),
+            new Lock.Target.TargetRemove(),
+            new Lock.Target.TargetUsedByMachine(use)));
+        volumeBoxes.add(volumeBox);
+        markDirtyAndBroadcast();
+        return volumeBox;
+    }
+
+    /** Removes the box the machine at {@code ownerPos} owns, if any: the machine is gone. */
+    public void removeOwnedBy(BlockPos ownerPos) {
+        boolean removed = false;
+        for (Iterator<VolumeBox> it = volumeBoxes.iterator(); it.hasNext(); ) {
+            VolumeBox volumeBox = it.next();
+            if (volumeBox.isOwnedBy(ownerPos)) {
+                it.remove();
+                removed = true;
+            }
+        }
+        if (removed) {
+            markDirtyAndBroadcast();
+        }
     }
 
     /**
@@ -246,7 +363,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
     /**
      * Mark the saved data dirty AND broadcast the new state to clients in the dimension. Use this from
      * any caller that mutates VolumeBoxes outside of {@link #addVolumeBox} or {@link #tick} (e.g.
-     * editing flow in ItemMarkerConnector, lock additions in TileFiller / TileArchitectTable).
+     * editing flow in ItemMarkerWrench, lock additions in TileFiller / TileArchitectTable).
      */
     public void markDirtyAndBroadcast() {
         setDirty();
@@ -257,23 +374,34 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return volumeBoxes.stream().filter(volumeBox -> volumeBox.id.equals(id)).findFirst().orElse(null);
     }
 
-    public VolumeBox getCurrentEditing(Player player) {
-        return volumeBoxes.stream().filter(volumeBox -> volumeBox.isEditingBy(player)).findFirst().orElse(null);
-    }
-
     public void tick() {
         boolean dirty = false;
         for (int i = 0; i < volumeBoxes.size(); i++) {
             VolumeBox volumeBox = volumeBoxes.get(i);
+            // The fallback for an owner removed without its removal hook (a >=1.21.10 command replace skips block
+            // side effects): a box whose machine is no longer there goes too. An unloaded machine keeps its box
+            // (stillWorks holds while the chunk is not loaded).
+            Lock.Cause.CauseBlock owner = volumeBox.getOwner();
+            if (owner != null && !owner.stillWorks(world)) {
+                volumeBoxes.remove(i--);
+                dirty = true;
+                continue;
+            }
             if (volumeBox.isEditing()) {
                 Player player = volumeBox.getPlayer(world);
-                if (player == null && volumeBox.hasSourceMarkers()) {
-                    // A box lifted off markers is not kept for a player who left: the markers keep working.
-                    volumeBoxes.remove(i--);
-                    dirty = true;
-                    continue;
-                } else if (player == null) {
-                    volumeBox.pauseEditing();
+                if (player == null || player.isSpectator() || !holdsDragTool(player, volumeBox)
+                        || volumeBox.getHeld() == null || volumeBox.getOldMin() == null || volumeBox.getOldMax() == null) {
+                    // The drag is cancelled and the old size comes back when its player can no longer finish it: not
+                    // in this level any more (logged out, changed dimension), a spectator (who cannot use items), or
+                    // no longer holding the tool that drags this box; or when the drag lost its anchor. Nothing waits
+                    // for them, so a machine that owns the box is never left frozen on an edit nobody can finish.
+                    if (volumeBox.hasSourceMarkers()) {
+                        // A box lifted off markers is cancelled by dropping it: the markers keep working.
+                        volumeBoxes.remove(i--);
+                        dirty = true;
+                        continue;
+                    }
+                    volumeBox.cancelEditing();
                     dirty = true;
                 } else {
                     AABB oldAabb = volumeBox.box.getBoundingBox();
@@ -283,7 +411,9 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
                             player.position()
                                     .add(0, player.getEyeHeight(), 0)
                                     .add(player.getLookAngle().scale(volumeBox.getDist())));
-                    volumeBox.box.extendToEncompass(lookingAt);
+                    // No drag makes a box larger than markers could: each axis stops at the marker reach.
+                    volumeBox.box.extendToEncompass(VolumeBox.clampDragTarget(volumeBox.getHeld(), lookingAt,
+                            BCCoreConfig.markerMaxDistance.get(), volumeBox.getOldMin(), volumeBox.getOldMax()));
                     if (!volumeBox.box.getBoundingBox().equals(oldAabb)) {
                         dirty = true;
                     }
@@ -304,6 +434,16 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
             broadcastToDimension();
         }
     }
+
+    /**
+     * Whether {@code player} holds the tool that drags {@code volumeBox}: a Marker Wrench (a Volume Wrench is one too)
+     * for a box lifted off markers, the Volume Wrench for any other.
+     */
+    private static boolean holdsDragTool(Player player, VolumeBox volumeBox) {
+        Class<?> tool = volumeBox.hasSourceMarkers() ? ItemMarkerWrench.class : ItemVolumeWrench.class;
+        return tool.isInstance(player.getMainHandItem().getItem()) || tool.isInstance(player.getOffhandItem().getItem());
+    }
+
     public static LevelSavedDataVolumeBoxes get(Level world) {
         if (world.isClientSide()) {
             throw new IllegalArgumentException("Tried to create a world saved data instance on the client!");

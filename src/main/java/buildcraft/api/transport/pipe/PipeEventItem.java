@@ -172,8 +172,11 @@ public abstract class PipeEventItem extends PipeEvent {
             }
         }
 
-        /** Fired when an item is injected into a tile entity. (Refer to {@link Ejected} for more details) */
+        /** Fired when an item is offered to a neighbouring block's item handler, whether or not it took any (excess
+         *  then still holds it). (Refer to {@link Ejected} for more details) */
         public static class IntoTile extends Ejected {
+            /** Null when the target is a block-only item handler with no block entity (a composter). */
+            @Nullable
             public final BlockEntity tile;
 
             public IntoTile(IPipeHolder holder, IFlowItems flow, ItemStack inserted, ItemStack excess, Direction to,

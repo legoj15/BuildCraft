@@ -437,7 +437,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
 
     /**
      * Server: a marker wrench used on the volume marker at {@code markerPos}, hit at {@code hit}. When that marker is
-     * a corner of a connected volume that no box already covers or lifted, the markers' box is lifted into a one-shot
+     * a corner of a connected volume that no box overlaps and no lift holds, the markers' box is lifted into a one-shot
      * {@link VolumeBox} and resizing starts from that corner. Returns false when the click was not that, so the marker
      * handles it. (A click that confirms or cancels a drag in progress never gets here: {@link #onItemUseFirst} takes
      * it, except a click on a marker that does not back the dragged box, which is left to connect.)

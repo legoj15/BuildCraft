@@ -282,7 +282,14 @@ public class TileFiller extends TileBC_Neptune
         BlockState blockState = getBlockState();
         Direction facing = blockState.getValue(HorizontalDirectionalBlock.FACING);
         LevelSavedDataVolumeBoxes savedBoxes = volumeBoxes.get();
-        VolumeBox volumeBox = savedBoxes.getLockableVolumeBoxAt(worldPosition.relative(facing.getOpposite()));
+        BlockPos behind = worldPosition.relative(facing.getOpposite());
+        VolumeBox dragged = savedBoxes.getVolumeBoxAt(behind);
+        if (dragged != null && dragged.isEditing()) {
+            // Saved mid-drag: the drag ends on a later tick (cancelled once its player is found missing), look again then.
+            orphanedBoxChecked = false;
+            return;
+        }
+        VolumeBox volumeBox = savedBoxes.getLockableVolumeBoxAt(behind);
         if (volumeBox == null) {
             return;
         }

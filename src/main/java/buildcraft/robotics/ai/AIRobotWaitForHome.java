@@ -11,9 +11,15 @@ import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 
-/** A robot that needs a charge, finds no charger it can reach, and whose home's chunk is not loaded, hovers where it is
- *  at no cost until the home comes back. {@link AIRobotMain} starts it after a failed recharge and keeps retrying the
- *  recharge on its usual back-off meanwhile, so a charger that comes into reach is still found.
+/** A robot that needs a charge, finds no charger it can reach, and whose home's chunk is not loaded (or whose home
+ *  forbids it, Forbid/Force Robot), hovers where it is at no cost until the home comes back. {@link AIRobotMain}
+ *  starts it after a failed recharge and keeps retrying the recharge on its usual back-off meanwhile, so a charger that
+ *  comes into reach is still found.
+ *
+ *  <p>The forbid case (2026-10-26, issue #46): Forbid Robot evicts a robot from a station and keeps it from charging
+ *  there, and a robot whose only charger is its forbidding home otherwise ran flat and shut down for good (a shutdown
+ *  is never undone on its own), however soon the gate turned off. Waiting keeps it until the forbid lifts; a robot
+ *  already flat when it is evicted waits too, instead of shutting down ({@link #homeForbids}).
  *
  *  <p>Not 7.1.x, where this never arose: a robot's home was always loaded alongside it (7.1.x's station lookup, like
  *  this port's until 2026-10, loaded the home's chunk). Without the wait the robot went back to work between the failed
@@ -31,11 +37,19 @@ public class AIRobotWaitForHome extends AIRobot {
         super(iRobot);
     }
 
-    /** Whether {@code robot} has a home whose chunk is not loaded: no flight can reach it, and its gates and charger
-     *  are out of sight. */
+    /** Whether {@code robot} has a home whose chunk is not loaded (no flight can reach it, and its gates and charger
+     *  are out of sight), or a home whose gate forbids it (no flight is allowed to dock there). */
     static boolean homeOutOfReach(IRobotAccess robot) {
         DockingStation home = robot.getLinkedStation();
-        return home != null && !home.isChunkLoaded();
+        return home != null && (!home.isChunkLoaded() || home.isRobotForbidden(robot));
+    }
+
+    /** Whether {@code robot}'s loaded home forbids it: the one out-of-reach home a flat robot waits for rather than
+     *  shutting down, since the eviction that left it flat off its charger is undone only by the gate. (A flat robot
+     *  whose home's chunk is unloaded still shuts down, as before.) */
+    static boolean homeForbids(IRobotAccess robot) {
+        DockingStation home = robot.getLinkedStation();
+        return home != null && home.isChunkLoaded() && home.isRobotForbidden(robot);
     }
 
     @Override

@@ -21,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 
 import buildcraft.api.boards.RedstoneBoardRobotNBT;
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.RobotManager;
@@ -43,8 +44,10 @@ import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotRegistry;
 import buildcraft.robotics.RobotStationPluggable;
 import buildcraft.robotics.ZonePinnedRobot;
+import buildcraft.robotics.ai.AIRobotGotoSleep;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.boards.BoardRobotCarrierNBT;
+import buildcraft.robotics.boards.BoardRobotDeliveryNBT;
 import buildcraft.robotics.boards.BoardRobotEmptyNBT;
 import buildcraft.robotics.boards.BoardRobotPickerNBT;
 import buildcraft.robotics.boards.BoardRobotPumpNBT;
@@ -399,6 +402,164 @@ public class RobotGateTester {
                 () -> EntityArenaUtil.discard(robot[0]));
     }
 
+    /** A home station that forbids {@code board} robots but is otherwise an unload target: a stone item pipe (an
+     *  item output, nothing to supply) over a chest, with Forbid Robot, an unfiltered Accept Items and a Load/Unload
+     *  Area of this cell on its gates. */
+    private static TilePipeHolder installForbiddingHome(GameTestHelper helper, BlockPos homeRel,
+                                                        RedstoneBoardRobotNBT board) {
+        TilePipeHolder homeTile = installAcceptingStation(helper, homeRel, Direction.EAST);
+        PluggableGate forbidGate = addGate(homeTile, Direction.WEST, PARAM_GATE);
+        forbidGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        forbidGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT, null));
+        forbidGate.logic.statements[0].action.set(0, new StatementParameterRobot(
+                ItemRobot.createRobotStack(board.getID(), 0)));
+        PluggableGate zoneGate = addGate(homeTile, Direction.NORTH, PARAM_GATE);
+        zoneGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        zoneGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA, null));
+        zoneGate.logic.statements[0].action.set(0, new StatementParameterMapLocation(
+                areaMap(helper, BlockPos.ZERO, new BlockPos(5, 6, 6))));
+        return homeTile;
+    }
+
+    /** A station on top of a stone item pipe over a chest, with an unfiltered Accept Items gate on {@code gateSide}:
+     *  a robot can unload there, and what it unloads ends up in the chest rather than loose in the arena. */
+    private static TilePipeHolder installAcceptingStation(GameTestHelper helper, BlockPos relPos, Direction gateSide) {
+        helper.setBlock(relPos.below(), Blocks.CHEST);
+        TilePipeHolder tile = installStation(helper, relPos, Direction.UP, BCTransportItems.PIPE_STONE_ITEM.get());
+        PluggableGate acceptGate = addGate(tile, gateSide, PARAM_GATE);
+        acceptGate.logic.statements[0].trigger.set(TriggerWrapper.wrap(BCCoreStatements.TRIGGER_TRUE, null));
+        acceptGate.logic.statements[0].action.set(
+                ActionWrapper.wrap(BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS, null));
+        return tile;
+    }
+
+    /** Whether {@code type} is anywhere on the robot's AI stack. */
+    private static boolean runs(EntityRobot robot, Class<? extends AIRobot> type) {
+        for (AIRobot ai = robot.mainAI; ai != null; ai = ai.getDelegateAI()) {
+            if (type.isInstance(ai)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The robot's AI stack, outermost first, for a failure message. */
+    private static String aiChain(EntityRobot robot) {
+        StringBuilder chain = new StringBuilder();
+        for (AIRobot ai = robot.mainAI; ai != null; ai = ai.getDelegateAI()) {
+            chain.append(chain.length() == 0 ? "" : " > ").append(ai.getClass().getSimpleName());
+        }
+        return chain.toString();
+    }
+
+    private static boolean sameStation(DockingStation a, DockingStation b) {
+        return a != null && b != null && a.getPos().equals(b.getPos()) && a.side() == b.side();
+    }
+
+    /** Forbid Robot evicts a robot docked at the station (not 7.1.x, where the docked-station shortcut in the station
+     *  search let it unload there anyway): a carrier homed and docked at a forbidding home that would take its cargo
+     *  leaves it and unloads at the other accepting station in its zone. The unload is credited to the station the
+     *  carrier is docked at on the tick its cargo leaves it, which is where {@code AIRobotUnload} runs. */
+    public static void forbidRobotEvictsDockedRobotToAnotherStation(GameTestHelper helper) {
+        BlockPos homeRel = new BlockPos(1, 3, 2);
+        BlockPos otherRel = new BlockPos(4, 3, 4);
+        EntityArenaUtil.forceLoadCell(helper);
+
+        installForbiddingHome(helper, homeRel, BoardRobotCarrierNBT.INSTANCE);
+        installAcceptingStation(helper, otherRel, Direction.WEST);
+
+        ItemStack seeded = new ItemStack(Items.DIAMOND, 5);
+        EntityRobot[] robot = { null };
+        DockingStation[] unloadedAt = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FORBID_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FORBID_WORK_TICKS,
+                () -> {
+                    if (robot[0] == null) {
+                        DockingStationPipe home = stationAt(helper, homeRel, Direction.UP);
+                        DockingStationPipe other = stationAt(helper, otherRel, Direction.UP);
+                        if (home == null || other == null
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT)
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS)
+                                || !hasActiveAction(home, BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA)
+                                || !hasActiveAction(other, BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS)) {
+                            return false;
+                        }
+                        robot[0] = addHomedRobot(helper, home, BoardRobotCarrierNBT.INSTANCE);
+                        robot[0].setInventoryStack(0, seeded.copy());
+                        return false;
+                    }
+                    if (!ItemStack.matches(robot[0].getInventoryStack(0), seeded)) {
+                        unloadedAt[0] = robot[0].getDockingStation();
+                        return true;
+                    }
+                    return false;
+                },
+                () -> robot[0] == null
+                        ? "the stations or their gates never resolved, so the carrier was never added"
+                        : "the carrier never unloaded anywhere, docked at " + robot[0].getDockingStation()),
+                () -> {
+                    helper.assertTrue(sameStation(unloadedAt[0], stationAt(helper, otherRel, Direction.UP)),
+                            "the carrier must leave its forbidding home and unload at the other accepting station, "
+                                    + "but unloaded docked at " + unloadedAt[0]);
+                    helper.succeed();
+                },
+                "the carrier never unloaded at the other accepting station",
+                () -> EntityArenaUtil.discard(robot[0]));
+    }
+
+    /** The cargo-safe half of the eviction: a Delivery robot homed and docked at a forbidding home that is the only
+     *  station that would take its leftover cargo keeps the cargo and goes to sleep elsewhere. Disposing of
+     *  leftover cargo drops it on the ground when no station will take it; a forbid is gate state that can lift, so
+     *  it must not count as "no station" (the 2026-10-17 attempt at this fix dropped the whole load). */
+    public static void forbidRobotEvictionKeepsCargoWithNoOtherStation(GameTestHelper helper) {
+        BlockPos homeRel = new BlockPos(2, 3, 3);
+        EntityArenaUtil.forceLoadCell(helper);
+
+        installForbiddingHome(helper, homeRel, BoardRobotDeliveryNBT.INSTANCE);
+
+        ItemStack seeded = new ItemStack(Items.DIAMOND, 5);
+        EntityRobot[] robot = { null };
+        DockingStationPipe[] home = { null };
+        EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + FORBID_WORK_TICKS,
+                EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, FORBID_WORK_TICKS,
+                () -> {
+                    if (robot[0] == null) {
+                        home[0] = stationAt(helper, homeRel, Direction.UP);
+                        if (home[0] == null
+                                || !hasActiveAction(home[0], BCRoboticsStatements.ACTION_STATION_FORBID_ROBOT)
+                                || !hasActiveAction(home[0], BCRoboticsStatements.ACTION_STATION_ACCEPT_ITEMS)
+                                || !hasActiveAction(home[0], BCRoboticsStatements.ACTION_ROBOT_LOAD_UNLOAD_AREA)) {
+                            return false;
+                        }
+                        robot[0] = addHomedRobot(helper, home[0], BoardRobotDeliveryNBT.INSTANCE);
+                        robot[0].setInventoryStack(0, seeded.copy());
+                        return false;
+                    }
+                    // Settled: off the forbidding home and on the way to sleep (the fix: the disposal kept the cargo
+                    // and the board put the robot to sleep), or the cargo gone (unloaded at home or dropped). Not
+                    // "asleep": a robot whose home forbids it sleeps at the nearest other powered station, which can
+                    // be in another arena, so the test ends before that flight leaves the cell.
+                    return runs(robot[0], AIRobotGotoSleep.class)
+                            && !sameStation(robot[0].getDockingStation(), home[0])
+                            || !ItemStack.matches(robot[0].getInventoryStack(0), seeded);
+                },
+                () -> robot[0] == null
+                        ? "the station or its gates never resolved, so the robot was never added"
+                        : "the robot neither lost its cargo nor slept off its forbidding home, docked at "
+                                + robot[0].getDockingStation() + ", running " + aiChain(robot[0])),
+                () -> {
+                    ItemStack cargo = robot[0].getInventoryStack(0).copy();
+                    helper.assertTrue(ItemStack.matches(cargo, seeded),
+                            "the robot must keep its cargo while the only station that takes it forbids it - "
+                                    + "holding " + cargo + ", docked at " + robot[0].getDockingStation());
+                    helper.succeed();
+                },
+                "the robot neither lost its cargo nor slept off its forbidding home",
+                () -> EntityArenaUtil.discard(robot[0]));
+    }
+
     // ---------- goto station action ----------
 
     /** A robot docked at station A while station A's gate carries the in-station trigger + goto-station
@@ -530,7 +691,7 @@ public class RobotGateTester {
 
                     gate.logic.resolveActions();
 
-                    buildcraft.api.robots.AIRobot override = robot[0].getOverridingAI();
+                    AIRobot override = robot[0].getOverridingAI();
                     helper.assertTrue(override != null,
                             "a Goto Station action with an EMPTY parameter must still send the robot linked "
                                     + "to the gate's station home - 7.1.x defaulted the destination to the "
@@ -754,7 +915,7 @@ public class RobotGateTester {
 
         EntityRobot[] robot = { null };
         EntityRobot[] holder = { null };
-        buildcraft.api.robots.AIRobot[] sleep = { null };
+        AIRobot[] sleep = { null };
         int[] phase = { 0 }; // 0: stations, 1: id + home + B held + first resolve, 2: settled asleep under the gate
         int[] settled = { 0 };
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + GOTO_NOOP_WORK_TICKS,
@@ -799,7 +960,7 @@ public class RobotGateTester {
                             "no redirect may be installed while B is held, got " + robot[0].getOverridingAI());
                     helper.assertTrue(stationB.robotIdTaking() == holder[0].getRobotId(),
                             "the other robot's hold on B must be left alone");
-                    buildcraft.api.robots.AIRobot active = robot[0].mainAI.getActiveAI();
+                    AIRobot active = robot[0].mainAI.getActiveAI();
                     if (sleep[0] == null) {
                         if (active instanceof AIRobotSleep) {
                             sleep[0] = active;

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:robot_station_forbid_robot_evicts_docked",
+    "environment": "buildcraftunofficial:robot_gate",
+    "structure": "minecraft:empty",
+    "max_ticks": 610,
+    "setup_ticks": 0,
+    "required": true
+}

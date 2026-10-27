@@ -92,11 +92,14 @@ public class ActionRobotGotoStation extends BCStatement implements IActionIntern
      *  <li>the target's chunk is not loaded: robots path only through loaded cells, so the flight fails at once
      *  (the station searches skip such stations for the same reason). The station is not gone, so its claim would
      *  succeed and the robot's board would be aborted for nothing.</li>
+     *  <li>the target forbids the robot (Forbid/Force Robot): the goto refuses it in {@code start()}, and a robot
+     *  that did dock there would be evicted at once.</li>
      *  </ul>
      *  A redirect that fails later (no path to the station) is the controller's to throttle: {@code AIRobotMain}
      *  refuses new overrides for a while after one fails. */
     static boolean shouldRedirect(EntityRobot robot, DockingStation target) {
-        if (target == null || target == robot.getDockingStation() || !target.isChunkLoaded()) {
+        if (target == null || target == robot.getDockingStation() || !target.isChunkLoaded()
+                || target.isRobotForbidden(robot)) {
             return false;
         }
         return !target.isTaken() || target.robotIdTaking() == robot.getRobotId();

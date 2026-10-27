@@ -1277,6 +1277,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_rig_planter_api", () -> buildcraft.robotics.RobotStationRigTester::planterApiRig);
         reg.accept("buildcraftunofficial:robot_gate_sleep_wakeup", () -> buildcraft.robotics.statements.RobotGateTester::sleepTriggerAndWakeupPreemptsPicker);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
+        reg.accept("buildcraftunofficial:robot_station_forbid_robot_evicts_docked", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotEvictsDockedRobotToAnotherStation);
+        reg.accept("buildcraftunofficial:robot_station_forbid_robot_eviction_keeps_cargo", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotEvictionKeepsCargoWithNoOtherStation);
         reg.accept("buildcraftunofficial:robot_pump_unloads_into_home_tank", () -> buildcraft.robotics.statements.RobotGateTester::pumpUnloadsIntoTankAtHomeStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_unloaded_target", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAnUnloadedStationLeavesTheRobotAlone);

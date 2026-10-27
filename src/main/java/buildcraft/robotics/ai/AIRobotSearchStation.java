@@ -20,7 +20,9 @@ import buildcraft.robotics.IStationFilter;
 
 /** Picks the nearest {@link DockingStation} matching a {@link IStationFilter} and zone. Sets {@code targetStation}
  *  and terminates immediately — the search is a single sweep of the registry, not a long-running scan. The
- *  7.1.x {@code ActionStationForbidRobot.isForbidden} gate becomes the D1 {@code isRobotForbidden} policy. */
+ *  7.1.x {@code ActionStationForbidRobot.isForbidden} gate becomes the D1 {@code isRobotForbidden} policy, and (not
+ *  7.1.x) it applies to the station the robot is docked at too: {@link AIRobotMain} evicts a robot whose dock starts
+ *  forbidding it, and this search then picks another station. */
 public class AIRobotSearchStation extends AIRobot {
 
     public DockingStation targetStation;
@@ -50,7 +52,8 @@ public class AIRobotSearchStation extends AIRobot {
     @Override
     public void start() {
         if (robot.getDockingStation() != null
-                && filter.matches(robot.getDockingStation())) {
+                && filter.matches(robot.getDockingStation())
+                && !robot.getDockingStation().isRobotForbidden(robot)) {
             targetStation = robot.getDockingStation();
             terminate();
             return;
@@ -64,19 +67,7 @@ public class AIRobotSearchStation extends AIRobot {
         // (getHolder() → removeStation) — removing from a map while iterating its values is a
         // ConcurrentModificationException, which the AI cycle would swallow as a silently failed search.
         for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
-            // A station in an unloaded chunk is usable (isInitialized: a robot homed there keeps working) but not
-            // reachable: the flight cannot cross unloaded cells, so choosing it only claims it, fails, and picks it
-            // again next cycle (a Delivery robot disposed of its cargo every time).
-            if (!station.isChunkLoaded() || !station.isInitialized()) {
-                continue;
-            }
-
-            if (station.isTaken() && station.robotIdTaking() != robot.getRobotId()) {
-                continue;
-            }
-
-            if (zone != null && !(homeIgnoresZone && station == robot.getLinkedStation())
-                    && !zone.contains(Vec3.atCenterOf(station.getPos()))) {
+            if (!isCandidate(robot, station, zone, homeIgnoresZone)) {
                 continue;
             }
 
@@ -102,6 +93,42 @@ public class AIRobotSearchStation extends AIRobot {
         }
 
         terminate();
+    }
+
+    /** Whether a search with {@code filter} and {@code zone} would find a station but for Forbid Robot: one matches
+     *  and is a candidate (loaded, free, in the zone; flight reach is not checked), and every such station forbids the
+     *  robot. A forbid is gate state that can lift, so a
+     *  robot this leaves without a station has somewhere to go later, which the caller may want to wait for. */
+    public static boolean onlyForbiddingStationsMatch(IRobotAccess robot, IStationFilter filter, IZone zone,
+            boolean homeIgnoresZone) {
+        boolean forbidden = false;
+        for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
+            if (isCandidate(robot, station, zone, homeIgnoresZone) && filter.matches(station)) {
+                if (!station.isRobotForbidden(robot)) {
+                    return false;
+                }
+                forbidden = true;
+            }
+        }
+        return forbidden;
+    }
+
+    /** Everything but the filter and the forbid: the station is loaded, free (or this robot's) and in the zone. */
+    private static boolean isCandidate(IRobotAccess robot, DockingStation station, IZone zone,
+            boolean homeIgnoresZone) {
+        // A station in an unloaded chunk is usable (isInitialized: a robot homed there keeps working) but not
+        // reachable: the flight cannot cross unloaded cells, so choosing it only claims it, fails, and picks it
+        // again next cycle (a Delivery robot disposed of its cargo every time).
+        if (!station.isChunkLoaded() || !station.isInitialized()) {
+            return false;
+        }
+
+        if (station.isTaken() && station.robotIdTaking() != robot.getRobotId()) {
+            return false;
+        }
+
+        return zone == null || (homeIgnoresZone && station == robot.getLinkedStation())
+                || zone.contains(Vec3.atCenterOf(station.getPos()));
     }
 
     @Override

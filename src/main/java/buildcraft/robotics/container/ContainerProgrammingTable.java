@@ -66,7 +66,7 @@ public class ContainerProgrammingTable extends ContainerBCTile<TileProgrammingTa
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_JEI_TRANSFER_PROGRAMMING && !isClient && tile != null) {
+        if (id == NET_TRANSFER_PROGRAMMING && !isClient && tile != null) {
             // JEI "+" on a Programming Table recipe. Payload: recipe id, board id; everything is re-validated
             // against the player's real inventory and the table's live state.
             RoboticsTableTransfer.program(player.getInventory(), tile, buffer.readUtf(), buffer.readUtf(), true);

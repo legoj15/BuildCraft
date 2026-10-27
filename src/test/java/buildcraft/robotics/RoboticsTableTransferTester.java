@@ -37,10 +37,10 @@ import buildcraft.robotics.container.ProgrammingTableLayout;
 import buildcraft.robotics.container.RoboticsTableTransfer;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
-import buildcraft.robotics.recipe.IntegrationRecipeCollector;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
-import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.silicon.container.ContainerIntegrationTable;
@@ -205,11 +205,11 @@ public class RoboticsTableTransferTester {
         Inventory inv = player.getInventory();
         ContainerProgrammingTable menu = new ContainerProgrammingTable(0, player, table);
 
-        List<ProgrammingRecipeJei> entries = ProgrammingRecipeCollector.collect();
+        List<ProgrammingRecipeEntry> entries = ProgrammingRecipeCollector.collect();
         if (entries.size() < 5) {
             helper.fail("liveness: expected the collector to offer several Programming entries, got " + entries.size());
         }
-        for (ProgrammingRecipeJei entry : entries) {
+        for (ProgrammingRecipeEntry entry : entries) {
             table.invBoard.setStackInSlot(0, ItemStack.EMPTY);
             table.findRecipe(); // forget the previous entry's recipe and selection
             inv.setItem(0, entry.inputs().get(0).copy());
@@ -491,11 +491,11 @@ public class RoboticsTableTransferTester {
         Inventory inv = player.getInventory();
         ContainerIntegrationTable menu = new ContainerIntegrationTable(0, player, table);
 
-        List<IntegrationRecipeJei> entries = IntegrationRecipeCollector.collect();
+        List<IntegrationRecipeEntry> entries = IntegrationRecipeCollector.collect();
         if (entries.size() < 5) {
             helper.fail("liveness: expected the collector to offer several Integration entries, got " + entries.size());
         }
-        for (IntegrationRecipeJei entry : entries) {
+        for (IntegrationRecipeEntry entry : entries) {
             table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
             for (int i = 0; i < table.invToIntegrate.getSlots(); i++) {
                 table.invToIntegrate.setStackInSlot(i, ItemStack.EMPTY);
@@ -599,7 +599,7 @@ public class RoboticsTableTransferTester {
      *  ServerPlayer, so the payload handler cannot run; it only forwards to {@code readMessage}). */
     private static void sendProgramming(ContainerProgrammingTable menu, String recipeId, String boardId) {
         menu.player.containerMenu = menu;
-        send(menu, ContainerBC_Neptune.NET_JEI_TRANSFER_PROGRAMMING, buf -> {
+        send(menu, ContainerBC_Neptune.NET_TRANSFER_PROGRAMMING, buf -> {
             buf.writeUtf(recipeId);
             buf.writeUtf(boardId);
         });
@@ -607,7 +607,7 @@ public class RoboticsTableTransferTester {
 
     private static void sendIntegration(ContainerIntegrationTable menu, String boardId) {
         menu.player.containerMenu = menu;
-        send(menu, ContainerBC_Neptune.NET_JEI_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
+        send(menu, ContainerBC_Neptune.NET_TRANSFER_INTEGRATION, buf -> buf.writeUtf(boardId));
     }
 
     private static void send(ContainerBC_Neptune menu, int id, Consumer<PacketBufferBC> writer) {

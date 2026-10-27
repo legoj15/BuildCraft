@@ -77,7 +77,7 @@ public class ContainerAssemblyTable extends ContainerBCTile<TileAssemblyTable> {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_JEI_TRANSFER_ITEMS && !isClient && tile != null) {
+        if (id == NET_TRANSFER_ITEMS && !isClient && tile != null) {
             // JEI "+" pressed on an assembly recipe: move the chosen ingredients from the player's
             // inventory into the table's input inv. Only stacks the player really holds can move.
             AssemblyTableTransfer.apply(player.getInventory(), tile.inv,

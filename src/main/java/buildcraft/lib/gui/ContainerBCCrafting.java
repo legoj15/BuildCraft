@@ -127,7 +127,7 @@ public abstract class ContainerBCCrafting<T extends AbstractBCBlockEntity>
         if (support.readMessage(id, buffer, isClient, ctx)) {
             return;
         }
-        if (id == ContainerBC_Neptune.NET_JEI_RECIPE_TRANSFER && !isClient) {
+        if (id == ContainerBC_Neptune.NET_RECIPE_TRANSFER && !isClient) {
             // Server-side: JEI requested recipe placement into the blueprint phantom grid. Look up the
             // recipe by resource location and delegate to handlePlacement() — which the concrete tables
             // override to set the phantom pattern (the base stub below is a no-op).

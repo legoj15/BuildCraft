@@ -18,9 +18,9 @@ import buildcraft.lib.test.MainSourceSet.SourceFile;
 
 /** The guide book must not depend on a mod's JEI compat package. The guide's recipe lookups share the robotics table
  *  collectors with the JEI categories, so those collectors (and the identity helper that keeps boards and robots
- *  apart) live in {@code buildcraft.robotics.recipe}; {@code buildcraft.robotics.compat.jei} holds only what talks to
- *  JEI. This pins both halves: nothing under a {@code client/guide} directory touches a {@code compat.jei} package,
- *  and nothing outside the robotics JEI package uses it either.
+ *  apart) live in {@code buildcraft.robotics.compat.viewer}; {@code buildcraft.robotics.compat.jei} holds only what
+ *  talks to JEI. This pins both halves: nothing under a {@code client/guide} directory touches a
+ *  {@code compat.jei} package, and nothing outside the robotics JEI package uses it either.
  *
  *  <p>Reads this node's compiled view of the sources ({@link MainSourceSet}) with comments and string literals
  *  blanked, so a Javadoc that merely names the JEI package is not a use of it. */

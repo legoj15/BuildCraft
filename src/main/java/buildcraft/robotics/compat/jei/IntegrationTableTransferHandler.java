@@ -15,7 +15,7 @@ import mezz.jei.api.recipe.types.IRecipeType;
 import buildcraft.lib.compat.jei.AbstractTransferHandler;
 
 import buildcraft.robotics.compat.viewer.IntegrationTableRecipeTransfer;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
 import buildcraft.silicon.container.ContainerIntegrationTable;
 
 /**
@@ -23,7 +23,7 @@ import buildcraft.silicon.container.ContainerIntegrationTable;
  * into a ring slot. The work is the shared {@link IntegrationTableRecipeTransfer} core.
  */
 public class IntegrationTableTransferHandler
-        extends AbstractTransferHandler<ContainerIntegrationTable, IntegrationRecipeJei> {
+        extends AbstractTransferHandler<ContainerIntegrationTable, IntegrationRecipeEntry> {
 
     public IntegrationTableTransferHandler(IRecipeTransferHandlerHelper helper) {
         super(helper, new IntegrationTableRecipeTransfer());
@@ -31,9 +31,9 @@ public class IntegrationTableTransferHandler
 
     @Override
     //? if >=1.21.10 {
-    public IRecipeType<IntegrationRecipeJei> getRecipeType() {
+    public IRecipeType<IntegrationRecipeEntry> getRecipeType() {
     //?} else {
-    /*public RecipeType<IntegrationRecipeJei> getRecipeType() {*/
+    /*public RecipeType<IntegrationRecipeEntry> getRecipeType() {*/
     //?}
         return IntegrationRecipeJeiTypes.INTEGRATION;
     }

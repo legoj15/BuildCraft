@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.lib.compat.jei;
+package buildcraft.lib.compat.viewer;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -30,13 +30,14 @@ import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
 
 /**
- * Pins the JEI subtype keys of the lens, gate, facade and fragile fluid shard — the identity JEI uses to tell two
- * stacks of one item apart (equal keys merge into one entry, different keys get their own entry and recipe lookup).
+ * Pins the recipe-viewer subtype keys of the lens, gate, facade and fragile fluid shard — the identity JEI and REI
+ * both use to tell two stacks of one item apart (equal keys merge into one entry, different keys get their own entry
+ * and recipe lookup).
  *
  * <p>Two contracts, both checked on every node:
  * <ul>
  * <li><b>Identity</b>: two independently built stacks of the same variant give EQUAL keys, and different variants
- * give different keys — otherwise JEI either lists duplicates or merges variants into one entry.</li>
+ * give different keys — otherwise the viewer either lists duplicates or merges variants into one entry.</li>
  * <li><b>Legacy text</b>: each key's {@code toString()} is the exact string the pre-2026-09-26 interpreters returned.
  * On 1.21.1, {@code JeiSubtypes} hands JEI 19.x that string as the legacy subtype info (what an old bookmark file is
  * matched against); a changed string silently orphans those bookmarks. JEI 19.27's current bookmark file stores the
@@ -45,7 +46,7 @@ import buildcraft.silicon.plug.FacadeStateManager;
  * </ul>
  * The redstone board and robot keys are pinned separately ({@code ProgrammingRecipeCollectorTester}).
  */
-public class JeiSubtypeKeysTest extends VanillaSetupBaseTester {
+public class SubtypeKeysTest extends VanillaSetupBaseTester {
 
     // ── Lens / filter ───────────────────────────────────────────────────────
 

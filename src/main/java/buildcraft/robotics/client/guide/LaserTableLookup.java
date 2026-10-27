@@ -18,10 +18,10 @@ import buildcraft.lib.client.guide.parts.recipe.GuideLaserTableFactory;
 import buildcraft.lib.recipe.ChangingItemStack;
 import buildcraft.lib.recipe.ChangingObject;
 
-import buildcraft.robotics.recipe.RoboticsJeiSubtypes;
+import buildcraft.robotics.compat.viewer.RoboticsSubtypes;
 
 /** The matching and folding both robotics table lookups share. A step matches a stack when they are the same
- *  {@linkplain RoboticsJeiSubtypes#sameVariant variant} — the same board program, the same robot program — so a
+ *  {@linkplain RoboticsSubtypes#sameVariant variant} — the same board program, the same robot program — so a
  *  Miner board's page finds exactly the Miner step. Usages fall back to item-level matching when no step takes that
  *  exact variant (the tables accept any board and any robot, so a programmed Miner board can still be reprogrammed).
  *  Several matches fold into ONE cycling panel: a blank robot is used by every robot program, and one panel per
@@ -33,7 +33,7 @@ final class LaserTableLookup {
     static List<GuidePartFactory> recipes(List<LaserTableStep> steps, ItemStack stack, ItemStack table) {
         List<LaserTableStep> matched = new ArrayList<>();
         for (LaserTableStep step : steps) {
-            if (anyMatch(step.outputs(), stack, RoboticsJeiSubtypes::sameVariant)) {
+            if (anyMatch(step.outputs(), stack, RoboticsSubtypes::sameVariant)) {
                 matched.add(step);
             }
         }
@@ -42,7 +42,7 @@ final class LaserTableLookup {
 
     /** @return The steps that take {@code stack} as an input, as display factories. */
     static List<GuidePartFactory> usages(List<LaserTableStep> steps, ItemStack stack, ItemStack table) {
-        List<LaserTableStep> matched = stepsTaking(steps, stack, RoboticsJeiSubtypes::sameVariant);
+        List<LaserTableStep> matched = stepsTaking(steps, stack, RoboticsSubtypes::sameVariant);
         if (matched.isEmpty()) {
             matched = stepsTaking(steps, stack, ItemStack::isSameItem);
         }

@@ -18,9 +18,9 @@ import buildcraft.lib.client.guide.parts.recipe.IStackRecipes;
 
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.item.ItemRedstoneBoard;
-import buildcraft.robotics.recipe.ProgrammingRecipeCollector;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
-import buildcraft.robotics.recipe.RoboticsJeiSubtypes;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeCollector;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
+import buildcraft.robotics.compat.viewer.RoboticsSubtypes;
 import buildcraft.silicon.BCSiliconItems;
 
 /** The guide's Programming Table lookup ({@code type="programming"}): blank Redstone Board → programmed board. A
@@ -43,9 +43,9 @@ public enum GuideProgrammingRecipes implements IStackRecipes {
         }
         BCRoboticsRecipes.ensureInitialized();
         List<LaserTableStep> built = new ArrayList<>();
-        for (ProgrammingRecipeJei entry : ProgrammingRecipeCollector.collect()) {
+        for (ProgrammingRecipeEntry entry : ProgrammingRecipeCollector.collect()) {
             String id = entry.output().getItem() instanceof ItemRedstoneBoard
-                    ? RoboticsJeiSubtypes.boardKey(entry.output()) : entry.id();
+                    ? RoboticsSubtypes.boardKey(entry.output()) : entry.id();
             built.add(new LaserTableStep(id == null ? entry.id() : id, List.of(entry.inputs()),
                     List.of(entry.output()), entry.microJoules()));
         }

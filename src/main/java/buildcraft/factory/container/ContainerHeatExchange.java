@@ -73,7 +73,7 @@ public class ContainerHeatExchange extends ContainerBCTile<TileHeatExchange> {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_JEI_TRANSFER_BUCKETS && !isClient && tile != null) {
+        if (id == NET_TRANSFER_BUCKETS && !isClient && tile != null) {
             // JEI "+" pressed on a heat-exchanger pair: move hot/cold input buckets into the
             // container slots; the tile drains them into the section tanks.
             int count = buffer.readVarInt();

@@ -16,14 +16,14 @@ import buildcraft.lib.compat.jei.AbstractTransferHandler;
 
 import buildcraft.robotics.compat.viewer.ProgrammingTableRecipeTransfer;
 import buildcraft.robotics.container.ContainerProgrammingTable;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 
 /**
  * JEI "+" recipe transfer for the Programming Table: moves a blank board from the player's inventory into the table
  * and selects the option the JEI entry shows. The work is the shared {@link ProgrammingTableRecipeTransfer} core.
  */
 public class ProgrammingTableTransferHandler
-        extends AbstractTransferHandler<ContainerProgrammingTable, ProgrammingRecipeJei> {
+        extends AbstractTransferHandler<ContainerProgrammingTable, ProgrammingRecipeEntry> {
 
     public ProgrammingTableTransferHandler(IRecipeTransferHandlerHelper helper) {
         super(helper, new ProgrammingTableRecipeTransfer());
@@ -31,9 +31,9 @@ public class ProgrammingTableTransferHandler
 
     @Override
     //? if >=1.21.10 {
-    public IRecipeType<ProgrammingRecipeJei> getRecipeType() {
+    public IRecipeType<ProgrammingRecipeEntry> getRecipeType() {
     //?} else {
-    /*public RecipeType<ProgrammingRecipeJei> getRecipeType() {*/
+    /*public RecipeType<ProgrammingRecipeEntry> getRecipeType() {*/
     //?}
         return ProgrammingRecipeJeiTypes.PROGRAMMING;
     }

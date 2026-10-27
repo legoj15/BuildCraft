@@ -49,7 +49,7 @@ public final class AssemblyTableRecipeTransfer extends RecipeTransfer<ContainerA
             boolean maxTransfer) {
         List<ItemStack> need = need(player.getInventory(), recipe);
         var registries = player.level().registryAccess();
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_ITEMS,
+        container.sendMessage(ContainerBC_Neptune.NET_TRANSFER_ITEMS,
                 buf -> AssemblyTableTransfer.write(buf, registries, maxTransfer, need));
     }
 

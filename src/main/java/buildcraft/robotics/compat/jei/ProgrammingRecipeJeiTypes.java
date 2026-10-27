@@ -11,18 +11,18 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /*import mezz.jei.api.recipe.RecipeType;*/
 //?}
 
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
+import buildcraft.robotics.compat.viewer.ProgrammingRecipeEntry;
 
-/** Holds the JEI recipe type for the Programming Table; every entry is a {@link ProgrammingRecipeJei}. JEI 20+
+/** Holds the JEI recipe type for the Programming Table; every entry is a {@link ProgrammingRecipeEntry}. JEI 20+
  *  (the {@code >=1.21.10} nodes) deprecated {@code RecipeType} for removal in favour of {@code IRecipeType}; the
  *  1.21.1 node's JEI 19.x predates {@code IRecipeType}, so it keeps the class. */
 public final class ProgrammingRecipeJeiTypes {
     //? if >=1.21.10 {
-    public static final IRecipeType<ProgrammingRecipeJei> PROGRAMMING = IRecipeType.create(
-            "buildcraftunofficial", "programming_table", ProgrammingRecipeJei.class);
+    public static final IRecipeType<ProgrammingRecipeEntry> PROGRAMMING = IRecipeType.create(
+            "buildcraftunofficial", "programming_table", ProgrammingRecipeEntry.class);
     //?} else {
-    /*public static final RecipeType<ProgrammingRecipeJei> PROGRAMMING = RecipeType.create(
-            "buildcraftunofficial", "programming_table", ProgrammingRecipeJei.class);*/
+    /*public static final RecipeType<ProgrammingRecipeEntry> PROGRAMMING = RecipeType.create(
+            "buildcraftunofficial", "programming_table", ProgrammingRecipeEntry.class);*/
     //?}
 
     private ProgrammingRecipeJeiTypes() {}

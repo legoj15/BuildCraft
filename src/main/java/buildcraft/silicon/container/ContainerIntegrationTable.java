@@ -59,7 +59,7 @@ public class ContainerIntegrationTable extends ContainerBCTile<TileIntegrationTa
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
-        if (id == NET_JEI_TRANSFER_INTEGRATION && !isClient && tile != null) {
+        if (id == NET_TRANSFER_INTEGRATION && !isClient && tile != null) {
             // JEI "+" on an Integration Table recipe. Payload: the board id; the robot and the board are both
             // checked against the player's real inventory before either moves.
             RoboticsTableTransfer.integrate(player.getInventory(), tile, buffer.readUtf(), true);

@@ -3,7 +3,7 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
  * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/
  */
-package buildcraft.robotics.recipe;
+package buildcraft.robotics.compat.viewer;
 
 import java.util.HashSet;
 import java.util.List;
@@ -34,7 +34,7 @@ import buildcraft.robotics.item.ItemRobot;
  *  which had no category. */
 public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
 
-    private static List<IntegrationRecipeJei> entries;
+    private static List<IntegrationRecipeEntry> entries;
 
     @BeforeAll
     public static void collectOnce() {
@@ -52,7 +52,7 @@ public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
         }
         Assertions.assertFalse(expected.isEmpty(), "liveness: the registry has robot programs");
         Set<String> shown = new HashSet<>();
-        for (IntegrationRecipeJei entry : entries) {
+        for (IntegrationRecipeEntry entry : entries) {
             String id = ItemRobot.getBoardId(entry.outputs().get(0));
             Assertions.assertTrue(shown.add(id), "robot " + id + " appears once");
         }
@@ -62,7 +62,7 @@ public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
     @Test
     public void everyEntryIsWhatTheTableActuallyCrafts() {
         Assertions.assertFalse(entries.isEmpty(), "liveness");
-        for (IntegrationRecipeJei entry : entries) {
+        for (IntegrationRecipeEntry entry : entries) {
             Assertions.assertTrue(ItemStack.isSameItem(entry.center(), new ItemStack(BCRoboticsItems.ROBOT.get())),
                     "the centre is a robot");
             Assertions.assertTrue(ItemRobot.hasEmptyBoard(entry.center()),
@@ -85,7 +85,7 @@ public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
     @Test
     public void transferIdentifierNamesTheProgramTheRobotGets() {
         Assertions.assertFalse(entries.isEmpty(), "liveness");
-        for (IntegrationRecipeJei entry : entries) {
+        for (IntegrationRecipeEntry entry : entries) {
             Assertions.assertEquals(ItemRobot.getBoardId(entry.outputs().get(0)), entry.boardId(),
                     entry.id() + ": the board the '+' transfer asks for is the program the robot ends up with");
         }
@@ -94,14 +94,14 @@ public class IntegrationRecipeCollectorTester extends VanillaSetupBaseTester {
     @Test
     public void drainedRobotsAlsoLandOnTheirEntry() {
         Assertions.assertFalse(entries.isEmpty(), "liveness");
-        for (IntegrationRecipeJei entry : entries) {
+        for (IntegrationRecipeEntry entry : entries) {
             ItemStack crafted = entry.outputs().get(0);
             String id = ItemRobot.getBoardId(crafted);
             Assertions.assertTrue(ItemRobot.getEnergy(crafted) > 0, id + ": a fresh craft is charged");
-            Object drainedKey = RoboticsJeiSubtypes.robotKey(ItemRobot.createRobotStack(id, 0));
+            Object drainedKey = RoboticsSubtypes.robotKey(ItemRobot.createRobotStack(id, 0));
             boolean listed = false;
             for (ItemStack output : entry.outputs()) {
-                listed |= drainedKey.equals(RoboticsJeiSubtypes.robotKey(output));
+                listed |= drainedKey.equals(RoboticsSubtypes.robotKey(output));
             }
             Assertions.assertTrue(listed,
                     id + ": the drained robot (a separate JEI entry, also in the creative tab) finds this recipe too");

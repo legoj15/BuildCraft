@@ -18,8 +18,8 @@ import buildcraft.lib.client.guide.parts.recipe.IStackRecipes;
 
 import buildcraft.robotics.BCRoboticsRecipes;
 import buildcraft.robotics.item.ItemRobot;
-import buildcraft.robotics.recipe.IntegrationRecipeCollector;
-import buildcraft.robotics.recipe.IntegrationRecipeJei;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeCollector;
+import buildcraft.robotics.compat.viewer.IntegrationRecipeEntry;
 import buildcraft.silicon.BCSiliconItems;
 
 /** The guide's Integration Table lookup ({@code type="integration"}): blank Robot + programmed board → that robot.
@@ -41,7 +41,7 @@ public enum GuideIntegrationRecipes implements IStackRecipes {
         }
         BCRoboticsRecipes.ensureInitialized();
         List<LaserTableStep> built = new ArrayList<>();
-        for (IntegrationRecipeJei entry : IntegrationRecipeCollector.collect()) {
+        for (IntegrationRecipeEntry entry : IntegrationRecipeCollector.collect()) {
             List<List<ItemStack>> slots = new ArrayList<>();
             slots.add(List.of(entry.center()));
             for (ItemStack expansion : entry.expansions()) {

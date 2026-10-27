@@ -14,7 +14,6 @@ import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.robotics.BCRoboticsMenuTypes;
 import buildcraft.robotics.container.ContainerProgrammingTable;
 import buildcraft.robotics.container.RoboticsTableTransfer;
-import buildcraft.robotics.recipe.ProgrammingRecipeJei;
 import buildcraft.silicon.tile.TileProgrammingTable;
 
 /**
@@ -24,14 +23,14 @@ import buildcraft.silicon.tile.TileProgrammingTable;
  * an advisory answer.
  */
 public final class ProgrammingTableRecipeTransfer
-        extends RecipeTransfer<ContainerProgrammingTable, ProgrammingRecipeJei> {
+        extends RecipeTransfer<ContainerProgrammingTable, ProgrammingRecipeEntry> {
 
     public ProgrammingTableRecipeTransfer() {
         super(ContainerProgrammingTable.class, BCRoboticsMenuTypes.PROGRAMMING_TABLE::get);
     }
 
     @Override
-    protected TransferResult check(ContainerProgrammingTable container, ProgrammingRecipeJei recipe, Player player,
+    protected TransferResult check(ContainerProgrammingTable container, ProgrammingRecipeEntry recipe, Player player,
             boolean maxTransfer) {
         TileProgrammingTable table = container.tile;
         String boardId = recipe.boardId();
@@ -42,11 +41,11 @@ public final class ProgrammingTableRecipeTransfer
     }
 
     @Override
-    protected void send(ContainerProgrammingTable container, ProgrammingRecipeJei recipe, Player player,
+    protected void send(ContainerProgrammingTable container, ProgrammingRecipeEntry recipe, Player player,
             boolean maxTransfer) {
         String recipeId = recipe.recipeId();
         String boardId = recipe.boardId();
-        container.sendMessage(ContainerBC_Neptune.NET_JEI_TRANSFER_PROGRAMMING, buf -> {
+        container.sendMessage(ContainerBC_Neptune.NET_TRANSFER_PROGRAMMING, buf -> {
             buf.writeUtf(recipeId);
             buf.writeUtf(boardId);
         });

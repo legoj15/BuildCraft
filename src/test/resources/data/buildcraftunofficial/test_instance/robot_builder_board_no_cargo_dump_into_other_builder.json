@@ -3,7 +3,7 @@
     "function": "buildcraftunofficial:robot_builder_board_no_cargo_dump_into_other_builder",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
-    "max_ticks": 40,
+    "max_ticks": 310,
     "setup_ticks": 0,
     "required": true
 }

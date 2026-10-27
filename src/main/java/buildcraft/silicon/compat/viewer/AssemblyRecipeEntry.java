@@ -20,7 +20,9 @@ import net.minecraft.world.item.ItemStack;
  * <p>{@code id} is the entry's lookup key in the viewer's Assembly Table category
  * and must be unique per entry — for regular recipes it's
  * {@code registryName + ":" + outputItemId}, for the facade recipes it's the
- * recipe's registry name plus {@code :basic} or {@code :hollow}.
+ * recipe's registry name plus {@code :basic} or {@code :hollow}. {@code recipe}
+ * is that registry name alone: the key the "+" transfer sends the server, which
+ * resolves the recipe's own ingredients from it.
  *
  * <p>{@code focusLinkInputIndex} is the index into {@code inputSlots} of the
  * cycling input slot that should be focus-linked to the output slot (i.e. a
@@ -32,12 +34,14 @@ import net.minecraft.world.item.ItemStack;
  */
 public record AssemblyRecipeEntry(
         String id,
+        String recipe,
         List<List<ItemStack>> inputSlots,
         List<ItemStack> outputs,
         long microJoules,
         int focusLinkInputIndex
 ) {
-    public AssemblyRecipeEntry(String id, List<List<ItemStack>> inputSlots, List<ItemStack> outputs, long microJoules) {
-        this(id, inputSlots, outputs, microJoules, -1);
+    public AssemblyRecipeEntry(String id, String recipe, List<List<ItemStack>> inputSlots, List<ItemStack> outputs,
+            long microJoules) {
+        this(id, recipe, inputSlots, outputs, microJoules, -1);
     }
 }

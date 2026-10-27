@@ -5,29 +5,35 @@
  */
 package buildcraft.silicon.container;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.ToIntFunction;
+
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.buffer.Unpooled;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.crafting.Ingredient;
 
 import buildcraft.VanillaSetupBaseTester;
+import buildcraft.api.recipes.AssemblyRecipeBasic;
+import buildcraft.api.recipes.IngredientStack;
 import buildcraft.lib.compat.viewer.TransferResult;
+import buildcraft.lib.gui.BCContainerSupport;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.lib.recipe.AssemblyRecipeRegistry;
+import buildcraft.lib.tile.item.ItemHandlerSimple;
 import buildcraft.silicon.BCSiliconItems;
 import buildcraft.silicon.gate.EnumGateLogic;
 import buildcraft.silicon.gate.EnumGateMaterial;
@@ -35,185 +41,293 @@ import buildcraft.silicon.gate.EnumGateModifier;
 import buildcraft.silicon.gate.GateVariant;
 
 /**
- * The wire format of the JEI "+" transfer into the Assembly Table. Its payload used to carry each needed
- * stack as {@code {id, count}} only, so a server that compares the player's stacks on item AND components
- * (as it must) never found a component-carrying ingredient — an Iron AND Gate, a named or enchanted tool —
- * and the "+" button silently did nothing for any such recipe. These tests pin that every stack survives
- * the round trip with its components intact. Also pins the advisory half the JEI handler runs before it sends:
- * which alternative each input slot asks for, how identical asks are summed, and whether the player covers them.
+ * The recipe-viewer "+" transfer into the Assembly Table: the request names a recipe (registry name plus the output it
+ * was shown for), and the server resolves the recipe's own ingredients and takes the stacks they accept. It used to
+ * send concrete stacks and match the player's on item AND components, so a renamed ingredient the table would take
+ * by hand showed "missing". These tests pin the wire format, the lookup that turns a request into ingredients (an
+ * unknown recipe or an output the recipe does not make yields none), the client's advisory check, and the move itself
+ * against a plain {@link Container}, no level needed. The same flow through the real menu is the game test
+ * {@link AssemblyTableTransferTester}.
+ *
+ * <p>The recipe is a throwaway one registered for the test, so no production recipe's shape is pinned.
  */
 public class AssemblyTableTransferTest extends VanillaSetupBaseTester {
+
+    private static final String RECIPE = "buildcraftunofficial:test_assembly_transfer";
+
+    /** 2 redstone, then 1 iron ingot, then 1 more that may be an iron ingot or a gold ingot. */
+    private AssemblyRecipeBasic recipe;
+
+    @BeforeEach
+    public void registerRecipe() {
+        recipe = new AssemblyRecipeBasic(RECIPE, 1L, ImmutableSet.of(
+                new IngredientStack(Ingredient.of(Items.REDSTONE), 2),
+                new IngredientStack(Ingredient.of(Items.IRON_INGOT), 1),
+                new IngredientStack(Ingredient.of(Items.IRON_INGOT, Items.GOLD_INGOT), 1)),
+                new ItemStack(Items.STICK));
+        AssemblyRecipeRegistry.register(recipe);
+    }
+
+    @AfterEach
+    public void unregisterRecipe() {
+        AssemblyRecipeRegistry.REGISTRY.remove(RECIPE);
+    }
 
     /** Static registries only: enough for every component used here, no server or level needed. */
     private static RegistryAccess registries() {
         return RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
     }
 
-    private static AssemblyTableTransfer.Request roundTrip(boolean max, List<ItemStack> stacks) {
+    private static AssemblyTableTransfer.Request roundTrip(boolean max, String recipe, ItemStack output) {
         PacketBufferBC buf = new PacketBufferBC(Unpooled.buffer());
         try {
-            AssemblyTableTransfer.write(buf, registries(), max, stacks);
+            AssemblyTableTransfer.write(buf, registries(), max, recipe, output);
             return AssemblyTableTransfer.read(buf, registries());
         } finally {
             buf.release();
         }
     }
 
-    private static ItemStack ironAndGate(int count) {
-        return BCSiliconItems.PLUG_GATE.get()
-                .getStack(new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.NO_MODIFIER))
-                .copyWithCount(count);
+    private static ItemStack named(ItemStack stack, String name) {
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
+        return stack;
     }
 
-    private static void assertSameStack(ItemStack want, ItemStack got, String what) {
-        Assertions.assertTrue(ItemStack.isSameItemSameComponents(want, got),
-                what + ": item and components must survive the round trip — wanted " + want + " "
-                        + want.getComponentsPatch() + " but got " + got + " " + got.getComponentsPatch());
-        Assertions.assertEquals(want.getCount(), got.getCount(), what + ": count");
+    private static Container inventoryOf(ItemStack... stacks) {
+        Container inv = new SimpleContainer(41); // a player inventory's size
+        for (int i = 0; i < stacks.length; i++) {
+            inv.setItem(i, stacks[i]);
+        }
+        return inv;
     }
+
+    private static int count(Container inv, ItemStack like) {
+        int total = 0;
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            if (ItemStack.isSameItemSameComponents(inv.getItem(i), like)) {
+                total += inv.getItem(i).getCount();
+            }
+        }
+        return total;
+    }
+
+    private static int count(ItemHandlerSimple handler, ItemStack like) {
+        int total = 0;
+        for (int i = 0; i < handler.getSlots(); i++) {
+            if (ItemStack.isSameItemSameComponents(handler.getStackInSlot(i), like)) {
+                total += handler.getStackInSlot(i).getCount();
+            }
+        }
+        return total;
+    }
+
+    // ── Wire format ──
 
     @Test
-    public void aBuildCraftComponentSurvivesTheRoundTrip() {
-        ItemStack gate = ironAndGate(2);
+    public void theRequestRoundTripsItsRecipeOutputAndFlag() {
+        ItemStack gate = BCSiliconItems.PLUG_GATE.get().getStack(
+                new GateVariant(EnumGateLogic.AND, EnumGateMaterial.IRON, EnumGateModifier.LAPIS));
         Assertions.assertFalse(gate.getComponentsPatch().isEmpty(),
                 "precondition: the gate must really carry a component, or this test proves nothing");
 
-        AssemblyTableTransfer.Request got = roundTrip(false, List.of(gate));
+        AssemblyTableTransfer.Request got = roundTrip(true, "gate-modifier-AND-IRON-LAPIS", gate);
 
-        Assertions.assertEquals(1, got.stacks().size());
-        assertSameStack(gate, got.stacks().get(0), "iron AND gate");
+        Assertions.assertTrue(got.maxTransfer());
+        Assertions.assertEquals("gate-modifier-AND-IRON-LAPIS", got.recipe());
+        Assertions.assertTrue(ItemStack.isSameItemSameComponents(gate, got.output()),
+                "the output's components must survive: wanted " + gate.getComponentsPatch() + " got "
+                        + got.output().getComponentsPatch());
+        Assertions.assertFalse(roundTrip(false, RECIPE, gate).maxTransfer(), "the flag round-trips both ways");
     }
 
     @Test
-    public void vanillaComponentsSurviveTheRoundTrip() {
-        ItemStack named = new ItemStack(Items.DIAMOND_PICKAXE);
-        named.set(DataComponents.CUSTOM_NAME, Component.literal("Programmed"));
-        named.set(DataComponents.DAMAGE, 17);
-        CompoundTag blob = new CompoundTag();
-        blob.putString("buildcraft_test", "marker");
-        ItemStack tagged = new ItemStack(Items.PAPER, 5);
-        tagged.set(DataComponents.CUSTOM_DATA, CustomData.of(blob));
-
-        AssemblyTableTransfer.Request got = roundTrip(false, List.of(named, tagged));
-
-        Assertions.assertEquals(2, got.stacks().size());
-        assertSameStack(named, got.stacks().get(0), "named pickaxe");
-        assertSameStack(tagged, got.stacks().get(1), "custom-data paper");
-    }
-
-    @Test
-    public void aBareStackStaysBareAndKeepsItsCount() {
-        ItemStack redstone = new ItemStack(Items.REDSTONE, 48);
-
-        AssemblyTableTransfer.Request got = roundTrip(false, List.of(redstone));
-
-        Assertions.assertEquals(1, got.stacks().size());
-        assertSameStack(redstone, got.stacks().get(0), "plain redstone");
-        Assertions.assertTrue(got.stacks().get(0).getComponentsPatch().isEmpty(),
-                "a bare ingredient must not gain components on the way");
-    }
-
-    @Test
-    public void aComponentCarrierDoesNotMatchItsBareTwin() {
-        // The server matches on item AND components; the decoded stack must therefore be distinguishable
-        // from a plain one, or "+" would drain plain stacks the recipe never asked for.
-        ItemStack gate = ironAndGate(1);
-        AssemblyTableTransfer.Request got = roundTrip(false, List.of(gate));
-
-        Assertions.assertFalse(ItemStack.isSameItemSameComponents(got.stacks().get(0),
-                new ItemStack(BCSiliconItems.PLUG_GATE.get())),
-                "the decoded gate must not equal a default (component-less) gate");
-    }
-
-    @Test
-    public void theMaxTransferFlagRoundTripsBothWays() {
-        Assertions.assertTrue(roundTrip(true, List.of(new ItemStack(Items.STICK))).maxTransfer());
-        Assertions.assertFalse(roundTrip(false, List.of(new ItemStack(Items.STICK))).maxTransfer());
-    }
-
-    @Test
-    public void anEmptyRequestIsEmpty() {
-        Assertions.assertTrue(roundTrip(false, List.of()).stacks().isEmpty());
-    }
-
-    @Test
-    public void aRequestNamingMoreStacksThanTheTableHasSlotsIsDropped() {
-        List<ItemStack> tooMany = new ArrayList<>();
-        for (int i = 0; i <= AssemblyTableTransfer.MAX_STACKS; i++) {
-            tooMany.add(new ItemStack(Items.STICK, i + 1));
+    public void aRecipeNameLongerThanTheCapIsRefused() {
+        PacketBufferBC buf = new PacketBufferBC(Unpooled.buffer());
+        try {
+            buf.writeByte(0);
+            buf.writeUtf("x".repeat(AssemblyTableTransfer.MAX_RECIPE_NAME + 1));
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(BCContainerSupport.registryBuf(buf, registries()),
+                    new ItemStack(Items.STICK));
+            Assertions.assertThrows(RuntimeException.class, () -> AssemblyTableTransfer.read(buf, registries()),
+                    "an oversized name is a malformed request: the dispatcher logs the throw and drops it");
+        } finally {
+            buf.release();
         }
-
-        AssemblyTableTransfer.Request got = roundTrip(true, tooMany);
-
-        Assertions.assertTrue(got.stacks().isEmpty(),
-                "an oversized request cannot be a real recipe and must be dropped whole, not truncated");
-
-        List<ItemStack> exactlyFull = tooMany.subList(0, AssemblyTableTransfer.MAX_STACKS);
-        Assertions.assertEquals(AssemblyTableTransfer.MAX_STACKS, roundTrip(false, exactlyFull).stacks().size(),
-                "a request naming exactly one stack per table slot is still honoured");
     }
 
-    // ── The advisory half: what the JEI handler asks for, and whether the player can cover it ──
+    // ── The lookup: a request becomes the recipe's ingredients, or nothing ──
 
-    /** A player holding exactly {@code held}, by item (these tests use component-less stacks). */
-    private static ToIntFunction<ItemStack> holding(Map<Item, Integer> held) {
-        return stack -> held.getOrDefault(stack.getItem(), 0);
+    @Test
+    public void aKnownRecipeAndItsOutputYieldTheRecipesOwnIngredientsInOrder() {
+        List<IngredientStack> inputs = AssemblyTableTransfer.inputsFor(RECIPE, new ItemStack(Items.STICK, 5));
+
+        Assertions.assertNotNull(inputs, "the stack's count is not part of what the recipe makes");
+        Assertions.assertEquals(3, inputs.size());
+        Assertions.assertEquals(2, inputs.get(0).count);
+        Assertions.assertTrue(inputs.get(0).ingredient.test(new ItemStack(Items.REDSTONE)));
+        Assertions.assertTrue(inputs.get(1).ingredient.test(new ItemStack(Items.IRON_INGOT))
+                && !inputs.get(1).ingredient.test(new ItemStack(Items.GOLD_INGOT)));
+        Assertions.assertTrue(inputs.get(2).ingredient.test(new ItemStack(Items.GOLD_INGOT)));
     }
 
     @Test
-    public void slotsAskingForTheSameStackAreSummedIntoOneRequest() {
-        List<List<ItemStack>> slots = List.of(
-                List.of(new ItemStack(Items.REDSTONE, 2)),
-                List.of(new ItemStack(Items.IRON_INGOT, 1)),
-                List.of(new ItemStack(Items.REDSTONE, 3)));
+    public void anUnknownRecipeOrAnOutputItDoesNotMakeYieldsNothing() {
+        Assertions.assertNull(AssemblyTableTransfer.inputsFor("no_such_recipe", new ItemStack(Items.STICK)));
+        Assertions.assertNull(AssemblyTableTransfer.inputsFor(RECIPE, new ItemStack(Items.COAL)),
+                "another item");
+        Assertions.assertNull(AssemblyTableTransfer.inputsFor(RECIPE, named(new ItemStack(Items.STICK), "Rod")),
+                "the right item with other components is not what the recipe makes");
+        Assertions.assertNull(AssemblyTableTransfer.inputsFor(RECIPE, ItemStack.EMPTY));
+    }
 
-        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots, holding(Map.of()));
+    // ── The client's advisory check ──
 
-        Assertions.assertEquals(2, need.size(), "two redstone slots collapse into one stack");
-        Assertions.assertTrue(need.get(0).is(Items.REDSTONE) && need.get(0).getCount() == 5,
-                "the redstone demand is 2 + 3, got " + need.get(0));
-        Assertions.assertTrue(need.get(1).is(Items.IRON_INGOT) && need.get(1).getCount() == 1);
-        Assertions.assertEquals(2, slots.get(0).get(0).getCount(), "the JEI entry's own stacks are never grown");
+    @Test
+    public void theCheckAcceptsWhatTheTableAcceptsByHand() {
+        List<IngredientStack> inputs = AssemblyTableTransfer.inputsFor(RECIPE, new ItemStack(Items.STICK));
+        Container renamed = inventoryOf(named(new ItemStack(Items.REDSTONE, 2), "Spark"),
+                named(new ItemStack(Items.IRON_INGOT, 2), "Bar"));
+
+        Assertions.assertEquals(TransferResult.OK, AssemblyTableTransfer.check(inputs, renamed),
+                "a renamed redstone and iron ingot satisfy ingredients that test the item");
     }
 
     @Test
-    public void eachSlotPicksTheFirstAlternativeThePlayerHasEnoughOf() {
-        List<List<ItemStack>> slots = List.of(
-                List.of(new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.BIRCH_PLANKS, 4)),
-                List.of(new ItemStack(Items.IRON_INGOT, 1), new ItemStack(Items.GOLD_INGOT, 1)));
+    public void theCheckAnswersMissingWhenAnIngredientIsShort() {
+        List<IngredientStack> inputs = AssemblyTableTransfer.inputsFor(RECIPE, new ItemStack(Items.STICK));
 
-        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots,
-                holding(Map.of(Items.BIRCH_PLANKS, 9, Items.OAK_PLANKS, 3)));
-        Assertions.assertTrue(need.get(0).is(Items.BIRCH_PLANKS),
-                "three oak planks do not cover four, so the birch alternative is the one asked for");
-        Assertions.assertTrue(need.get(1).is(Items.IRON_INGOT),
-                "with neither ingot held, the first alternative is the one reported short");
+        Assertions.assertEquals(TransferResult.MISSING, AssemblyTableTransfer.check(inputs,
+                inventoryOf(new ItemStack(Items.REDSTONE, 1), new ItemStack(Items.IRON_INGOT, 2))),
+                "one redstone short");
+        Assertions.assertEquals(TransferResult.MISSING, AssemblyTableTransfer.check(inputs,
+                inventoryOf(new ItemStack(Items.REDSTONE, 2), new ItemStack(Items.COAL, 9))),
+                "no iron or gold at all");
     }
 
     @Test
-    public void emptySlotsAndEmptyAlternativesAskForNothing() {
-        List<List<ItemStack>> slots = List.of(List.of(), List.of(ItemStack.EMPTY, new ItemStack(Items.STICK, 2)));
+    public void stockTwoIngredientsBothAcceptIsNotCountedTwice() {
+        List<IngredientStack> inputs = AssemblyTableTransfer.inputsFor(RECIPE, new ItemStack(Items.STICK));
 
-        List<ItemStack> need = AssemblyTableTransfer.chooseNeed(slots, holding(Map.of(Items.STICK, 2)));
-
-        Assertions.assertEquals(1, need.size());
-        Assertions.assertTrue(need.get(0).is(Items.STICK) && need.get(0).getCount() == 2,
-                "an empty alternative is skipped, and a slot with none is dropped");
-        Assertions.assertTrue(AssemblyTableTransfer.chooseNeed(List.of(List.of()), holding(Map.of())).isEmpty());
+        Assertions.assertEquals(TransferResult.MISSING, AssemblyTableTransfer.check(inputs,
+                inventoryOf(new ItemStack(Items.REDSTONE, 2), new ItemStack(Items.IRON_INGOT, 1))),
+                "one iron ingot cannot be both the iron the recipe wants and the iron-or-gold after it");
+        Assertions.assertEquals(TransferResult.OK, AssemblyTableTransfer.check(inputs,
+                inventoryOf(new ItemStack(Items.REDSTONE, 2), new ItemStack(Items.IRON_INGOT, 1),
+                        new ItemStack(Items.GOLD_INGOT, 1))), "gold covers the either-or, iron the other");
     }
 
     @Test
-    public void theCheckAnswersOkMissingOrInvalid() {
-        List<ItemStack> need = List.of(new ItemStack(Items.REDSTONE, 5), new ItemStack(Items.IRON_INGOT, 1));
+    public void theCheckIsInvalidWhenThereIsNothingToAskFor() {
+        Container anything = inventoryOf(new ItemStack(Items.REDSTONE, 64));
 
-        Assertions.assertEquals(TransferResult.OK,
-                AssemblyTableTransfer.check(need, holding(Map.of(Items.REDSTONE, 5, Items.IRON_INGOT, 1))),
-                "exactly covering the demand is enough");
-        Assertions.assertEquals(TransferResult.MISSING,
-                AssemblyTableTransfer.check(need, holding(Map.of(Items.REDSTONE, 4, Items.IRON_INGOT, 1))),
-                "one redstone short is missing");
-        Assertions.assertEquals(TransferResult.MISSING, AssemblyTableTransfer.check(need, holding(Map.of())));
-        Assertions.assertEquals(TransferResult.INVALID, AssemblyTableTransfer.check(List.of(), holding(Map.of())),
-                "an entry that asks for nothing is not a transferable recipe");
+        Assertions.assertEquals(TransferResult.INVALID, AssemblyTableTransfer.check(null, anything));
+        Assertions.assertEquals(TransferResult.INVALID, AssemblyTableTransfer.check(List.of(), anything));
+    }
+
+    // ── The move ──
+
+    private static AssemblyTableTransfer.Request request(boolean max) {
+        return new AssemblyTableTransfer.Request(max, RECIPE, new ItemStack(Items.STICK));
+    }
+
+    @Test
+    public void theMoveTakesRenamedIngredientsAndDebitsThePlayerByExactlyWhatWentIn() {
+        ItemStack spark = named(new ItemStack(Items.REDSTONE, 5), "Spark");
+        ItemStack bar = named(new ItemStack(Items.IRON_INGOT, 3), "Bar");
+        ItemStack coal = new ItemStack(Items.COAL, 7);
+        Container inv = inventoryOf(spark.copy(), bar.copy(), coal.copy());
+        ItemHandlerSimple table = new ItemHandlerSimple(12);
+
+        int moved = AssemblyTableTransfer.apply(inv, table, request(false));
+
+        Assertions.assertEquals(4, moved, "2 redstone, then 1 iron for each iron ingredient");
+        Assertions.assertEquals(2, count(table, spark.copyWithCount(1)));
+        Assertions.assertEquals(2, count(table, bar.copyWithCount(1)));
+        Assertions.assertEquals(3, count(inv, spark.copyWithCount(1)), "5 - 2");
+        Assertions.assertEquals(1, count(inv, bar.copyWithCount(1)), "3 - 2");
+        Assertions.assertEquals(7, count(inv, coal), "an item no ingredient accepts is never touched");
+    }
+
+    @Test
+    public void anIngredientThatAcceptsSeveralItemsTakesWhatIsLeftForIt() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 2), new ItemStack(Items.IRON_INGOT, 1),
+                new ItemStack(Items.GOLD_INGOT, 1));
+        ItemHandlerSimple table = new ItemHandlerSimple(12);
+
+        AssemblyTableTransfer.apply(inv, table, request(false));
+
+        Assertions.assertEquals(2, count(table, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(1, count(table, new ItemStack(Items.IRON_INGOT)), "the iron ingredient's");
+        Assertions.assertEquals(1, count(table, new ItemStack(Items.GOLD_INGOT)),
+                "the iron-or-gold ingredient came after the iron was spent, so it took the gold");
+    }
+
+    @Test
+    public void whatThePlayerLacksIsNotMovedOrInvented() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 1));
+        ItemHandlerSimple table = new ItemHandlerSimple(12);
+
+        int moved = AssemblyTableTransfer.apply(inv, table, request(false));
+
+        Assertions.assertEquals(1, moved, "the one redstone the player held");
+        Assertions.assertEquals(1, count(table, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(0, count(inv, new ItemStack(Items.REDSTONE)));
+    }
+
+    @Test
+    public void theMaxFlagTakesEverythingTheIngredientsAcceptAfterOneRecipesWorth() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 64), new ItemStack(Items.REDSTONE, 36),
+                new ItemStack(Items.IRON_INGOT, 5), new ItemStack(Items.COAL, 9));
+        ItemHandlerSimple table = new ItemHandlerSimple(12);
+
+        AssemblyTableTransfer.apply(inv, table, request(true));
+
+        Assertions.assertEquals(100, count(table, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(5, count(table, new ItemStack(Items.IRON_INGOT)));
+        Assertions.assertEquals(0, count(inv, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(9, count(inv, new ItemStack(Items.COAL)), "coal is nobody's ingredient");
+    }
+
+    @Test
+    public void aFullTableDebitsThePlayerOnlyForWhatItTook() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 64), new ItemStack(Items.REDSTONE, 36),
+                new ItemStack(Items.IRON_INGOT, 1));
+        ItemHandlerSimple oneSlot = new ItemHandlerSimple(1);
+
+        int moved = AssemblyTableTransfer.apply(inv, oneSlot, request(true));
+
+        Assertions.assertEquals(64, moved, "one slot holds one stack of redstone and nothing else");
+        Assertions.assertEquals(64, count(oneSlot, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(36, count(inv, new ItemStack(Items.REDSTONE)), "100 held, 64 taken");
+        Assertions.assertEquals(1, count(inv, new ItemStack(Items.IRON_INGOT)),
+                "the iron the full table could not take stays with the player");
+    }
+
+    @Test
+    public void aSlotThatTakesOnlyPartOfAStackDebitsOnlyThatPart() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 10));
+        ItemHandlerSimple oneSlot = new ItemHandlerSimple(1);
+        oneSlot.insertItem(0, new ItemStack(Items.REDSTONE, 60), false); // room for 4 more
+
+        int moved = AssemblyTableTransfer.apply(inv, oneSlot, request(true));
+
+        Assertions.assertEquals(4, moved, "the 4 that fit");
+        Assertions.assertEquals(64, count(oneSlot, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(6, count(inv, new ItemStack(Items.REDSTONE)),
+                "10 held, 4 taken: the 6 that did not fit are still the player's");
+    }
+
+    @Test
+    public void anUnknownRecipeOrWrongOutputMovesNothing() {
+        Container inv = inventoryOf(new ItemStack(Items.REDSTONE, 4), new ItemStack(Items.IRON_INGOT, 4));
+        ItemHandlerSimple table = new ItemHandlerSimple(12);
+
+        Assertions.assertEquals(0, AssemblyTableTransfer.apply(inv, table,
+                new AssemblyTableTransfer.Request(true, "no_such_recipe", new ItemStack(Items.STICK))));
+        Assertions.assertEquals(0, AssemblyTableTransfer.apply(inv, table,
+                new AssemblyTableTransfer.Request(true, RECIPE, new ItemStack(Items.COAL))));
+
+        Assertions.assertEquals(4, count(inv, new ItemStack(Items.REDSTONE)));
+        Assertions.assertEquals(0, count(table, new ItemStack(Items.REDSTONE)));
     }
 }

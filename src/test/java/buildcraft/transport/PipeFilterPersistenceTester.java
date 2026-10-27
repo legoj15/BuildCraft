@@ -9,7 +9,9 @@ import io.netty.buffer.Unpooled;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
@@ -29,10 +31,14 @@ import buildcraft.api.transport.pipe.PipeBehaviour;
 import buildcraft.api.transport.pipe.PipeEventActionActivate;
 
 import buildcraft.core.BCCoreItems;
+import buildcraft.lib.gui.BCContainerSupport;
 import buildcraft.lib.gui.ContainerBC_Neptune;
+import buildcraft.lib.gui.slot.IPhantomSlot;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.lib.test.ListStacks;
 
 import buildcraft.transport.container.ContainerDiamondPipe;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
@@ -92,7 +98,7 @@ public class PipeFilterPersistenceTester {
 
         // The JEI ghost-ingredient drop reaches the same slot through its own packet.
         markChunkSaved(helper, chunk);
-        ghostDrop(menu, EMZULI_SLOT + 1, "minecraft:gold_ingot");
+        ghostDrop(helper, menu, EMZULI_SLOT + 1, new ItemStack(Items.GOLD_INGOT));
         helper.assertTrue(chunk.isUnsaved(), "a JEI ghost drop onto an Emzuli filter must mark the chunk dirty");
         helper.assertTrue(behaviour.invFilters.getStackInSlot(EMZULI_SLOT + 1).is(Items.GOLD_INGOT),
                 "the ghost drop reached the filter inventory");
@@ -147,7 +153,7 @@ public class PipeFilterPersistenceTester {
                 .getStackInSlot(EMERALD_SLOT).is(Items.IRON_INGOT), "the filter survives the pipe's saved NBT");
 
         markChunkSaved(helper, chunk);
-        ghostDrop(menu, EMERALD_SLOT + 1, "minecraft:gold_ingot");
+        ghostDrop(helper, menu, EMERALD_SLOT + 1, new ItemStack(Items.GOLD_INGOT));
         helper.assertTrue(chunk.isUnsaved(), "a JEI ghost drop onto an Emerald filter must mark the chunk dirty");
         helper.assertTrue(behaviour.filters.getStackInSlot(EMERALD_SLOT + 1).is(Items.GOLD_INGOT),
                 "the ghost drop reached the filter inventory");
@@ -212,7 +218,7 @@ public class PipeFilterPersistenceTester {
                 .getStackInSlot(DIAMOND_SLOT).is(Items.IRON_INGOT), "the filter survives the pipe's saved NBT");
 
         markChunkSaved(helper, chunk);
-        ghostDrop(menu, DIAMOND_SLOT + 1, "minecraft:gold_ingot");
+        ghostDrop(helper, menu, DIAMOND_SLOT + 1, new ItemStack(Items.GOLD_INGOT));
         helper.assertTrue(chunk.isUnsaved(), "a JEI ghost drop onto a " + what + " filter must mark the chunk dirty");
         helper.assertTrue(behaviour.filters.getStackInSlot(DIAMOND_SLOT + 1).is(Items.GOLD_INGOT),
                 "the ghost drop reached the filter inventory");
@@ -222,6 +228,69 @@ public class PipeFilterPersistenceTester {
         helper.assertTrue(chunk.isUnsaved(), "clearing a " + what + " filter must mark the chunk dirty");
         helper.assertTrue(((PipeBehaviourDiamond) reloadedBehaviour(tile)).filters
                 .getStackInSlot(DIAMOND_SLOT).isEmpty(), "the cleared slot stays cleared in the saved NBT");
+
+        helper.succeed();
+    }
+
+    // --- JEI / REI ghost-ingredient drops ---
+
+    /** A recipe viewer's ghost-ingredient drop carries the whole dragged stack. It used to send only the item's
+     *  registry id and the server built a bare count-1 stack, so a data-carrying item (a configured List, which
+     *  the Diamond and Emzuli pipes match through {@code StackUtil.isMatchingItemOrList}) landed as a blank one.
+     *  Also pins the receiver's other rules: the count is forced to 1, an empty stack and a non-phantom slot are
+     *  ignored, and a malformed payload throws nothing and changes nothing. */
+    public static void ghostDropKeepsTheStacksComponents(GameTestHelper helper) {
+        TilePipeHolder tile = placePipe(helper, BCTransportItems.PIPE_DIAMOND_ITEM.get());
+        PipeBehaviourDiamond behaviour = (PipeBehaviourDiamond) tile.getPipe().getBehaviour();
+        ContainerDiamondPipe menu = new ContainerDiamondPipe(0,
+                helper.makeMockPlayer(GameType.CREATIVE).getInventory(), behaviour);
+        ItemStack iron = new ItemStack(Items.IRON_INGOT);
+        ItemStack gold = new ItemStack(Items.GOLD_INGOT);
+
+        // A List set to "iron ingot": it filters only through the data it carries.
+        ItemStack list = ListStacks.listHolding(1, iron);
+        helper.assertTrue(StackUtil.isMatchingItemOrList(list, iron) && !StackUtil.isMatchingItemOrList(list, gold),
+                "precondition: the configured List matches iron and not gold");
+        ghostDrop(helper, menu, DIAMOND_SLOT, list);
+        ItemStack held = behaviour.filters.getStackInSlot(DIAMOND_SLOT);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(list, held),
+                "the filter slot holds the dropped List with its data, not a blank one: " + held + " "
+                        + held.getComponentsPatch());
+        helper.assertTrue(StackUtil.isMatchingItemOrList(held, iron) && !StackUtil.isMatchingItemOrList(held, gold),
+                "the dropped List filters like the configured one");
+
+        // The count is the slot's business, not the drag's.
+        ItemStack named = new ItemStack(Items.PAPER, 7);
+        named.set(DataComponents.CUSTOM_NAME, Component.literal("Ghost"));
+        ghostDrop(helper, menu, DIAMOND_SLOT + 1, named);
+        held = behaviour.filters.getStackInSlot(DIAMOND_SLOT + 1);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(named, held),
+                "a named stack keeps its name: " + held + " " + held.getComponentsPatch());
+        helper.assertTrue(held.getCount() == 1, "the server forces the count to 1, got " + held.getCount());
+
+        // Nothing dragged: the slot is left as it was.
+        ghostDrop(helper, menu, DIAMOND_SLOT + 1, ItemStack.EMPTY);
+        helper.assertTrue(ItemStack.isSameItemSameComponents(named, behaviour.filters.getStackInSlot(DIAMOND_SLOT + 1)),
+                "an empty drop leaves the filter alone");
+
+        // A slot that is not a phantom one (the last menu slot is a player-inventory slot) is not written.
+        int plainSlot = menu.slots.size() - 1;
+        helper.assertFalse(menu.getSlot(plainSlot) instanceof IPhantomSlot,
+                "precondition: the last menu slot is a real slot");
+        ghostDrop(helper, menu, plainSlot, named);
+        helper.assertTrue(menu.getSlot(plainSlot).getItem().isEmpty(), "a ghost drop never fills a real slot");
+
+        // Garbage after a valid slot index: logged and dropped, never thrown at the network thread.
+        PacketBufferBC garbage = new PacketBufferBC(Unpooled.buffer());
+        try {
+            garbage.writeShort(DIAMOND_SLOT + 1);
+            garbage.writeBytes(new byte[] { 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f, 0x7f });
+            menu.readMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, garbage, false, null);
+        } finally {
+            garbage.release();
+        }
+        helper.assertTrue(ItemStack.isSameItemSameComponents(named, behaviour.filters.getStackInSlot(DIAMOND_SLOT + 1)),
+                "a malformed drop leaves the filter alone");
 
         helper.succeed();
     }
@@ -409,12 +478,14 @@ public class PipeFilterPersistenceTester {
     }
 
     /** Replays the server-bound JEI ghost-ingredient packet for a phantom slot. */
-    private static void ghostDrop(ContainerBC_Neptune menu, int slot, String itemId) {
+    private static void ghostDrop(GameTestHelper helper, ContainerBC_Neptune menu, int slot, ItemStack stack) {
         PacketBufferBC buffer = new PacketBufferBC(Unpooled.buffer());
-        buffer.writeShort(slot);
-        buffer.writeUtf(itemId);
-        menu.readMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buffer, false, null);
-        buffer.release();
+        try {
+            BCContainerSupport.writeGhostSlot(buffer, helper.getLevel().registryAccess(), slot, stack);
+            menu.readMessage(ContainerBC_Neptune.NET_GHOST_SLOT_SET, buffer, false, null);
+        } finally {
+            buffer.release();
+        }
     }
 
     /** Rebuilds the pipe from its saved NBT, as a chunk reload does, and returns the fresh behaviour. */

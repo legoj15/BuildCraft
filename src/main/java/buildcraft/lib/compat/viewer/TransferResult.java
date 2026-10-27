@@ -16,7 +16,12 @@ public enum TransferResult {
     OK,
     /** The player does not hold what the request needs. */
     MISSING,
-    /** The machine's slots hold something that would conflict; the player must empty them first. */
+    /** The player does not hold what the request needs, but does hold a programmed board or robot that would have
+     *  served had it been blank. Programmed ones are never taken (the player may value one), so this says why
+     *  instead of the generic {@link #MISSING}. */
+    ONLY_PROGRAMMED,
+    /** The machine's slots hold something that would conflict and the transfer would clear it back into the
+     *  player's inventory, but the inventory has no room for it all. Nothing was moved. */
     BUSY,
     /** The request names a recipe, option or board the server does not know — stale or tampered. */
     INVALID

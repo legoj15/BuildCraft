@@ -97,11 +97,24 @@ public class TileIntegrationTable extends TileLaserTableBase {
      *  so nothing that goes in can stop the table crafting. Public so the JEI transfer can ask the question for the
      *  robot it is about to put in the centre. */
     public boolean canRingTake(ItemStack centre, int slot, ItemStack stack) {
-        if (centre.isEmpty()) return false;
         NonNullList<ItemStack> ring = NonNullList.withSize(invToIntegrate.getSlots(), ItemStack.EMPTY);
         for (int i = 0; i < ring.size(); i++) {
             ring.set(i, i == slot ? stack : invToIntegrate.getStackInSlot(i));
         }
+        return ringMakesRecipe(centre, ring);
+    }
+
+    /** {@link #canRingTake} for a ring that is emptied first: {@code stack} alone in the ring, with {@code centre} in
+     *  the centre, whatever the ring holds now. For the JEI transfer, which clears the ring before it fills it and
+     *  has to ask the question without touching the real contents. */
+    public boolean canEmptiedRingTake(ItemStack centre, ItemStack stack) {
+        NonNullList<ItemStack> ring = NonNullList.withSize(invToIntegrate.getSlots(), ItemStack.EMPTY);
+        ring.set(0, stack);
+        return ringMakesRecipe(centre, ring);
+    }
+
+    private boolean ringMakesRecipe(ItemStack centre, NonNullList<ItemStack> ring) {
+        if (centre.isEmpty()) return false;
         IntegrationRecipe candidate = IntegrationRecipeRegistry.INSTANCE.getRecipeFor(centre, ring);
         if (candidate == null) return false;
         ItemStack output = candidate.getOutput(centre, ring);

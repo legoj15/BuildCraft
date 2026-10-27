@@ -176,6 +176,16 @@ public class AbstractTransferHandlerTest {
         Assertions.assertNotEquals(missing.userErrorKeys.get(0), busy.userErrorKeys.get(0),
             "but it says something different from MISSING: the player has to act differently");
 
+        Answers onlyProgrammed = new Answers();
+        Probe onlyProgrammedProbe = new Probe(onlyProgrammed);
+        onlyProgrammedProbe.core.result = TransferResult.ONLY_PROGRAMMED;
+        Assertions.assertNotNull(onlyProgrammedProbe.press("recipe", false, false));
+        Assertions.assertEquals(1, onlyProgrammed.userErrorKeys.size(),
+            "ONLY_PROGRAMMED is a tooltip on the greyed button");
+        Assertions.assertNotEquals(missing.userErrorKeys.get(0), onlyProgrammed.userErrorKeys.get(0),
+            "and it names the programmed board or robot, which MISSING's generic text does not");
+        Assertions.assertNotEquals(busy.userErrorKeys.get(0), onlyProgrammed.userErrorKeys.get(0));
+
         Answers invalid = new Answers();
         Probe invalidProbe = new Probe(invalid);
         invalidProbe.core.result = TransferResult.INVALID;

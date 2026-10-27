@@ -1,6 +1,6 @@
 {
     "type": "minecraft:function",
-    "function": "buildcraftunofficial:jei_transfer_assembly_drops_oversized_request",
+    "function": "buildcraftunofficial:jei_transfer_assembly_facade_output",
     "environment": "minecraft:default",
     "structure": "minecraft:empty",
     "max_ticks": 20,

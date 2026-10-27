@@ -46,10 +46,12 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu implemen
     /** Container message ID: viewer "+" transfer of a crafting recipe (JEI and REI); see
      *  {@link buildcraft.lib.compat.viewer.BlueprintRecipeTransfer}. */
     public static final int NET_RECIPE_TRANSFER = 100;
-    /** Container message ID used by JEI's BCGhostIngredientHandler. */
+    /** Container message ID: a recipe viewer (JEI's BCGhostIngredientHandler, REI's drag visitor) dropped an item on a
+     *  phantom slot. Payload: unsigned short slot index, then the whole dragged stack as
+     *  {@code ItemStack.OPTIONAL_STREAM_CODEC} (see {@link BCContainerSupport#writeGhostSlot}). */
     public static final int NET_GHOST_SLOT_SET = 101;
     /** Container message ID: viewer "+" transfer of real items into a machine's input inventory
-     *  (Assembly Table). Payload: boolean maxTransfer, varInt count, then each chosen stack as NBT.
+     *  (Assembly Table). Payload: see {@link buildcraft.silicon.container.AssemblyTableTransfer#write}.
      *  Handled by the container subclass; see {@link buildcraft.lib.compat.viewer.TransferUtil}. */
     public static final int NET_TRANSFER_ITEMS = 102;
     /** Container message ID: viewer "+" transfer of filled fluid buckets into a machine's container

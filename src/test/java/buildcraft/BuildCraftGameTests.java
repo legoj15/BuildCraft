@@ -399,9 +399,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:jei_transfer_moves_bucket", () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferMovesBucket);
         reg.accept("buildcraftunofficial:jei_transfer_skips_missing", () -> buildcraft.lib.compat.jei.JeiTransferTester::testTransferSkipsMissing);
         reg.accept("buildcraftunofficial:jei_transfer_assembly_moves_component_ingredients", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferMovesComponentCarryingIngredients);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_accepts_like_the_table", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferAcceptsIngredientsTheWayTheTableDoes);
         reg.accept("buildcraftunofficial:jei_transfer_assembly_only_moves_what_player_holds", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferOnlyMovesWhatThePlayerHolds);
         reg.accept("buildcraftunofficial:jei_transfer_assembly_honours_max_flag", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferHonoursTheMaxFlag);
-        reg.accept("buildcraftunofficial:jei_transfer_assembly_drops_oversized_request", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferDropsAnOversizedRequest);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_ignores_unknown_recipe_or_output", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferIgnoresAnUnknownRecipeOrOutput);
+        reg.accept("buildcraftunofficial:jei_transfer_assembly_facade_output", () -> buildcraft.silicon.container.AssemblyTableTransferTester::transferFacadeOutputMovesTheBlockItNeeds);
 
         // Energy Converter (Dynamo MJ + FE Engine)
         reg.accept("buildcraftunofficial:dynamo_upgrade_slot_filtering", () -> buildcraft.energy.EnergyConverterTester::testDynamoUpgradeSlotFiltering);
@@ -897,6 +899,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_woodiamond_mode_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::woodDiamondModeEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_diamond_item_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondItemFilterEditMarksChunkDirty);
         reg.accept("buildcraftunofficial:pipe_diamond_fluid_filter_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::diamondFluidFilterEditMarksChunkDirty);
+        reg.accept("buildcraftunofficial:pipe_ghost_drop_keeps_stack_components", () -> buildcraft.transport.PipeFilterPersistenceTester::ghostDropKeepsTheStacksComponents);
         // The same for the wrench and gate-action edits of the Daizuli, Lapis, Limiter (iron/diamond power) and
         // Stripes pipes, and the facing the Wood/Iron/Daizuli pipes share: none of them dirtied the chunk.
         reg.accept("buildcraftunofficial:pipe_daizuli_edit_persists", () -> buildcraft.transport.PipeFilterPersistenceTester::daizuliEditsMarkChunkDirty);

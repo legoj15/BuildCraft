@@ -16,6 +16,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -146,7 +147,9 @@ public class RoboticsTableTransferTester {
     }
 
     /** Anything the server cannot honour moves nothing and selects nothing: no blank board, only programmed
-     *  boards, unknown board or recipe ids, and a board slot holding something that is not a board. */
+     *  boards (which answers {@code ONLY_PROGRAMMED}, not {@code MISSING}), unknown board or recipe ids, and a
+     *  stranger in the board slot that has nowhere to go. A stranger the player has room for is cleared back to the
+     *  inventory and the blank board takes its place; a full inventory is {@code BUSY} and nothing changes. */
     public static void programmingTransferRejectsWhatItCannotHonour(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
         TileProgrammingTable table = placeProgrammingTable(helper);
@@ -168,6 +171,9 @@ public class RoboticsTableTransferTester {
         if (!ItemStack.matches(programmed, inv.getItem(0))) {
             helper.fail("a programmed board must stay in the player's inventory");
         }
+        expect(helper, TransferResult.ONLY_PROGRAMMED,
+                RoboticsTableTransfer.program(inv, table, RECIPE_ID, BoardRobotPickerNBT.ID, false),
+                "programmed board only (advisory)");
 
         // A blank is present now; unknown ids still move nothing.
         inv.setItem(1, new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get()));
@@ -182,15 +188,53 @@ public class RoboticsTableTransferTester {
             helper.fail("the spare blank board must not have been taken by a rejected request");
         }
 
-        // A board slot that already holds a non-board blocks the transfer, and is left alone.
+        // A board slot holding a non-board is not the table's to keep: it goes back to the player and the blank
+        // board takes its place. The advisory check says so and moves nothing.
         table.invBoard.setStackInSlot(0, new ItemStack(Items.STICK));
-        sendProgramming(menu, RECIPE_ID, BoardRobotPickerNBT.ID);
-        if (!table.invBoard.getStackInSlot(0).is(Items.STICK) || inv.getItem(1).getCount() != 1
-                || table.optionId != -1) {
-            helper.fail("a board slot holding a stick must block the transfer untouched");
-        }
-        expect(helper, TransferResult.BUSY,
+        expect(helper, TransferResult.OK,
                 RoboticsTableTransfer.program(inv, table, RECIPE_ID, BoardRobotPickerNBT.ID, false), "stick in slot");
+        if (!table.invBoard.getStackInSlot(0).is(Items.STICK) || inv.getItem(1).getCount() != 1) {
+            helper.fail("the advisory check must not clear the stick or take the blank board");
+        }
+        sendProgramming(menu, RECIPE_ID, BoardRobotPickerNBT.ID);
+        ItemStack slotted = table.invBoard.getStackInSlot(0);
+        if (!slotted.is(BCRoboticsItems.REDSTONE_BOARD.get()) || !BoardRobotEmptyNBT.ID.equals(boardIdOf(slotted))
+                || slotted.getCount() != 1) {
+            helper.fail("the blank board should have replaced the stick, the slot holds " + slotted);
+        }
+        if (countOf(inv, Items.STICK) != 1 || countOf(inv, BCRoboticsItems.REDSTONE_BOARD.get()) != 1
+                || !ItemStack.matches(programmed, inv.getItem(0))) {
+            helper.fail("the stick should be back in the player's inventory beside the untouched programmed board");
+        }
+        if (table.optionId != optionIndexOf(table, BoardRobotPickerNBT.ID)) {
+            helper.fail("the picker option should be selected after the clear, optionId=" + table.optionId);
+        }
+
+        // A full inventory still takes the stick when the blank board's own slot is freed by the transfer...
+        resetProgrammingTable(table, new ItemStack(Items.STICK));
+        fillInventory(inv, 5);
+        inv.setItem(5, new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get()));
+        expect(helper, TransferResult.OK,
+                RoboticsTableTransfer.program(inv, table, RECIPE_ID, BoardRobotPickerNBT.ID, false),
+                "full inventory, freed slot");
+        sendProgramming(menu, RECIPE_ID, BoardRobotPickerNBT.ID);
+        if (!inv.getItem(5).is(Items.STICK) || table.invBoard.getStackInSlot(0).isEmpty()) {
+            helper.fail("the stick should have taken the slot the blank board left, got " + inv.getItem(5));
+        }
+
+        // ... but not when that slot stays occupied: BUSY, and nothing at all changes.
+        resetProgrammingTable(table, new ItemStack(Items.STICK));
+        fillInventory(inv, 5);
+        inv.setItem(5, new ItemStack(BCRoboticsItems.REDSTONE_BOARD.get(), 2));
+        List<ItemStack> before = snapshot(inv);
+        expect(helper, TransferResult.BUSY,
+                RoboticsTableTransfer.program(inv, table, RECIPE_ID, BoardRobotPickerNBT.ID, false),
+                "full inventory (advisory)");
+        sendProgramming(menu, RECIPE_ID, BoardRobotPickerNBT.ID);
+        if (!table.invBoard.getStackInSlot(0).is(Items.STICK) || table.optionId != -1) {
+            helper.fail("a full inventory must leave the stick in the table and select nothing");
+        }
+        assertInventoryIs(helper, inv, before, "full inventory");
         helper.succeed();
     }
 
@@ -420,8 +464,11 @@ public class RoboticsTableTransferTester {
         helper.succeed();
     }
 
-    /** All-or-nothing: if either the robot or the board is missing, or the table cannot take them, nothing moves
-     *  (no half-filled table). A programmed robot is never taken as the blank chassis. */
+    /** All-or-nothing: if either the robot or the board is missing, or the inventory cannot take what has to leave
+     *  the table, nothing moves (no half-filled table). A programmed robot is never taken as the blank chassis, and
+     *  when it is the only robot the player holds the answer is {@code ONLY_PROGRAMMED}, not {@code MISSING}. What
+     *  does not belong in the table goes back to the player's inventory; a ring that already holds the one
+     *  requested board keeps it. */
     public static void integrationTransferIsAtomicAndSelective(GameTestHelper helper) {
         BCRoboticsRecipes.ensureInitialized();
         TileIntegrationTable table = placeIntegrationTable(helper);
@@ -429,6 +476,7 @@ public class RoboticsTableTransferTester {
         Inventory inv = player.getInventory();
         ContainerIntegrationTable menu = new ContainerIntegrationTable(0, player, table);
         ItemStack board = ItemRedstoneBoard.createStack(BoardRobotPickerNBT.INSTANCE);
+        ItemStack miner = ItemRedstoneBoard.createStack(BoardRobotMinerNBT.INSTANCE);
         ItemStack robot = new ItemStack(BCRoboticsItems.ROBOT.get());
 
         // Robot but no board.
@@ -438,42 +486,136 @@ public class RoboticsTableTransferTester {
         expect(helper, TransferResult.MISSING,
                 RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "robot but no board");
 
+        // A programmed robot beside it is not why the board is missing: still MISSING, not ONLY_PROGRAMMED.
+        ItemStack programmedRobot = ItemRobot.createRobotStack(BoardRobotPickerNBT.ID, 1_000L);
+        inv.setItem(2, programmedRobot.copy());
+        expect(helper, TransferResult.MISSING,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false),
+                "blank robot and a programmed one, no board");
+        inv.setItem(2, ItemStack.EMPTY);
+
         // Board but no robot.
         inv.setItem(0, ItemStack.EMPTY);
         inv.setItem(1, board.copy());
         sendIntegration(menu, BoardRobotPickerNBT.ID);
         assertUntouched(helper, table, inv, 0, 1, "board but no robot");
+        expect(helper, TransferResult.MISSING,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "board but no robot");
 
-        // A programmed robot is not a blank chassis.
-        ItemStack programmedRobot = ItemRobot.createRobotStack(BoardRobotPickerNBT.ID, 1_000L);
+        // A programmed robot is not a blank chassis, and the answer says so.
         inv.setItem(0, programmedRobot.copy());
         sendIntegration(menu, BoardRobotPickerNBT.ID);
         assertUntouched(helper, table, inv, 1, 1, "programmed robot only");
         if (!ItemStack.matches(programmedRobot, inv.getItem(0))) {
             helper.fail("a programmed robot must stay in the player's inventory");
         }
+        expect(helper, TransferResult.ONLY_PROGRAMMED,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "programmed robot only");
 
-        // Both present, but the ring already holds a different board: the table would pick the wrong program.
+        // Lacking the board as well, a blank robot would not be enough either: plain MISSING, not ONLY_PROGRAMMED.
+        inv.setItem(1, ItemStack.EMPTY);
+        expect(helper, TransferResult.MISSING,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "programmed robot, no board");
+        inv.setItem(1, board.copy());
+
+        // Both present, but the ring already holds a different board: the table would pick the wrong program, so
+        // the stranger goes back to the player and the requested pair is set up in its place.
         inv.setItem(0, robot.copy());
-        table.invToIntegrate.setStackInSlot(5, ItemRedstoneBoard.createStack(BoardRobotMinerNBT.INSTANCE));
-        sendIntegration(menu, BoardRobotPickerNBT.ID);
-        if (!table.invTarget.getStackInSlot(0).isEmpty() || inv.getItem(0).isEmpty() || inv.getItem(1).isEmpty()) {
-            helper.fail("a busy ring must block the whole transfer, robot included");
-        }
-        expect(helper, TransferResult.BUSY,
+        table.invToIntegrate.setStackInSlot(5, miner.copy());
+        expect(helper, TransferResult.OK,
                 RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "foreign board in ring");
-        table.invToIntegrate.setStackInSlot(5, ItemStack.EMPTY);
+        if (!ItemStack.matches(miner, table.invToIntegrate.getStackInSlot(5))
+                || !table.invTarget.getStackInSlot(0).isEmpty() || inv.getItem(0).isEmpty()
+                || inv.getItem(1).isEmpty()) {
+            helper.fail("the advisory check must not clear the ring or move the robot and board");
+        }
+        sendIntegration(menu, BoardRobotPickerNBT.ID);
+        assertTableHolds(helper, table, BoardRobotPickerNBT.ID, "foreign board in ring");
+        if (countOf(inv, BCRoboticsItems.ROBOT.get()) != 0 || countBoards(inv, BoardRobotPickerNBT.ID) != 0
+                || countBoards(inv, BoardRobotMinerNBT.ID) != 1) {
+            helper.fail("the miner board should be back in the player's inventory and the robot and picker board used up");
+        }
 
-        // A centre slot holding a non-robot blocks it too.
+        // A centre slot holding a non-robot is cleared the same way.
+        resetIntegrationTable(table);
+        clearInventory(inv);
+        inv.setItem(0, robot.copy());
+        inv.setItem(1, board.copy());
         table.invTarget.setStackInSlot(0, new ItemStack(Items.STICK));
         sendIntegration(menu, BoardRobotPickerNBT.ID);
-        if (!table.invTarget.getStackInSlot(0).is(Items.STICK) || inv.getItem(0).isEmpty()
-                || inv.getItem(1).isEmpty() || !table.invToIntegrate.stacks.stream().allMatch(ItemStack::isEmpty)) {
-            helper.fail("a stick in the centre must block the transfer untouched");
+        assertTableHolds(helper, table, BoardRobotPickerNBT.ID, "stick in the centre");
+        if (countOf(inv, Items.STICK) != 1 || countOf(inv, BCRoboticsItems.ROBOT.get()) != 0) {
+            helper.fail("the stick should be back in the player's inventory and the robot in the centre");
         }
-        table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
+
+        // A ring that already holds exactly the requested board keeps it where it is; only the stray stack around it
+        // leaves, and the robot is all that comes from the player.
+        resetIntegrationTable(table);
+        clearInventory(inv);
+        inv.setItem(0, robot.copy());
+        table.invToIntegrate.setStackInSlot(2, board.copy());
+        table.invToIntegrate.setStackInSlot(6, new ItemStack(Items.STICK, 3));
+        expect(helper, TransferResult.OK,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false), "board already in ring");
+        sendIntegration(menu, BoardRobotPickerNBT.ID);
+        assertTableHolds(helper, table, BoardRobotPickerNBT.ID, "board already in ring");
+        if (!ItemStack.matches(board, table.invToIntegrate.getStackInSlot(2))) {
+            helper.fail("the requested board already in the ring must stay in its slot, ring slot 2 holds "
+                    + table.invToIntegrate.getStackInSlot(2));
+        }
+        if (countOf(inv, Items.STICK) != 3 || countOf(inv, BCRoboticsItems.ROBOT.get()) != 0) {
+            helper.fail("the three sticks should be back in the player's inventory and the robot used");
+        }
+
+        // Full inventory, freed slots: the robot and the board are one item each, so their two slots free up for the
+        // stick and the miner board that have to leave.
+        resetIntegrationTable(table);
+        table.invTarget.setStackInSlot(0, new ItemStack(Items.STICK));
+        table.invToIntegrate.setStackInSlot(3, miner.copy());
+        fillInventory(inv, 4, 5);
+        inv.setItem(4, robot.copy());
+        inv.setItem(5, board.copy());
+        expect(helper, TransferResult.OK,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false),
+                "full inventory, two freed slots");
+        sendIntegration(menu, BoardRobotPickerNBT.ID);
+        assertTableHolds(helper, table, BoardRobotPickerNBT.ID, "full inventory, two freed slots");
+        if (countOf(inv, Items.STICK) != 1 || countBoards(inv, BoardRobotMinerNBT.ID) != 1) {
+            helper.fail("the stick and the miner board should have taken the two slots the transfer freed");
+        }
+
+        // One slot short: a stack of two boards frees no slot, so the two strangers have one place between them.
+        // BUSY, and neither the table nor the inventory changes.
+        resetIntegrationTable(table);
+        table.invTarget.setStackInSlot(0, new ItemStack(Items.STICK));
+        table.invToIntegrate.setStackInSlot(3, miner.copy());
+        fillInventory(inv, 4, 5);
+        inv.setItem(4, robot.copy());
+        ItemStack twoBoards = board.copy();
+        twoBoards.setCount(2);
+        inv.setItem(5, twoBoards);
+        List<ItemStack> before = snapshot(inv);
+        expect(helper, TransferResult.BUSY,
+                RoboticsTableTransfer.integrate(inv, table, BoardRobotPickerNBT.ID, false),
+                "full inventory (advisory)");
+        sendIntegration(menu, BoardRobotPickerNBT.ID);
+        if (!table.invTarget.getStackInSlot(0).is(Items.STICK)
+                || !ItemStack.matches(miner, table.invToIntegrate.getStackInSlot(3))) {
+            helper.fail("a full inventory must leave the stick and the miner board in the table");
+        }
+        for (int i = 0; i < table.invToIntegrate.getSlots(); i++) {
+            if (i != 3 && !table.invToIntegrate.getStackInSlot(i).isEmpty()) {
+                helper.fail("a full inventory must not put the picker board into the ring, slot " + i + " holds "
+                        + table.invToIntegrate.getStackInSlot(i));
+            }
+        }
+        assertInventoryIs(helper, inv, before, "full inventory");
 
         // The blank board and unknown ids are not programs: nothing moves.
+        resetIntegrationTable(table);
+        clearInventory(inv);
+        inv.setItem(0, robot.copy());
+        inv.setItem(1, board.copy());
         sendIntegration(menu, BoardRobotEmptyNBT.ID);
         sendIntegration(menu, "buildcraftunofficial:no_such_board");
         if (!table.invTarget.getStackInSlot(0).isEmpty() || inv.getItem(0).isEmpty() || inv.getItem(1).isEmpty()) {
@@ -648,6 +790,102 @@ public class RoboticsTableTransferTester {
         }
         if (inv.getItem(0).isEmpty() == (robotLeft != 0) || inv.getItem(1).isEmpty() == (boardLeft != 0)) {
             helper.fail(what + ": the player's items must be untouched");
+        }
+    }
+
+    /** Empties the Integration Table's centre and ring (the result slot is no input and stays). */
+    private static void resetIntegrationTable(TileIntegrationTable table) {
+        table.invTarget.setStackInSlot(0, ItemStack.EMPTY);
+        for (int i = 0; i < table.invToIntegrate.getSlots(); i++) {
+            table.invToIntegrate.setStackInSlot(i, ItemStack.EMPTY);
+        }
+    }
+
+    /** Puts {@code board} in the Programming Table's board slot and forgets the recipe and selection of whatever was
+     *  there before, as the table does on its next tick. */
+    private static void resetProgrammingTable(TileProgrammingTable table, ItemStack board) {
+        table.invBoard.setStackInSlot(0, board);
+        table.findRecipe();
+    }
+
+    /** The Integration Table holds exactly a robot in the centre and exactly one {@code boardId} board in the ring,
+     *  and nothing else there. */
+    private static void assertTableHolds(GameTestHelper helper, TileIntegrationTable table, String boardId,
+            String what) {
+        ItemStack centre = table.invTarget.getStackInSlot(0);
+        if (!centre.is(BCRoboticsItems.ROBOT.get()) || centre.getCount() != 1) {
+            helper.fail(what + ": exactly one robot should be in the centre, got " + centre);
+        }
+        int boards = 0;
+        for (ItemStack ring : table.invToIntegrate.stacks) {
+            if (ring.isEmpty()) {
+                continue;
+            }
+            boards++;
+            if (ring.getCount() != 1 || !boardId.equals(boardIdOf(ring))) {
+                helper.fail(what + ": the ring should hold only the one " + boardId + " board, got " + ring);
+            }
+        }
+        if (boards != 1) {
+            helper.fail(what + ": exactly one ring slot should hold the board, " + boards + " do");
+        }
+    }
+
+    /** How many of {@code item} the player carries in the 36 main slots. */
+    private static int countOf(Inventory inv, Item item) {
+        int total = 0;
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            if (inv.getItem(i).is(item)) {
+                total += inv.getItem(i).getCount();
+            }
+        }
+        return total;
+    }
+
+    /** How many boards of program {@code boardId} the player carries in the 36 main slots. */
+    private static int countBoards(Inventory inv, String boardId) {
+        int total = 0;
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack stack = inv.getItem(i);
+            if (stack.getItem() instanceof ItemRedstoneBoard && boardId.equals(boardIdOf(stack))) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static void clearInventory(Inventory inv) {
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            inv.setItem(i, ItemStack.EMPTY);
+        }
+    }
+
+    /** Fills every main slot except those in {@code keep} with a full stack of dirt, so only the kept slots (and
+     *  slots the transfer frees by using the last of a stack) have room. */
+    private static void fillInventory(Inventory inv, int... keep) {
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            inv.setItem(i, new ItemStack(Items.DIRT, 64));
+        }
+        for (int slot : keep) {
+            inv.setItem(slot, ItemStack.EMPTY);
+        }
+    }
+
+    private static List<ItemStack> snapshot(Inventory inv) {
+        List<ItemStack> copies = new ArrayList<>();
+        for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            copies.add(inv.getItem(i).copy());
+        }
+        return copies;
+    }
+
+    private static void assertInventoryIs(GameTestHelper helper, Inventory inv, List<ItemStack> expected,
+            String what) {
+        for (int i = 0; i < expected.size(); i++) {
+            if (!ItemStack.matches(expected.get(i), inv.getItem(i))) {
+                helper.fail(what + ": inventory slot " + i + " changed from " + expected.get(i) + " to "
+                        + inv.getItem(i));
+            }
         }
     }
 

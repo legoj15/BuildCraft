@@ -20,8 +20,9 @@ import buildcraft.lib.gui.BCContainer;
 /**
  * REI's "+" button for one BuildCraft machine category: wraps the machine's shared {@link RecipeTransfer} (the one
  * JEI's handler wraps too), so both viewers check the same things and send the server the same container message. A
- * {@link TransferResult} becomes REI's answer: OK an enabled button (and on a press, the transfer), MISSING and BUSY a
- * failed result, which REI tints the button red for, with the same tooltip JEI shows, INVALID no button.
+ * {@link TransferResult} becomes REI's answer: OK an enabled button (and on a press, the transfer), MISSING,
+ * ONLY_PROGRAMMED and BUSY a failed result, which REI tints the button red for, with the same tooltip JEI shows,
+ * INVALID no button.
  *
  * @param <C> the machine's container menu type
  * @param <R> the recipe-viewer entry type
@@ -29,9 +30,10 @@ import buildcraft.lib.gui.BCContainer;
 public final class ReiRecipeTransferHandler<C extends AbstractContainerMenu & BCContainer, R>
         implements TransferHandler {
 
-    // JEI's tooltips for the same two answers.
+    // JEI's tooltips for the same three answers.
     private static final String MISSING_KEY = "gui.jei.transfer.buildcraftunofficial.missing";
-    private static final String BUSY_KEY = "gui.jei.transfer.buildcraftunofficial.table_busy";
+    private static final String ONLY_PROGRAMMED_KEY = "gui.jei.transfer.buildcraftunofficial.only_programmed";
+    private static final String BUSY_KEY = "gui.jei.transfer.buildcraftunofficial.inventory_full";
 
     private final CategoryIdentifier<ReiDisplay<R>> category;
     private final RecipeTransfer<C, R> core;
@@ -59,6 +61,7 @@ public final class ReiRecipeTransferHandler<C extends AbstractContainerMenu & BC
         return switch (result) {
             case OK -> Result.createSuccessful().blocksFurtherHandling();
             case MISSING -> Result.createFailed(Component.translatable(MISSING_KEY));
+            case ONLY_PROGRAMMED -> Result.createFailed(Component.translatable(ONLY_PROGRAMMED_KEY));
             case BUSY -> Result.createFailed(Component.translatable(BUSY_KEY));
             case INVALID -> Result.createNotApplicable();
         };

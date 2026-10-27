@@ -24,6 +24,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -47,6 +48,7 @@ import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.lib.misc.RefusalMemory;
 import buildcraft.lib.tile.AbstractBCSyncedBlockEntity;
 import buildcraft.lib.tile.OwnerData;
 
@@ -96,6 +98,14 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
     private int delayIndex = 0;
     private int tick = 0;
     private int lastSyncedAmount = 0;
+
+    /**
+     * Cells a claim or protection mod refused to let the gate's owner fill (issue #65: without the ask a gate beside a
+     * claim could pour lava or explosive gas into it from up to 64 blocks away). The pump's policy
+     * ({@link RefusalMemory#DRAIN}): a fully refused area is re-asked about one cell per second at most. Transient,
+     * so a reloaded gate asks once more.
+     */
+    private final RefusalMemory refusals = new RefusalMemory(RefusalMemory.DRAIN);
 
     public TileFloodGate(BlockPos pos, BlockState state) {
         super(BCFactoryBlockEntities.FLOOD_GATE.get(), pos, state);
@@ -210,7 +220,18 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
         return path;
     }
 
+    /** Whether a claim or protection mod lets the gate's owner put fluid at {@code pos}; asked only for the one cell
+     *  about to be filled, never during the search (see {@link #refusals}). */
+    private boolean mayPlace(BlockPos pos) {
+        return !(level instanceof ServerLevel serverLevel) || BlockUtil.canMachinePlace(serverLevel, pos, getOwner());
+    }
+
     private boolean canFill(BlockPos offsetPos) {
+        // A refused cell is never filled, and an empty one is not searched through either. A refused cell that
+        // already holds this fluid can still carry a path to cells beyond it; each of those is asked about itself.
+        if (refusals.isRefused(level, offsetPos, getOwner())) {
+            return false;
+        }
         if (level.isEmptyBlock(offsetPos)) {
             return true;
         }
@@ -271,7 +292,12 @@ public class TileFloodGate extends AbstractBCSyncedBlockEntity implements IDebug
                             break;
                         }
                     }
-                    if (canFill && canFill(currentPos)) {
+                    canFill = canFill && canFill(currentPos);
+                    if (canFill && !mayPlace(currentPos)) {
+                        // A claim refused the cell: remember it so the next search treats it as a wall, and spend
+                        // nothing. The rest of the queue goes on at the usual pace.
+                        refusals.remember(level, currentPos, getOwner());
+                    } else if (canFill) {
                         // Place the fluid block
                         Fluid fluidType = res.getFluid();
                         BlockState fluidBlock = fluidType.defaultFluidState().createLegacyBlock();

@@ -40,10 +40,9 @@ import net.minecraft.world.level.block.state.BlockState;
  * <tr><td>Robot search boards (lumberjack, miner, ...)</td><td>{@link #ROBOT_SEARCH}</td><td>fixed 1200 ticks</td>
  *     <td>256, oldest dropped (a claimed forest)</td><td>robot's acting identity and home-station owner</td>
  *     <td>-</td></tr>
- * <tr><td>Pump; robot pump board</td><td>{@link #DRAIN}</td><td>spaced: 6000 ticks, stretched by 20 per other
- *     live refusal</td><td>none (see below)</td><td>tile owner; robot's acting identity and home-station
- *     owner</td><td>Pump: the cell the
- *     current bucket charges</td></tr>
+ * <tr><td>Pump; robot pump board; Flood Gate (cells it may not fill)</td><td>{@link #DRAIN}</td><td>spaced: 6000
+ *     ticks, stretched by 20 per other live refusal</td><td>none (see below)</td><td>tile owner; robot's acting
+ *     identity and home-station owner</td><td>Pump: the cell the current bucket charges</td></tr>
  * </table>
  *
  * <p><b>Refusals.</b> A refusal holds while the block's state is unchanged, until its window ends. The state check

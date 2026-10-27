@@ -239,4 +239,45 @@ public class FloodGateTester {
 
         helper.succeed();
     }
+
+    /**
+     * Issue #65: a Flood Gate must not pour fluid into a cell a claim mod refuses. The gate is sealed so that the
+     * only cell it can reach is the pocket below it, the stand-in claim refuses placements there, and the gate is
+     * ticked by hand well past several placement rounds. The pocket must stay empty, the tank full, and the gate must
+     * have asked exactly once (the refusal is remembered rather than re-asked every 16 ticks).
+     */
+    public static void testRefusedCellIsNotFlooded(GameTestHelper helper) {
+        BlockPos gatePos = new BlockPos(3, 4, 3);
+        BlockPos pocket = gatePos.below();
+        helper.setBlock(gatePos, BCFactoryBlocks.FLOOD_GATE.get());
+        for (Direction side : new Direction[] {Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.WEST,
+                Direction.EAST}) {
+            helper.setBlock(pocket.relative(side), net.minecraft.world.level.block.Blocks.STONE);
+        }
+        helper.setBlock(pocket, net.minecraft.world.level.block.Blocks.AIR);
+        //? if >=1.21.10 {
+        TileFloodGate gate = helper.getBlockEntity(gatePos, TileFloodGate.class);
+        //?} else {
+        /*TileFloodGate gate = helper.getBlockEntity(gatePos);*/
+        //?}
+        gate.openSides.retainAll(java.util.EnumSet.of(Direction.DOWN));
+        gate.getTank().setFluidStack(0, new net.neoforged.neoforge.fluids.FluidStack(
+                net.minecraft.world.level.material.Fluids.WATER, 2000));
+
+        BlockPos absPocket = helper.absolutePos(pocket);
+        try (buildcraft.lib.test.WorkClaimMod claim = new buildcraft.lib.test.WorkClaimMod(
+                absPocket::equals, absPocket::equals)) {
+            for (int i = 0; i < 400; i++) {
+                gate.serverTick();
+            }
+            assertTrue(helper.getBlockState(pocket).isAir(),
+                    "the gate flooded a cell the claim refuses: " + helper.getBlockState(pocket));
+            assertTrue(gate.getTank().getAmountMb(0) == 2000,
+                    "the gate spent fluid on a refused cell: " + gate.getTank().getAmountMb(0) + " mB left");
+            assertTrue(claim.placeAsks(absPocket) == 1,
+                    "the gate must ask the claim once and remember the answer, asked "
+                            + claim.placeAsks(absPocket) + " times");
+        }
+        helper.succeed();
+    }
 }

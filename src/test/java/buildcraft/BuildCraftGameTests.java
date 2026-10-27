@@ -779,6 +779,16 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pump_idle_finds_column_pool_promptly", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpFindsAColumnPoolPromptly);
         reg.accept("buildcraftunofficial:pump_idle_wakes_on_adjacent_change", () -> buildcraft.factory.tile.PumpIdleRebuildTester::idlePumpWakesWhenAnAdjacentBlockChanges);
 
+        // A redstone signal beside a Pump, Mining Well or Quarry pauses it in place (no work, no power spent, progress kept) and
+        // taking it away resumes it: whether the signal arrives after the machine has ticked, or was already there when it was placed.
+        reg.accept("buildcraftunofficial:mining_well_redstone_pauses_and_resumes", () -> buildcraft.factory.tile.MinerRedstonePauseTester::wellPausesWhenSignalArrivesAndResumes);
+        reg.accept("buildcraftunofficial:mining_well_placed_beside_redstone_starts_paused", () -> buildcraft.factory.tile.MinerRedstonePauseTester::wellPlacedBesideSignalStartsPaused);
+        reg.accept("buildcraftunofficial:pump_redstone_pauses_and_resumes", () -> buildcraft.factory.tile.MinerRedstonePauseTester::pumpPausesWhenSignalArrivesAndResumes);
+        reg.accept("buildcraftunofficial:pump_placed_beside_redstone_starts_paused", () -> buildcraft.factory.tile.MinerRedstonePauseTester::pumpPlacedBesideSignalStartsPaused);
+        reg.accept("buildcraftunofficial:quarry_redstone_pauses_and_resumes", () -> buildcraft.builders.tile.TileQuarryRedstonePauseTester::quarryPausesWhenSignalArrivesAndResumes);
+        reg.accept("buildcraftunofficial:quarry_placed_beside_redstone_starts_paused", () -> buildcraft.builders.tile.TileQuarryRedstonePauseTester::quarryPlacedBesideSignalStartsPaused);
+        reg.accept("buildcraftunofficial:quarry_paused_keeps_its_rig", () -> buildcraft.builders.tile.TileQuarryRedstonePauseTester::pausedQuarryKeepsItsRig);
+
         // The pump never loads a chunk: not its flood fill, not a drain within block-update reach of a chunk border (straight or
         // across a corner), not one whose neighbouring chunk unloaded after the cell was queued; an idle pump finds fluid once
         // it loads. The robot pump leaves such a source alone too

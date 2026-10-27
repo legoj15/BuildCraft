@@ -104,10 +104,13 @@ public class BlockMiningWell extends BlockBCTile_Neptune<TileMiningWell> {
         //?}
         // Wake a finished/idle well when an adjacent block changes (1.12.2 reacted via a world
         // block-update listener; NeoForge has no global equivalent, so this covers adjacent changes
-        // and deeper column changes fall back to the periodic re-scan).
+        // and deeper column changes fall back to the periodic re-scan). The same change may start or end a redstone
+        // signal beside the well: read that first, then wake it, which is what sets a well the signal just left back
+        // to work.
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof TileMiningWell well) {
+                well.refreshRedstonePause();
                 well.scheduleRecheck();
             }
         }

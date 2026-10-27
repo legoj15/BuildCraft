@@ -678,7 +678,8 @@ public class TilePump extends TileMiner implements IDebuggable {
             setChanged();
             MessageUtil.sendUpdateToTrackingPlayers(this); // clients stop drawing the old tube now, not on the next sync
         }
-        if (!queueBuilt || builtAtRevision != CONFIG_REVISION.get()) {
+        // A paused pump builds nothing (the flood fill waits for the signal to go); super.serverTick skips mine() too.
+        if (!isRedstonePaused() && (!queueBuilt || builtAtRevision != CONFIG_REVISION.get())) {
             buildQueue();
             queueBuilt = true;
             // Whatever the pump was waiting for is moot: the queue it just built is what mine() works from now.
@@ -688,6 +689,7 @@ public class TilePump extends TileMiner implements IDebuggable {
 
         super.serverTick();
 
+        // Paused or not, what the pump already holds keeps going to the tanks and pipes beside it.
         FluidUtilBC.pushFluidToNeighbors(level, worldPosition, tank);
     }
 
@@ -899,6 +901,9 @@ public class TilePump extends TileMiner implements IDebuggable {
         left.add("lastLength = " + lastLength);
         left.add("isComplete = " + isComplete());
         left.add("progress = " + MjAPI.formatMj((long) progress));
+        // The cached flag is server-only; the client half reads the signal itself so the two halves still line up
+        left.add("paused by redstone = "
+                + (level != null && level.isClientSide() ? level.hasNeighborSignal(worldPosition) : isRedstonePaused()));
         // TilePump-specific fields
         left.add("fluid = " + FluidUtilBC.getDebugString(tank.getFluidStack(0)));
         left.add("queue size = " + queue.size());

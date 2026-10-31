@@ -5,6 +5,7 @@
  */
 package buildcraft.transport.stripes;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.server.level.ServerLevel;
@@ -28,11 +29,16 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import buildcraft.api.transport.IStripesActivator;
 import buildcraft.api.transport.IStripesHandlerBlock;
 
+import buildcraft.lib.inventory.AbstractInvItemTransactor;
+import buildcraft.lib.inventory.InventoryWrapper;
+import buildcraft.lib.inventory.ItemHandlerTransactor;
 import buildcraft.lib.misc.MachineRefusals;
 
 /** Breaks a minecart in front of the stripes pipe and sends it, and whatever it carried, back down the pipe. Run by
  *  {@code StripesRegistry#handleBlock} from the pipe's tick, ahead of its digging, as 7.1.x ran its BLOCK_BREAK
- *  handlers (8.0.x registered this handler but never dispatched it). Nothing it takes apart is lost or duplicated:
+ *  handlers (8.0.x registered this handler but never dispatched it). What the cart carries is read through its entity
+ *  item capability, so a modded cart that offers its items only that way is emptied too. Nothing it takes apart is
+ *  lost or duplicated:
  *  an item goes down the pipe only once it is out of the cart, a cart with an item that will not come out is left
  *  standing, and a cart that names no item of its own to send is destroyed the way an attack would destroy it. */
 public enum StripesHandlerMinecartDestroy implements IStripesHandlerBlock {
@@ -61,27 +67,19 @@ public enum StripesHandlerMinecartDestroy implements IStripesHandlerBlock {
             }
             // If the minecart has an inventory (e.g. chest/hopper minecart), extract its contents. A stack is sent
             // only once it is out of its slot: sending one that is still there would duplicate it.
-            boolean moved = false;
+            boolean[] moved = new boolean[1];
             boolean stuck = false;
-            if (cart instanceof Container container) {
-                for (int i = 0; i < container.getContainerSize(); i++) {
-                    ItemStack s = container.getItem(i);
-                    if (!s.isEmpty()) {
-                        container.setItem(i, ItemStack.EMPTY);
-                        if (container.getItem(i).isEmpty()) {
-                            activator.sendItem(s, direction);
-                            moved = true;
-                        } else {
-                            stuck = true;
-                        }
-                    }
-                }
+            for (AbstractInvItemTransactor contents : contentsOf(cart)) {
+                stuck |= !contents.drainInto(stack -> {
+                    activator.sendItem(stack, direction);
+                    moved[0] = true;
+                });
             }
             // A slot that would not empty still holds its item, and breaking the cart around it would delete it (or
             // spill it on the ground, for a cart that drops its contents when it goes). Sending a copy first would
             // duplicate it. So the cart stays, with what is left in it; the pipe has done what it could.
             if (stuck) {
-                return moved;
+                return moved[0];
             }
             ItemStack cartItem = cart.getPickResult();
             if (cartItem == null || cartItem.isEmpty()) {
@@ -89,13 +87,30 @@ public enum StripesHandlerMinecartDestroy implements IStripesHandlerBlock {
                 // way instead, as an attack on it would, so whatever it drops lands in the world. One that cannot be
                 // destroyed that way (invulnerable) stays, emptied.
                 destroyAsAnAttack(serverLevel, player, cart);
-                return moved || cart.isRemoved();
+                return moved[0] || cart.isRemoved();
             }
             cart.discard();
             activator.sendItem(cartItem, direction);
             return true;
         }
         return false;
+    }
+
+    /** The views of what {@code cart} carries, drained in order. A cart offers its items through the entity item
+     *  capability (NeoForge registers it for the vanilla chest and hopper carts, and it is the only way a modded cart
+     *  that is not a vanilla {@link Container} offers them). A cart that is also a {@code Container} is read as one
+     *  afterwards, for anything its capability does not show: the cart spills that when it is discarded. Draining the
+     *  same slots twice is harmless, since the second pass finds them empty or stuck. */
+    private static List<AbstractInvItemTransactor> contentsOf(AbstractMinecart cart) {
+        List<AbstractInvItemTransactor> views = new ArrayList<>(2);
+        ItemHandlerTransactor viaCapability = ItemHandlerTransactor.ofEntity(cart);
+        if (viaCapability != null) {
+            views.add(viaCapability);
+        }
+        if (cart instanceof Container container) {
+            views.add(new InventoryWrapper(container));
+        }
+        return views;
     }
 
     /** Hits {@code cart} with a blow from {@code player} that breaks it, so it goes the way its own type breaks. */

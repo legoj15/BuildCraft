@@ -7,8 +7,11 @@
 package buildcraft.lib.inventory;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.capabilities.Capabilities;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
@@ -21,11 +24,25 @@ import buildcraft.api.core.IStackFilter;
 
 import buildcraft.lib.misc.StackUtil;
 
-/** An {@link buildcraft.api.inventory.IItemTransactor} over a block's item capability, the inventory surface pipes
- *  use (vanilla containers through NeoForge's wrapper, modded storage and BuildCraft's own machines directly). {@link InventoryWrapper} covers only vanilla {@code Container}s, which most modded
+/** An {@link buildcraft.api.inventory.IItemTransactor} over a block's or an entity's item capability, the inventory
+ *  surface pipes use (vanilla containers through NeoForge's wrapper, modded storage and BuildCraft's own machines
+ *  directly). {@link InventoryWrapper} covers only vanilla {@code Container}s, which most modded
  *  inventories are not. The handler decides what may leave or enter each slot, so insert-only and extract-only
  *  slots behave here exactly as they do for a pipe. */
 public final class ItemHandlerTransactor extends AbstractInvItemTransactor {
+    /** The transactor over {@code entity}'s item capability (the whole inventory, not an automation view), or null
+     *  if the entity has none. NeoForge registers it for the vanilla chest and hopper minecarts and boats, and a
+     *  modded entity that carries items offers them this way. */
+    @Nullable
+    public static ItemHandlerTransactor ofEntity(@Nonnull Entity entity) {
+        //? if >=1.21.10 {
+        ResourceHandler<ItemResource> handler = entity.getCapability(Capabilities.Item.ENTITY);
+        //?} else {
+        /*IItemHandler handler = entity.getCapability(Capabilities.ItemHandler.ENTITY);*/
+        //?}
+        return handler == null ? null : new ItemHandlerTransactor(handler);
+    }
+
     //? if >=1.21.10 {
     private final ResourceHandler<ItemResource> handler;
 
@@ -66,7 +83,7 @@ public final class ItemHandlerTransactor extends AbstractInvItemTransactor {
     @Override
     @Nonnull
     protected ItemStack extract(int slot, IStackFilter filter, int min, int max, boolean simulate) {
-        ItemStack current = slotStack(slot);
+        ItemStack current = slotContents(slot);
         if (current.isEmpty() || current.getCount() < min || !filter.matches(current.copy())) {
             return StackUtil.EMPTY;
         }
@@ -104,10 +121,12 @@ public final class ItemHandlerTransactor extends AbstractInvItemTransactor {
 
     @Override
     protected boolean isEmpty(int slot) {
-        return slotStack(slot).isEmpty();
+        return slotContents(slot).isEmpty();
     }
 
-    private ItemStack slotStack(int slot) {
+    @Override
+    @Nonnull
+    protected ItemStack slotContents(int slot) {
         //? if >=1.21.10 {
         ItemResource resource = handler.getResource(slot);
         int amount = handler.getAmountAsInt(slot);

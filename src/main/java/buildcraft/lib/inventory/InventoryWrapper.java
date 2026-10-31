@@ -99,4 +99,10 @@ public final class InventoryWrapper extends AbstractInvItemTransactor {
     protected boolean isEmpty(int slot) {
         return inventory.getItem(slot).isEmpty();
     }
+
+    @Override
+    @Nonnull
+    protected ItemStack slotContents(int slot) {
+        return inventory.getItem(slot);
+    }
 }

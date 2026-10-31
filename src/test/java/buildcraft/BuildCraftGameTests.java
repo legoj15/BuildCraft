@@ -306,6 +306,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_breaks_minecart_after_attack_ask", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testMinecartInFrontIsBrokenAfterAnAttackAsk);
         reg.accept("buildcraftunofficial:stripes_minecart_stuck_slot_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testSlotThatWillNotClearKeepsTheCartAndItsItem);
         reg.accept("buildcraftunofficial:stripes_minecart_no_pick_result_destroyed_its_own_way", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCartThatNamesNoItemIsDestroyedItsOwnWay);
+        reg.accept("buildcraftunofficial:stripes_minecart_capability_only_cart_emptied", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCapabilityOnlyCartIsEmptiedBeforeItIsBroken);
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);

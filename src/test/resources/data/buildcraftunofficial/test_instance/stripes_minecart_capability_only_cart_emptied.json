@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:stripes_minecart_capability_only_cart_emptied",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 100,
+    "setup_ticks": 0,
+    "required": true
+}

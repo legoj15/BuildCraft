@@ -29,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import buildcraft.api.transport.IStripesActivator;
 
 import buildcraft.lib.misc.FakePlayerUtil;
+import buildcraft.lib.test.CapabilityOnlyCart;
 import buildcraft.lib.test.EntityArenaUtil;
 
 /**
@@ -68,7 +69,10 @@ public class StripesHandlerMinecartDestroyTester {
 
     /**
      * A chest cart as a mod can make one: one slot that ignores being emptied (a container whose
-     * {@code setItem(EMPTY)} does not take), and a cart that names no item to hand back. Nothing vanilla does either.
+     * {@code setItem(EMPTY)} and {@code removeItem} do not take, and {@code getItem} hands out copies), and a cart that
+     * names no item to hand back. Nothing
+     * vanilla does either. It is still a chest cart to NeoForge, so the handler reaches it through the entity item
+     * capability that NeoForge registers for chest carts, over this very container.
      */
     private static final class OddChestCart extends MinecartChest {
         static final int STUBBORN_SLOT = 1;
@@ -89,6 +93,20 @@ public class StripesHandlerMinecartDestroyTester {
                 return;
             }
             super.setItem(slot, stack);
+        }
+
+        /** The Transfer API (1.21.10+) shrinks the stack {@code getItem} returns in place, then calls {@code setItem},
+         *  so a slot only ignores being emptied if it hands out a copy. */
+        @Override
+        public ItemStack getItem(int slot) {
+            ItemStack held = super.getItem(slot);
+            return stubborn && slot == STUBBORN_SLOT ? held.copy() : held;
+        }
+
+        /** The classic item handler (1.21.1) empties a slot through this, not through {@code setItem}. */
+        @Override
+        public ItemStack removeItem(int slot, int count) {
+            return stubborn && slot == STUBBORN_SLOT ? ItemStack.EMPTY : super.removeItem(slot, count);
         }
 
         @Override
@@ -194,6 +212,46 @@ public class StripesHandlerMinecartDestroyTester {
                     dropped |= item.getItem().is(Items.CHEST_MINECART);
                 }
                 helper.assertTrue(dropped, "...and it left its own drop in the world instead of vanishing");
+            }
+            helper.succeed();
+        }, "the cart's chunk never became entity-ticking", () -> {
+            EntityArenaUtil.discard(cart);
+            discardItems(helper, frontRel);
+        });
+    }
+
+    /**
+     * A cart that offers its items only through the entity item capability (it is not a {@code Container}) is emptied
+     * through it before it is broken: what it carries goes down the pipe along with the cart, and nothing is left in
+     * it. The handler used to read only a vanilla {@code Container}, so such a cart was discarded with its contents
+     * unsent and they were lost.
+     */
+    public static void testCapabilityOnlyCartIsEmptiedBeforeItIsBroken(GameTestHelper helper) {
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos frontRel = pipeRel.east();
+        EntityArenaUtil.forceLoadEntityArena(helper, frontRel);
+        CapabilityOnlyCart[] cart = new CapabilityOnlyCart[1];
+        EntityArenaUtil.tickUntil(helper, POLL_TICKS, () -> EntityArenaUtil.isEntityTicking(helper, frontRel), () -> {
+            try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(helper.getLevel())) {
+                cart[0] = new CapabilityOnlyCart(helper.getLevel());
+                Vec3 at = Vec3.atBottomCenterOf(helper.absolutePos(frontRel));
+                cart[0].setPos(at.x, at.y, at.z);
+                cart[0].setNoGravity(true);
+                cart[0].store.setStackInSlot(0, new ItemStack(Items.COBBLESTONE, 4));
+                cart[0].store.setStackInSlot(2, new ItemStack(Items.DIAMOND, 2));
+                helper.getLevel().addFreshEntity(cart[0]);
+
+                Recorder recorder = new Recorder();
+                boolean acted = StripesHandlerMinecartDestroy.INSTANCE.handle(
+                        helper.getLevel(), helper.absolutePos(pipeRel), Direction.EAST, lease.player(), recorder);
+
+                helper.assertTrue(acted, "the cart is broken");
+                helper.assertTrue(recorder.count(Items.COBBLESTONE) == 4 && recorder.count(Items.DIAMOND) == 2,
+                        "what the cart carried goes down the pipe, found " + recorder.sent);
+                helper.assertTrue(recorder.count(Items.MINECART) == 1, "...with the cart's own item");
+                helper.assertTrue(cart[0].store.getStackInSlot(0).isEmpty() && cart[0].store.getStackInSlot(2).isEmpty(),
+                        "...and none of it is left in the cart, found " + cart[0].store.stacks);
+                helper.assertTrue(cart[0].isRemoved(), "the cart is gone");
             }
             helper.succeed();
         }, "the cart's chunk never became entity-ticking", () -> {

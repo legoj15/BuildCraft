@@ -9,6 +9,7 @@ package buildcraft.lib.inventory;
 import net.minecraft.resources.Identifier;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
@@ -44,6 +45,45 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
     protected abstract int size();
 
     protected abstract boolean isEmpty(int slot);
+
+    /** The stack in {@code slot} as the inventory itself reports it, which is more than {@link #extract} offers when
+     *  the slot limits how much may leave at once. The default is what a simulated extract offers, exact for every
+     *  inventory that lets a whole slot out; one that can limit it overrides this with a plain read. */
+    @Nonnull
+    protected ItemStack slotContents(int slot) {
+        return extract(slot, StackFilter.ALL, 1, Integer.MAX_VALUE, true);
+    }
+
+    /** Takes what each slot will let out, one slot at a time, and hands every stack to {@code sink} as soon as it is
+     *  out. A stack goes to {@code sink} only as far as the slot really gave it up, judged by re-reading the slot
+     *  rather than by what the extraction claims: a slot that still holds everything it held gave nothing, so
+     *  sending what it returned would duplicate it. A slot that lets only part out gives that part.
+     *
+     *  @return true if every slot is empty afterwards, false if anything is still in the inventory. */
+    public final boolean drainInto(@Nonnull Consumer<ItemStack> sink) {
+        boolean emptied = true;
+        for (int slot = 0; slot < size(); slot++) {
+            ItemStack before = slotContents(slot).copy();
+            if (before.isEmpty()) {
+                continue;
+            }
+            ItemStack offered = extract(slot, StackFilter.ALL, 1, Integer.MAX_VALUE, true);
+            if (!offered.isEmpty()) {
+                ItemStack taken = extract(slot, StackFilter.ALL, offered.getCount(), offered.getCount(), false);
+                ItemStack after = slotContents(slot);
+                boolean sameStack = !after.isEmpty() && ItemStack.isSameItemSameComponents(after, before);
+                int gone = before.getCount() - (sameStack ? after.getCount() : 0);
+                int out = Math.min(taken.getCount(), gone);
+                if (out > 0) {
+                    sink.accept(out == taken.getCount() ? taken : taken.copyWithCount(out));
+                }
+            }
+            if (!isEmpty(slot)) {
+                emptied = false;
+            }
+        }
+        return emptied;
+    }
 
     @Override
     @Nonnull

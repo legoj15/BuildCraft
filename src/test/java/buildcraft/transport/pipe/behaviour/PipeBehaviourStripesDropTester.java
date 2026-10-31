@@ -513,6 +513,15 @@ public class PipeBehaviourStripesDropTester {
         try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
             helper.setBlock(beyondRel, Blocks.STONE);
 
+            // A thrown item touches no cell itself (its impact events judge where it lands), so a claim that refuses
+            // the cell it aims at does not stop the throw.
+            try (WorkClaimMod claim = new WorkClaimMod(front::equals, pos -> false, front::equals, pos -> false)) {
+                PipeEventItem.Drop thrown = rig.drop(new ItemStack(Items.SNOWBALL, 2));
+                rig.stripes.onDrop(thrown);
+                helper.assertTrue(thrown.getStack().getCount() < 2,
+                        "a snowball aimed at a refused cell is still thrown, got " + thrown.getStack());
+            }
+
             try (WorkClaimMod claim = new WorkClaimMod(front::equals, pos -> false, front::equals, pos -> false)) {
                 PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.WATER_BUCKET));
                 rig.stripes.onDrop(refused);

@@ -411,7 +411,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
         if (!(player.level() instanceof ServerLevel level)) {
             return true;
         }
-        return UseInAirProbe.permits(level, player, cell -> BlockUtil.canMachinePlaceAs(level, cell, player),
+        return UseInAirProbe.permits(level, player, stack, cell -> BlockUtil.canMachinePlaceAs(level, cell, player),
                 cell -> BlockUtil.canMachineBreakAs(level, cell, player));
     }
 

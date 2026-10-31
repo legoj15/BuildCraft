@@ -198,7 +198,7 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
             return true;
         }
         GameProfile owner = RobotProtection.stationIdentityOf(robot);
-        if (!UseInAirProbe.permits(level, player, cell -> BlockUtil.canMachinePlace(level, cell, owner),
+        if (!UseInAirProbe.permits(level, player, stack, cell -> BlockUtil.canMachinePlace(level, cell, owner),
                 cell -> BlockUtil.canMachineBreak(level, cell, owner))) {
             markRefused();
             return false;

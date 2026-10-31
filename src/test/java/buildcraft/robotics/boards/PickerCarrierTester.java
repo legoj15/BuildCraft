@@ -33,6 +33,7 @@ import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.BCCoreStatements;
 import buildcraft.core.tile.TileEngineCreative;
+import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.lib.BCLibConfig;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
@@ -286,6 +287,12 @@ public class PickerCarrierTester {
      * hopper on any pipe in the game; and the search ignored the wooden pipe's wrench-set face entirely.
      * This pins both against the same chest, so a revert of either half fails here.
      *
+     * <p>A third station's wooden pipe points at a Chute, which offers its slots only through the item
+     * capability and is no vanilla {@code Container}. The wooden pipe connects to it through that
+     * capability, so the station must report it as its item input too: requiring a {@code Container} hid
+     * Provide Items on every modded inventory and on BuildCraft's own machines (issue #74). (The Chute only
+     * accepts items, so nothing actually comes out of it; only the input's presence is checked here.)
+     *
      * <p>Deliberately asserts on {@code getItemInput()} directly rather than driving a live robot: the
      * negative case ("the carrier never loads") is unprovable by waiting, since a passing run and a merely
      * slow one look identical. */
@@ -294,12 +301,16 @@ public class PickerCarrierTester {
         BlockPos plainChestRel = new BlockPos(1, 2, 1);
         BlockPos woodRel = new BlockPos(4, 3, 1);
         BlockPos woodChestRel = new BlockPos(4, 2, 1);
+        BlockPos capRel = new BlockPos(1, 3, 4);
+        BlockPos capChuteRel = new BlockPos(1, 2, 4);
         EntityArenaUtil.forceLoadCell(helper);
 
         helper.setBlock(plainChestRel, Blocks.CHEST);
         installStationOnPlainPipe(helper, plainRel, Direction.UP);
         helper.setBlock(woodChestRel, Blocks.CHEST);
         installStation(helper, woodRel, Direction.UP);
+        helper.setBlock(capChuteRel, BCFactoryBlocks.CHUTE.get());
+        installStation(helper, capRel, Direction.UP);
 
         // The wooden pipe aims itself on its first server tick (PipeBehaviourDirectional.onTick advances to
         // the first face carrying a TILE connection), so gate on the station existing AND the wooden one
@@ -308,7 +319,9 @@ public class PickerCarrierTester {
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,
                         () -> {
                             DockingStationPipe wood = stationAt(helper, woodRel, Direction.UP);
+                            DockingStationPipe cap = stationAt(helper, capRel, Direction.UP);
                             return wood != null && wood.getItemInput() != null
+                                    && cap != null && cap.getItemInput() != null
                                     && stationAt(helper, plainRel, Direction.UP) != null;
                         }),
                 () -> {
@@ -325,9 +338,13 @@ public class PickerCarrierTester {
                     helper.assertTrue(wood.getItemInputSide().face == Direction.UP,
                             "the item input side must be the chest's own face (UP for a pipe facing DOWN), "
                                     + "not the search direction: got " + wood.getItemInputSide());
+
+                    helper.assertTrue(stationAt(helper, capRel, Direction.UP).getItemInput() != null,
+                            "a station on a wooden pipe pointed at a capability-only inventory (a Chute) must "
+                                    + "report it as its item input, as the wooden pipe connects to it");
                     helper.succeed();
                 },
-                "the wooden supply station never resolved the chest below it");
+                "a wooden supply station never resolved the inventory below it (the Chute one is issue #74)");
     }
 
     // ---------- unload path (station item output) ----------

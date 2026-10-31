@@ -21,6 +21,8 @@ import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import net.neoforged.neoforge.fluids.FluidStack;*/
 //?}
 
+import buildcraft.api.inventory.IItemTransactor;
+import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRequestProvider;
 import buildcraft.api.statements.StatementSlot;
@@ -43,8 +45,8 @@ public class TestStation extends DockingStation {
     }
 
     @Override
-    public SimpleContainer getItemInput() {
-        return new SimpleContainer(27);
+    public IItemTransactor getItemInput() {
+        return new InventoryWrapper(new SimpleContainer(27));
     }
 
     //? if >=1.21.10 {

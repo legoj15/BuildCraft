@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
@@ -32,6 +31,7 @@ import net.neoforged.neoforge.transfer.fluid.FluidResource;
 /*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
 //?}
 
+import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IDockingStationProvider;
@@ -122,7 +122,7 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
         }
 
         @Override
-        public SimpleContainer getItemInput() {
+        public IItemTransactor getItemInput() {
             return seams.contains(Seam.ITEM_INPUT) ? super.getItemInput() : null;
         }
 

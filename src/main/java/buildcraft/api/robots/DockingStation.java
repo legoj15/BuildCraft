@@ -14,7 +14,6 @@ import javax.annotation.Nullable;
 
 import com.mojang.authlib.GameProfile;
 
-import net.minecraft.world.Container;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
@@ -32,6 +31,7 @@ import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.transport.IInjectable;
 
@@ -282,7 +282,8 @@ public abstract class DockingStation {
         return EnumPipePart.CENTER;
     }
 
-    public Container getItemInput() {
+    /** The inventory a docked robot loads from, or null when this station supplies none. */
+    public IItemTransactor getItemInput() {
         return null;
     }
 

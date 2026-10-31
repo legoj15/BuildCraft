@@ -22,13 +22,16 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 //?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;*/
 //?}
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IStackFilter;
+import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.EntityRobotBase;
@@ -44,6 +47,7 @@ import buildcraft.api.transport.pipe.IFlowItems;
 import buildcraft.api.transport.pipe.IFlowPower;
 import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipeHolder;
+import buildcraft.lib.inventory.ItemHandlerTransactor;
 import buildcraft.lib.inventory.filter.PassThroughStackFilter;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.CapUtil;
@@ -286,15 +290,23 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
     }
 
     @Override
-    public net.minecraft.world.Container getItemInput() {
-        Direction facing = extractionFacing();
-        if (facing == null) {
+    public IItemTransactor getItemInput() {
+        IPipeHolder h = getHolder();
+        Direction facing = extractionFacing(h);
+        // In memory, not Level.isLoaded, for the reason getFluidInput gives.
+        if (facing == null || world == null || !BlockUtil.isChunkPresent(world, getPos().relative(facing))) {
             return null;
         }
         // The inventory this station's pipe draws from: the block one cell out along the WOODEN pipe's own
-        // extraction face. A docked robot LOADS from here (D6).
-        return loadedBlockEntity(getPos().relative(facing)) instanceof net.minecraft.world.Container container
-                ? container : null;
+        // extraction face. A docked robot LOADS from here (D6). Read through the item capability, as the
+        // wooden pipe itself extracts: requiring a vanilla Container hid Provide Items, and starved the
+        // robots, on every modded inventory and BuildCraft machine the pipe happily pulled from (#74).
+        //? if >=1.21.10 {
+        ResourceHandler<ItemResource> handler = h.getCapabilityFromPipe(facing, CapUtil.CAP_ITEMS);
+        //?} else {
+        /*IItemHandler handler = h.getCapabilityFromPipe(facing, CapUtil.CAP_ITEMS);*/
+        //?}
+        return handler == null ? null : new ItemHandlerTransactor(handler);
     }
 
     @Override
@@ -302,7 +314,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // The face of the INVENTORY that the pipe touches — the opposite of the direction we searched in.
         // 7.1.x returned the same (`ForgeDirection.getOrientation(meta).getOpposite()`); an earlier port
         // returned the search direction itself, which is the inward face, not the one to extract through.
-        Direction facing = extractionFacing();
+        Direction facing = extractionFacing(getHolder());
         return facing == null ? EnumPipePart.CENTER : EnumPipePart.fromFacing(facing.getOpposite());
     }
 
@@ -322,8 +334,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
      *
      * <p>{@code PipeBehaviourWoodDiamond} extends {@code PipeBehaviourWood}, so the filtered wooden pipe
      * qualifies too — exactly as 7.1.x's {@code PipeItemsEmerald extends PipeItemsWood} did. */
-    private @Nullable Direction extractionFacing() {
-        IPipeHolder h = getHolder();
+    private static @Nullable Direction extractionFacing(@Nullable IPipeHolder h) {
         if (h == null || h.getPipe() == null || !(h.getPipe().getFlow() instanceof IFlowItems)) {
             return null;
         }
@@ -374,8 +385,8 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
             return null;
         }
         // The fluid source this station's pipe draws from: the block one cell out along the WOODEN FLUID
-        // pipe's own extraction face (resolved through the neighbour's block capability, with the
-        // blocking-pluggable checks the item input's BlockEntity read doesn't need). A docked robot LOADS
+        // pipe's own extraction face, resolved through the neighbour's block capability exactly as the
+        // item input is. A docked robot LOADS
         // fluid from here — 7.1.x's getFluidInput, which the fluid carrier board's load leg needs.
         return h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS);
     }

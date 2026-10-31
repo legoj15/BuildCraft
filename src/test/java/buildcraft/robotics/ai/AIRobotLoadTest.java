@@ -12,7 +12,6 @@ import java.util.function.Predicate;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -41,8 +40,8 @@ public class AIRobotLoadTest extends VanillaSetupBaseTester {
         }
 
         @Override
-        public Container getItemInput() {
-            return input;
+        public IItemTransactor getItemInput() {
+            return input == null ? null : new InventoryWrapper(input);
         }
 
         @Override

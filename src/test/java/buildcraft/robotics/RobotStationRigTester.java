@@ -614,7 +614,8 @@ public class RobotStationRigTester {
                         if (station == null) {
                             return false;
                         }
-                        helper.assertTrue(station.getItemInput() == chest,
+                        helper.assertTrue(station.getItemInput() != null
+                                        && !station.getItemInput().extract(null, 1, 1, true).isEmpty(),
                                 "the station's wooden pipe must supply the chest it points at, got "
                                         + station.getItemInput());
                         robot[0] = placeRobot(helper, station, BoardRobotLumberjackNBT.INSTANCE);

@@ -20,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
@@ -34,6 +33,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.api.inventory.IItemTransactor;
+import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.api.core.IZone;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
@@ -678,8 +679,8 @@ public class BuilderBoardTester {
         }
 
         @Override
-        public Container getItemInput() {
-            return input;
+        public IItemTransactor getItemInput() {
+            return input == null ? null : new InventoryWrapper(input);
         }
 
         @Override

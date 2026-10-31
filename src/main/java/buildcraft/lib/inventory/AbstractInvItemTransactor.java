@@ -76,27 +76,33 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
 
     @Nonnull
     private ItemStack insertAllAtOnce(@Nonnull ItemStack stack, boolean simulate) {
-        ItemStack before = asValid(stack);
+        // A slot insert may split or shrink the stack it is handed even when simulating (InventoryWrapper does), so
+        // each pass gets its own copy: the caller's stack stays whole for the real pass and for a refusal.
+        ItemStack input = asValid(stack);
+        ItemStack remaining = input.copy();
         IntArrayList insertedSlots = new IntArrayList(size());
         IntArrayList emptySlots = new IntArrayList(size());
         for (int slot = 0; slot < size(); slot++) {
             if (isEmpty(slot)) {
                 emptySlots.add(slot);
             } else {
-                stack = insert(slot, stack, true);
+                remaining = insert(slot, remaining, true);
                 insertedSlots.add(slot);
-                if (stack.isEmpty()) break;
+                if (remaining.isEmpty()) break;
             }
         }
         for (int slot : emptySlots.toIntArray()) {
-            stack = insert(slot, stack, true);
+            remaining = insert(slot, remaining, true);
             insertedSlots.add(slot);
-            if (stack.isEmpty()) break;
+            if (remaining.isEmpty()) break;
         }
-        if (!stack.isEmpty()) {
-            return stack;
+        if (!remaining.isEmpty()) {
+            // Not everything fits and none of it was inserted, so the overflow is the whole input, not the part that
+            // overran the simulated slots.
+            return input.copy();
         }
         if (simulate) return StackUtil.EMPTY;
+        ItemStack before = input.copy();
         for (int slot : insertedSlots.toIntArray()) {
             before = insert(slot, before, false);
         }

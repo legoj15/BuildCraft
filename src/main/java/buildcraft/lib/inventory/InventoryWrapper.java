@@ -46,7 +46,9 @@ public final class InventoryWrapper extends AbstractInvItemTransactor {
             merged.setCount(merged.getCount() + stack.getCount());
             int size = Math.min(inventory.getMaxStackSize(), merged.getMaxStackSize());
             if (merged.getCount() > size) {
-                stack.setCount(stack.getCount() - (merged.getCount() - size));
+                // What is left over is the part of the merge above the limit; subtracting that from the offered
+                // count instead (as 1.12.2 did) reported the part that FIT as the overflow.
+                stack.setCount(merged.getCount() - size);
                 merged.setCount(size);
                 if (!simulate) {
                     inventory.setItem(slot, merged);

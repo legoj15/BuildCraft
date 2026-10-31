@@ -65,9 +65,13 @@ public class ItemHandlerTransactorTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(64, handler.getStackInSlot(1).getCount());
         Assertions.assertEquals(41, handler.getStackInSlot(3).getCount());
 
-        // Only 23 more stone fit, so all-or-none inserts nothing. The overflow should be all 30 but the base class
-        // reports the 7 that did not fit (issue #75); assert only what was inserted.
-        Assertions.assertFalse(transactor.insert(new ItemStack(Items.STONE, 30), true, false).isEmpty());
+        // Only 23 more stone fit, so all-or-none inserts nothing and refuses the whole 30, not the 7 that overflowed.
+        ItemStack refused = new ItemStack(Items.STONE, 30);
+        ItemStack refusedOverflow = transactor.insert(refused, true, false);
+        Assertions.assertTrue(refusedOverflow.is(Items.STONE) && refusedOverflow.getCount() == 30,
+                "all-or-none overflow is the whole input, got " + refusedOverflow);
+        Assertions.assertEquals(30, refused.getCount(), "the caller's stack is left alone");
+        Assertions.assertEquals(64, handler.getStackInSlot(1).getCount());
         Assertions.assertEquals(41, handler.getStackInSlot(3).getCount(), "all-or-none must insert nothing");
     }
 }

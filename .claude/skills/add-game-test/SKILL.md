@@ -212,6 +212,15 @@ Everything here lives in `EntityArenaUtil` (`src/test/java/buildcraft/lib/test/`
   items inside the test's own cell count. A drop popped into a block that stays (a plug or wire clicked off a
   pipe) ejects itself at up to 0.3 blocks a tick, so keep that block two blocks from every cell edge:
   `pipe_pluggable_break` and `pipe_wire_break` lost their drop across the edge from (1,2,1).
+- **A per-position "this spilled" assertion pins the spills (`ItemEntity.setNeverPickUp`) in the tick it scans them.**
+  Two loose stacks of one item merge when either looks for neighbours (an item that has just changed block does
+  so every second tick) while they sit within about 0.75 blocks (a stack of a max-size-1 item never does). Rigs two blocks apart reach that in two ticks, because an item popped inside a
+  block that is then replaced is pushed out at up to 0.3 blocks a tick: the FE engine's and the MJ dynamo's gold
+  gears merged inside `CommandReplaceTester` (22 of 4000 repeated spills of that pair), so one rig's box lost its
+  gear and `setblock_destroy_still_spills` failed now and then in a full run (issue #73). A pinned item neither
+  merges nor is taken by a hopper, robot or player, and nothing has ticked it yet in the tick it spawned;
+  `CommandReplaceTester.pinSpills` is the pattern.
+  Counting totals across the cell (`DropArenaUtil`) is the other way out when no per-rig attribution is needed.
 - **Sweep and scan inside the cell with `EntityArenaUtil.cellBounds(helper)`.** It is the 6x7 cell
   as an entity box (the block cells' outer faces); any wider sweep reaches into the neighbouring
   arenas and discards THEIR drops. Use `cellZone` for a robot zone and `cellBounds` for a sweep.

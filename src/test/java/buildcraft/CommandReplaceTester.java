@@ -29,7 +29,6 @@ import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
-import buildcraft.api.core.BCLog;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreItems;
@@ -72,9 +71,10 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class CommandReplaceTester {
 
     /** Ticks between the removal and the second scan, which catches anything that lands in a rig's box after the
-     *  removal. Every spill is synchronous, so it is also scanned on the removal's own tick: once, the Stirling's coal
-     *  and its own block item were both missing from the second scan, cause unknown (issue #58;
-     *  {@link #reportVanished} logs the next one). */
+     *  removal. Every spill is synchronous, so it is also scanned on the removal's own tick and the two are unioned:
+     *  a spill that something removes before the second scan still counts as a spill (the must-not-spill modes would
+     *  otherwise pass over it), and {@link #vanished} fails the test naming what happened to it (issues #58 and #73:
+     *  two gold gears merging, see {@link #pinSpills}). */
     private static final int GAP_TICKS = 2;
     /** The wait for every rig position to become entity-ticking, so a spilled item is visible to a scan. */
     private static final int POLL_TICKS = 60;
@@ -179,12 +179,14 @@ public class CommandReplaceTester {
                         throw new IllegalStateException("the cloned tank should hold the 1000 mB it was moved with, held "
                                 + tank.tank.getAmountMb(0));
                     }
+                    List<ItemEntity> lateScan = new ArrayList<>(EntityArenaUtil.droppedItems(helper, source, RIG_RADIUS));
+                    addAbsent(lateScan, EntityArenaUtil.droppedItems(helper, destination, RIG_RADIUS));
                     List<ItemEntity> spilled = new ArrayList<>(seenAtClone);
-                    addAbsent(spilled, EntityArenaUtil.droppedItems(helper, source, RIG_RADIUS));
-                    addAbsent(spilled, EntityArenaUtil.droppedItems(helper, destination, RIG_RADIUS));
+                    addAbsent(spilled, lateScan);
                     if (!spilled.isEmpty()) {
+                        List<String> vanished = vanished("clone move", seenAtClone, lateScan);
                         throw new IllegalStateException("clone move must not spill the tank's water, but dropped "
-                                + describe(spilled));
+                                + describe(spilled) + (vanished.isEmpty() ? "" : " (" + String.join("; ", vanished) + ")"));
                     }
                     helper.succeed();
                 },
@@ -218,7 +220,9 @@ public class CommandReplaceTester {
                     for (Rig rig : rigs) {
                         remove(helper, rig, removal);
                         // The rig's chunk is entity-ticking, so what the removal spilled is visible at once.
-                        seenAtRemoval.put(rig, EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS));
+                        List<ItemEntity> spilled = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
+                        pinSpills(spilled);
+                        seenAtRemoval.put(rig, spilled);
                     }
                 },
                 GAP_TICKS,
@@ -227,7 +231,7 @@ public class CommandReplaceTester {
                     for (Rig rig : rigs) {
                         List<ItemEntity> dropped = new ArrayList<>(seenAtRemoval.get(rig));
                         List<ItemEntity> lateScan = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
-                        reportVanished(rig, dropped, lateScan);
+                        failures.addAll(vanished(rig.name(), dropped, lateScan));
                         addAbsent(dropped, lateScan);
                         if (removal == Removal.SETBLOCK_DESTROY) {
                             for (Item expected : rig.mustSpill()) {
@@ -414,6 +418,20 @@ public class CommandReplaceTester {
         }
     }
 
+    /** Stops the items a removal just spilled from merging with each other (and from being picked up). Two loose
+     *  stacks of one item merge when either looks for neighbours (an item that has just changed block does so every
+     *  second tick) while they sit within about 0.75 blocks, and rigs two blocks apart get there in two ticks, because an item popped inside a block that the command then replaces is pushed
+     *  out at up to 0.3 blocks a tick. The FE engine's and the MJ dynamo's gold gears did (22 of 4000 repeated spills
+     *  of that pair; the absorbed entity is {@code DISCARDED} at age 1 or 2 with its stack emptied, and the rig that
+     *  lost its gear failed {@code setblock_destroy_still_spills}), which is the flake of issues #58 and #73. A merge
+     *  is not what this test measures, and the spills are only scanned here, in the tick they spawn, before anything
+     *  has ticked them, so no merge can have happened yet. Items that appear later are not pinned. */
+    private static void pinSpills(List<ItemEntity> spilled) {
+        for (ItemEntity item : spilled) {
+            item.setNeverPickUp();
+        }
+    }
+
     /** Adds each of {@code more} that {@code items} does not already hold (entities compare by identity). */
     private static void addAbsent(List<ItemEntity> items, List<ItemEntity> more) {
         for (ItemEntity item : more) {
@@ -423,21 +441,27 @@ public class CommandReplaceTester {
         }
     }
 
-    /** Logs a spill seen on the removal's tick that the second scan no longer finds. It still counts as spilled; the
-     *  log is the evidence for issue #58's cause. A removed item says {@code DISCARDED} for nearly every way out (a
-     *  sweep, a merge, lava, fire, the void, old age), so its age and fire ticks are logged beside it; one still in
-     *  the level has moved out of the box, and its position says where. */
-    private static void reportVanished(Rig rig, List<ItemEntity> seen, List<ItemEntity> lateScan) {
+    /** One failure line per spill seen on the removal's tick that the second scan no longer finds. A spill is
+     *  synchronous and nothing in the rig takes it back, so an item that was there and is gone (or has left the box)
+     *  {@link #GAP_TICKS} ticks later was removed or moved by something outside the rig (issue #73). A removed item
+     *  says {@code DISCARDED} for nearly every way out (a sweep, a merge, lava, fire, an explosion, the void, old
+     *  age), so its age and fire ticks are named beside it; one still in the level has moved out of the box, and its
+     *  position says where. */
+    private static List<String> vanished(String name, List<ItemEntity> seen, List<ItemEntity> lateScan) {
+        List<String> lines = new ArrayList<>();
         for (ItemEntity item : seen) {
             if (item.isRemoved()) {
-                BCLog.logger.warn("[command-replace] {} spilled {}, absent from the scan {} ticks later: removed ({}) at {} (age {},"
-                        + " fire ticks {})", rig.name(), item.getItem(), GAP_TICKS, item.getRemovalReason(),
-                        item.position(), item.getAge(), item.getRemainingFireTicks());
+                // A merge empties the absorbed entity's stack before discarding it; every other way out leaves it.
+                String merged = item.getItem().isEmpty() ? ", its stack emptied: merged into another stack" : "";
+                lines.add(name + " spilled " + item.getItem() + ", absent from the scan " + GAP_TICKS
+                        + " ticks later: removed (" + item.getRemovalReason() + ") at " + item.position() + " (age "
+                        + item.getAge() + ", fire ticks " + item.getRemainingFireTicks() + merged + ")");
             } else if (!lateScan.contains(item)) {
-                BCLog.logger.warn("[command-replace] {} spilled {}, which left the scan box within {} ticks: now at {}",
-                        rig.name(), item.getItem(), GAP_TICKS, item.position());
+                lines.add(name + " spilled " + item.getItem() + ", which left the scan box within " + GAP_TICKS
+                        + " ticks: now at " + item.position());
             }
         }
+        return lines;
     }
 
     private static String describe(List<ItemEntity> items) {

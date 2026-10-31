@@ -8,7 +8,6 @@
  */
 package buildcraft.robotics.ai;
 
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.core.IStackFilter;
@@ -16,7 +15,6 @@ import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.lib.inventory.filter.AggregateFilter;
 import buildcraft.robotics.statements.ActionRobotFilterTool;
 
@@ -95,8 +93,8 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
 
     private boolean equipItemStack() {
         DockingStation station = robot.getDockingStation();
-        Container input = station.getItemInput();
-        if (input == null) {
+        IItemTransactor inputTransactor = station.getItemInput();
+        if (inputTransactor == null) {
             return false;
         }
 
@@ -105,7 +103,6 @@ public class AIRobotFetchAndEquipItemStack extends AIRobot {
         // gate-semantics at Ph6) decides. The count matters downstream: AIRobotPlant plants a single
         // seed and drops the remainder of the hand on the ground, so equipping a full stack made a
         // planter fed from a seed chest spill 63 seeds every cycle.
-        IItemTransactor inputTransactor = new InventoryWrapper(input);
         ItemStack possible = inputTransactor.extract(filter, 1, 1, false);
         if (possible.isEmpty()) {
             return false;

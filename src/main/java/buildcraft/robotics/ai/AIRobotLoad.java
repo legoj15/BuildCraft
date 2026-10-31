@@ -8,7 +8,6 @@
  */
 package buildcraft.robotics.ai;
 
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 import buildcraft.api.core.IStackFilter;
@@ -16,12 +15,11 @@ import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.lib.misc.StackUtil;
 
 /** Pulls items from the docked station's item input into the robot's four slots. The 7.1.x slot-by-slot
  *  {@code InventoryIterator}/{@code ITransactor} scan becomes a D2 {@code IItemTransactor} exchange — the
- *  station input {@code Container} is wrapped, matching stacks are {@code extract}ed up to the quantity, and
+ *  station input is read through its transactor, matching stacks are {@code extract}ed up to the quantity, and
  *  the robot's transactor {@code insert}s them; {@code doLoad} maps to {@code simulate}. The station's
  *  {@code canRobotExtractItem} policy (D1) gates each stack, exactly where 7.1.x's
  *  {@code ActionStationProvideItems} + {@code ActionRobotFilter} chain did — Ph6 gave
@@ -76,12 +74,11 @@ public class AIRobotLoad extends AIRobot {
             return false;
         }
 
-        Container input = station.getItemInput();
-        if (input == null) {
+        IItemTransactor inputTransactor = station.getItemInput();
+        if (inputTransactor == null) {
             return false;
         }
 
-        IItemTransactor inputTransactor = new InventoryWrapper(input);
         IItemTransactor robotTransactor = robot.getTransactor();
 
         if (quantity == ANY_QUANTITY) {
@@ -95,9 +92,8 @@ public class AIRobotLoad extends AIRobot {
                     return false;
                 }
                 if (!station.canRobotExtractItem(extracted)) {
-                    // Copy BEFORE the put-back: the station transactor drains the offered stack itself when it
-                    // lands back in an emptied slot (see the quantity branch), so the exclusion would otherwise
-                    // exclude "empty", match nothing new, and re-extract this same stack forever.
+                    // Copy BEFORE the put-back (see the quantity branch): the exclusion must name the refused
+                    // stack even if the put-back drains it.
                     ItemStack refused = extracted.copy();
                     if (doLoad) {
                         inputTransactor.insert(extracted, false, false);
@@ -127,10 +123,10 @@ public class AIRobotLoad extends AIRobot {
                 break;
             }
             if (!station.canRobotExtractItem(extracted)) {
-                // Copy BEFORE the put-back: the station transactor (InventoryWrapper) drains the offered
-                // stack itself when it lands back in an emptied slot, so reading `extracted` after the
-                // insert can capture an EMPTY stack — and excluding "empty" excludes nothing, looping on
-                // the same refused stack forever.
+                // Copy BEFORE the put-back: a transactor may drain the offered stack as it lands back
+                // (InventoryWrapper does, in an emptied slot), so reading `extracted` after the insert can
+                // capture an EMPTY stack — and excluding "empty" excludes nothing, looping on the same
+                // refused stack forever.
                 ItemStack refused = extracted.copy();
                 if (doLoad) {
                     inputTransactor.insert(extracted, false, false);

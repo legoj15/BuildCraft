@@ -11,11 +11,12 @@ import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import buildcraft.api.inventory.IItemTransactor;
+import buildcraft.lib.inventory.InventoryWrapper;
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
@@ -38,8 +39,8 @@ public class AIRobotFetchAndEquipItemStackTest extends VanillaSetupBaseTester {
         }
 
         @Override
-        public Container getItemInput() {
-            return input;
+        public IItemTransactor getItemInput() {
+            return input == null ? null : new InventoryWrapper(input);
         }
     }
 

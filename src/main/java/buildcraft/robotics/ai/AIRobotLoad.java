@@ -123,8 +123,8 @@ public class AIRobotLoad extends AIRobot {
                 break;
             }
             if (!station.canRobotExtractItem(extracted)) {
-                // Copy BEFORE the put-back: a transactor may drain the offered stack as it lands back
-                // (InventoryWrapper does, in an emptied slot), so reading `extracted` after the insert can
+                // Copy BEFORE the put-back: a transactor may drain the offered stack as it lands back (the
+                // IItemTransactor contract does not forbid it), so reading `extracted` after the insert can
                 // capture an EMPTY stack — and excluding "empty" excludes nothing, looping on the same
                 // refused stack forever.
                 ItemStack refused = extracted.copy();

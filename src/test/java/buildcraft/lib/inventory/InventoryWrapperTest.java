@@ -35,6 +35,20 @@ public class InventoryWrapperTest extends VanillaSetupBaseTester {
     }
 
     @Test
+    public void simulatedPartialInsertLeavesTheCallersStackAlone() {
+        SimpleContainer container = new SimpleContainer(1);
+        InventoryWrapper wrapper = new InventoryWrapper(container);
+
+        ItemStack input = new ItemStack(Items.STONE, 100);
+        ItemStack overflow = wrapper.insert(input, false, true);
+        Assertions.assertEquals(36, overflow.getCount(), "64 of 100 fit one empty slot");
+        Assertions.assertEquals(100, input.getCount(), "a simulation leaves the caller's stack alone");
+        Assertions.assertTrue(container.getItem(0).isEmpty());
+        Assertions.assertTrue(wrapper.canPartiallyAccept(new ItemStack(Items.STONE, 100)),
+                "an empty slot can take part of a stack");
+    }
+
+    @Test
     public void allOrNoneRefusalReturnsTheWholeStackAndInsertsNothing() {
         SimpleContainer container = new SimpleContainer(2);
         container.setItem(0, new ItemStack(Items.STONE, 64));

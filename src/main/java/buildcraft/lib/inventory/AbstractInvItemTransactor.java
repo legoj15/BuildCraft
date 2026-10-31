@@ -97,6 +97,8 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
 
     @Nonnull
     private ItemStack insertAnyAmount(@Nonnull ItemStack stack, boolean simulate) {
+        // Works on a copy for the same reason as insertAllAtOnce: a simulated slot insert may shrink what it is handed.
+        stack = stack.copy();
         int slotCount = size();
         IntArrayList emptySlots = new IntArrayList(slotCount);
         for (int slot = 0; slot < size(); slot++) {

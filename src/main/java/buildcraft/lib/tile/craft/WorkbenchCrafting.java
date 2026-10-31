@@ -23,12 +23,14 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 
@@ -75,6 +77,10 @@ public class WorkbenchCrafting {
     private final ItemHandlerSimple invMaterials;
     private final ItemHandlerSimple invResult;
     private boolean isBlueprintDirty = true;
+    /** The server's recipe manager {@link #currentRecipe} and {@link #matches} were looked up in. A datapack
+     *  {@code /reload} builds a new one, so a different instance here means every held recipe is a pre-reload one. */
+    @Nullable
+    private RecipeManager matchedRecipeManager = null;
     private boolean areMaterialsDirty = true;
     /** The grid {@link #craft()} extracts from the materials (the blueprint, or its substituted form), or null when
      *  the materials cannot supply any acceptable grid. Valid while {@link #areMaterialsDirty} is false. */
@@ -167,11 +173,25 @@ public class WorkbenchCrafting {
         return CraftingInput.of(width, height, blueprintGrid());
     }
 
+    /** Marks the blueprint dirty when the server's recipe manager is not the one the held recipes came from (a
+     *  datapack reload), so they are matched afresh instead of crafting pre-reload recipes until the grid changes.
+     *  Called wherever the dirty flag gates the held recipes: {@code tick}, but also the calls that can land between
+     *  a reload and the next tick. A reference compare, so cheap enough for every tick. */
+    private void invalidateOnRecipeReload() {
+        MinecraftServer server = tile.getLevel().getServer();
+        RecipeManager current = server == null ? null : server.getRecipeManager();
+        if (current != matchedRecipeManager) {
+            matchedRecipeManager = current;
+            isBlueprintDirty = true;
+        }
+    }
+
     /** @return True if anything changed, false otherwise */
     public boolean tick() {
         if (tile.getLevel().isClientSide()) {
             throw new IllegalStateException("Never call this on the client side!");
         }
+        invalidateOnRecipeReload();
         if (isBlueprintDirty) {
             List<ItemStack> grid = blueprintGrid();
             CraftingInput input = CraftingInput.of(width, height, grid);
@@ -197,6 +217,7 @@ public class WorkbenchCrafting {
      *  variant rewrites the blueprint to that variant's items and recomputes at once.
      *  @return true if the selection changed. */
     public boolean cycleOutput(int dir) {
+        invalidateOnRecipeReload();
         if (isBlueprintDirty) {
             // A grid edit in the same tick must win: never apply a variant built from the pre-edit blueprint. Drop
             // the click rather than tick() here, which would swallow the "changed" signal the tile's own tick() uses
@@ -395,6 +416,7 @@ public class WorkbenchCrafting {
 
     /** @return True if {@link #craft()} might return true. */
     public boolean canCraft() {
+        invalidateOnRecipeReload();
         if (currentRecipe == null || isBlueprintDirty) {
             return false;
         }
@@ -408,6 +430,7 @@ public class WorkbenchCrafting {
     /** Attempts to craft a single item.
      *  @return True if the crafting happened, false otherwise. */
     public boolean craft() {
+        invalidateOnRecipeReload();
         if (isBlueprintDirty || currentRecipe == null) {
             return false;
         }

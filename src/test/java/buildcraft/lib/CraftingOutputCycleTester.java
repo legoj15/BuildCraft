@@ -11,6 +11,7 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.Item;
@@ -447,6 +448,46 @@ public final class CraftingOutputCycleTester {
         if (tile.getCurrentRecipeOutput().getItem() != Items.SPRUCE_STAIRS) {
             helper.fail("After the dropped click the edited grid must resolve to spruce stairs, got "
                 + tile.getCurrentRecipeOutput());
+        }
+        helper.succeed();
+    }
+
+    /** A datapack {@code /reload} swaps in a new recipe manager, so the recipes the engine matched against the old one
+     *  are stale: a settled engine must re-match on the next tick after a reload (and only then, not every tick). */
+    public static void testReloadRematchesRecipes(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, BCFactoryBlocks.AUTOWORKBENCH_ITEM.get());
+        //? if >=1.21.10 {
+        TileAutoWorkbenchItems tile = helper.getBlockEntity(pos, TileAutoWorkbenchItems.class);
+        //?} else {
+        /*TileAutoWorkbenchItems tile = helper.getBlockEntity(pos);*/
+        //?}
+        if (tile == null) {
+            helper.fail("Auto Workbench block-entity must be present");
+            return;
+        }
+        tile.invBlueprint.setStackInSlot(0, new ItemStack(Items.BEDROCK));
+        if (!tile.crafting.tick() || tile.crafting.getMatchCount() != 2) {
+            helper.fail("Precondition: a fresh engine must match both test recipes for one bedrock, matches "
+                + tile.crafting.getMatchCount());
+        }
+        if (tile.crafting.tick()) {
+            helper.fail("Precondition: a settled engine must not recompute without a change");
+        }
+
+        // The server blocks until the reload has swapped its resources in, so the new manager is live on return.
+        MinecraftServer server = helper.getLevel().getServer();
+        server.reloadResources(server.getPackRepository().getSelectedIds()).join();
+
+        if (!tile.crafting.tick()) {
+            helper.fail("After a datapack reload the engine must re-match against the reloaded recipes");
+        }
+        if (tile.crafting.getMatchCount() != 2 || tile.crafting.getAssumedResult().getItem() != Items.DIAMOND) {
+            helper.fail("The reloaded recipes must still match the bedrock blueprint to " + RECIPE_A + " first, got "
+                + tile.crafting.getMatchCount() + " matches and " + tile.crafting.getAssumedResult());
+        }
+        if (tile.crafting.tick()) {
+            helper.fail("The engine must settle again after re-matching once, not recompute every tick");
         }
         helper.succeed();
     }

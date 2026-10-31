@@ -1036,6 +1036,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:cycle_output_act_variants_rewrite_blueprint", () -> buildcraft.lib.CraftingOutputCycleTester::testVariantsRewriteBlueprint);
         reg.accept("buildcraftunofficial:cycle_output_autoworkbench_no_variants", () -> buildcraft.lib.CraftingOutputCycleTester::testAutoWorkbenchOffersNoVariants);
 
+        // A datapack /reload swaps the recipe manager: the shared crafting engine must drop the recipes it matched
+        // against the old one (issue #69).
+        reg.accept("buildcraftunofficial:cycle_output_reload_rematches", () -> buildcraft.lib.CraftingOutputCycleTester::testReloadRematchesRecipes);
+
         reg.accept("buildcraftunofficial:autoworkbench_cobblestone_pipe_connects", () -> buildcraft.factory.MachinePipeConnectivityTester::testCobblestonePipeConnectsToAutoWorkbench);
         reg.accept("buildcraftunofficial:autoworkbench_clay_pipe_inserts", () -> buildcraft.factory.MachinePipeConnectivityTester::testClayPipeInsertsIntoAutoWorkbench);
         reg.accept("buildcraftunofficial:architect_wood_pipe_extracts", () -> buildcraft.factory.MachinePipeConnectivityTester::testWoodPipeExtractsFinishedBlueprintFromArchitect);

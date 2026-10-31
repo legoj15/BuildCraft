@@ -13,6 +13,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 //?}
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
@@ -47,8 +48,9 @@ import buildcraft.builders.snapshot.Snapshot;
  *   y=137 : "from" schematic slot (8, 137) 16×16
  *   y=137 : "to" schematic slot (56, 137) 16×16
  *   y=135 : Replace button (80, 135) 60×20 — to the right of the "to" slot
- *   y=155 : "N × A → B" summary label
  *   y=159 : player inventory
+ *   y=98  : "N × A → B" summary strip, over the bottom edge of the preview viewport (the panel has no
+ *           free row: the schematic slots end at y=153 and the inventory starts at y=159)
  * </pre>
  *
  * <p>Design notes the user cares about:
@@ -81,8 +83,11 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
     private static final int REPLACE_X = 80, REPLACE_Y = 135;
     private static final int REPLACE_W = 60, REPLACE_H = 20;
 
-    // Summary label y-coord (drawn just below the schematic slots)
-    private static final int SUMMARY_X = 8, SUMMARY_Y = 156;
+    // Summary strip: a translucent bar along the bottom edge of the preview viewport, in front of the model.
+    // A font line (9px, whose last row is descender room) plus two rows above it, so the glyphs sit centred.
+    private static final int SUMMARY_H = 11;
+    private static final int SUMMARY_PAD_X = 3, SUMMARY_PAD_Y = 2;
+    private static final int SUMMARY_BACKDROP = 0x99_00_00_00, SUMMARY_COLOR = 0xFF_FF_FF_FF;
 
     private EditBox nameField;
     private Button replaceButton;
@@ -321,20 +326,37 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
 
     @Override
     protected void drawForegroundLayer() {
-        // Summary label: "N × <from> → <to>" — walks the palette+data on every frame, which is
+        // Summary strip: "N × <from> → <to>" — walks the palette+data on every frame, which is
         // cheap because blueprints are typically small. Skips cleanly when any piece is missing.
-        String summary = buildSummaryText();
-        if (summary != null) {
-            BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
-            if (graphics != null) {
-                int color = 0xFF_40_40_40;
-                graphics.text(font, summary, SUMMARY_X, SUMMARY_Y, color, false);
-            }
+        String summary = buildSummaryText(PREVIEW_W - 2 * SUMMARY_PAD_X);
+        if (summary == null) {
+            return;
         }
+        BCGraphics graphics = buildcraft.lib.gui.GuiIcon.getGuiGraphics();
+        if (graphics == null) {
+            return;
+        }
+        int bottom = PREVIEW_Y + PREVIEW_H;
+        int top = bottom - SUMMARY_H;
+        // 1.21.1 draws the GUI depth-tested and its preview model sits between z=50 and z=150 over the viewport,
+        // so a strip at depth 0 is hidden wherever the model is. Lift it above the model but under the carried
+        // item (232) and tooltips (400). Later nodes order the strip above the preview by submission and need nothing.
+        //? if <1.21.10 {
+        /*graphics.pose().pushPose();
+        graphics.pose().translate(0.0F, 0.0F, 180.0F);*/
+        //?}
+        graphics.fill(PREVIEW_X, top, PREVIEW_X + PREVIEW_W, bottom, SUMMARY_BACKDROP);
+        graphics.text(font, summary, PREVIEW_X + SUMMARY_PAD_X, top + SUMMARY_PAD_Y, SUMMARY_COLOR, true);
+        //? if <1.21.10 {
+        /*graphics.pose().popPose();*/
+        //?}
     }
 
-    /** @return the "5 × Oak Log → Stone" (or "5 × Short Grass removed") text, or null if a precondition is unmet. */
-    private String buildSummaryText() {
+    /**
+     * @return the "5 × Oak Log → Stone" (or "5 × Short Grass removed") text, trimmed to {@code maxWidth}
+     *         pixels, or null if a precondition is unmet.
+     */
+    private String buildSummaryText(int maxWidth) {
         ISchematicBlock from = pendingFind();
         ISchematicBlock to = pendingReplacement();
         if (from == null || to == null) {
@@ -346,13 +368,38 @@ public class GuiReplacer extends GuiBC8<ContainerReplacer> {
         }
         int count = blueprint.countMatchingCells(from);
         String fromName = schematicDisplayName(from);
-        if (isRemoving()) {
-            return Component.translatable("gui.buildcraftunofficial.replacer.summary_remove",
-                    count, fromName).getString();
+        String toName = isRemoving() ? null : schematicDisplayName(to);
+        String line = summaryLine(count, fromName, toName);
+        if (font.width(line) <= maxWidth) {
+            return line;
         }
-        String toName = schematicDisplayName(to);
-        return Component.translatable("gui.buildcraftunofficial.replacer.summary",
-                count, fromName, toName).getString();
+        // Too wide: the block names are the only unbounded part, so give them what the fixed text leaves.
+        // A name that fits in half of it keeps its full length and the other name gets the remainder.
+        int budget = Math.max(0, maxWidth - font.width(summaryLine(count, "", toName == null ? null : "")));
+        if (toName == null) {
+            return summaryLine(count, ellipsize(fromName, budget), null);
+        }
+        int half = budget / 2;
+        int fromWidth = font.width(fromName);
+        int toWidth = font.width(toName);
+        int fromLimit = fromWidth <= half ? fromWidth : toWidth <= half ? budget - toWidth : half;
+        return summaryLine(count, ellipsize(fromName, fromLimit), ellipsize(toName, budget - fromLimit));
+    }
+
+    /** The summary sentence; a null {@code toName} is the removal wording. */
+    private static String summaryLine(int count, String fromName, String toName) {
+        return toName == null
+                ? Component.translatable("gui.buildcraftunofficial.replacer.summary_remove", count, fromName).getString()
+                : Component.translatable("gui.buildcraftunofficial.replacer.summary", count, fromName, toName).getString();
+    }
+
+    /** {@code name} cut with a trailing ellipsis so it is at most {@code limit} pixels wide. */
+    private String ellipsize(String name, int limit) {
+        if (font.width(name) <= limit) {
+            return name;
+        }
+        String ellipsis = CommonComponents.ELLIPSIS.getString();
+        return font.plainSubstrByWidth(name, Math.max(0, limit - font.width(ellipsis))) + ellipsis;
     }
 
     private static String schematicDisplayName(ISchematicBlock schematic) {

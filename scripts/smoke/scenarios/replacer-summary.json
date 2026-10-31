@@ -1,0 +1,73 @@
+{
+  "name": "replacer-summary",
+  "description": "Replacer summary strip (issue #63). A six-high column of chiseled polished blackstone is scanned into a blueprint; the Replacer gets the blueprint, then two captured schematics with long names. The 'N x A -> B' / 'N x A removed' line sits on a translucent strip along the bottom edge of the preview viewport, clear of the schematic slots and the inventory, and long names are cut with an ellipsis to fit the viewport width. The column is tall so the spinning preview reaches the strip (the 1.21.1 renderer is depth-tested and the strip has to sit in front of it). Shots: Replace with both names too long for the line, then Remove with a long name (the short-name case is replacer-remove).",
+  "base": [0, 150, 0],
+  "steps": [
+    { "do": "wait", "ms": 2500 },
+    { "label": "clear, floor, column of chiseled polished blackstone, a stairs block to capture", "do": "cmd", "run": [
+      "gamemode creative @p", "difficulty peaceful", "time set 6000", "weather clear", "?clear @p",
+      "?forceload add {X-16} {Z-16} {X+16} {Z+16}",
+      "?fill {X-6} {Y} {Z-8} {X+10} {Y+8} {Z+8} minecraft:air",
+      "fill {X-6} {Y-1} {Z-8} {X+10} {Y-1} {Z+8} minecraft:smooth_stone",
+      "fill {X} {Y} {Z} {X} {Y+5} {Z} minecraft:chiseled_polished_blackstone",
+      "setblock {X+4} {Y} {Z+1} minecraft:waxed_oxidized_cut_copper_stairs"
+    ] },
+    { "label": "architect scans the column", "do": "cmd", "run": [
+      "setblock {X+1} {Y} {Z-2} buildcraftunofficial:architect[facing=north]",
+      "data merge block {X+1} {Y} {Z-2} {box_initialized:1b,box_minX:{X},box_minY:{Y},box_minZ:{Z},box_maxX:{X},box_maxY:{Y+5},box_maxZ:{Z},isValid:1b,name:\"blackstone column\",items:{in:{items:[{stack:{id:\"buildcraftunofficial:blueprint_clean\",count:1}}]},out:{items:[]}}}"
+    ] },
+    { "label": "architect finished", "do": "waitCmd", "run": "data get block {X+1} {Y} {Z-2} items.out.items[0].stack.id", "match": "blueprint_used", "timeoutSec": 40 },
+    { "label": "replacer with the blueprint only", "do": "cmd", "run": [
+      "setblock {X+5} {Y} {Z-2} buildcraftunofficial:replacer",
+      "data merge block {X+5} {Y} {Z-2} {items:{snapshot:{items:[{stack:{id:\"minecraft:stone\",count:1}}]},schematicFrom:{items:[]},schematicTo:{items:[]}}}",
+      "data modify block {X+5} {Y} {Z-2} items.snapshot.items[0].stack merge from block {X+1} {Y} {Z-2} items.out.items[0].stack"
+    ] },
+
+    { "do": "tp", "at": [1, 0, 4], "yaw": 180, "pitch": 2 },
+    { "do": "hold", "item": "buildcraftunofficial:schematic_single_clean" },
+    { "do": "aim", "at": [0, 0, 0] },
+    { "do": "wait", "ms": 400 },
+    { "label": "capture a column block", "do": "use" },
+    { "do": "wait", "ms": 400 },
+    { "label": "column block schematic into the 'from' slot", "do": "cmd", "run": [
+      "data modify block {X+5} {Y} {Z-2} items.schematicFrom.items set value [{stack:{id:\"minecraft:stone\",count:1}}]",
+      "data modify block {X+5} {Y} {Z-2} items.schematicFrom.items[0].stack merge from entity @p Inventory[{id:\"buildcraftunofficial:schematic_single_used\"}]",
+      "clear @p buildcraftunofficial:schematic_single_used"
+    ] },
+    { "do": "hold", "item": "buildcraftunofficial:schematic_single_clean" },
+    { "do": "aim", "at": [4, 0, 1] },
+    { "do": "wait", "ms": 400 },
+    { "label": "capture the stairs", "do": "use" },
+    { "do": "wait", "ms": 400 },
+    { "label": "stairs schematic into the 'to' slot", "do": "cmd", "run": [
+      "data modify block {X+5} {Y} {Z-2} items.schematicTo.items set value [{stack:{id:\"minecraft:stone\",count:1}}]",
+      "data modify block {X+5} {Y} {Z-2} items.schematicTo.items[0].stack merge from entity @p Inventory[{id:\"buildcraftunofficial:schematic_single_used\"}]",
+      "clear @p buildcraftunofficial:schematic_single_used"
+    ] },
+    { "label": "replacer contents", "do": "cmd", "echo": true, "run": "data get block {X+5} {Y} {Z-2} items" },
+
+    { "do": "tp", "at": [5, 0, -5], "yaw": 0, "pitch": 20 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [5, 0, -2] },
+    { "do": "wait", "ms": 400 },
+    { "label": "open the Replacer", "do": "use" },
+    { "do": "expectScreen", "contains": "Replacer" },
+    { "do": "wait", "ms": 2500 },
+    { "do": "widgets", "name": "replace-long" },
+    { "do": "shot", "name": "replace-long", "look": "Button reads 'Replace'. The summary strip sits inside the bottom of the preview, white text on a dark translucent bar, nothing drawn over the first inventory row, and the tall spinning column reaches the bar without hiding its text. Both names are too long for the line: each is cut with '...' and the line stops inside the bar ('6 x Chiseled Pol... -> Waxed Oxidi...' or similar)." },
+    { "do": "close" },
+
+    { "label": "empty the 'to' slot: Remove with one long name", "do": "cmd", "run": [
+      "data modify block {X+5} {Y} {Z-2} items.schematicTo.items set value []"
+    ] },
+    { "do": "tp", "at": [5, 0, -5], "yaw": 0, "pitch": 20 },
+    { "do": "aim", "at": [5, 0, -2] },
+    { "do": "wait", "ms": 400 },
+    { "label": "open the Replacer again", "do": "use" },
+    { "do": "expectScreen", "contains": "Replacer" },
+    { "do": "wait", "ms": 2500 },
+    { "do": "shot", "name": "remove-long", "look": "Button reads 'Remove'. Summary reads '6 x Chiseled Polished Blac... removed' (the name cut with '...' so the whole line fits the bar); the preview is empty because every cell of the column is removed." },
+    { "do": "close" },
+    { "label": "release the chunks", "do": "cmd", "run": ["?forceload remove {X-16} {Z-16} {X+16} {Z+16}"] }
+  ]
+}

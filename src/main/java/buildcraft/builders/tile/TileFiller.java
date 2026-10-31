@@ -164,6 +164,12 @@ public class TileFiller extends TileBC_Neptune
             if (level != null && !level.isClientSide()) {
                 if (builder != null) {
                     builder.resourcesChanged();
+                    // New blocks wake a Filler parked finished in ON, which must re-read its box first for the same
+                    // reason as in setControlMode. ON only: a parked ON Filler never reaches the builder's tick, while
+                    // a LOOP one can land here from inside it (taking a block for a task) and keeps its sweep.
+                    if (finished && mode == Mode.ON) {
+                        builder.invalidateChecks();
+                    }
                 }
                 finished = false;
             }
@@ -833,12 +839,16 @@ public class TileFiller extends TileBC_Neptune
 
     @Override
     public void setControlMode(Mode mode) {
-        if (this.mode == Mode.OFF && mode != Mode.OFF) {
-            finished = false;
-        }
-        // Entering LOOP from a non-LOOP state re-arms the builder so a Filler that finished
-        // in ON mode kicks off another cycle when the player flips it to LOOP.
-        if (mode == Mode.LOOP && this.mode != Mode.LOOP) {
+        // Any change into a running mode re-arms the Filler: one that was switched OFF resumes, and one that finished
+        // (ON parks for good, LOOP only starts another cycle) goes again when the player flips it to the other mode.
+        if (mode != this.mode && mode != Mode.OFF) {
+            // An idle Filler's check results date from before it stopped: the builder re-reads only a few cells a tick,
+            // so with the rest still cached as correct its first tick back would report done over blocks broken in the
+            // meantime, and ON's finished state would park it before it ever saw them. Make it re-read the box first.
+            // Only the classification is dropped; tasks already queued (an OFF -> ON mid-build) keep going.
+            if (this.mode == Mode.OFF || finished) {
+                builder.invalidateChecks();
+            }
             finished = false;
         }
         this.mode = mode;

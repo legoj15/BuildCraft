@@ -431,6 +431,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:filler_planner_save_migrates", () -> buildcraft.builders.tile.FillerPlannerMigrationTester::aFillerBesideAPlannerBoxTakesItOverByTicking);
         // A weakly fed Filler spends its power as it arrives: the work signal clients get must still read as working.
         reg.accept("buildcraftunofficial:filler_slow_feed_syncs_as_working", () -> buildcraft.builders.tile.FillerProgressTester::aSlowlyFedFillerSyncsAsWorkingAndAStarvedOneDoesNot);
+        // A Filler switched back to On after idling re-reads its whole box first: a block lost meanwhile is rebuilt, queued work is kept.
+        reg.accept("buildcraftunofficial:filler_loop_to_on_rebuilds_broken_block", () -> buildcraft.builders.snapshot.FillerRearmTester::loopFillerSwitchedToOnRebuildsABrokenBlock);
+        reg.accept("buildcraftunofficial:filler_off_to_on_rebuilds_broken_block", () -> buildcraft.builders.snapshot.FillerRearmTester::offFillerSwitchedToOnRebuildsABrokenBlock);
+        reg.accept("buildcraftunofficial:filler_off_on_mid_build_keeps_queued_tasks", () -> buildcraft.builders.snapshot.FillerRearmTester::offOnMidBuildKeepsQueuedTasks);
+        reg.accept("buildcraftunofficial:filler_finished_on_given_resources_rebuilds_broken_block", () -> buildcraft.builders.snapshot.FillerRearmTester::finishedOnFillerGivenResourcesRebuildsABrokenBlock);
 
         // Quarry frames must not be washed away (and dropped) by flowing fluid (infinite-frame exploit).
         reg.accept("buildcraftunofficial:frame_not_washed_away_by_fluid", () -> buildcraft.builders.block.BlockFrameTester::testFrameNotWashedAwayByFluid);

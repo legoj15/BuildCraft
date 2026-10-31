@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:filler_finished_on_given_resources_rebuilds_broken_block",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 310,
+    "setup_ticks": 0,
+    "required": true
+}

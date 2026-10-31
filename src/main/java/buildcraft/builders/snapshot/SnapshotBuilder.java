@@ -66,7 +66,8 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
     private static final byte REQUIRED_UNKNOWN = 0;
     private static final byte REQUIRED_TRUE = 1;
     private static final byte REQUIRED_FALSE = 2;
-    private static final int CHECKS_PER_TICK = 10;
+    /** Cells {@link #tick()} re-reads each tick (package-private for the re-arm tests, see {@link #checkSweepCell}). */
+    static final int CHECKS_PER_TICK = 10;
     /** Ticks a whole-box fluid sweep result stays good for the place-task gate (see {@code areaFluid}). Vanilla
      *  water spreads one cell per 5 ticks, so a result this old is at most one flow step behind the world. */
     public static final int FLUID_SCAN_INTERVAL = 5;
@@ -745,6 +746,37 @@ public abstract class SnapshotBuilder<T extends ITileForSnapshotBuilder> {
             )))
             .mapToInt(this::posToIndex)
             .toArray();
+    }
+
+    /**
+     * Forgets everything the check sweep has classified, so no tick can report the build done before the sweep has read
+     * the whole box again. {@link #tick()} re-reads only a handful of cells a tick and keeps the rest as last
+     * classified, which is stale once the builder has sat idle (a Filler that was switched off, or one that finished):
+     * left alone, its first tick after waking would answer "done" over the cells it did not re-read.
+     * <p>
+     * Unlike {@link #updateSnapshot()} and {@link #cancel()} this keeps the queued tasks and the power they drew. They
+     * go on as they were, and a task whose cell turns out correct once it is read again is dropped by the tick as usual.
+     * With no snapshot yet there are no check results to forget, and only the fluid and census caches are dropped.
+     */
+    public void invalidateChecks() {
+        cachedAreaFluid = null;
+        replaceCensusKnown = false;
+        if (checkResults != null) {
+            Arrays.fill(checkResults, CHECK_RESULT_UNKNOWN);
+        }
+    }
+
+    /** How many cells the check sweep cycles through: the whole box. */
+    int checkSweepLength() {
+        return checkOrder.length;
+    }
+
+    /**
+     * The cell the check sweep reads {@code ahead} reads from now, wrapping round the box ({@code 0} is the first cell
+     * the next {@link #tick()} reads). Package-private so the re-arm tests can break a block the next tick cannot see.
+     */
+    BlockPos checkSweepCell(int ahead) {
+        return indexToPos(checkOrder[Math.floorMod(currentCheckIndex + ahead, checkOrder.length)]);
     }
 
     public void resourcesChanged() {

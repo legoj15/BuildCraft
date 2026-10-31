@@ -8,9 +8,7 @@
 package buildcraft.robotics.ai;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.mojang.authlib.GameProfile;
 
@@ -20,11 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -37,6 +31,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FakePlayerUtil;
 import buildcraft.lib.misc.MachineRefusals;
+import buildcraft.lib.misc.UseInAirProbe;
 import buildcraft.robotics.RobotProtection;
 
 /** The stripes board's item-use cycle: aim the held item at the reserved block, "use" it there through
@@ -186,15 +181,11 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
     }
 
     /**
-     * The home station's owner's say on the dispenser fallback's use in the air. The vanilla items that touch the world
-     * from there (buckets, bottles, boats, lily pads, spawn eggs, eyes of ender) all aim along the player's eye ray
-     * ({@link Item#getPlayerPOVHitResult}), and this robot's player is posed before the dispatch, so the block each
-     * fluid mode's ray meets is known before the use. That block and the cell in front of the face it was met on get
-     * the placement probe (a bucket pours into either, a boat or an egg is put down in front); a fluid met gets the
-     * break probe (a bucket takes it) and the cell above it the placement probe (a lily pad goes on top). A ray that
-     * meets nothing within reach touches no block, and a thrown item is the deployer's own projectile, judged by its
-     * impact events. True at once when the owner is the player the robot acts as; false at once when the station
-     * cannot name its owner ({@link RobotProtection#stationOwnerShortcut}).
+     * The home station's owner's say on the dispenser fallback's use in the air: the cells the item can touch from the
+     * robot's posed player (the dispatch poses it first) are asked about as the station's owner, which cells those are
+     * being {@link UseInAirProbe}'s rule, shared with the stripes pipe. True at once when the owner is the player the
+     * robot acts as; false at once when the station cannot name its owner
+     * ({@link RobotProtection#stationOwnerShortcut}).
      */
     @Override
     public boolean mayUseInAir(Player player, ItemStack stack) {
@@ -206,33 +197,11 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
         if (shortcut != null || !(player.level() instanceof ServerLevel level)) {
             return true;
         }
-        Set<BlockPos> placed = new LinkedHashSet<>();
-        Set<BlockPos> taken = new LinkedHashSet<>();
-        for (ClipContext.Fluid fluid : ClipContext.Fluid.values()) {
-            BlockHitResult hit = Item.getPlayerPOVHitResult(level, player, fluid);
-            if (hit.getType() != HitResult.Type.BLOCK) {
-                continue;
-            }
-            BlockPos pos = hit.getBlockPos();
-            placed.add(pos);
-            placed.add(pos.relative(hit.getDirection()));
-            if (!level.getFluidState(pos).isEmpty()) {
-                taken.add(pos);
-                placed.add(pos.above());
-            }
-        }
         GameProfile owner = RobotProtection.stationIdentityOf(robot);
-        for (BlockPos cell : placed) {
-            if (!BlockUtil.canMachinePlace(level, cell, owner)) {
-                markRefused();
-                return false;
-            }
-        }
-        for (BlockPos cell : taken) {
-            if (!BlockUtil.canMachineBreak(level, cell, owner)) {
-                markRefused();
-                return false;
-            }
+        if (!UseInAirProbe.permits(level, player, cell -> BlockUtil.canMachinePlace(level, cell, owner),
+                cell -> BlockUtil.canMachineBreak(level, cell, owner))) {
+            markRefused();
+            return false;
         }
         return true;
     }

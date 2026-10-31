@@ -17,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -52,6 +53,7 @@ import buildcraft.lib.misc.InventoryUtil;
 import buildcraft.lib.misc.MachineRefusals;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.RefusalMemory;
+import buildcraft.lib.misc.UseInAirProbe;
 
 import buildcraft.transport.BCTransportStatements;
 
@@ -396,6 +398,22 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
     }
 
     // IStripesActivator
+
+    /**
+     * The dispenser fallback's use in the air asks the item right-click event at the pipe's player's feet, which a
+     * bucket's pour or take does not land at: its ray from the output face reaches up to a few blocks out and
+     * {@code BucketItem#use} posts no placement or break event there. So the cells the item can touch from the aimed
+     * player ({@link UseInAirProbe}, the rule the robot's use in the air follows too) are asked as the owner, by the
+     * same placement and break probes the pipe's digging and every other machine use, before the item is used.
+     */
+    @Override
+    public boolean mayUseInAir(@Nonnull Player player, @Nonnull ItemStack stack) {
+        if (!(player.level() instanceof ServerLevel level)) {
+            return true;
+        }
+        return UseInAirProbe.permits(level, player, cell -> BlockUtil.canMachinePlaceAs(level, cell, player),
+                cell -> BlockUtil.canMachineBreakAs(level, cell, player));
+    }
 
     @Override
     public void dropItem(@Nonnull ItemStack stack, Direction direction) {

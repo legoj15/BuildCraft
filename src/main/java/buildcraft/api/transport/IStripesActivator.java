@@ -17,8 +17,10 @@ public interface IStripesActivator {
 
     /** Asked by a handler just before it uses {@code itemStack} with no block target (a use in the air), where the
      *  item's own aim from {@code player} decides what it touches. False withholds the use: the handler reports it as not
-     *  handled and counts it a refused click, which ends the dispatch; the activator keeps its own account of why. The default allows it: a stripes pipe
-     *  uses items as the one player whose own events already judge the use. */
+     *  handled and counts it a refused click, which ends the dispatch; the activator keeps its own account of why. The default allows it, for an
+     *  activator that answers to no one beyond the player whose own events already judge the use. Few events do: the
+     *  cells a bucket or a boat reaches from the player's aim post none, so BuildCraft's stripes pipe and robot
+     *  override this to ask protection mods about them. */
     default boolean mayUseInAir(@Nonnull Player player, @Nonnull ItemStack itemStack) {
         return true;
     }

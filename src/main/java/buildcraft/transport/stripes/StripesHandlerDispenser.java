@@ -73,8 +73,9 @@ public enum StripesHandlerDispenser implements IStripesHandlerItem {
         }
 
         // Strategy 3: Use in air (right-click with no target block). The activator has a say first: where this use
-        // lands is the item's own aim, which a robot answering to a second player asks that player about. A refusal
-        // is tallied as a refused click, so the dispatch ends here instead of trying a later handler.
+        // lands is the item's own aim (a bucket pours or takes up to a few blocks out, with no event of its own
+        // there), which a pipe asks its owner about and a robot asks its station's owner about too. A refusal is
+        // tallied as a refused click, so the dispatch ends here instead of trying a later handler.
         if (!activator.mayUseInAir(player, stack)) {
             MachineRefusals.record(player);
             return false;

@@ -337,6 +337,28 @@ public class BlockUtil {
     }
 
     /**
+     * {@link #canMachinePlace}'s twin for a machine that already holds its fake player (a stripes handler's, leased by
+     * the pipe for the whole drop), with no second lease: the placement event is posted for {@code machine} standing
+     * where {@link #canMachinePlace}'s own player stands, the centre of {@code pos}, so a claim that judges where the
+     * actor stands answers both alike, and what the machine's player holds in hand is what the claim sees. The player
+     * is put back where it was, facing the same way, afterwards (a use in the air is aimed from it).
+     */
+    public static boolean canMachinePlaceAs(ServerLevel level, BlockPos pos, Player machine) {
+        if (BCCoreConfig.minePlayerProtected.get()) {
+            return true;
+        }
+        Vec3 feet = machine.position();
+        float yRot = machine.getYRot();
+        float xRot = machine.getXRot();
+        FakePlayerUtil.pose(machine, Vec3.atCenterOf(pos), yRot, xRot);
+        try {
+            return PlaceEventProbe.canPlace(level, List.of(pos), machine);
+        } finally {
+            FakePlayerUtil.pose(machine, feet, yRot, xRot);
+        }
+    }
+
+    /**
      * Right-clicks {@code stack} (the item {@code player} holds in {@code hand}) on the block {@code hit} names, for
      * a machine standing in for a player: the right-click-block event is posted first, so a claim or protection mod
      * can refuse the use; then vanilla's gate (an empty stack, or an item on the player's cooldown, is not used

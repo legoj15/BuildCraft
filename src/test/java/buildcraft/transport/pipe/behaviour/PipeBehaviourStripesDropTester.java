@@ -495,6 +495,67 @@ public class PipeBehaviourStripesDropTester {
     }
 
     /**
+     * Issue #71: a bucket a stripes pipe uses in the air lands wherever its ray from the pipe's output face meets a
+     * block, which is not where the right-click event (posted at the player's feet) is asked about, and
+     * {@code BucketItem#use} posts no placement or break event of its own. The pipe must ask the cell the bucket
+     * pours into and the fluid it takes, as the robot's use in the air does. Here the stone beyond the cell in front
+     * is what the ray meets, so the water would land in front: a claim that refuses placements there keeps it air and
+     * the bucket full, a claim that refuses breaks of a source in front keeps the empty bucket from taking it, and
+     * the same pipe pours and takes when nothing refuses (so the refusals above are the claim's).
+     */
+    public static void testAirUseBucketAsksTheCellsItTouches(GameTestHelper helper) {
+        helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected must be off (the default), or no machine asks at all");
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos frontRel = pipeRel.east();
+        BlockPos beyondRel = frontRel.east();
+        BlockPos front = helper.absolutePos(frontRel);
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
+            helper.setBlock(beyondRel, Blocks.STONE);
+
+            try (WorkClaimMod claim = new WorkClaimMod(front::equals, pos -> false, front::equals, pos -> false)) {
+                PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.WATER_BUCKET));
+                rig.stripes.onDrop(refused);
+                helper.assertTrue(helper.getBlockState(frontRel).isAir(),
+                        "the pipe poured into a cell the claim refuses: " + helper.getBlockState(frontRel));
+                helper.assertTrue(refused.getStack().is(Items.WATER_BUCKET) && rig.count(Items.BUCKET) == 0,
+                        "a refused bucket stays full and unused, got " + refused.getStack());
+                helper.assertTrue(claim.placeAsks(front) >= 1, "the pipe asked about the cell it would pour into");
+            }
+            try (WorkClaimMod claim = new WorkClaimMod(front::equals, pos -> false, pos -> false, pos -> false)) {
+                PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.WATER_BUCKET));
+                rig.stripes.onDrop(allowed);
+                helper.assertTrue(helper.getBlockState(frontRel).is(Blocks.WATER),
+                        "the pipe pours in front when nothing refuses: " + helper.getBlockState(frontRel));
+                helper.assertTrue(claim.placeAsks(front) >= 1, "...and asked about that cell first");
+            }
+            rig.empty();
+            helper.setBlock(frontRel, Blocks.AIR);
+            helper.setBlock(beyondRel, Blocks.AIR);
+
+            helper.setBlock(frontRel, Blocks.WATER);
+            try (ClaimProtectionMod claim = new ClaimProtectionMod(front, true)) {
+                PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.BUCKET));
+                rig.stripes.onDrop(refused);
+                helper.assertTrue(helper.getBlockState(frontRel).is(Blocks.WATER),
+                        "the pipe took a source from a cell the claim refuses breaks in");
+                helper.assertTrue(refused.getStack().is(Items.BUCKET) && rig.count(Items.WATER_BUCKET) == 0,
+                        "a refused empty bucket stays empty and unused, got " + refused.getStack());
+                helper.assertTrue(claim.asks() >= 1, "the pipe asked about the source it would take");
+            }
+            try (ClaimProtectionMod claim = new ClaimProtectionMod(front, false)) {
+                PipeEventItem.Drop allowed = rig.drop(new ItemStack(Items.BUCKET));
+                rig.stripes.onDrop(allowed);
+                helper.assertTrue(!helper.getBlockState(frontRel).is(Blocks.WATER),
+                        "the pipe takes the source in front when nothing refuses");
+                helper.assertTrue(claim.asks() >= 1, "...and asked about it first");
+            }
+            helper.setBlock(frontRel, Blocks.AIR);
+        }
+        helper.succeed();
+    }
+
+    /**
      * What an item does to the stack it was used from is kept, as a player keeps it, and an item used in the air acts
      * on the cell in front of the pipe: the pipe aims its player out of the output face (7.1.x aimed it too; 8.0.x
      * used dispenser behaviours on that cell). A stripes pipe carrying ONE empty bucket takes the water source in front

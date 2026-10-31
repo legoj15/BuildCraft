@@ -30,7 +30,28 @@ error, or BuildCraft logged an ERROR.
 4. `save-all`, close the client (and its Gradle wrapper), next node.
 
 **Keep the physical mouse off the game window** while it runs — a real mouse move overwrites the bridge's synthetic
-cursor. One node at a time: McDevBridge's `~/.mcdevbridge/bridge.json` only points at the newest client.
+cursor.
+
+## One run per machine: the lock and the pin
+
+McDevBridge's `~/.mcdevbridge/bridge.json` only ever points at the newest client, so a second client booting beside a run
+(another session's runner, a game opened by hand) could hand the run the wrong world, or drive the run's own. Two guards,
+both in `SmokeGuard.ps1` (`multiplayer/mp.py` speaks the same lock file):
+
+- **Lock.** The runner takes `~/.mcdevbridge/smoke.lock` before its first boot and holds it until the last node is done
+  (released in `finally`). Any other runner (`Invoke-InClientSmoke.ps1`, `mp.py server`) exits at once, booting nothing,
+  naming the holder: owner, pid, since, nodes and scenario, repo. The PowerShell runner's exit code for that is 3 (1 stays
+  "a step failed or the node was fatal"). A lock whose process is gone (a killed run) is stale and is taken over by the next
+  runner, so it is never deleted by hand; the file records the holder's start time, so a pid number reused by another
+  process is not mistaken for the holder.
+- **Pin.** The bridge's url, token and pid are read once at boot and used from then on, and only a bridge.json that is the
+  client THIS run spawned is accepted: the port that client logged to the run's own `<node>/gradle.out.log` must be the
+  file's port, and the pid must be a live Java process that started after the spawn and, where Windows will say, listens on that
+  port (McDevBridge reports no pid over HTTP, so the OS says who owns the port). Before every bridge call the runner checks the pinned client
+  still runs and bridge.json still names it. If another client has taken the file over, or the pinned client is gone, that
+  step fails with `bridge pin violated: ...`, the rest of the node's steps are skipped and the node ends FATAL; the pinned
+  client is still the one that gets saved and closed, never whatever bridge.json names by then. A missing or half-written
+  bridge.json is not a violation (a client exiting deletes it).
 
 ## Scenario format
 
@@ -162,7 +183,9 @@ What another player sees (arm swings, particles, entity sync that goes server to
 server and two clients, which the runner above cannot do. `multiplayer/mp.py` boots `:<node>:runServer` and two
 `runClient`s (Watcher and Worker) that quick-play into it, all under `versions/<node>/run-smoke/mp-*`, drives world
 commands over RCON and each client over its own bridge (it records each client's url and token as it starts), and
-stops only what it started. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check built on it; its
+stops only what it started. `server` takes the machine-wide smoke lock described above (held by the server's Gradle
+process), `client` joins it and `stop` releases it; `b` and the scene scripts fail loudly once a client's pinned process
+is gone. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check built on it; its
 docstring gives the phase order and the expected result, and `multiplayer/grids.py` tiles the shots per node for a
 26.3 vs 26.2 comparison. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server log's `No key layers` ERROR is
 vanilla complaining about the flat world's empty generator settings; the default flat world is used.

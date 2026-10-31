@@ -17,6 +17,11 @@ read it first. This skill is the procedure around it.
   (`versions/<node>/build/libs`, or a McDevBridge worktree). None → `-BuildBridge`, or build it there.
   `/screenclick` + `/screenhover` need McDevBridge `4f0b536` or later.
 - **Free disk**: each first boot of a node downloads assets and writes a world. A full C: drive fails the boot.
+- **One run per machine.** The runner holds `~/.mcdevbridge/smoke.lock` for the whole run. When another session's run
+  has it, the runner boots nothing and exits **3**, naming the holder (pid, nodes, repo): wait for that run, don't work
+  around it. A lock left by a killed run is taken over automatically; delete it by hand only when its pid is gone and a
+  runner still refuses. A client started by hand mid-run (the lock cannot stop that) breaks the bridge pin: the step reads
+  `bridge pin violated: ...`, the node ends FATAL, and its results are not to be trusted; close the stray client and rerun.
 - **Mouse off the game window** for the whole run (a real mouse move overrides the synthetic cursor). The window
   takes focus when it opens; warn the user if they're at the machine.
 
@@ -28,7 +33,7 @@ pwsh scripts/smoke/Invoke-InClientSmoke.ps1                        # all five, s
 ```
 
 Run it with `run_in_background` — a node's first boot compiles and can take several minutes. It exits 1 on any
-failed step, fatal error or BuildCraft ERROR log line.
+failed step, fatal error or BuildCraft ERROR log line, and 3 when another run holds the smoke lock.
 
 ## Reviewing
 

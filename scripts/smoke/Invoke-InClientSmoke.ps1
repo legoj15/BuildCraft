@@ -4,7 +4,13 @@
   McDevBridge HTTP bridge, and collects screenshots + a pass/fail report for review.
 
 .DESCRIPTION
-  Per node, one client at a time (McDevBridge's ~/.mcdevbridge/bridge.json only ever points at the newest client):
+  One run per machine: McDevBridge's ~/.mcdevbridge/bridge.json only ever points at the newest client, so the run takes
+  the smoke lock (~/.mcdevbridge/smoke.lock, see SmokeGuard.ps1) before the first boot and holds it to the end. A run that
+  finds the lock held by a live process exits 3 naming the holder; a lock whose process is gone is taken over. The bridge
+  url, token and pid read at boot are pinned and must belong to the client this run spawned: a step fails, and the node
+  ends fatal, when bridge.json later names another client or the pinned client is gone.
+
+  Per node, one client at a time:
     1. Prepares versions/<node>/run-smoke/ — a game directory of its own (-PbcRunDir), so the hand-used run/ with its
        extra mods and saves is never touched: installs the node's McDevBridge jar, writes quiet/unpausing options.
     2. Boots :<node>:runClient straight into the "bc-smoke" save (-PbcQuickPlay). The first run on a node has no save
@@ -38,6 +44,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3.0
+. (Join-Path $PSScriptRoot 'SmokeGuard.ps1')
 
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 # `pwsh -File ... -Nodes a,b` hands the list over as ONE string; accept both forms.
@@ -57,10 +64,24 @@ $PlaySeed = if ($ScenarioData.PSObject.Properties['saveSeed']) { [string]$Scenar
 
 # ── Bridge plumbing ──────────────────────────────────────────────────────────
 
-$script:Bridge = $null
+$script:Bridge = $null          # the pin: bridge.json as read at boot (url, token, pid, port) plus the client's startFileTime
 $script:Spawned = $null
+$script:PinViolation = $null    # why the pin broke, once it has; the scenario stops there
 
-function Invoke-Bridge([string]$Method, [string]$Path, $Body = $null, [int]$TimeoutSec = 60) {
+function Assert-BridgePinned {
+    # Every bridge call first proves the run still talks to the client it pinned at boot (SmokeGuard.ps1). The pinned url
+    # and token would keep answering for that client after another one took bridge.json over, so a breach is the signal:
+    # a second client means another session may be driving this world, or this run a foreign one.
+    if (-not $script:Bridge) { return }
+    $problem = Get-BridgePinProblem -Pin $script:Bridge -BridgeFile $BridgeFile
+    if ($problem) {
+        if (-not $script:PinViolation) { $script:PinViolation = "bridge pin violated: $problem" }
+        throw $script:PinViolation
+    }
+}
+
+function Invoke-Bridge([string]$Method, [string]$Path, $Body = $null, [int]$TimeoutSec = 60, [switch]$NoPinCheck) {
+    if (-not $NoPinCheck) { Assert-BridgePinned }
     $req = @{
         Uri        = "http://127.0.0.1:$($script:Bridge.port)$Path"
         Method     = $Method
@@ -88,8 +109,10 @@ function Wait-Until([scriptblock]$Condition, [int]$TimeoutSec, [string]$What, [i
             $r = & $Condition
             if ($r) { return $r }
         } catch {
-            # A condition throws 'FATAL: ...' when waiting longer cannot help (e.g. the process it waits on is gone).
+            # A condition throws 'FATAL: ...' when waiting longer cannot help (e.g. the process it waits on is gone);
+            # a broken bridge pin is the same, and Invoke-Scenario reads the flag.
             if ($_.Exception.Message.StartsWith('FATAL: ')) { throw $_.Exception.Message.Substring(7) }
+            if ($script:PinViolation) { throw $_.Exception.Message }
             $lastError = $_.Exception.Message
         }
         Start-Sleep -Milliseconds $PollMs
@@ -185,7 +208,9 @@ function Initialize-RunDir([string]$Node) {
 
 function Assert-NoOtherClient {
     # Every McDevBridge client overwrites the one ~/.mcdevbridge/bridge.json: a second dev client (another session's,
-    # or one left open by hand) would steal this run's bridge mid-scenario.
+    # or one left open by hand) would steal this run's bridge mid-scenario. Another runner is kept out by the smoke lock
+    # for the whole run; this catches a client started by hand, and only at boot (the bridge pin catches one that
+    # appears mid-run).
     # Waits briefly first: the previous node's window can outlive its kill by a few seconds.
     $deadline = (Get-Date).AddSeconds(30)
     do {
@@ -201,6 +226,8 @@ function Assert-NoOtherClient {
 function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]$LogDir) {
     Assert-NoOtherClient
     $before = if (Test-Path $BridgeFile) { (Get-Item $BridgeFile).LastWriteTimeUtc } else { [datetime]::MinValue }
+    # Every java process already running: a bridge.json naming one of them is not the client about to be spawned.
+    $javaBefore = @(Get-Process java, javaw -ErrorAction SilentlyContinue | ForEach-Object Id)
     $gradleArgs = @(":${Node}:runClient", '-PbcRunDir=run-smoke', '--console=plain')
     if ($QuickPlay) { $gradleArgs += "-PbcQuickPlay=$PlaySave" }
     # A scenario's "gradleProperties" (e.g. ["withGuideMe"]) become -P flags: optional dev-runtime mods it needs.
@@ -214,13 +241,26 @@ function Start-Client([string]$Node, [string]$RunDir, [bool]$QuickPlay, [string]
         -WindowStyle Hidden -PassThru
     # Recorded before any wait can throw, so the main loop can clean up a client that booted without a bridge.
     $script:Spawned = [pscustomobject]@{ Gradle = $proc; Since = Get-Date }
+    $script:PinViolation = $null
 
-    Wait-Until {
+    # Only a bridge.json written by the client THIS run spawned is taken. The port that client logged to our own Gradle
+    # output names it exactly: a file naming another port is a second client booting beside ours (another session's, or
+    # a stale file), so wait on for ours to be written. The process checks (alive, a Minecraft process, started after the
+    # spawn, owner of that port) come on top.
+    $gradleLog = Join-Path $LogDir 'gradle.out.log'
+    $script:Bridge = Wait-Until {
         if ($proc.HasExited) { throw "FATAL: runClient exited early (code $($proc.ExitCode)); see $LogDir" }
-        (Test-Path $BridgeFile) -and (Get-Item $BridgeFile).LastWriteTimeUtc -gt $before
-    } ($BootMinutes * 60) 'the client to publish a new bridge.json' 2000 | Out-Null
-    # A read can catch the file mid-write; retry briefly.
-    $script:Bridge = Wait-Until { Get-Content -Raw $BridgeFile | ConvertFrom-Json } 10 'a readable bridge.json' 200
+        if (-not (Test-Path $BridgeFile) -or (Get-Item $BridgeFile).LastWriteTimeUtc -le $before) { return $null }
+        # A read can catch the file mid-write: the parse throws and the next poll retries.
+        $info = Get-Content -Raw $BridgeFile | ConvertFrom-Json
+        $logPort = Get-SpawnLogBridgePort $gradleLog
+        if ($null -eq $logPort) { throw "bridge.json is there, but the spawned client has not logged its bridge port to $gradleLog" }
+        $problem = Get-BridgeBootProblem -Info $info -Since $script:Spawned.Since -JavaBefore $javaBefore -SpawnLogPort $logPort
+        if ($problem) { throw $problem }
+        $info
+    } ($BootMinutes * 60) "this run's client to publish its bridge.json" 500
+    # The pin is that file's url, token and pid, plus when the client started (to tell it from a later owner of the pid).
+    $script:Bridge | Add-Member -NotePropertyName startFileTime -NotePropertyValue (Get-ProcessStartFileTime ([int]$script:Bridge.pid)) -Force
     $ping = Wait-Until { Invoke-Bridge GET '/ping' $null 5 } 120 'the bridge to answer /ping'
     [pscustomobject]@{ Gradle = $proc; Pid = [int]$script:Bridge.pid; BridgeVersion = $ping.version }
 }
@@ -237,7 +277,9 @@ function Stop-Spawned {
 }
 
 function Stop-Client($Client) {
-    try { Invoke-Bridge POST '/command' @{ command = 'save-all flush' } 120 | Out-Null } catch { }
+    # The pinned url still reaches the pinned client when another one has taken bridge.json over, so save through it
+    # anyway; $Client.Pid is the pinned pid, never whatever bridge.json says now.
+    try { Invoke-Bridge POST '/command' @{ command = 'save-all flush' } 120 -NoPinCheck | Out-Null } catch { }
     Stop-Process -Id $Client.Pid -Force -ErrorAction SilentlyContinue
     if (-not $Client.Gradle.WaitForExit(90000)) {
         # The Gradle wrapper outlived its client: take its process tree down so the next node can boot.
@@ -602,6 +644,8 @@ function Invoke-Scenario([string]$Node, [string]$NodeOut) {
             $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $true; detail = $r.detail; shot = $r.shot }
         } catch {
             $results += [pscustomobject]@{ n = $i; step = $label; do = $step.do; ok = $false; detail = $_.Exception.Message; shot = $null }
+            # A broken bridge pin ends the node: whatever a later step would drive, it is not the client this run pinned.
+            if ($script:PinViolation) { break }
             # A failed step leaves the client in an unknown state: take a picture of it, close any screen, go on.
             try {
                 $file = Join-Path $NodeOut ('{0:D2}-FAILED.png' -f $i)
@@ -616,72 +660,88 @@ function Invoke-Scenario([string]$Node, [string]$NodeOut) {
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+# One run per machine (SmokeGuard.ps1): taken before the first boot, held to the end of the last node, released in the
+# finally below. A refusal is exit 3, so a caller can tell "someone else is running" from "a step failed" (exit 1).
+try {
+    $lock = Enter-SmokeLock -Owner 'Invoke-InClientSmoke.ps1' -Repo $Repo -Detail "nodes $($Nodes -join ','), scenario $($ScenarioData.name)"
+} catch {
+    [Console]::Error.WriteLine("smoke lock: $($_.Exception.Message)")
+    Remove-Item -LiteralPath $OutDir -ErrorAction SilentlyContinue   # still empty
+    exit 3
+}
+if ($lock.Recovered) { Write-Host "[smoke lock] took over a stale lock: its pid $($lock.Recovered.pid) is gone" }
+
 $summary = @()
-foreach ($node in $Nodes) {
-    $nodeOut = Join-Path $OutDir $node
-    New-Item -ItemType Directory -Force -Path $nodeOut | Out-Null
-    Write-Host "[$node] preparing"
-    $report = [ordered]@{ node = $node; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
-    $client = $null
-    $prep = $null
-    try {
-        $prep = Initialize-RunDir $node
-        $report.bridgeJar = $prep.Jar
-        $savePath = Join-Path $prep.RunDir "saves/$SaveName"
-        # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
-        # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
-        $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
-        if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
-        $haveSave = Test-Path $savePath
-        if ($PlaySave -ne $SaveName) {
-            $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
-            if (-not (Test-Path $playPath)) {
-                $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }
-                if (-not $seedPath -or -not (Test-Path $seedPath)) {
-                    throw "the scenario plays save '$PlaySave', which $node's run-smoke/saves does not have$(if ($PlaySeed) { " (nor its seed '$PlaySeed': run any scenario once first)" } else { ': copy it in first' })"
+try {
+    foreach ($node in $Nodes) {
+        $nodeOut = Join-Path $OutDir $node
+        New-Item -ItemType Directory -Force -Path $nodeOut | Out-Null
+        Write-Host "[$node] preparing"
+        $report = [ordered]@{ node = $node; scenario = $ScenarioData.name; started = (Get-Date).ToString('s'); steps = @(); buildcraftErrors = @(); fatal = $null }
+        $client = $null
+        $prep = $null
+        try {
+            $prep = Initialize-RunDir $node
+            $report.bridgeJar = $prep.Jar
+            $savePath = Join-Path $prep.RunDir "saves/$SaveName"
+            # A first run names the save whatever the menus defaulted to ("New World", or its translation); adopt the
+            # only save there is, before booting, so an interrupted first run doesn't leave an orphan behind.
+            $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
+            if (-not (Test-Path $savePath) -and $saves.Count -eq 1 -and $saves[0].Name -ne $PlaySave) { Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName }
+            $haveSave = Test-Path $savePath
+            if ($PlaySave -ne $SaveName) {
+                $playPath = Join-Path $prep.RunDir "saves/$PlaySave"
+                if (-not (Test-Path $playPath)) {
+                    $seedPath = if ($PlaySeed) { Join-Path $prep.RunDir "saves/$PlaySeed" } else { $null }
+                    if (-not $seedPath -or -not (Test-Path $seedPath)) {
+                        throw "the scenario plays save '$PlaySave', which $node's run-smoke/saves does not have$(if ($PlaySeed) { " (nor its seed '$PlaySeed': run any scenario once first)" } else { ': copy it in first' })"
+                    }
+                    Copy-Item -Recurse -LiteralPath $seedPath -Destination $playPath
                 }
-                Copy-Item -Recurse -LiteralPath $seedPath -Destination $playPath
+            }
+            $quickPlay = $haveSave -or ($PlaySave -ne $SaveName)
+            # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
+            # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
+            if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
+                foreach ($extra in @($ScenarioData.extraSaves)) {
+                    $extraPath = Join-Path $prep.RunDir "saves/$extra"
+                    if (-not (Test-Path $extraPath)) { Copy-Item -Recurse -LiteralPath $savePath -Destination $extraPath }
+                }
+            }
+            Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
+            $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
+            $report.bridgeVersion = $client.BridgeVersion
+            if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
+            $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
+
+            Write-Host "[$node] running $(@($ScenarioData.steps).Count) steps"
+            $report.steps = @(Invoke-Scenario $node $nodeOut)
+            if ($script:PinViolation) { throw $script:PinViolation }
+
+            $logs = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = $logCursor; limit = 500 }).logs
+            $report.buildcraftErrors = @($logs | Where-Object { ($_ | ConvertTo-Json -Depth 6 -Compress) -match '(?i)buildcraft' })
+        } catch {
+            $report.fatal = $_.Exception.Message
+            Write-Warning "[$node] $($report.fatal)"
+        } finally {
+            if ($client) { Stop-Client $client } else { Stop-Spawned }
+            $script:Spawned = $null
+        }
+        # First run: adopt the save the menus just created (same rule as before booting).
+        if ($prep) {
+            $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
+            if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1) {
+                Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName
             }
         }
-        $quickPlay = $haveSave -or ($PlaySave -ne $SaveName)
-        # A scenario that visits more than one world names the extra saves; each is a copy of the first one, made
-        # (once) while no client is running. A first run has nothing to copy yet: run it once more afterwards.
-        if ($haveSave -and $ScenarioData.PSObject.Properties['extraSaves']) {
-            foreach ($extra in @($ScenarioData.extraSaves)) {
-                $extraPath = Join-Path $prep.RunDir "saves/$extra"
-                if (-not (Test-Path $extraPath)) { Copy-Item -Recurse -LiteralPath $savePath -Destination $extraPath }
-            }
-        }
-        Write-Host "[$node] booting client ($(if ($quickPlay) { "quick-play $PlaySave" } else { 'first run: creating the world' }))"
-        $client = Start-Client $node $prep.RunDir $quickPlay $nodeOut
-        $report.bridgeVersion = $client.BridgeVersion
-        if ($quickPlay) { Wait-InWorld 600 } else { New-SmokeWorld }
-        $logCursor = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = 0; limit = 1 }).nextCursor
-
-        Write-Host "[$node] running $(@($ScenarioData.steps).Count) steps"
-        $report.steps = @(Invoke-Scenario $node $nodeOut)
-
-        $logs = (Invoke-Bridge POST '/log' @{ level = 'ERROR'; since = $logCursor; limit = 500 }).logs
-        $report.buildcraftErrors = @($logs | Where-Object { ($_ | ConvertTo-Json -Depth 6 -Compress) -match '(?i)buildcraft' })
-    } catch {
-        $report.fatal = $_.Exception.Message
-        Write-Warning "[$node] $($report.fatal)"
-    } finally {
-        if ($client) { Stop-Client $client } else { Stop-Spawned }
-        $script:Spawned = $null
+        $report.finished = (Get-Date).ToString('s')
+        $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $nodeOut 'report.json') -Encoding utf8
+        $failed = @($report.steps | Where-Object { -not $_.ok }).Count
+        $summary += [pscustomobject]@{ node = $node; steps = @($report.steps).Count; failed = $failed; bcErrors = @($report.buildcraftErrors).Count; fatal = $report.fatal; report = $report }
+        Write-Host "[$node] done: $(@($report.steps).Count) steps, $failed failed, $(@($report.buildcraftErrors).Count) BuildCraft log errors$(if ($report.fatal) { ", FATAL: $($report.fatal)" })"
     }
-    # First run: adopt the save the menus just created (same rule as before booting).
-    if ($prep) {
-        $saves = @(Get-ChildItem -Directory -Path (Join-Path $prep.RunDir 'saves') -ErrorAction SilentlyContinue)
-        if (-not (Test-Path (Join-Path $prep.RunDir "saves/$SaveName")) -and $saves.Count -eq 1) {
-            Rename-Item -LiteralPath $saves[0].FullName -NewName $SaveName
-        }
-    }
-    $report.finished = (Get-Date).ToString('s')
-    $report | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $nodeOut 'report.json') -Encoding utf8
-    $failed = @($report.steps | Where-Object { -not $_.ok }).Count
-    $summary += [pscustomobject]@{ node = $node; steps = @($report.steps).Count; failed = $failed; bcErrors = @($report.buildcraftErrors).Count; fatal = $report.fatal; report = $report }
-    Write-Host "[$node] done: $(@($report.steps).Count) steps, $failed failed, $(@($report.buildcraftErrors).Count) BuildCraft log errors$(if ($report.fatal) { ", FATAL: $($report.fatal)" })"
+} finally {
+    Exit-SmokeLock
 }
 
 # summary.md: one table per node, screenshots linked relative to the run folder.

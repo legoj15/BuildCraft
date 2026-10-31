@@ -6,7 +6,9 @@
 package buildcraft;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -22,9 +24,12 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.api.core.BCLog;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileBuilder;
 import buildcraft.core.BCCoreItems;
@@ -66,7 +71,10 @@ import buildcraft.transport.tile.TilePipeHolder;
  */
 public class CommandReplaceTester {
 
-    /** Ticks between the removal and the assertions: spilled items are in the level and have barely moved. */
+    /** Ticks between the removal and the second scan, which catches anything that lands in a rig's box after the
+     *  removal. Every spill is synchronous, so it is also scanned on the removal's own tick: once, the Stirling's coal
+     *  and its own block item were both missing from the second scan, cause unknown (issue #58;
+     *  {@link #reportVanished} logs the next one). */
     private static final int GAP_TICKS = 2;
     /** The wait for every rig position to become entity-ticking, so a spilled item is visible to a scan. */
     private static final int POLL_TICKS = 60;
@@ -137,6 +145,8 @@ public class CommandReplaceTester {
     public static void testCloneMoveNeitherSpillsNorDuplicates(GameTestHelper helper) {
         BlockPos source = TANK;
         BlockPos destination = new BlockPos(3, 2, 1);
+        // Scanned on the clone's own tick as well as GAP_TICKS later, as runRigs does.
+        List<ItemEntity> seenAtClone = new ArrayList<>();
         forceLoadAround(helper, source, destination);
         EntityArenaUtil.tickUntilThen(helper, POLL_TICKS,
                 () -> EntityArenaUtil.isEntityTicking(helper, source)
@@ -151,6 +161,8 @@ public class CommandReplaceTester {
                     command(helper, "clone " + a.getX() + " " + a.getY() + " " + a.getZ() + " "
                             + a.getX() + " " + a.getY() + " " + a.getZ() + " "
                             + b.getX() + " " + b.getY() + " " + b.getZ() + " replace move");
+                    seenAtClone.addAll(EntityArenaUtil.droppedItems(helper, source, RIG_RADIUS));
+                    seenAtClone.addAll(EntityArenaUtil.droppedItems(helper, destination, RIG_RADIUS));
                 },
                 GAP_TICKS,
                 () -> {
@@ -167,8 +179,9 @@ public class CommandReplaceTester {
                         throw new IllegalStateException("the cloned tank should hold the 1000 mB it was moved with, held "
                                 + tank.tank.getAmountMb(0));
                     }
-                    List<ItemEntity> spilled = new ArrayList<>(EntityArenaUtil.droppedItems(helper, source, RIG_RADIUS));
-                    spilled.addAll(EntityArenaUtil.droppedItems(helper, destination, RIG_RADIUS));
+                    List<ItemEntity> spilled = new ArrayList<>(seenAtClone);
+                    addAbsent(spilled, EntityArenaUtil.droppedItems(helper, source, RIG_RADIUS));
+                    addAbsent(spilled, EntityArenaUtil.droppedItems(helper, destination, RIG_RADIUS));
                     if (!spilled.isEmpty()) {
                         throw new IllegalStateException("clone move must not spill the tank's water, but dropped "
                                 + describe(spilled));
@@ -186,6 +199,7 @@ public class CommandReplaceTester {
 
     private static void runRigs(GameTestHelper helper, Removal removal) {
         List<Rig> rigs = new ArrayList<>();
+        Map<Rig, List<ItemEntity>> seenAtRemoval = new HashMap<>();
         forceLoadAround(helper, ALL_POSITIONS);
         EntityArenaUtil.tickUntilThen(helper, POLL_TICKS,
                 () -> {
@@ -203,13 +217,18 @@ public class CommandReplaceTester {
                     rigs.addAll(buildRigs(helper));
                     for (Rig rig : rigs) {
                         remove(helper, rig, removal);
+                        // The rig's chunk is entity-ticking, so what the removal spilled is visible at once.
+                        seenAtRemoval.put(rig, EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS));
                     }
                 },
                 GAP_TICKS,
                 () -> {
                     List<String> failures = new ArrayList<>();
                     for (Rig rig : rigs) {
-                        List<ItemEntity> dropped = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
+                        List<ItemEntity> dropped = new ArrayList<>(seenAtRemoval.get(rig));
+                        List<ItemEntity> lateScan = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
+                        reportVanished(rig, dropped, lateScan);
+                        addAbsent(dropped, lateScan);
                         if (removal == Removal.SETBLOCK_DESTROY) {
                             for (Item expected : rig.mustSpill()) {
                                 if (dropped.stream().noneMatch(e -> e.getItem().is(expected))) {
@@ -379,10 +398,45 @@ public class CommandReplaceTester {
         }
     }
 
-    /** Discards the loose items around a rig: leftovers of a previous test in this cell, and our own spills. */
+    /** Discards the loose items around a rig: leftovers of a previous test in this cell, and our own spills. Clipped
+     *  to this test's cell in x and z, where the neighbouring arenas sit: the rigs are one block in from the cell's
+     *  edges, so an unclipped box would reach half a block into a neighbour and discard its drops mid-test. Not in y:
+     *  the x/z clip already keeps the sweep in this cell's own column, and the top rigs' scans reach above the cell,
+     *  so their sweep must too. */
     private static void clearDrops(GameTestHelper helper, BlockPos rel) {
-        for (ItemEntity item : EntityArenaUtil.droppedItems(helper, rel, RIG_RADIUS + 1.0)) {
+        double reach = RIG_RADIUS + 1.0;
+        AABB box = AABB.ofSize(Vec3.atCenterOf(helper.absolutePos(rel)), reach * 2, reach * 2, reach * 2);
+        AABB cell = EntityArenaUtil.cellBounds(helper);
+        box = new AABB(Math.max(box.minX, cell.minX), box.minY, Math.max(box.minZ, cell.minZ),
+                Math.min(box.maxX, cell.maxX), box.maxY, Math.min(box.maxZ, cell.maxZ));
+        for (ItemEntity item : helper.getLevel().getEntitiesOfClass(ItemEntity.class, box)) {
             item.discard();
+        }
+    }
+
+    /** Adds each of {@code more} that {@code items} does not already hold (entities compare by identity). */
+    private static void addAbsent(List<ItemEntity> items, List<ItemEntity> more) {
+        for (ItemEntity item : more) {
+            if (!items.contains(item)) {
+                items.add(item);
+            }
+        }
+    }
+
+    /** Logs a spill seen on the removal's tick that the second scan no longer finds. It still counts as spilled; the
+     *  log is the evidence for issue #58's cause. A removed item says {@code DISCARDED} for nearly every way out (a
+     *  sweep, a merge, lava, fire, the void, old age), so its age and fire ticks are logged beside it; one still in
+     *  the level has moved out of the box, and its position says where. */
+    private static void reportVanished(Rig rig, List<ItemEntity> seen, List<ItemEntity> lateScan) {
+        for (ItemEntity item : seen) {
+            if (item.isRemoved()) {
+                BCLog.logger.warn("[command-replace] {} spilled {}, absent from the scan {} ticks later: removed ({}) at {} (age {},"
+                        + " fire ticks {})", rig.name(), item.getItem(), GAP_TICKS, item.getRemovalReason(),
+                        item.position(), item.getAge(), item.getRemainingFireTicks());
+            } else if (!lateScan.contains(item)) {
+                BCLog.logger.warn("[command-replace] {} spilled {}, which left the scan box within {} ticks: now at {}",
+                        rig.name(), item.getItem(), GAP_TICKS, item.position());
+            }
         }
     }
 

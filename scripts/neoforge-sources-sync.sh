@@ -8,7 +8,8 @@
 #     .neoforge-ref/sources-<neo_version>/  decompiled .java -- net/minecraft
 #                                           (patched) + net/neoforged (framework)
 #     .neoforge-ref/vanilla-<mc_version>/   pure vanilla MC jar (deobfuscated
-#                                           bytecode; inspect with `javap`)
+#                                           bytecode; inspect with `javap`) --
+#                                           unobfuscated (26.x) lines only
 #     .neoforge-ref/INDEX.txt               node -> version -> dir map (generated)
 #
 # "Active" = the (neo_version, minecraft_version) pinned in each
@@ -72,6 +73,11 @@ for i in "${!node_ids[@]}"; do
 done
 
 declare -A keep   # basename of a dir that must survive pruning -> 1
+declare -A vanilla_note   # mc_version -> INDEX.txt text when no vanilla dir is kept
+
+is_deobfuscated() {  # is_deobfuscated <jar>: Mojang names present? (zip names are stored uncompressed)
+    grep -qa 'net/minecraft/client/Minecraft.class' "$1" 2>/dev/null
+}
 
 sync_one() {  # sync_one <neo_version> <mc_version>
     local neo_version="$1" mc_version="$2"
@@ -126,11 +132,21 @@ sync_one() {  # sync_one <neo_version> <mc_version>
     fi
 
     # -- pure vanilla Minecraft jar (deobfuscated bytecode) --
+    # Only lines Mojang ships unobfuscated (26.x) qualify: a 1.21.x client jar is
+    # ProGuard-obfuscated, so javap by Mojang class name finds nothing in it. Such a
+    # jar is refused (and an earlier copy pruned); use that line's sources-* instead.
     [ "$force" = 1 ] && rm -rf "$vanilla_dir"
-    if [ -d "$vanilla_dir" ]; then
+    # A dir whose jar is missing or empty (an interrupted copy) is no copy at all.
+    [ -s "$vanilla_dir/$mc_version.jar" ] || rm -rf "$vanilla_dir"
+    if [ -d "$vanilla_dir" ] && ! is_deobfuscated "$vanilla_dir/$mc_version.jar"; then
+        echo "[vanilla] $mc_version: removing obfuscated copy (use sources-$neo_version)"
+        rm -rf "$vanilla_dir"
+        unset "keep[vanilla-$mc_version]"
+        vanilla_note["$mc_version"]="(obfuscated line; use sources-*)"
+    elif [ -d "$vanilla_dir" ]; then
         echo "[vanilla] $mc_version: present (use --force to rebuild)"
     else
-        local mc_root vanilla_jar
+        local mc_root vanilla_jar launcher_jar gradle_jar j
         if [ -n "${MINECRAFT_DIR:-}" ]; then
             mc_root="$MINECRAFT_DIR"
         elif [ -n "${APPDATA:-}" ]; then
@@ -138,15 +154,25 @@ sync_one() {  # sync_one <neo_version> <mc_version>
         else
             mc_root="$HOME/AppData/Roaming/.minecraft"
         fi
-        vanilla_jar="$mc_root/versions/$mc_version/$mc_version.jar"
-        if [ -f "$vanilla_jar" ]; then
-            echo "[vanilla] $mc_version: copying -> $vanilla_dir"
-            mkdir -p "$vanilla_dir"
-            cp "$vanilla_jar" "$vanilla_dir/"
-            echo "[vanilla]   $mc_version.jar ($(du -h "$vanilla_jar" | cut -f1))"
+        # The launcher copy is preferred; ModDevGradle's download of the same Mojang
+        # jar is the fallback, and exists for every node Gradle has built.
+        launcher_jar="$mc_root/versions/$mc_version/$mc_version.jar"
+        gradle_jar="${GRADLE_USER_HOME:-$HOME/.gradle}/caches/neoformruntime/artifacts/minecraft_${mc_version}_client.jar"
+        vanilla_jar=""
+        for j in "$launcher_jar" "$gradle_jar"; do
+            [ -s "$j" ] && { vanilla_jar="$j"; break; }
+        done
+        if [ -z "$vanilla_jar" ]; then
+            echo "[vanilla] $mc_version: SKIPPED -- not at $launcher_jar nor $gradle_jar"
+            echo "[vanilla]   Run :<node>:compileJava once, launch $mc_version via the launcher, or set MINECRAFT_DIR."
+        elif ! is_deobfuscated "$vanilla_jar"; then
+            echo "[vanilla] $mc_version: SKIPPED -- obfuscated line (use sources-$neo_version)"
+            vanilla_note["$mc_version"]="(obfuscated line; use sources-*)"
         else
-            echo "[vanilla] $mc_version: SKIPPED -- not found at $vanilla_jar"
-            echo "[vanilla]   Launch Minecraft $mc_version via the official launcher once, or set MINECRAFT_DIR."
+            echo "[vanilla] $mc_version: copying $vanilla_jar -> $vanilla_dir"
+            mkdir -p "$vanilla_dir"
+            cp "$vanilla_jar" "$vanilla_dir/$mc_version.jar"
+            echo "[vanilla]   $mc_version.jar ($(du -h "$vanilla_jar" | cut -f1))"
         fi
     fi
 }
@@ -174,9 +200,10 @@ done
     echo "# Regenerate this file and the dirs with:  bash scripts/neoforge-sources-sync.sh"
     echo "#"
     for i in "${!node_ids[@]}"; do
-        # The vanilla jar is optional (needs a launcher install); list only what is on disk.
+        # The vanilla jar is optional (unobfuscated lines only); list only what is on disk.
         vanilla="vanilla-${node_mcs[$i]}/"
-        [ -d "$ref_dir/vanilla-${node_mcs[$i]}" ] || vanilla="(no vanilla jar; use sources-*)"
+        [ -d "$ref_dir/vanilla-${node_mcs[$i]}" ] \
+            || vanilla="${vanilla_note[${node_mcs[$i]}]:-(no vanilla jar; use sources-*)}"
         printf 'node %-10s  sources-%-18s  %s\n' "${node_ids[$i]}" "${node_neos[$i]}/" "$vanilla"
     done
 } > "$ref_dir/INDEX.txt"

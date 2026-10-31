@@ -64,7 +64,10 @@ versions** (the APIs differ by line, which is the whole point of the split);
 - `.neoforge-ref/vanilla-<minecraft_version>/<minecraft_version>.jar` — the pure, unpatched,
   deobfuscated vanilla client jar. Bytecode, not source — inspect with `javap` (e.g.
   `javap -p -cp .neoforge-ref/vanilla-26.1.2/26.1.2.jar net.minecraft.client.Camera`).
-  Authoritative ground truth for unpatched vanilla.
+  Authoritative ground truth for unpatched vanilla. Copied from the launcher install, else
+  from ModDevGradle's cached client jar. **26.x lines only**: 1.21.x client jars are
+  obfuscated (useless to `javap` by Mojang name), so those nodes have no vanilla dir —
+  INDEX.txt says so; use their `sources-*`.
 
 Dir names are version-stamped (`sources-<neo>`, `vanilla-<mc>`). The sync reads each
 `versions/<node>/gradle.properties`, keeps one dir-set per active node, and prunes only

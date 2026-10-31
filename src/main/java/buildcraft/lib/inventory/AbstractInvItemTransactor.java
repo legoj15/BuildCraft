@@ -16,7 +16,6 @@ import javax.annotation.Nonnull;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.core.NonNullList;
 
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.inventory.IItemTransactor;
@@ -155,12 +154,6 @@ public abstract class AbstractInvItemTransactor implements IItemTransactor {
                 + getClass() + ")");
         }
         return StackUtil.EMPTY;
-    }
-
-    @Override
-    public NonNullList<ItemStack> insert(NonNullList<ItemStack> stacks, boolean simulate) {
-        // WARNING: SLOW IMPL
-        return stacks;
     }
 
     @Nonnull

@@ -1794,8 +1794,8 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *  SAME {@link #inv} array the slot accessors already serve, one instance per robot. The two write
      *  paths differ deliberately — {@link #setInventoryStack} stores the caller's own instance (7.1.x
      *  live-instance semantics for AIs that keep mutating a stack they were handed), while the transactor
-     *  copies: {@link AbstractInvItemTransactor} dry-runs with the very reference it then commits, so the
-     *  offered stack may never be mutated, let alone stored live. */
+     *  copies: {@link AbstractInvItemTransactor} hands it a copy of the offered stack, but the caller still
+     *  owns the original, so it may never be mutated, let alone stored live. */
     private final IItemTransactor transactor = new RobotTransactor();
 
     @Override

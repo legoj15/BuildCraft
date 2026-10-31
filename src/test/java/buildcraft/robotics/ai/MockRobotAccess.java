@@ -389,9 +389,16 @@ public class MockRobotAccess implements IRobotAccess {
         return null;
     }
 
+    private IZone zoneToLoadUnload;
+
+    /** The zone a load/unload search is held to; none (the whole level) unless a test sets one. */
+    void setZoneToLoadUnload(IZone zone) {
+        zoneToLoadUnload = zone;
+    }
+
     @Override
     public IZone getZoneToLoadUnload() {
-        return null;
+        return zoneToLoadUnload;
     }
 
     // -- inventory --
@@ -463,6 +470,31 @@ public class MockRobotAccess implements IRobotAccess {
     @Override
     public boolean isKnownUnreachableBlock(BlockPos pos) {
         return unreachableBlocks.isKnownUnreachable(pos);
+    }
+
+    // -- leftover cargo --
+
+    private DockingStation evictedFrom;
+    private int heldDisposals;
+
+    @Override
+    public DockingStation getEvictedFromStation() {
+        return evictedFrom;
+    }
+
+    @Override
+    public void setEvictedFromStation(DockingStation station) {
+        evictedFrom = station;
+    }
+
+    @Override
+    public int getHeldDisposals() {
+        return heldDisposals;
+    }
+
+    @Override
+    public void setHeldDisposals(int count) {
+        heldDisposals = count;
     }
 
     // -- board / motion --

@@ -238,6 +238,10 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
             new UnreachableEntityCache<>(() -> level().getGameTime());
     private final UnreachableBlockCache unreachableBlocks =
             new UnreachableBlockCache(() -> level().getGameTime(), this::blockPosition);
+    /** Leftover-cargo memory ({@link #getEvictedFromStation}, {@link #getHeldDisposals}); not saved, so a reload
+     *  forgets an eviction and starts the hold count afresh. */
+    private DockingStation evictedFromStation;
+    private int heldDisposals;
 
     /** One receiver instance for the robot's lifetime. {@code RobotStationPluggable} re-fetches it on every
      *  capability query (so identity is never cached outside), but the {@link #ticksCharging} latch it drives
@@ -1933,6 +1937,26 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     @Override
     public boolean isKnownUnreachableBlock(BlockPos pos) {
         return unreachableBlocks.isKnownUnreachable(pos);
+    }
+
+    @Override
+    public DockingStation getEvictedFromStation() {
+        return evictedFromStation;
+    }
+
+    @Override
+    public void setEvictedFromStation(DockingStation station) {
+        evictedFromStation = station;
+    }
+
+    @Override
+    public int getHeldDisposals() {
+        return heldDisposals;
+    }
+
+    @Override
+    public void setHeldDisposals(int count) {
+        heldDisposals = count;
     }
 
     // ── Debug ───────────────────────────────────────────────────────────────

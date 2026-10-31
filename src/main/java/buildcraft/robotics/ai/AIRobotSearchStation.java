@@ -43,7 +43,9 @@ public class AIRobotSearchStation extends AIRobot {
 
     /** @param homeIgnoresZone let the robot's own linked station match even outside {@code iZone} (not 7.1.x):
      *                         unloading passes it, so a robot homed outside its work zone can still empty its
-     *                         cargo at home rather than only through the docked-station shortcut, once a minute */
+     *                         cargo at home rather than only through the docked-station shortcut, once a minute.
+     *                         The station Forbid Robot evicted the robot from while it carried cargo matches
+     *                         outside the zone too, so it can go back there once the forbid lifts (#68) */
     public AIRobotSearchStation(IRobotAccess iRobot, IStationFilter iFilter, IZone iZone, boolean homeIgnoresZone) {
         this(iRobot, iFilter, iZone);
         this.homeIgnoresZone = homeIgnoresZone;
@@ -95,22 +97,63 @@ public class AIRobotSearchStation extends AIRobot {
         terminate();
     }
 
-    /** Whether a search with {@code filter} and {@code zone} would find a station but for Forbid Robot: one matches
-     *  and is a candidate (loaded, free, in the zone; flight reach is not checked), and every such station forbids the
-     *  robot. A forbid is gate state that can lift, so a
-     *  robot this leaves without a station has somewhere to go later, which the caller may want to wait for. */
-    public static boolean onlyForbiddingStationsMatch(IRobotAccess robot, IStationFilter filter, IZone zone,
+    /** What a disposal may wait for when an unload search came up empty ({@link #unavailableTakers}). */
+    public enum Hold {
+        /** Nothing: a station the robot may use now exists (the caller already tried it and failed), or none would
+         *  take the cargo at all. */
+        NONE,
+        /** A taker forbids the robot (Forbid Robot, #46): the player's own gate state, waited for without a cap. */
+        FORBIDDEN,
+        /** Takers are only claimed by another robot or not loaded (#68): states nobody controls, so the disposal
+         *  waits for them a few times only ({@code AIRobotDisposeItems.MAX_TRANSIENT_HOLDS}). */
+        TRANSIENT
+    }
+
+    /** Why a search with {@code filter} and {@code zone} comes up empty, when the reason can pass, so a caller whose
+     *  own try at the stations failed may wait for one rather than give up. The one list of those reasons (the callers
+     *  point here): a station in the search's zone that
+     *  <ul>
+     *  <li>matches and forbids the robot: {@link Hold#FORBIDDEN}, which wins over the rest;</li>
+     *  <li>matches and is held by a plain claim of another robot (a visit or a dock): {@link Hold#TRANSIENT}, the claim
+     *      ends with the visit;</li>
+     *  <li>is in a chunk that is not loaded: {@link Hold#TRANSIENT}, the chunk loads again once a player comes near.
+     *      The filter is not asked: a station read back from the save has no pipe to answer with until its chunk loads,
+     *      and one cached from earlier answers from a pipe that has unloaded since. With no zone the search covers the
+     *      whole level, where some station is nearly always unloaded, so then only the robot's own home counts.</li>
+     *  </ul>
+     *  {@link Hold#NONE} as soon as a match is usable now (loaded, free or this robot's, not forbidding), even one the
+     *  flight failed to reach: what failed then was not a state that passes. Another robot's HOME never counts: only
+     *  that robot's own redirect (a Goto Station action) moves it, and no search offers it to anyone else. The zone is
+     *  the search's own ({@code homeIgnoresZone}: the home and the station the robot was evicted from match outside
+     *  it). Flight reach is not checked. */
+    public static Hold unavailableTakers(IRobotAccess robot, IStationFilter filter, IZone zone,
             boolean homeIgnoresZone) {
         boolean forbidden = false;
+        boolean passing = false;
         for (DockingStation station : new ArrayList<>(robot.getRegistry().getStations())) {
-            if (isCandidate(robot, station, zone, homeIgnoresZone) && filter.matches(station)) {
-                if (!station.isRobotForbidden(robot)) {
-                    return false;
-                }
+            if (!station.isInitialized() || !inZone(robot, station, zone, homeIgnoresZone)) {
+                continue;
+            }
+            boolean heldByAnother = station.isTaken() && station.robotIdTaking() != robot.getRobotId();
+            if (heldByAnother && station.isMainStation()) {
+                continue;
+            }
+            if (!station.isChunkLoaded()) {
+                passing |= zone != null || station == robot.getLinkedStation();
+                continue;
+            }
+            if (!filter.matches(station)) {
+                continue;
+            }
+            if (station.isRobotForbidden(robot)) {
                 forbidden = true;
+            } else if (heldByAnother) {
+                passing = true;
+            } else {
+                return Hold.NONE;
             }
         }
-        return forbidden;
+        return forbidden ? Hold.FORBIDDEN : passing ? Hold.TRANSIENT : Hold.NONE;
     }
 
     /** Everything but the filter and the forbid: the station is loaded, free (or this robot's) and in the zone. */
@@ -127,8 +170,21 @@ public class AIRobotSearchStation extends AIRobot {
             return false;
         }
 
-        return zone == null || (homeIgnoresZone && station == robot.getLinkedStation())
+        return inZone(robot, station, zone, homeIgnoresZone);
+    }
+
+    /** The zone test of a search: no zone, a station the zone contains, or, when {@code homeIgnoresZone}, the robot's
+     *  own home or the station Forbid Robot evicted it from while it carried cargo
+     *  ({@link IRobotAccess#getEvictedFromStation}, matched by place since the registry may have rebuilt it). */
+    private static boolean inZone(IRobotAccess robot, DockingStation station, IZone zone, boolean homeIgnoresZone) {
+        return zone == null
+                || (homeIgnoresZone && (station == robot.getLinkedStation() || isEvictedFrom(robot, station)))
                 || zone.contains(Vec3.atCenterOf(station.getPos()));
+    }
+
+    private static boolean isEvictedFrom(IRobotAccess robot, DockingStation station) {
+        DockingStation evicted = robot.getEvictedFromStation();
+        return evicted != null && evicted.side() == station.side() && evicted.getPos().equals(station.getPos());
     }
 
     @Override

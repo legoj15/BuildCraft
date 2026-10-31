@@ -196,7 +196,8 @@ public class BoardRobotBuilder extends RedstoneBoardRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
-            // Only stations that forbid this robot would take the cargo back: keep it and sleep, then try again.
+            // Only stations that are out of reach for now (AIRobotSearchStation.unavailableTakers) could
+            // take the cargo back: keep it and sleep, then try again.
             startDelegateAI(new AIRobotGotoSleep(robot));
         } else if (ai instanceof AIRobotGotoStationAndLoad) {
             if (!ai.success()) {

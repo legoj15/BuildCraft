@@ -51,6 +51,10 @@ public class AIRobotUnload extends AIRobot {
                 // The cargo slots, and the hand too when the hand was part of the ask (containsItems never looks at
                 // it): a worn tool the station would not take is a failed unload, not a successful one.
                 setSuccess(!robot.containsItems() && !(emptiesHand && !robot.getHeldItem().isEmpty()));
+                if (!robot.containsItems()) {
+                    // Any unload that empties the cargo, not only a disposal's, starts the leftover hold count afresh.
+                    robot.setHeldDisposals(0);
+                }
                 terminate();
             }
         }

@@ -36,11 +36,10 @@ public class AIRobotGotoStationToUnload extends AIRobot {
         }
     }
 
-    /** Whether the robot is held back from unloading only by Forbid Robot: a station it could unload at, searched
-     *  for as this AI searches, exists, and every one forbids it. */
-    static boolean onlyForbiddingStationsTakeCargo(IRobotAccess robot) {
-        return AIRobotSearchStation.onlyForbiddingStationsMatch(robot, takesCargo(robot),
-                robot.getZoneToLoadUnload(), true);
+    /** What, if anything, the robot may wait for to unload, searched for as this AI searches
+     *  ({@link AIRobotSearchStation#unavailableTakers} lists what passes). */
+    static AIRobotSearchStation.Hold unavailableTakers(IRobotAccess robot) {
+        return AIRobotSearchStation.unavailableTakers(robot, takesCargo(robot), robot.getZoneToLoadUnload(), true);
     }
 
     private static IStationFilter takesCargo(IRobotAccess robot) {

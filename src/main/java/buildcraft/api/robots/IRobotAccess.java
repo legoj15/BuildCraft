@@ -231,6 +231,30 @@ public interface IRobotAccess {
         return false;
     }
 
+    // ── Leftover cargo (not 7.1.x) ──
+
+    /** The station Forbid Robot last evicted this robot from while it carried cargo, until a disposal of that cargo
+     *  ends without keeping it; null when there is none. Not saved. An unload search lets it match outside the
+     *  load/unload zone, as it lets the home, so cargo the robot was unloading there waits for the forbid to lift
+     *  instead of being dropped. A robot with no such memory answers null, which is the default. */
+    @Nullable
+    default DockingStation getEvictedFromStation() {
+        return null;
+    }
+
+    default void setEvictedFromStation(@Nullable DockingStation station) {
+    }
+
+    /** How many leftover-cargo disposals kept the cargo for a taker that was only claimed by another robot or not
+     *  loaded, since a disposal last unloaded it; the disposal stops waiting for such a taker after a few. Not saved.
+     *  A robot with no such memory answers 0 and ignores the update, which is the default. */
+    default int getHeldDisposals() {
+        return 0;
+    }
+
+    default void setHeldDisposals(int count) {
+    }
+
     // ── Board / motion ──
 
     RedstoneBoardRobot getBoard();

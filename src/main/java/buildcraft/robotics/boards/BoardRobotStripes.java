@@ -112,7 +112,8 @@ public class BoardRobotStripes extends RedstoneBoardRobot {
     @Override
     public void delegateAIEnded(AIRobot ai) {
         if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
-            // Only stations that forbid this robot would take the item back: keep it and sleep, then try again.
+            // Only stations that are out of reach for now (AIRobotSearchStation.unavailableTakers) could
+            // take the item back: keep it and sleep, then try again.
             startDelegateAI(new AIRobotGotoSleep(robot));
         } else if (ai instanceof AIRobotSearchAndGotoBlock searchAI) {
             if (searchAI.success()) {

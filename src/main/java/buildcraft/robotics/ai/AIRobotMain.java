@@ -64,6 +64,11 @@ public class AIRobotMain extends AIRobot {
             // every station search and flight now passes this station by, home included, so the board finds another
             // station or sleeps elsewhere. The home link is kept, and the robot goes back once the forbid lifts; one
             // that needs a charge no other station gives waits for that (AIRobotWaitForHome) rather than shut down.
+            // A robot carrying cargo remembers the station (#68): it may have been unloading there from outside its
+            // zone, and its leftover-cargo disposal keeps the cargo for that station to stop forbidding it.
+            if (robot.containsItems()) {
+                robot.setEvictedFromStation(dock);
+            }
             robot.undock();
             if (ai != null && ai == overridingAI) {
                 // A redirect cut short here is not restarted: its target may be the station that now forbids it.

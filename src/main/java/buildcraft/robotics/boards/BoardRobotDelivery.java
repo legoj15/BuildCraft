@@ -152,7 +152,8 @@ public class BoardRobotDelivery extends RedstoneBoardRobot {
                 startDelegateAI(new AIRobotDeliverRequested(robot, currentRequest.job()));
             }
         } else if (ai instanceof AIRobotDisposeItems dispose && dispose.heldBack()) {
-            // The leftover cargo is kept: only stations that forbid this robot would take it. Sleep, then try again.
+            // The leftover cargo is kept: only stations that are out of reach for now
+            // (AIRobotSearchStation.unavailableTakers) could take it. Sleep, then try again.
             // The sleep frees every reservation the robot holds, so the order's claims are marked unheld first, as
             // for a requester that is away, and the next cycle's preempt takes them back.
             currentRequest.releaseClaims();

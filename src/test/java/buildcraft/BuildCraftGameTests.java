@@ -288,6 +288,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_stripes_drops_product_of_air_use", () -> buildcraft.robotics.ai.RobotStripesTester::stripesDropsTheProductOfAnAirUse);
         reg.accept("buildcraftunofficial:robot_stripes_board_spills_item_it_gives_up_on", () -> buildcraft.robotics.boards.RobotStripesGiveUpTester::stripesBoardSpillsAnItemItGivesUpOn);
         reg.accept("buildcraftunofficial:robot_dispose_items_drops_cargo_when_no_station", () -> buildcraft.robotics.ai.RobotDisposeItemsTester::disposeItemsDropsCargoWhenNoStationWillTakeIt);
+        reg.accept("buildcraftunofficial:robot_dispose_items_keeps_cargo_for_unloaded_station", () -> buildcraft.robotics.ai.RobotDisposeItemsTester::disposeItemsKeepsCargoForAStationInAnUnloadedChunk);
         reg.accept("buildcraftunofficial:robot_straight_move_snaps_onto_target", () -> buildcraft.robotics.ai.RobotStraightMoveSnapTester::straightMoveSnapsARealRobotOntoItsTarget);
         reg.accept("buildcraftunofficial:stripes_drop_places_one_returns_remainder", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testDropPlacesOneAndReturnsRemainder);
         reg.accept("buildcraftunofficial:stripes_hoe_asks_right_click_before_tilling", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHoeAsksTheRightClickEventBeforeTilling);
@@ -1304,6 +1305,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_station_forbid_robot", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotActionRefusesUnloadAtStation);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot_evicts_docked", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotEvictsDockedRobotToAnotherStation);
         reg.accept("buildcraftunofficial:robot_station_forbid_robot_eviction_keeps_cargo", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotEvictionKeepsCargoWithNoOtherStation);
+        reg.accept("buildcraftunofficial:robot_station_forbid_robot_eviction_keeps_cargo_outside_zone", () -> buildcraft.robotics.statements.RobotGateTester::forbidRobotEvictionKeepsCargoForAStationOutsideTheZone);
         reg.accept("buildcraftunofficial:robot_pump_unloads_into_home_tank", () -> buildcraft.robotics.statements.RobotGateTester::pumpUnloadsIntoTankAtHomeStation);
         reg.accept("buildcraftunofficial:robot_goto_station_action", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionRedirectsDockedRobot);
         reg.accept("buildcraftunofficial:robot_goto_station_action_unloaded_target", () -> buildcraft.robotics.statements.RobotGateTester::gotoStationActionAtAnUnloadedStationLeavesTheRobotAlone);

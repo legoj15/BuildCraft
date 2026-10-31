@@ -123,6 +123,10 @@ public class AIRobotDeliverRequested extends AIRobot {
                 }
             }
 
+            if (count > 0 && !robot.containsItems()) {
+                // A drop-off that empties the cargo starts the leftover hold count afresh, as an unload does.
+                robot.setHeldDisposals(0);
+            }
             setSuccess(count > 0);
             terminate();
         }

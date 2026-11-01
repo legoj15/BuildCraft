@@ -2,7 +2,7 @@
 navigation:
   title: "Zone Planner"
   parent: contents/robots/robot.md
-  position: 14
+  position: 15
   icon: buildcraftunofficial:zone_planner
 item_ids:
   - buildcraftunofficial:map_location

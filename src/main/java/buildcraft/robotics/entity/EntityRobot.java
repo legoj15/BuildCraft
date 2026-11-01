@@ -103,6 +103,7 @@ import buildcraft.robotics.ai.AIRobotMain;
 import buildcraft.robotics.ai.AIRobotShutdown;
 import buildcraft.robotics.ai.AIRobotSleep;
 import buildcraft.robotics.ai.AIRobotWaitForHome;
+import buildcraft.robotics.client.RobotGogglesView;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.robotics.particle.RobotEnergyParticleOptions;
 import buildcraft.robotics.statements.ActionRobotWorkInArea;
@@ -1389,9 +1390,34 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     }
 
     /** Whole MJ, 0..10000 — the renderer's charge fraction is this over
-     *  {@code MAX_POWER / MjAPI.MJ}. */
+     *  {@code MAX_POWER / MjAPI.MJ} ({@link RobotChargeView#chargeFraction}). */
     public int getEnergyMj() {
         return entityData.get(ENERGY_MJ);
+    }
+
+    // ── Robot Goggles view ──────────────────────────────────────────────────
+
+    /** Whether the local player's Robot Goggles apply to this robot: only ever on the client, and only when the
+     *  local player has them on. The player lookup lives in {@link RobotGogglesView}, a client-only class this
+     *  common class must reach solely behind the {@code isClientSide} test, or the dedicated server loads
+     *  {@code Minecraft}. */
+    private boolean gogglesView() {
+        return level().isClientSide() && RobotGogglesView.localPlayerWearsGoggles();
+    }
+
+    /** Goggles show every robot through walls: vanilla's glowing outline, which draws over the world whatever
+     *  stands in the way. Client only - the server's answer is the stock glowing tag, so a goggles view never
+     *  reaches the world state or another player. */
+    @Override
+    public boolean isCurrentlyGlowing() {
+        return super.isCurrentlyGlowing() || gogglesView();
+    }
+
+    /** The outline colour: red when the battery is empty to green when it is full while the Goggles view applies,
+     *  otherwise the stock team colour. */
+    @Override
+    public int getTeamColor() {
+        return gogglesView() ? RobotChargeView.outlineRgbForEnergy(getEnergyMj()) : super.getTeamColor();
     }
 
     /** Drives the energy-particle rate. */

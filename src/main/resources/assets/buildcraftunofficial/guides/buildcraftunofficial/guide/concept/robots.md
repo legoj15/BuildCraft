@@ -43,6 +43,10 @@ Provide Items lets robots take items out of the inventory behind the station, an
 
 A robot with nothing to do, or nothing to do it with, parks on its home station and sleeps for a minute before looking again; the Wake Up action rouses it at once. The Docking Station page lists the remaining station actions (forbidding or forcing robots, requesting items) and the robot triggers a gate can read, such as whether a robot is in the station or asleep.
 
+## Seeing your robots
+
+Robots work out of sight, and the [Robot Goggles](../item/goggles.md) show them: worn in the head slot they outline every robot through walls, red when its battery is low to green when it is full.
+
 ## Boards
 
 Every board has a page of its own under Boards. The cheap ones (Picker, Carrier, Tank) move things between stations. The middle tier works a zone: Lumberjack, Miner, Farmer, Planter, Leaf Cutter and Shovelman with a tool from a station, Harvester and Pump with none, and the Butcher with a sword. The expensive ones fight monsters (Knight), deliver on request, drop TNT, run items like a Stripes pipe, or feed a Builder. The Empty board is the blank one, and a robot carrying it cannot be placed.

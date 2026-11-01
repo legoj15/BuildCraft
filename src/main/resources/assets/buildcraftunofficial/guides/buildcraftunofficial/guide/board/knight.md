@@ -2,7 +2,7 @@
 navigation:
   title: "Knight Board"
   parent: contents/robots/board.md
-  position: 24
+  position: 25
   icon: buildcraftunofficial:redstone_board
 ---
 

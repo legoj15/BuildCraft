@@ -2,7 +2,7 @@
 navigation:
   title: "Accept Items"
   parent: contents/robots/station.md
-  position: 36
+  position: 37
 ---
 
 # Accept Items

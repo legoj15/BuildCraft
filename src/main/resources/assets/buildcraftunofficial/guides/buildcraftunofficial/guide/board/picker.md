@@ -2,7 +2,7 @@
 navigation:
   title: "Picker Board"
   parent: contents/robots/board.md
-  position: 28
+  position: 29
   icon: buildcraftunofficial:redstone_board
 ---
 

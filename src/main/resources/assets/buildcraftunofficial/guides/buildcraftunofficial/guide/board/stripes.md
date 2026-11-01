@@ -2,7 +2,7 @@
 navigation:
   title: "Stripes Board"
   parent: contents/robots/board.md
-  position: 32
+  position: 33
   icon: buildcraftunofficial:redstone_board
 ---
 

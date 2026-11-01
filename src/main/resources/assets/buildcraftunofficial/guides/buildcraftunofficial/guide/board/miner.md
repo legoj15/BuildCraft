@@ -2,7 +2,7 @@
 navigation:
   title: "Miner Board"
   parent: contents/robots/board.md
-  position: 27
+  position: 28
   icon: buildcraftunofficial:redstone_board
 ---
 

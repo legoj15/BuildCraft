@@ -1,0 +1,25 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "buildcraftunofficial:goggles"
+    ]
+  },
+  "criteria": {
+    "has_chipset_redstone": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "buildcraftunofficial:chipset_redstone"
+          }
+        ]
+      }
+    }
+  },
+  "requirements": [
+    [
+      "has_chipset_redstone"
+    ]
+  ]
+}

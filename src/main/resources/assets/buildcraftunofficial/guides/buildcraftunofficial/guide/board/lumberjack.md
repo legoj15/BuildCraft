@@ -2,7 +2,7 @@
 navigation:
   title: "Lumberjack Board"
   parent: contents/robots/board.md
-  position: 26
+  position: 27
   icon: buildcraftunofficial:redstone_board
 ---
 

@@ -2,7 +2,7 @@
 navigation:
   title: "Builder Board"
   parent: contents/robots/board.md
-  position: 17
+  position: 18
   icon: buildcraftunofficial:redstone_board
 ---
 

@@ -2,7 +2,7 @@
 navigation:
   title: "Docking Stations"
   parent: contents/robots.md
-  position: 34
+  position: 35
   icon: buildcraftunofficial:robot_station
 ---
 

@@ -14,4 +14,4 @@ item_ids:
 
 Basically just a blank circuit board. Add stuff to it to make it more useful.
 
-**Used to craft:** <ItemLink id="buildcraftunofficial:advanced_crafting_table" />, <ItemLink id="buildcraftunofficial:integration_table" />, <ItemLink id="buildcraftunofficial:programming_table" />
+**Used to craft:** <ItemLink id="buildcraftunofficial:advanced_crafting_table" />, <ItemLink id="buildcraftunofficial:goggles" />, <ItemLink id="buildcraftunofficial:integration_table" />, <ItemLink id="buildcraftunofficial:programming_table" />

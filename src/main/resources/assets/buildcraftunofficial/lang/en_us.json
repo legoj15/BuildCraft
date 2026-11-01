@@ -730,6 +730,8 @@
     "advancements.buildcraftunofficial.laser_power.description": "Make a laser",
     "advancements.buildcraftunofficial.precision_crafting.title": "Precision crafting",
     "advancements.buildcraftunofficial.precision_crafting.description": "Start crafting with an assembly table",
+    "advancements.buildcraftunofficial.goggles.title": "Robot's-eye view",
+    "advancements.buildcraftunofficial.goggles.description": "Get a pair of Robot Goggles",
     "item.buildcraftunofficial.plug_gate": "Gate",
     "item.buildcraftunofficial.plug_pulsar": "Pipe Pulsar",
     "item.buildcraftunofficial.plug_lens": "Lens",

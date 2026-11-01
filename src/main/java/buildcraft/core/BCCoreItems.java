@@ -60,6 +60,18 @@ public class BCCoreItems {
                         "map_location",
                         ItemMapLocation::new, props -> props.stacksTo(16));
 
+        // Robot Goggles: a head-slot item with no armour value and no durability. >=1.21.10 gets the head slot from
+        // the equippable component; 1.21.1 has none, so ItemGoggles implements Equipable there instead.
+        //? if >=1.21.10 {
+        public static final DeferredItem<ItemGoggles> GOGGLES = RegistrationUtilBC.registerItem(ITEMS,
+                        "goggles",
+                        ItemGoggles::new, props -> props.stacksTo(1).equippable(EquipmentSlot.HEAD));
+        //?} else {
+        /*public static final DeferredItem<ItemGoggles> GOGGLES = RegistrationUtilBC.registerItem(ITEMS,
+                        "goggles",
+                        ItemGoggles::new, props -> props.stacksTo(1));*/
+        //?}
+
         // Gear items
         public static final DeferredItem<Item> GEAR_WOOD = RegistrationUtilBC.registerItem(ITEMS,"gear_wood", Item::new, p -> p);
         public static final DeferredItem<Item> GEAR_STONE = RegistrationUtilBC.registerItem(ITEMS,"gear_stone", Item::new, p -> p);
@@ -106,21 +118,7 @@ public class BCCoreItems {
         // but kept out of public releases. BCCoreClient tags them with a red "Dev only"
         // tooltip via BCTooltips.markDevOnly.
 
-        // The 1.12.2 goggles headpiece was never finished.
-        public static final DeferredItem<ItemGoggles> GOGGLES;
-
         static {
-                //? if >=1.21.10 {
-                GOGGLES = BCLib.DEV
-                                ? RegistrationUtilBC.registerItem(ITEMS,"goggles", ItemGoggles::new,
-                                                props -> props.stacksTo(1).durability(0).equippable(EquipmentSlot.HEAD))
-                                : null;
-                //?} else {
-                /*GOGGLES = BCLib.DEV
-                                ? RegistrationUtilBC.registerItem(ITEMS,"goggles", ItemGoggles::new,
-                                                props -> props.stacksTo(1).durability(0))
-                                : null;*/
-                //?}
                 DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)
                                 ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_DESTROY)
                                 : null;

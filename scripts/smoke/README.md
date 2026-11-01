@@ -145,6 +145,18 @@ blueprint by NBT, the used blueprint goes architect output -> chest -> player in
 server's own `builderClientData.stalledCounts`. The generator's docstring lists which cell of the rig stalls for which
 reason; its GUI hover coordinates assume the scenario's 1600x900 window at GUI scale 3.
 
+## Robot Goggles: `goggles`
+
+`goggles` (hand-written) checks issue #79 on every node: three robots with empty, half and full batteries stand behind a
+stone wall and one stands in the open to the side; with a bare head the walled ones are invisible, with the goggles put
+on the head (`item replace entity @p armor.head`) they are outlined through the wall, red to green by charge, and a close
+shot of the open robot checks its body is not washed out (the outline pass must draw nothing but the outline). The outlines
+are gone again once the goggles come off. It then right-clicks the goggles in survival and reads back, with
+`execute if/unless items`, that they swapped onto the head (the `Equipable` path on 1.21.1, the equippable component
+elsewhere). The outline is vanilla's glowing pass, so the node differences worth
+comparing are whether it shows at all (the render-state nodes draw the cube's outline through a model part,
+`RenderRobot#submitGogglesOutline`; 1.21.1 through the outline-aware buffer source) and the colours.
+
 ## Real-mouse checks: `zone-planner-drag`, `library-scrollbar-drag`
 
 The bridge has no press-drag-release, and the Zone Planner also asks the window system whether a pan's or stroke's

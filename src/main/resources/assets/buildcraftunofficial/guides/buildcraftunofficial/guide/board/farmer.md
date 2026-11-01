@@ -2,7 +2,7 @@
 navigation:
   title: "Farmer Board"
   parent: contents/robots/board.md
-  position: 22
+  position: 23
   icon: buildcraftunofficial:redstone_board
 ---
 

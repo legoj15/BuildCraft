@@ -2,7 +2,7 @@
 navigation:
   title: "Station Reserved"
   parent: contents/robots/station.md
-  position: 46
+  position: 47
 ---
 
 # Station Reserved

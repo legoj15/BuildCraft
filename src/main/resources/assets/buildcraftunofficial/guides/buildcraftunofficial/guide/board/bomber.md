@@ -2,7 +2,7 @@
 navigation:
   title: "Bomber Board"
   parent: contents/robots/board.md
-  position: 16
+  position: 17
   icon: buildcraftunofficial:redstone_board
 ---
 

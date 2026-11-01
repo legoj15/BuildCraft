@@ -2,7 +2,7 @@
 navigation:
   title: "Leaf Cutter Board"
   parent: contents/robots/board.md
-  position: 25
+  position: 26
   icon: buildcraftunofficial:redstone_board
 ---
 

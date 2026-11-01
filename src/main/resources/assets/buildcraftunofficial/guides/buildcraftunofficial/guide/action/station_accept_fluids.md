@@ -2,7 +2,7 @@
 navigation:
   title: "Accept Fluids"
   parent: contents/robots/station.md
-  position: 35
+  position: 36
 ---
 
 # Accept Fluids

@@ -131,7 +131,6 @@ public class BCCoreClient {
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
                         // Dev-only items get a red "Dev only" tooltip marker.
                         if (buildcraft.lib.BCLib.DEV) {
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.GOGGLES.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_DESTROY.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_BLUEPRINT.get());
                                 buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_TEMPLATE.get());

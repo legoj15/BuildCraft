@@ -2,7 +2,7 @@
 navigation:
   title: "Harvester Board"
   parent: contents/robots/board.md
-  position: 23
+  position: 24
   icon: buildcraftunofficial:redstone_board
 ---
 

@@ -1,20 +1,20 @@
 ###### Changes since 2026.2.1:
 
 This release contains new features that were being developed along with fixes from the previous version. A followup update will be released that finalizes these new features and adds the remaining planned ones.
-- **Rebranded to "BuildCraft Redux"** with new art for the first time.
+- **Rebranded to "BuildCraft Redux"** with new art for the first time. Worlds, machines and configs carry over. If you install mods by hand, delete the old `BCunofficial` jar when adding the new `BuildCraftRedux` jar.
 - You can now utilize heated combustible fluids in the combustion engine. These can either improve efficiency or be detrimental.
-- Searing oil now spawns in the Nether to allow for Nether starts.
+- Searing oil now spawns in the Nether to allow for Nether starts. Existing config files still exclude the Nether: remove it from `excludedDimensions` to turn it on.
 - Combustible fluids can now burn again. Gaseous fuels will literally explode in the correct conditions.
 - You can now augment a Quarry or Mining Well with a Pump placed on top to drain fluids.
 - Redstone now *actually* pauses machines like the Mining Well, Pump, and Quarry. The Guide Book pages were literally lying before this.
 - Lasers can now fire underwater, and will emit bubbles when doing so.
 - A plethora of machines can now be waterlogged so that they don't look weird when underwater.
-- Pipe sounds have have been adjusted so that they are not all the same sound.
+- Pipe sounds have been adjusted so that they are not all the same sound.
 - The wrench is now a more conventional tool in the Minecraft sense (attack damage, damage values, enchantable). BuildCraft wrenches can mine BuildCraft machines faster.
 - Turned the Marker Connector into the Marker Wrench, giving it wrenching abilities, and added a new "Volume Wrench" item that allows editing volumes after their creation, in addition to connecting markers. In other words, there is now a 3-tier wrench system.
 - Looking at a marker laser shows its length in blocks under the crosshair, including the faint preview lines while holding a Marker Wrench.
-- Utilizing the new Volume Wrench, you can now change the size of machine's working volume.
-- Replaced the weird "Filler Planner" volume box addon thing with a toggleable planning mode in the Filler's GUI.
+- Utilizing the new Volume Wrench, you can now change the size of a machine's working volume.
+- Replaced the weird "Filler Planner" volume box addon thing with a toggleable planning mode in the Filler's GUI. Filler Planners left in inventories disappear; Fillers that used one keep its box and pattern.
 - Modifying the state of a Filler with the preview/planning mode enabled now has minimal delay in multiplayer.
 - The Zone Planner now can show chunks that were previously loaded but are out of range. This was a 1.7.10 feature that was missed.
 - "Solid" facades now blend their shading together to make them look more like regular blocks when there are multiple next to each other.
@@ -34,7 +34,7 @@ This release contains new features that were being developed along with fixes fr
 - A modded minecart broken by a Stripes Pipe now empties its contents instead of voiding the inventory.
 - A Stripes robot now throws a snowball, egg or ender pearl like the pipe does.
 - Fixed robots dropping leftover cargo on the ground. Robots now will wait up to 3 minutes for an available station before giving up and dropping their inventory.
-- Fixed a finished Filler not triggering again after having the state around it change (either via gates or within it's filling volume).
+- Fixed a finished Filler not triggering again after having the state around it change (either via gates or within its filling volume).
 - Fixed Advanced Crafting Tables and Auto Workbenches crafting the old recipes after a datapack `/reload` until their grid was touched.
 - Fixed the Replacer's summary line just being haphazardly in the player's inventory slots.
 - Dramatically improved how alternative materials are handled in the Advanced Crafting Table, should be more representative of how an actual crafting table handles recipes.

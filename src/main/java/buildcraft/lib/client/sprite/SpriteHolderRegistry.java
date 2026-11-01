@@ -82,9 +82,13 @@ public class SpriteHolderRegistry {
     public static class SpriteHolder implements ISprite {
         private final String location;
         private final Identifier resourceLocation;
-        private TextureAtlasSprite cachedSprite;
+        /** The sprite paired with the registry generation it was resolved in, published as one
+         *  volatile write: chunk-compile workers read it while the render thread invalidates it. */
+        private record Cached(TextureAtlasSprite sprite, int generation) {}
 
-        public SpriteHolder(String location) {
+        private volatile Cached cached;
+
+        private SpriteHolder(String location) {
             this.location = location;
             // location is in the format "modid:path"
             this.resourceLocation = Identifier.parse(location);
@@ -99,15 +103,24 @@ public class SpriteHolderRegistry {
         }
 
         public TextureAtlasSprite getSprite() {
-            if (cachedSprite == null) {
-                try {
-                    cachedSprite = resolveSprite();
-                } catch (Exception e) {
-                    // During early init or server side, atlas may not be available
-                    return null;
-                }
+            int gen = generation;
+            Cached c = cached;
+            if (c != null && c.generation == gen) {
+                return c.sprite;
             }
-            return cachedSprite;
+            TextureAtlasSprite sprite;
+            try {
+                sprite = resolveSprite();
+            } catch (Exception e) {
+                // During early init or server side, atlas may not be available
+                return null;
+            }
+            // A resolve that straddled invalidateAll() read the old atlas: use it once, never cache it.
+            // Null (no atlas yet) is retried on the next call.
+            if (sprite != null && gen == generation) {
+                cached = new Cached(sprite, gen);
+            }
+            return sprite;
         }
 
         /** The atlas page this sprite was stitched onto, resolved the same way as
@@ -152,7 +165,7 @@ public class SpriteHolderRegistry {
 
         /** Clear the cached sprite (call on resource reload). */
         public void invalidate() {
-            cachedSprite = null;
+            cached = null;
         }
 
         @Override
@@ -173,7 +186,21 @@ public class SpriteHolderRegistry {
         }
     }
 
+    /** Bumped by {@link #invalidateAll}; see {@link SpriteHolder#getSprite}. */
+    private static volatile int generation;
+
+    /** One holder per location (the constructor is private), so {@link #invalidateAll} reaches every cached sprite. */
+    private static final java.util.Map<String, SpriteHolder> HOLDERS = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static SpriteHolder getHolder(String location) {
-        return new SpriteHolder(location);
+        return HOLDERS.computeIfAbsent(location, SpriteHolder::new);
+    }
+
+    /** Drops every holder's cached sprite; called once the reload has swapped in the new atlases. */
+    public static void invalidateAll() {
+        generation++;
+        for (SpriteHolder holder : HOLDERS.values()) {
+            holder.invalidate();
+        }
     }
 }

@@ -24,7 +24,6 @@ import buildcraft.lib.client.model.MutableQuad;
 import buildcraft.lib.client.render.ItemRenderUtil;
 import buildcraft.lib.misc.SpriteUtil;
 import buildcraft.silicon.plug.PluggablePulsar;
-import buildcraft.transport.client.model.PipeModelCacheAll;
 
 public enum PlugPulsarRenderer implements IPlugDynamicRenderer<PluggablePulsar> {
     INSTANCE;
@@ -39,6 +38,14 @@ public enum PlugPulsarRenderer implements IPlugDynamicRenderer<PluggablePulsar> 
     // LED boxes (South, North, Up, Down, East, West - using relative offset)
     private static List<MutableQuad> autoLeds;
     private static List<MutableQuad> manualLeds;
+
+    /** Drops the cached quads after a resource reload; their UVs point into the previous atlas. */
+    public static void onModelBake() {
+        offBox = null;
+        onBox = null;
+        autoLeds = null;
+        manualLeds = null;
+    }
 
     public static void initCache() {
         if (offBox != null) return;

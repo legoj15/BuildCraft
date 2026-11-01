@@ -72,6 +72,8 @@ public class BCLibClient {
         //?}
 
         modEventBus.addListener(ModelEvent.BakingCompleted.class, event -> {
+            // The atlases are live by now; every holder re-resolves its sprite on next use.
+            buildcraft.lib.client.sprite.SpriteHolderRegistry.invalidateAll();
             java.util.HashSet<Identifier> sprites = new java.util.HashSet<>();
             ModelHolderRegistry.onTextureStitchPre(sprites);
             ModelHolderRegistry.onModelBake();
@@ -96,35 +98,6 @@ public class BCLibClient {
         /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent.class, event ->
             event.registerReloadListener(
                 (ResourceManagerReloadListener) GuideManager.INSTANCE::onResourceManagerReload
-            )
-        );*/
-        //?}
-
-        // Drop PipeBaseModelGenStandard's sprite caches whenever the client resource manager
-        // reloads. Three scenarios trigger this: F3+T (player-initiated reload), a resource
-        // pack list change in the menu, AND vanilla MC's Options → Accessibility → High
-        // Contrast toggle (which enables/disables the built-in `minecraft:high_contrast`
-        // pack and calls Minecraft#reloadResourcePacks under the hood). The cached
-        // TextureAtlasSprite references point at slots in the previous atlas stitch and
-        // would render garbage UVs against the new atlas if not invalidated. Doing this
-        // unconditionally — rather than gating on "did the cb state actually change" — is
-        // both simpler and necessary: the atlas restitches even when only the high-contrast
-        // pack toggles (no cb state change for ON/OFF users), and our cached sprites would
-        // be just as stale in that case. The next chunk re-bake will populate the cache
-        // afresh on demand.
-        //? if >=1.21.10 {
-        modEventBus.addListener(AddClientReloadListenersEvent.class, event ->
-            event.addListener(
-                Identifier.fromNamespaceAndPath("buildcraftunofficial", "pipe_sprite_cache"),
-                (ResourceManagerReloadListener) rm ->
-                    buildcraft.transport.client.model.PipeBaseModelGenStandard.clearSpriteCaches()
-            )
-        );
-        //?} else {
-        /*modEventBus.addListener(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent.class, event ->
-            event.registerReloadListener(
-                (ResourceManagerReloadListener) rm ->
-                    buildcraft.transport.client.model.PipeBaseModelGenStandard.clearSpriteCaches()
             )
         );*/
         //?}

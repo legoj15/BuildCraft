@@ -149,7 +149,8 @@ def tex_shell_side():
 def tex_shell_top():
     """Top/bottom of the shell (u = x, v = z): the same slot layout as the sides turned flat.
     Rows 2-4 and 11-13 plate, 5/10 bezel, 6-9 what the slot sees (the core's face), rows 14-15
-    the slot walls (explicit UV). Mirror-symmetric in v, since the bottom samples it flipped."""
+    the slot walls (explicit UV). Rows 3-12 are mirror-symmetric in v, so the bottom (which
+    samples it flipped) keeps the seal on both slot edges; rows 2/13 shade as a bevel."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 11)
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 31)
@@ -374,10 +375,10 @@ def shell(x0, x1):
         box("sill_front_ceiling", (x0, hi, SH0), (x1, hi, CORE0), {"down": F("side", mouth_hi)}),
         box("sill_back_floor", (x0, lo, CORE1), (x1, lo, SH1), {"up": F("side", mouth_hi)}),
         box("sill_back_ceiling", (x0, hi, CORE1), (x1, hi, SH1), {"down": F("side", mouth_lo)}),
-        box("sill_top_front", (x0, CORE1, lo), (x1, SH1, lo), {"south": F("top", mouth_hi)}),
-        box("sill_top_back", (x0, CORE1, hi), (x1, SH1, hi), {"north": F("top", mouth_hi)}),
-        box("sill_bottom_front", (x0, SH0, lo), (x1, CORE0, lo), {"south": F("top", mouth_lo)}),
-        box("sill_bottom_back", (x0, SH0, hi), (x1, CORE0, hi), {"north": F("top", mouth_lo)}),
+        box("sill_top_front", (x0, CORE1, lo), (x1, SH1, lo), {"south": F("top", mouth_lo)}),
+        box("sill_top_back", (x0, CORE1, hi), (x1, SH1, hi), {"north": F("top", mouth_lo)}),
+        box("sill_bottom_front", (x0, SH0, lo), (x1, CORE0, lo), {"south": F("top", mouth_hi)}),
+        box("sill_bottom_back", (x0, SH0, hi), (x1, CORE0, hi), {"north": F("top", mouth_hi)}),
     ]
 
 

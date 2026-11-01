@@ -135,28 +135,28 @@
             "name": "sill_top_front",
             "from": [3, 11.75, 6], "to": [14, 14, 6],
             "faces": {
-                "south": {"uv": [3, 16, 14, 14], "texture": "#top"}
+                "south": {"uv": [3, 14, 14, 16], "texture": "#top"}
             }
         },
         {
             "name": "sill_top_back",
             "from": [3, 11.75, 10], "to": [14, 14, 10],
             "faces": {
-                "north": {"uv": [3, 16, 14, 14], "texture": "#top"}
+                "north": {"uv": [3, 14, 14, 16], "texture": "#top"}
             }
         },
         {
             "name": "sill_bottom_front",
             "from": [3, 2, 6], "to": [14, 4.25, 6],
             "faces": {
-                "south": {"uv": [3, 14, 14, 16], "texture": "#top"}
+                "south": {"uv": [3, 16, 14, 14], "texture": "#top"}
             }
         },
         {
             "name": "sill_bottom_back",
             "from": [3, 2, 10], "to": [14, 4.25, 10],
             "faces": {
-                "north": {"uv": [3, 14, 14, 16], "texture": "#top"}
+                "north": {"uv": [3, 16, 14, 14], "texture": "#top"}
             }
         },
         {

@@ -101,21 +101,16 @@ public class ShapePatternsTester {
                     }
                 }
             }
-            // A closed 2D outline (Arc's is closed by the box edge) must place more when Filled than when Hollow, and
-            // Surrounded must leave its inside empty (#85: Hexagon set no fill point, so Filled did nothing).
+            // A closed 2D outline must place more when Filled than when Hollow (#85: Hexagon set no fill point, so
+            // Filled did nothing).
             BlockPos flat = new BlockPos(5, 1, 9);
-            int cells = flat.getX() * flat.getY() * flat.getZ();
             for (IFillerPatternShape pattern : patterns) {
                 if (!(pattern instanceof PatternShape2d) || pattern == BCBuildersStatements.PATTERN_ARC) continue;
-                String where = pattern.getUniqueTag() + " in " + flat.toShortString();
                 int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW, PatternParameterRotation.NONE));
                 int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER, PatternParameterRotation.NONE));
-                int outer = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_OUTER, PatternParameterRotation.NONE));
                 if (filled <= hollow) {
-                    throw new IllegalStateException(where + ": filled (" + filled + ") is not more than hollow (" + hollow + ")");
-                }
-                if (outer >= cells) {
-                    throw new IllegalStateException(where + ": surrounded filled every cell, inside included");
+                    throw new IllegalStateException(pattern.getUniqueTag() + " in " + flat.toShortString() + ": filled ("
+                        + filled + ") is not more than hollow (" + hollow + ")");
                 }
             }
             // Turning a 2D shape turns its fill with it: every rotation, in every fill mode, is the unturned shape

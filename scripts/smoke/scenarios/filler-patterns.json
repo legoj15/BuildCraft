@@ -1,0 +1,60 @@
+{
+  "name": "filler-patterns",
+  "description": "Issues #80 and #85: five Fillers set up by NBT (box, pattern, parameters, power, cobblestone) on a white floor. A: Flatten over a dirt hill with holes in its bottom layer (the box is 7x4x7; afterwards its bottom layer is solid and everything above is gone, the dirt outside the box untouched). B/C: Octagon hollow and filled in an 11x9 box. D/E: Hexagon turned a quarter turn in a 5x9 box, Filled and Surrounded (before the fill-seed fix Filled did nothing and Surrounded filled the whole box). Then the Flatten Filler's GUI with the new icon in its pattern slot. GUI coordinates assume the 1600x900 window at guiScale 3 (Filler panel at 179,29; pattern slot centre 207,77).",
+  "base": [0, 150, 0],
+  "guiScale": 3,
+  "steps": [
+    { "label": "window 1600x900 (GUI coordinates assume it with guiScale 3)", "do": "window", "width": 1600, "height": 900 },
+    { "label": "load the rig's chunks, creative, noon", "do": "cmd", "run": [
+      "gamemode creative @p",
+      "?forceload add {X-16} {Z-16} {X+40} {Z+40}",
+      "time set noon",
+      "fill {X-4} {Y} {Z-8} {X+32} {Y+8} {Z+26} minecraft:air",
+      "fill {X-4} {Y-1} {Z-8} {X+32} {Y-1} {Z+26} minecraft:white_concrete"
+    ] },
+    { "label": "A: dirt terrain in and beside the Flatten box: bottom layer with holes, a hill, a log on top, a ridge outside the box", "do": "cmd", "run": [
+      "fill {X} {Y} {Z} {X+6} {Y} {Z+6} minecraft:dirt",
+      "fill {X+1} {Y} {Z+4} {X+2} {Y} {Z+5} minecraft:air",
+      "setblock {X+5} {Y} {Z+1} minecraft:air",
+      "fill {X+2} {Y+1} {Z+1} {X+5} {Y+2} {Z+3} minecraft:dirt",
+      "setblock {X+3} {Y+3} {Z+2} minecraft:oak_log",
+      "fill {X+7} {Y} {Z} {X+8} {Y+2} {Z+6} minecraft:dirt"
+    ] },
+    { "do": "tp", "at": [3, 2, -7], "yaw": 0, "pitch": 18 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "a-flatten-before", "do": "shot", "look": "A before: a dirt hill with an oak log on top inside the Flatten area, two holes in its bottom layer (front left and back right), and a dirt ridge just right of it (outside the box)" },
+    { "label": "A-E: place the five Fillers", "do": "cmd", "run": [
+      "setblock {X+3} {Y} {Z-2} buildcraftunofficial:filler[facing=north]",
+      "setblock {X+15} {Y} {Z-2} buildcraftunofficial:filler[facing=north]",
+      "setblock {X+15} {Y} {Z+21} buildcraftunofficial:filler[facing=south]",
+      "setblock {X+26} {Y} {Z-2} buildcraftunofficial:filler[facing=north]",
+      "setblock {X+26} {Y} {Z+21} buildcraftunofficial:filler[facing=south]"
+    ] },
+    { "label": "A: Flatten, box x0-6 y0-3 z0-6", "do": "cmd", "run": "data merge block {X+3} {Y} {Z-2} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,box_initialized:1b,markerBox:0b,box_minX:{X},box_minY:{Y},box_minZ:{Z},box_maxX:{X+6},box_maxY:{Y+3},box_maxZ:{Z+6},patternStatement:{s:{kind:\"buildcraft:flatten\"}},items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}}]}}}" },
+    { "label": "B: Octagon hollow, axis Y, box x10-20 z0-8", "do": "cmd", "run": "data merge block {X+15} {Y} {Z-2} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,box_initialized:1b,markerBox:0b,box_minX:{X+10},box_minY:{Y},box_minZ:{Z},box_maxX:{X+20},box_maxY:{Y},box_maxZ:{Z+8},patternStatement:{s:{kind:\"buildcraft:2d_octagon\"},\"0\":{kind:\"buildcraft:filler_parameter_axis\",a:1b},\"1\":{kind:\"buildcraft:fillerParameterHollow\",filled:0b}},items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}}]}}}" },
+    { "label": "C: Octagon filled, axis Y, box x10-20 z11-19", "do": "cmd", "run": "data merge block {X+15} {Y} {Z+21} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,box_initialized:1b,markerBox:0b,box_minX:{X+10},box_minY:{Y},box_minZ:{Z+11},box_maxX:{X+20},box_maxY:{Y},box_maxZ:{Z+19},patternStatement:{s:{kind:\"buildcraft:2d_octagon\"},\"0\":{kind:\"buildcraft:filler_parameter_axis\",a:1b},\"1\":{kind:\"buildcraft:fillerParameterHollow\",filled:1b}},items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}},{stack:{id:\"minecraft:cobblestone\",count:64}}]}}}" },
+    { "label": "D: Hexagon Filled, quarter turn, box x24-28 z0-8", "do": "cmd", "run": "data merge block {X+26} {Y} {Z-2} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,box_initialized:1b,markerBox:0b,box_minX:{X+24},box_minY:{Y},box_minZ:{Z},box_maxX:{X+28},box_maxY:{Y},box_maxZ:{Z+8},patternStatement:{s:{kind:\"buildcraft:2d_hexagon\"},\"0\":{kind:\"buildcraft:filler_parameter_axis\",a:1b},\"1\":{kind:\"buildcraft:fillerParameterHollow\",filled:1b},\"2\":{kind:\"buildcraft:fillerParameterRotation\",d:1b}},items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}}]}}}" },
+    { "label": "E: Hexagon Surrounded, quarter turn, box x24-28 z11-19", "do": "cmd", "run": "data merge block {X+26} {Y} {Z+21} {ownerUUID:\"380df991-f603-344c-a090-369bad2a924a\",ownerName:\"Dev\",battery_mj:16000000000L,box_initialized:1b,markerBox:0b,box_minX:{X+24},box_minY:{Y},box_minZ:{Z+11},box_maxX:{X+28},box_maxY:{Y},box_maxZ:{Z+19},patternStatement:{s:{kind:\"buildcraft:2d_hexagon\"},\"0\":{kind:\"buildcraft:filler_parameter_axis\",a:1b},\"1\":{kind:\"buildcraft:fillerParameterHollow\",filled:1b,outer:1b},\"2\":{kind:\"buildcraft:fillerParameterRotation\",d:1b}},items:{resources:{items:[{stack:{id:\"minecraft:cobblestone\",count:64}}]}}}" },
+    { "label": "A finished (expect finished 1b)", "do": "waitCmd", "run": "data get block {X+3} {Y} {Z-2} finished", "match": "1b", "timeoutSec": 180 },
+    { "label": "B finished", "do": "waitCmd", "run": "data get block {X+15} {Y} {Z-2} finished", "match": "1b", "timeoutSec": 180 },
+    { "label": "C finished", "do": "waitCmd", "run": "data get block {X+15} {Y} {Z+21} finished", "match": "1b", "timeoutSec": 180 },
+    { "label": "D finished", "do": "waitCmd", "run": "data get block {X+26} {Y} {Z-2} finished", "match": "1b", "timeoutSec": 180 },
+    { "label": "E finished", "do": "waitCmd", "run": "data get block {X+26} {Y} {Z+21} finished", "match": "1b", "timeoutSec": 180 },
+    { "do": "tp", "at": [3, 2, -7], "yaw": 0, "pitch": 18 },
+    { "do": "wait", "ms": 1500 },
+    { "name": "a-flatten-after", "do": "shot", "look": "A after: the Flatten area is a flat 7x7 floor (dirt plus cobblestone where the two holes were), with nothing standing on it: hill and log gone. The dirt ridge to its right is untouched. The Filler block sits in front" },
+    { "label": "an invisible barrier to stand on high above the 2D rigs (a creative player is not flying and would fall)", "do": "cmd", "run": "setblock {X+19} {Y+21} {Z+9} minecraft:barrier" },
+    { "do": "tp", "at": [19, 22, 9], "yaw": 0, "pitch": 90 },
+    { "do": "wait", "ms": 2000 },
+    { "name": "bcde-top-down", "do": "shot", "look": "Top down, north at the top of the screen. Left column (x10-20): top B a hollow cobblestone octagon outline 11 wide 9 deep, symmetric, all eight sides; bottom C the same octagon solid. Right column (x24-28, 5 wide 9 deep): top D a solid hexagon with its points to the north and south; bottom E the same hexagon left empty with cobblestone filling the box around it (NOT a solid 5x9 rectangle). Fillers stand outside each box" },
+    { "do": "tp", "at": [3, 0, -5], "yaw": 180, "pitch": 0 },
+    { "do": "hold", "item": "minecraft:air" },
+    { "do": "aim", "at": [3, 0, -2] },
+    { "label": "open the Flatten Filler", "do": "use" },
+    { "do": "expectScreen", "contains": "GuiFiller", "timeoutSec": 10 },
+    { "name": "a-gui", "do": "shot", "look": "The Filler GUI: its pattern slot (top left of the panel) shows the new Flatten icon, a red cube over a grey bottom slab; the pattern list, if shown, has Flatten beside Stairs" },
+    { "do": "hover", "x": 207, "y": 77 },
+    { "name": "a-gui-tooltip", "do": "shot", "look": "The pattern slot's tooltip names Flatten" },
+    { "do": "close" }
+  ]
+}

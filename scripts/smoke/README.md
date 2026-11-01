@@ -145,6 +145,14 @@ blueprint by NBT, the used blueprint goes architect output -> chest -> player in
 server's own `builderClientData.stalledCounts`. The generator's docstring lists which cell of the rig stalls for which
 reason; its GUI hover coordinates assume the scenario's 1600x900 window at GUI scale 3.
 
+## Filler patterns: `filler-patterns`
+
+`filler-patterns` (hand-written) checks issues #80 and #85: five Fillers set up by NBT (box, pattern and parameters,
+power, cobblestone), so no pattern drag is needed. Flatten over a dirt hill with holes in its floor (before and after
+shots), Octagon hollow and filled in an 11x9 box, and a quarter-turned Hexagon Filled and Surrounded in a 5x9 box,
+shot top-down from a barrier block (a creative player is not flying and falls during a wait). Each Filler's finish is
+gated with `waitCmd` on its `finished` flag. Ends on the Flatten Filler's GUI and the pattern slot's tooltip.
+
 ## Robot Goggles: `goggles`
 
 `goggles` (hand-written) checks issue #79 on every node: three robots with empty, half and full batteries stand behind a

@@ -1,6 +1,6 @@
 # Written by scripts/guide-to-guideme.py; GuideMeExportStalenessTest checks it. Do not edit.
-inputs 25bb871d2993f257d1049042665ebf85efb32f5dd0385f09356f674c089ac158
-outputs a223c99f3c0ecfde200ed7789baecf89823686b07b959547dc0870e16250a657
+inputs 25c7bfdfa0815f6b649796ab0b01abb3bc4aa73caab45692ffcc872af3b68a93
+outputs 320010ef5690816e911c5ec24f2ad192a2fc59b5d122cb1871196b9ba9868727
 lang 10
 lang 15
 lang 5

@@ -229,15 +229,22 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Override
     public void addDrops(NonNullList<ItemStack> toDrop, int fortune) {
         super.addDrops(toDrop, fortune);
-        if (!currentFluid.isEmpty()) {
-            int totalAmount = 0;
-            for (EnumPipePart part : EnumPipePart.VALUES) {
-                totalAmount += sections.get(part).amount;
-            }
-            if (totalAmount > 0) {
-                FluidItemDrops.addFluidDrops(toDrop, currentFluid.copyWithAmount(totalAmount));
-            }
+        FluidStack stored = getStoredFluid();
+        if (!stored.isEmpty()) {
+            FluidItemDrops.addFluidDrops(toDrop, stored);
         }
+    }
+
+    /** Everything in the pipe, every section together, as one stack (empty when the pipe holds nothing). */
+    public FluidStack getStoredFluid() {
+        if (currentFluid.isEmpty()) {
+            return FluidStack.EMPTY;
+        }
+        int totalAmount = 0;
+        for (EnumPipePart part : EnumPipePart.VALUES) {
+            totalAmount += sections.get(part).amount;
+        }
+        return totalAmount > 0 ? currentFluid.copyWithAmount(totalAmount) : FluidStack.EMPTY;
     }
 
     @Override

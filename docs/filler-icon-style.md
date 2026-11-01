@@ -26,7 +26,7 @@ The sheet script reads this block; keep one colour per line.
 
 ```palette
 K #222222 ink: every silhouette and outline, concave step lines, the rotation wedge edge
-L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter (axis edges excepted), Frame front beams
+L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter (axis edges and faces excepted), Frame front beams
 M #B3B3B3 mid grey: left (south) faces, curved surface body, Frame back beams
 D #6E6E6E dark grey: right (east) faces, curved shadow, hidden edges of glass cubes, unselected centre dots
 G #C8C8C8 ghost: dotted outline of space the pattern leaves alone (None, sphere-part ghosts, hollow-family area)
@@ -36,12 +36,18 @@ B #9C2B1E accent dark: Clear and Flatten, right face
 X #FF3352 axis red: the highlighted edges of axis_x (Blender's X)
 Y #8BDC00 axis green: the highlighted edges of axis_y (Blender's Y)
 Z #2890FF axis blue: the highlighted edges of axis_z (Blender's Z)
+N #FF5555 north red: face_north's face (gate tooltips' side colours, ColourUtil.FACE_TO_FORMAT)
+S #5555FF south blue: face_south's face
+E #FFFF55 east yellow: face_east's face
+W #55FF55 west green: face_west's face
+T #FFFFFF top white: face_up's face (face_down's face is K, the side colour black)
 ```
 
 - Nothing outside the block. Every pixel is fully opaque or fully transparent.
 - L, M and D are the only placed-block tones. G never means a block, only "untouched".
 - The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent;
-  the axis icons are the one exception, their selected edges taking the 3D-editor axis colours X, Y and Z. X is
+  the axis and face icons are the exceptions: axis edges take the 3D-editor axis colours X, Y and Z, and a
+  face takes the colour gate tooltips give that side (N, S, E, W, T, and K for the bottom). X is
   Blender's pink-leaning red, kept apart from the accent's orange-red so it does not read as removal.
 - The accent ramp is darker than the grey ramp at every step (luma 167/116/75 against 230/179/110), so Clear and
   Fill still differ in greyscale and for red-blind players.
@@ -244,7 +250,8 @@ rotation): hexagon points west and east, pentagon flat side north and point sout
 flat side south, arc centred on the south-east corner and bulging north-west.
 
 Parameters: the selected element is L; the frame or structure around it is K; secondary hints are D.
-- Face: glass cube, the named face is the only filled region.
+- Face: glass cube, the named face is the only filled region, in its side colour, plus the side's letter in K
+  (N, S, E, W, and T/B after BuildCraft's own Top and Bottom) in the empty half of the cube.
 - Axis: glass cube, the four edges parallel to the axis are in that axis's colour (X, Y or Z), not L.
 - XZ direction: a top-down arrow.
 - Centre: a 3x3 grid, the chosen cell solid.
@@ -300,12 +307,12 @@ No letters anywhere. Every meaning above is carried by shape, position or tone; 
 | `center_6` | South-west | draw | As `center_0`, cell 6 lit (bottom left). |
 | `center_7` | South | draw | As `center_0`, cell 7 lit (bottom middle). |
 | `center_8` | South-east | draw | As `center_0`, cell 8 lit (bottom right). |
-| `face_down` | Down | draw | INS: K stays, `+` -> D, `f` -> L, other tags transparent. |
-| `face_east` | East | draw | OUT: K stays, `+` -> D, `e` -> L, other tags transparent. |
-| `face_north` | North | exemplar | INS with `n` -> L. |
-| `face_south` | South | draw | OUT with `s` -> L. |
-| `face_up` | Up | draw | OUT with `u` -> L. |
-| `face_west` | West | draw | INS with `w` -> L. |
+| `face_down` | Down | draw | INS: K stays, `+` -> D, `f` -> K, other tags transparent. Letter B in K, 3x5 rows `XX. X.X XX. X.X XX.`, top left at (3,4). |
+| `face_east` | East | draw | OUT: K stays, `+` -> D, `e` -> E, other tags transparent. Letter E in K, 3x5 rows `XXX X.. XX. X.. XXX`, top left at (3,7). |
+| `face_north` | North | exemplar | INS with `n` -> N. Letter N in K, 3x5 rows `XX. X.X X.X X.X X.X`, top left at (3,4). |
+| `face_south` | South | draw | OUT with `s` -> S. Letter S in K, 3x5 rows `XXX X.. XXX ..X XXX`, top left at (11,6). |
+| `face_up` | Up | draw | OUT with `u` -> T. Letter T in K, 3x5 rows `XXX .X. .X. .X. .X.`, top left at (3,7). |
+| `face_west` | West | draw | INS with `w` -> W. Letter W in K, 3x5 rows `X.X X.X XXX XXX X.X`, top left at (10,4). |
 | `filled_inner` | Filled | draw | Dotted G square plus DISC10. |
 | `filled_outer` | Surrounded | draw | K ring on x, y = 1..14 with L inside, then DISC10 punched out: DISC10's L pixels transparent, its K pixels K. |
 | `hollow` | Hollow | draw | Dotted G square plus DISC10 with x, y = 6..9 made transparent and K on the hole's rim (x = 6..9 on rows 5 and 10, rows 6..9 at x = 5 and 10). |

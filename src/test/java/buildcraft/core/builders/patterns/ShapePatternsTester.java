@@ -89,15 +89,15 @@ public class ShapePatternsTester {
                     }
                 }
             }
-            // A closed 2D outline must place more when Filled than when Hollow, and Surrounded must leave its inside
+            // A 2D outline (closed, or closed by the box edge) must place more when Filled than when Hollow, and Surrounded must leave its inside
             // empty, at every rotation of a non-square box (Hexagon set no fill point; a quarter turn put the fill
             // seed outside the box, so Filled did nothing and Surrounded filled everything).
             BlockPos flat = new BlockPos(5, 1, 9);
             int cells = flat.getX() * flat.getY() * flat.getZ();
             for (IFillerPatternShape pattern : patterns) {
                 if (!(pattern instanceof PatternShape2d) || pattern == BCBuildersStatements.PATTERN_ARC) continue;
-                int rotations = pattern.maxParameters() > 2 ? 4 : 1;
-                for (int r = 0; r < rotations; r++) {
+                // Square and Octagon declare no rotation slot, but a Filler keeps one from the previous pattern.
+                for (int r = 0; r < 4; r++) {
                     PatternParameterRotation rotation = PatternParameterRotation.values()[r];
                     String where = pattern.getUniqueTag() + " rotated " + r + " in " + flat.toShortString();
                     int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW, rotation));
@@ -131,7 +131,7 @@ public class ShapePatternsTester {
 
     private static IFilledTemplate fill2d(IFillerPatternShape pattern, BlockPos size, PatternParameterHollow hollow,
         PatternParameterRotation rotation) {
-        IStatementParameter[] params = new IStatementParameter[pattern.maxParameters()];
+        IStatementParameter[] params = new IStatementParameter[Math.max(3, pattern.maxParameters())];
         for (int i = 0; i < params.length; i++) {
             params[i] = i == 0 ? PatternParameterAxis.Y : i == 1 ? hollow : i == 2 ? rotation : pattern.createParameter(i);
         }

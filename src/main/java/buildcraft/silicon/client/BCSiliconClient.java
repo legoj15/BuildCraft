@@ -122,19 +122,6 @@ public class BCSiliconClient {
         }*/
         //?}
 
-        FacadeItemModel.onModelBake();
-        buildcraft.silicon.client.model.GateItemModel.onModelBake();
-        buildcraft.silicon.client.model.LensItemModel.onModelBake();
-        buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
-        buildcraft.silicon.client.model.plug.PlugBakerLens.onModelBake();
-        buildcraft.silicon.client.render.PlugGateRenderer.onModelBake();
-        // Also invalidate the upstream PipeModelCacheAll cache so any pipe model that previously
-        // baked non-empty gate quads (back when PlugGateBaker.bake didn't return an empty list)
-        // gets re-baked. Without this, those old chunk-mesh gate quads can persist in the
-        // joined-cache layer above PlugGateBaker and render UNDERNEATH the BER, producing dim
-        // gates that look like the BER is broken when the actual issue is stale chunk geometry.
-        buildcraft.transport.client.model.PipeModelCacheAll.clearModels();
-
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet
         // during the initial resource reload. Dedup runs later via runDeferredDedup().
@@ -156,6 +143,23 @@ public class BCSiliconClient {
         }
         cachedBlockStateModels = byState;*/
         //?}
+    }
+
+    /**
+     * Drop the plug caches that hold sprite UVs once the reload has swapped in the new atlases.
+     * ModifyBakingResult is too early: it runs while models prepare, before the new block atlas is
+     * uploaded, so a chunk compile in that window would re-cache old-atlas UVs until the next
+     * reload. The joined per-pipe cache above these goes after them, in
+     * {@code BCTransportClient#onBakingCompleted} (LOWEST priority).
+     */
+    @SubscribeEvent
+    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+        FacadeItemModel.onModelBake();
+        buildcraft.silicon.client.model.GateItemModel.onModelBake();
+        buildcraft.silicon.client.model.LensItemModel.onModelBake();
+        buildcraft.silicon.client.model.plug.PlugBakerLens.onModelBake();
+        buildcraft.silicon.client.render.PlugGateRenderer.onModelBake();
+        buildcraft.silicon.client.render.PlugPulsarRenderer.onModelBake();
     }
 
     /**

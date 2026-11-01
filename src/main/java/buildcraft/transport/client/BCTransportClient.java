@@ -12,6 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 //? if >=1.21.10 {
@@ -42,8 +43,10 @@ import buildcraft.transport.client.gui.GuiDiamondPipe;
 import buildcraft.transport.client.gui.GuiDiamondWoodPipe;
 import buildcraft.transport.client.gui.GuiEmzuliPipe;
 import buildcraft.transport.client.gui.GuiFilteredBuffer;
+import buildcraft.transport.client.model.PipeBaseModelGenStandard;
 import buildcraft.transport.client.model.PipeBlockStateModel;
 import buildcraft.transport.client.model.PipeItemModel;
+import buildcraft.transport.client.model.PipeModelCacheAll;
 import buildcraft.transport.client.render.PipeFlowRendererFluids;
 import buildcraft.transport.client.render.PipeFlowRendererItems;
 import buildcraft.transport.client.render.PipeFlowRendererPower;
@@ -151,6 +154,22 @@ public class BCTransportClient {
     }*/
     //?}
 
+
+    /**
+     * Drop the pipe sprite arrays and the joined per-pipe quad cache once a reload has swapped in
+     * the new atlases (F3+T, a pack change, the High Contrast toggle). BakingCompleted is the
+     * earliest mod hook after the atlas swap: reload listeners apply in
+     * registration order with the atlases ahead of the model manager (on 1.21.1 the model manager
+     * uploads them itself just before this event). LOWEST priority so the joined cache goes after
+     * the plug bakers' caches (silicon, robotics), or it could re-join their stale quads.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+        PipeBaseModelGenStandard.clearSpriteCaches();
+        PipeBehaviourRendererStripes.onModelBake();
+        PipeFlowRendererItems.onModelBake();
+        PipeModelCacheAll.clearModels();
+    }
 
     /**
      * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel, and

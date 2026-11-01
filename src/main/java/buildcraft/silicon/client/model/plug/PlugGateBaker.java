@@ -7,9 +7,7 @@
 package buildcraft.silicon.client.model.plug;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.joml.Vector3f;
 
@@ -22,8 +20,6 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 //?}
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.phys.AABB;
 
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
 import buildcraft.lib.client.model.ModelUtil;
@@ -33,12 +29,6 @@ import buildcraft.silicon.client.model.key.KeyPlugGate;
 
 public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
     public static final PlugGateBaker INSTANCE = new PlugGateBaker();
-
-    private static final Map<KeyPlugGate, List<BakedQuad>> cached = new java.util.concurrent.ConcurrentHashMap<>();
-
-    public static void onModelBake() {
-        cached.clear();
-    }
 
     private TextureAtlasSprite getSprite(String path) {
         net.minecraft.client.renderer.texture.TextureAtlas atlas = (net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
@@ -128,42 +118,6 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
         return quads;
     }
 
-    private void buildBox(List<BakedQuad> list, float minX, float minY, float minZ, float maxX, float maxY, float maxZ, TextureAtlasSprite sprite, Direction targetSide, boolean shade, int light) {
-        AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
-        Vector3f center = new Vector3f((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
-        Vector3f radius = new Vector3f(maxX - center.x, maxY - center.y, maxZ - center.z);
-
-        for (Direction face : Direction.values()) {
-            // Skip the EAST face: pre-rotation, EAST is the face of the box that sits against
-            // the pipe surface (gate boxes are mounted at x=2..4.x in the WEST-facing build, so
-            // their EAST face is at the pipe body's WEST surface and is hidden by the pipe body
-            // quad in front of it). After rotate(WEST, targetSide), the equivalent face still
-            // ends up flush against the pipe body. Cutting it eliminates one quad per box per
-            // gate from the chunk mesh — meaningful when many gates land in the same 27-section
-            // re-mesh after a nearby block placement.
-            if (face == Direction.EAST) continue;
-
-            ModelUtil.UvFaceData uv = makeGateUVs(face);
-
-            MutableQuad q = ModelUtil.createFace(face, center, radius, uv);
-            q.texFromSprite(sprite);
-            q.setTint(-1);
-            q.setShade(shade);
-            if (light > 0) {
-                q.setLightEmission(light);
-            }
-            q.rotate(Direction.WEST, targetSide, 0.5f, 0.5f, 0.5f);
-
-            // Adjust normal after rotate
-            q.setCalculatedNormal();
-
-            // We need to apply diffuse lighting manually since it's an item/block hybrid
-            q.setCalculatedDiffuse();
-
-            list.add(q.toBakedBlock());
-        }
-    }
-
     /**
      * Build box geometry as MutableQuads for item rendering (NORTH-facing).
      * The geometry is built with the thin axis on Z (gate face = NORTH),
@@ -183,23 +137,6 @@ public class PlugGateBaker implements IPluggableStaticBaker<KeyPlugGate> {
             q.setCalculatedNormal();
             list.add(q);
         }
-    }
-
-    /** Hardcoded UV region matching the BC 1.12.2 gate.json texture shrink-wrapping. */
-    private static ModelUtil.UvFaceData makeGateUVs(Direction face) {
-        ModelUtil.UvFaceData uv = new ModelUtil.UvFaceData();
-        if (face == Direction.WEST || face == Direction.EAST) {
-            uv.minU = 5f / 16f;
-            uv.maxU = 11f / 16f;
-            uv.minV = 5f / 16f;
-            uv.maxV = 11f / 16f;
-        } else {
-            uv.minU = 2f / 16f;
-            uv.maxU = 4f / 16f;
-            uv.minV = 5f / 16f;
-            uv.maxV = 11f / 16f;
-        }
-        return uv;
     }
 
     /**

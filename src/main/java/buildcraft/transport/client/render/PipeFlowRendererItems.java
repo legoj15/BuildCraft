@@ -38,6 +38,11 @@ public enum PipeFlowRendererItems implements IPipeFlowRenderer<PipeFlowItems> {
     private static final MutableQuad[] COLOURED_QUADS = new MutableQuad[6];
     private static boolean colouredQuadsInitialized = false;
 
+    /** Drops the overlay quads after a resource reload; their UVs point into the previous atlas. */
+    public static void onModelBake() {
+        colouredQuadsInitialized = false;
+    }
+
     /** Lazily initializes the coloured overlay quads the first time they're needed.
      *  This ensures the sprite atlas has been baked before we try to read UV coordinates. */
     private static void ensureColouredQuads() {

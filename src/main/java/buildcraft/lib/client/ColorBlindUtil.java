@@ -18,8 +18,8 @@ import buildcraft.lib.BCLibConfig.ColorBlindMode;
  * preference at the vanilla level doesn't also have to flip a separate BuildCraft knob. The
  * vanilla High Contrast option enables the built-in {@code minecraft:high_contrast} resource
  * pack and triggers a resource pack reload — which restitches the block atlas — so toggling
- * it propagates to BuildCraft pipes via the cache-clear listener registered in
- * {@link BCLibClient}.
+ * it propagates to BuildCraft pipes via the sprite-cache clear in
+ * {@code BCTransportClient#onBakingCompleted}.
  *
  * <p>This helper lives in {@code buildcraft.lib.client} rather than {@code buildcraft.lib}
  * because it imports {@link Minecraft}; keeping the import out of {@link BCLibConfig} preserves

@@ -91,6 +91,11 @@ public enum PipeBehaviourRendererStripes implements IPipeBehaviourRenderer<PipeB
         }
     }
 
+    /** Drops the cached beam quads after a resource reload; their UVs point into the previous atlas. */
+    public static void onModelBake() {
+        java.util.Arrays.fill(DIRECTION_QUADS, null);
+    }
+
     /** Get or build the quads for the given direction. */
     private static MutableQuad[] getQuads(Direction dir) {
         int idx = dir.ordinal();

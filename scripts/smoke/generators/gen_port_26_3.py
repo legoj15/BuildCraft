@@ -124,8 +124,8 @@ cmd("translucency row",
     "setblock %s minecraft:water" % at(-4, -1, 0),
     "setblock %s buildcraftunofficial:tank" % at(-2, 0, 0),
     "setblock %s buildcraftunofficial:tank" % at(-2, 1, 0),
-    *pipe(0, 0, 0, "stone_item", ',col:"lime"'),
-    *pipe(0, 1, 0, "stone_fluid", ',col:"red"'),
+    *pipe(0, 0, 0, "stone_item", ',col:"LIME"'),
+    *pipe(0, 1, 0, "stone_fluid", ',col:"RED"'),
     "setblock %s minecraft:blue_stained_glass_pane" % at(2, 0, 0),
     "setblock %s minecraft:slime_block" % at(4, 0, 0),
     "setblock %s minecraft:honey_block" % at(6, 0, 0),
@@ -166,8 +166,8 @@ shot("b2-markers-close", "B2 torch_center_lit (shade_direction_override): volume
 
 # ── pipes, plugs and dropped items ─────────────────────────────────────────────────────────────────────────────
 cmd("pipe row",
-    *pipe(-6, 0, 8, "wood_item"), *pipe(-4, 0, 8, "stone_fluid", ',col:"red"'), *pipe(-2, 0, 8, "gold_power"),
-    *pipe(0, 0, 8, "diamond_item"), *pipe(2, 0, 8, "quartz_item", ',col:"blue"'), *pipe(4, 0, 8, "stripes_item"),
+    *pipe(-6, 0, 8, "wood_item"), *pipe(-4, 0, 8, "stone_fluid", ',col:"RED"'), *pipe(-2, 0, 8, "gold_power"),
+    *pipe(0, 0, 8, "diamond_item"), *pipe(2, 0, 8, "quartz_item", ',col:"BLUE"'), *pipe(4, 0, 8, "stripes_item"),
     *pipe(6, 0, 8, "structure"))
 cmd("plug row (south faces toward the camera)",
     *plugged(-5, 1, 8, "stone_item", 'south:{id:"buildcraftunofficial:facade",data:{facade:%s,activeState:0}}' % FACADE_OLD),

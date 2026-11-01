@@ -126,17 +126,24 @@ public class BCRoboticsClient {
     //?}
 
     /**
+     * Both docking-station caches hold TextureAtlasSprite references, which a resource reload
+     * discards. Cleared here, not in ModifyBakingResult, because the new block atlas is only live by
+     * BakingCompleted. The baked side is doubly load-bearing: PlugBakerSimple only re-bakes when the
+     * quad ARRAY's identity changes, so dropping the cache is what makes the rebuilt array reach it.
+     */
+    @SubscribeEvent
+    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+        RobotStationModel.onModelBake();
+        PlugRobotStationRenderer.onModelBake();
+    }
+
+    /**
      * Registers the docking-station baker and dynamic renderer. Fires after all models are baked and
      * after {@link EntityRenderersEvent} has completed, so {@code PipeApiClient.registry} is
      * guaranteed to be set by Transport — mirrors {@code BCSiliconClient}'s facade/gate registration.
      */
     @SubscribeEvent
     public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
-        // Both caches hold TextureAtlasSprite references, which a resource reload discards. The baked
-        // side is doubly load-bearing: PlugBakerSimple only re-bakes when the quad ARRAY's identity
-        // changes, so dropping the cache here is what makes the rebuilt array reach it.
-        RobotStationModel.onModelBake();
-        PlugRobotStationRenderer.onModelBake();
         if (PipeApiClient.registry != null) {
             PipeApiClient.registry.registerBaker(KeyPlugRobotStation.class, BAKER_PLUG_ROBOT_STATION);
             PipeApiClient.registry.registerRenderer(RobotStationPluggable.class, PlugRobotStationRenderer.INSTANCE);

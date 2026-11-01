@@ -76,7 +76,7 @@ public class RobotStationModel {
      *  covers both idle states and the dynamic overlay only ever runs for reserved/linked. */
     public static final String SPRITE_AVAILABLE = "buildcraftunofficial:pipes/robot_station_available";
 
-    private static MutableQuad[] baked;
+    private static volatile MutableQuad[] baked;
 
     /**
      * Pure geometry + UVs, no sprite and no atlas access.
@@ -117,10 +117,12 @@ public class RobotStationModel {
      *  never class-init. {@code PlugBakerSimple} re-bakes on ARRAY IDENTITY, so
      *  {@link #onModelBake()} dropping the cache is what makes a resource reload take effect. */
     public static MutableQuad[] bakedQuads() {
-        if (baked == null) {
-            baked = buildPedestal(SpriteUtil.getSprite(SPRITE_AVAILABLE), 0f);
+        MutableQuad[] quads = baked;
+        if (quads == null) {
+            quads = buildPedestal(SpriteUtil.getSprite(SPRITE_AVAILABLE), 0f);
+            baked = quads;
         }
-        return baked;
+        return quads;
     }
 
     /** Drops the cached atlas references on a resource reload. */

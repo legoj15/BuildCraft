@@ -50,10 +50,21 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     // Textures — sprites are loaded lazily from the atlas via PipeDefinition texture names.
     // Caches are keyed by (def, colourblind-bit) so both variants can stay resolved simultaneously
     // — same pattern as DYED_SPRITES, which is keyed by (def, dyeColor ordinal).
-    private static final Map<Long, TextureAtlasSprite[]> SPRITES = new java.util.HashMap<>();
-    private static final Map<Long, TextureAtlasSprite[]> MASK_SPRITES = new java.util.HashMap<>();
+    private static final Map<Long, Stamped> SPRITES = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<Long, Stamped> MASK_SPRITES = new java.util.concurrent.ConcurrentHashMap<>();
     /** Cache of dyed fluid pipe sprites, keyed by (PipeDefinition, DyeColor ordinal, colourblind-bit). */
-    private static final Map<Long, TextureAtlasSprite[]> DYED_SPRITES = new java.util.HashMap<>();
+    private static final Map<Long, Stamped> DYED_SPRITES = new java.util.concurrent.ConcurrentHashMap<>();
+    /** Bumped by {@link #clearSpriteCaches}. Every cached array carries the generation it was resolved
+     *  in and is served only while that generation is current, so an array a chunk worker resolved
+     *  against the old atlas and stored after the reset is never read. */
+    private static volatile int spriteGeneration;
+
+    private record Stamped(TextureAtlasSprite[] sprites, int generation) {}
+
+    private static TextureAtlasSprite[] current(Map<Long, Stamped> map, long key, int gen) {
+        Stamped s = map.get(key);
+        return s != null && s.generation == gen ? s.sprites : null;
+    }
 
     /** Read the effective colourblind state — delegates to {@link buildcraft.lib.client.ColorBlindUtil#isActive()}
      *  which folds in both the BC config tri-state and (in AUTO mode) the vanilla MC
@@ -86,7 +97,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
 
     @Override
     public TextureAtlasSprite[] getItemSprites(PipeDefinition def) {
-        return SPRITES.get(defKey(def, isCb()));
+        return current(SPRITES, defKey(def, isCb()), spriteGeneration);
     }
 
     /** Ensure sprites are populated for a pipe definition. Resolves from the block atlas
@@ -96,7 +107,8 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     private static TextureAtlasSprite[] ensureSprites(PipeDefinition def) {
         boolean cb = isCb();
         long key = defKey(def, cb);
-        TextureAtlasSprite[] cached = SPRITES.get(key);
+        int gen = spriteGeneration;
+        TextureAtlasSprite[] cached = current(SPRITES, key, gen);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
@@ -112,7 +124,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         // Only cache if all sprites resolved successfully — allows re-resolution
         // when atlas is reloaded or sprites become available later
         if (allResolved) {
-            SPRITES.put(key, array);
+            SPRITES.put(key, new Stamped(array, gen));
         }
         return array;
     }
@@ -179,7 +191,8 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     static TextureAtlasSprite[] ensureMaskSprites(PipeDefinition def) {
         boolean cb = isCb();
         long key = defKey(def, cb);
-        TextureAtlasSprite[] cached = MASK_SPRITES.get(key);
+        int gen = spriteGeneration;
+        TextureAtlasSprite[] cached = current(MASK_SPRITES, key, gen);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
@@ -211,7 +224,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
             }
         }
         if (allResolved) {
-            MASK_SPRITES.put(key, array);
+            MASK_SPRITES.put(key, new Stamped(array, gen));
         }
         return array;
     }
@@ -225,7 +238,8 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
     static TextureAtlasSprite[] ensureDyedSprites(PipeDefinition def, DyeColor colour) {
         boolean cb = isCb();
         long cacheKey = dyedKey(def, colour, cb);
-        TextureAtlasSprite[] cached = DYED_SPRITES.get(cacheKey);
+        int gen = spriteGeneration;
+        TextureAtlasSprite[] cached = current(DYED_SPRITES, cacheKey, gen);
         if (cached != null) return cached;
         TextureAtlasSprite missing = SpriteUtil.missingSprite();
         TextureAtlasSprite[] array = new TextureAtlasSprite[def.textures.length];
@@ -242,7 +256,7 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
                         + " and that the source/mask PNGs exist and have matching dimensions.");
             }
         }
-        DYED_SPRITES.put(cacheKey, array);
+        DYED_SPRITES.put(cacheKey, new Stamped(array, gen));
         return array;
     }
 
@@ -267,16 +281,11 @@ public enum PipeBaseModelGenStandard implements IPipeBaseModelGen {
         *///?}
     }
 
-    /** Called from the resource-manager reload listener (BCLibClient) — fires on F3+T, on
-     *  any resource-pack change, AND on vanilla MC's High Contrast toggle (which switches
-     *  the built-in {@code minecraft:high_contrast} pack and triggers a reload). After a
-     *  reload the atlas has been restitched: any {@link TextureAtlasSprite} reference cached
-     *  here points at freed atlas slots from the previous stitch, which would render as
-     *  garbage UVs on the new atlas. Drop everything; the next {@code ensureSprites} call
-     *  per pipe definition will re-resolve against the current atlas. The level renderer's
-     *  own reload path takes care of triggering chunk re-bakes, so no explicit
-     *  {@code allChanged()} call is needed here. */
+    /** Called from {@code BCTransportClient#onBakingCompleted} on every resource reload (F3+T, a pack
+     *  change, the High Contrast toggle): the restitched atlas frees the slots these sprites point
+     *  at. Drop everything; the next {@code ensureSprites} call re-resolves against the new atlas. */
     public static void clearSpriteCaches() {
+        spriteGeneration++;
         SPRITES.clear();
         MASK_SPRITES.clear();
         DYED_SPRITES.clear();

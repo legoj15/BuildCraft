@@ -149,8 +149,8 @@ def tex_shell_side():
 def tex_shell_top():
     """Top/bottom of the shell (u = x, v = z): the same slot layout as the sides turned flat.
     Rows 2-4 and 11-13 plate, 5/10 bezel, 6-9 what the slot sees (the core's face), rows 14-15
-    the slot walls (explicit UV). Rows 3-12 are mirror-symmetric in v, so the bottom (which
-    samples it flipped) keeps the seal on both slot edges; rows 2/13 shade as a bevel."""
+    the slot walls (explicit UV). Rows 5 and 10 are both seal, so the bottom (which samples
+    the sheet flipped) still has it on both slot edges; the plate rows are not symmetric."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 11)
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 31)

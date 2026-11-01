@@ -1,0 +1,16 @@
+{
+  "name": "mod-list-banner",
+  "base": [0, 150, 0],
+  "steps": [
+    { "label": "leave the world for the title screen", "do": "pause" },
+    { "do": "click", "widgetText": "Save and Quit to Title" },
+    { "do": "expectScreen", "contains": "TitleScreen", "timeoutSec": 60 },
+    { "do": "click", "widgetText": "Mods" },
+    { "do": "expectScreen", "contains": "Mod", "timeoutSec": 10 },
+    { "name": "modlist-widgets", "do": "widgets" },
+    { "label": "select the BuildCraft row: list rows are not widgets, so click by position (alphabetical list, GUI scale 2; the >=26.2 list is icon rows, the older one sorts Minecraft first)", "do": "click", "x": 75, "y": 48, "nodes": ["26.2", "26.3"] },
+    { "do": "click", "x": 50, "y": 72, "nodes": ["1.21.1", "1.21.10", "1.21.11", "26.1.2"] },
+    { "do": "wait", "ms": 1000 },
+    { "name": "modlist-banner", "do": "shot", "look": "info panel shows the new banner: crane, BuildCraft wordmark, yellow REDUX in the hazard bar, five gears (no obsidian), 'based on BuildCraft by SpaceToad' readable; name reads BuildCraft Redux; mod-list icon is the gear icon" }
+  ]
+}

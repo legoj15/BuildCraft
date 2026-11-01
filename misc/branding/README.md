@@ -49,7 +49,7 @@ Pixel art is only ever scaled by whole numbers with nearest-neighbour; only the 
 - The mark keeps the original BuildCraft logo's structure: crane on the left with its jib over the name, a heavy "Build" and a light "Craft", a hazard bar under the name, and the gears on the right (the material row and the obsidian column are gone).
 - REDUX replaces the old bar's plain stripes: yellow capitals on a black plate set into the hazard band, 11 px tall against the wordmark's 18, so it reads as part of the name.
 - The wordmark is light with a dark outline and a drop shadow, and the credit sits on a dark riveted plate, so the banner reads on NeoForge's dark panel and on white.
-- Palette: hazard yellow `#F6C400` (bottom-row shade `#DEA800`) on band black `#1C1C1C`; crane steel `#E8E8E8`, `#9E9E9E`, `#686868`; outlines `#121212` (crane, band) and `#161616` (wordmark, over a `#000000` drop shadow); wordmark fill graded top to bottom, `#FFFFFF` to `#BEBEBE` for "Build" and `#C8C8C8` to `#949494` for "Craft". The nameplate is `#262626` with `#969696` and `#ECECEC` text.
+- Palette: hazard yellow `#F6D03B` (bottom-row shade `#F6C400`) on band black `#1C1C1C`; crane steel `#E8E8E8`, `#9E9E9E`, `#686868`; outlines `#121212` (crane, band) and `#161616` (wordmark, over a `#000000` drop shadow); wordmark fill graded top to bottom, `#FFFFFF` to `#BEBEBE` for "Build" and `#C8C8C8` to `#949494` for "Craft". The nameplate is `#262626` with `#969696` and `#ECECEC` text.
 
 ## Girder 7 font
 

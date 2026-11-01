@@ -157,6 +157,9 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_wood_fluid_drains_cauldron", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeDrainsCauldron);
         reg.accept("buildcraftunofficial:pipe_wood_fluid_keeps_its_fluid", () -> buildcraft.transport.pipe.CauldronPipeTester::testWoodPipeKeepsItsFluid);
         reg.accept("buildcraftunofficial:pipe_item_feeds_composter", () -> buildcraft.transport.pipe.CauldronPipeTester::testItemPipeFeedsComposter);
+        // ...and a gate on such a pipe reads them through the same capabilities (#64).
+        reg.accept("buildcraftunofficial:gate_reads_cauldron_fluid", () -> buildcraft.transport.pipe.CauldronPipeTester::testGateReadsCauldronFluid);
+        reg.accept("buildcraftunofficial:gate_reads_composter_inventory", () -> buildcraft.transport.pipe.CauldronPipeTester::testGateReadsComposterInventory);
 
         // Wire connectivity predicate gating the logic_transportation advancement
         reg.accept("buildcraftunofficial:wire_connectivity_isolated", () -> buildcraft.transport.block.PipeWireConnectivityTester::testIsolatedWireNotConnected);

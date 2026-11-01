@@ -4,12 +4,21 @@
  * should be located as "LICENSE.API" in the BuildCraft source code distribution. */
 package buildcraft.api.statements;
 
-import net.minecraft.world.level.block.entity.BlockEntity;
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public interface ITriggerExternal extends ITrigger {
 
-    boolean isTriggerActive(BlockEntity target, Direction side, IStatementContainer source, IStatementParameter[] parameters);
+    /** @param pos the neighbouring block the gate looks at, always loaded.
+     * @param target its block entity, or null for a block that has none (a vanilla cauldron or composter exposes its
+     *            contents through a block capability alone).
+     * @param side the side of the gate's pipe that faces {@code pos}. */
+    boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity target, Direction side,
+        IStatementContainer source, IStatementParameter[] parameters);
 
 }
 

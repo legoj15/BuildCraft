@@ -11,8 +11,10 @@ import java.util.Collection;
 import javax.annotation.Nonnull;
 
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.gates.IGate;
 import buildcraft.api.statements.IStatementContainer;
@@ -69,7 +71,7 @@ public enum TriggerProviderPipes implements ITriggerProvider {
 
     @Override
     public void addExternalTriggers(
-        Collection<ITriggerExternal> triggers, @Nonnull Direction side, BlockEntity tile
+        Collection<ITriggerExternal> triggers, @Nonnull Direction side, Level level, BlockPos pos, BlockEntity tile
     ) {
 
     }

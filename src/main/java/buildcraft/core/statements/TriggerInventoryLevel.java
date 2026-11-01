@@ -7,6 +7,10 @@ package buildcraft.core.statements;
 
 import java.util.Locale;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
@@ -47,13 +51,12 @@ public class TriggerInventoryLevel extends AbstractContainerLevelTrigger {
     }
 
     @Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container,
-        IStatementParameter[] parameters) {
-        if (tile.getLevel() == null) return false;
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer container, IStatementParameter[] parameters) {
         //? if >=1.21.10 {
-        var itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);
+        var itemHandler = level.getCapability(Capabilities.Item.BLOCK, pos, side != null ? side.getOpposite() : null);
         //?} else {
-        /*var itemHandler = tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null);*/
+        /*var itemHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side != null ? side.getOpposite() : null);*/
         //?}
         if (itemHandler == null) {
             return false;

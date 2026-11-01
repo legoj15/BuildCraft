@@ -8,9 +8,12 @@ package buildcraft.core.statements;
 import java.util.Collection;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import net.neoforged.neoforge.capabilities.Capabilities;
 
@@ -47,7 +50,8 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         @Nonnull Direction side) {}
 
     @Override
-    public void addExternalTriggers(Collection<ITriggerExternal> res, @Nonnull Direction side, BlockEntity tile) {
+    public void addExternalTriggers(Collection<ITriggerExternal> res, @Nonnull Direction side, Level level, BlockPos pos,
+        @Nullable BlockEntity tile) {
         // Skip pipe holders — they have their own internal trigger system (TriggerProviderPipes).
         // In 1.12.2, pipe sections returned getTankProperties()=empty so they were naturally filtered
         // by the liquids.length > 0 check. In 26.1.1 ResourceHandler.size() returns 1 unconditionally,
@@ -56,7 +60,7 @@ public enum CoreTriggerProvider implements ITriggerProvider {
             return;
         }
 
-        if (TriggerPower.isTriggeringTile(tile, side.getOpposite())) {
+        if (tile != null && TriggerPower.isTriggeringTile(tile, side.getOpposite())) {
             res.add(BCCoreStatements.TRIGGER_POWER_HIGH);
             res.add(BCCoreStatements.TRIGGER_POWER_LOW);
         }
@@ -69,12 +73,14 @@ public enum CoreTriggerProvider implements ITriggerProvider {
             blockFluidHandlerTriggers = defaults.blockFluidHandlerTriggers(side);
         }
 
-        if (!blockInventoryTriggers && tile != null && tile.getLevel() != null) {
+        // The container triggers read a block capability, which a block without a block entity (a vanilla cauldron
+        // or composter) can expose too.
+        if (!blockInventoryTriggers) {
             //? if >=1.21.10 {
-            var itemHandler = tile.getLevel().getCapability(Capabilities.Item.BLOCK, tile.getBlockPos(), side.getOpposite());
+            var itemHandler = level.getCapability(Capabilities.Item.BLOCK, pos, side.getOpposite());
             boolean hasInventory = itemHandler != null && itemHandler.size() > 0;
             //?} else {
-            /*var itemHandler = tile.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, tile.getBlockPos(), side.getOpposite());
+            /*var itemHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side.getOpposite());
             boolean hasInventory = itemHandler != null && itemHandler.getSlots() > 0;*/
             //?}
             if (hasInventory) {
@@ -88,12 +94,12 @@ public enum CoreTriggerProvider implements ITriggerProvider {
             }
         }
 
-        if (!blockFluidHandlerTriggers && tile != null && tile.getLevel() != null) {
+        if (!blockFluidHandlerTriggers) {
             //? if >=1.21.10 {
-            var fluidHandler = tile.getLevel().getCapability(Capabilities.Fluid.BLOCK, tile.getBlockPos(), side.getOpposite());
+            var fluidHandler = level.getCapability(Capabilities.Fluid.BLOCK, pos, side.getOpposite());
             boolean hasFluid = fluidHandler != null && fluidHandler.size() > 0;
             //?} else {
-            /*var fluidHandler = tile.getLevel().getCapability(Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side.getOpposite());
+            /*var fluidHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, side.getOpposite());
             boolean hasFluid = fluidHandler != null && fluidHandler.getTanks() > 0;*/
             //?}
             if (hasFluid) {

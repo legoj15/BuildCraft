@@ -20,9 +20,22 @@ import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.api.mj.MjAPI;
+import buildcraft.api.statements.IStatement;
+import buildcraft.api.statements.IStatementParameter;
+import buildcraft.api.statements.StatementParameterItemStack;
 import buildcraft.api.transport.pipe.IPipe.ConnectedType;
 
+import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
+
+import buildcraft.core.BCCoreStatements;
+import buildcraft.silicon.BCSiliconPlugs;
+import buildcraft.silicon.gate.EnumGateLogic;
+import buildcraft.silicon.gate.EnumGateMaterial;
+import buildcraft.silicon.gate.EnumGateModifier;
+import buildcraft.silicon.gate.GateLogic;
+import buildcraft.silicon.gate.GateVariant;
+import buildcraft.silicon.plug.PluggableGate;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWood;
@@ -141,6 +154,79 @@ public class CauldronPipeTester {
         BlockState state = helper.getBlockState(CAULDRON);
         helper.assertTrue(state.is(Blocks.LAVA_CAULDRON),
             "A wooden pipe holding water must not extract lava, but the cauldron is now " + state);
+        helper.succeed();
+    }
+
+    private static GateLogic placeGate(GameTestHelper helper, BlockPos pipePos, Direction face) {
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
+        PluggableGate gate = new PluggableGate(BCSiliconPlugs.gate, tile, face,
+            new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK, EnumGateModifier.NO_MODIFIER));
+        tile.replacePluggable(face, gate);
+        return gate.logic;
+    }
+
+    /** The gate's listed external trigger for {@code trigger} on {@code face}, or a failure naming what was listed. */
+    private static TriggerWrapper listedTrigger(GameTestHelper helper, GateLogic logic, IStatement trigger,
+        Direction face) {
+        for (TriggerWrapper wrapper : logic.getAllValidTriggers()) {
+            if (wrapper.delegate == trigger && wrapper.sourcePart.face == face) {
+                return wrapper;
+            }
+        }
+        helper.assertTrue(false, "The gate should list " + trigger.getUniqueTag() + " for its " + face
+            + " neighbour, but listed only " + logic.getAllValidTriggers().stream()
+                .map(w -> w.delegate.getUniqueTag() + "@" + w.sourcePart).toList());
+        return null;
+    }
+
+    /** A gate on a pipe beside a cauldron (no block entity) lists the fluid triggers for it, and they follow the
+     *  cauldron's contents (#64). */
+    public static void testGateReadsCauldronFluid(GameTestHelper helper) {
+        helper.setBlock(CAULDRON, Blocks.CAULDRON);
+        placePipe(helper, BCTransportItems.PIPE_STONE_FLUID.get());
+        GateLogic logic = placeGate(helper, PIPE, Direction.UP);
+        TriggerWrapper full = listedTrigger(helper, logic, BCCoreStatements.TRIGGER_FLUID_FULL, TO_CAULDRON);
+        TriggerWrapper empty = listedTrigger(helper, logic, BCCoreStatements.TRIGGER_FLUID_EMPTY, TO_CAULDRON);
+        TriggerWrapper space = listedTrigger(helper, logic, BCCoreStatements.TRIGGER_FLUID_SPACE, TO_CAULDRON);
+        TriggerWrapper below25 = listedTrigger(helper, logic, BCCoreStatements.TRIGGER_FLUID_BELOW_25, TO_CAULDRON);
+        IStatementParameter[] none = new IStatementParameter[0];
+        // Filtered to water: these probe whether water fits, and a cauldron takes it only a third of a bucket at a time.
+        IStatementParameter[] water = { new StatementParameterItemStack(new ItemStack(Items.WATER_BUCKET)) };
+
+        helper.assertTrue(empty.isTriggerActive(logic, none) && !full.isTriggerActive(logic, none),
+            "An empty cauldron should read as empty, not full");
+        helper.assertTrue(space.isTriggerActive(logic, water) && !full.isTriggerActive(logic, water),
+            "An empty cauldron should have space for water and not be full of it");
+        helper.assertTrue(below25.isTriggerActive(logic, water), "An empty cauldron should be below 25% of water");
+        helper.setBlock(CAULDRON, Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3));
+        helper.assertTrue(full.isTriggerActive(logic, none) && !empty.isTriggerActive(logic, none),
+            "A brimming water cauldron should read as full, not empty");
+        helper.assertTrue(full.isTriggerActive(logic, water) && !space.isTriggerActive(logic, water),
+            "A brimming water cauldron should be full of water with no space for more");
+        helper.succeed();
+    }
+
+    /** A gate on a pipe resting on a composter (no block entity) lists the inventory triggers for its input. */
+    public static void testGateReadsComposterInventory(GameTestHelper helper) {
+        BlockPos composterPos = new BlockPos(2, 2, 2);
+        BlockPos pipePos = composterPos.above();
+        helper.setBlock(composterPos, Blocks.COMPOSTER);
+        helper.setBlock(pipePos, BCTransportBlocks.PIPE_HOLDER.get());
+        //? if >=1.21.10 {
+        TilePipeHolder tile = helper.getBlockEntity(pipePos, TilePipeHolder.class);
+        //?} else {
+        /*TilePipeHolder tile = helper.getBlockEntity(pipePos);*/
+        //?}
+        tile.onPlacedBy(null, new ItemStack(BCTransportItems.PIPE_COBBLE_ITEM.get()));
+        GateLogic logic = placeGate(helper, pipePos, Direction.NORTH);
+
+        TriggerWrapper empty = listedTrigger(helper, logic, BCCoreStatements.TRIGGER_INVENTORY_EMPTY, Direction.DOWN);
+        helper.assertTrue(empty.isTriggerActive(logic, new IStatementParameter[0]),
+            "The composter's input slot, seen from above, should read as empty");
         helper.succeed();
     }
 }

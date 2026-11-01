@@ -5,6 +5,10 @@
  */
 package buildcraft.core.statements;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
@@ -44,8 +48,8 @@ public class TriggerEnginePowerStage extends BCStatement implements ITriggerExte
     }
 
     @Override
-    public boolean isTriggerActive(BlockEntity target, Direction side, IStatementContainer source,
-        IStatementParameter[] parameters) {
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity target, Direction side,
+        IStatementContainer source, IStatementParameter[] parameters) {
         if (target instanceof TileEngineBase_BC8 engine) {
             return engine.getPowerStage() == stage;
         }

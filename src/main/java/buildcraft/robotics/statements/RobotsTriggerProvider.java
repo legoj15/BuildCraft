@@ -10,7 +10,9 @@ package buildcraft.robotics.statements;
 
 import java.util.Collection;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.statements.ITriggerExternal;
@@ -41,6 +43,7 @@ public enum RobotsTriggerProvider implements ITriggerProvider {
     }
 
     @Override
-    public void addExternalTriggers(Collection<ITriggerExternal> triggers, Direction side, BlockEntity tile) {
+    public void addExternalTriggers(Collection<ITriggerExternal> triggers, Direction side, Level level, BlockPos pos,
+        BlockEntity tile) {
     }
 }

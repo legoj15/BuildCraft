@@ -594,12 +594,9 @@ public class GateLogic implements IGate, IWireEmitter, IRedstoneStatementContain
                     set.add(new TriggerWrapperInternalSided(trigger, face));
                 }
             }
-            BlockEntity neighbour = getNeighbourTile(face);
-            if (neighbour != null) {
-                for (ITriggerExternal trigger : StatementManager.getExternalTriggers(face, neighbour)) {
-                    if (isValidTrigger(trigger)) {
-                        set.add(new TriggerWrapperExternal(trigger, face));
-                    }
+            for (ITriggerExternal trigger : StatementManager.getExternalTriggers(this, face)) {
+                if (isValidTrigger(trigger)) {
+                    set.add(new TriggerWrapperExternal(trigger, face));
                 }
             }
         }

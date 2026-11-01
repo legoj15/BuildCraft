@@ -10,8 +10,10 @@ import net.minecraft.resources.Identifier;
 
 import javax.annotation.Nonnull;
 
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.statements.IStatement;
@@ -109,10 +111,17 @@ public abstract class TriggerWrapper extends StatementWrapper implements ITrigge
 
         @Override
         public boolean isTriggerActive(IStatementContainer source, IStatementParameter[] parameters) {
-            BlockEntity tile = getNeighbourTile(source);
-            if (tile == null) {
+            BlockEntity self = source.getTile();
+            Level level = self == null ? null : self.getLevel();
+            if (level == null) {
                 return false;
             }
+            BlockPos pos = self.getBlockPos().relative(sourcePart.face);
+            if (!level.isLoaded(pos)) {
+                return false;
+            }
+            // Null for a block that has no block entity but may still expose a capability (a cauldron, a composter).
+            BlockEntity tile = getNeighbourTile(source);
             if (tile instanceof ITriggerExternalOverride) {
                 ITriggerExternalOverride override = (ITriggerExternalOverride) tile;
                 ITriggerExternalOverride.Result result =
@@ -123,7 +132,7 @@ public abstract class TriggerWrapper extends StatementWrapper implements ITrigge
                     return true;
                 }
             }
-            return trigger.isTriggerActive(tile, sourcePart.face, source, parameters);
+            return trigger.isTriggerActive(level, pos, tile, sourcePart.face, source, parameters);
         }
     }
 }

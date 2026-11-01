@@ -7,16 +7,21 @@ package buildcraft.api.statements;
 import java.util.Collection;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public interface ITriggerProvider {
     void addInternalTriggers(Collection<ITriggerInternal> triggers, IStatementContainer container);
 
     void addInternalSidedTriggers(Collection<ITriggerInternalSided> triggers, IStatementContainer container, @Nonnull Direction side);
 
-    /** Returns the list of triggers available to a gate next to the given block. */
-    void addExternalTriggers(Collection<ITriggerExternal> triggers, @Nonnull Direction side, BlockEntity tile);
+    /** Returns the list of triggers available to a gate next to the block at {@code pos}, whose block entity is
+     * {@code tile} (null when it has none). See {@link ITriggerExternal#isTriggerActive}. */
+    void addExternalTriggers(Collection<ITriggerExternal> triggers, @Nonnull Direction side, Level level, BlockPos pos,
+        @Nullable BlockEntity tile);
 }
 

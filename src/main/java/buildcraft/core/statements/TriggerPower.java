@@ -5,6 +5,9 @@
  */
 package buildcraft.core.statements;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -96,7 +99,8 @@ public class TriggerPower extends BCStatement implements ITriggerInternal, ITrig
     }
 
     @Override
-    public boolean isTriggerActive(BlockEntity target, Direction side, IStatementContainer source, IStatementParameter[] parameters) {
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity target, Direction side,
+        IStatementContainer source, IStatementParameter[] parameters) {
         return isActive(target, EnumPipePart.fromFacing(side.getOpposite()));
     }
 

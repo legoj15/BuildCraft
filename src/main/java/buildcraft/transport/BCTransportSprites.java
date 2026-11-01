@@ -69,7 +69,7 @@ public class BCTransportSprites {
         ACTION_PIPE_DIRECTION = new EnumMap<>(Direction.class);
         for (Direction face : Direction.values()) {
             ACTION_PIPE_DIRECTION.put(face,
-                getHolder("core", "triggers/trigger_dir_" + face.getName().toLowerCase(Locale.ROOT)));
+                getHolder("filler/parameters/face_" + face.getName().toLowerCase(Locale.ROOT)));
         }
 
         POWER_FLOW = getHolder("pipes/power_flow");

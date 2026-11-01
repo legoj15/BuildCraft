@@ -367,7 +367,7 @@
   {
    "do": "cmd",
    "run": [
-    "attribute @p minecraft:generic.gravity base reset"
+    "attribute @p minecraft:generic.gravity base set 0.08"
    ],
    "nodes": [
     "1.21.1"

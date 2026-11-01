@@ -85,9 +85,11 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
                 maxA = normMaxA;
                 maxB = normMaxB;
 
+                // The quarter-turn iterator draws shape point (a, b) at template (maxA - b, a), so the seed goes
+                // there too; measuring against maxB put it outside any box that is not square.
                 if (dir.rotationCount % 2 == 1) {
                     int fillT = fillA;
-                    fillA = maxB - fillB;
+                    fillA = maxA - fillB;
                     fillB = fillT;
                 }
                 if (dir.rotationCount > 1) {

@@ -27,6 +27,7 @@ import buildcraft.builders.snapshot.pattern.PatternShape2d;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterAxis;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
 
 public class ShapePatternsTester {
     private static void assertTrue(boolean val) {
@@ -88,14 +89,26 @@ public class ShapePatternsTester {
                     }
                 }
             }
-            // A closed 2D outline must place more when Filled than when Hollow (Hexagon set no fill point, so Filled did nothing).
-            BlockPos flat = new BlockPos(9, 1, 9);
+            // A closed 2D outline must place more when Filled than when Hollow, and Surrounded must leave its inside
+            // empty, at every rotation of a non-square box (Hexagon set no fill point; a quarter turn put the fill
+            // seed outside the box, so Filled did nothing and Surrounded filled everything).
+            BlockPos flat = new BlockPos(5, 1, 9);
+            int cells = flat.getX() * flat.getY() * flat.getZ();
             for (IFillerPatternShape pattern : patterns) {
                 if (!(pattern instanceof PatternShape2d) || pattern == BCBuildersStatements.PATTERN_ARC) continue;
-                int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW));
-                int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER));
-                if (filled <= hollow) {
-                    throw new IllegalStateException(pattern.getUniqueTag() + " filled (" + filled + ") is not more than hollow (" + hollow + ")");
+                int rotations = pattern.maxParameters() > 2 ? 4 : 1;
+                for (int r = 0; r < rotations; r++) {
+                    PatternParameterRotation rotation = PatternParameterRotation.values()[r];
+                    String where = pattern.getUniqueTag() + " rotated " + r + " in " + flat.toShortString();
+                    int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW, rotation));
+                    int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER, rotation));
+                    int outer = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_OUTER, rotation));
+                    if (filled <= hollow) {
+                        throw new IllegalStateException(where + ": filled (" + filled + ") is not more than hollow (" + hollow + ")");
+                    }
+                    if (outer >= cells) {
+                        throw new IllegalStateException(where + ": surrounded filled every cell, inside included");
+                    }
                 }
             }
             helper.succeed();
@@ -116,10 +129,11 @@ public class ShapePatternsTester {
         return count;
     }
 
-    private static IFilledTemplate fill2d(IFillerPatternShape pattern, BlockPos size, PatternParameterHollow hollow) {
+    private static IFilledTemplate fill2d(IFillerPatternShape pattern, BlockPos size, PatternParameterHollow hollow,
+        PatternParameterRotation rotation) {
         IStatementParameter[] params = new IStatementParameter[pattern.maxParameters()];
         for (int i = 0; i < params.length; i++) {
-            params[i] = i == 0 ? PatternParameterAxis.Y : i == 1 ? hollow : pattern.createParameter(i);
+            params[i] = i == 0 ? PatternParameterAxis.Y : i == 1 ? hollow : i == 2 ? rotation : pattern.createParameter(i);
         }
         IFilledTemplate template = createFilledTemplate(size);
         assertTrue(pattern.fillTemplate(template, params));

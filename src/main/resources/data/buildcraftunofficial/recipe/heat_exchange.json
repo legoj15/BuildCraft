@@ -3,13 +3,14 @@
   "category": "misc",
   "pattern": [
     "igi",
-    "###",
+    "#c#",
     "igi"
   ],
   "key": {
     "i": "#c:ingots/iron",
     "g": "buildcraftunofficial:gear_iron",
-    "#": "#c:glass_blocks/colorless"
+    "#": "#c:glass_blocks/colorless",
+    "c": "#c:ingots/copper"
   },
   "result": {
     "id": "buildcraftunofficial:heat_exchange"

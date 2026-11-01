@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate the Heat Exchanger's block models, item model, blockstate and textures.
 
-The shell-and-tube look: a green-painted shell with a sight-glass slot front and back (the
-renderer's fluid flow shows through it), bolted steel flanges where two exchangers join,
+The shell-and-tube look: a dark-steel shell (the blast furnace top's palette) with a sight slot
+on all four long faces (the renderer's fluid flow shows through them), bolted steel flanges where two exchangers join,
 blind dished caps on a lone segment's open ends, and colour-banded nozzles where the fluids
 enter and leave a finished 3-5 block exchanger (START blue = cold side, END red = hot side,
 the same colours as the GUI help). Everything is generated so the geometry can be changed
@@ -31,8 +31,8 @@ Fluid geometry this must agree with (RenderHeatExchange, model pixels, canonical
   END top         (4,14,4)-(12,16,12)  -> top nozzle bore (TANK_TOP)
   every tank box is shrunk by 1/4 px when drawn
   flow: heatant box y/z 2.1..13.9, coolant box 4.1..11.9, from END x ~2.2 to START x ~13.7
-        -> enclosed by the 2..14 shell, seen through the sight-glass slots (y 6..10); the flow
-           ends sit inside the 1px cover plates.
+        -> enclosed by the 2..14 shell, seen through the sight slots (front/back y 6..10, top/bottom
+           z 6..10, each down to the 4.25..11.75 core); the flow ends sit inside the 1px cover plates.
 """
 import json
 import os
@@ -50,13 +50,18 @@ DEFAULT_OUT = os.path.join(REPO, "src", "main", "resources", "assets", NS)
 # texel's place on the sheet is where it lands on the block.
 # =========================================================================================
 
-# shell paint: the old wireframe sprites' dark green #24431b is the bottom of this ramp
-G_HI = (0x86, 0xad, 0x6c)
-G_LT = (0x6a, 0x93, 0x57)
-G_MD = (0x55, 0x7c, 0x46)
-G_M2 = (0x50, 0x76, 0x42)  # paint mottling
-G_DK = (0x41, 0x63, 0x38)
-G_DD = (0x31, 0x4f, 0x2a)
+# shell plate: vanilla blast_furnace_top's ramp (#3f3e42..#747474), one shade darker below it
+G_HI = (0x74, 0x74, 0x74)
+G_LT = (0x68, 0x68, 0x68)
+G_MD = (0x4f, 0x4f, 0x4f)
+G_M2 = (0x49, 0x48, 0x48)  # plate mottling
+G_M3 = (0x59, 0x58, 0x58)  # lighter plate mottling
+G_DK = (0x3f, 0x3e, 0x42)
+G_DD = (0x31, 0x30, 0x34)
+# window seal: the old heat exchanger's green, down to its wireframe sprites' #24431b
+SEAL_LT = (0x55, 0x7c, 0x46)
+SEAL_MD = (0x41, 0x63, 0x38)
+SEAL_DK = (0x24, 0x43, 0x1b)
 # steel
 S_HI = (0xde, 0xde, 0xde)
 S_LT = (0xc2, 0xc2, 0xc2)
@@ -68,7 +73,7 @@ S_BK = (0x2f, 0x2f, 0x2f)
 # interior
 I_BK = (0x14, 0x18, 0x16)
 I_DK = (0x22, 0x29, 0x25)
-# copper tube bundle seen through the sight glass
+# copper tube bundle seen through the sight slots
 C_LT = (0xad, 0x6c, 0x3a)
 C_MD = (0x86, 0x50, 0x2a)
 C_DK = (0x5c, 0x36, 0x1b)
@@ -108,19 +113,20 @@ def mottle(px, x0, y0, x1, y1, base, alt, seed):
 
 
 def tex_shell_side():
-    """Front/back of the shell: rows 2-5 upper band, 6-9 sight glass, 10-13 lower band,
-    rows 14-15 the slot sills (explicit UV)."""
+    """Front/back of the shell: rows 2-4 upper band, 5/10 green seal, 6-9 sight slot, 11-13 lower
+    band, rows 14-15 the slot walls (explicit UV), sealed green like the rim."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 7)
+    mottle(px, 0, 0, 15, 15, G_MD, G_M3, 29)
     hline(px, 2, 0, 15, G_HI)
     hline(px, 3, 0, 15, G_LT)
-    # sight-glass bezel above and below the slot, bolts mirror-symmetric (the back face
-    # samples the same rows mirrored)
-    hline(px, 5, 0, 15, S_LT)
-    hline(px, 10, 0, 15, S_DK)
+    # green seal above and below the slot, bolts mirror-symmetric (the back face samples the
+    # same rows mirrored)
+    hline(px, 5, 0, 15, SEAL_LT)
+    hline(px, 10, 0, 15, SEAL_DK)
     for x in (3, 12):
-        px[5][x] = S_HI
-        px[10][x] = S_MD
+        px[5][x] = S_LT
+        px[10][x] = S_DK
     # tube bundle through the glass: one copper tube on a dark ground
     hline(px, 6, 0, 15, I_BK)
     hline(px, 7, 0, 15, C_MD)
@@ -132,35 +138,46 @@ def tex_shell_side():
     hline(px, 12, 0, 15, G_DK)
     hline(px, 13, 0, 15, G_DD)
     mottle(px, 0, 11, 15, 11, G_MD, G_M2, 3)
-    # sills: steel frame depth (row 14 at the slot mouth)
-    hline(px, 14, 0, 15, S_MD)
-    hline(px, 15, 0, 15, S_DK)
+    # slot walls: the seal's depth (row 14 at the slot mouth)
+    hline(px, 14, 0, 15, SEAL_MD)
+    hline(px, 15, 0, 15, SEAL_DK)
     hline(px, 0, 0, 15, G_DK)
     hline(px, 1, 0, 15, G_DK)
     return px
 
 
 def tex_shell_top():
-    """Top/bottom of the shell (u = x, v = z)."""
+    """Top/bottom of the shell (u = x, v = z): the same slot layout as the sides turned flat.
+    Rows 2-4 and 11-13 plate, 5/10 bezel, 6-9 what the slot sees (the core's face), rows 14-15
+    the slot walls (explicit UV). Mirror-symmetric in v, since the bottom samples it flipped."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 11)
+    mottle(px, 0, 0, 15, 15, G_MD, G_M3, 31)
     hline(px, 2, 0, 15, G_LT)
-    hline(px, 13, 0, 15, G_LT)
-    # longitudinal weld strap along the axis
-    hline(px, 7, 0, 15, G_DK)
-    hline(px, 8, 0, 15, G_DK)
-    for x in (4, 11):
-        px[7][x] = G_HI
-        px[8][x] = G_DD
-    vline(px, 2, 3, 12, G_DK)
-    vline(px, 13, 3, 12, G_DK)
+    hline(px, 13, 0, 15, G_DK)
+    hline(px, 5, 0, 15, SEAL_MD)
+    hline(px, 10, 0, 15, SEAL_MD)
+    for x in (3, 12):
+        px[5][x] = S_LT
+        px[10][x] = S_LT
+    hline(px, 6, 0, 15, I_BK)
+    hline(px, 7, 0, 15, C_MD)
+    hline(px, 8, 0, 15, C_MD)
+    hline(px, 9, 0, 15, I_BK)
+    for x in (2, 6, 9, 13):
+        px[7][x] = C_LT
+        px[8][x] = C_DK
+    hline(px, 14, 0, 15, SEAL_MD)
+    hline(px, 15, 0, 15, SEAL_DK)
+    hline(px, 0, 0, 15, G_DK)
+    hline(px, 1, 0, 15, G_DK)
     return px
 
 
 def tex_flange():
     """Joint-flange halves, cap-plate and cover rims, and every shell-facing flange face.
     cols 0/15: joint-side rim (bolt heads); cols 1/14: shell-side rim; rows/cols 1 and 14:
-    the ring a shell-facing face shows around the shell; centre: what the sight-glass slots
+    the ring a shell-facing face shows around the shell; centre: what the sight slots
     see at their ends. Cols 0/15 and 1/14 are painted alike, so either side may sample them."""
     px = new(I_DK)
     hline(px, 1, 1, 14, S_LT)
@@ -293,8 +310,8 @@ TEXTURES = {
 }
 
 SH0, SH1 = 2, 14            # shell cross-section
-GL0, GL1 = 6, 10            # sight-glass slot height (y)
-CORE0, CORE1 = 4.25, 11.75  # slot back wall depth (z): inside the coolant flow box (4.1..11.9)
+GL0, GL1 = 6, 10            # sight slot width (y on the front/back, z on the top/bottom)
+CORE0, CORE1 = 4.25, 11.75  # slot floor depth: inside the coolant flow box (4.1..11.9)
 FL0, FL1 = 1, 15            # flange / cover / cap-plate cross-section
 DOME0, DOME1 = 3, 13        # cap dome
 NK0, NK1 = 3, 13            # nozzle collar (outer)
@@ -341,19 +358,26 @@ def span(side, length, offset=0):
 
 
 def shell(x0, x1):
-    """Shell body between x0 and x1 with a sight-glass slot front and back."""
+    """Shell body between x0 and x1: four corner bars and a core, leaving a sight slot on each
+    long face (front/back y GL0..GL1, top/bottom z GL0..GL1) down to the core."""
+    lo, hi = GL0, GL1
+    # slot walls (zero-thickness): the green seal's depth, sheet rows 14..16 (row 14 at the mouth)
+    mouth_lo, mouth_hi = [x0, 14, x1, 16], [x0, 16, x1, 14]
     return [
-        box("shell_lower", (x0, SH0, SH0), (x1, GL0, SH1), {
-            "north": F("side"), "south": F("side"), "down": F("top")}),
-        box("shell_upper", (x0, GL1, SH0), (x1, SH1, SH1), {
-            "north": F("side"), "south": F("side"), "up": F("top")}),
-        box("glass_back", (x0, GL0, CORE0), (x1, GL1, CORE1), {
-            "north": F("side"), "south": F("side")}),
-        # slot sills (zero-thickness): steel frame depth, sheet rows 14..16 (row 14 at the mouth)
-        box("sill_front_floor", (x0, GL0, SH0), (x1, GL0, CORE0), {"up": F("side", [x0, 14, x1, 16])}),
-        box("sill_front_ceiling", (x0, GL1, SH0), (x1, GL1, CORE0), {"down": F("side", [x0, 16, x1, 14])}),
-        box("sill_back_floor", (x0, GL0, CORE1), (x1, GL0, SH1), {"up": F("side", [x0, 16, x1, 14])}),
-        box("sill_back_ceiling", (x0, GL1, CORE1), (x1, GL1, SH1), {"down": F("side", [x0, 14, x1, 16])}),
+        box("shell_lower_front", (x0, SH0, SH0), (x1, lo, lo), {"north": F("side"), "down": F("top")}),
+        box("shell_lower_back", (x0, SH0, hi), (x1, lo, SH1), {"south": F("side"), "down": F("top")}),
+        box("shell_upper_front", (x0, hi, SH0), (x1, SH1, lo), {"north": F("side"), "up": F("top")}),
+        box("shell_upper_back", (x0, hi, hi), (x1, SH1, SH1), {"south": F("side"), "up": F("top")}),
+        box("core", (x0, CORE0, CORE0), (x1, CORE1, CORE1), {
+            "north": F("side"), "south": F("side"), "up": F("top"), "down": F("top")}),
+        box("sill_front_floor", (x0, lo, SH0), (x1, lo, CORE0), {"up": F("side", mouth_lo)}),
+        box("sill_front_ceiling", (x0, hi, SH0), (x1, hi, CORE0), {"down": F("side", mouth_hi)}),
+        box("sill_back_floor", (x0, lo, CORE1), (x1, lo, SH1), {"up": F("side", mouth_hi)}),
+        box("sill_back_ceiling", (x0, hi, CORE1), (x1, hi, SH1), {"down": F("side", mouth_lo)}),
+        box("sill_top_front", (x0, CORE1, lo), (x1, SH1, lo), {"south": F("top", mouth_hi)}),
+        box("sill_top_back", (x0, CORE1, hi), (x1, SH1, hi), {"north": F("top", mouth_hi)}),
+        box("sill_bottom_front", (x0, SH0, lo), (x1, CORE0, lo), {"south": F("top", mouth_lo)}),
+        box("sill_bottom_back", (x0, SH0, hi), (x1, CORE0, hi), {"north": F("top", mouth_lo)}),
     ]
 
 
@@ -440,7 +464,7 @@ def bottom_nozzle(tex):
     collar = drop_faces(ring_y("port", 0, 2, NK0, NK1, tex), ["up"])
     for el in collar:
         el["faces"]["down"]["cull"] = "down"
-    # dark bore back just below the shell's underside, so the green paint never shows in the hole
+    # dark bore back just below the shell's underside, so the shell plate never shows in the hole
     ceiling = box("port_bore_ceiling", (BR0, BORE_CEILING_Y, BR0), (BR1, BORE_CEILING_Y, BR1), {"down": F(tex)})
     return collar + [ceiling]
 

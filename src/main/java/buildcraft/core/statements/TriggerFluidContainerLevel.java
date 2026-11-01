@@ -7,6 +7,10 @@ package buildcraft.core.statements;
 
 import java.util.Locale;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
@@ -58,12 +62,10 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
 
     //? if >=1.21.10 {
     @Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (tile == null || tile.getLevel() == null) {
-            return false;
-        }
-        ResourceHandler<FluidResource> handler = tile.getLevel().getCapability(
-            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        ResourceHandler<FluidResource> handler = level.getCapability(
+            Capabilities.Fluid.BLOCK, pos, side != null ? side.getOpposite() : null
         );
         if (handler == null) {
             return false;
@@ -91,8 +93,9 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
                 if (searchedFluid.isEmpty()) {
                     return true; // Empty tank is certainly below threshold
                 }
+                // An unbounded, uncommitted probe (see TriggerFluidContainer): a cauldron refuses a 1 mB one.
                 try (Transaction tx = Transaction.openRoot()) {
-                    if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                    if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
                         return true;
                     }
                 }
@@ -107,12 +110,10 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
     }
     //?} else {
     /*@Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (tile == null || tile.getLevel() == null) {
-            return false;
-        }
-        IFluidHandler handler = tile.getLevel().getCapability(
-            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        IFluidHandler handler = level.getCapability(
+            Capabilities.FluidHandler.BLOCK, pos, side != null ? side.getOpposite() : null
         );
         if (handler == null) {
             return false;
@@ -140,8 +141,9 @@ public class TriggerFluidContainerLevel extends AbstractContainerLevelTrigger {
                 if (searchedFluid.isEmpty()) {
                     return true; // Empty tank is certainly below threshold
                 }
+                // An unbounded, uncommitted probe (see TriggerFluidContainer): a cauldron refuses a 1 mB one.
                 FluidStack probe = searchedFluid.copy();
-                probe.setAmount(1);
+                probe.setAmount(Integer.MAX_VALUE);
                 if (handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0) {
                     return true;
                 }

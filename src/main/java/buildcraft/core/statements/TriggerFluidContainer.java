@@ -7,6 +7,10 @@ package buildcraft.core.statements;
 
 import java.util.Locale;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
@@ -51,13 +55,10 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
 
     //? if >=1.21.10 {
     @Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (tile == null || tile.getLevel() == null) {
-            return false;
-        }
-
-        ResourceHandler<FluidResource> handler = tile.getLevel().getCapability(
-            Capabilities.Fluid.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        ResourceHandler<FluidResource> handler = level.getCapability(
+            Capabilities.Fluid.BLOCK, pos, side != null ? side.getOpposite() : null
         );
 
         if (handler == null) {
@@ -107,9 +108,11 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                     }
                     return false;
                 }
+                // Probe with an unbounded amount, never committed: a cauldron takes fluid only in whole steps, so a
+                // 1 mB probe always failed and a filtered SPACE read false (and FULL true) on an empty one.
                 try (Transaction tx = Transaction.openRoot()) {
                     for (int i = 0; i < tanks; i++) {
-                        if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
                             return true;
                         }
                     }
@@ -129,7 +132,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                 }
                 try (Transaction tx = Transaction.openRoot()) {
                     for (int i = 0; i < tanks; i++) {
-                        if (handler.insert(i, searchedFluid, 1, tx) > 0) {
+                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
                             return false;
                         }
                     }
@@ -141,13 +144,10 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
     }
     //?} else {
     /*@Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        if (tile == null || tile.getLevel() == null) {
-            return false;
-        }
-
-        IFluidHandler handler = tile.getLevel().getCapability(
-            Capabilities.FluidHandler.BLOCK, tile.getBlockPos(), side != null ? side.getOpposite() : null
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer statementContainer, IStatementParameter[] parameters) {
+        IFluidHandler handler = level.getCapability(
+            Capabilities.FluidHandler.BLOCK, pos, side != null ? side.getOpposite() : null
         );
 
         if (handler == null) {
@@ -197,8 +197,10 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                     }
                     return false;
                 }
+                // Probe with an unbounded amount, never committed: a cauldron takes fluid only in whole steps, so a
+                // 1 mB probe always failed and a filtered SPACE read false (and FULL true) on an empty one.
                 FluidStack probe = searchedFluid.copy();
-                probe.setAmount(1);
+                probe.setAmount(Integer.MAX_VALUE);
                 return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) > 0;
             }
             case FULL: {
@@ -213,7 +215,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                     return true;
                 }
                 FluidStack probe = searchedFluid.copy();
-                probe.setAmount(1);
+                probe.setAmount(Integer.MAX_VALUE);
                 return handler.fill(probe, IFluidHandler.FluidAction.SIMULATE) <= 0;
             }
         }

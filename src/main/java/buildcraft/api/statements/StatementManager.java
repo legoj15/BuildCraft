@@ -14,8 +14,12 @@ import java.util.Map;
 
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 public final class StatementManager {
 
@@ -76,7 +80,23 @@ public final class StatementManager {
         paramsBuf.put(name, reader);
     }
 
-    public static List<ITriggerExternal> getExternalTriggers(Direction side, BlockEntity entity) {
+    /** The triggers a gate on {@code container} offers for its neighbour on {@code side}: a block entity, or a block
+     * with none that still exposes a capability. An unloaded neighbour offers nothing. */
+    public static List<ITriggerExternal> getExternalTriggers(IStatementContainer container, Direction side) {
+        BlockEntity self = container.getTile();
+        Level level = self == null ? null : self.getLevel();
+        if (level == null) {
+            return new ArrayList<>();
+        }
+        BlockPos pos = self.getBlockPos().relative(side);
+        if (!level.isLoaded(pos)) {
+            return new ArrayList<>();
+        }
+        return getExternalTriggers(side, level, pos, container.getNeighbourTile(side));
+    }
+
+    public static List<ITriggerExternal> getExternalTriggers(Direction side, Level level, BlockPos pos,
+        @Nullable BlockEntity entity) {
         if (entity instanceof IOverrideDefaultStatements) {
             List<ITriggerExternal> result = ((IOverrideDefaultStatements) entity).overrideTriggers();
             if (result != null) {
@@ -87,7 +107,7 @@ public final class StatementManager {
         LinkedHashSet<ITriggerExternal> triggers = new LinkedHashSet<>();
 
         for (ITriggerProvider provider : triggerProviders) {
-            provider.addExternalTriggers(triggers, side, entity);
+            provider.addExternalTriggers(triggers, side, level, pos, entity);
         }
 
         return new ArrayList<>(triggers);

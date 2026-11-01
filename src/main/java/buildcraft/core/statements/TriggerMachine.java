@@ -5,6 +5,10 @@
  */
 package buildcraft.core.statements;
 
+import javax.annotation.Nullable;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
@@ -39,7 +43,8 @@ public class TriggerMachine extends BCStatement implements ITriggerExternal {
     }
 
     @Override
-    public boolean isTriggerActive(BlockEntity tile, Direction side, IStatementContainer container, IStatementParameter[] parameters) {
+    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
+        IStatementContainer container, IStatementParameter[] parameters) {
         if (tile instanceof IHasWork hasWork) {
             return hasWork.hasWork() == active;
         }

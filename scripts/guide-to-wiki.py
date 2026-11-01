@@ -475,7 +475,7 @@ def write_home(entries):
 
 def write_footer():
     (OUT / "_Footer.md").write_text(
-        "<sub>BuildCraft (Unofficial) for NeoForge · "
+        "<sub>BuildCraft Redux for NeoForge · "
         "[Repository](https://github.com/legoj15/BuildCraft) · "
         "Generated from the in-game Guide Book.</sub>\n", encoding="utf-8")
 

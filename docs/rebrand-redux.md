@@ -31,7 +31,7 @@ and the `SpaceToad && BuildCraftUnofficial` check at `CopyrightHeaderTester.java
 | `lang/en_us.json:105` `buildcraft.guide.chapter.submod.unofficial` | "Unofficial" | "Redux" — the Guide Book's Sort-by-System chapter label for entries in the root namespace. Keep the key; `zh_cn.json:213` ("非官方") gets a matching value |
 | `scripts/guide-to-wiki.py:478` | wiki footer "BuildCraft (Unofficial) for NeoForge" | "BuildCraft Redux for NeoForge", then regenerate the wiki |
 | `build.gradle.kts:446` `archiveBaseName` | `BCunofficial` | `BuildCraftRedux` (jar: `BuildCraftRedux-2026.3.0+mc26.3.jar`) |
-| `README.md` | title `BuildCraft **UNOFFICIAL**`, jar name, Modrinth/CF links and Maven coordinates | new title; jar name; Maven coordinate switches to the stable Modrinth project id `cg00eho3` (a slug change breaks `maven.modrinth:buildcraft-unofficial`); `curse.maven` only reads the numeric id, the slug half is cosmetic |
+| `README.md` | title `BuildCraft **UNOFFICIAL**`, jar name, Modrinth/CF links and Maven coordinates | new title; jar name. Store links and Maven coordinates keep the old slugs (user decision 2026-10-31: slugs and URLs stay) |
 | `AGENTS.md:1` | "BuildCraft Unofficial" is a NeoForge port… | "BuildCraft Redux" (formerly BuildCraft Unofficial) …; note the id stays `buildcraftunofficial` on purpose |
 | `changelog.md` | — | one player-facing line: renamed to BuildCraft Redux; existing worlds/configs unaffected; manual installs delete the old `BCunofficial-*.jar` |
 | `docs/*.md` (8 hits) | historical design docs | leave — they record what was true when written |
@@ -46,7 +46,6 @@ app, Prism) replace the file themselves.
 ## Gitignored tooling (main checkout, not in this tree)
 
 - `release/modules/BcRelease.psm1:157` jar path `BCunofficial-$Version+mc…` → new base name.
-- `release/config/release.json` — `projectSlug` for both sites if the slugs change (ids stay).
 - `deploy/Invoke-Deploy.ps1:14,92,153,455` — jar name and the old-jar cleanup glob. The cleanup must
   match **both** `BCunofficial*.jar` and `BuildCraftRedux*.jar` for at least one release, or Server1 ends
   up with both jars and refuses to boot.
@@ -68,7 +67,7 @@ Both pages are currently ~10 lines, say "port of 8.0.0" (stale since robots came
 | Field | Modrinth (`cg00eho3`) | CurseForge (`1499367`) |
 |---|---|---|
 | Title | BuildCraft Redux | BuildCraft Redux |
-| Slug | `buildcraft-redux` is free (checked 2026-10-31). Changing it kills the old URL: update README + release.json the same day | verify in project settings whether the author can change it; if not, leave `buildcraft-unofficial` — the URL is invisible in-app |
+| Slug | stays `buildcraft-unofficial` (user decision 2026-10-31) | stays `buildcraft-unofficial` |
 | Summary | draft's one-liner (≤256 chars) | same, check CF's summary length limit |
 | Body | paste draft; Modrinth Markdown | paste draft into the Markdown editor mode |
 | Images in body | host in-repo (`docs/store/img/`, served via raw.githubusercontent) so one Markdown works on both; sources in `build/screenshots/2026-10-19/` (2560×1440) | same |

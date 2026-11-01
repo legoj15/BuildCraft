@@ -443,7 +443,7 @@ tasks.processResources {
 
 // ─── Distribution JAR ────────────────────────────────────────────────────────
 tasks.jar {
-    archiveBaseName = "BCunofficial"
+    archiveBaseName = "BuildCraftRedux"
     // Axis A (mod_version, CalVer) + Axis B (minecraft_version) as a SemVer build-metadata tag.
     // The +mc<mc> coordinate lives ONLY in the jar filename — never in the mods.toml version —
     // because NeoForge orders versions Maven-style, where '+...' would corrupt update ordering.

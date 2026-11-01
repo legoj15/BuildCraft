@@ -40,14 +40,14 @@ N #FF5555 north red: face_north's face (gate tooltips' side colours, ColourUtil.
 S #5555FF south blue: face_south's face
 E #FFFF55 east yellow: face_east's face
 W #55FF55 west green: face_west's face
-T #FFFFFF top white: face_up's face (face_down's face is K, the side colour black)
+T #FFFFFF top white: face_up's face (face_down's face is K: 1.12.2's side colour was black, which tooltips show as DARK_GRAY #555555 and which would read as the block tone D in an icon)
 ```
 
 - Nothing outside the block. Every pixel is fully opaque or fully transparent.
 - L, M and D are the only placed-block tones. G never means a block, only "untouched".
 - The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent;
   the axis and face icons are the exceptions: axis edges take the 3D-editor axis colours X, Y and Z, and a
-  face takes the colour gate tooltips give that side (N, S, E, W, T, and K for the bottom). X is
+  face takes the colour gate tooltips give that side (N, S, E, W, T; the bottom is K, not the tooltip's dark grey). X is
   Blender's pink-leaning red, kept apart from the accent's orange-red so it does not read as removal.
 - The accent ramp is darker than the grey ramp at every step (luma 167/116/75 against 230/179/110), so Clear and
   Fill still differ in greyscale and for red-blind players.
@@ -259,7 +259,7 @@ Parameters: the selected element is L; the frame or structure around it is K; se
 - Hollow family: the dotted square is the whole area; DISC10 shows what is filled.
 - Y direction: a side-elevation staircase; ascending the right way up, descending upside down.
 
-No letters anywhere. Every meaning above is carried by shape, position or tone; the tooltip names it.
+No letters except the face icons' side letters. Every other meaning is carried by shape, position or tone; the tooltip names it.
 
 ## Patterns
 

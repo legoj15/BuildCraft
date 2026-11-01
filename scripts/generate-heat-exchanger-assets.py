@@ -263,7 +263,7 @@ TEXTURE_PAINTERS = {
 
 
 def write_png(px, path):
-    """Minimal deterministic RGBA PNG writer (no Pillow needed)."""
+    """Minimal RGBA PNG writer (no Pillow needed). Pixel-deterministic; the bytes follow the local zlib build, so a regeneration on another machine can rewrite unchanged PNGs."""
     raw = b"".join(b"\x00" + bytes(v for (r, g, b) in row for v in (r, g, b, 255)) for row in px)
 
     def chunk(tag, data):

@@ -12,8 +12,30 @@
    "do": "cmd",
    "run": [
     "gamemode creative @p",
-    "tp @p {X+8} {Y+2} {Z-6}",
+    "tp @p {X+8} {Y+2} {Z-6}"
+   ]
+  },
+  {
+   "label": "hover in place (1.21.1 names the attribute generic.gravity)",
+   "do": "cmd",
+   "run": [
     "attribute @p minecraft:gravity base set 0"
+   ],
+   "nodes": [
+    "26.3",
+    "26.2",
+    "26.1.2",
+    "1.21.11",
+    "1.21.10"
+   ]
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "attribute @p minecraft:generic.gravity base set 0"
+   ],
+   "nodes": [
+    "1.21.1"
    ]
   },
   {
@@ -333,6 +355,22 @@
    "do": "cmd",
    "run": [
     "attribute @p minecraft:gravity base reset"
+   ],
+   "nodes": [
+    "26.3",
+    "26.2",
+    "26.1.2",
+    "1.21.11",
+    "1.21.10"
+   ]
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "attribute @p minecraft:generic.gravity base reset"
+   ],
+   "nodes": [
+    "1.21.1"
    ]
   }
  ]

@@ -2,11 +2,9 @@ package buildcraft.silicon.gate;
 
 import java.util.List;
 
-import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.statements.IStatement;
 
 import buildcraft.lib.gui.ISimpleDrawable;
-import buildcraft.lib.misc.ColourUtil;
 import buildcraft.lib.statement.StatementContext;
 
 public class GateContext<T extends IStatement> implements StatementContext<T> {
@@ -23,11 +21,9 @@ public class GateContext<T extends IStatement> implements StatementContext<T> {
     }
 
     public static class GateGroup<T extends IStatement> implements StatementGroup<T> {
-        public final EnumPipePart part;
         public final List<T> statements;
 
-        public GateGroup(EnumPipePart part, List<T> statements) {
-            this.part = part;
+        public GateGroup(List<T> statements) {
             this.statements = statements;
         }
 
@@ -39,14 +35,6 @@ public class GateContext<T extends IStatement> implements StatementContext<T> {
         @Override
         public ISimpleDrawable getSourceIcon() {
             return null;
-        }
-
-        @Override
-        public int getLedgerColour() {
-            if (part == EnumPipePart.CENTER) {
-                return 0;
-            }
-            return ColourUtil.getColourForSide(part.face);
         }
     }
 }

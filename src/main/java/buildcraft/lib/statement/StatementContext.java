@@ -23,10 +23,5 @@ public interface StatementContext<S extends IGuiSlot> {
          *         a source. */
         @Nullable
         ISimpleDrawable getSourceIcon();
-
-        /** @return The colour for the ledger (Must include alpha), or 0 if this shouldn't have a colour. */
-        default int getLedgerColour() {
-            return 0;
-        }
     }
 }

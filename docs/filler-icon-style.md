@@ -33,11 +33,16 @@ G #C8C8C8 ghost: dotted outline of space the pattern leaves alone (None, sphere-
 a #F58A6E accent light: Clear and Flatten, top face
 A #DD4B32 accent mid: Clear and Flatten, left face
 B #9C2B1E accent dark: Clear and Flatten, right face
+X #FF3352 axis red: the highlighted edges of axis_x (Blender's X)
+Y #8BDC00 axis green: the highlighted edges of axis_y (Blender's Y)
+Z #2890FF axis blue: the highlighted edges of axis_z (Blender's Z)
 ```
 
 - Nothing outside the block. Every pixel is fully opaque or fully transparent.
 - L, M and D are the only placed-block tones. G never means a block, only "untouched".
-- The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent.
+- The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent;
+  the axis icons are the one exception, their selected edges taking the 3D-editor axis colours X, Y and Z. X is
+  Blender's pink-leaning red, kept apart from the accent's orange-red so it does not read as removal.
 - The accent ramp is darker than the grey ramp at every step (luma 167/116/75 against 230/179/110), so Clear and
   Fill still differ in greyscale and for red-blind players.
 
@@ -240,7 +245,7 @@ flat side south, arc centred on the south-east corner and bulging north-west.
 
 Parameters: the selected element is L; the frame or structure around it is K; secondary hints are D.
 - Face: glass cube, the named face is the only filled region.
-- Axis: glass cube, the four edges parallel to the axis are L.
+- Axis: glass cube, the four edges parallel to the axis are in that axis's colour (X, Y or Z), not L.
 - XZ direction: a top-down arrow.
 - Centre: a 3x3 grid, the chosen cell solid.
 - Rotation: a clock face, L wedge clockwise from 12 o'clock, one quarter per step.
@@ -283,9 +288,9 @@ No letters anywhere. Every meaning above is carried by shape, position or tone; 
 | `arrow_down` | South | draw | `arrow_up` mirrored top to bottom (y -> 15 - y). |
 | `arrow_left` | West | draw | `arrow_up` transposed (x <-> y). |
 | `arrow_right` | East | draw | `arrow_left` mirrored left to right (x -> 15 - x). |
-| `axis_x` | X Axis | draw | Glass cube (OUT with region tags transparent and `+` -> D, plus INS `+` -> D), then L on the four east-west edges: 2px pairs stepping +2 x per row, four pairs each, starting at (7,1), (1,4), (7,8) and (1,11). |
-| `axis_y` | Y Axis | draw | Same glass cube, then L on x = 1 and x = 14 for rows 4-11 and on x = 7,8 for rows 1-14. |
-| `axis_z` | Z Axis | draw | `axis_x` mirrored left to right. |
+| `axis_x` | X Axis | draw | Glass cube (OUT with region tags transparent and `+` -> D, plus INS `+` -> D), then X on the four east-west edges: 2px pairs stepping +2 x per row, four pairs each, starting at (7,1), (1,4), (7,8) and (1,11). |
+| `axis_y` | Y Axis | draw | Same glass cube, then Y on x = 1 and x = 14 for rows 4-11 and on x = 7,8 for rows 1-14. |
+| `axis_z` | Z Axis | draw | `axis_x` mirrored left to right, its X pixels in Z. |
 | `center_0` | North-west (`center_i` = enum ordinal, reading order) | draw | K square ring on x, y = 1..14, no fill. Cells are 4x4 with origins x, y in {2, 6, 10}; cell i sits at column i % 3, row i / 3. Cell i is solid L; every other cell gets a 2x2 D dot at its origin + (1,1). Here cell 0, top left. |
 | `center_1` | North | draw | As `center_0`, cell 1 lit (top middle). |
 | `center_2` | North-east | draw | As `center_0`, cell 2 lit (top right). |

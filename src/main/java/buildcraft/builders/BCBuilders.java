@@ -41,6 +41,7 @@ public class BCBuilders {
         BCBuildersBlockEntities.init(modEventBus);
         BCBuildersEntities.init(modEventBus);
         BCBuildersMenuTypes.init(modEventBus);
+        BCBuildersFeatures.init(modEventBus);
 
         modEventBus.addListener((FMLCommonSetupEvent event) -> {
             BCBuildersRecipes.init();

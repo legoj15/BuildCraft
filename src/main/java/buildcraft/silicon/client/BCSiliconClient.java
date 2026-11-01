@@ -133,7 +133,6 @@ public class BCSiliconClient {
         // joined-cache layer above PlugGateBaker and render UNDERNEATH the BER, producing dim
         // gates that look like the BER is broken when the actual issue is stale chunk geometry.
         buildcraft.transport.client.model.PipeModelCacheAll.clearModels();
-        buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.onModelBake();
 
         // Cache the blockstate models for deferred facade deduplication.
         // We can't run dedup here because ItemStack components aren't bound yet
@@ -228,6 +227,7 @@ public class BCSiliconClient {
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCSiliconClient.class);
+        buildcraft.silicon.client.model.plug.PlugBakerSimpleItems.init();
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(buildcraft.silicon.client.RenderLaser.class);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(GameBus.class);
     }

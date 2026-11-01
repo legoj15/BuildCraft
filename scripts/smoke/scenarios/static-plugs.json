@@ -1,0 +1,181 @@
+{
+  "name": "static-plugs",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        4
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "label": "rig: five pipes, each with one static plug type on south, up and east",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "time set day",
+        "fill {X-6} {Y-1} {Z-2} {X+6} {Y-1} {Z+6} minecraft:stone",
+        "fill {X-6} {Y} {Z-2} {X+6} {Y+3} {Z+1} minecraft:air",
+        "setblock {X-4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:timer\",data:{}},up:{id:\"buildcraftunofficial:timer\",data:{}},east:{id:\"buildcraftunofficial:timer\",data:{}}}}",
+        "setblock {X-2} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-2} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:light_sensor\",data:{}},up:{id:\"buildcraftunofficial:light_sensor\",data:{}},east:{id:\"buildcraftunofficial:light_sensor\",data:{}}}}",
+        "setblock {X} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_power\"},plugs:{south:{id:\"buildcraftunofficial:pulsar\",data:{}},up:{id:\"buildcraftunofficial:pulsar\",data:{}},east:{id:\"buildcraftunofficial:pulsar\",data:{}}}}",
+        "setblock {X+2} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+2} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:blocker\",data:{}},up:{id:\"buildcraftunofficial:blocker\",data:{}},east:{id:\"buildcraftunofficial:blocker\",data:{}}}}",
+        "setblock {X+4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_power\"},plugs:{south:{id:\"buildcraftunofficial:power_adaptor\",data:{}},up:{id:\"buildcraftunofficial:power_adaptor\",data:{}},east:{id:\"buildcraftunofficial:power_adaptor\",data:{}}}}"
+      ]
+    },
+    {
+      "do": "cmd",
+      "run": [
+        "gamemode spectator @p"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        -3,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        -4,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "timer",
+      "look": "timer plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    },
+    {
+      "do": "tp",
+      "at": [
+        -1,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        -2,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "light-sensor",
+      "look": "light-sensor plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    },
+    {
+      "do": "tp",
+      "at": [
+        1,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "pulsar",
+      "look": "pulsar plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    },
+    {
+      "do": "tp",
+      "at": [
+        3,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        2,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "blocker",
+      "look": "blocker plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    },
+    {
+      "do": "tp",
+      "at": [
+        5,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        4,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "power-adaptor",
+      "look": "power-adaptor plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    }
+  ]
+}

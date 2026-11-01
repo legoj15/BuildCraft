@@ -177,6 +177,12 @@ public class EntityRobotTester {
 
         helper.assertTrue(a.getRobotId() == EntityRobotBase.NULL_ROBOT_ID,
                 "precondition: a robot that has not ticked yet still carries the NULL_ROBOT_ID sentinel");
+        // The Robot Goggles view is client-only: on this server level the robot must neither glow nor take the
+        // charge outline colour. Without the isClientSide guard the call would reach the client-only helper, and
+        // Minecraft.getInstance() is null on a server, so it would throw.
+        helper.assertTrue(!a.isCurrentlyGlowing() && a.getTeamColor() == 0xFFFFFF,
+                "a server-side robot must report no goggles outline: glowing " + a.isCurrentlyGlowing()
+                        + ", team colour " + Integer.toHexString(a.getTeamColor()));
 
         EntityArenaUtil.tickUntil(helper, EntityArenaUtil.CELL_READY_TICKS + REGISTER_WORK_TICKS,
                 EntityArenaUtil.whenCellTicking(helper, EntityArenaUtil.CELL_READY_TICKS, REGISTER_WORK_TICKS,

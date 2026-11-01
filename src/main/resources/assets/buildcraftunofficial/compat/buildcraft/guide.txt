@@ -411,6 +411,7 @@ chipset "silicon" "chipset_quartz"
 concept "robots" "robot" "robots" "-10"
 item_typed "robots" "robot" "robot" "buildcraftunofficial:robot"
 item_typed "robots" "robot" "redstone_board" "buildcraftunofficial:redstone_board"
+item_typed "robots" "robot" "goggles" "buildcraftunofficial:goggles"
 block "robots" "robot" "programming_table"
 block "robots" "robot" "zone_planner"
 

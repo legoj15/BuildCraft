@@ -51,10 +51,6 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCLibItems.DEBUGGER.get());
                                 // Power Tester — MJ sink; handy next to an engine in creative
                                 output.accept(BCCoreItems.POWER_TESTER.get());
-                                // Dev-only Goggles (only when launched with -Dbuildcraft.dev=true)
-                                if (BCCoreItems.GOGGLES != null) {
-                                    output.accept(BCCoreItems.GOGGLES.get());
-                                }
                                 // Water Spring
                                 output.accept(BCCoreItems.SPRING_WATER.get());
                                 // Oil Spring

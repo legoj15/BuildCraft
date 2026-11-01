@@ -2,7 +2,7 @@
 navigation:
   title: "Request Items"
   parent: contents/robots/station.md
-  position: 42
+  position: 43
 ---
 
 # Request Items

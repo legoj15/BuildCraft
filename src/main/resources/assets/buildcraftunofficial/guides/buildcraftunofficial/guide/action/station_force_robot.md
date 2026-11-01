@@ -2,7 +2,7 @@
 navigation:
   title: "Force Robot"
   parent: contents/robots/station.md
-  position: 39
+  position: 40
 ---
 
 # Force Robot

@@ -2,7 +2,7 @@
 navigation:
   title: "Robot In Station"
   parent: contents/robots/robot.md
-  position: 10
+  position: 11
 ---
 
 # Robot In Station

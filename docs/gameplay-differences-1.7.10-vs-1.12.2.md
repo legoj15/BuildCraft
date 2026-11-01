@@ -289,8 +289,11 @@ Tanks (16 buckets, stack in displays), Flood Gate, Chute, Filtered Buffer, Minin
 shaft), Auto Workbench, Advanced Crafting Table, Assembly Table + Laser (chipsets 10/20/40/60/80
 MJ both eras), Land Marks + Path Marks, Wrench, Gears (still craft-chain items, still used in a
 handful of recipes), Paintbrush, **List** item (already in 7.1.x — not a BC8 invention), Map
-Location, Debugger. **Goggles never shipped in any era** (dev-only in 1.12.2/port, absent from
-7.1.x entirely).
+Location, Debugger. **Goggles never shipped in a release of any era** (an unfinished dev-only item in
+1.12.2, absent from 7.1.x entirely); this port finished them (issue #79): a craftable, head-slot item on
+every node whose wearer sees robots outlined through walls, red to green by charge (the 7.2.x
+see-through mode, done with vanilla's glowing outline), and the cells a stalled Builder is skipping. The
+worn model and real icon are still open (issue #45).
 
 Oil worldgen is recognisably the same in all three: oil-desert/oil-ocean biomes, small/medium/
 large lakes, tall spouts, and a regenerating **Oil Spring under large lakes** (25 % in 7.1.x,

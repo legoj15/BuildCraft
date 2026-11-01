@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "ICI",
+    "G G"
+  ],
+  "key": {
+    "I": "#c:ingots/iron",
+    "C": "buildcraftunofficial:chipset_redstone",
+    "G": "#c:glass_panes/colorless"
+  },
+  "result": {
+    "id": "buildcraftunofficial:goggles"
+  }
+}

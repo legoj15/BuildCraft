@@ -32,7 +32,7 @@ public class BCRoboticsCreativeTabs {
                     Identifier.fromNamespaceAndPath(BCRobotics.MODID, "robots"));
 
     // 7.1.10's "BuildCraft Robots" tab held exactly robots, the robot station and the redstone
-    // boards, in that order; the zone planner stayed on the main tab there by constructor accident
+    // boards, in that order (this port adds the Robot Goggles after the station); the zone planner stayed on the main tab there by constructor accident
     // and was moved here deliberately. The icon is the EMPTY board: upstream set a bare board stack
     // and its icon code resolved that through the registry to the empty board's clean chip — a
     // data-less stack here would instead fall through the icon dispatch to the 1.12.2-line fallback
@@ -77,6 +77,9 @@ public class BCRoboticsCreativeTabs {
                                 }
                                 // Docking Station — 7.1.10 showed it only on this tab, never Pluggables
                                 output.accept(BCRoboticsItems.ROBOT_STATION.get());
+                                // Robot Goggles — a core item (7.2.x put them on the main tab), but all they
+                                // show is robots, so they sit with the robot items, before the boards.
+                                output.accept(buildcraft.core.BCCoreItems.GOGGLES.get());
                                 // Redstone Boards: the empty board, then each board as its own item
                                 // (what the Ph7 programming table will consume). Skipped entirely in
                                 // the bare-stack fallback above, matching the old main-tab loop.

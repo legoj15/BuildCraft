@@ -2,7 +2,7 @@
 navigation:
   title: "Tank Board"
   parent: contents/robots/board.md
-  position: 33
+  position: 34
   icon: buildcraftunofficial:redstone_board
 ---
 

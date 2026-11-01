@@ -6,7 +6,6 @@
 
 package buildcraft.builders.client.render;
 
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 
 import buildcraft.lib.client.render.MarkerRenderer;
@@ -26,13 +25,11 @@ public final class StallHighlights {
 
     /**
      * Whether {@code player} sees the stalled-cell outlines: while a Marker Wrench or Volume Wrench is in either hand
-     * (the tools that already show the build's volumes), or BC Goggles are worn on the head. The one place that says
-     * so: render code asks it and nothing else, so a change to who sees them (Goggles becoming wearable, a new tool)
-     * is a change here.
+     * (the tools that already show the build's volumes), or Robot Goggles are worn on the head. The one place that
+     * says so: render code asks it and nothing else, so a change to who sees them (a new tool) is a change here.
      */
     public static boolean canSee(Player player) {
-        return MarkerRenderer.isHoldingMarkerWrench(player)
-            || player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ItemGoggles;
+        return MarkerRenderer.isHoldingMarkerWrench(player) || ItemGoggles.isWornBy(player);
     }
 
     /** {@link #canSee} for the local player. Here and not in the caller so the caller never names LocalPlayer: it is

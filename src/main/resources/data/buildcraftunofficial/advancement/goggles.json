@@ -1,0 +1,16 @@
+{
+  "display": {
+    "icon": { "id": "buildcraftunofficial:goggles" },
+    "title": { "translate": "advancements.buildcraftunofficial.goggles.title" },
+    "description": { "translate": "advancements.buildcraftunofficial.goggles.description" }
+  },
+  "parent": "buildcraftunofficial:precision_crafting",
+  "criteria": {
+    "has_goggles": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [{ "items": "buildcraftunofficial:goggles" }]
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
 navigation:
   title: "Forbid Robot"
   parent: contents/robots/station.md
-  position: 38
+  position: 39
 ---
 
 # Forbid Robot

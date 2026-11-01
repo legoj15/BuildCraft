@@ -344,7 +344,14 @@ each frame; a PATTERN, not a signature template — the entity path uses
 `context.getItemModelResolver()`); aim-pitch rotation + the 45°-cycle active spin driven from
 tickCount+partialTick, NOT the 7.1.x wall-clock-mutated-from-renderer hack. Four inventory slots as
 small floating items at the cube corners (±0.125 x/z, +0.28 y, 0.5 scale). Goggles see-through
-charge mode (8.0.x feature): deferred with the goggles-art todo.
+charge mode (the 7.2.x feature, inherited by 8.0.x): done in issue #79 with vanilla's glowing outline
+instead of a colour pass of the renderer's own. `EntityRobot` reports `isCurrentlyGlowing()` / `getTeamColor()`
+while the local player wears Robot Goggles (client only, via `RobotGogglesView`; the red-to-green ramp is
+`RobotChargeView`), so the outline colour and its through-walls drawing come from vanilla. On the
+render-state nodes the renderer must also queue geometry that vanilla's outline pass can take (custom
+geometry cannot be outlined there): the robot's items are submitted with the state's outline colour and the
+cube is submitted once more as a model part (see "Goggles outline" in `RenderRobot`). 1.21.1's classic
+renderer needs nothing: its buffer source is already outline-aware.
 
 **RobotRenderState extends EntityRenderState**: only ADD fields. Full inherited-field shadow-hazard
 set (both gens): entityType, x, y, z, ageInTicks, boundingBoxWidth/Height, eyeHeight,

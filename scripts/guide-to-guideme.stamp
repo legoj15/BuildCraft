@@ -1,6 +1,6 @@
 # Written by scripts/guide-to-guideme.py; GuideMeExportStalenessTest checks it. Do not edit.
-inputs 25bb871d2993f257d1049042665ebf85efb32f5dd0385f09356f674c089ac158
-outputs a223c99f3c0ecfde200ed7789baecf89823686b07b959547dc0870e16250a657
+inputs d76ec30ed0731f23cdb5514873078123e637a9ef2e240a2969686261490d6c96
+outputs 6e732ef45d02cddcce862a6cb93aefba879ebb8f5484df8f66e8af9134664f2e
 lang 10
 lang 15
 lang 5
@@ -155,6 +155,7 @@ lang item.buildcraftunofficial.gear_iron
 lang item.buildcraftunofficial.gear_stone
 lang item.buildcraftunofficial.gear_wood
 lang item.buildcraftunofficial.gelled_water
+lang item.buildcraftunofficial.goggles
 lang item.buildcraftunofficial.guide
 lang item.buildcraftunofficial.list
 lang item.buildcraftunofficial.marker_wrench

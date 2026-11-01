@@ -2,7 +2,7 @@
 navigation:
   title: "Planter Board"
   parent: contents/robots/board.md
-  position: 29
+  position: 30
   icon: buildcraftunofficial:redstone_board
 ---
 

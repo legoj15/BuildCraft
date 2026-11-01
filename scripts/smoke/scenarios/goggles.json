@@ -1,0 +1,183 @@
+{
+  "name": "goggles",
+  "description": "Robot Goggles (issue #79): robots outlined through a wall, red (empty) to green (full) by charge, only while the goggles are on the head. Three robots with 0, half and full batteries stand behind a three-thick stone wall, one more stands in the open to the side and is shot close up, to check its body is not washed out. The outline is vanilla's glowing pass, so what to check per node is that it shows at all (the render-state nodes draw the cube through a model part, 1.21.1 through the outline-aware buffer source) and that its colour tracks the charge.",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "label": "stand in the rig's chunks first (a fresh world has them unloaded)",
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 0
+    },
+    {
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 3000
+    },
+    {
+      "label": "clear leftovers, floor, wall",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..60]",
+        "fill {X-8} {Y} {Z-2} {X+8} {Y+8} {Z+14} minecraft:air",
+        "fill {X-8} {Y-1} {Z-2} {X+8} {Y-1} {Z+14} minecraft:stone",
+        "fill {X-8} {Y} {Z+4} {X+8} {Y+6} {Z+6} minecraft:stone",
+        "item replace entity @p armor.head with minecraft:air"
+      ]
+    },
+    {
+      "label": "robots: empty, half and full behind the wall, one in the open",
+      "do": "cmd",
+      "run": [
+        "summon buildcraftunofficial:robot {X-3}.5 {Y+2} {Z+9}.5 {battery:{stored:0L},NoGravity:1b}",
+        "summon buildcraftunofficial:robot {X}.5 {Y+2} {Z+9}.5 {battery:{stored:5000000000L},NoGravity:1b}",
+        "summon buildcraftunofficial:robot {X+3}.5 {Y+2} {Z+9}.5 {battery:{stored:10000000000L},NoGravity:1b}",
+        "summon buildcraftunofficial:robot {X-3}.5 {Y+2} {Z+1}.5 {battery:{stored:7500000000L},NoGravity:1b}"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 0
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "no-goggles",
+      "look": "bare head: the stone wall fills the view and the three robots behind it are NOT visible"
+    },
+    {
+      "label": "put the goggles on the head",
+      "do": "cmd",
+      "run": [
+        "item replace entity @p armor.head with buildcraftunofficial:goggles"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "goggles",
+      "look": "goggles on: the three robots behind the wall are outlined and visible THROUGH it. Left of the three is green (full), the middle olive/dim yellow-green (half), the right red (empty)"
+    },
+    {
+      "do": "look",
+      "yaw": 25,
+      "pitch": 5
+    },
+    {
+      "do": "wait",
+      "ms": 700
+    },
+    {
+      "do": "shot",
+      "name": "goggles-angle",
+      "look": "from an angle the outlines still follow the cubes; colours unchanged"
+    },
+    {
+      "do": "look",
+      "yaw": 72,
+      "pitch": -8
+    },
+    {
+      "do": "wait",
+      "ms": 700
+    },
+    {
+      "do": "shot",
+      "name": "open-robot-goggles",
+      "look": "goggles on, looking at the robot in the open: its body is the normal robot (grey casing, red LED decal on its side) with a coloured outline around it, mostly green; it must NOT be washed out to white"
+    },
+    {
+      "label": "take the goggles off",
+      "do": "cmd",
+      "run": [
+        "item replace entity @p armor.head with minecraft:air"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 1000
+    },
+    {
+      "do": "shot",
+      "name": "open-robot-bare",
+      "look": "bare head, same view: the same robot with no outline and the same body as in the goggles shot"
+    },
+    {
+      "label": "right-click equips: goggles in the hand, head bare (survival: creative copies the stack instead of swapping it)",
+      "do": "cmd",
+      "run": [
+        "gamemode survival @p",
+        "item replace entity @p armor.head with minecraft:air",
+        "item replace entity @p weapon.mainhand with buildcraftunofficial:goggles"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 500
+    },
+    {
+      "do": "use"
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "label": "expect pass: the goggles are now on the head",
+      "do": "cmd",
+      "run": [
+        "execute if items entity @p armor.head buildcraftunofficial:goggles"
+      ],
+      "echo": true
+    },
+    {
+      "label": "expect pass: the hand is empty again (swapped, not copied)",
+      "do": "cmd",
+      "run": [
+        "execute unless items entity @p weapon.mainhand buildcraftunofficial:goggles"
+      ],
+      "echo": true
+    },
+    {
+      "do": "cmd",
+      "run": [
+        "item replace entity @p armor.head with minecraft:air",
+        "gamemode creative @p"
+      ]
+    },
+    {
+      "label": "clean up",
+      "do": "cmd",
+      "run": [
+        "?kill @e[type=buildcraftunofficial:robot,x={X},y={Y},z={Z},distance=..60]"
+      ]
+    }
+  ]
+}

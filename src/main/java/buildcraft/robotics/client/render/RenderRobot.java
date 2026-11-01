@@ -40,9 +40,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.ItemRenderer;*/
 //?}
 
-import buildcraft.api.mj.MjAPI;
-import buildcraft.api.robots.EntityRobotBase;
-
 import buildcraft.core.client.BuildCraftLaserManager;
 import buildcraft.lib.client.model.ModelUtil;
 import buildcraft.lib.client.model.MutableQuad;
@@ -53,6 +50,7 @@ import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.client.render.laser.LaserRenderer_BC8;
 
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.robotics.entity.RobotChargeView;
 
 /**
  * Entity renderer for the robot: one 8&times;8&times;8-unit cube at 1/16 scale, three texture passes over
@@ -228,12 +226,10 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             : BCLibRenderTypes.entityCutoutCull(texture);
     }
 
-    /** Stored charge as a 0..1 fraction. Reads {@code MAX_POWER} rather than hard-coding 10 000 so a
-     *  future capacity re-pin keeps the bar honest. */
+    /** Stored charge as a 0..1 fraction; {@link RobotChargeView} owns the scale, so the charge bar and the
+     *  Goggles outline colour cannot drift apart. */
     private static float chargeFraction(EntityRobot robot) {
-        long maxMj = EntityRobotBase.MAX_POWER / MjAPI.MJ;
-        if (maxMj <= 0) return 0F;
-        return Mth.clamp(robot.getEnergyMj() / (float) maxMj, 0F, 1F);
+        return RobotChargeView.chargeFraction(robot.getEnergyMj());
     }
 
     /** Degrees of extra spin for an actively-used held item, cycling 0..45. */
@@ -430,7 +426,7 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             poseStack.pushPose();
             applySlotTransform(poseStack, slot);
             state.inventory[slot].submit(poseStack, collector, state.lightCoords,
-                OverlayTexture.NO_OVERLAY, 0);
+                OverlayTexture.NO_OVERLAY, state.outlineColor);
             poseStack.popPose();
         }
 
@@ -439,7 +435,7 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             poseStack.pushPose();
             applyWearableTransform(poseStack, i);
             state.wearables[i].submit(poseStack, collector, state.lightCoords,
-                OverlayTexture.NO_OVERLAY, 0);
+                OverlayTexture.NO_OVERLAY, state.outlineColor);
             poseStack.popPose();
         }
 
@@ -447,12 +443,13 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
             poseStack.pushPose();
             applyHeldItemTransform(poseStack, state.aimPitch, state.itemSpin);
             state.heldItem.submit(poseStack, collector, state.lightCoords,
-                OverlayTexture.NO_OVERLAY, 0);
+                OverlayTexture.NO_OVERLAY, state.outlineColor);
             poseStack.popPose();
         }
 
         drawBody(poseStack, collector, state.skin, state.chargeFraction, state.sleeping,
             state.hurtTime, state.lightCoords);
+        submitGogglesOutline(poseStack, collector, state.outlineColor);
 
         poseStack.popPose();
     }
@@ -464,6 +461,83 @@ public class RenderRobot extends EntityRenderer<EntityRobot, RobotRenderState> {
                              int light, float red, float green, float blue, float alpha) {
         ((SubmitNodeCollector) sink).order(order).submitCustomGeometry(poseStack, type,
             (pose, buffer) -> emitCube(pose, buffer, unlit, light, red, green, blue, alpha));
+    }
+
+    // ── Goggles outline ─────────────────────────────────────────────────────
+
+    /** Opaque, so the outline silhouette is the whole cube. Any opaque texture would do: it is sampled for its
+     *  alpha only, and the ordinary pass is either never queued or fully transparent (see
+     *  {@link #submitGogglesOutline}). */
+    private static final Identifier TEX_SILHOUETTE =
+        Identifier.parse("minecraft:textures/block/white_concrete.png");
+
+    /** Fully transparent white, for the nodes whose model-part feature cannot skip the ordinary pass (before 26.2):
+     *  with the blending translucent render type a fragment of alpha 0 leaves the framebuffer as it was. */
+    private static final int INVISIBLE_TINT = 0x00FFFFFF;
+
+    /**
+     * The robot cube as a stock model part (8&times;8&times;8 texels around the origin, the same box as the body),
+     * shared by every robot: it holds no state, and the pose it is drawn with is the submit-time snapshot the
+     * collector hands back.
+     *
+     * <p><b>Why a model part and not the custom geometry the body is drawn with.</b> The glowing outline Robot
+     * Goggles ask for (see {@code EntityRobot#isCurrentlyGlowing}) is drawn by the feature that submits the geometry,
+     * and on the render-state nodes only the model, model-part, item and block features take an outline colour:
+     * {@code submitCustomGeometry} has no such parameter, and from 1.21.10 to 26.1 it renders through the plain
+     * buffer source, with no outline buffer at all. 1.21.1 needs none of this; its {@code MultiBufferSource} is
+     * vanilla's outline-aware wrapper whenever the robot glows.
+     */
+    private static final net.minecraft.client.model.geom.ModelPart SILHOUETTE = bakeSilhouette();
+
+    private static net.minecraft.client.model.geom.ModelPart bakeSilhouette() {
+        net.minecraft.client.model.geom.builders.MeshDefinition mesh =
+            new net.minecraft.client.model.geom.builders.MeshDefinition();
+        mesh.getRoot().addOrReplaceChild("cube",
+            net.minecraft.client.model.geom.builders.CubeListBuilder.create()
+                .texOffs(0, 0).addBox(-4F, -4F, -4F, 8F, 8F, 8F),
+            net.minecraft.client.model.geom.PartPose.ZERO);
+        return net.minecraft.client.model.geom.builders.LayerDefinition.create(mesh, 32, 16)
+            .bakeRoot().getChild("cube");
+    }
+
+    /**
+     * Queues the robot's glowing outline: vanilla's outline pass, in the colour the entity chose
+     * ({@code EntityRobot#getTeamColor}, red to green by charge while the local player wears Robot Goggles).
+     * Nothing when the robot is not glowing.
+     *
+     * <p>The model-part feature draws a part twice: once with the render type it was given, then, for a non-zero
+     * outline colour, into the outline buffer. Only the second draw is wanted, and how to get just that differs:
+     * <ul>
+     * <li><b>26.2 and later:</b> given the <em>outline variant</em> of the cutout type, the feature skips the first
+     * draw and queues only the outline pass, so nothing but the outline is ever drawn, whatever the feature order.</li>
+     * <li><b>1.21.10, 1.21.11, 26.1.2:</b> the feature always makes the first draw, through the plain buffer
+     * source. Given the blending translucent type with a fully transparent tint, that draw changes no pixel (alpha 0
+     * blends to nothing, in any order the features run, and the cube sits where the body is). A cutout type would
+     * not do: the cutout test reads the texture's alpha before the vertex tint is applied, so the fragments would
+     * survive and show as a white cube wherever the body does not cover them.</li>
+     * </ul>
+     */
+    private static void submitGogglesOutline(PoseStack poseStack, SubmitNodeCollector collector, int outlineColor) {
+        if (outlineColor == 0) {
+            return;
+        }
+        poseStack.pushPose();
+        // Model parts are wound for the upside-down frame every vanilla entity model is drawn in.
+        poseStack.scale(-1F, -1F, 1F);
+        //? if >=26.3 {
+        RenderType type = cubeType(TEX_SILHOUETTE, false).outline().orElseThrow();
+        collector.order(ORDER_BODY).submitModelPart(SILHOUETTE, poseStack, type, LightUtil.FULL_BRIGHT,
+            OverlayTexture.NO_OVERLAY, null, -1, outlineColor);
+        //?} elif >=26.2 {
+        /*RenderType type = cubeType(TEX_SILHOUETTE, false).outline().orElseThrow();
+        collector.order(ORDER_BODY).submitModelPart(SILHOUETTE, poseStack, type, LightUtil.FULL_BRIGHT,
+            OverlayTexture.NO_OVERLAY, null, -1, null, outlineColor);*/
+        //?} else {
+        /*RenderType type = cubeType(TEX_SILHOUETTE, true);
+        collector.order(ORDER_BODY).submitModelPart(SILHOUETTE, poseStack, type, LightUtil.FULL_BRIGHT,
+            OverlayTexture.NO_OVERLAY, null, false, false, INVISIBLE_TINT, null, outlineColor);*/
+        //?}
+        poseStack.popPose();
     }
 
     private static ItemStack orEmpty(ItemStack stack) {

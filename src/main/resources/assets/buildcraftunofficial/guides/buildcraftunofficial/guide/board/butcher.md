@@ -2,7 +2,7 @@
 navigation:
   title: "Butcher Board"
   parent: contents/robots/board.md
-  position: 18
+  position: 19
   icon: buildcraftunofficial:redstone_board
 ---
 

@@ -2,7 +2,7 @@
 navigation:
   title: "Provide Items"
   parent: contents/robots/station.md
-  position: 41
+  position: 42
 ---
 
 # Provide Items

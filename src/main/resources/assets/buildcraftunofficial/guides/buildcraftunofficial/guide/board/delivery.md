@@ -2,7 +2,7 @@
 navigation:
   title: "Delivery Board"
   parent: contents/robots/board.md
-  position: 20
+  position: 21
   icon: buildcraftunofficial:redstone_board
 ---
 

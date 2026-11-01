@@ -2,7 +2,7 @@
 navigation:
   title: "Work in Area"
   parent: contents/robots/robot.md
-  position: 13
+  position: 14
 ---
 
 # Work in Area

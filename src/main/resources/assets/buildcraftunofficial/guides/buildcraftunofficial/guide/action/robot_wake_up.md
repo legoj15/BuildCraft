@@ -2,7 +2,7 @@
 navigation:
   title: "Wake Up"
   parent: contents/robots/robot.md
-  position: 12
+  position: 13
 ---
 
 # Wake Up

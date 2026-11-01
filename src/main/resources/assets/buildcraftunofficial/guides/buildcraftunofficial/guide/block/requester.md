@@ -2,7 +2,7 @@
 navigation:
   title: "Requester"
   parent: contents/robots/station.md
-  position: 44
+  position: 45
   icon: buildcraftunofficial:requester
 item_ids:
   - buildcraftunofficial:requester

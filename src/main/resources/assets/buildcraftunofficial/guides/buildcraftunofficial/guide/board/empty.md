@@ -2,7 +2,7 @@
 navigation:
   title: "Empty Board"
   parent: contents/robots/board.md
-  position: 21
+  position: 22
   icon: buildcraftunofficial:redstone_board
 ---
 

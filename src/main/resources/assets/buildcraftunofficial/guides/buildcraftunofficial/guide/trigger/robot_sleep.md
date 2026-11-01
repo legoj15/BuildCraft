@@ -2,7 +2,7 @@
 navigation:
   title: "Robot Sleep"
   parent: contents/robots/robot.md
-  position: 11
+  position: 12
 ---
 
 # Robot Sleep

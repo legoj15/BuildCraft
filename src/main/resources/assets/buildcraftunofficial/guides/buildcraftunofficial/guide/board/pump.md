@@ -2,7 +2,7 @@
 navigation:
   title: "Pump Board"
   parent: contents/robots/board.md
-  position: 30
+  position: 31
   icon: buildcraftunofficial:redstone_board
 ---
 

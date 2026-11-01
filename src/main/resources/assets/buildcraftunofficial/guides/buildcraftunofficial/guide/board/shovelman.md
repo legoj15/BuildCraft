@@ -2,7 +2,7 @@
 navigation:
   title: "Shovelman Board"
   parent: contents/robots/board.md
-  position: 31
+  position: 32
   icon: buildcraftunofficial:redstone_board
 ---
 

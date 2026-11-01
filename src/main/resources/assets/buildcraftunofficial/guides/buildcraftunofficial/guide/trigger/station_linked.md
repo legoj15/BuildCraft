@@ -2,7 +2,7 @@
 navigation:
   title: "Station Linked"
   parent: contents/robots/station.md
-  position: 45
+  position: 46
 ---
 
 # Station Linked

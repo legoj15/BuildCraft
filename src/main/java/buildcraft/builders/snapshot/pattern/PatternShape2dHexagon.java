@@ -27,5 +27,6 @@ public class PatternShape2dHexagon extends PatternShape2d {
         list.lineFrom(0, maxB - halfB);
         list.moveTo(0, halfB);
         list.lineTo(indent, 0);
+        list.setFillPoint(maxA / 2, maxB / 2);
     }
 }

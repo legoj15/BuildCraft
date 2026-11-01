@@ -987,7 +987,6 @@
     "fillerpattern.stairs": "Stairs",
     "fillerpattern.box": "Box",
     "fillerpattern.frame": "Frame",
-    "fillerpattern.cylinder": "Cylinder",
     "fillerpattern.sphere": "Sphere",
     "fillerpattern.sphere_half": "Hemisphere",
     "fillerpattern.sphere_quarter": "Quarter-sphere",

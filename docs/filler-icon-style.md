@@ -5,7 +5,7 @@ Spec for every icon in `src/main/resources/assets/buildcraftunofficial/textures/
 one without further design decisions. Where a rule and a reference grid disagree, the grid wins.
 
 Exemplars the rest were drawn from: `patterns/sphere_quarter`, `patterns/2d_hexagon`, `patterns/clear`, `parameters/face_north`.
-Not yet in this style: `flatten`, `horizon`, `cylinder` (old art, excluded from `--strict` runs).
+Not yet in this style: `horizon` (old art for a pattern that does not exist yet, issue #87; excluded from `--strict` runs).
 
 The gate's pipe-direction actions use the `face_*` icons directly (`BCTransportSprites.ACTION_PIPE_DIRECTION`);
 there are no separate `triggers/trigger_dir_*` files, so a face icon change reaches both GUIs.
@@ -18,7 +18,7 @@ there are no separate `triggers/trigger_dir_*` files, so a face icon change reac
    18x18 slot at 1x and 6x; changed icons get an old-vs-new block; lint notes print in red under the label.
 4. Judge at 1x, in the strips, not in the 6x cells. The strips lay patterns out in the selection popup's rows and
    parameters one family per run; an icon must differ from its neighbours there (see "Popup neighbours").
-5. Done when `... --strict --exclude flatten horizon cylinder` exits 0. Old art fails the colour lint until redrawn.
+5. Done when `... --strict --exclude horizon` exits 0. Old art fails the colour lint until redrawn.
 
 ## Palette
 
@@ -30,14 +30,14 @@ L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter, 
 M #B3B3B3 mid grey: left (south) faces, curved surface body, Frame back beams
 D #6E6E6E dark grey: right (east) faces, curved shadow, hidden edges of glass cubes, unselected centre dots
 G #C8C8C8 ghost: dotted outline of space the pattern leaves alone (None, sphere-part ghosts, hollow-family area)
-a #F58A6E accent light: Clear only, top face
-A #DD4B32 accent mid: Clear only, left face
-B #9C2B1E accent dark: Clear only, right face
+a #F58A6E accent light: Clear and Flatten, top face
+A #DD4B32 accent mid: Clear and Flatten, left face
+B #9C2B1E accent dark: Clear and Flatten, right face
 ```
 
 - Nothing outside the block. Every pixel is fully opaque or fully transparent.
 - L, M and D are the only placed-block tones. G never means a block, only "untouched".
-- The accent hue means removal and appears on Clear only. A selected element in a parameter is L, never accent.
+- The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent.
 - The accent ramp is darker than the grey ramp at every step (luma 167/116/75 against 230/179/110), so Clear and
   Fill still differ in greyscale and for red-blind players.
 
@@ -216,8 +216,9 @@ itself under a quarter turn, all four corners lit).
 
 ## Families
 
-Fill / Clear / None: one form, three meanings. Fill is CUBE; Clear is CUBE with L->a, M->A, D->B (removal); None is
-CUBE's silhouette as G dashes and nothing else (nothing happens).
+Fill / Clear / None / Flatten: one form, four meanings. Fill is CUBE; Clear is CUBE with L->a, M->A, D->B (removal); None is
+CUBE's silhouette as G dashes and nothing else (nothing happens); Flatten is Clear with its bottom slab left grey
+(cleared above a floor), the one icon besides Clear that uses the accent.
 
 Sphere parts are drawn in place, at BALL's size, never rescaled to fill the canvas, so all four sphere icons read as
 fractions of one ball:
@@ -262,11 +263,10 @@ No letters anywhere. Every meaning above is carried by shape, position or tone; 
 | `2d_triangle` | Triangle | draw | Apex K pair x = 7,8 on row 2; rows 3-12 in pairs with the left K edge at x = 6, 5, 4, 3, 2 (right edge mirrored) and L between; row 13 = K across x = 1..14. |
 | `box` | Box | draw | CUBE with rows 3-7 replaced by grid BOX_TOP: open top showing the inside (west wall inside D, north wall inside M). The real pattern is a closed shell; closed, it would be Fill. |
 | `clear` | Clear | exemplar | CUBE with L->a, M->A, D->B. |
-| `cylinder` | none | out of scope | Orphan sprite, no pattern uses it. Leave untouched. |
 | `fill` | Fill | draw | Grid CUBE. |
-| `flatten` | none | out of scope | Orphan sprite. Leave untouched. |
+| `flatten` | Flatten | draw | Clear's CUBE with the bottom 3 of 7 cube units of the side faces left grey (M, D): grey from row 9 at x = 1,2,13,14, row 10 at x = 3,4,11,12, row 11 at x = 5,6,9,10, row 12 at x = 7,8. Red volume cleared over a grey floor. |
 | `frame` | Frame | draw | Wireframe, no K, no fill: OUT's `K` and `+` pixels become L (silhouette and front corner); INS's `+` pixels become M where not already L (hidden back corner); everything else transparent. |
-| `horizon` | none | out of scope | Orphan sprite. Leave untouched. |
+| `horizon` | none (issue #87) | out of scope | Orphan sprite. Leave untouched until the pattern exists. |
 | `none` | None | draw | Grid NONE: CUBE's silhouette as G dashes only. |
 | `pyramid` | Pyramid | draw | Grid PYRAMID: smooth square pyramid on CUBE's footprint, apex pair x = 7,8 on row 2, south face M, east face D, split between x = 7 and 8. The pattern builds 1-block steps; at 14px steps are noise. |
 | `sphere` | Sphere | draw | Grid BALL, no ghost dots. |
@@ -314,7 +314,7 @@ No letters anywhere. Every meaning above is carried by shape, position or tone; 
 ## Popup neighbours
 
 Patterns popup, row by row: None, Box, Clear, Fill / Frame, Pyramid, Sphere, Eighth-Sphere / Hemisphere,
-Quarter-sphere, Stairs / Arc, Circle, Hexagon, Octagon / Pentagon, Semi-Circle, Square, Triangle (the pattern
+Quarter-sphere, Stairs, Flatten / Arc, Circle, Hexagon, Octagon / Pentagon, Semi-Circle, Square, Triangle (the pattern
 groups in `ContainerFiller`; the sheet script copies them as `PATTERN_POPUP`, so change both together). Pairs that
 need the most care: Circle-Octagon, Hemisphere-Quarter-sphere, Sphere-Eighth-Sphere, Box-Fill, None-Frame.
 A parameter popup shows one type at a time (all six faces, all nine centres, and so on), so those icons only need

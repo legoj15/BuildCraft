@@ -19,7 +19,7 @@ Usage:
   python scripts/art/filler-icon-sheet.py OUT.png
   python scripts/art/filler-icon-sheet.py OUT.png --compare-rev HEAD            old-vs-new for every changed icon
   python scripts/art/filler-icon-sheet.py OUT.png --compare-rev HEAD --compare patterns/clear parameters/face_north
-  python scripts/art/filler-icon-sheet.py OUT.png --patterns DIR --parameters DIR --exclude flatten horizon cylinder
+  python scripts/art/filler-icon-sheet.py OUT.png --patterns DIR --parameters DIR --exclude horizon
 Exit status is 0 even when lint notes are drawn; --strict makes any note exit 1.
 """
 
@@ -45,7 +45,7 @@ DEFAULT_GUIDE = REPO / "docs" / "filler-icon-style.md"
 # (ContainerFiller's pattern groups); a parameter popup shows one parameter type at a time, so parameters are grouped
 # by family. Icons outside every group (orphans, new files) end the strip as their own group.
 PATTERN_POPUP = [["none", "box", "clear", "fill"], ["frame", "pyramid", "sphere", "sphere_eighth"],
-                 ["sphere_half", "sphere_quarter", "stairs"], ["2d_arc", "2d_circle", "2d_hexagon", "2d_octagon"],
+                 ["sphere_half", "sphere_quarter", "stairs", "flatten"], ["2d_arc", "2d_circle", "2d_hexagon", "2d_octagon"],
                  ["2d_pentagon", "2d_semi_circle", "2d_square", "2d_triangle"]]
 PARAMETER_FAMILIES = [("face_",), ("axis_",), ("arrow_",), ("center_",), ("rotation_",), ("stairs_",),
                       ("filled_", "hollow")]

@@ -23,6 +23,8 @@ import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.registry.FillerRegistry;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.snapshot.Template;
+import buildcraft.builders.snapshot.pattern.PatternShape2d;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterAxis;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterFacing;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
 
@@ -79,12 +81,49 @@ public class ShapePatternsTester {
                     } else {
                         assertTrue(b);
                     }
+                    // Every pattern the popup offers, bar None and Clear, has to place something (#85: Octagon placed nothing).
+                    if (pattern != BCBuildersStatements.PATTERN_NONE && pattern != BCBuildersStatements.PATTERN_CLEAR
+                        && countSet(filledTemplate) == 0) {
+                        throw new IllegalStateException(pattern.getUniqueTag() + " placed nothing in " + size.toShortString());
+                    }
+                }
+            }
+            // A closed 2D outline must place more when Filled than when Hollow (Hexagon set no fill point, so Filled did nothing).
+            BlockPos flat = new BlockPos(9, 1, 9);
+            for (IFillerPatternShape pattern : patterns) {
+                if (!(pattern instanceof PatternShape2d) || pattern == BCBuildersStatements.PATTERN_ARC) continue;
+                int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW));
+                int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER));
+                if (filled <= hollow) {
+                    throw new IllegalStateException(pattern.getUniqueTag() + " filled (" + filled + ") is not more than hollow (" + hollow + ")");
                 }
             }
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage());
         }
+    }
+
+    private static int countSet(IFilledTemplate template) {
+        int count = 0;
+        for (int z = 0; z <= template.getMax().getZ(); z++) {
+            for (int y = 0; y <= template.getMax().getY(); y++) {
+                for (int x = 0; x <= template.getMax().getX(); x++) {
+                    if (template.get(x, y, z)) count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private static IFilledTemplate fill2d(IFillerPatternShape pattern, BlockPos size, PatternParameterHollow hollow) {
+        IStatementParameter[] params = new IStatementParameter[pattern.maxParameters()];
+        for (int i = 0; i < params.length; i++) {
+            params[i] = i == 0 ? PatternParameterAxis.Y : i == 1 ? hollow : pattern.createParameter(i);
+        }
+        IFilledTemplate template = createFilledTemplate(size);
+        assertTrue(pattern.fillTemplate(template, params));
+        return template;
     }
 
     public static void testSphereEquality(GameTestHelper helper) {

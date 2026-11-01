@@ -79,7 +79,8 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
                 return java.util.Arrays.asList(
                     buildcraft.builders.BCBuildersStatements.PATTERN_HEMI_SPHERE,
                     buildcraft.builders.BCBuildersStatements.PATTERN_QUARTER_SPHERE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS
+                    buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS,
+                    buildcraft.builders.BCBuildersStatements.PATTERN_FLATTEN
                 );
             }
             @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }

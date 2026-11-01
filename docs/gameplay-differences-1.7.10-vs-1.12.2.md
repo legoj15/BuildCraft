@@ -277,9 +277,11 @@ clean). This port inherits all of it and adds heat-tiered fuel (hot x1.25, seari
   Library without crafting recipes** (tooltip: "Not usable in survival"). This port restored real
   recipes for all of them — the port is more survival-complete than the 1.12.2 branch we forked.
 - **Filler patterns**: 1.7.10 has Fill, Clear, Box, Flatten, Horizon, Frame, Pyramid, Stairs,
-  Cylinder (+ hollow/centre params). 1.12.2/this port drop Cylinder, **add the whole geometry
-  family** (Triangle/Square/Pentagon/Hexagon/Octagon/Arc/Semi-Circle/Circle/Sphere/Hemisphere/
-  Quarter/Eighth + rotation/axis), and keep **Flatten/Horizon commented out "broken ATM"**.
+  Cylinder (+ hollow/centre params). 1.12.2/this port drop Cylinder (Circle on axis Y builds it), **add
+  the whole geometry family** (Triangle/Square/Pentagon/Hexagon/Octagon/Arc/Semi-Circle/Circle/Sphere/
+  Hemisphere/Quarter/Eighth + rotation/axis). 1.12.2 left Flatten/Horizon commented out "broken ATM" and
+  Octagon empty; this port brings Flatten back with its floor as the box's bottom layer (#80), implements
+  Octagon (#85), and leaves Horizon to issue #87.
 - **Quarry**: same frame-and-strip-mine both eras; 1.12.2 adds auto chunk-loading (config),
   one-time-use option, and stops requesting power when finished (port).
 

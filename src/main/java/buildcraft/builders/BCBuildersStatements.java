@@ -12,6 +12,7 @@ import buildcraft.builders.snapshot.pattern.Pattern;
 import buildcraft.builders.snapshot.pattern.PatternBox;
 import buildcraft.builders.snapshot.pattern.PatternClear;
 import buildcraft.builders.snapshot.pattern.PatternFill;
+import buildcraft.builders.snapshot.pattern.PatternFlatten;
 import buildcraft.builders.snapshot.pattern.PatternFrame;
 import buildcraft.builders.snapshot.pattern.PatternNone;
 import buildcraft.builders.snapshot.pattern.PatternPyramid;
@@ -44,8 +45,7 @@ public class BCBuildersStatements {
     public static final PatternSphere PATTERN_SPHERE = new PatternSphere();
     public static final PatternPyramid PATTERN_PYRAMID = new PatternPyramid();
     public static final PatternFrame PATTERN_FRAME = new PatternFrame();
-    // public static final PatternHorizon PATTERN_HORIZON = new PatternHorizon(); // broken ATM
-    // public static final PatternFlatten PATTERN_FLATTEN = new PatternFlatten(); // broken ATM
+    public static final PatternFlatten PATTERN_FLATTEN = new PatternFlatten();
 
     public static final PatternStairs PATTERN_STAIRS = new PatternStairs();
     public static final PatternSpherePart PATTERN_QUARTER_SPHERE = new PatternSpherePart(PatternSpherePart.SpherePartType.QUARTER);
@@ -64,8 +64,7 @@ public class BCBuildersStatements {
     public static final Pattern[] PATTERNS = { //
         PATTERN_FILL, PATTERN_CLEAR, PATTERN_BOX, PATTERN_NONE, //
         PATTERN_EIGHTH_SPHERE, PATTERN_SPHERE, PATTERN_PYRAMID, PATTERN_FRAME, //
-        /* PATTERN_HORIZON, PATTERN_FLATTEN, */ //
-        PATTERN_STAIRS, PATTERN_QUARTER_SPHERE, PATTERN_HEMI_SPHERE, //
+        PATTERN_FLATTEN, PATTERN_STAIRS, PATTERN_QUARTER_SPHERE, PATTERN_HEMI_SPHERE, //
         PATTERN_OCTAGON, PATTERN_HEXAGON, PATTERN_CIRCLE, PATTERN_ARC, //
         PATTERN_TRIANGLE, PATTERN_SQUARE, PATTERN_SEMI_CIRCLE, PATTERN_PENTAGON //
     };

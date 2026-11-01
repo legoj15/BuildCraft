@@ -201,3 +201,7 @@ is gone. `multiplayer/scene_swing_particles.py` is the 26.3 port's B6/B7 check b
 docstring gives the phase order and the expected result, and `multiplayer/grids.py` tiles the shots per node for a
 26.3 vs 26.2 comparison. Run it from Git Bash with `MSYS_NO_PATHCONV=1`. The server log's `No key layers` ERROR is
 vanilla complaining about the flat world's empty generator settings; the default flat world is used.
+
+## Resource reload: `sprite-reload`
+
+`sprite-reload` (hand-written) checks that plugs, gates, the docking station and dyed pipes keep correct textures across a resource reload (issue #81): it shoots the rig, turns vanilla High Contrast on and off through Options → Accessibility (each toggle reloads the resource packs), and shoots it after each. All three shot pairs must match. A pipe's `col` NBT takes the enum name in capitals (`LIME`); lowercase is silently ignored.

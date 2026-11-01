@@ -1,0 +1,227 @@
+{
+  "name": "sprite-reload",
+  "base": [
+    0,
+    150,
+    0
+  ],
+  "steps": [
+    {
+      "do": "tp",
+      "at": [
+        0,
+        0,
+        4
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "label": "rig: lens, pulsar, gate, docking station, dyed item pipe, dyed fluid pipe, plain glass pipe",
+      "do": "cmd",
+      "run": [
+        "gamemode creative @p",
+        "time set day",
+        "fill {X-6} {Y-1} {Z-2} {X+6} {Y-1} {Z+6} minecraft:stone",
+        "fill {X-6} {Y} {Z-2} {X+6} {Y+3} {Z+1} minecraft:air",
+        "setblock {X-6} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-6} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:0b}},up:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:1b}}}}",
+        "setblock {X-4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_power\"},plugs:{south:{id:\"buildcraftunofficial:pulsar\",data:{}},up:{id:\"buildcraftunofficial:pulsar\",data:{}}}}",
+        "setblock {X-2} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-2} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:1b,material:3b,modifier:3b}}}},up:{id:\"buildcraftunofficial:gate\",data:{data:{variant:{logic:0b,material:1b,modifier:0b}}}}}}",
+        "setblock {X} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:wood_item\"},plugs:{south:{id:\"buildcraftunofficial:robot_station\",data:{}}}}",
+        "setblock {X+2} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+2} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\",col:\"LIME\"}}",
+        "setblock {X+4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_fluid\",col:\"RED\"}}",
+        "setblock {X+6} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+6} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:diamond_item\"}}"
+      ]
+    },
+    {
+      "do": "cmd",
+      "run": [
+        "gamemode spectator @p"
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "tp",
+      "at": [
+        -3,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "before-left",
+      "look": "baseline, left to right: red lens and filter; pulsar; two gates (quartz-iron and plain); docking station; lime item pipe; red fluid pipe; diamond pipe. No magenta, no smeared or wrong textures (left half: lens/filter, pulsar, gates, docking station)"
+    },
+    {
+      "do": "tp",
+      "at": [
+        4,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "before-right",
+      "look": "baseline, left to right: red lens and filter; pulsar; two gates (quartz-iron and plain); docking station; lime item pipe; red fluid pipe; diamond pipe. No magenta, no smeared or wrong textures (right half: lime item pipe, red fluid pipe, diamond pipe)"
+    },
+    {
+      "label": "open the pause menu",
+      "do": "pause"
+    },
+    {
+      "do": "click",
+      "widgetText": "Options"
+    },
+    {
+      "do": "click",
+      "widgetText": "Accessibility"
+    },
+    {
+      "do": "widgets",
+      "name": "accessibility"
+    },
+    {
+      "label": "turn High Contrast on: reloads resource packs and restitches the atlas",
+      "do": "click",
+      "widgetText": "High Contrast"
+    },
+    {
+      "do": "wait",
+      "ms": 10000
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "do": "tp",
+      "at": [
+        -3,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "high-contrast-left",
+      "look": "same rig after the reload: every plug, gate and pipe still textured correctly (no magenta, no texture from another block, no smeared UVs). Pipes may switch to their colourblind/high-contrast textures under colourBlindMode AUTO (left half: lens/filter, pulsar, gates, docking station)"
+    },
+    {
+      "do": "tp",
+      "at": [
+        4,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "high-contrast-right",
+      "look": "same rig after the reload: every plug, gate and pipe still textured correctly (no magenta, no texture from another block, no smeared UVs). Pipes may switch to their colourblind/high-contrast textures under colourBlindMode AUTO (right half: lime item pipe, red fluid pipe, diamond pipe)"
+    },
+    {
+      "do": "pause"
+    },
+    {
+      "do": "click",
+      "widgetText": "Options"
+    },
+    {
+      "do": "click",
+      "widgetText": "Accessibility"
+    },
+    {
+      "label": "turn High Contrast back off: second reload",
+      "do": "click",
+      "widgetText": "High Contrast"
+    },
+    {
+      "do": "wait",
+      "ms": 10000
+    },
+    {
+      "do": "close"
+    },
+    {
+      "do": "wait",
+      "ms": 2500
+    },
+    {
+      "do": "tp",
+      "at": [
+        -3,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "after-left",
+      "look": "back to the baseline look, identical to the 'before' shot (left half: lens/filter, pulsar, gates, docking station)"
+    },
+    {
+      "do": "tp",
+      "at": [
+        4,
+        1,
+        3
+      ],
+      "yaw": 180,
+      "pitch": 15
+    },
+    {
+      "do": "wait",
+      "ms": 800
+    },
+    {
+      "do": "shot",
+      "name": "after-right",
+      "look": "back to the baseline look, identical to the 'before' shot (right half: lime item pipe, red fluid pipe, diamond pipe)"
+    }
+  ]
+}

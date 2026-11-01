@@ -46,7 +46,8 @@ import buildcraft.energy.FluidVolatility;
  *
  * <p><b>Fire.</b> The block also carries its {@link FluidVolatility.Band}, fixed at registration, and answers
  * vanilla fire's flammability and spread-speed questions from it (zero for residue and whenever the
- * {@code canBurn} config is off), so oils and fuels burn with ordinary fire. A gaseous variant additionally
+ * {@code canBurn} config is off), so oils and fuels burn with ordinary fire. Lava lights every burning fluid but
+ * crude oil, at any heat (see the constructor). A gaseous variant additionally
  * detonates when fire catches it ({@link #onCaughtFire}) and, as the cell's own scheduled block tick, when a
  * neighbouring detonation chains to it ({@link #tick}); the fluid tick covers the rest (see
  * {@link FluidVolatility}).
@@ -58,12 +59,18 @@ public class BCFluidBlock extends LiquidBlock {
 
     private final boolean searing;
     private final FluidVolatility.Band volatility;
+    private final boolean lavaIgnites;
 
+    /** @param lavaIgnites whether lava's random tick may light this fluid where it burns at all; false for crude oil,
+     *                     so the Nether slicks on the lava sea, desert lakes beside lava pools and wells reaching
+     *                     underground lava survive. Only lava's own ignition is gated: a fire it lights elsewhere
+     *                     (grass beside the lake) still spreads onto crude oil like any fire */
     public BCFluidBlock(FlowingFluid fluid, BlockBehaviour.Properties properties, int heat,
-                        FluidVolatility.Band volatility) {
+                        FluidVolatility.Band volatility, boolean lavaIgnites) {
         super(fluid, properties);
         this.searing = heat >= 2;
         this.volatility = volatility;
+        this.lavaIgnites = lavaIgnites;
     }
 
     /** How this fluid behaves around fire, fixed at registration. */
@@ -84,6 +91,11 @@ public class BCFluidBlock extends LiquidBlock {
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
         return burns() ? volatility.fireSpreadSpeed : 0;
+    }
+
+    @Override
+    public boolean ignitedByLava(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+        return lavaIgnites && burns();
     }
 
     // onCaughtFire: void on 1.21.1, boolean from 1.21.10 (true = the block was set on fire), and 26.3 adds the item

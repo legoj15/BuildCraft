@@ -76,11 +76,22 @@ public class FluidFireTester {
         require(flammability(level, probe, entry("fuel_gaseous").block().get()) > 0,
             "gas must be flammable so fire is drawn to it");
 
+        // What lava reads: every burning fuel catches from it, crude oil at any heat never (Nether slicks on the lava
+        // sea, desert lakes and wells beside lava pools stay), residue never.
+        for (String lit : new String[] {"oil_distilled", "fuel_light", "oil_heavy_heat_2", "fuel_gaseous"}) {
+            require(lavaIgnites(level, probe, entry(lit).block().get()), lit + " must catch fire from lava");
+        }
+        for (String unlit : new String[] {"oil", "oil_heat_1", "oil_heat_2", "oil_residue", "oil_residue_heat_2"}) {
+            require(!lavaIgnites(level, probe, entry(unlit).block().get()), unlit + " must not catch fire from lava");
+        }
+
         boolean canBurnBefore = BCEnergyConfig.canBurnEnabled();
         BCEnergyConfig.canBurn.set(false);
         try {
             require(flammability(level, probe, crude) == 0 && fireSpread(level, probe, crude) == 0,
                 "crude oil must not burn while canBurn is off");
+            require(!lavaIgnites(level, probe, entry("fuel_light").block().get()),
+                "lava must not light a fuel while canBurn is off");
         } finally {
             BCEnergyConfig.canBurn.set(canBurnBefore);
         }
@@ -437,6 +448,10 @@ public class FluidFireTester {
 
     private static int flammability(ServerLevel level, BlockPos pos, Block block) {
         return block.defaultBlockState().getFlammability(level, pos, Direction.UP);
+    }
+
+    private static boolean lavaIgnites(ServerLevel level, BlockPos pos, Block block) {
+        return block.defaultBlockState().ignitedByLava(level, pos, Direction.UP);
     }
 
     private static int fireSpread(ServerLevel level, BlockPos pos, Block block) {

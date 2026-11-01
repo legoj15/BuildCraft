@@ -246,7 +246,8 @@ public class BCEnergyFluids {
 
         // Crude oil and residue are too thick to swim in or to count as water (no swim event, riptide, conduit,
         // water damage, underwater music...); every other BC fluid stays water-like.
-        boolean waterLike = !baseName.equals("oil") && !baseName.equals("oil_residue");
+        boolean crude = baseName.equals("oil");
+        boolean waterLike = !crude && !baseName.equals("oil_residue");
 
         // FluidType
         DeferredHolder<FluidType, FluidType> fluidType = FLUID_TYPES.register(regName,
@@ -298,7 +299,7 @@ public class BCEnergyFluids {
                         .noLootTable()
                         .liquid()
                         .lightLevel(s -> 0)
-                , heat, volatility), () -> BlockBehaviour.Properties.of());
+                , heat, volatility, !crude), () -> BlockBehaviour.Properties.of());
 
         // Bucket
         bucketHolder[0] = RegistrationUtilBC.registerItem(ITEMS, regName + "_bucket",

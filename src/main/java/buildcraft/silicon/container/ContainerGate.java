@@ -141,11 +141,11 @@ public class ContainerGate extends ContainerBC_Neptune {
         } else {
             list.add(0, null);
         }
-        to.groups.add(new GateGroup<>(EnumPipePart.CENTER, list));
+        to.groups.add(new GateGroup<>(list));
         for (EnumPipePart part : EnumPipePart.FACES) {
             list = parts.get(part);
             if (list != null) {
-                to.groups.add(new GateGroup<>(part, list));
+                to.groups.add(new GateGroup<>(list));
             }
         }
     }

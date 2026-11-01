@@ -5,7 +5,9 @@
  */
 package buildcraft.builders.gen;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,9 +19,13 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -44,9 +50,10 @@ import buildcraft.lib.misc.data.EnumAxisOrder;
 
 /**
  * An abandoned quarry: a default-sized (11x11, 5 tall) quarry frame, decayed into gaps and cobwebs, over a pit dug
- * the way the quarry digs. No quarry block. The pit goes at least {@link #MIN_DEPTH} full layers below the frame and
- * stops above the first layer that holds deepslate or a fluid source; its last layer may be half mined, in the
- * quarry's own snaking order.
+ * the way the quarry digs. No quarry block. The first {@link #MIN_DEPTH} layers below the frame are dug out; below
+ * them a simulated quarry walks on in its own snaking order and gives up at the first block that is not plain terrain
+ * (an ore, part of a mineshaft or dungeon, deepslate, a fluid, bedrock), leaving that block and the rest of its layer for the
+ * player to find.
  *
  * <p>Everything is decided by reads before the first write, so a rejected site leaves the world untouched. The
  * footprint is centred on the placement origin, which keeps every write inside the decorating chunk and its
@@ -91,6 +98,12 @@ public record QuarryPitFeature() implements Feature {
     /** Chance a frame block has rotted away, and of those, the share left as a cobweb rather than air. */
     static final float FRAME_DECAY_CHANCE = 0.3f;
     static final float COBWEB_SHARE = 0.35f;
+    /** How far above the frame top a tree on the footprint is cleared: past any vanilla overworld tree's crown. */
+    static final int TREE_CLEAR_HEIGHT = 32;
+    /** The plain terrain the abandoned quarry dug through below its first MIN_DEPTH layers; it stopped at the first
+     *  block not in this tag (an ore, a mineshaft plank, mossy cobblestone, clay...), so the player finds it. */
+    static final TagKey<Block> DIGS_THROUGH =
+            TagKey.create(Registries.BLOCK, Identifier.parse("buildcraftunofficial:quarry_pit_digs_through"));
 
     private static boolean generate(WorldGenLevel level, RandomSource random, BlockPos origin) {
         if (!BCCoreConfig.worldGen.get() || !BCBuildersConfig.generateQuarryPits.get()) {
@@ -120,51 +133,55 @@ public record QuarryPitFeature() implements Feature {
         }
         int baseY = hMax;
 
-        // Depth: count the diggable layers below the base, stopping above deepslate, fluid or bedrock.
-        int diggable = 0;
-        while (isLayerDiggable(level, pos, x0 + 1, z0 + 1, x1 - 1, z1 - 1, baseY - diggable - 1)) {
-            diggable++;
+        // The first MIN_DEPTH layers are dug whatever they hold, so they must be free of deepslate, fluid and bedrock.
+        for (int layer = 1; layer <= MIN_DEPTH; layer++) {
+            if (!isLayerDiggable(level, pos, x0 + 1, z0 + 1, x1 - 1, z1 - 1, baseY - layer)) {
+                return false;
+            }
         }
-        if (diggable < MIN_DEPTH) {
-            return false;
-        }
-        int fullLayers = MIN_DEPTH + random.nextInt(diggable - MIN_DEPTH + 1);
 
-        // Clear the mining box (frame interior, from just under the frame top) down through the full layers, and any
-        // tree standing over it, which would otherwise be left floating above the pit.
+        // Run the quarry: one walk over the whole mining box, in TileQuarry's order (snaking across each layer, then
+        // down), until the next block is one a player would want to see: anything that is not plain terrain
+        // (DIGS_THROUGH), and always deepslate, a fluid or bedrock. Below the forced layers caves are walked through.
+        int floorY = baseY - MIN_DEPTH - 1;
+        while (!level.isOutsideBuildHeight(floorY - 1)) {
+            floorY--;
+        }
+        EnumAxisOrder axisOrder = random.nextBoolean() ? EnumAxisOrder.XZY : EnumAxisOrder.ZXY;
+        AxisOrder.Inversion inv = AxisOrder.Inversion.getFor(random.nextBoolean(), random.nextBoolean(), false);
+        BoxIterator walk = new BoxIterator(new BlockPos(x0 + 1, floorY, z0 + 1),
+                new BlockPos(x1 - 1, baseY + FRAME_HEIGHT - 1, z1 - 1), AxisOrder.getFor(axisOrder, inv), true);
+        List<BlockPos> toDig = new ArrayList<>();
+        while (walk.hasNext()) {
+            BlockPos next = walk.next();
+            BlockState state = level.getBlockState(next);
+            if (state.isAir()) {
+                continue;
+            }
+            if (next.getY() < baseY - MIN_DEPTH && stopsTheQuarry(state)) {
+                break;
+            }
+            toDig.add(next);
+        }
+
+        // Clear every tree on the footprint first: one rooted in the pit would float over it, and one rooted where the
+        // frame goes would be cut by it. Below the base anything tree is cleared; above it, up to the first other block.
         Set<BlockPos> fluidNeighbours = new HashSet<>();
-        for (int x = x0 + 1; x <= x1 - 1; x++) {
-            for (int z = z0 + 1; z <= z1 - 1; z++) {
-                for (int y = baseY + FRAME_HEIGHT; !level.isOutsideBuildHeight(y); y++) {
+        int treeTop = Math.min(baseY + FRAME_HEIGHT + TREE_CLEAR_HEIGHT, level.getMaxY());
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int y = hMin - 1; y <= treeTop; y++) {
                     BlockState state = level.getBlockState(pos.set(x, y, z));
-                    if (!state.is(BlockTags.LOGS) && !state.is(BlockTags.LEAVES)) {
+                    if (state.is(BlockTags.LOGS) || state.is(BlockTags.LEAVES)) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
+                    } else if (y >= baseY && !state.isAir() && !state.canBeReplaced()) {
                         break;
                     }
-                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
                 }
             }
         }
-        for (int y = baseY + FRAME_HEIGHT - 1; y >= baseY - fullLayers; y--) {
-            for (int x = x0 + 1; x <= x1 - 1; x++) {
-                for (int z = z0 + 1; z <= z1 - 1; z++) {
-                    dig(level, pos.set(x, y, z), fluidNeighbours);
-                }
-            }
-        }
-
-        // The layer the quarry was working on when it was abandoned: some prefix of its walk.
-        int partialY = baseY - fullLayers - 1;
-        if (fullLayers < diggable) {
-            BlockPos layerMin = new BlockPos(x0 + 1, partialY, z0 + 1);
-            BlockPos layerMax = new BlockPos(x1 - 1, partialY, z1 - 1);
-            EnumAxisOrder axisOrder = random.nextBoolean() ? EnumAxisOrder.XZY : EnumAxisOrder.ZXY;
-            AxisOrder.Inversion inv = AxisOrder.Inversion.getFor(random.nextBoolean(), random.nextBoolean(), false);
-            BoxIterator walk = new BoxIterator(layerMin, layerMax, AxisOrder.getFor(axisOrder, inv), true);
-            int interior = (FRAME_SIZE - 2) * (FRAME_SIZE - 2);
-            int mined = random.nextInt(interior);
-            for (int i = 0; i < mined && walk.hasNext(); i++) {
-                dig(level, pos.set(walk.next()), fluidNeighbours);
-            }
+        for (BlockPos digPos : toDig) {
+            dig(level, pos.set(digPos), fluidNeighbours);
         }
 
         // Let fluids the pit cut into flow in, rather than standing as walls.
@@ -195,6 +212,11 @@ public record QuarryPitFeature() implements Feature {
             y--;
         }
         return Integer.MIN_VALUE;
+    }
+
+    private static boolean stopsTheQuarry(BlockState state) {
+        return state.is(Blocks.DEEPSLATE) || state.is(Blocks.BEDROCK) || !state.getFluidState().isEmpty()
+                || !(state.is(DIGS_THROUGH) || state.canBeReplaced());
     }
 
     private static boolean isLayerDiggable(WorldGenLevel level, BlockPos.MutableBlockPos pos, int xMin, int zMin,

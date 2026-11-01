@@ -11,7 +11,7 @@ issueTrackerURL="https://github.com/legoj15/BuildCraft/issues"
 [[mods]]
 modId="buildcraftunofficial"
 version="${mod_version}"
-displayName="BuildCraft (Unofficial)"
+displayName="BuildCraft Redux"
 # logoFile is the pre-26.2 property; bannerFile/iconFile are its 26.2-only replacements (NeoForge
 # #3073). All three are kept deliberately: older lines ignore the unknown keys, and 26.2 suppresses
 # its dev-only logoFile warning the moment either new key is present (#3413). icon.png is the square
@@ -23,7 +23,7 @@ credits="Created by SpaceToad"
 authors="SpaceToad, BuildCraft Team, legoj15 (1.21.1+ port)"
 description='''
 Extending Minecraft with pipes, auto-crafting, quarries, engines and much more!
-Unofficial port to NeoForge.
+A fan-made continuation reuniting BuildCraft 7 and 8 on NeoForge.
 '''
 displayURL="https://github.com/legoj15/BuildCraft"
 updateJSONURL="https://raw.githubusercontent.com/legoj15/BuildCraft/${update_branch}/BuildCraftVersions.json"

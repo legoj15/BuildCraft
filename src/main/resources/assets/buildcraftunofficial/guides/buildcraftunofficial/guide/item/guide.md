@@ -20,6 +20,6 @@ This book contains a lot of information related to the BuildCraft mod. The conte
 <RecipesFor id="buildcraftunofficial:guide" fallbackText="" />
 </Row>
 
-We hope you have as much fun with this mod as you did with the original. This is BuildCraft Unofficial, a fan-port of the original. If you have questions or problems, please report them on the port's [GitHub issue tracker](https://github.com/legoj15/BuildCraft/issues).
+We hope you have as much fun with this mod as you did with the original. This is BuildCraft Redux, a fan-made continuation of the original. If you have questions or problems, please report them on the port's [GitHub issue tracker](https://github.com/legoj15/BuildCraft/issues).
 
 Thank you to the original team behind BuildCraft and the maintainers that made it kept it alive from 1.2.5 all the way through 1.12.2, it was a key part of my childhood that I want more people to experience as well.

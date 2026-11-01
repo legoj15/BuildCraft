@@ -1,4 +1,4 @@
-"BuildCraft Unofficial" is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft
+"BuildCraft Redux" (formerly "BuildCraft Unofficial"; the mod id, asset namespace, copyright collective name and store URLs keep the old name on purpose) is a NeoForge port of the original 1.12.2 and 1.7.10 Minecraft Forge BuildCraft
 
 The project is a mix of Java 25 and Java 21 out of necessity.
 

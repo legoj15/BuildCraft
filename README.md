@@ -1,4 +1,5 @@
-## BuildCraft **UNOFFICIAL**
+## BuildCraft Redux
+#### Formerly BuildCraft Unofficial
 #### For Minecraft 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, and 26.3 on NeoForge
 
 ### Reporting an issue
@@ -39,7 +40,7 @@ Please check if the bug or feature request has been reported beforehand. Also, p
     * On Linux/Unix/Mac: `./gradlew buildAndCollect`
     * On Windows: `.\gradlew.bat buildAndCollect`
     * The Gradle wrapper pins the required Gradle version (9.x); you do **not** need Gradle installed.
-5. Once the build finishes, the jar `BCunofficial-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`.
+5. Once the build finishes, the jar `BuildCraftRedux-<version>+mc<minecraft version>.jar` (one per supported Minecraft version) is in `build/libs/<version>/`.
 
 ### Running in a Development Environment
 To test the mod locally, use the NeoForge run tasks. These are **per-node**, so prefix them with the Minecraft version you want (e.g. `:26.3:`):

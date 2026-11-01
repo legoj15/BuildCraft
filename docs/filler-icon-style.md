@@ -26,7 +26,7 @@ The sheet script reads this block; keep one colour per line.
 
 ```palette
 K #222222 ink: every silhouette and outline, concave step lines, the rotation wedge edge
-L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter, Frame front beams
+L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter (axis edges excepted), Frame front beams
 M #B3B3B3 mid grey: left (south) faces, curved surface body, Frame back beams
 D #6E6E6E dark grey: right (east) faces, curved shadow, hidden edges of glass cubes, unselected centre dots
 G #C8C8C8 ghost: dotted outline of space the pattern leaves alone (None, sphere-part ghosts, hollow-family area)

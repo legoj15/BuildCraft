@@ -47,7 +47,9 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
     @Override
     public boolean fillTemplate(IFilledTemplate filledTemplate, IStatementParameter[] params) {
         PatternParameterAxis axis = getParam(0, params, PatternParameterAxis.Y);
-        PatternParameterRotation dir = getParam(2, params, PatternParameterRotation.NONE);
+        // A shape with no rotation slot (Square, Octagon) never turns, even when the Filler kept one from the previous pattern.
+        PatternParameterRotation dir = maxParameters() > 2 ? getParam(2, params, PatternParameterRotation.NONE)
+            : PatternParameterRotation.NONE;
 
         PathIterator2d iterator = getIterator(filledTemplate, axis);
 

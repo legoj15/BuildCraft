@@ -816,7 +816,7 @@ public enum GuideManager {
         }
     }
 
-    /** "Filler Patterns" — collapses ~19 alphabetically-listed pattern actions into one
+    /** "Filler Patterns" — collapses the Filler's alphabetically-listed pattern actions into one
      *  category entry under Actions, using the stairs sprite as the icon. The body
      *  comes from {@code concept/filler_patterns.md}; this method just supplies the
      *  TOC-side metadata (icon, title, chapter placement). */

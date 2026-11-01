@@ -315,8 +315,8 @@ public class GuideGroupManager {
         // GUI, NOT alphabetical) becomes an entry; the filler block is the consumer/key.
         // The "Filler Patterns" category entry in the TOC opens a page that lists this
         // group, so individual patterns are reachable from there instead of cluttering
-        // the top-level Actions chapter with N alphabetical leaves. Keep the order in
-        // sync with BCBuildersStatements.PATTERNS — that array is the GUI's own source.
+        // the top-level Actions chapter with N alphabetical leaves. The entries come
+        // straight from BCBuildersStatements.PATTERNS, in its order; the GUI popup's order lives in ContainerFiller (#88).
         addEntries("buildcraft", "filler_patterns",
             (Object[]) buildcraft.builders.BCBuildersStatements.PATTERNS);
         addKey("buildcraft", "filler_patterns",

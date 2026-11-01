@@ -87,27 +87,66 @@ public class ShapePatternsTester {
                         && countSet(filledTemplate) == 0) {
                         throw new IllegalStateException(pattern.getUniqueTag() + " placed nothing in " + size.toShortString());
                     }
+                    // Flatten lays exactly the box's bottom layer and leaves everything above it to be cleared.
+                    if (pattern == BCBuildersStatements.PATTERN_FLATTEN) {
+                        for (int z = 0; z <= filledTemplate.getMax().getZ(); z++) {
+                            for (int y = 0; y <= filledTemplate.getMax().getY(); y++) {
+                                for (int x = 0; x <= filledTemplate.getMax().getX(); x++) {
+                                    if (filledTemplate.get(x, y, z) != (y == 0)) {
+                                        throw new IllegalStateException("flatten in " + size.toShortString() + " is wrong at (" + x + ", " + y + ", " + z + ")");
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            // A 2D outline (closed, or closed by the box edge) must place more when Filled than when Hollow, and Surrounded must leave its inside
-            // empty, at every rotation of a non-square box (Hexagon set no fill point; a quarter turn put the fill
-            // seed outside the box, so Filled did nothing and Surrounded filled everything).
+            // A closed 2D outline (Arc's is closed by the box edge) must place more when Filled than when Hollow, and
+            // Surrounded must leave its inside empty (#85: Hexagon set no fill point, so Filled did nothing).
             BlockPos flat = new BlockPos(5, 1, 9);
             int cells = flat.getX() * flat.getY() * flat.getZ();
             for (IFillerPatternShape pattern : patterns) {
                 if (!(pattern instanceof PatternShape2d) || pattern == BCBuildersStatements.PATTERN_ARC) continue;
-                // Square and Octagon declare no rotation slot, but a Filler keeps one from the previous pattern.
-                for (int r = 0; r < 4; r++) {
-                    PatternParameterRotation rotation = PatternParameterRotation.values()[r];
-                    String where = pattern.getUniqueTag() + " rotated " + r + " in " + flat.toShortString();
-                    int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW, rotation));
-                    int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER, rotation));
-                    int outer = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_OUTER, rotation));
-                    if (filled <= hollow) {
-                        throw new IllegalStateException(where + ": filled (" + filled + ") is not more than hollow (" + hollow + ")");
-                    }
-                    if (outer >= cells) {
-                        throw new IllegalStateException(where + ": surrounded filled every cell, inside included");
+                String where = pattern.getUniqueTag() + " in " + flat.toShortString();
+                int hollow = countSet(fill2d(pattern, flat, PatternParameterHollow.HOLLOW, PatternParameterRotation.NONE));
+                int filled = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_INNER, PatternParameterRotation.NONE));
+                int outer = countSet(fill2d(pattern, flat, PatternParameterHollow.FILLED_OUTER, PatternParameterRotation.NONE));
+                if (filled <= hollow) {
+                    throw new IllegalStateException(where + ": filled (" + filled + ") is not more than hollow (" + hollow + ")");
+                }
+                if (outer >= cells) {
+                    throw new IllegalStateException(where + ": surrounded filled every cell, inside included");
+                }
+            }
+            // Turning a 2D shape turns its fill with it: every rotation, in every fill mode, is the unturned shape
+            // in the transposed (quarter turns) or same box, rotated cell for cell. A quarter turn used to seed the
+            // fill outside a non-square box, so Filled did nothing and Surrounded filled everything. Shapes with no
+            // rotation slot (Square, Octagon) never turn, though a Filler keeps a rotation from the previous pattern.
+            for (BlockPos box : new BlockPos[] { new BlockPos(5, 1, 9), new BlockPos(4, 1, 7) }) {
+                BlockPos transposed = new BlockPos(box.getZ(), 1, box.getX());
+                int w = box.getX(), l = box.getZ();
+                for (IFillerPatternShape pattern : patterns) {
+                    if (!(pattern instanceof PatternShape2d)) continue;
+                    boolean turns = pattern.maxParameters() > 2;
+                    for (PatternParameterHollow mode : PatternParameterHollow.values()) {
+                        IFilledTemplate same = fill2d(pattern, box, mode, PatternParameterRotation.NONE);
+                        IFilledTemplate across = fill2d(pattern, transposed, mode, PatternParameterRotation.NONE);
+                        for (int r = 1; r < 4; r++) {
+                            IFilledTemplate turned = fill2d(pattern, box, mode, PatternParameterRotation.values()[r]);
+                            for (int z = 0; z < l; z++) {
+                                for (int x = 0; x < w; x++) {
+                                    boolean expected;
+                                    if (!turns) expected = same.get(x, 0, z);
+                                    else if (r == 1) expected = across.get(z, 0, w - 1 - x);
+                                    else if (r == 2) expected = same.get(w - 1 - x, 0, l - 1 - z);
+                                    else expected = across.get(l - 1 - z, 0, x);
+                                    if (turned.get(x, 0, z) != expected) {
+                                        throw new IllegalStateException(pattern.getUniqueTag() + " " + mode + " rotated " + r + " in "
+                                            + box.toShortString() + " is not the unturned shape turned, at (" + x + ", " + z + ")");
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

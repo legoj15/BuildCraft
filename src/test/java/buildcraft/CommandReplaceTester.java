@@ -7,8 +7,10 @@ package buildcraft;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
@@ -71,15 +73,17 @@ import buildcraft.transport.tile.TilePipeHolder;
 public class CommandReplaceTester {
 
     /** Ticks between the removal and the second scan, which catches anything that lands in a rig's box after the
-     *  removal. Every spill is synchronous, so it is also scanned on the removal's own tick and the two are unioned:
+     *  removal and that no removal-tick scan saw. Every spill is synchronous, so it is also scanned on the removal's own tick and the two are unioned:
      *  a spill that something removes before the second scan still counts as a spill (the must-not-spill modes would
      *  otherwise pass over it), and {@link #vanished} fails the test naming what happened to it (issues #58 and #73:
-     *  two gold gears merging, see {@link #pinSpills}). */
+     *  two gold gears merging, see {@link #pinSpills}). A spill seen on the removal's tick belongs to its rig wherever
+     *  it drifts afterwards: one popped inside a block the command then replaces is pushed out of it, and has been seen
+     *  to leave its own box by the second scan (issue #82), so it can also reach a neighbour's. */
     private static final int GAP_TICKS = 2;
     /** The wait for every rig position to become entity-ticking, so a spilled item is visible to a scan. */
     private static final int POLL_TICKS = 60;
-    /** Half the side of the box scanned around a rig. Rigs sit two blocks apart, and an item popped from a rig
-     *  stays within about 0.6 blocks of it over {@link #GAP_TICKS}, so a rig's box never sees a neighbour's drops. */
+    /** Half the side of the box scanned around a rig. Rigs sit two blocks apart, so the boxes only touch, and a spill
+     *  is attributed to the rig whose removal-tick scan saw it first, never to a box it drifts into later. */
     private static final double RIG_RADIUS = 1.0;
 
     /** One block under test: what it is called in a failure message, where it is, and which items a removal that
@@ -184,7 +188,7 @@ public class CommandReplaceTester {
                     List<ItemEntity> spilled = new ArrayList<>(seenAtClone);
                     addAbsent(spilled, lateScan);
                     if (!spilled.isEmpty()) {
-                        List<String> vanished = vanished("clone move", seenAtClone, lateScan);
+                        List<String> vanished = vanished("clone move", seenAtClone);
                         throw new IllegalStateException("clone move must not spill the tank's water, but dropped "
                                 + describe(spilled) + (vanished.isEmpty() ? "" : " (" + String.join("; ", vanished) + ")"));
                     }
@@ -202,6 +206,8 @@ public class CommandReplaceTester {
     private static void runRigs(GameTestHelper helper, Removal removal) {
         List<Rig> rigs = new ArrayList<>();
         Map<Rig, List<ItemEntity>> seenAtRemoval = new HashMap<>();
+        // Every spill some rig's removal-tick scan saw; ItemEntity compares by identity.
+        Set<ItemEntity> claimed = new HashSet<>();
         forceLoadAround(helper, ALL_POSITIONS);
         EntityArenaUtil.tickUntilThen(helper, POLL_TICKS,
                 () -> {
@@ -220,7 +226,10 @@ public class CommandReplaceTester {
                     for (Rig rig : rigs) {
                         remove(helper, rig, removal);
                         // The rig's chunk is entity-ticking, so what the removal spilled is visible at once.
-                        List<ItemEntity> spilled = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
+                        List<ItemEntity> spilled = new ArrayList<>(
+                                EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS));
+                        spilled.removeIf(claimed::contains);
+                        claimed.addAll(spilled);
                         pinSpills(spilled);
                         seenAtRemoval.put(rig, spilled);
                     }
@@ -230,8 +239,12 @@ public class CommandReplaceTester {
                     List<String> failures = new ArrayList<>();
                     for (Rig rig : rigs) {
                         List<ItemEntity> dropped = new ArrayList<>(seenAtRemoval.get(rig));
-                        List<ItemEntity> lateScan = EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS);
-                        failures.addAll(vanished(rig.name(), dropped, lateScan));
+                        // Only what no removal-tick scan saw: a later arrival, counted in every box it sits in. A
+                        // spill some removal-tick scan saw is that rig's, already in its `dropped` wherever it is now.
+                        List<ItemEntity> lateScan = new ArrayList<>(
+                                EntityArenaUtil.droppedItems(helper, rig.pos(), RIG_RADIUS));
+                        lateScan.removeIf(claimed::contains);
+                        failures.addAll(vanished(rig.name(), dropped));
                         addAbsent(dropped, lateScan);
                         if (removal == Removal.SETBLOCK_DESTROY) {
                             for (Item expected : rig.mustSpill()) {
@@ -441,13 +454,14 @@ public class CommandReplaceTester {
         }
     }
 
-    /** One failure line per spill seen on the removal's tick that the second scan no longer finds. A spill is
-     *  synchronous and nothing in the rig takes it back, so an item that was there and is gone (or has left the box)
-     *  {@link #GAP_TICKS} ticks later was removed or moved by something outside the rig (issue #73). A removed item
-     *  says {@code DISCARDED} for nearly every way out (a sweep, a merge, lava, fire, an explosion, the void, old
-     *  age), so its age and fire ticks are named beside it; one still in the level has moved out of the box, and its
-     *  position says where. */
-    private static List<String> vanished(String name, List<ItemEntity> seen, List<ItemEntity> lateScan) {
+    /** One failure line per spill seen on the removal's tick that has been removed from the level by the second
+     *  scan. A spill is synchronous and nothing in the rig takes it back, so an item gone {@link #GAP_TICKS} ticks
+     *  later was removed by something outside the rig (issue #73). A removed item says {@code DISCARDED} for nearly
+     *  every way out (a sweep, a merge, lava, fire, an explosion, the void, old age), so its age and fire ticks are
+     *  named beside it. One that is still in the level but has drifted out of the box is not a failure: being pushed
+     *  out of the replaced block is ordinary item physics (issue #82), and a spill flung much further is not told
+     *  apart from it. */
+    private static List<String> vanished(String name, List<ItemEntity> seen) {
         List<String> lines = new ArrayList<>();
         for (ItemEntity item : seen) {
             if (item.isRemoved()) {
@@ -456,9 +470,6 @@ public class CommandReplaceTester {
                 lines.add(name + " spilled " + item.getItem() + ", absent from the scan " + GAP_TICKS
                         + " ticks later: removed (" + item.getRemovalReason() + ") at " + item.position() + " (age "
                         + item.getAge() + ", fire ticks " + item.getRemainingFireTicks() + merged + ")");
-            } else if (!lateScan.contains(item)) {
-                lines.add(name + " spilled " + item.getItem() + ", which left the scan box within " + GAP_TICKS
-                        + " ticks: now at " + item.position());
             }
         }
         return lines;

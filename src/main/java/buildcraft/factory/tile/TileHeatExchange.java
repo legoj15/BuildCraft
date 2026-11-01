@@ -234,11 +234,12 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             Deque<TileHeatExchange> exchangers = findAdjacentExchangers();
             if (exchangers.isEmpty()) {
                 checkNeighbours = true;
-            } else if (exchangers.size() < 3) {
+            } else if (exchangers.size() < 3 || exchangers.size() > 5) {
+                // Too short or too long to form: dissolve any section left from a valid length
                 for (TileHeatExchange tile : exchangers) {
                     tile.removeSection();
                 }
-            } else if (exchangers.size() <= 5) {
+            } else {
                 ExchangeSectionStart sectionStart = null;
                 ExchangeSectionEnd sectionEnd = null;
                 for (TileHeatExchange exchange : exchangers) {
@@ -287,8 +288,11 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
         if (level == null) return;
         if (checkNeighbours) {
             Deque<TileHeatExchange> exchangers = findAdjacentExchangers();
-            // Link start and end sections on the client — retry until successful
-            if (exchangers.size() > 2) {
+            if (exchangers.size() < 3 || exchangers.size() > 5) {
+                // Can never form; a later server sync sets checkNeighbours again
+                checkNeighbours = false;
+            } else {
+                // Link start and end sections on the client — retry until successful
                 TileHeatExchange start = exchangers.getFirst();
                 TileHeatExchange end = exchangers.getLast();
                 if (start.isStart() && end.isEnd()) {
@@ -304,6 +308,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
 
     private void removeSection() {
         if (section == null) return;
+        // No block is removed here, so the removal hook never sees these tanks: spill them now (1.12.2 did too)
+        if (level != null) {
+            buildcraft.lib.misc.BlockDropsUtil.dropFluidShards(level, worldPosition, section.tankInput, section.tankOutput);
+        }
         section = null;
         // Reset block state to MIDDLE when the multiblock is invalidated
         if (level != null) {
@@ -400,8 +408,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 }
             }
             Direction next = horizontals[(idx + 1) % 4];
-            level.setBlock(worldPosition, getBlockState().setValue(BlockHeatExchange.FACING, next),
-                    Block.UPDATE_ALL);
+            level.setBlock(worldPosition, withFacing(getBlockState(), worldPosition, next), Block.UPDATE_ALL);
         } else {
             // Rotate 180° — swap start and end
             ExchangeSectionStart start = null;
@@ -414,7 +421,7 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 }
                 exchange.section = null;
                 level.setBlock(exchange.worldPosition,
-                        exchange.getBlockState().setValue(BlockHeatExchange.FACING, thisFacing.getOpposite()),
+                        withFacing(exchange.getBlockState(), exchange.worldPosition, thisFacing.getOpposite()),
                         Block.UPDATE_ALL);
                 exchange.checkNeighbours = true;
                 exchange.setChanged();
@@ -435,6 +442,12 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             }
         }
         return true;
+    }
+
+    /** The block state turned to {@code facing}, with its connection flags recomputed for that facing rather than
+     *  left to the neighbour-shape pass. */
+    private BlockState withFacing(BlockState state, BlockPos pos, Direction facing) {
+        return BlockHeatExchange.updateConnections(state.setValue(BlockHeatExchange.FACING, facing), level, pos, facing);
     }
 
     private int computeSyncHash() {

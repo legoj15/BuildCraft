@@ -126,6 +126,7 @@ public class BCSiliconClient {
         buildcraft.silicon.client.model.GateItemModel.onModelBake();
         buildcraft.silicon.client.model.LensItemModel.onModelBake();
         buildcraft.silicon.client.model.plug.PlugGateBaker.onModelBake();
+        buildcraft.silicon.client.model.plug.PlugBakerLens.onModelBake();
         buildcraft.silicon.client.render.PlugGateRenderer.onModelBake();
         // Also invalidate the upstream PipeModelCacheAll cache so any pipe model that previously
         // baked non-empty gate quads (back when PlugGateBaker.bake didn't return an empty list)

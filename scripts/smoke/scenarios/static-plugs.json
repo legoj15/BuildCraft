@@ -17,7 +17,7 @@
       "pitch": 15
     },
     {
-      "label": "rig: five pipes, each with one static plug type on south, up and east",
+      "label": "rig: seven pipes: lens, timer, light sensor, pulsar, blocker, power adapter, filter; each plug on south, up and east",
       "do": "cmd",
       "run": [
         "gamemode creative @p",
@@ -33,7 +33,11 @@
         "setblock {X+2} {Y+1} {Z} buildcraftunofficial:pipe_holder",
         "data merge block {X+2} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:blocker\",data:{}},up:{id:\"buildcraftunofficial:blocker\",data:{}},east:{id:\"buildcraftunofficial:blocker\",data:{}}}}",
         "setblock {X+4} {Y+1} {Z} buildcraftunofficial:pipe_holder",
-        "data merge block {X+4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_power\"},plugs:{south:{id:\"buildcraftunofficial:power_adaptor\",data:{}},up:{id:\"buildcraftunofficial:power_adaptor\",data:{}},east:{id:\"buildcraftunofficial:power_adaptor\",data:{}}}}"
+        "data merge block {X+4} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_power\"},plugs:{south:{id:\"buildcraftunofficial:power_adaptor\",data:{}},up:{id:\"buildcraftunofficial:power_adaptor\",data:{}},east:{id:\"buildcraftunofficial:power_adaptor\",data:{}}}}",
+        "setblock {X-6} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X-6} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:0b}},up:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:0b}},east:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:0b}}}}",
+        "setblock {X+6} {Y+1} {Z} buildcraftunofficial:pipe_holder",
+        "data merge block {X+6} {Y+1} {Z} {pipe:{def:\"buildcraftunofficial:stone_item\"},plugs:{south:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:1b}},up:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:1b}},east:{id:\"buildcraftunofficial:lens\",data:{colour:\"red\",f:1b}}}}"
       ]
     },
     {
@@ -176,6 +180,60 @@
       "do": "shot",
       "name": "power-adaptor",
       "look": "power-adaptor plug on the pipe's south (front), top and east faces: same shape on all three, texture orientation consistent, no magenta"
+    },
+    {
+      "do": "tp",
+      "at": [
+        -5,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        -6,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "red-lens",
+      "look": "red lens on south, top and east faces: frame bars plus red tinted centre; same on all three faces"
+    },
+    {
+      "do": "tp",
+      "at": [
+        7,
+        0,
+        2
+      ],
+      "yaw": 150,
+      "pitch": 30
+    },
+    {
+      "do": "aim",
+      "at": [
+        6,
+        1,
+        0
+      ]
+    },
+    {
+      "do": "wait",
+      "ms": 600
+    },
+    {
+      "do": "shot",
+      "name": "red-filter",
+      "look": "red filter on south, top and east faces: frame bars plus red tinted centre, with two vertical crossbars; same on all three faces"
     }
   ]
 }

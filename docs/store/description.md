@@ -70,14 +70,14 @@ Logic Gates augment your existing pipes. When utilized correctly, you can make y
 ![Robots](img/robots.png)
 
 Absent from every BuildCraft version after 1.7.10 (i.e. a very long time), you can again program robot boards, dock robots at stations on your pipes, and send
-them to farm, harvest, haul items and fluids, or fight, all directed through gates.
+them to farm, harvest, haul items and fluids, or fight, entirely controlled by logic gates.
 
 ---
 # What's new
 On top of existing systems, the following has been reworked or is completely new to the mod:
 ## Redux changes
 - **Overworld oil spawns**: Infinite oil has been changed to not be their own biome, instead biomes tagged as "rich" (by default arid and deep ocean) now get distinctly wider and taller oil spouts.
-- **Nether Oil**: Very rare finite spouts of searing oil present in select Nether biomes. This should allow for Nether start challenge runs.
+- **Nether Oil**: Spouts of searing oil rarely present in the Nether. This should allow for Nether start challenge runs.
 - **Wrench overhaul**: It's an actual tool now (in Minecraft terms), and now has a 3-tier progression path to expand capabilities (evolves the "Marker Connector" tool).
 - **Enchantable machines**: You can now enchant the Miner and Quarry with applicable pickaxe enchants. This can be disabled/nullified in the config.
 - **Machine augmentation**: You can place a Pump on top of a Miner or Quarry and have it drain fluids.
@@ -96,7 +96,7 @@ On top of existing systems, the following has been reworked or is completely new
 
 ## Built for today's servers
 
-- **Respects land claims.** A large amount of effort went into making sure all automations respect mods and server plugins that claim land for multiplayer worlds. Quarries won't break unowned blocks, and explosives dropped by robots or pipes can't be used to grief.
+- **Respects land claims.** A large amount of effort went into making sure all automations respect mods and server plugins that claim land for multiplayer worlds. Blocks, pipes and robots without permissions cannot make changes to claimed land, even when using entities like TNT.
 - **Performance.** Long pipe networks, idle machines, and pumps over huge lakes were tested on modern MC to make sure they do not introduce performance issues.
 - **Recipe viewers.** Native support for JEI and REI.
 - **In-game Guide Book** covering every block, item and gate, with robot tutorials. Also compatible with AE2's GuideME.

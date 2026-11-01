@@ -7,9 +7,9 @@
 package buildcraft.silicon.client.model.plug;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 
@@ -52,7 +52,8 @@ import buildcraft.silicon.client.model.key.KeyPlugLens;
 public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
     INSTANCE;
 
-    private static final Map<KeyPlugLens, List<BakedQuad>> cached = new HashMap<>();
+    /** Chunk sections compile on several threads at once: a plain HashMap here handed back null mid-put. */
+    private static final Map<KeyPlugLens, List<BakedQuad>> cached = new ConcurrentHashMap<>();
 
     public static void onModelBake() {
         cached.clear();
@@ -247,29 +248,30 @@ public enum PlugBakerLens implements IPluggableStaticBaker<KeyPlugLens> {
 
     @Override
     public List<BakedQuad> bake(KeyPlugLens key) {
-        if (!cached.containsKey(key)) {
-            List<MutableQuad> rawQuads = new ArrayList<>();
-            String layerName = key.layer != null ? key.layer.toString().toLowerCase() : "";
+        return cached.computeIfAbsent(key, PlugBakerLens::bakeUncached);
+    }
 
-            List<BakedQuad> baked = new ArrayList<>();
+    private static List<BakedQuad> bakeUncached(KeyPlugLens key) {
+        List<MutableQuad> rawQuads = new ArrayList<>();
+        String layerName = key.layer != null ? key.layer.toString().toLowerCase() : "";
 
-            if (layerName.contains("cutout")) {
-                bakeCutoutQuads(rawQuads, key.isFilter);
-                for (MutableQuad q : rawQuads) {
-                    q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
-                    q.multShade();
-                    baked.add(q.toBakedBlock());
-                }
-            } else if (layerName.contains("translucent")) {
-                bakeTranslucentQuads(rawQuads, key.colour, key.isFilter);
-                for (MutableQuad q : rawQuads) {
-                    q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
-                    baked.add(q.toBakedTranslucent());
-                }
+        List<BakedQuad> baked = new ArrayList<>();
+
+        if (layerName.contains("cutout")) {
+            bakeCutoutQuads(rawQuads, key.isFilter);
+            for (MutableQuad q : rawQuads) {
+                q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
+                q.multShade();
+                baked.add(q.toBakedBlock());
             }
-
-            cached.put(key, baked);
+        } else if (layerName.contains("translucent")) {
+            bakeTranslucentQuads(rawQuads, key.colour, key.isFilter);
+            for (MutableQuad q : rawQuads) {
+                q.rotate(Direction.WEST, key.side, 0.5f, 0.5f, 0.5f);
+                baked.add(q.toBakedTranslucent());
+            }
         }
-        return cached.get(key);
+
+        return baked;
     }
 }

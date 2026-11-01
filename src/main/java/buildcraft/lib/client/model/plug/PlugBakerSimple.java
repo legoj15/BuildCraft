@@ -6,8 +6,6 @@
 
 package buildcraft.lib.client.model.plug;
 
-import net.minecraft.resources.Identifier;
-
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -29,8 +27,9 @@ import buildcraft.lib.client.model.MutableQuad;
 public class PlugBakerSimple<K extends PluggableModelKey> implements IPluggableStaticBaker<K> {
 
     private final IQuadProvider provider;
-    private final Map<Direction, List<BakedQuad>> cached = new EnumMap<>(Direction.class);
-    private MutableQuad[] lastSeen;
+    /** Chunk sections compile on several threads at once, so a re-bake builds a whole new map and publishes it with
+     * the array it came from in one write; a reader never sees a half-filled map. */
+    private volatile Baked baked;
 
     public PlugBakerSimple(IQuadProvider provider) {
         this.provider = provider;
@@ -39,8 +38,9 @@ public class PlugBakerSimple<K extends PluggableModelKey> implements IPluggableS
     @Override
     public List<BakedQuad> bake(K key) {
         MutableQuad[] quads = provider.getCutoutQuads();
-        if (quads != lastSeen) {
-            cached.clear();
+        Baked current = baked;
+        if (current == null || current.source != quads) {
+            Map<Direction, List<BakedQuad>> bySide = new EnumMap<>(Direction.class);
             MutableQuad copy = new MutableQuad();
             for (Direction to : Direction.values()) {
                 List<BakedQuad> list = new ArrayList<>();
@@ -50,12 +50,15 @@ public class PlugBakerSimple<K extends PluggableModelKey> implements IPluggableS
                     copy.multShade();
                     list.add(copy.toBakedBlock());
                 }
-                cached.put(to, list);
+                bySide.put(to, list);
             }
-            lastSeen = quads;
+            current = new Baked(quads, bySide);
+            baked = current;
         }
-        return cached.get(key.side);
+        return current.bySide.get(key.side);
     }
+
+    private record Baked(MutableQuad[] source, Map<Direction, List<BakedQuad>> bySide) {}
 
     public interface IQuadProvider {
         MutableQuad[] getCutoutQuads();

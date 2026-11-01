@@ -1,59 +1,112 @@
 {
     "parent": "minecraft:block/block",
-    "render_type": "minecraft:translucent",
+    "render_type": "minecraft:solid",
     "textures": {
-        "sprite_a": "buildcraftunofficial:block/heat_exchange/sprite_a",
-        "sprite_b": "buildcraftunofficial:block/heat_exchange/sprite_b",
-        "sprite_d": "buildcraftunofficial:block/heat_exchange/sprite_d",
-        "particle": "buildcraftunofficial:block/heat_exchange/sprite_a"
+        "cap": "buildcraftunofficial:block/heat_exchange/cap",
+        "flange": "buildcraftunofficial:block/heat_exchange/flange",
+        "side": "buildcraftunofficial:block/heat_exchange/shell_side",
+        "top": "buildcraftunofficial:block/heat_exchange/shell_top",
+        "particle": "buildcraftunofficial:block/heat_exchange/shell_top"
     },
     "elements": [
         {
-            "comment": "Inner Pipe — no east/west cap faces. sprite_b at uv [0,0,12,12] on the Outer Pipe already encodes the full cap pattern (including the inner-mouth area); a second inner cap layered on top would show a mis-aligned slice of sprite_b at the same world position.",
-            "from": [0, 4, 4],
-            "to": [16, 12, 12],
+            "name": "cap_plate",
+            "from": [1, 1, 1], "to": [2, 15, 15],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
+                "north": {"uv": [14, 1, 15, 15], "texture": "#flange"},
+                "east": {"uv": [1, 1, 15, 15], "texture": "#flange"},
+                "south": {"uv": [1, 1, 2, 15], "texture": "#flange"},
+                "west": {"uv": [1, 1, 15, 15], "texture": "#cap"},
+                "up": {"uv": [1, 1, 2, 15], "texture": "#flange"},
+                "down": {"uv": [1, 1, 2, 15], "texture": "#flange"}
             }
         },
         {
-            "comment": "Inner Pipe - inverted (back-face pass for the inner tube walls; matching no-cap shape)",
-            "from": [16, 12, 12],
-            "to": [0, 4, 4],
+            "name": "cap_dome",
+            "from": [0, 3, 3], "to": [1, 13, 13],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
+                "north": {"uv": [15, 3, 16, 13], "texture": "#cap"},
+                "south": {"uv": [0, 3, 1, 13], "texture": "#cap"},
+                "west": {"uv": [3, 3, 13, 13], "texture": "#cap", "cullface": "west"},
+                "up": {"uv": [0, 3, 1, 13], "texture": "#cap"},
+                "down": {"uv": [0, 3, 1, 13], "texture": "#cap"}
             }
         },
         {
-            "comment": "Outer Pipe",
-            "from": [ 0, 2, 2 ],
-            "to": [ 16, 14, 14 ],
+            "name": "shell_lower",
+            "from": [2, 2, 2], "to": [14, 6, 14],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "east":  { "uv": [ 0, 0, 12, 12 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 0, 0, 12, 12 ], "texture": "#sprite_b" }
+                "north": {"uv": [2, 10, 14, 14], "texture": "#side"},
+                "south": {"uv": [2, 10, 14, 14], "texture": "#side"},
+                "down": {"uv": [2, 2, 14, 14], "texture": "#top"}
             }
         },
         {
-            "comment": "Outer Pipe - inverted (back-face pass for translucent rendering)",
-            "from": [ 16, 14, 14 ],
-            "to": [ 0, 2, 2 ],
+            "name": "shell_upper",
+            "from": [2, 10, 2], "to": [14, 14, 14],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "east":  { "uv": [ 0, 0, 12, 12 ], "texture": "#sprite_b" },
-                "west":  { "uv": [ 0, 0, 12, 12 ], "texture": "#sprite_b" }
+                "north": {"uv": [2, 2, 14, 6], "texture": "#side"},
+                "south": {"uv": [2, 2, 14, 6], "texture": "#side"},
+                "up": {"uv": [2, 2, 14, 14], "texture": "#top"}
+            }
+        },
+        {
+            "name": "glass_back",
+            "from": [2, 6, 4.25], "to": [14, 10, 11.75],
+            "faces": {
+                "north": {"uv": [2, 6, 14, 10], "texture": "#side"},
+                "south": {"uv": [2, 6, 14, 10], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_front_floor",
+            "from": [2, 6, 2], "to": [14, 6, 4.25],
+            "faces": {
+                "up": {"uv": [2, 14, 14, 16], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_front_ceiling",
+            "from": [2, 10, 2], "to": [14, 10, 4.25],
+            "faces": {
+                "down": {"uv": [2, 16, 14, 14], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_back_floor",
+            "from": [2, 6, 11.75], "to": [14, 6, 14],
+            "faces": {
+                "up": {"uv": [2, 16, 14, 14], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_back_ceiling",
+            "from": [2, 10, 11.75], "to": [14, 10, 14],
+            "faces": {
+                "down": {"uv": [2, 14, 14, 16], "texture": "#side"}
+            }
+        },
+        {
+            "name": "cap_plate",
+            "from": [14, 1, 1], "to": [15, 15, 15],
+            "faces": {
+                "north": {"uv": [1, 1, 2, 15], "texture": "#flange"},
+                "east": {"uv": [1, 1, 15, 15], "texture": "#cap"},
+                "south": {"uv": [14, 1, 15, 15], "texture": "#flange"},
+                "west": {"uv": [1, 1, 15, 15], "texture": "#flange"},
+                "up": {"uv": [14, 1, 15, 15], "texture": "#flange"},
+                "down": {"uv": [14, 1, 15, 15], "texture": "#flange"}
+            }
+        },
+        {
+            "name": "cap_dome",
+            "from": [15, 3, 3], "to": [16, 13, 13],
+            "faces": {
+                "north": {"uv": [0, 3, 1, 13], "texture": "#cap"},
+                "east": {"uv": [3, 3, 13, 13], "texture": "#cap", "cullface": "east"},
+                "south": {"uv": [15, 3, 16, 13], "texture": "#cap"},
+                "up": {"uv": [15, 3, 16, 13], "texture": "#cap"},
+                "down": {"uv": [15, 3, 16, 13], "texture": "#cap"}
             }
         }
     ]

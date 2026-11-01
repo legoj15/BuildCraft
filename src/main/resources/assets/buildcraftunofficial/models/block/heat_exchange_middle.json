@@ -1,53 +1,63 @@
 {
-    "render_type": "minecraft:translucent",
+    "render_type": "minecraft:solid",
     "textures": {
-        "sprite_a": "buildcraftunofficial:block/heat_exchange/sprite_a",
-        "sprite_d": "buildcraftunofficial:block/heat_exchange/sprite_d",
-        "particle": "buildcraftunofficial:block/heat_exchange/sprite_a"
+        "side": "buildcraftunofficial:block/heat_exchange/shell_side",
+        "top": "buildcraftunofficial:block/heat_exchange/shell_top",
+        "particle": "buildcraftunofficial:block/heat_exchange/shell_top"
     },
     "elements": [
         {
-            "comment": "Inner Pipe",
-            "from": [0, 4, 4],
-            "to": [16, 12, 12],
+            "name": "shell_lower",
+            "from": [2, 2, 2], "to": [14, 6, 14],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
+                "north": {"uv": [2, 10, 14, 14], "texture": "#side"},
+                "south": {"uv": [2, 10, 14, 14], "texture": "#side"},
+                "down": {"uv": [2, 2, 14, 14], "texture": "#top"}
             }
         },
         {
-            "comment": "Inner Pipe - inverted",
-            "from": [16, 12, 12],
-            "to": [0, 4, 4],
+            "name": "shell_upper",
+            "from": [2, 10, 2], "to": [14, 14, 14],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "down":  { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "north": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" },
-                "south": { "uv": [ 0, 0, 16, 8 ], "texture": "#sprite_a" }
+                "north": {"uv": [2, 2, 14, 6], "texture": "#side"},
+                "south": {"uv": [2, 2, 14, 6], "texture": "#side"},
+                "up": {"uv": [2, 2, 14, 14], "texture": "#top"}
             }
         },
         {
-            "comment": "Outer Pipe",
-            "from": [ 0, 2, 2 ],
-            "to": [ 16, 14, 14 ],
+            "name": "glass_back",
+            "from": [2, 6, 4.25], "to": [14, 10, 11.75],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" }
+                "north": {"uv": [2, 6, 14, 10], "texture": "#side"},
+                "south": {"uv": [2, 6, 14, 10], "texture": "#side"}
             }
         },
         {
-            "comment": "Outer Pipe - inverted",
-            "from": [ 16, 14, 14 ],
-            "to": [ 0, 2, 2 ],
+            "name": "sill_front_floor",
+            "from": [2, 6, 2], "to": [14, 6, 4.25],
             "faces": {
-                "up":    { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "down":  { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "north": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" },
-                "south": { "uv": [ 0, 0, 16, 12 ], "texture": "#sprite_d" }
+                "up": {"uv": [2, 14, 14, 16], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_front_ceiling",
+            "from": [2, 10, 2], "to": [14, 10, 4.25],
+            "faces": {
+                "down": {"uv": [2, 16, 14, 14], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_back_floor",
+            "from": [2, 6, 11.75], "to": [14, 6, 14],
+            "faces": {
+                "up": {"uv": [2, 16, 14, 14], "texture": "#side"}
+            }
+        },
+        {
+            "name": "sill_back_ceiling",
+            "from": [2, 10, 11.75], "to": [14, 10, 14],
+            "faces": {
+                "down": {"uv": [2, 14, 14, 16], "texture": "#side"}
             }
         }
     ]

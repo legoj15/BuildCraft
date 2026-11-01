@@ -1,0 +1,33 @@
+{
+    "render_type": "minecraft:solid",
+    "textures": {
+        "cap": "buildcraftunofficial:block/heat_exchange/cap",
+        "flange": "buildcraftunofficial:block/heat_exchange/flange",
+        "particle": "buildcraftunofficial:block/heat_exchange/shell_top"
+    },
+    "elements": [
+        {
+            "name": "cap_plate",
+            "from": [14, 1, 1], "to": [15, 15, 15],
+            "faces": {
+                "north": {"uv": [1, 1, 2, 15], "texture": "#flange"},
+                "east": {"uv": [1, 1, 15, 15], "texture": "#cap"},
+                "south": {"uv": [14, 1, 15, 15], "texture": "#flange"},
+                "west": {"uv": [1, 1, 15, 15], "texture": "#flange"},
+                "up": {"uv": [14, 1, 15, 15], "texture": "#flange"},
+                "down": {"uv": [14, 1, 15, 15], "texture": "#flange"}
+            }
+        },
+        {
+            "name": "cap_dome",
+            "from": [15, 3, 3], "to": [16, 13, 13],
+            "faces": {
+                "north": {"uv": [0, 3, 1, 13], "texture": "#cap"},
+                "east": {"uv": [3, 3, 13, 13], "texture": "#cap", "cullface": "east"},
+                "south": {"uv": [15, 3, 16, 13], "texture": "#cap"},
+                "up": {"uv": [15, 3, 16, 13], "texture": "#cap"},
+                "down": {"uv": [15, 3, 16, 13], "texture": "#cap"}
+            }
+        }
+    ]
+}

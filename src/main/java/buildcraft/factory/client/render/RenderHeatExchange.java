@@ -80,8 +80,11 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
     private static final TankBounds TANK_BOTTOM, TANK_TOP;
 
     static {
-        TANK_BOTTOM = new TankBounds(2, 0, 2, 14, 2, 14);
-        TANK_TOP = new TankBounds(2, 14, 2, 14, 16, 14);
+        // The vertical ports are 8x8 nozzle bores in the block model (START underneath, END on top),
+        // the same cross-section as the side tanks' axial nozzles. scripts/generate-heat-exchanger-assets.py
+        // builds the model around these boxes; change both together.
+        TANK_BOTTOM = new TankBounds(4, 0, 4, 12, 2, 12);
+        TANK_TOP = new TankBounds(4, 14, 4, 12, 16, 12);
         TankBounds start = new TankBounds(0, 4, 4, 2, 12, 12);
         TankBounds end = new TankBounds(14, 4, 4, 16, 12, 12);
         TankSideData sides = new TankSideData(start, end);

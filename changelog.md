@@ -1,5 +1,6 @@
 ###### Changes since 2026.3.0:
 
+* The Heat Exchanger has a new look: a painted shell-and-tube vessel with bolted joints between segments, capped ends, and blue (cold) and red (hot) nozzles where fluids go in and out. The flowing fluids still show through a sight glass on the front and back.
 * Lava now sets placed oils and fuels alight, like fire already does. Lava never lights crude oil itself, so oil lakes beside lava pools and the oil slicks on the Nether's lava sea aren't set ablaze by the lava alone; residue still never burns.
 * **Robot Goggles** can now be crafted from iron ingots, glass panes and a redstone chipset, and worn in the head slot. They outline every robot through walls, red when its battery is empty to green when it is full, and outline the cells a stalled Builder is skipping.
 * Abandoned quarry pits are a rare surface find in the Overworld: a rotted quarry frame, full of gaps and cobwebs, over a square pit. Its quarry dug until it reached something worth finding, an ore, a mineshaft or a dungeon, and left it for the player, who can carry on the dig. Turn them off with the `generateQuarryPits` option.

@@ -1,0 +1,339 @@
+{
+ "name": "heat-exchanger-look",
+ "description": "Heat exchanger look for the #43 redesign: dry rows plus a running piped rig.",
+ "base": [
+  0,
+  150,
+  0
+ ],
+ "steps": [
+  {
+   "label": "load the rig area",
+   "do": "cmd",
+   "run": [
+    "gamemode creative @p",
+    "tp @p {X+8} {Y+2} {Z-6}",
+    "attribute @p minecraft:gravity base set 0"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 4000
+  },
+  {
+   "label": "setup",
+   "do": "cmd",
+   "run": [
+    "gamemode creative @p",
+    "difficulty peaceful",
+    "time set 6000",
+    "weather clear",
+    "?tick unfreeze",
+    "?kill @e[type=item]",
+    "?fill {X-4} {Y} {Z-8} {X+20} {Y+5} {Z+9} minecraft:air",
+    "fill {X-4} {Y-1} {Z-8} {X+20} {Y-1} {Z+9} minecraft:smooth_stone",
+    "setblock {X} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+3} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+4} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+7} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+8} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+9} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+12} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+13} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+14} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+15} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+16} {Y} {Z} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+7} {Y+1} {Z+5} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+8} {Y+1} {Z+5} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+9} {Y+1} {Z+5} buildcraftunofficial:heat_exchange[facing=north]",
+    "setblock {X+9} {Y} {Z+5} buildcraftunofficial:pipe_holder",
+    "data merge block {X+9} {Y} {Z+5} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+10} {Y+1} {Z+5} buildcraftunofficial:pipe_holder",
+    "data merge block {X+10} {Y+1} {Z+5} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+7} {Y+2} {Z+5} buildcraftunofficial:pipe_holder",
+    "data merge block {X+7} {Y+2} {Z+5} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}",
+    "setblock {X+6} {Y+1} {Z+5} buildcraftunofficial:pipe_holder",
+    "data merge block {X+6} {Y+1} {Z+5} {pipe:{def:\"buildcraftunofficial:cobblestone_fluid\"}}"
+   ]
+  },
+  {
+   "do": "hold",
+   "item": "minecraft:air"
+  },
+  {
+   "do": "wait",
+   "ms": 3000
+  },
+  {
+   "label": "fill running rig (start=water, end=lava)",
+   "do": "cmd",
+   "echo": true,
+   "run": [
+    "data merge block {X+9} {Y+1} {Z+5} {sectionInput:{id:\"minecraft:water\",amount:2000}}",
+    "data merge block {X+7} {Y+1} {Z+5} {sectionInput:{id:\"minecraft:lava\",amount:2000}}"
+   ]
+  },
+  {
+   "do": "wait",
+   "ms": 4000
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "tick freeze"
+   ]
+  },
+  {
+   "do": "cmd",
+   "echo": true,
+   "label": "rig state",
+   "run": [
+    "data get block {X+9} {Y+1} {Z+5}"
+   ]
+  },
+  {
+   "do": "tp",
+   "at": [
+    8,
+    1,
+    -7
+   ],
+   "yaw": 0,
+   "pitch": 8
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "overview",
+   "look": "front (north) side of all dry rows: single x0, pair x3-4, triple x7-9, five x12-16; running rig behind"
+  },
+  {
+   "do": "tp",
+   "at": [
+    -1.5,
+    0,
+    -2.5
+   ],
+   "yaw": -35,
+   "pitch": 22
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "single-34",
+   "look": "lone (unformed) exchanger, 3/4 front-left"
+  },
+  {
+   "do": "tp",
+   "at": [
+    -3,
+    0,
+    0
+   ],
+   "yaw": -90,
+   "pitch": 12
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "single-axial",
+   "look": "lone exchanger looking down its axis: end-cap faces"
+  },
+  {
+   "do": "tp",
+   "at": [
+    5.5,
+    0,
+    -2.5
+   ],
+   "yaw": 35,
+   "pitch": 22
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "pair-34",
+   "look": "two-block (invalid, unformed) pair"
+  },
+  {
+   "do": "tp",
+   "at": [
+    11,
+    0,
+    -2.5
+   ],
+   "yaw": 40,
+   "pitch": 22
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "triple-front-right",
+   "look": "formed triple, 3/4 front-right: START at x9 (east end)"
+  },
+  {
+   "do": "tp",
+   "at": [
+    5.5,
+    0,
+    2
+   ],
+   "yaw": -140,
+   "pitch": 22
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "triple-back-left",
+   "look": "formed triple, 3/4 back-left: END at x7"
+  },
+  {
+   "do": "tp",
+   "at": [
+    14,
+    0,
+    -3.5
+   ],
+   "yaw": 0,
+   "pitch": 10
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "five-front",
+   "look": "formed five-chain front-on: seams between middles"
+  },
+  {
+   "do": "tp",
+   "at": [
+    11.5,
+    1,
+    2.5
+   ],
+   "yaw": 60,
+   "pitch": 20
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "running-ne",
+   "look": "running rig 3/4 from north-east: START side port pipe (east) and bottom pipe, fluid flow visible"
+  },
+  {
+   "do": "tp",
+   "at": [
+    4.5,
+    2,
+    2.5
+   ],
+   "yaw": -60,
+   "pitch": 25
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "running-nw",
+   "look": "running rig 3/4 from north-west: END top pipe and west side port"
+  },
+  {
+   "do": "tp",
+   "at": [
+    8,
+    2,
+    8.5
+   ],
+   "yaw": 180,
+   "pitch": 25
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "running-back",
+   "look": "running rig from the back (south)"
+  },
+  {
+   "do": "tp",
+   "at": [
+    8,
+    0,
+    2.5
+   ],
+   "yaw": 0,
+   "pitch": -8
+  },
+  {
+   "do": "wait",
+   "ms": 900
+  },
+  {
+   "do": "shot",
+   "name": "running-low",
+   "look": "running rig low angle from front: bottom port meets pipe"
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "tick unfreeze"
+   ]
+  },
+  {
+   "do": "hold",
+   "item": "buildcraftunofficial:heat_exchange"
+  },
+  {
+   "do": "tp",
+   "at": [
+    8,
+    1,
+    -7
+   ],
+   "yaw": 0,
+   "pitch": 8
+  },
+  {
+   "do": "wait",
+   "ms": 600
+  },
+  {
+   "do": "shot",
+   "name": "held-item",
+   "look": "item model in hand"
+  },
+  {
+   "do": "cmd",
+   "run": [
+    "attribute @p minecraft:gravity base reset"
+   ]
+  }
+ ]
+}

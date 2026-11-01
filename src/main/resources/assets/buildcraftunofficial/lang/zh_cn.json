@@ -614,6 +614,7 @@
     "buildcraftunofficial.configuration.flowDisplay": "流速显示",
     "buildcraftunofficial.configuration.forceExcessiveOilBiomes": "强制富油生物群系",
     "buildcraftunofficial.configuration.gasExplodes": "气态燃料会爆炸",
+    "buildcraftunofficial.configuration.containedFluidDetonation": "启用容器内流体爆炸",
     "buildcraftunofficial.configuration.general": "常规",
     "buildcraftunofficial.configuration.largeOilGenProb": "大型石油生成概率",
     "buildcraftunofficial.configuration.largeSpoutMaxHeight": "大型油泉最大高度",

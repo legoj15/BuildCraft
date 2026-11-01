@@ -54,6 +54,8 @@ public class BCEnergy {
             commonSetup(event);
         });
 
+        ContainedFluidDetonation.init();
+
         // MC 26.1: Register recipes on ServerAboutToStartEvent
         NeoForge.EVENT_BUS.addListener((ServerAboutToStartEvent event) -> {
             onServerAboutToStart(event);

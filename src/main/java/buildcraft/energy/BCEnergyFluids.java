@@ -466,6 +466,11 @@ public class BCEnergyFluids {
             return dense;
         }
 
+        /** How this fluid behaves around fire, the same band its block carries. */
+        public FluidVolatility.Band volatility() {
+            return volatility;
+        }
+
         @Override
         //? if >=1.21.10 {
         public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state, FluidState fluidState) {

@@ -41,6 +41,8 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.neoforged.neoforge.fluids.FluidStack;
+
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.tiles.IDebuggable;
@@ -55,6 +57,7 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 import buildcraft.api.transport.pipe.PipeEvent;
 import buildcraft.api.transport.pluggable.PipePluggable;
 
+import buildcraft.energy.ContainedFluidDetonation;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
@@ -66,12 +69,14 @@ import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.pipe.Pipe;
+import buildcraft.transport.pipe.flow.PipeFlowFluids;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourDaizuli;
 import buildcraft.transport.wire.WireManager;
 import buildcraft.transport.pipe.PipeEventBus;
 
 @SuppressWarnings("this-escape")
-public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder, IDebuggable {
+public class TilePipeHolder extends AbstractBCBlockEntity
+        implements IPipeHolder, IDebuggable, ContainedFluidDetonation.Container {
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DREAM
         = net.minecraft.resources.Identifier.parse("buildcraftunofficial:pipe_dream");
     private static final net.minecraft.resources.Identifier ADVANCEMENT_PIPE_DIVERSIFICATION
@@ -458,6 +463,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
         wireManager.tick();
         if (pipe != null) {
             pipe.onTick();
+            ContainedFluidDetonation.tickContainer(level, worldPosition, this);
         }
         // Tick pluggables
         for (PipePluggable plug : pluggables) {
@@ -712,6 +718,20 @@ public class TilePipeHolder extends AbstractBCBlockEntity implements IPipeHolder
     @Override
     public Pipe getPipe() {
         return pipe;
+    }
+
+    // --- Detonation (gas in a fluid pipe exploding; every other pipe holds nothing that can) ---
+
+    @Override
+    public FluidStack containedFluid() {
+        return pipe != null && pipe.getFlow() instanceof PipeFlowFluids fluids ? fluids.getStoredFluid() : FluidStack.EMPTY;
+    }
+
+    @Override
+    public void ventContainedFluid() {
+        if (pipe != null && pipe.getFlow() instanceof PipeFlowFluids fluids) {
+            fluids.clearCargo();
+        }
     }
 
     @Override

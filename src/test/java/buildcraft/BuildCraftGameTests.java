@@ -244,6 +244,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
         reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
         reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
+        reg.accept("buildcraftunofficial:tank_of_gas_detonates", () -> buildcraft.energy.ContainedFluidDetonationTester::testTankOfGasDetonates);
 
         // Inventory Transactors
         reg.accept("buildcraftunofficial:item_transactor_simple_moving", () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);

@@ -21,6 +21,17 @@ public class BCEnergyConfig {
 
     public static ModConfigSpec.BooleanValue canBurn;
     public static ModConfigSpec.BooleanValue gasExplodes;
+    public static ModConfigSpec.EnumValue<ContainedDetonation> containedFluidDetonation;
+
+    /** How dangerous a tank or fluid pipe full of gaseous fuel is; the rules live in ContainedFluidDetonation. */
+    public enum ContainedDetonation {
+        /** Stored fluid never explodes. */
+        OFF,
+        /** Any container holding at least a bucket of gas explodes with the strength of a gas block. */
+        PER_BLOCK,
+        /** The blast grows with how much gas the container holds. */
+        BY_VOLUME
+    }
 
     public static ModConfigSpec.BooleanValue enableOilSpouts;
     public static ModConfigSpec.IntValue finiteSpoutMinHeight;
@@ -70,9 +81,9 @@ public class BCEnergyConfig {
         canBurn = builder
                 .comment("Set true to let placed oils and fuels burn with vanilla fire. Heavier oils catch rarely and",
                          "burn down slowly, lighter fuels catch quickly and fire races across a pool, and a heated",
-                         "oil or fuel burns faster than a cool one. Residue never burns. Tanks and pipes are",
-                         "unaffected; only fluid placed in the world burns. Gaseous fuels still explode when lit",
-                         "unless gasExplodes is off.")
+                         "oil or fuel burns faster than a cool one. Residue never burns. Tanks and pipes never",
+                         "burn; containedFluidDetonation decides whether the gas inside them explodes. Gaseous fuels",
+                         "still explode when lit unless gasExplodes is off.")
                 .define("canBurn", true);
 
         gasExplodes = builder
@@ -81,6 +92,16 @@ public class BCEnergyConfig {
                          "(the Nether) ignites gas on its own. Each blast sets off the gas close by a few ticks later.",
                          "Liquid oil and fuels never explode. This also controls the Nether case.")
                 .define("gasExplodes", true);
+
+        containedFluidDetonation = builder
+                .comment("Whether gaseous fuel inside a tank or fluid pipe explodes when fire, soul fire, lava or a lit",
+                         "campfire is beside the container (lightning sets such fires), or when a blast destroys it.",
+                         "OFF: stored fluid never explodes. PER_BLOCK: every container holding at least one bucket of",
+                         "gas explodes like a block of gas, so a pipe is as dangerous as a tank. BY_VOLUME: the blast",
+                         "grows with the stored amount, so a nearly empty pipe barely pops and a full tank is far",
+                         "stronger than TNT. Off whenever canBurn or gasExplodes is off. The Nether alone never sets",
+                         "a container off.")
+                .defineEnum("containedFluidDetonation", ContainedDetonation.OFF);
 
         builder.push("spouts");
 
@@ -296,6 +317,19 @@ public class BCEnergyConfig {
     /** Whether gaseous fuels explode ({@code gasExplodes}), the Nether case included; read live, never cached. */
     public static boolean gasExplodesEnabled() {
         return readFlag(gasExplodes);
+    }
+
+    /** The {@code containedFluidDetonation} mode in force: {@code OFF} while {@code canBurn} or {@code gasExplodes} is
+     *  off, and before the spec has loaded (unlike the two flags, this one defaults to off). Read live. */
+    public static ContainedDetonation containedDetonationMode() {
+        if (containedFluidDetonation == null || !canBurnEnabled() || !gasExplodesEnabled()) {
+            return ContainedDetonation.OFF;
+        }
+        try {
+            return containedFluidDetonation.get();
+        } catch (IllegalStateException notLoadedYet) {
+            return ContainedDetonation.OFF;
+        }
     }
 
     private static boolean readFlag(ModConfigSpec.BooleanValue flag) {

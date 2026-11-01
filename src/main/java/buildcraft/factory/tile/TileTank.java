@@ -34,6 +34,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import buildcraft.energy.ContainedFluidDetonation;
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.container.ContainerTank;
 import buildcraft.lib.gui.IBCMenuProvider;
@@ -53,7 +54,8 @@ import buildcraft.api.tiles.IDebuggable;
  * Each individual tank holds 16 buckets (16,000 mB).
  * Ported from 1.12.2 TileTank.
  */
-public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProvider, IDebuggable, IComparatorOutputTile {
+public class TileTank extends AbstractBCSyncedBlockEntity
+        implements IBCMenuProvider, IDebuggable, IComparatorOutputTile, ContainedFluidDetonation.Container {
 
     public final BCFluidTank tank = new BCFluidTank(1, 16_000); // 16 buckets
     public final FluidSmoother smoothedTank = new FluidSmoother(tank);
@@ -87,6 +89,18 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
         tank.setFluidStack(0, FluidStack.EMPTY);
     }
 
+    // --- Detonation (gas in this tank exploding; the column's other tanks each answer for their own) ---
+
+    @Override
+    public FluidStack containedFluid() {
+        return tank.getFluidStack(0);
+    }
+
+    @Override
+    public void ventContainedFluid() {
+        clearContent();
+    }
+
     // --- Comparator ---
 
     @Override
@@ -108,6 +122,9 @@ public class TileTank extends AbstractBCSyncedBlockEntity implements IBCMenuProv
         //?}
         _profiler.push("buildcraft:tank_serverTick");
         try {
+
+        // Before the sync below, so a tank this empties is sent empty this tick
+        ContainedFluidDetonation.tickContainer(level, worldPosition, this);
 
         int currentAmount = tank.getAmountMb(0);
 

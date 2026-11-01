@@ -33,8 +33,8 @@ import buildcraft.lib.misc.BlockUtil;
  *
  * <p>The scale is a {@link Band}. It decides two numbers that vanilla fire reads from the block (see
  * {@link Band#fireSpreadSpeed} and {@link Band#flammability}) and, for the top band, whether the fluid explodes.
- * Everything here concerns <b>placed fluid blocks</b> only: tanks and pipes hold their fluid as data, are never
- * ignited, and react to nothing (a nearby blast can still break them like any block).
+ * Everything here concerns <b>placed fluid blocks</b> only: tanks and pipes hold their fluid as data and never burn;
+ * whether the gas inside them explodes is {@link ContainedFluidDetonation}'s business.
  *
  * <p><b>Detonation.</b> An {@link Band#EXPLOSIVE} source block explodes when something ignites it: fire catching it
  * ({@code BCFluidBlock#onCaughtFire}), an ignition source beside it ({@link #isIgnitionSource}: fire, soul fire,
@@ -98,7 +98,7 @@ public final class FluidVolatility {
     private static final int HEATED = 1;
 
     /** TNT-strength, the same blast upstream 7.1.x used. */
-    private static final float BLAST_POWER = 4.0F;
+    static final float BLAST_POWER = 4.0F;
 
     /** Chebyshev distance from a detonation out to which explosive sources are scheduled to follow it. The cleared
      *  cube covers distance 1, so the chain reaches the shell between 2 and this value. */

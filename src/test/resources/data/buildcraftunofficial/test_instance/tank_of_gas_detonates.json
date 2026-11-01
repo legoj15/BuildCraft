@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:tank_of_gas_detonates",
+    "environment": "buildcraftunofficial:tank_of_gas_detonates",
+    "structure": "minecraft:empty",
+    "max_ticks": 510,
+    "setup_ticks": 0,
+    "required": true
+}

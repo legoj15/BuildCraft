@@ -109,7 +109,11 @@ def lint(icon: Image.Image, palette: set | None) -> list[str]:
 
 
 def git_show(rev: str, path: Path) -> Image.Image | None:
-    rel = path.resolve().relative_to(REPO).as_posix()
+    """The icon at REV, or None when REV has no such file (REV itself is checked once in main)."""
+    try:
+        rel = path.resolve().relative_to(REPO).as_posix()
+    except ValueError:
+        return None
     try:
         data = subprocess.run(["git", "-C", str(REPO), "show", f"{rev}:{rel}"], capture_output=True, check=True).stdout
     except subprocess.CalledProcessError:
@@ -162,6 +166,14 @@ def main() -> int:
     ap.add_argument("--exclude", nargs="+", default=[], metavar="NAME", help="icon basenames to leave out")
     ap.add_argument("--strict", action="store_true", help="exit 1 if any icon has a lint note")
     args = ap.parse_args()
+    if args.compare and not args.compare_rev:
+        ap.error("--compare needs --compare-rev")
+    for d in (args.patterns, args.parameters):
+        if not d.is_dir():
+            ap.error(f"not a directory: {d}")
+    if args.compare_rev and subprocess.run(["git", "-C", str(REPO), "rev-parse", "--verify", "--quiet",
+                                            args.compare_rev + "^{commit}"], capture_output=True).returncode:
+        ap.error(f"unknown revision: {args.compare_rev}")
 
     slot = Image.open(args.slot).convert("RGBA").crop(SLOT_BOX)
     palette = load_palette(args.guide)
@@ -190,7 +202,7 @@ def main() -> int:
         if wanted:
             missing = wanted - {c[0] for c in compare}
             if missing:
-                print("not found: " + ", ".join(sorted(missing)), file=sys.stderr)
+                ap.error("not found: " + ", ".join(sorted(missing)))
 
     cell_w = big + GAP + 18 + GAP
     cell_h = big + 32

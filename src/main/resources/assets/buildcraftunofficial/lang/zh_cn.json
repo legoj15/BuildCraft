@@ -608,6 +608,7 @@
     "buildcraftunofficial.configuration.disableRfPipe": "禁用 RF 管道",
     "buildcraftunofficial.configuration.display": "显示",
     "buildcraftunofficial.configuration.enableOilGeneration": "启用石油生成",
+    "buildcraftunofficial.configuration.generateQuarryPits": "生成废弃采石场矿坑",
     "buildcraftunofficial.configuration.enableOilSpouts": "启用油泉",
     "buildcraftunofficial.configuration.excludedBiomes": "排除的生物群系",
     "buildcraftunofficial.configuration.excludedDimensions": "排除的维度",

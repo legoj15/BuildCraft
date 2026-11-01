@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Heat Exchanger's block models, item model, blockstate and textures.
 
-The shell-and-tube look: a dark-steel shell (the blast furnace top's palette) with a sight slot
+The shell-and-tube look: an iron shell (the iron block's palette) with a sight slot
 on all four long faces (the renderer's fluid flow shows through them), bolted steel flanges where two exchangers join,
 blind dished caps on a lone segment's open ends, and colour-banded nozzles where the fluids
 enter and leave a finished 3-5 block exchanger (START blue = cold side, END red = hot side,
@@ -50,18 +50,16 @@ DEFAULT_OUT = os.path.join(REPO, "src", "main", "resources", "assets", NS)
 # texel's place on the sheet is where it lands on the block.
 # =========================================================================================
 
-# shell plate: vanilla blast_furnace_top's ramp (#3f3e42..#747474), one shade darker below it
-G_HI = (0x74, 0x74, 0x74)
-G_LT = (0x68, 0x68, 0x68)
-G_MD = (0x4f, 0x4f, 0x4f)
-G_M2 = (0x49, 0x48, 0x48)  # plate mottling
-G_M3 = (0x59, 0x58, 0x58)  # lighter plate mottling
-G_DK = (0x3f, 0x3e, 0x42)
-G_DD = (0x31, 0x30, 0x34)
-# window seal: the old heat exchanger's green, down to its wireframe sprites' #24431b
-SEAL_LT = (0x55, 0x7c, 0x46)
-SEAL_MD = (0x41, 0x63, 0x38)
-SEAL_DK = (0x24, 0x43, 0x1b)
+# shell plate: vanilla iron_block's ramp (#b1b0b0..#f2f2f2)
+G_HI = (0xf2, 0xf2, 0xf2)
+G_LT = (0xe6, 0xe6, 0xe6)
+G_MD = (0xdc, 0xdc, 0xdc)
+G_M2 = (0xd6, 0xd6, 0xd6)  # plate mottling
+G_M3 = (0xe0, 0xe0, 0xe0)  # lighter plate mottling
+G_DK = (0xc1, 0xc1, 0xc1)
+G_DD = (0xb1, 0xb0, 0xb0)
+# window seal: one flat band in the old heat exchanger's dark green (its sprites' #24431b)
+SEAL = (0x24, 0x43, 0x1b)
 # steel
 S_HI = (0xde, 0xde, 0xde)
 S_LT = (0xc2, 0xc2, 0xc2)
@@ -114,19 +112,15 @@ def mottle(px, x0, y0, x1, y1, base, alt, seed):
 
 def tex_shell_side():
     """Front/back of the shell: rows 2-4 upper band, 5/10 green seal, 6-9 sight slot, 11-13 lower
-    band, rows 14-15 the slot walls (explicit UV), sealed green like the rim."""
+    band, rows 14-15 the slot walls (explicit UV), the same green as the seal."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 7)
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 29)
     hline(px, 2, 0, 15, G_HI)
     hline(px, 3, 0, 15, G_LT)
-    # green seal above and below the slot, bolts mirror-symmetric (the back face samples the
-    # same rows mirrored)
-    hline(px, 5, 0, 15, SEAL_LT)
-    hline(px, 10, 0, 15, SEAL_DK)
-    for x in (3, 12):
-        px[5][x] = S_LT
-        px[10][x] = S_DK
+    # green seal above and below the slot
+    hline(px, 5, 0, 15, SEAL)
+    hline(px, 10, 0, 15, SEAL)
     # tube bundle through the glass: one copper tube on a dark ground
     hline(px, 6, 0, 15, I_BK)
     hline(px, 7, 0, 15, C_MD)
@@ -138,9 +132,9 @@ def tex_shell_side():
     hline(px, 12, 0, 15, G_DK)
     hline(px, 13, 0, 15, G_DD)
     mottle(px, 0, 11, 15, 11, G_MD, G_M2, 3)
-    # slot walls: the seal's depth (row 14 at the slot mouth)
-    hline(px, 14, 0, 15, SEAL_MD)
-    hline(px, 15, 0, 15, SEAL_DK)
+    # slot walls: the seal's depth
+    hline(px, 14, 0, 15, SEAL)
+    hline(px, 15, 0, 15, SEAL)
     hline(px, 0, 0, 15, G_DK)
     hline(px, 1, 0, 15, G_DK)
     return px
@@ -156,11 +150,8 @@ def tex_shell_top():
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 31)
     hline(px, 2, 0, 15, G_LT)
     hline(px, 13, 0, 15, G_DK)
-    hline(px, 5, 0, 15, SEAL_MD)
-    hline(px, 10, 0, 15, SEAL_MD)
-    for x in (3, 12):
-        px[5][x] = S_LT
-        px[10][x] = S_LT
+    hline(px, 5, 0, 15, SEAL)
+    hline(px, 10, 0, 15, SEAL)
     hline(px, 6, 0, 15, I_BK)
     hline(px, 7, 0, 15, C_MD)
     hline(px, 8, 0, 15, C_MD)
@@ -168,8 +159,8 @@ def tex_shell_top():
     for x in (2, 6, 9, 13):
         px[7][x] = C_LT
         px[8][x] = C_DK
-    hline(px, 14, 0, 15, SEAL_MD)
-    hline(px, 15, 0, 15, SEAL_DK)
+    hline(px, 14, 0, 15, SEAL)
+    hline(px, 15, 0, 15, SEAL)
     hline(px, 0, 0, 15, G_DK)
     hline(px, 1, 0, 15, G_DK)
     return px
@@ -362,7 +353,7 @@ def shell(x0, x1):
     """Shell body between x0 and x1: four corner bars and a core, leaving a sight slot on each
     long face (front/back y GL0..GL1, top/bottom z GL0..GL1) down to the core."""
     lo, hi = GL0, GL1
-    # slot walls (zero-thickness): the green seal's depth, sheet rows 14..16 (row 14 at the mouth)
+    # slot walls (zero-thickness): the green seal's depth, sheet rows 14..16
     mouth_lo, mouth_hi = [x0, 14, x1, 16], [x0, 16, x1, 14]
     return [
         box("shell_lower_front", (x0, SH0, SH0), (x1, lo, lo), {"north": F("side"), "down": F("top")}),

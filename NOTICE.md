@@ -32,6 +32,11 @@ Textures carry no copyright header, so upstream lineage is recorded here instead
   `textures/item/robot.png` — are byte-copies of the in-tree `textures/entity/robot_<kind>.png` skins —
   themselves byte-identical to upstream 7.1.x/8.0.x art — duplicated only because entity textures are
   bound whole-file while item icons need to sit on the stitched item atlas.
+- `src/main/resources/logo.png` (the mod-list banner) and the store images under `docs/store/img/` are built
+  from `misc/branding/` by `scripts/branding/build-banners.py`. The crane, wordmark and hazard bar are an
+  original pixel redrawing that follows the layout of upstream BuildCraft's `logo.png` (crane, "BuildCraft",
+  hazard stripe, gears), which it replaces; the gears are the mod's own gear item textures, and the credit
+  font (`misc/branding/font/girder7.txt`) was drawn for this project.
 
 ## Files under the Minecraft Mod Public License 1.0.1
 

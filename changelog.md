@@ -1,6 +1,6 @@
 ###### Changes since 2026.2.1:
 
-- BuildCraft Unofficial is now called **BuildCraft Redux**. Only the name changed: worlds, machines, blueprints and configs carry over untouched. If you install mods by hand, delete the old `BCunofficial-…jar` when adding the new `BuildCraftRedux-…jar`.
+- BuildCraft Unofficial is now called **BuildCraft Redux**. Only the name changed: worlds, machines, blueprints and configs carry over untouched. If you install mods by hand, delete the old `BCunofficial-…jar` when adding the new `BuildCraftRedux-…jar`. The mod list shows a redrawn banner to match.
 - Fuel temperature now matters in the Combustion Engine: hot fuel gives 25% more power than cool, searing fuel 25% less and runs the engine hot enough to need extra coolant. Hot and searing fuels used to be refused outright.
 - Oil now spawns in the Nether, always searing: slicks on the lava sea, buried pockets and small spouts, with rare infinite springs in Crimson Forests. Existing config files still list the Nether as excluded; remove it from `excludedDimensions` to turn it on.
 - Oils and fuels burn, lighter ones faster: fire catches a pool of crude or heavy oil slowly and it burns for a long time, while light fuels catch quickly and fire races across them, heating a fuel makes it burn faster, and residue never burns. Gaseous fuels explode when lit (by fire, lava or a lit campfire next to them), and in the Nether on their own; each blast sets off any gas close by a moment later. Burning and explosions can each be turned off in the config.

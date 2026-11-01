@@ -353,6 +353,58 @@ public class PipeBehaviourStripesDropTester {
     }
 
     /**
+     * A stripes pipe's fire charge or flint and steel lights the cell in front of it only where the owner may build.
+     * The dispenser's first click names that cell and the item passes it; the second click, which sets the fire, names
+     * the pipe's own block. So for a claim that leaves clicks alone, what guards the cell is the placement event
+     * NeoForge posts for the fire, because the click goes through {@code ItemStack#useOn}, which captures the blocks
+     * an item sets and reverts them when the event is cancelled (issue #78 suspected there was no such event). A
+     * handler that called {@code Item#useOn} directly would skip that capture and light a claimed cell. The refused
+     * fire charge is not consumed. A refused flint and steel's durability is not checked: NeoForge's revert puts back
+     * the count but re-applies the stack's own live component map, so it keeps the wear, as a player's does.
+     */
+    public static void testFireNeedsThePlacementAskAtTheTarget(GameTestHelper helper) {
+        helper.assertTrue(!BCCoreConfig.minePlayerProtected.get(),
+                "precondition: minePlayerProtected is off, so the pipe asks claims at all");
+        BlockPos pipeRel = new BlockPos(2, 2, 2);
+        BlockPos targetRel = pipeRel.east();
+        BlockPos target = helper.absolutePos(targetRel);
+        try (StripesRig rig = StripesRig.build(helper, pipeRel, Direction.EAST)) {
+            helper.setBlock(targetRel.below(), Blocks.STONE);
+            for (Item lighter : List.of(Items.FIRE_CHARGE, Items.FLINT_AND_STEEL)) {
+                // Every way out puts the cell out, so a failed refusal leaves no fire in the arena.
+                try {
+                    try (WorkClaimMod claim = new WorkClaimMod(target::equals, pos -> false, target::equals,
+                            pos -> false)) {
+                        PipeEventItem.Drop refused = rig.drop(new ItemStack(lighter));
+                        rig.stripes.onDrop(refused);
+
+                        helper.assertTrue(claim.placeAsks(target) >= 1,
+                                "the pipe asks the placement question for the cell its " + lighter + " would light");
+                        helper.assertTrue(helper.getBlockState(targetRel).isAir(),
+                                "a claim on the target cell keeps " + lighter + " from lighting it, got "
+                                        + helper.getBlockState(targetRel));
+                        helper.assertTrue(refused.getStack().is(lighter) && refused.getStack().getCount() == 1,
+                                "...and the refused " + lighter + " is not consumed, got " + refused.getStack());
+                    }
+                    rig.empty();
+
+                    // Control: nothing refuses, so the same pipe lights the cell (the claim only counts).
+                    try (WorkClaimMod claim = new WorkClaimMod(target::equals, pos -> false, pos -> false,
+                            pos -> false)) {
+                        rig.stripes.onDrop(rig.drop(new ItemStack(lighter)));
+                        helper.assertTrue(helper.getBlockState(targetRel).is(Blocks.FIRE),
+                                "an allowed " + lighter + " lights the cell, got " + helper.getBlockState(targetRel));
+                    }
+                } finally {
+                    helper.setBlock(targetRel, Blocks.AIR);
+                    rig.empty();
+                }
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
      * Shearing a block away is a break, so a stripes pipe carrying shears asks the same break protection its own
      * digging does, as the pipe's owner standing on the block (as {@code BlockUtil#canMachineBreak} and a robot ask
      * it, so a claim that judges where the actor stands answers all three alike): a claim that cancels the break keeps

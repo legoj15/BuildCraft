@@ -24,6 +24,9 @@ public class BCBuildersConfig {
     /** The maximum number of blocks that the quarry is allowed to mine each second. 0 = no limit. */
     public static ModConfigSpec.DoubleValue quarryMaxBlockMineRate;
 
+    /** Whether abandoned quarry pits generate in new chunks (also gated by the core worldGen switch). */
+    public static ModConfigSpec.BooleanValue generateQuarryPits;
+
     /** The default for {@link #libraryMaxUploadMb}: the largest scan the default config can make (markers 64 apart
      *  enclose 65^3 = 274,625 cells, about 4.4 MB unpacked) with room for its palette, and not much more. */
     public static final int LIBRARY_MAX_UPLOAD_MB_DEFAULT = 32;
@@ -90,6 +93,11 @@ public class BCBuildersConfig {
                 .comment("The maximum number of blocks that the quarry is allowed to mine each second.",
                          "A value of 0 means no limit, and a value of 0.5 will mine up to half a block per second.")
                 .defineInRange("quarryMaxBlockMineRate", 0.0, 0.0, 1000.0);
+
+        generateQuarryPits = builder
+                .comment("Set true to generate abandoned quarry pits (a rotted frame over a half-dug hole) in new chunks.",
+                         "How rare they are is set by the placed feature buildcraftunofficial:quarry_pit, which a datapack can override.")
+                .define("generateQuarryPits", true);
 
         builder.pop();
         builder.pop();

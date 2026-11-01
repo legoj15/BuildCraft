@@ -796,6 +796,7 @@
     "buildcraftunofficial.configuration.quarryTaskPowerDivisor": "Quarry Task Power Divisor",
     "buildcraftunofficial.configuration.quarryMaxFrameMoveSpeed": "Quarry Max Frame Move Speed",
     "buildcraftunofficial.configuration.quarryMaxBlockMineRate": "Quarry Max Block Mine Rate",
+    "buildcraftunofficial.configuration.generateQuarryPits": "Generate Abandoned Quarry Pits",
     "buildcraftunofficial.configuration.worldGen": "Enable World Generation",
     "buildcraftunofficial.configuration.oil": "Oil Generation",
     "buildcraftunofficial.configuration.enableOilGeneration": "Enable Oil Generation",

@@ -1,0 +1,200 @@
+{
+  "name": "quarry-pit",
+  "base": [
+    2000,
+    140,
+    2000
+  ],
+  "steps": [
+    {
+      "do": "cmd",
+      "run": [
+        "gamemode spectator @p",
+        "time set day"
+      ]
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        -40,
+        -20
+      ],
+      "yaw": 0,
+      "pitch": 30,
+      "label": "mesa go"
+    },
+    {
+      "do": "wait",
+      "ms": 4000
+    },
+    {
+      "do": "cmd",
+      "run": [
+        "fill {X-8} 30 {Z-8} {X+8} 90 {Z+8} minecraft:stone",
+        "fill {X-8} 91 {Z-8} {X+8} 91 {Z+8} minecraft:grass_block",
+        "fill {X-8} 92 {Z-8} {X+8} 110 {Z+8} minecraft:air",
+        "fill {X+2} 92 {Z+2} {X+2} 97 {Z+2} minecraft:oak_log"
+      ],
+      "label": "build mesa"
+    },
+    {
+      "do": "cmd",
+      "run": "place feature buildcraftunofficial:quarry_pit {X} 64 {Z}",
+      "echo": true,
+      "label": "mesa place (expect: Placed feature)"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "mesa",
+      "look": "rotted 11x11 frame with gaps/cobwebs on the stone mesa, square pit below, no floating log"
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        -30,
+        0
+      ],
+      "yaw": 0,
+      "pitch": 90
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "mesa-down",
+      "look": "straight down: 9x9 pit, last layer partly dug in rows"
+    },
+    {
+      "do": "tp",
+      "at": [
+        160,
+        -50,
+        -18
+      ],
+      "yaw": 0,
+      "pitch": 35,
+      "label": "site 0 go"
+    },
+    {
+      "do": "wait",
+      "ms": 4000
+    },
+    {
+      "do": "cmd",
+      "run": "place feature buildcraftunofficial:quarry_pit {X+160} 64 {Z+0}",
+      "allowFail": true,
+      "echo": true,
+      "label": "site 0 place"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "site0",
+      "look": "natural terrain: rotted frame over a pit if placed; untouched terrain if refused"
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        -50,
+        142
+      ],
+      "yaw": 0,
+      "pitch": 35,
+      "label": "site 1 go"
+    },
+    {
+      "do": "wait",
+      "ms": 4000
+    },
+    {
+      "do": "cmd",
+      "run": "place feature buildcraftunofficial:quarry_pit {X+0} 64 {Z+160}",
+      "allowFail": true,
+      "echo": true,
+      "label": "site 1 place"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "site1",
+      "look": "natural terrain: rotted frame over a pit if placed; untouched terrain if refused"
+    },
+    {
+      "do": "tp",
+      "at": [
+        -160,
+        -50,
+        -18
+      ],
+      "yaw": 0,
+      "pitch": 35,
+      "label": "site 2 go"
+    },
+    {
+      "do": "wait",
+      "ms": 4000
+    },
+    {
+      "do": "cmd",
+      "run": "place feature buildcraftunofficial:quarry_pit {X-160} 64 {Z+0}",
+      "allowFail": true,
+      "echo": true,
+      "label": "site 2 place"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "site2",
+      "look": "natural terrain: rotted frame over a pit if placed; untouched terrain if refused"
+    },
+    {
+      "do": "tp",
+      "at": [
+        0,
+        -50,
+        -178
+      ],
+      "yaw": 0,
+      "pitch": 35,
+      "label": "site 3 go"
+    },
+    {
+      "do": "wait",
+      "ms": 4000
+    },
+    {
+      "do": "cmd",
+      "run": "place feature buildcraftunofficial:quarry_pit {X+0} 64 {Z-160}",
+      "allowFail": true,
+      "echo": true,
+      "label": "site 3 place"
+    },
+    {
+      "do": "wait",
+      "ms": 1500
+    },
+    {
+      "do": "shot",
+      "name": "site3",
+      "look": "natural terrain: rotted frame over a pit if placed; untouched terrain if refused"
+    }
+  ]
+}

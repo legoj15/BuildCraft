@@ -94,10 +94,18 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
             // The handlers act on pos.relative(direction) (the stripes pipe's convention: pos is the pipe), so
             // they are handed the cell just behind the reserved one. 7.1.x's handlers took the target itself.
             BlockPos activatorPos = useToBlock.relative(direction.getOpposite());
+            // A thrown item is still thrown at cells the owner was refused, as a stripes pipe throws one
+            // (UseInAirProbe), but the handlers are skipped: their clicks, mob interactions and cart breaking act on
+            // those cells whatever the item. A station that cannot name its owner (shortcut FALSE) still refuses all.
+            boolean throwOnly = false;
             if (!stationOwnerPermits(serverLevel, useToBlock, activatorPos)) {
-                markRefused();
-                terminate();
-                return;
+                throwOnly = RobotProtection.stationOwnerShortcut(robot) == null
+                        && UseInAirProbe.isThrown(stack.getItem());
+                if (!throwOnly) {
+                    markRefused();
+                    terminate();
+                    return;
+                }
             }
             try (FakePlayerUtil.Lease lease = RobotProtection.lease(robot, serverLevel)) {
                 FakePlayer player = lease.player();
@@ -108,7 +116,17 @@ public class AIRobotStripesHandler extends AIRobot implements IStripesActivator 
                 player.setItemInHand(InteractionHand.MAIN_HAND, stack);
                 ItemStack original = stack.copy();
 
-                if (PipeApi.stripeRegistry.handleItem(robot.level(), activatorPos, direction, stack, player, this)) {
+                if (throwOnly) {
+                    // The deployer's own item right-click event still judges the throw.
+                    // A use the item passed on (nothing to throw from here) is a failed use, as below.
+                    if (BlockUtil.useItemInAir(serverLevel, player, InteractionHand.MAIN_HAND, stack)) {
+                        takeBackFrom(player, stack, original);
+                    } else if (MachineRefusals.count(player) != refusalsBefore) {
+                        markRefused();
+                    } else {
+                        setSuccess(false);
+                    }
+                } else if (PipeApi.stripeRegistry.handleItem(robot.level(), activatorPos, direction, stack, player, this)) {
                     takeBackFrom(player, stack, original);
                 } else if (refused || MachineRefusals.count(player) != refusalsBefore) {
                     // A protection mod refused the deployer's click, break or mob interaction (the tallies the

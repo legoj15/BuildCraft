@@ -34,6 +34,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -265,8 +266,9 @@ public class RobotDeployerProtectionTester {
 
     // ── Stripes ─────────────────────────────────────────────────────────────
 
-    /** Enough cycles for the stripes AI's 60-cycle wind-up and its one use. */
-    private static final int STRIPES_CYCLES = 62;
+    /** The stripes AI's 60-cycle wind-up and its one use: an AI cycled by hand keeps updating after it terminates, so
+     *  a cycle more would use the item again. */
+    private static final int STRIPES_CYCLES = 61;
 
     /** Runs a fresh stripes AI with a hoe at {@code targetRel}; the AI, for its outcome. */
     private static AIRobotStripesHandler hoeWith(GameTestHelper helper, EntityRobot robot, BlockPos targetRel) {
@@ -358,6 +360,45 @@ public class RobotDeployerProtectionTester {
         helper.setBlock(waterRel, Blocks.AIR);
         helper.setBlock(wallRel, Blocks.AIR);
         helper.setBlock(targetRel.below(), Blocks.AIR);
+        helper.succeed();
+    }
+
+    /** A thrown item is the deployer's own projectile, judged by its impact events, as a stripes pipe's is
+     *  (UseInAirProbe): a station's owner the claim refuses at the reserved cell does not stop the throw, though the
+     *  clicks and mob handlers that would act on that cell still may not run. */
+    public static void stripesThrowIsNotRefusedForTheStationOwnersCell(GameTestHelper helper) {
+        requireProtectionChecksOn();
+        GameProfile deployer = profile("bc_deployer_throw_deployer");
+        GameProfile owner = profile("bc_deployer_throw_owner");
+        BlockPos targetRel = new BlockPos(2, 2, 2);
+        BlockPos target = helper.absolutePos(targetRel);
+        List<Entity> thrown = new ArrayList<>();
+        // The snowball is caught as it joins, by where it is thrown from (other tests throw some too), and kept out of
+        // the world: only that it was thrown matters here.
+        Consumer<EntityJoinLevelEvent> catcher = event -> {
+            if (event.getEntity() instanceof ItemSupplier supplier && supplier.getItem().is(Items.SNOWBALL)
+                    && event.getEntity().position().closerThan(Vec3.atCenterOf(target), 2)) {
+                thrown.add(event.getEntity());
+                event.setCanceled(true);
+            }
+        };
+        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, catcher);
+        try (PlayerClaim claim = new PlayerClaim(target, owner)) {
+            EntityRobot robot = robot(helper, targetRel.above(), deployer, owner);
+            robot.setItemInUse(new ItemStack(Items.SNOWBALL, 4));
+            AIRobotStripesHandler user = new AIRobotStripesHandler(robot, target);
+            for (int cycles = 0; cycles < STRIPES_CYCLES; cycles++) {
+                user.cycle();
+            }
+            check(claim.placeAsks.contains(GameProfileUtil.getId(owner)), "the station's owner was asked about");
+            check(thrown.size() == 1, "a robot throws its snowball although its station's owner may not build in the "
+                    + "cell it aims at, got " + thrown.size() + " thrown");
+            check(!user.refused(), "the throw is not reported as refused");
+            check(robot.getHeldItem().getCount() == 3, "the rest of the snowballs stay in hand, got "
+                    + robot.getHeldItem());
+        } finally {
+            NeoForge.EVENT_BUS.unregister(catcher);
+        }
         helper.succeed();
     }
 

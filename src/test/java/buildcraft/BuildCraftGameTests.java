@@ -1484,6 +1484,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_deployer_plant_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::plantNeedsDeployerAndStationOwner);
         reg.accept("buildcraftunofficial:robot_deployer_stripes_activator_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesNeedsStationOwnerAtTheActivatorCell);
         reg.accept("buildcraftunofficial:robot_deployer_stripes_in_air_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesInAirUseNeedsStationOwner);
+        reg.accept("buildcraftunofficial:robot_deployer_stripes_throw_not_refused_for_owner_cell", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stripesThrowIsNotRefusedForTheStationOwnersCell);
         reg.accept("buildcraftunofficial:robot_deployer_save_round_trip", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::deployerSurvivesSaveAndUnknownActsAsOwner);
         reg.accept("buildcraftunofficial:robot_deployer_station_owner_remembered", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stationRemembersItsOwnerAndUnknownFailsClosed);
         reg.accept("buildcraftunofficial:robot_deployer_bomber_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::bomberNeedsBothAndTntIsTheDeployers);

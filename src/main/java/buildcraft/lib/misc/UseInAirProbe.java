@@ -93,8 +93,10 @@ public final class UseInAirProbe {
     }
 
     /** A thrown item (snowball, egg, arrow, potion, ender pearl, fishing bobber, eye of ender) puts down no block of
-     *  its own where it aims: what it hits is judged by its own impact events, so its aim is not asked about. */
-    private static boolean isThrown(Item item) {
+     *  its own where it aims: what it hits is judged by its own impact events, so its aim is not asked about. Only its
+     *  use in the air is the throw: a matched item may still act on a block it is clicked on (a fire charge lights it,
+     *  an eye of ender fills a portal frame). */
+    public static boolean isThrown(Item item) {
         return item instanceof ProjectileItem || item instanceof EnderpearlItem || item instanceof FishingRodItem
                 || item instanceof EnderEyeItem;
     }

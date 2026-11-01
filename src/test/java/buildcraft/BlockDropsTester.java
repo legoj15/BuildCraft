@@ -374,6 +374,43 @@ public class BlockDropsTester {
                 .alsoNear(MACHINE_EXCHANGER, 1.0).exactly(Items.BUCKET, 1));
     }
 
+    // A Heat Exchanger section that stops being valid (a chain cut under 3 or grown past 5) is dissolved without any
+    // block being removed, so the removal hook never sees its tanks: the dissolve spills them itself, as 1.12.2 did.
+    // EAST-facing exchangers chain along +z with START at the high end; the END tile sits two blocks in from the
+    // cell edge so its shards, pushed out of the solid block they spawn in, stay inside the cell.
+
+    public static void testHeatExchangerDissolveSpillsSectionTanks(GameTestHelper helper) {
+        Item shard = BCCoreItems.FRAGILE_FLUID_CONTAINER.get();
+        NonNullList<ItemStack> oneSpill = NonNullList.create();
+        FluidItemDrops.addFluidDrops(oneSpill, water());
+        int shards = oneSpill.stream().mapToInt(ItemStack::getCount).sum();
+        if (shards <= 0) {
+            throw new IllegalStateException("a bucket of water should yield fluid shards, so the shard count "
+                    + "below would pass vacuously");
+        }
+        BlockPos end = new BlockPos(3, 2, 2);
+        DropArenaUtil.awaitDrops(helper, () -> {
+            for (int z = 2; z <= 6; z++) {
+                helper.setBlock(new BlockPos(3, 2, z), BCFactoryBlocks.HEAT_EXCHANGE.get().defaultBlockState()
+                        .setValue(buildcraft.factory.block.BlockHeatExchange.FACING, net.minecraft.core.Direction.EAST));
+            }
+            TileHeatExchange endTile = tile(helper, end, TileHeatExchange.class);
+            endTile.markCheckNeighbours();
+            endTile.serverTick();
+            if (!endTile.isEnd()) {
+                throw new IllegalStateException("The 5-long chain did not form, so its END tile has no tank to spill");
+            }
+            endTile.getSection().tankInput.setFluidStack(0, water());
+
+            BlockPos sixth = new BlockPos(3, 2, 1);
+            helper.setBlock(sixth, BCFactoryBlocks.HEAT_EXCHANGE.get().defaultBlockState()
+                    .setValue(buildcraft.factory.block.BlockHeatExchange.FACING, net.minecraft.core.Direction.EAST));
+            TileHeatExchange sixthTile = tile(helper, sixth, TileHeatExchange.class);
+            sixthTile.markCheckNeighbours();
+            sixthTile.serverTick();
+        }, Drops.near(end, 2.5).exactly(shard, shards)); // popped inside a block that stays, so they are pushed out
+    }
+
     // ---------- Stirling engine (raw fuel slot) ----------
     // Both tests go through breakEnginesAndCheck, which also breaks the other engines that hold contents.
 

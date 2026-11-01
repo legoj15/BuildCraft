@@ -5,9 +5,12 @@
  */
 package buildcraft.factory;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -23,6 +26,9 @@ import net.neoforged.neoforge.transfer.transaction.Transaction;
 // methods stand in.*/
 //?}
 
+import buildcraft.factory.block.BlockHeatExchange;
+import buildcraft.factory.block.BlockHeatExchange.EnumExchangePart;
+import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TileHeatExchange.OutputTank;
 import buildcraft.lib.fluid.BCFluidTank;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
@@ -321,5 +327,86 @@ public class HeatExchangerTester {
                 "Input amount should be unchanged after rolled-back drain, got " + in.getAmountMb(0));*/
         //?}
         helper.succeed();
+    }
+
+    /** Places a NORTH-facing exchanger at {@code (x, 2, 3)}; a NORTH chain runs from START at high x to END. */
+    private static TileHeatExchange placeExchanger(GameTestHelper helper, int x) {
+        return placeExchanger(helper, new BlockPos(x, 2, 3), Direction.NORTH);
+    }
+
+    private static TileHeatExchange placeExchanger(GameTestHelper helper, BlockPos rel, Direction facing) {
+        helper.setBlock(rel, BCFactoryBlocks.HEAT_EXCHANGE.get().defaultBlockState()
+                .setValue(BlockHeatExchange.FACING, facing));
+        if (!(helper.getLevel().getBlockEntity(helper.absolutePos(rel)) instanceof TileHeatExchange tile)) {
+            throw new IllegalStateException("No heat exchanger tile at " + rel);
+        }
+        return tile;
+    }
+
+    /**
+     * Issue #83: a formed 5-long exchanger extended to 6 must dissolve, like a chain under 3.
+     * Before the fix the size-6 scan had no branch, so the old START/END tiles kept their
+     * sections (and kept running) and their header/nozzle parts rendered mid-chain.
+     */
+    public static void testChainLongerThanFiveDissolves(GameTestHelper helper) {
+        TileHeatExchange[] tiles = new TileHeatExchange[6];
+        for (int x = 0; x < 5; x++) {
+            tiles[x] = placeExchanger(helper, x);
+        }
+        tiles[2].markCheckNeighbours();
+        tiles[2].serverTick();
+        assertTrue(tiles[4].isStart() && tiles[0].isEnd(), "A 5-long chain should form START..END");
+
+        tiles[5] = placeExchanger(helper, 5);
+        tiles[5].markCheckNeighbours();
+        tiles[5].serverTick();
+        for (int x = 0; x < 6; x++) {
+            TileHeatExchange tile = tiles[x];
+            assertTrue(tile.getSection() == null, "Tile " + x + " of a 6-long chain still holds a section");
+            EnumExchangePart part = tile.getBlockState().getValue(BlockHeatExchange.PART);
+            assertTrue(part == EnumExchangePart.MIDDLE, "Tile " + x + " of a 6-long chain is still " + part);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Issue #84: after a wrench rotation each block's connected_left/right must describe its
+     * real neighbours. Covers a 2-block chain flipped 180° and a lone block turned 90° into
+     * line with a neighbour. {@code rotate()} recomputes the rotated block's flags itself;
+     * vanilla's neighbour-shape pass corrects the blocks around it.
+     */
+    public static void testRotatedChainRecomputesConnections(GameTestHelper helper) {
+        TileHeatExchange first = placeExchanger(helper, 2);
+        placeExchanger(helper, 3);
+        assertTrue(first.rotate(), "rotate() refused a 2-block chain");
+        assertConnections(helper, new BlockPos(2, 2, 3), Direction.SOUTH);
+        assertConnections(helper, new BlockPos(3, 2, 3), Direction.SOUTH);
+
+        // A lone NORTH block turns to EAST, whose left (counter-clockwise) side is NORTH.
+        placeExchanger(helper, new BlockPos(2, 2, 5), Direction.EAST);
+        TileHeatExchange lone = placeExchanger(helper, new BlockPos(2, 2, 6), Direction.NORTH);
+        assertTrue(lone.rotate(), "rotate() refused a lone block");
+        assertConnections(helper, new BlockPos(2, 2, 6), Direction.EAST);
+        assertConnections(helper, new BlockPos(2, 2, 5), Direction.EAST);
+        helper.succeed();
+    }
+
+    private static void assertConnections(GameTestHelper helper, BlockPos rel, Direction expectedFacing) {
+        BlockPos pos = helper.absolutePos(rel);
+        BlockState state = helper.getLevel().getBlockState(pos);
+        Direction facing = state.getValue(BlockHeatExchange.FACING);
+        assertTrue(facing == expectedFacing, "Block " + rel + " should face " + expectedFacing + ", got " + facing);
+        boolean left = isSameFacingExchanger(helper, pos.relative(facing.getCounterClockWise()), facing);
+        boolean right = isSameFacingExchanger(helper, pos.relative(facing.getClockWise()), facing);
+        assertTrue(left || right, "Block " + rel + " should have a connected neighbour");
+        assertTrue(state.getValue(BlockHeatExchange.CONNECTED_LEFT) == left
+                && state.getValue(BlockHeatExchange.CONNECTED_RIGHT) == right,
+                "Block " + rel + " has connected_left/right " + state.getValue(BlockHeatExchange.CONNECTED_LEFT)
+                        + "/" + state.getValue(BlockHeatExchange.CONNECTED_RIGHT) + ", expected " + left + "/" + right);
+    }
+
+    private static boolean isSameFacingExchanger(GameTestHelper helper, BlockPos pos, Direction facing) {
+        BlockState state = helper.getLevel().getBlockState(pos);
+        return state.getBlock() instanceof BlockHeatExchange && state.getValue(BlockHeatExchange.FACING) == facing;
     }
 }

@@ -682,6 +682,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:heat_exchanger_atomic_craft_rolls_back", () -> buildcraft.factory.HeatExchangerTester::testAtomicCraftRollsBackOnUndersizedFill);
         reg.accept("buildcraftunofficial:heat_exchanger_tank_clears_on_empty_load", () -> buildcraft.factory.HeatExchangerTester::testTankClearsWhenLoadedFromEmptySave);
         reg.accept("buildcraftunofficial:heat_exchanger_slot_caps_at_max_stack_size", () -> buildcraft.factory.HeatExchangerTester::testItemHandlerRespectsConfiguredMaxStackSize);
+        reg.accept("buildcraftunofficial:heat_exchanger_chain_over_five_dissolves", () -> buildcraft.factory.HeatExchangerTester::testChainLongerThanFiveDissolves);
+        reg.accept("buildcraftunofficial:heat_exchanger_rotate_recomputes_connections", () -> buildcraft.factory.HeatExchangerTester::testRotatedChainRecomputesConnections);
 
         // Distiller wrench rotation (1.12.2 parity)
         reg.accept("buildcraftunofficial:distiller_wrench_rotates_clockwise", () -> buildcraft.factory.DistillerTester::testWrenchRotatesClockwise);
@@ -885,6 +887,7 @@ public class BuildCraftGameTests {
         // A player break of the Tank, Flood Gate, Distiller and Heat Exchanger reaches the same removal hook (no
         // block-side drop of their own): each machine's contents arrive exactly once.
         reg.accept("buildcraftunofficial:drops_fluid_machines_once", () -> BlockDropsTester::testFluidMachinesPlayerBreakDropsContentsOnce);
+        reg.accept("buildcraftunofficial:drops_heat_exchanger_dissolve_spills_tanks", () -> BlockDropsTester::testHeatExchangerDissolveSpillsSectionTanks);
         // A replace-mode /setblock (and /fill, /clone, structure placement) wipes the old tile instead of spilling
         // it (Clearable on 1.21.1, the skip-side-effects flag on the newer nodes); destroy mode keeps spilling.
         reg.accept("buildcraftunofficial:setblock_replace_spills_nothing", () -> CommandReplaceTester::testSetblockReplaceSpillsNothing);

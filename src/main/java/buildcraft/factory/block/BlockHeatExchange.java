@@ -117,7 +117,8 @@ public class BlockHeatExchange extends BlockBCTile_Waterloggable<TileHeatExchang
         return updateConnections(state, level, pos, facing);
     }
 
-    private BlockState updateConnections(BlockState state, LevelReader level, BlockPos pos, Direction facing) {
+    /** Sets CONNECTED_LEFT/RIGHT from the neighbours of {@code pos} for a block facing {@code facing}. */
+    public static BlockState updateConnections(BlockState state, LevelReader level, BlockPos pos, Direction facing) {
         // Left = counter-clockwise, Right = clockwise
         boolean connectLeft = doesNeighbourConnect(level, pos, facing, facing.getCounterClockWise());
         boolean connectRight = doesNeighbourConnect(level, pos, facing, facing.getClockWise());

@@ -264,7 +264,7 @@ No letters anywhere. Every meaning above is carried by shape, position or tone; 
 | `box` | Box | draw | CUBE with rows 3-7 replaced by grid BOX_TOP: open top showing the inside (west wall inside D, north wall inside M). The real pattern is a closed shell; closed, it would be Fill. |
 | `clear` | Clear | exemplar | CUBE with L->a, M->A, D->B. |
 | `fill` | Fill | draw | Grid CUBE. |
-| `flatten` | Flatten | draw | Clear's CUBE with the bottom 3 of 7 cube units of the side faces left grey (M, D): grey from row 9 at x = 1,2,13,14, row 10 at x = 3,4,11,12, row 11 at x = 5,6,9,10, row 12 at x = 7,8. Red volume cleared over a grey floor. |
+| `flatten` | Flatten | draw | Clear's CUBE with the bottom 3 of 7 cube units of the side faces left grey (M, D): grey from row 9 at x = 2 and 13, row 10 at x = 3,4,11,12, row 11 at x = 5,6,9,10, row 12 at x = 7,8 (columns 1 and 14 stay K). Red volume cleared over a grey floor. |
 | `frame` | Frame | draw | Wireframe, no K, no fill: OUT's `K` and `+` pixels become L (silhouette and front corner); INS's `+` pixels become M where not already L (hidden back corner); everything else transparent. |
 | `horizon` | none (issue #87) | out of scope | Orphan sprite. Leave untouched until the pattern exists. |
 | `none` | None | draw | Grid NONE: CUBE's silhouette as G dashes only. |

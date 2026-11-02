@@ -43,7 +43,11 @@ Then offer the bump.
    `versions/<node>/gradle.properties`.
 2. `./gradlew :<node>:compileJava` — a Gradle sync so ModDevGradle regenerates artifacts for
    the new version.
-3. `bash scripts/neoforge-sources-sync.sh` — refresh `.neoforge-ref/` (below).
+3. `bash scripts/neoforge-sources-sync.sh` — refresh `.neoforge-ref/` (below). Run it while
+   Gradle is idle, never alongside step 4: it unzips the node's moddev sources jar
+   (`minecraft-patched-<neo>-sources.jar` on 26.x lines, `neoforge-<neo>-sources.jar` on
+   1.21.x), and on Windows a `createMinecraftArtifacts` that re-runs at the same moment fails
+   with `AccessDeniedException` replacing that jar.
 4. Build and test; fix whatever the changelog flagged **cautionary**.
 5. No `changelog.md` entry for a bump unless it changes player-facing behavior.
 

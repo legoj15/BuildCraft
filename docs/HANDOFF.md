@@ -12,7 +12,6 @@
 
 ## Next
 - #89: two unit tests were already red on 26.3: the GuideMeExportStalenessTest export is stale, and the zh_cn `generateQuarryPits` lang key is missing.
-- The NeoForge version check shows 26.1.2 (-> 26.1.2.126) and 26.3 (-> 26.3.0.101) one build behind; use the `neoforge-bump` skill.
 
 ## Open questions / leads (unverified)
 - Keep the heat exchanger's dark-green seal as its accent? Recommended yes (the 1.12.2 exchanger's colour); alternative is an #a7a7a7 bezel with green only on the slot walls.

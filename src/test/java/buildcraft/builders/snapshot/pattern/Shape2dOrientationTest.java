@@ -53,9 +53,11 @@ public class Shape2dOrientationTest {
 
     /** Checks a 14x14 face: {@code cell} reads the face with depth 0 at the icon's top. */
     private static void assertPointedTop(IFillerPatternShape pattern, BlockPos size, PatternParameterAxis axis,
-        Cell cell, String bottom) {
+        Cell cell, String middle, String bottom) {
         IFilledTemplate t = fill(pattern, size, axis);
         Assertions.assertEquals("......##......", row(t, cell, 0), axis + ": the point should be the icon's top row");
+        // Only the flood fill reaches a middle row's inside, so a fill that reads the face mirrored or not at all fails.
+        Assertions.assertEquals(middle, row(t, cell, 7), axis + ": the inside was not filled");
         Assertions.assertEquals(bottom, row(t, cell, 13), axis + ": wrong base row");
     }
 
@@ -69,15 +71,18 @@ public class Shape2dOrientationTest {
         BlockPos xBox = new BlockPos(1, 14, 14);
         IFillerPatternShape pentagon = BCBuildersStatements.PATTERN_PENTAGON;
         IFillerPatternShape triangle = BCBuildersStatements.PATTERN_TRIANGLE;
-        // The Pentagon's flat side spans 10 of 14, the golden ratio's share (1.12.2's inset gave 6).
+        // The Pentagon's flat side: the golden ratio's share of the width (about 62%) rounds to 10 of 14 here;
+        // 1.12.2's inset gave 6.
         String pentagonBase = "..##########..";
+        String pentagonMiddle = "##############";
         String triangleBase = "##############";
+        String triangleMiddle = "...########...";
 
-        assertPointedTop(pentagon, flatBox, PatternParameterAxis.Y, flat, pentagonBase);
-        assertPointedTop(pentagon, zBox, PatternParameterAxis.Z, eastWest, pentagonBase);
-        assertPointedTop(pentagon, xBox, PatternParameterAxis.X, northSouth, pentagonBase);
-        assertPointedTop(triangle, flatBox, PatternParameterAxis.Y, flat, triangleBase);
-        assertPointedTop(triangle, zBox, PatternParameterAxis.Z, eastWest, triangleBase);
-        assertPointedTop(triangle, xBox, PatternParameterAxis.X, northSouth, triangleBase);
+        assertPointedTop(pentagon, flatBox, PatternParameterAxis.Y, flat, pentagonMiddle, pentagonBase);
+        assertPointedTop(pentagon, zBox, PatternParameterAxis.Z, eastWest, pentagonMiddle, pentagonBase);
+        assertPointedTop(pentagon, xBox, PatternParameterAxis.X, northSouth, pentagonMiddle, pentagonBase);
+        assertPointedTop(triangle, flatBox, PatternParameterAxis.Y, flat, triangleMiddle, triangleBase);
+        assertPointedTop(triangle, zBox, PatternParameterAxis.Z, eastWest, triangleMiddle, triangleBase);
+        assertPointedTop(triangle, xBox, PatternParameterAxis.X, northSouth, triangleMiddle, triangleBase);
     }
 }

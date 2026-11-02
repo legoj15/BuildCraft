@@ -46,6 +46,15 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
                 CompoundTag pNbt = NBTUtilBC.getCompound(nbt, Integer.toString(p));
                 params[p] = StatementTypeParam.INSTANCE.readFromNbt(pNbt);
             }
+            clearUnusedParams();
+        }
+    }
+
+    /** Slots past the statement's last parameter are drawn blocked, so nothing may stay in them for the statement
+     *  to read: an older save or a client packet can still carry one left there by the previous statement. */
+    private void clearUnusedParams() {
+        for (int p = statement.maxParameters(); p < params.length; p++) {
+            params[p] = null;
         }
     }
 
@@ -70,6 +79,9 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
             statement = type.readFromBuffer(buffer);
             for (int p = 0; p < params.length; p++) {
                 params[p] = StatementTypeParam.INSTANCE.readFromBuffer(buffer);
+            }
+            if (statement != null) {
+                clearUnusedParams();
             }
         } else {
             statement = type.defaultStatement;
@@ -105,7 +117,7 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
             return;
         }
         for (int i = 0; i < params.length; i++) {
-            if (i > statement.maxParameters()) {
+            if (i >= statement.maxParameters()) {
                 params[i] = null;
             } else {
                 params[i] = statement.createParameter(params[i], i);
@@ -159,7 +171,7 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
         @Override
         public boolean canSet(IStatementParameter value) {
             IStatement statement = statementRef.get();
-            if (statement == null) {
+            if (statement == null || index >= statement.maxParameters()) {
                 return false;
             }
             return statement.createParameter(value, index) == value;

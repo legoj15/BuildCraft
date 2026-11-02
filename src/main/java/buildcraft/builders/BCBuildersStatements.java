@@ -6,6 +6,8 @@
 
 package buildcraft.builders;
 
+import java.util.List;
+
 import buildcraft.api.statements.StatementManager;
 
 import buildcraft.builders.snapshot.pattern.Pattern;
@@ -61,13 +63,18 @@ public class BCBuildersStatements {
     public static final PatternShape2dSemiCircle PATTERN_SEMI_CIRCLE = new PatternShape2dSemiCircle();
     public static final PatternShape2dPentagon PATTERN_PENTAGON = new PatternShape2dPentagon();
 
-    public static final Pattern[] PATTERNS = { //
-        PATTERN_FILL, PATTERN_CLEAR, PATTERN_BOX, PATTERN_NONE, //
-        PATTERN_EIGHTH_SPHERE, PATTERN_SPHERE, PATTERN_PYRAMID, PATTERN_FRAME, //
-        PATTERN_FLATTEN, PATTERN_STAIRS, PATTERN_QUARTER_SPHERE, PATTERN_HEMI_SPHERE, //
-        PATTERN_OCTAGON, PATTERN_HEXAGON, PATTERN_CIRCLE, PATTERN_ARC, //
-        PATTERN_TRIANGLE, PATTERN_SQUARE, PATTERN_SEMI_CIRCLE, PATTERN_PENTAGON //
-    };
+    /** The Filler's pattern popup, one row per group, in GUI order: the one place that order is kept.
+     * {@link #PATTERNS}, the Filler GUI and the guide's pattern list all come from it, and
+     * scripts/art/filler-icon-sheet.py parses it. */
+    public static final List<List<Pattern>> PATTERN_POPUP = List.of(
+        List.of(PATTERN_NONE, PATTERN_BOX, PATTERN_CLEAR, PATTERN_FILL),
+        List.of(PATTERN_FRAME, PATTERN_PYRAMID, PATTERN_SPHERE, PATTERN_EIGHTH_SPHERE),
+        List.of(PATTERN_HEMI_SPHERE, PATTERN_QUARTER_SPHERE, PATTERN_STAIRS, PATTERN_FLATTEN),
+        List.of(PATTERN_ARC, PATTERN_CIRCLE, PATTERN_HEXAGON, PATTERN_OCTAGON),
+        List.of(PATTERN_PENTAGON, PATTERN_SEMI_CIRCLE, PATTERN_SQUARE, PATTERN_TRIANGLE)
+    );
+
+    public static final Pattern[] PATTERNS = PATTERN_POPUP.stream().flatMap(List::stream).toArray(Pattern[]::new);
 
     static {
         StatementManager.registerParameter(PatternParameterXZDir::readFromNbt);

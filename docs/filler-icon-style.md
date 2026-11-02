@@ -325,10 +325,8 @@ No letters except the face icons' side letters. Every other meaning is carried b
 
 ## Popup neighbours
 
-Patterns popup, row by row: None, Box, Clear, Fill / Frame, Pyramid, Sphere, Eighth-Sphere / Hemisphere,
-Quarter-sphere, Stairs, Flatten / Arc, Circle, Hexagon, Octagon / Pentagon, Semi-Circle, Square, Triangle (the pattern
-groups in `ContainerFiller`; the sheet script copies them as `PATTERN_POPUP`, so change both together). Pairs that
-need the most care: Circle-Octagon, Hemisphere-Quarter-sphere, Sphere-Eighth-Sphere, Box-Fill, None-Frame.
+The patterns popup shows the rows of `BCBuildersStatements.PATTERN_POPUP`, which the sheet script's 1x strip
+copies; read the order there. Pairs that need the most care: Circle-Octagon, Hemisphere-Quarter-sphere, Sphere-Eighth-Sphere, Box-Fill, None-Frame.
 A parameter popup shows one type at a time (all six faces, all nine centres, and so on), so those icons only need
 to differ within their family.
 

@@ -10,11 +10,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -28,14 +29,15 @@ import org.junit.jupiter.api.Test;
  * {@code models/item/goggles.json} into NeoForge's {@code neoforge:separate_transforms}. A missing or wrong rewrite
  * fails nothing at boot: the goggles just wear their flat icon on the head, or show no icon at all, on that one node.
  *
- * <p>The 1.21.1 base must be {@code neoforge:item_layers}: a nested model bakes through its own geometry only, and the
- * {@code item/generated} flat-icon conversion runs for top-level models alone, so a nested generated parent bakes with
- * no quads. The wrapper's {@code gui_light} must be "front" or the inventory icon is lit like a block.
+ * <p>On 1.21.1 the rewrite replaces the very icon model it falls back to, so the base must carry the icon itself: a
+ * base that points at {@code item/goggles} would be a model that is its own parent. The wrapper has no parent of its
+ * own, so its {@code gui_light} must be "front" or the inventory icon is lit like a block.
  */
 public class GogglesHeadModelTester {
 
     private static final String WORN = "buildcraftunofficial:item/goggles_worn";
-    private static final String ICON = "buildcraftunofficial:item/goggles";
+    private static final String ICON_MODEL = "buildcraftunofficial:item/goggles";
+    private static final String ICON_TEXTURE = "buildcraftunofficial:item/goggles";
 
     //? if >=1.21.10 {
     private static final boolean HAS_ITEM_DEFINITIONS = true;
@@ -52,18 +54,29 @@ public class GogglesHeadModelTester {
         }
     }
 
+    /** The model of the case whose {@code when} names the head view, alone or in a list; null when none does. */
+    private static String headCaseModel(JsonArray cases) {
+        for (JsonElement c : cases) {
+            JsonObject entry = c.getAsJsonObject();
+            JsonElement when = entry.get("when");
+            boolean head = when.isJsonArray() ? when.getAsJsonArray().contains(new JsonPrimitive("head"))
+                : "head".equals(when.getAsString());
+            if (head) {
+                return entry.getAsJsonObject("model").get("model").getAsString();
+            }
+        }
+        return null;
+    }
+
     @Test
-    public void testHeadViewIsTheWornModelAndEveryOtherViewTheIcon() {
+    public void testHeadViewIsTheWornModelAndTheFallbackTheIcon() {
         if (HAS_ITEM_DEFINITIONS) {
             JsonObject model = read("/assets/buildcraftunofficial/items/goggles.json").getAsJsonObject("model");
             Assertions.assertEquals("minecraft:select", model.get("type").getAsString());
             Assertions.assertEquals("minecraft:display_context", model.get("property").getAsString());
-            JsonArray cases = model.getAsJsonArray("cases");
-            Assertions.assertEquals(1, cases.size(), "only the head view switches models");
-            JsonObject head = cases.get(0).getAsJsonObject();
-            Assertions.assertEquals("head", head.get("when").getAsString());
-            Assertions.assertEquals(WORN, head.getAsJsonObject("model").get("model").getAsString());
-            Assertions.assertEquals(ICON, model.getAsJsonObject("fallback").get("model").getAsString());
+            Assertions.assertEquals(WORN, headCaseModel(model.getAsJsonArray("cases")),
+                "the head view must draw the worn model");
+            Assertions.assertEquals(ICON_MODEL, model.getAsJsonObject("fallback").get("model").getAsString());
         } else {
             JsonObject classic = read("/assets/buildcraftunofficial/models/item/goggles.json");
             Assertions.assertTrue(classic.has("loader"),
@@ -73,11 +86,14 @@ public class GogglesHeadModelTester {
             Assertions.assertEquals("front", classic.get("gui_light").getAsString(),
                 "without front GUI light the inventory icon is lit like a block");
             JsonObject base = classic.getAsJsonObject("base");
-            Assertions.assertEquals("neoforge:item_layers", base.get("loader").getAsString(),
-                "a nested item/generated base bakes with no quads on 1.21.1: the icon would be invisible");
-            Assertions.assertEquals(ICON, base.getAsJsonObject("textures").get("layer0").getAsString());
+            Assertions.assertNotEquals(ICON_MODEL, base.has("parent") ? base.get("parent").getAsString() : null,
+                "the base points at the model the rewrite replaced, so it is its own parent and never loads");
+            JsonObject textures = base.getAsJsonObject("textures");
+            Assertions.assertEquals(ICON_TEXTURE, textures.get("layer0").getAsString());
+            Assertions.assertEquals(ICON_TEXTURE, textures.has("particle") ? textures.get("particle").getAsString() : null,
+                "the per-view model takes its particle from the base: without one it is the missing texture");
             JsonObject perspectives = classic.getAsJsonObject("perspectives");
-            Assertions.assertEquals(Set.of("head"), perspectives.keySet(), "only the head view switches models");
+            Assertions.assertTrue(perspectives.has("head"), "the head view is not switched: the goggles wear their icon");
             Assertions.assertEquals(WORN, perspectives.getAsJsonObject("head").get("parent").getAsString());
         }
     }

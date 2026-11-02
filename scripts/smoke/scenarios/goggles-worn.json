@@ -12,6 +12,7 @@
       "gamemode creative @p",
       "?tp @e[type=minecraft:husk,tag=bcgog] {X} -200 {Z}",
       "?kill @e[type=minecraft:armor_stand,tag=bcgog]",
+      "?kill @e[type=minecraft:item,x={X},y={Y},z={Z},distance=..24]",
       "fill {X-8} {Y} {Z-6} {X+8} {Y+6} {Z+8} minecraft:air",
       "fill {X-8} {Y-1} {Z-6} {X+8} {Y-1} {Z+8} minecraft:smooth_stone",
       "time set noon",

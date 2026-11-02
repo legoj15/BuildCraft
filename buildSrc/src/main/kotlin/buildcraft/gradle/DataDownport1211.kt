@@ -21,6 +21,12 @@ import java.io.File
 
 object DataDownport1211 {
 
+    // ItemDisplayContext's serialized names on 1.21.1, the keys separate_transforms looks perspectives up by.
+    private val CONTEXTS_1211 = setOf(
+        "none", "thirdperson_lefthand", "thirdperson_righthand", "firstperson_lefthand", "firstperson_righthand",
+        "head", "gui", "ground", "fixed"
+    )
+
     fun convIngredient1211(v: Any?): Any? = when (v) {
         is String -> if (v.startsWith("#")) linkedMapOf("tag" to v.substring(1)) else linkedMapOf("item" to v)
         is List<*> -> v.map { convIngredient1211(it) }
@@ -111,10 +117,11 @@ object DataDownport1211 {
     //                                    set CUSTOM_MODEL_DATA on 1.21.1 (gated `else` branches in
     //                                    Item{Paintbrush_BC8,List_BC8,MapLocation,GateCopier}), so the
     //                                    overrides resolve the colour/state variant the selector picked.
-    //   • minecraft:select           -> NeoForge's per-view loader, neoforge:separate_transforms: the
-    //     (display_context)              fallback is the base, each case's contexts map to its model (the
-    //                                    Goggles: a 3D model on the head, the flat icon everywhere else).
-    //                                    Any other select property fails the build: no 1.21.1 equivalent.
+    //   • minecraft:select           -> NeoForge's per-view loader, neoforge:separate_transforms, which
+    //     (display_context)              replaces the classic model: the fallback's content is the base,
+    //                                    each case's contexts map to its model (the Goggles: a 3D model on
+    //                                    the head, the flat icon everywhere else). Any other select
+    //                                    property fails the build: no 1.21.1 equivalent.
     @Suppress("UNCHECKED_CAST")
     fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
         if (!itemsDir.isDirectory) return
@@ -197,29 +204,42 @@ object DataDownport1211 {
                         }
                         return m!!["model"] as String
                     }
+                    // This output replaces the item's hand-authored classic model, so nothing may point at it.
+                    val ownId = "${modelsItemDir.parentFile.parentFile.name}:item/${f.nameWithoutExtension}"
                     val perspectives = linkedMapOf<String, Any?>()
                     for (case in spec["cases"] as List<Map<String, Any?>>) {
                         val target = modelId(case["model"])
+                        check(target != ownId) { "items/${f.name}: a case points at $ownId, the model this rewrite replaces" }
                         val contexts = case["when"].let { if (it is List<*>) it else listOf(it) }
-                        contexts.forEach { perspectives[it as String] = linkedMapOf("parent" to target) }
+                        contexts.forEach { c ->
+                            val name = c as String
+                            // An unknown name would never match on 1.21.1: that view would quietly keep the base.
+                            check(name in CONTEXTS_1211) { "items/${f.name}: 1.21.1 has no display context \"$name\"" }
+                            perspectives[name] = linkedMapOf("parent" to target)
+                        }
                     }
-                    // Two 1.21.1 baking quirks shape the base. A nested model bakes through its own
-                    // geometry only: the item/generated -> flat-icon conversion runs for top-level models
-                    // alone, so a generated fallback nested as-is bakes EMPTY (an invisible icon). It is
-                    // inlined under neoforge:item_layers, which builds the same quads from its layers.
-                    // And GUI lighting comes from the wrapper's own gui_light (default "side", block-lit),
-                    // so the wrapper copies the generated icon's "front".
-                    val fallbackId = modelId(spec["fallback"])
+                    // The fallback is usually the very model this rewrite replaces (the goggles' flat icon), so
+                    // its content becomes the base inline instead of a parent reference. 1.21.1 bakes a nested
+                    // item/generated model into the flat icon like a top-level one. GUI lighting comes from the
+                    // wrapper's own gui_light, and a wrapper with no parent defaults to "side" (lit like a
+                    // block), so it carries the flat items' "front"; the particle comes from the base's own
+                    // textures, where vanilla's flat-item bake would have used layer0. One difference stays:
+                    // the wrapper reports no item transforms, so a dropped item floats 2 px higher than a plain
+                    // icon does there.
+                    val fallbackId = modelId(spec["fallback"] ?: error("items/${f.name}: a select needs a fallback, the 1.21.1 base"))
                     val fallbackFile = modelsItemDir.parentFile.resolve(fallbackId.substringAfter(':') + ".json")
+                    check(fallbackFile.isFile) { "items/${f.name}: fallback $fallbackId is not a model of this mod ($fallbackFile)" }
                     val fallback = slurper.parse(fallbackFile) as Map<String, Any?>
                     val wrapper = linkedMapOf<String, Any?>("loader" to "neoforge:separate_transforms")
-                    val base: MutableMap<String, Any?>
-                    if ((fallback["parent"] as? String) in setOf("minecraft:item/generated", "item/generated")) {
-                        wrapper["gui_light"] = "front"
-                        base = linkedMapOf("parent" to "minecraft:item/generated", "loader" to "neoforge:item_layers")
-                        fallback.forEach { (k, v) -> if (k != "parent") base[k] = v }
+                    val base = LinkedHashMap(fallback)
+                    val flat = (fallback["parent"] as? String)?.removePrefix("minecraft:") in setOf("item/generated", "item/handheld")
+                    if (flat) {
+                        (fallback["gui_light"] ?: "front").let { wrapper["gui_light"] = it }
+                        val textures = LinkedHashMap((fallback["textures"] as? Map<String, Any?>) ?: emptyMap())
+                        if ("particle" !in textures && "layer0" in textures) textures["particle"] = textures["layer0"]
+                        base["textures"] = textures
                     } else {
-                        base = linkedMapOf("parent" to fallbackId)
+                        fallback["gui_light"]?.let { wrapper["gui_light"] = it }
                     }
                     wrapper["base"] = base
                     wrapper["perspectives"] = perspectives

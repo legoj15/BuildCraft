@@ -316,8 +316,8 @@ No letters except the face icons' side letters. Every other meaning is carried b
 | `filled_inner` | Filled | draw | RING12's K ring, its L cells as the L/M checker. |
 | `filled_outer` | Surrounded | draw | RING12's K ring; every other cell on x, y = 1..14 outside it as the L/M checker, its inside transparent. |
 | `hollow` | Hollow | draw | RING12's K ring only. |
-| `rotation_0` | No rotation | hand-drawn | DISC14's K ring, interior transparent; an L-cored hand at x = 7,8 down to row 7 under a K arrowhead at 12 o'clock. The PNG is the reference. |
-| `rotation_1` | 90 degree rotation | hand-drawn | DISC14's K ring; L wedge over the first quarter clockwise from 12 o'clock, K edges at 12 and 3 o'clock, K arrowhead at the 3 o'clock edge pointing clockwise. The PNG is the reference. |
+| `rotation_0` | No rotation | hand-drawn | DISC14's K ring, interior transparent; an L hand at x = 8 on rows 2 and 5-7, broken by the K arrowhead at 12 o'clock on rows 2-4. The PNG is the reference. |
+| `rotation_1` | 90 degree rotation | hand-drawn | DISC14's K ring; L wedge over the first quarter clockwise from 12 o'clock, a K edge at 3 o'clock (the ring closes it at 12), K arrowhead at the 3 o'clock edge pointing clockwise. The PNG is the reference. |
 | `rotation_2` | 180 degree rotation | hand-drawn | As `rotation_1` with the wedge over half the face and the arrowhead at 6 o'clock. |
 | `rotation_3` | 270 degree rotation | hand-drawn | As `rotation_1` with the wedge over three quarters and the arrowhead at 9 o'clock. |
 | `stairs_ascend` | Up (Y direction; Pyramid and Stairs) | draw | Side elevation: L columns x = 2..5 (rows 8-13), x = 6..9 (rows 5-13), x = 10..13 (rows 2-13), so three 4px steps rise to the right on a flat base; K on the silhouette plus the two concave corners (6,8) and (10,5). |

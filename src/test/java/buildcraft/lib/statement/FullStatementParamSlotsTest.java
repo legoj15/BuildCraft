@@ -11,9 +11,12 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.nbt.CompoundTag;
 
 import buildcraft.api.filler.IFillerPattern;
+import buildcraft.api.statements.IStatementParameter;
 
 import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.filler.FillerType;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterAxis;
+import buildcraft.builders.snapshot.pattern.parameter.PatternParameterHollow;
 import buildcraft.builders.snapshot.pattern.parameter.PatternParameterRotation;
 
 /** A statement's parameter slots end at its maxParameters(): the GUI draws the rest blocked, so nothing may live
@@ -46,6 +49,23 @@ public class FullStatementParamSlotsTest {
         loaded.readFromNbt(nbt);
         Assertions.assertEquals(BCBuildersStatements.PATTERN_SQUARE, loaded.get());
         Assertions.assertNull(loaded.get(2), "a saved rotation came back on a pattern without a rotation slot");
+    }
+
+    /** The gate's "set Filler pattern" action hands over the whole array: every slot the pattern has must arrive,
+     *  the first included, and none past its last. */
+    @Test
+    public void settingWithAnArrayCopiesEveryUsedSlot() {
+        IStatementParameter[] fromGate = { PatternParameterAxis.X, PatternParameterHollow.FILLED_INNER,
+            PatternParameterRotation.QUARTER };
+        FullStatement<IFillerPattern> full = new FullStatement<>(FillerType.INSTANCE, 4, null);
+        full.set(BCBuildersStatements.PATTERN_CIRCLE, fromGate);
+        Assertions.assertEquals(PatternParameterAxis.X, full.get(0), "the gate's axis was dropped");
+        Assertions.assertEquals(PatternParameterHollow.FILLED_INNER, full.get(1));
+        Assertions.assertEquals(PatternParameterRotation.QUARTER, full.get(2));
+
+        full.set(BCBuildersStatements.PATTERN_SQUARE, fromGate);
+        Assertions.assertEquals(PatternParameterAxis.X, full.get(0));
+        Assertions.assertNull(full.get(2), "Square has two parameters but took the gate's rotation");
     }
 
     @Test

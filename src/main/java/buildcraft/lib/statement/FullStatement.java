@@ -199,7 +199,11 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
 
     public void set(S statement, IStatementParameter[] params) {
         set(statement);
-        for (int i = Math.min(getParamCount(), params.length) - 1; i > 0; i--) {
+        if (statement == null) {
+            return;
+        }
+        int count = Math.min(Math.min(getParamCount(), params.length), statement.maxParameters());
+        for (int i = 0; i < count; i++) {
             set(i, params[i]);
         }
     }

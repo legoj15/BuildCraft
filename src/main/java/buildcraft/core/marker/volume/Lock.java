@@ -9,6 +9,7 @@ package buildcraft.core.marker.volume;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import net.minecraft.core.BlockPos;
@@ -23,8 +24,12 @@ import buildcraft.lib.client.render.laser.LaserData_BC8;
 import buildcraft.lib.misc.NBTUtilBC;
 
 public class Lock {
-    /** The saved name of the lock target that used to pin a Filler Planner addon to a Volume Box; saves still hold it. */
-    private static final String RETIRED_ADDON_TARGET = "ADDON";
+    /**
+     * Saved names of lock targets that are gone; saves still hold them. {@code ADDON} pinned a Filler Planner addon to
+     * a Volume Box. {@code RESIZE} kept a machine's claimed box at the size it was claimed at; the machine follows a
+     * resize now (see {@code LevelSavedDataVolumeBoxes#getHeldBy}), so the Volume Wrench may drag it like any other.
+     */
+    private static final Set<String> RETIRED_TARGETS = Set.of("ADDON", "RESIZE");
 
     public Cause cause;
     public List<Target> targets = new ArrayList<>();
@@ -66,8 +71,8 @@ public class Lock {
             for (int i = 0; i < targetsList.size(); i++) {
                 CompoundTag targetTag = NBTUtilBC.getCompound(targetsList, i);
                 String targetType = NBTUtilBC.getString(targetTag, "type", "REMOVE");
-                if (RETIRED_ADDON_TARGET.equals(targetType)) {
-                    continue; // the addon layer is gone, so there is nothing left for this target to lock
+                if (RETIRED_TARGETS.contains(targetType)) {
+                    continue; // nothing is left for this target to lock
                 }
                 Target target = Target.EnumTarget.valueOf(targetType).supplier.get();
                 target.readFromNBT(NBTUtilBC.getCompound(targetTag, "data"));
@@ -168,17 +173,6 @@ public class Lock {
             }
         }
 
-        public static class TargetResize extends Target {
-            @Override
-            public CompoundTag writeToNBT(CompoundTag nbt) {
-                return nbt;
-            }
-
-            @Override
-            public void readFromNBT(CompoundTag nbt) {
-            }
-        }
-
         public static class TargetUsedByMachine extends Target {
             public EnumType type;
 
@@ -220,7 +214,6 @@ public class Lock {
 
         enum EnumTarget {
             REMOVE(TargetRemove::new),
-            RESIZE(TargetResize::new),
             USED_BY_MACHINE(TargetUsedByMachine::new);
 
             public final Supplier<? extends Target> supplier;

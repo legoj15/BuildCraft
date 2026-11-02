@@ -728,6 +728,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:machines_leave_markers_backing_lifted_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::machinesLeaveMarkersBackingALiftedBox);
         reg.accept("buildcraftunofficial:filler_lone_marker_gets_no_owned_box", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::aLoneMarkerGivesTheFillerNoOwnedBox);
         reg.accept("buildcraftunofficial:sneak_use_leaves_box_another_player_drags", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::sneakUseLeavesABoxAnotherPlayerDrags);
+        reg.accept("buildcraftunofficial:claimed_box_resizes_with_filler", () -> buildcraft.builders.FillerOwnedVolumeBoxTester::claimedBoxResizesWithTheFiller);
 
         // Paper advancement contract (4 criteria, all required, names matching PaperAdvancement constants)
         reg.accept("buildcraftunofficial:paper_advancement_contract", () -> buildcraft.core.PaperAdvancementTester::testPaperAdvancementContract);

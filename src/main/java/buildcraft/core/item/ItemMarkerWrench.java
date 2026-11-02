@@ -351,11 +351,11 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
                     nearest = box;
                 }
             }
-            // A box a machine holds on to (Remove), or uses as it is (Resize), stays. A box a machine owns is
-            // locked against removal only: it goes with its machine, never by a wrench. A box another player is
-            // dragging stays with that player, whose drag the removal would orphan.
-            if (nearest != null && !nearest.isEditing() && nearest.getLockTargetsStream().noneMatch(
-                target -> target instanceof Lock.Target.TargetRemove || target instanceof Lock.Target.TargetResize)) {
+            // A box a machine owns or claimed is locked against removal: it goes with (or is freed by) its machine,
+            // never by a wrench. A box another player is dragging stays with that player, whose drag the removal
+            // would orphan.
+            if (nearest != null && !nearest.isEditing()
+                && nearest.getLockTargetsStream().noneMatch(Lock.Target.TargetRemove.class::isInstance)) {
                 return new VolumePick(VolumeClick.BOX_REMOVE, nearest, null, nearestDist);
             }
             return VolumePick.NOTHING;
@@ -368,8 +368,8 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         BlockPos bestCorner = null;
         double bestDist = Double.MAX_VALUE;
         for (VolumeBox box : boxes) {
-            // A box being dragged (by anyone) stays with its dragger; a resize-locked one cannot be dragged at all.
-            if (box.isEditing() || box.getLockTargetsStream().anyMatch(Lock.Target.TargetResize.class::isInstance)) {
+            // A box being dragged (by anyone) stays with its dragger. A machine's box may be dragged: it follows.
+            if (box.isEditing()) {
                 continue;
             }
             for (BlockPos p : PositionUtil.getCorners(box.box.min(), box.box.max())) {

@@ -290,7 +290,6 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
                 new Lock(
                     new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
                     new Lock.Target.TargetRemove(),
-                    new Lock.Target.TargetResize(),
                     new Lock.Target.TargetUsedByMachine(
                         Lock.Target.TargetUsedByMachine.EnumType.STRIPES_READ
                     )
@@ -398,9 +397,9 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
     }
 
     /**
-     * Keeps the scan area in step with the volume box this table owns, if it owns one (it does when it took over
-     * survival markers or a floating box lifted off them; a table from before boxes were owned has none and keeps its
-     * area). Looked up by owner
+     * Keeps the scan area in step with the volume box this table owns or claimed, if it has one (it owns one when it
+     * took over survival markers or a floating box lifted off them, and claims one when placed against a free box; a
+     * table from before boxes were owned that took markers has none and keeps its area). Looked up by this table's
      * position, not by an id saved on the tile, so a copy of this tile's data can never point a second table at it.
      * <p>
      * {@link #box} stays the area scanned, mirrored from the owned box only once a drag is confirmed: a scan in
@@ -411,7 +410,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
      * @return true while the box is being dragged: the table does no work this tick.
      */
     private boolean followOwnedBox() {
-        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getOwnedBy(worldPosition);
+        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getHeldBy(worldPosition, getBlockState().getBlock());
         if (owned == null) {
             return false;
         }

@@ -248,7 +248,8 @@ public class TileFiller extends TileBC_Neptune
         }
     }
 
-    /** Pins {@code volumeBox} to this Filler's block (no remove, no resize) unless a lock of this very block is already there. */
+    /** Pins {@code volumeBox} to this Filler's block (no removal; a resize is followed, see {@link #followOwnedBox}) unless
+     *  a lock of this very block is already there. */
     private void lockVolumeBox(LevelSavedDataVolumeBoxes volumeBoxes, VolumeBox volumeBox, BlockState blockState) {
         boolean locked = volumeBox.locks.stream().anyMatch(lock ->
             lock.cause instanceof Lock.Cause.CauseBlock cause
@@ -260,7 +261,6 @@ public class TileFiller extends TileBC_Neptune
             new Lock(
                 new Lock.Cause.CauseBlock(worldPosition, blockState.getBlock()),
                 new Lock.Target.TargetRemove(),
-                new Lock.Target.TargetResize(),
                 new Lock.Target.TargetUsedByMachine(
                     Lock.Target.TargetUsedByMachine.EnumType.STRIPES_WRITE
                 )
@@ -409,10 +409,10 @@ public class TileFiller extends TileBC_Neptune
     // ==================== Owned box ====================
 
     /**
-     * Keeps the working area in step with the volume box this Filler owns, if it owns one (it does when it took over
-     * survival markers or a floating box lifted off them; a Filler from before boxes were owned has none and keeps its
-     * area as it is). The box is
-     * looked up by its owner position rather than by an id saved on the tile, so a copy of this tile's data (a
+     * Keeps the working area in step with the volume box this Filler owns or claimed, if it has one (it owns one when
+     * it took over survival markers or a floating box lifted off them, and claims one when placed against a free box;
+     * a Filler from before boxes were owned that took markers has none and keeps its area as it is). The box is
+     * looked up by this Filler's position rather than by an id saved on the tile, so a copy of this tile's data (a
      * blueprint, a structure) can never point a second Filler at it.
      * <p>
      * {@link #box} stays the area the builder works on, mirrored from the owned box only once a drag is confirmed:
@@ -423,7 +423,7 @@ public class TileFiller extends TileBC_Neptune
      * @return true while the box is being dragged: the Filler does no work this tick.
      */
     private boolean followOwnedBox() {
-        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getOwnedBy(worldPosition);
+        VolumeBox owned = LevelSavedDataVolumeBoxes.get(level).getHeldBy(worldPosition, getBlockState().getBlock());
         if (owned == null) {
             return false;
         }

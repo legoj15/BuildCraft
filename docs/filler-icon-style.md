@@ -26,8 +26,8 @@ The sheet script reads this block; keep one colour per line.
 
 ```palette
 K #222222 ink: every silhouette and outline, concave step lines, the rotation wedge edge
-L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter (axis edges and faces excepted), Frame front beams
-M #B3B3B3 mid grey: left (south) faces, curved surface body, Frame back beams
+L #E6E6E6 light grey: top faces, 2D fills, the selected element of a parameter (axis edges and faces excepted), Frame front beams, the hollow family's checker
+M #B3B3B3 mid grey: left (south) faces, curved surface body, Frame back beams, the hollow family's checker
 D #6E6E6E dark grey: right (east) faces, curved shadow, hidden edges of glass cubes, unselected centre dots
 G #C8C8C8 ghost: dotted outline of space the pattern leaves alone (None, sphere-part ghosts)
 a #F58A6E accent light: Clear and Flatten, top face
@@ -45,8 +45,8 @@ T #FFFFFF top white: face_up's face (face_down's face is K: 1.12.2's side colour
 
 - Nothing outside the block. Every pixel is fully opaque or fully transparent.
 - L, M and D are the only placed-block tones. G never means a block, only "untouched".
-- The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent;
-  the axis and face icons are the exceptions: axis edges take the 3D-editor axis colours X, Y and Z, and a
+- The accent hue means removal and appears on Clear and Flatten only. A selected element in a parameter is L, never accent
+  (the hollow family shows its placed region as the L/M checker instead); the axis and face icons are the exceptions: axis edges take the 3D-editor axis colours X, Y and Z, and a
   face takes the colour gate tooltips give that side (N, S, E, W, T; the bottom is K, not the tooltip's dark grey). X is
   Blender's pink-leaning red, kept apart from the accent's orange-red so it does not read as removal.
 - The accent ramp is darker than the grey ramp at every step (luma 167/116/75 against 230/179/110), so Clear and

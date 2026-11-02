@@ -53,8 +53,8 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
 
         PathIterator2d iterator = getIterator(filledTemplate, axis);
 
-        int maxA = axis == PatternParameterAxis.X ? filledTemplate.getMax().getY() : filledTemplate.getMax().getX();
-        int maxB = axis == PatternParameterAxis.Z ? filledTemplate.getMax().getY() : filledTemplate.getMax().getZ();
+        int maxA = axis == PatternParameterAxis.X ? filledTemplate.getMax().getZ() : filledTemplate.getMax().getX();
+        int maxB = axis == PatternParameterAxis.Y ? filledTemplate.getMax().getZ() : filledTemplate.getMax().getY();
 
         int normMaxA = maxA;
         int normMaxB = maxB;
@@ -154,27 +154,32 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
         boolean isFilled(int a, int b);
     }
 
+    /** Shape point (a, b) in the world: a runs east (south on Axis X), b runs south on Axis Y and down on the upright
+     *  axes, so the top of a shape (and of its icon) is north lying flat and up standing. 1.12.2 mapped a to y on
+     *  Axis X (the shape lay on its side) and b to y on Axis Z (upside down). */
     private static PathIterator2d getIterator(IFilledTemplate filledTemplate, PatternParameterAxis axis) {
+        int maxY = filledTemplate.getMax().getY();
         switch (axis) {
             case X:
-                return (y, z) -> filledTemplate.setLineX(0, filledTemplate.getMax().getX(), y, z, true);
+                return (z, b) -> filledTemplate.setLineX(0, filledTemplate.getMax().getX(), maxY - b, z, true);
             case Y:
-                return (x, z) -> filledTemplate.setLineY(x, 0, filledTemplate.getMax().getY(), z, true);
+                return (x, z) -> filledTemplate.setLineY(x, 0, maxY, z, true);
             case Z:
-                return (x, y) -> filledTemplate.setLineZ(x, y, 0, filledTemplate.getMax().getZ(), true);
+                return (x, b) -> filledTemplate.setLineZ(x, maxY - b, 0, filledTemplate.getMax().getZ(), true);
             default:
                 throw new IllegalArgumentException("Unknown axis " + axis);
         }
     }
 
     private static PositionGetter getFillGetter(IFilledTemplate filledTemplate, PatternParameterAxis axis) {
+        int maxY = filledTemplate.getMax().getY();
         switch (axis) {
             case X:
-                return (a, b) -> filledTemplate.get(0, a, b);
+                return (a, b) -> filledTemplate.get(0, maxY - b, a);
             case Y:
                 return (a, b) -> filledTemplate.get(a, 0, b);
             case Z:
-                return (a, b) -> filledTemplate.get(a, b, 0);
+                return (a, b) -> filledTemplate.get(a, maxY - b, 0);
             default:
                 throw new IllegalArgumentException("Unknown axis " + axis);
         }

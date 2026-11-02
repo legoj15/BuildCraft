@@ -246,7 +246,7 @@ The footprints (half and eighth are given as rows below, the quarter is the exem
 2D shapes are drawn filled: the fill is the shape's identity. Hollow versus filled is the Hollow parameter's job
 (the 2D default is Hollow). Arc is the exception: it is drawn as its curve, which is what it builds by default and
 keeps it apart from `rotation_1`. Orientation follows the generators with default parameters (Axis Y, no
-rotation): hexagon points west and east, pentagon point north and flat side south, triangle apex north, semicircle
+rotation; the icon's top is north there, and up on Axis X and Z, where the shape stands): hexagon points west and east, pentagon point north and flat side south, triangle apex north, semicircle
 flat side south, arc centred on the south-east corner and bulging north-west.
 
 Parameters: the selected element is L; the frame or structure around it is K; secondary hints are D.

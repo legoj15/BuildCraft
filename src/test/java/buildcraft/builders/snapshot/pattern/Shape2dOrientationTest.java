@@ -56,7 +56,8 @@ public class Shape2dOrientationTest {
         Cell cell, String middle, String bottom) {
         IFilledTemplate t = fill(pattern, size, axis);
         Assertions.assertEquals("......##......", row(t, cell, 0), axis + ": the point should be the icon's top row");
-        // Only the flood fill reaches a middle row's inside, so a fill that reads the face mirrored or not at all fails.
+        // Only the flood fill reaches a middle row's inside, so a fill that reads the face mirrored fails here; one
+        // that leaks past the outline fails on the Triangle's middle or the Pentagon's base.
         Assertions.assertEquals(middle, row(t, cell, 7), axis + ": the inside was not filled");
         Assertions.assertEquals(bottom, row(t, cell, 13), axis + ": wrong base row");
     }
@@ -71,8 +72,8 @@ public class Shape2dOrientationTest {
         BlockPos xBox = new BlockPos(1, 14, 14);
         IFillerPatternShape pentagon = BCBuildersStatements.PATTERN_PENTAGON;
         IFillerPatternShape triangle = BCBuildersStatements.PATTERN_TRIANGLE;
-        // The Pentagon's flat side: the golden ratio's share of the width (about 62%) rounds to 10 of 14 here;
-        // 1.12.2's inset gave 6.
+        // The Pentagon's flat side is 1/phi of the width (about 62%); with both corner insets rounded and the end cells
+        // included it lands on 10 of 14 here. 1.12.2's inset gave 6.
         String pentagonBase = "..##########..";
         String pentagonMiddle = "##############";
         String triangleBase = "##############";

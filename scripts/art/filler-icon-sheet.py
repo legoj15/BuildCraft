@@ -41,12 +41,12 @@ DEFAULT_PARAMETERS = TEXTURES / "filler" / "parameters"
 DEFAULT_SLOT = TEXTURES / "gui" / "misc_slots.png"
 DEFAULT_GUIDE = REPO / "docs" / "filler-icon-style.md"
 
+STATEMENTS = REPO / "src" / "main" / "java" / "buildcraft" / "builders" / "BCBuildersStatements.java"
+PATTERN_SOURCES = STATEMENTS.parent / "snapshot" / "pattern"
+
 # The 1x strips put neighbours side by side the way the game does. Patterns follow the selection popup's rows
-# (ContainerFiller's pattern groups); a parameter popup shows one parameter type at a time, so parameters are grouped
-# by family. Icons outside every group (orphans, new files) end the strip as their own group.
-PATTERN_POPUP = [["none", "box", "clear", "fill"], ["frame", "pyramid", "sphere", "sphere_eighth"],
-                 ["sphere_half", "sphere_quarter", "stairs", "flatten"], ["2d_arc", "2d_circle", "2d_hexagon", "2d_octagon"],
-                 ["2d_pentagon", "2d_semi_circle", "2d_square", "2d_triangle"]]
+# (BCBuildersStatements.PATTERN_POPUP, read by pattern_popup()); a parameter popup shows one parameter type at a time,
+# so parameters are grouped by family. Icons outside every group (orphans, new files) end the strip as their own group.
 PARAMETER_FAMILIES = [("face_",), ("axis_",), ("arrow_",), ("center_",), ("rotation_",), ("stairs_",),
                       ("filled_", "hollow")]
 
@@ -121,10 +121,36 @@ def git_show(rev: str, path: Path) -> Image.Image | None:
     return Image.open(io.BytesIO(data)).convert("RGBA")
 
 
+def pattern_popup() -> list[list[str]]:
+    """BCBuildersStatements.PATTERN_POPUP as rows of icon names (pattern tags), parsed from the Java source."""
+    src = STATEMENTS.read_text(encoding="utf-8")
+    popup = re.search(r"PATTERN_POPUP = List\.of\((.*?)\n\s*\);", src, re.S)
+    if not popup:
+        sys.exit(f"PATTERN_POPUP not found in {STATEMENTS}")
+    rows = []
+    for row in re.findall(r"List\.of\(([^)]*)\)", popup.group(1)):
+        rows.append([pattern_tag(src, const.strip()) for const in row.split(",")])
+    return rows
+
+
+def pattern_tag(src: str, const: str) -> str:
+    """The tag a PATTERN_* constant's class passes to super(), e.g. PATTERN_EIGHTH_SPHERE -> sphere_eighth."""
+    decl = re.search(rf"\b{const} = new (\w+)\(([^)]*)\)", src)
+    if not decl:
+        sys.exit(f"{const} not declared in {STATEMENTS}")
+    cls, arg = decl.groups()
+    ctor = re.search(r'super\("([^"]*)"(\s*\+\s*type\.lowerCaseName)?\)',
+                     (PATTERN_SOURCES / f"{cls}.java").read_text(encoding="utf-8"))
+    if not ctor:
+        sys.exit(f"no super(\"tag\") in {cls}.java")
+    # PatternSpherePart appends its SpherePartType's lower-case name to the tag
+    return ctor.group(1) + (arg.rsplit(".", 1)[-1].lower() if ctor.group(2) else "")
+
+
 def strip_groups(folder: str, names: list[str]) -> list[list[str]]:
     """Neighbour groups for a folder's 1x strip, in game order; leftovers form a final group."""
     if folder == "patterns":
-        groups = [[n for n in row if n in names] for row in PATTERN_POPUP]
+        groups = [[n for n in row if n in names] for row in pattern_popup()]
     else:
         groups = [[n for n in names if n.startswith(prefixes)] for prefixes in PARAMETER_FAMILIES]
     used = {n for g in groups for n in g}

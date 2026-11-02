@@ -6,6 +6,8 @@
 
 package buildcraft.builders.container;
 
+import java.util.List;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -21,9 +23,12 @@ import buildcraft.api.filler.IFillerPattern;
 import buildcraft.api.tiles.IControllable;
 
 import buildcraft.lib.gui.ContainerBCTile;
+import buildcraft.lib.gui.ISimpleDrawable;
 import buildcraft.lib.statement.FullStatement;
+import buildcraft.lib.statement.StatementContext;
 
 import buildcraft.builders.BCBuildersMenuTypes;
+import buildcraft.builders.BCBuildersStatements;
 import buildcraft.builders.filler.FillerType;
 import buildcraft.builders.tile.TileFiller;
 
@@ -48,68 +53,25 @@ public class ContainerFiller extends ContainerBCTile<TileFiller> implements ICon
         (statement, paramIndex) -> onStatementChange()
     );
 
-    public final buildcraft.lib.statement.StatementContext<IFillerPattern> possiblePatternsContext = () -> java.util.List.of(
-        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
-            @Override
-            public java.util.List<IFillerPattern> getValues() {
-                return java.util.Arrays.asList(
-                    buildcraft.builders.BCBuildersStatements.PATTERN_NONE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_BOX,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_CLEAR,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_FILL
-                );
-            }
-            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
-        },
-        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
-            @Override
-            public java.util.List<IFillerPattern> getValues() {
-                return java.util.Arrays.asList(
-                    buildcraft.builders.BCBuildersStatements.PATTERN_FRAME,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_PYRAMID,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_SPHERE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_EIGHTH_SPHERE
-                );
-            }
-            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
-        },
-        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
-            @Override
-            public java.util.List<IFillerPattern> getValues() {
-                return java.util.Arrays.asList(
-                    buildcraft.builders.BCBuildersStatements.PATTERN_HEMI_SPHERE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_QUARTER_SPHERE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_STAIRS,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_FLATTEN
-                );
-            }
-            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
-        },
-        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
-            @Override
-            public java.util.List<IFillerPattern> getValues() {
-                return java.util.Arrays.asList(
-                    buildcraft.builders.BCBuildersStatements.PATTERN_ARC,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_CIRCLE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_HEXAGON,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_OCTAGON
-                );
-            }
-            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
-        },
-        new buildcraft.lib.statement.StatementContext.StatementGroup<IFillerPattern>() {
-            @Override
-            public java.util.List<IFillerPattern> getValues() {
-                return java.util.Arrays.asList(
-                    buildcraft.builders.BCBuildersStatements.PATTERN_PENTAGON,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_SEMI_CIRCLE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_SQUARE,
-                    buildcraft.builders.BCBuildersStatements.PATTERN_TRIANGLE
-                );
-            }
-            @Override public buildcraft.lib.gui.ISimpleDrawable getSourceIcon() { return null; }
-        }
-    );
+    /** The pattern popup's groups, one per {@link BCBuildersStatements#PATTERN_POPUP} row. */
+    private static final List<StatementContext.StatementGroup<IFillerPattern>> PATTERN_GROUPS =
+        BCBuildersStatements.PATTERN_POPUP.stream()
+            .<StatementContext.StatementGroup<IFillerPattern>>map(row -> new StatementContext.StatementGroup<>() {
+                private final List<IFillerPattern> values = List.copyOf(row);
+
+                @Override
+                public List<IFillerPattern> getValues() {
+                    return values;
+                }
+
+                @Override
+                public ISimpleDrawable getSourceIcon() {
+                    return null;
+                }
+            })
+            .toList();
+
+    public final StatementContext<IFillerPattern> possiblePatternsContext = () -> PATTERN_GROUPS;
 
     public void onStatementChange() {
         if (player != null && player.level() != null && player.level().isClientSide()) {

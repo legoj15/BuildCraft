@@ -24,12 +24,14 @@ import net.minecraft.world.item.Tiers;*/
 
 /**
  * What a wrench is made of: the vanilla tool material that gives it durability, enchantability, repair item and
- * mining speed, plus the one light-weapon profile every wrench shares.
+ * mining speed, plus its light-weapon profile.
  * <ul>
  * <li>{@link #IRON}: the Basic and the Marker Wrench (250 uses, enchantability 14, mended with iron ingots, mines
- *     at 6.0).</li>
- * <li>{@link #DIAMOND}: the Volume Wrench (1561 uses, enchantability 10, mended with diamonds, mines at 8.0).</li>
+ *     at 6.0, hits for 3.5).</li>
+ * <li>{@link #DIAMOND}: the Volume Wrench (1561 uses, enchantability 10, mended with diamonds, mines at 8.0, hits
+ *     for 4.0).</li>
  * </ul>
+ * Every wrench swings at 2.0. The damage and speed are tooltip totals, which include the player's own 1.0 and 4.0.
  * A wrench mines only what {@link #MINEABLE} lists (BuildCraft's machines, pipes, engines, tanks and the like) at its
  * tier's speed, and counts as the right tool for their drops; every other block takes hand speed. Mining a block
  * costs one use, as a pickaxe's does. Wrenching (everything that reaches
@@ -41,19 +43,22 @@ import net.minecraft.world.item.Tiers;*/
  * repair and per-hit questions ({@link ItemWrench_Neptune}).
  */
 public enum WrenchTier {
-    IRON,
-    DIAMOND;
+    IRON(3.5F),
+    DIAMOND(4.0F);
 
     /** The blocks a wrench mines quickly and drops properly: {@code data/buildcraftunofficial/tags/block/mineable/wrench.json}. */
     public static final TagKey<Block> MINEABLE =
         TagKey.create(Registries.BLOCK, Identifier.parse("buildcraftunofficial:mineable/wrench"));
 
-    /** The attack damage tooltip's total, which includes the player's own 1.0 base. */
-    private static final float ATTACK_DAMAGE = 3.5F;
-    /** The attack speed tooltip's total, which includes the player's own 4.0 base: the 1.2 a pickaxe swings at. */
-    private static final float ATTACK_SPEED = 1.2F;
+    private static final float ATTACK_SPEED = 2.0F;
     private static final float PLAYER_BASE_ATTACK_DAMAGE = 1.0F;
     private static final float PLAYER_BASE_ATTACK_SPEED = 4.0F;
+
+    private final float attackDamage;
+
+    WrenchTier(float attackDamage) {
+        this.attackDamage = attackDamage;
+    }
 
     //? if >=1.21.10 {
     private ToolMaterial material() {
@@ -68,7 +73,7 @@ public enum WrenchTier {
         ToolMaterial material = material();
         return properties
             .tool(material, MINEABLE,
-                ATTACK_DAMAGE - PLAYER_BASE_ATTACK_DAMAGE - material.attackDamageBonus(),
+                attackDamage - PLAYER_BASE_ATTACK_DAMAGE - material.attackDamageBonus(),
                 ATTACK_SPEED - PLAYER_BASE_ATTACK_SPEED, 0.0F)
             .component(DataComponents.WEAPON, new Weapon(1, 0.0F));
     }
@@ -83,7 +88,7 @@ public enum WrenchTier {
             .durability(tier.getUses())
             .component(DataComponents.TOOL, tier.createToolProperties(MINEABLE))
             .attributes(DiggerItem.createAttributes(tier,
-                ATTACK_DAMAGE - PLAYER_BASE_ATTACK_DAMAGE - tier.getAttackDamageBonus(),
+                attackDamage - PLAYER_BASE_ATTACK_DAMAGE - tier.getAttackDamageBonus(),
                 ATTACK_SPEED - PLAYER_BASE_ATTACK_SPEED));
     }
 

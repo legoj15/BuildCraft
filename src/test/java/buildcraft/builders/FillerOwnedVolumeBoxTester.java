@@ -52,7 +52,7 @@ public class FillerOwnedVolumeBoxTester {
     private static final int REGISTER_TICKS = 40;
 
     /**
-     * The floating box a Marker Wrench leaves when a resize of connected markers is confirmed behaves like the markers
+     * The floating box a Volume Wrench leaves when a resize of connected markers is confirmed behaves like the markers
      * it replaced: a Filler placed against it ends with exactly one box over that area, the Filler's own, and the box
      * goes with the Filler. A machine that merely consumed the floating box (as a Quarry does) would own nothing; one
      * that left it standing next to a new owned box would leave two.
@@ -163,7 +163,18 @@ public class FillerOwnedVolumeBoxTester {
                     player.setPos(stand.x, stand.y, stand.z);
                     player.setYRot(180);
                     player.setXRot(0);
+                    // Only the Volume Wrench lifts a marker area; the Marker Wrench's click is left to the marker.
                     player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BCCoreItems.MARKER_WRENCH.get()));
+                    if (ItemMarkerWrench.onUseOnVolumeMarker(level, player, markers[1], Vec3.atCenterOf(markers[1]))) {
+                        throw new IllegalStateException("The Marker Wrench lifted a marker area");
+                    }
+                    // The click is the main hand's: a Volume Wrench in the offhand does not lend it the lift.
+                    player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(BCCoreItems.VOLUME_WRENCH.get()));
+                    if (ItemMarkerWrench.onUseOnVolumeMarker(level, player, markers[1], Vec3.atCenterOf(markers[1]))) {
+                        throw new IllegalStateException("A Marker Wrench lifted a marker area with a Volume Wrench in the offhand");
+                    }
+                    player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                    player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(BCCoreItems.VOLUME_WRENCH.get()));
                     if (!ItemMarkerWrench.onUseOnVolumeMarker(level, player, markers[1], Vec3.atCenterOf(markers[1]))) {
                         throw new IllegalStateException("Precondition: the corner marker could not be lifted");
                     }

@@ -324,7 +324,7 @@ block "building" "builders" "replacer"
 
 // ---- Building / Markers (markers) ----------------------------------------
 // The Path Mark and Land Mark blocks (writeups at block/marker_path.md and
-// block/marker_volume.md), the wrenches that link markers and resize volume boxes, and the creative
+// block/marker_volume.md), the wrenches that link markers and resize areas, and the creative
 // volume box that stands in for a marked area. These were "Specialized" blocks and loose tools.
 block "building" "markers" "marker_path"
 block "building" "markers" "marker_volume"

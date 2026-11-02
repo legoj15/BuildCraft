@@ -5,6 +5,7 @@
 package buildcraft.core.block;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -17,9 +18,13 @@ import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import javax.annotation.Nullable;
 
+import net.neoforged.neoforge.network.PacketDistributor;
+
 import buildcraft.lib.block.BlockMarkerBase;
 
+import buildcraft.core.BCCoreConfig;
 import buildcraft.core.item.ItemMarkerWrench;
+import buildcraft.core.marker.MessageMarkerTrack;
 import buildcraft.core.tile.TileMarkerVolume;
 
 public class BlockMarkerVolume extends BlockMarkerBase {
@@ -37,11 +42,18 @@ public class BlockMarkerVolume extends BlockMarkerBase {
             Player player, BlockHitResult hitResult) {
         if (!world.isClientSide()) {
             BlockEntity tile = world.getBlockEntity(pos);
-            if (tile instanceof TileMarkerVolume volume
-                && !((player.getMainHandItem().getItem() instanceof ItemMarkerWrench
-                        || player.getOffhandItem().getItem() instanceof ItemMarkerWrench)
-                    && ItemMarkerWrench.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
-                volume.onManualConnectionAttempt(player);
+            if (tile instanceof TileMarkerVolume volume) {
+                boolean wrench = player.getMainHandItem().getItem() instanceof ItemMarkerWrench
+                    || player.getOffhandItem().getItem() instanceof ItemMarkerWrench;
+                if (!(wrench && ItemMarkerWrench.onUseOnVolumeMarker(world, player, pos, hitResult.getLocation()))) {
+                    volume.onManualConnectionAttempt(player);
+                    if (wrench && player instanceof ServerPlayer serverPlayer) {
+                        // The wrench click that lifted no box starts the distance readout. Sent after the attempt: any
+                        // connection it made is already on its way to the client, ahead of this.
+                        PacketDistributor.sendToPlayer(serverPlayer,
+                            new MessageMarkerTrack(pos, BCCoreConfig.markerMaxDistance.get()));
+                    }
+                }
             }
         }
         return InteractionResult.SUCCESS;

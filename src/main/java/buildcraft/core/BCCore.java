@@ -330,6 +330,12 @@ public class BCCore {
                 buildcraft.core.marker.volume.MessageVolumeBoxes.STREAM_CODEC,
                 buildcraft.core.marker.volume.MessageVolumeBoxes::handle
         );
+        // Volume-marker distance readout: the server names the marker and its own connection limit
+        registrar.playToClient(
+                buildcraft.core.marker.MessageMarkerTrack.TYPE,
+                buildcraft.core.marker.MessageMarkerTrack.STREAM_CODEC,
+                buildcraft.core.marker.MessageMarkerTrack::handle
+        );
         //? if >=1.21.10 {
         registrar.playBidirectional(
                 MessageContainerPayload.TYPE,

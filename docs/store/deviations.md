@@ -108,7 +108,7 @@ out. Commit shas are kept so each line can be traced.
 - Filler's Fill pattern clears grass, snow layers and vines in its box — 2d120e82b — fix (?)
 - Builder and Filler animate each placement as a small flying item — 474197b1c — new (?)
 - Path-marker Builders show the route they'll follow — a973a8906 — new (?)
-- Marker volumes resize: drag a corner with the Marker Wrench, confirm, and a floating box replaces the markers — 38ecce436, 993423698 — new
+- Marker volumes resize: drag a corner with the Volume Wrench, confirm, and a floating box replaces the markers — 38ecce436, 993423698 — new
 - A Filler or Architect Table placed against markers keeps the area as a box the Volume Wrench can resize — ace7763eb, 83274f7c9 — new
 - Marker laser length in blocks shown under the crosshair — 8bf174c65 — new
 - Volume Markers float in air and survive losing their anchor block — 41aad67e5 — reworked (?)

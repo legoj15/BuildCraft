@@ -37,6 +37,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.VecUtil;
 
+import buildcraft.core.client.MarkerDistanceTracker;
 import buildcraft.core.marker.PathSubCache;
 import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
@@ -47,8 +48,8 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.tile.TileMarkerVolume;
 
 /**
- * The second wrench tier: everything the {@link ItemWrench_Neptune basic wrench} does, plus linking marker lasers,
- * resizing a connected marker volume, and removing or confirming volume boxes.
+ * The second wrench tier: everything the {@link ItemWrench_Neptune basic wrench} does, plus linking marker lasers and
+ * removing or confirming volume boxes.
  * <p>
  * <b>Click priority.</b> A marker laser hangs in the air, so the block behind the crosshair is usually the ground,
  * and the wrench would rotate that instead. {@link #isAimingAtMarkerTarget} tells whether the click is meant for a
@@ -62,11 +63,11 @@ import buildcraft.core.tile.TileMarkerVolume;
  * Anything else keeps the inherited wrench behaviour. The client runs the same test on its own marker caches and box
  * list.
  * <p>
- * <b>Dragging.</b> Picking up a volume box's corner in the air is gated by {@link #canEditCorners()}; only the
- * {@link ItemVolumeWrench} turns it on. The one drag every marker wrench has is the resize of a connected volume
+ * <b>Dragging.</b> Every corner drag is gated by {@link #canEditCorners()}; only the {@link ItemVolumeWrench} turns it
+ * on. That covers picking up a volume box's corner in the air and the resize of a connected volume
  * ({@link #onUseOnVolumeMarker}): clicking one of its corner markers lifts the markers into a one-shot
- * {@link VolumeBox} and drags that corner. Confirming with a new size breaks the markers and leaves the floating box
- * for the next machine placed against it; confirming the same size, or cancelling, drops the box and the markers keep
+ * {@link VolumeBox} and drags that corner. With a plain marker wrench the same click tries to connect the marker.
+ * Confirming with a new size breaks the markers and leaves the floating box for the next machine placed against it; confirming the same size, or cancelling, drops the box and the markers keep
  * working.
  */
 public class ItemMarkerWrench extends ItemWrench_Neptune {
@@ -87,8 +88,9 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         super(properties, tier);
     }
 
-    /** Whether this wrench may pick up a volume box's corner to drag it. Confirming or cancelling a drag in
-     *  progress, removing a box and lifting a connected marker volume are open to every marker wrench. */
+    /** Whether this wrench may drag corners: a volume box's, or a connected marker volume's by lifting it. Confirming
+     *  or cancelling a drag lifted off markers, and removing a box, are open to every marker wrench (a machine's box
+     *  drag is cancelled once no Volume Wrench is held). */
     protected boolean canEditCorners() {
         return false;
     }
@@ -142,6 +144,11 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         // this one rule. Past block reach nothing can hide a target, which lies within REACH, so no occlusion limit.
         if (!level.isClientSide() && !hitsBlock(level, player)) {
             doMarkerClick(level, player, null);
+        }
+        // A click at empty air with nothing marker-related aimed ends the volume marker distance readout. Client side
+        // only, where the readout lives; the tracker is named here only on that side.
+        if (level.isClientSide() && !hitsBlock(level, player) && !isAimingAtMarkerTarget(level, player, null)) {
+            MarkerDistanceTracker.clear();
         }
         // Always consume the action so the player gets swing feedback
         return InteractionResult.SUCCESS;
@@ -439,15 +446,25 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
     // ------------------------------------------------------------------------------------------------------------
     // Resizing a connected marker volume
 
+    /** Whether the wrench this click is made with may drag corners. A block click always arrives on the main hand, so
+     *  a marker wrench there decides it; the offhand counts only when the main hand holds no marker wrench. */
+    private static boolean holdsCornerEditor(Player player) {
+        if (player.getMainHandItem().getItem() instanceof ItemMarkerWrench main) {
+            return main.canEditCorners();
+        }
+        return player.getOffhandItem().getItem() instanceof ItemMarkerWrench off && off.canEditCorners();
+    }
+
     /**
-     * Server: a marker wrench used on the volume marker at {@code markerPos}, hit at {@code hit}. When that marker is
-     * a corner of a connected volume that no box overlaps and no lift holds, the markers' box is lifted into a one-shot
+     * Server: a wrench that {@linkplain #canEditCorners can edit corners} used on the volume marker at
+     * {@code markerPos}, hit at {@code hit}. When the player clicks with one and that marker is a corner of a
+     * connected volume that no box overlaps and no lift holds, the markers' box is lifted into a one-shot
      * {@link VolumeBox} and resizing starts from that corner. Returns false when the click was not that, so the marker
      * handles it. (A click that confirms or cancels a drag in progress never gets here: {@link #onItemUseFirst} takes
      * it, except a click on a marker that does not back the dragged box, which is left to connect.)
      */
     public static boolean onUseOnVolumeMarker(Level level, Player player, BlockPos markerPos, Vec3 hit) {
-        if (level.isClientSide() || player.isShiftKeyDown()
+        if (level.isClientSide() || player.isShiftKeyDown() || !holdsCornerEditor(player)
             || !(level.getBlockEntity(markerPos) instanceof TileMarkerVolume marker)) {
             return false;
         }

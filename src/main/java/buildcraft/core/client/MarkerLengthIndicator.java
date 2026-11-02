@@ -36,7 +36,8 @@ import buildcraft.lib.marker.MarkerSubCache;
 /**
  * Shows the length of the marker laser under the crosshair, just below it. Connected lasers always count; the
  * thin "possible connection" previews count only while a marker wrench is held, the same time they are drawn.
- * The pick runs once a client tick; the GUI layer only draws the result.
+ * The pick runs once a client tick; the GUI layer only draws the result. The layer also draws the line of
+ * {@link MarkerDistanceTracker}, which takes the same spot, one line lower while a laser length is showing.
  */
 public final class MarkerLengthIndicator {
     /** How far away a laser can be read. Lasers are visible much further, but past this the pick gets fiddly. */
@@ -183,12 +184,22 @@ public final class MarkerLengthIndicator {
         //?} else {
         /*boolean hudHidden = mc.options.hideGui;*/
         //?}
-        if (text == null || hudHidden) {
+        Component distance = MarkerDistanceTracker.label();
+        if (hudHidden || (text == null && distance == null)) {
             return;
         }
         Font font = mc.font;
-        int x = (mc.getWindow().getGuiScaledWidth() - font.width(text)) / 2;
+        BCGraphics graphics = new BCGraphics(vanillaGraphics);
         int y = mc.getWindow().getGuiScaledHeight() / 2 + 10;
-        new BCGraphics(vanillaGraphics).text(font, text, x, y, possible ? COLOUR_POSSIBLE : COLOUR_CONNECTED, true);
+        if (text != null) {
+            int x = (mc.getWindow().getGuiScaledWidth() - font.width(text)) / 2;
+            graphics.text(font, text, x, y, possible ? COLOUR_POSSIBLE : COLOUR_CONNECTED, true);
+            y += font.lineHeight + 1;
+        }
+        // The marker distance readout shares this spot, one line down when a laser length is showing above it.
+        if (distance != null) {
+            int x = (mc.getWindow().getGuiScaledWidth() - font.width(distance)) / 2;
+            graphics.text(font, distance, x, y, COLOUR_CONNECTED, true);
+        }
     }
 }

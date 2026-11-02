@@ -1,6 +1,6 @@
 {
   "name": "marker-resize",
-  "description": "Issue #32: a connected marker area lifted with the Marker Wrench, confirmed unchanged (markers stay, no box), lifted again and stretched two blocks east (markers drop, a floating box remains), then taken by a Filler placed against it (the floating box becomes the Filler's own box, so there is still exactly one box, and it goes when the Filler is broken). Markers A (0,0,4), B (4,0,4), C (0,0,8); B is dragged to (6,0,4) from (5,0,1), where B and the target are the same distance from the eye. A failed run can leave a floating box over x0-6 z4-8 in the save, which then refuses the lift: delete run-smoke/saves to start over.",
+  "description": "Issue #32: a connected marker area lifted with the Volume Wrench (the Marker Wrench no longer lifts), confirmed unchanged (markers stay, no box), lifted again and stretched two blocks east (markers drop, a floating box remains), then taken by a Filler placed against it (the floating box becomes the Filler's own box, so there is still exactly one box, and it goes when the Filler is broken). Markers A (0,0,4), B (4,0,4), C (0,0,8); B is dragged to (6,0,4) from (5,0,1), where B and the target are the same distance from the eye. A failed run can leave a floating box over x0-6 z4-8 in the save, which then refuses the lift: delete run-smoke/saves to start over.",
   "base": [40, 150, 40],
   "steps": [
     { "do": "wait", "ms": 2500 },
@@ -23,7 +23,7 @@
     { "do": "wait", "ms": 1200 },
 
     { "do": "tp", "at": [5, 0, 1], "yaw": 0, "pitch": 25 },
-    { "do": "hold", "item": "buildcraftunofficial:marker_wrench" },
+    { "do": "hold", "item": "buildcraftunofficial:volume_wrench" },
     { "do": "aim", "at": [4, 0, 4] },
     { "do": "wait", "ms": 800 },
     { "name": "connected", "do": "shot", "look": "three markers with red lasers along the area's two near edges (A-B along x, A-C along z); no volume box" },

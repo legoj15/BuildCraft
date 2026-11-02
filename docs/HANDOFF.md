@@ -7,6 +7,9 @@
 - Heat exchanger matches the other BC machines: shell in the shared casing ramp (plate #cbcbcb, frame #a7a7a7), 1px casing frame on the shell edges, interior in the recess greys #2b2b2b/#363636, sight-slot bottom row I_BK so it no longer sits luma-equal on the seal. Commits `232f75b90`, `ba01a90c3`, `f95287a41`; review_fast approved the final sha; user approved the in-game look on 26.3 (2026-11-02). Merged from `claude/heat-exchanger-uniformity-130a0d`.
 - The 2026-10-23 release follow-ups this file used to track are finished. Release work stays user-gated (see memory `project_next_release_plan`).
 
+- Volume-marker distance readout (wrench right-click a marker; branch `claude/marker-distance-expansion-119343`). Delegations: impl built it first try, all six nodes compiled; reviewer (Haiku) pass with nits; review_fast glm-flash approve, deepseek-flash (standing in for busy shop26) comment, both low. The low findings were fixed or narrowed in the docs. CME lead filed as #93. User approved it in-client on 26.3 (2026-11-02).
+- Marker-area lift (#32) is Volume Wrench only now, main hand decides (`087770eb1`). Done by the orchestrator. Delegations: reviewer (Haiku) FAIL on an offhand bypass, which was fixed with a game-test assertion that failed first; review_fast round 1 (shop26, glm-flash) found docs only, which were fixed; final-sha review_fast approved (one low: an offhand-only lift can only be confirmed by an air click, pre-existing, left). User approved it in-client.
+
 ## Next
 - #89: two unit tests were already red on 26.3: the GuideMeExportStalenessTest export is stale, and the zh_cn `generateQuarryPits` lang key is missing.
 - The NeoForge version check shows 26.1.2 (-> 26.1.2.126) and 26.3 (-> 26.3.0.101) one build behind; use the `neoforge-bump` skill.

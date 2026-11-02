@@ -26,7 +26,6 @@ public class BCBuildersSprites {
     public static final SpriteHolder FILLER_BOX;
     public static final SpriteHolder FILLER_FRAME;
     public static final SpriteHolder FILLER_FLATTEN;
-    public static final SpriteHolder FILLER_HORIZON;
     public static final SpriteHolder FILLER_PYRAMID;
     public static final SpriteHolder FILLER_STAIRS;
     public static final SpriteHolder FILLER_SPHERE;
@@ -63,7 +62,6 @@ public class BCBuildersSprites {
         FILLER_BOX = getHolder("filler/patterns/box");
         FILLER_FRAME = getHolder("filler/patterns/frame");
         FILLER_FLATTEN = getHolder("filler/patterns/flatten");
-        FILLER_HORIZON = getHolder("filler/patterns/horizon");
         FILLER_PYRAMID = getHolder("filler/patterns/pyramid");
         FILLER_STAIRS = getHolder("filler/patterns/stairs");
         FILLER_SPHERE = getHolder("filler/patterns/sphere");

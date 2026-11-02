@@ -5,7 +5,7 @@ Spec for every icon in `src/main/resources/assets/buildcraftunofficial/textures/
 one without further design decisions. Where a rule and a reference grid disagree, the grid wins.
 
 Exemplars the rest were drawn from: `patterns/sphere_quarter`, `patterns/2d_hexagon`, `patterns/clear`, `parameters/face_north`.
-Not yet in this style: `horizon` (old art for a pattern that does not exist yet, issue #87; excluded from `--strict` runs).
+Every sprite is in this style. Horizon's old art was deleted; issue #87 draws one if the pattern comes back.
 
 The gate's pipe-direction actions use the `face_*` icons directly (`BCTransportSprites.ACTION_PIPE_DIRECTION`);
 there are no separate `triggers/trigger_dir_*` files, so a face icon change reaches both GUIs.
@@ -18,7 +18,7 @@ there are no separate `triggers/trigger_dir_*` files, so a face icon change reac
    18x18 slot at 1x and 6x; changed icons get an old-vs-new block; lint notes print in red under the label.
 4. Judge at 1x, in the strips, not in the 6x cells. The strips lay patterns out in the selection popup's rows and
    parameters one family per run; an icon must differ from its neighbours there (see "Popup neighbours").
-5. Done when `... --strict --exclude horizon` exits 0. Old art fails the colour lint until redrawn.
+5. Done when `... --strict` exits 0. Old art fails the colour lint until redrawn.
 
 ## Palette
 
@@ -279,7 +279,6 @@ No letters except the face icons' side letters. Every other meaning is carried b
 | `fill` | Fill | draw | Grid CUBE. |
 | `flatten` | Flatten | draw | Clear's CUBE with the bottom 3 of 7 cube units of the side faces left grey (M, D): the red/grey seam (topmost grey pixel per column) is row 9 at x = 2 and 13, row 10 at x = 3,4,11,12, row 11 at x = 5,6,9,10, row 12 at x = 7,8; everything below it inside the silhouette is grey, down to row 13 at x = 7,8 (columns 1 and 14 stay K). Red volume cleared over a grey floor. |
 | `frame` | Frame | draw | Wireframe, no K, no fill: OUT's `K` and `+` pixels become L (silhouette and front corner); INS's `+` pixels become M where not already L (hidden back corner); everything else transparent. |
-| `horizon` | none (issue #87) | out of scope | Orphan sprite. Leave untouched until the pattern exists. |
 | `none` | None | draw | Grid NONE: CUBE's silhouette as G dashes only. |
 | `pyramid` | Pyramid | draw | Grid PYRAMID: smooth square pyramid on CUBE's footprint, apex pair x = 7,8 on row 2, south face M, east face D, split between x = 7 and 8. The pattern builds 1-block steps; at 14px steps are noise. |
 | `sphere` | Sphere | draw | Grid BALL, no ghost dots. |

@@ -19,7 +19,7 @@ Usage:
   python scripts/art/filler-icon-sheet.py OUT.png
   python scripts/art/filler-icon-sheet.py OUT.png --compare-rev HEAD            old-vs-new for every changed icon
   python scripts/art/filler-icon-sheet.py OUT.png --compare-rev HEAD --compare patterns/clear parameters/face_north
-  python scripts/art/filler-icon-sheet.py OUT.png --patterns DIR --parameters DIR --exclude horizon
+  python scripts/art/filler-icon-sheet.py OUT.png --patterns DIR --parameters DIR --exclude NAME
 Exit status is 0 even when lint notes are drawn; --strict makes any note exit 1.
 """
 

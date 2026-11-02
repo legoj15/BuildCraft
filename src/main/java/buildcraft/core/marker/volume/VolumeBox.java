@@ -49,7 +49,7 @@ public class VolumeBox {
     @Nullable
     private RetiredPlanner retiredPlanner = null;
     /**
-     * True for a box lifted off volume markers with the Marker Wrench: a machine takes it the way it takes markers
+     * True for a box lifted off volume markers with the Volume Wrench: a machine takes it the way it takes markers
      * (copies the area and removes the box) instead of locking it, so it is used once. A Quarry consumes it; a Filler
      * or Architect Table turns it into the box it owns (see {@link #owner}), as it does the markers themselves.
      */

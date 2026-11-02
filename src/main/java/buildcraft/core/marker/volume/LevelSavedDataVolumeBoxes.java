@@ -235,7 +235,7 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
      * nothing. That is so when one of them backs a lifted box (a marker joined to the connection after the lift is not
      * on the box's list, yet taking it takes the whole connection, the lifted markers included), and when a volume box
      * already overlaps the connection's area (taking the markers, or lifting them, would put a second box over it).
-     * Machines and the Marker Wrench's lift both ask this.
+     * Machines and the Volume Wrench's lift both ask this.
      */
     public boolean isReservedMarker(TileMarkerVolume marker) {
         VolumeConnection connection = marker.getCurrentConnection();

@@ -9,7 +9,7 @@ import net.minecraft.world.item.Item;
 
 /**
  * The third wrench tier: everything the {@link ItemMarkerWrench marker wrench} does, and it can also pick up the
- * corner of a volume box and drag it to a new size. It is the diamond-tier wrench ({@link WrenchTier#DIAMOND}); the
+ * corner of a volume box and drag it to a new size, or lift a connected marker volume off its markers to resize it. It is the diamond-tier wrench ({@link WrenchTier#DIAMOND}); the
  * other two are iron.
  */
 public class ItemVolumeWrench extends ItemMarkerWrench {

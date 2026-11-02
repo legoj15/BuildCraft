@@ -1,0 +1,73 @@
+{
+  "name": "goggles-worn",
+  "description": "Robot Goggles worn look (issue #45): the head layer draws the goggles through their own 3D item/goggles_worn model in the HEAD display context, every other view keeps the flat icon. 1.21.10+ switches models in items/goggles.json; 1.21.1 gets the same switch from the build's item-model downport (neoforge:separate_transforms), so the node to compare is 1.21.1 against the rest. Four husks (sun-proof, so they stand still at noon) show the goggles from the front, a three-quarter turn, the side and the back (strap and chipset), then the player wears them in both third-person views, in the inventory doll and as a held item.",
+  "base": [20, 150, 40],
+  "guiScale": 3,
+  "steps": [
+    { "label": "window 1600x900 so one skin pixel of a head 2 blocks away is ~20 screen pixels", "do": "window", "width": 1600, "height": 900 },
+    { "label": "stand in the rig's chunks first (a fresh world has them unloaded)", "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 0 },
+    { "do": "cmd", "run": ["gamemode creative @p"] },
+    { "do": "wait", "ms": 3000 },
+    { "label": "clear leftovers, floor, noon, bare head and hand", "do": "cmd", "run": [
+      "gamemode creative @p",
+      "?tp @e[type=minecraft:husk,tag=bcgog] {X} -200 {Z}",
+      "?kill @e[type=minecraft:armor_stand,tag=bcgog]",
+      "fill {X-8} {Y} {Z-6} {X+8} {Y+6} {Z+8} minecraft:air",
+      "fill {X-8} {Y-1} {Z-6} {X+8} {Y-1} {Z+8} minecraft:smooth_stone",
+      "time set noon",
+      "item replace entity @p armor.head with minecraft:air",
+      "item replace entity @p weapon.mainhand with minecraft:air"
+    ] },
+    { "label": "husks facing the camera, turned 45, side on, and back to the camera", "do": "cmd", "run": [
+      "summon minecraft:husk {X-3}.5 {Y} {Z+4}.5 {Rotation:[180f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\"]}",
+      "summon minecraft:husk {X-1}.5 {Y} {Z+4}.5 {Rotation:[135f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\"]}",
+      "summon minecraft:husk {X+1}.5 {Y} {Z+4}.5 {Rotation:[90f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\"]}",
+      "summon minecraft:husk {X+3}.5 {Y} {Z+4}.5 {Rotation:[0f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\"]}",
+      "item replace entity @e[type=minecraft:husk,tag=bcgog] armor.head with buildcraftunofficial:goggles"
+    ] },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 0 },
+    { "do": "wait", "ms": 1500 },
+    { "do": "shot", "name": "stands", "look": "four husks, each wearing the 3D goggles round its head (iron frame, glass, black strap), NOT a flat icon stuck to the face. The camera faces south, so right to left: front, three-quarter, side, back" },
+    { "do": "tp", "at": [-3, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "front", "look": "close-up, face on: two lenses over the eye row, rounded frame corners, a plain bridge between them, strap running off both sides" },
+    { "do": "tp", "at": [-1, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "three-quarter", "look": "close-up, turned 45: the frame stands only slightly proud of the face, the strap wraps the side of the head" },
+    { "do": "tp", "at": [1, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "side", "look": "close-up, side on: a thin profile, the strap a flat band round the head, no part floating off it" },
+    { "do": "tp", "at": [3, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "back", "look": "close-up, from behind: the redstone chipset sits on the back of the strap" },
+    { "label": "husks away (into the void, so no death puff or drops in the next shots), goggles on the player", "do": "cmd", "run": [
+      "tp @e[type=minecraft:husk,tag=bcgog] {X} -200 {Z}",
+      "item replace entity @p armor.head with buildcraftunofficial:goggles"
+    ] },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 0 },
+    { "do": "wait", "ms": 1000 },
+    { "label": "third person, from behind", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "third-back", "look": "third person from behind: strap round the back of the player's head with the chipset on it, sitting on the hair, not sunk into it" },
+    { "label": "third person, from the front", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "third-front", "look": "third person facing the player: goggles over the eyes, same as the front husk" },
+    { "label": "back to first person", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "do": "wait", "ms": 500 },
+    { "label": "survival, so the inventory key opens the doll and not the creative tabs", "do": "cmd", "run": ["gamemode survival @p"] },
+    { "do": "wait", "ms": 500 },
+    { "do": "keybind", "key": "key.inventory", "action": "tap" },
+    { "do": "expectScreen", "contains": "\\bInventoryScreen" },
+    { "do": "wait", "ms": 600 },
+    { "do": "shot", "name": "inventory", "look": "the doll wears the 3D goggles; the head armour slot shows the flat goggles icon, lit flat (not shaded like a block)" },
+    { "do": "close" },
+    { "do": "hold", "item": "buildcraftunofficial:goggles" },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "held", "look": "the flat goggles icon in the right hand and in the selected hotbar slot, never the 3D head model" },
+    { "label": "clean up", "do": "cmd", "run": [
+      "item replace entity @p armor.head with minecraft:air",
+      "item replace entity @p weapon.mainhand with minecraft:air",
+      "gamemode creative @p"
+    ] }
+  ]
+}

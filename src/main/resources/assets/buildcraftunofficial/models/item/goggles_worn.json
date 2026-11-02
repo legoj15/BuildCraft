@@ -1,0 +1,161 @@
+{
+  "textures": {
+    "goggles": "buildcraftunofficial:item/goggles_worn",
+    "particle": "buildcraftunofficial:item/goggles_worn"
+  },
+  "elements": [
+    {
+      "name": "frame_outer_left",
+      "from": [3.5, 6, 2.5],
+      "to": [4.5, 9, 3.5],
+      "faces": {
+        "north": {"uv": [8, 1, 9, 4], "texture": "#goggles"},
+        "up": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "down": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "west": {"uv": [6, 7, 7, 10], "texture": "#goggles"},
+        "east": {"uv": [8, 7, 9, 10], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_bridge",
+      "from": [7.5, 6, 2.5],
+      "to": [8.5, 9, 3.5],
+      "faces": {
+        "north": {"uv": [4, 1, 5, 4], "texture": "#goggles"},
+        "up": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "down": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "west": {"uv": [8, 7, 9, 10], "texture": "#goggles"},
+        "east": {"uv": [9, 7, 8, 10], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_outer_right",
+      "from": [11.5, 6, 2.5],
+      "to": [12.5, 9, 3.5],
+      "faces": {
+        "north": {"uv": [0, 1, 1, 4], "texture": "#goggles"},
+        "up": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "down": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "east": {"uv": [7, 7, 6, 10], "texture": "#goggles"},
+        "west": {"uv": [9, 7, 8, 10], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_top_left",
+      "from": [4.5, 9, 2.5],
+      "to": [7.5, 10, 3.5],
+      "faces": {
+        "north": {"uv": [5, 0, 8, 1], "texture": "#goggles"},
+        "up": {"uv": [9, 6, 12, 7], "texture": "#goggles"},
+        "down": {"uv": [0, 7, 3, 8], "texture": "#goggles"},
+        "west": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "east": {"uv": [7, 7, 8, 8], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_bottom_left",
+      "from": [4.5, 5, 2.5],
+      "to": [7.5, 6, 3.5],
+      "faces": {
+        "north": {"uv": [5, 4, 8, 5], "texture": "#goggles"},
+        "down": {"uv": [12, 6, 15, 7], "texture": "#goggles"},
+        "up": {"uv": [3, 7, 6, 8], "texture": "#goggles"},
+        "west": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "east": {"uv": [7, 7, 8, 8], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_top_right",
+      "from": [8.5, 9, 2.5],
+      "to": [11.5, 10, 3.5],
+      "faces": {
+        "north": {"uv": [1, 0, 4, 1], "texture": "#goggles"},
+        "up": {"uv": [9, 6, 12, 7], "texture": "#goggles"},
+        "down": {"uv": [0, 7, 3, 8], "texture": "#goggles"},
+        "west": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "east": {"uv": [7, 7, 8, 8], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "frame_bottom_right",
+      "from": [8.5, 5, 2.5],
+      "to": [11.5, 6, 3.5],
+      "faces": {
+        "north": {"uv": [1, 4, 4, 5], "texture": "#goggles"},
+        "down": {"uv": [12, 6, 15, 7], "texture": "#goggles"},
+        "up": {"uv": [3, 7, 6, 8], "texture": "#goggles"},
+        "west": {"uv": [7, 7, 8, 8], "texture": "#goggles"},
+        "east": {"uv": [7, 7, 8, 8], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "strap_left",
+      "from": [3, 6.5, 3],
+      "to": [3.5, 8.5, 13],
+      "faces": {
+        "west": {"uv": [0, 10, 10, 12], "texture": "#goggles"},
+        "up": {"uv": [15, 0, 15.5, 10], "texture": "#goggles"},
+        "down": {"uv": [15, 10, 15.5, 0], "texture": "#goggles"},
+        "north": {"uv": [12, 7, 12.5, 9], "texture": "#goggles"},
+        "south": {"uv": [12, 7, 12.5, 9], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "strap_right",
+      "from": [12.5, 6.5, 3],
+      "to": [13, 8.5, 13],
+      "faces": {
+        "east": {"uv": [10, 10, 0, 12], "texture": "#goggles"},
+        "up": {"uv": [15, 0, 15.5, 10], "texture": "#goggles"},
+        "down": {"uv": [15, 10, 15.5, 0], "texture": "#goggles"},
+        "north": {"uv": [12, 7, 12.5, 9], "texture": "#goggles"},
+        "south": {"uv": [12, 7, 12.5, 9], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "strap_back",
+      "from": [3.5, 6.5, 12.5],
+      "to": [12.5, 8.5, 13],
+      "faces": {
+        "south": {"uv": [0, 12, 9, 14], "texture": "#goggles"},
+        "up": {"uv": [0, 14, 9, 14.5], "texture": "#goggles"},
+        "down": {"uv": [0, 14, 9, 14.5], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "chipset",
+      "from": [5, 5.5, 13],
+      "to": [11, 9.5, 13.5],
+      "faces": {
+        "south": {"uv": [9, 0, 15, 4], "texture": "#goggles"},
+        "up": {"uv": [9, 4, 15, 4.5], "texture": "#goggles"},
+        "down": {"uv": [9, 5, 15, 5.5], "texture": "#goggles"},
+        "west": {"uv": [10, 7, 10.5, 11], "texture": "#goggles"},
+        "east": {"uv": [11, 7, 11.5, 11], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "lens_left",
+      "from": [4.5, 6, 3],
+      "to": [7.5, 9, 3],
+      "faces": {
+        "north": {"uv": [5, 1, 8, 4], "texture": "#goggles"}
+      }
+    },
+    {
+      "name": "lens_right",
+      "from": [8.5, 6, 3],
+      "to": [11.5, 9, 3],
+      "faces": {
+        "north": {"uv": [1, 1, 4, 4], "texture": "#goggles"}
+      }
+    }
+  ],
+  "display": {
+    "head": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 0, 0],
+      "scale": [1.6, 1.6, 1.6]
+    }
+  }
+}

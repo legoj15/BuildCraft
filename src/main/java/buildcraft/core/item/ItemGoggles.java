@@ -26,10 +26,14 @@ import net.minecraft.world.level.block.DispenserBlock;*/
  * red to green by charge (see {@code RobotChargeView}), and the cells a stalled Builder is skipping are outlined
  * (see {@code StallHighlights}). Both ask {@link #isWornBy}, so what counts as "wearing goggles" is decided here.
  *
- * <p>No armour, no durability, no enchantments, and no worn model or equipment asset: the head-slot behaviour is all
- * the item has. {@code BCCoreItems} gives the head slot to {@code >=1.21.10} through the equippable component; 1.21.1
- * has no such component, so the item is an {@code Equipable} there instead and does the right-click swap and the
- * dispenser registration by hand, as vanilla's elytra does.
+ * <p>No armour, no durability, no enchantments. {@code BCCoreItems} gives the head slot to {@code >=1.21.10} through the
+ * equippable component; 1.21.1 has no such component, so the item is an {@code Equipable} there instead and does the
+ * right-click swap and the dispenser registration by hand, as vanilla's elytra does.
+ *
+ * <p>The worn look needs no equipment asset or armour material: a head item without one is drawn by the head layer
+ * through its own item model in the HEAD display context, so {@code items/goggles.json} switches to the 3D
+ * {@code item/goggles_worn} model there and keeps the flat icon everywhere else. 1.21.1 has no item definitions; the
+ * build's item-model downport turns that switch into NeoForge's per-view model loader.
  */
 //? if >=1.21.10 {
 public class ItemGoggles extends Item {

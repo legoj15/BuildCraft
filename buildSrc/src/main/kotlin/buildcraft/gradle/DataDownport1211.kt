@@ -111,6 +111,10 @@ object DataDownport1211 {
     //                                    set CUSTOM_MODEL_DATA on 1.21.1 (gated `else` branches in
     //                                    Item{Paintbrush_BC8,List_BC8,MapLocation,GateCopier}), so the
     //                                    overrides resolve the colour/state variant the selector picked.
+    //   • minecraft:select           -> NeoForge's per-view loader, neoforge:separate_transforms: the
+    //     (display_context)              fallback is the base, each case's contexts map to its model (the
+    //                                    Goggles: a 3D model on the head, the flat icon everywhere else).
+    //                                    Any other select property fails the build: no 1.21.1 equivalent.
     @Suppress("UNCHECKED_CAST")
     fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
         if (!itemsDir.isDirectory) return
@@ -181,6 +185,45 @@ object DataDownport1211 {
                         out["overrides"] = overrides
                         write(outFile, out)
                     }
+                }
+                "minecraft:select" -> {
+                    check(spec["property"] == "minecraft:display_context") {
+                        "items/${f.name}: select on ${spec["property"]} has no 1.21.1 equivalent in DataDownport1211"
+                    }
+                    fun modelId(node: Any?): String {
+                        val m = node as? Map<String, Any?>
+                        check(m?.get("type") == "minecraft:model") {
+                            "items/${f.name}: a display_context case must be a plain minecraft:model"
+                        }
+                        return m!!["model"] as String
+                    }
+                    val perspectives = linkedMapOf<String, Any?>()
+                    for (case in spec["cases"] as List<Map<String, Any?>>) {
+                        val target = modelId(case["model"])
+                        val contexts = case["when"].let { if (it is List<*>) it else listOf(it) }
+                        contexts.forEach { perspectives[it as String] = linkedMapOf("parent" to target) }
+                    }
+                    // Two 1.21.1 baking quirks shape the base. A nested model bakes through its own
+                    // geometry only: the item/generated -> flat-icon conversion runs for top-level models
+                    // alone, so a generated fallback nested as-is bakes EMPTY (an invisible icon). It is
+                    // inlined under neoforge:item_layers, which builds the same quads from its layers.
+                    // And GUI lighting comes from the wrapper's own gui_light (default "side", block-lit),
+                    // so the wrapper copies the generated icon's "front".
+                    val fallbackId = modelId(spec["fallback"])
+                    val fallbackFile = modelsItemDir.parentFile.resolve(fallbackId.substringAfter(':') + ".json")
+                    val fallback = slurper.parse(fallbackFile) as Map<String, Any?>
+                    val wrapper = linkedMapOf<String, Any?>("loader" to "neoforge:separate_transforms")
+                    val base: MutableMap<String, Any?>
+                    if ((fallback["parent"] as? String) in setOf("minecraft:item/generated", "item/generated")) {
+                        wrapper["gui_light"] = "front"
+                        base = linkedMapOf("parent" to "minecraft:item/generated", "loader" to "neoforge:item_layers")
+                        fallback.forEach { (k, v) -> if (k != "parent") base[k] = v }
+                    } else {
+                        base = linkedMapOf("parent" to fallbackId)
+                    }
+                    wrapper["base"] = base
+                    wrapper["perspectives"] = perspectives
+                    write(outFile, wrapper)
                 }
             }
         }

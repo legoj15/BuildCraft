@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Stream;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,13 +34,14 @@ import buildcraft.TestHelper;
 
 /** The GuideME guide under {@code assets/buildcraftunofficial/guides/} is generated from the in-game guide's sources by
  *  {@code scripts/guide-to-guideme.py} and committed. This fails when the two have drifted apart: a guide page, the
- *  registration script, a recipe, a lang string the export read, or the exporter itself changed without a re-run, or
- *  a generated file was edited by hand.
+ *  registration script, a recipe fact the export uses, a lang string the export read, or the exporter itself changed
+ *  without a re-run, or a generated file was edited by hand.
  *
  *  <p>The script writes {@code scripts/guide-to-guideme.stamp} with a hash of its inputs, the lang keys it read, and a
  *  hash of its output; this recomputes both exactly as the script's {@code input_hash} / {@code _digest} do. Each file
  *  contributes its repo-relative path and its bytes with carriage returns removed, so a CRLF checkout hashes the same.
- *  Keep the two in step. */
+ *  Recipes contribute only {@code recipe_facts}, so a recipe edit that cannot change a page leaves this green. Keep the
+ *  two in step. */
 class GuideMeExportStalenessTest {
 
     private static final String RES = "src/main/resources/";
@@ -77,8 +80,68 @@ class GuideMeExportStalenessTest {
         files.add(root.resolve("scripts/guide-to-guideme.py"));
         files.add(root.resolve(COMPAT + "guide.txt"));
         files.addAll(walk(root.resolve(COMPAT + "guide"), Integer.MAX_VALUE));
-        files.addAll(walk(root.resolve(RECIPES), 1).stream().filter(p -> p.toString().endsWith(".json")).toList());
         return files;
+    }
+
+    /** The script's {@code recipe_facts}: per recipe JSON its id, type and result, then the BC items it consumes.
+     *  Nothing else in a recipe reaches a generated page, so nothing else may redden this test. */
+    private static List<String> recipeFacts(Path root) throws IOException {
+        List<Path> recipes = new ArrayList<>(
+            walk(root.resolve(RECIPES), 1).stream().filter(p -> p.toString().endsWith(".json")).toList());
+        recipes.sort((a, b) -> stem(a).compareTo(stem(b)));
+        List<String> lines = new ArrayList<>();
+        for (Path p : recipes) {
+            String stem = stem(p);
+            JsonObject r;
+            try {
+                r = JsonParser.parseString(Files.readString(p, StandardCharsets.UTF_8)).getAsJsonObject();
+            } catch (RuntimeException e) {
+                lines.add("recipe " + stem + " invalid");
+                continue;
+            }
+            String type = r.has("type") ? r.get("type").getAsString() : "-";
+            String result = resultId(r);
+            lines.add("recipe " + stem + " " + type + " " + (result == null ? "-" : result));
+            if (result == null) continue;
+            TreeSet<String> uses = new TreeSet<>();
+            if (r.get("key") instanceof JsonObject key) {
+                for (var e : key.entrySet()) collectItemIds(e.getValue(), uses);
+            }
+            if (r.get("ingredients") instanceof JsonArray ingredients) {
+                for (JsonElement e : ingredients) collectItemIds(e, uses);
+            }
+            for (String id : uses) {
+                if (id.startsWith("buildcraftunofficial:")) lines.add("use " + stem + " " + id);
+            }
+        }
+        return lines;
+    }
+
+    private static String resultId(JsonObject r) {
+        JsonElement res = r.get("result");
+        if (res instanceof JsonObject o) res = o.get("id");
+        return res == null || res.isJsonNull() ? null : res.getAsString();
+    }
+
+    /** guide_model's {@code ing_ids}, item ids only: a bare string that is not a {@code #tag}, an {@code item} field,
+     *  and an {@code items} string or list, recursing through lists. */
+    private static void collectItemIds(JsonElement v, TreeSet<String> out) {
+        if (v instanceof JsonPrimitive s && s.isString()) {
+            if (!s.getAsString().startsWith("#")) out.add(s.getAsString());
+        } else if (v instanceof JsonArray a) {
+            for (JsonElement e : a) collectItemIds(e, out);
+        } else if (v instanceof JsonObject o) {
+            if (o.has("item")) out.add(o.get("item").getAsString());
+            if (o.get("items") instanceof JsonPrimitive items) collectItemIds(items, out);
+            else if (o.get("items") instanceof JsonArray items) {
+                for (JsonElement e : items) collectItemIds(e, out);
+            }
+        }
+    }
+
+    private static String stem(Path p) {
+        String name = p.getFileName().toString();
+        return name.substring(0, name.length() - ".json".length());
     }
 
     private static List<Path> outputFiles(Path root) throws IOException {
@@ -89,6 +152,9 @@ class GuideMeExportStalenessTest {
 
     private static String inputHash(Path root, TreeSet<String> langKeys) throws IOException {
         MessageDigest h = digest(root, inputFiles(root));
+        for (String line : recipeFacts(root)) {
+            h.update((line + "\n").getBytes(StandardCharsets.UTF_8));
+        }
         JsonObject lang = JsonParser.parseString(Files.readString(root.resolve(LANG), StandardCharsets.UTF_8))
             .getAsJsonObject();
         for (String key : langKeys) {

@@ -18,8 +18,10 @@ guide-to-wiki.py. What the conversion does with the parts GuideME has no equival
     GuideME can only draw recipe types it has a mapping for, and we ship no code for it;
   * the config book and the book's own `config/` pages are skipped (they describe this file format).
 
-scripts/guide-to-guideme.stamp records a hash of every file it reads and of the output; the unit test
+scripts/guide-to-guideme.stamp records a hash of what it reads and of the output; the unit test
 GuideMeExportStalenessTest fails when the two drift apart, so the export never silently goes stale.
+Recipes enter that hash only as the facts the export uses (recipe_facts), so a recipe edit that cannot
+change a page, like swapping a vanilla ingredient, leaves the stamp current.
 
 Usage:  python3 scripts/guide-to-guideme.py           regenerate the export and the stamp
         python3 scripts/guide-to-guideme.py --check   exit 1 if the committed export is stale
@@ -34,8 +36,8 @@ import shutil
 import sys
 
 from guide_model import (ASSETS, GUIDE_DIR, LANG, LANG_FILE, RECIPE_DIR, REPO, Guide, attrs_of, drop_block,
-                         grouped, keep_block, lang_name, recipe_result_id, split_id, strip_comment_lines,
-                         subtype_name, system_name, warn, warnings)
+                         grouped, keep_block, lang_name, recipe_ingredient_ids, recipe_result_id, split_id,
+                         strip_comment_lines, subtype_name, system_name, warn, warnings)
 
 NS = "buildcraftunofficial"
 GUIDE_OUT = ASSETS / f"guides/{NS}/guide"
@@ -452,17 +454,33 @@ def _digest(paths):
     return h
 
 def input_files():
-    files = list(SCRIPTS) + [GUIDE_DIR.parent / "guide.txt"]
-    files += [p for p in GUIDE_DIR.rglob("*") if p.is_file()]
+    return list(SCRIPTS) + [GUIDE_DIR.parent / "guide.txt"] + [p for p in GUIDE_DIR.rglob("*") if p.is_file()]
+
+def recipe_facts():
+    """What the export reads from each recipe JSON: its id, type and result (RecipeFor, Recipe, recipe_cycle)
+    and the BC items it consumes ("Used to craft"). Patterns, counts and other ingredients never reach a page."""
+    lines = []
     # Exact-case suffix test, like load_recipes and the Java test (Windows glob ignores case).
-    files += [p for p in RECIPE_DIR.iterdir() if p.is_file() and p.suffix == ".json"]
-    return files
+    for f in sorted((p for p in RECIPE_DIR.iterdir() if p.is_file() and p.suffix == ".json"), key=lambda p: p.stem):
+        try:
+            r = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            lines.append(f"recipe {f.stem} invalid")    # load_recipes skips it too
+            continue
+        rid = recipe_result_id(r)
+        lines.append(f"recipe {f.stem} {r.get('type') or '-'} {rid or '-'}")
+        if rid:
+            lines += sorted({f"use {f.stem} {iid}" for kind, iid in recipe_ingredient_ids(r)
+                             if kind == "item" and iid.startswith(f"{NS}:")})
+    return lines
 
 def output_files():
     return [p for p in GUIDE_OUT.rglob("*") if p.is_file()] + [GUIDE_DEF]
 
 def input_hash(lang_keys):
     h = _digest(input_files())
+    for ln in recipe_facts():
+        h.update(f"{ln}\n".encode("utf-8"))
     lang = json.loads(LANG_FILE.read_text(encoding="utf-8"))
     for k in sorted(lang_keys):
         v = lang.get(k)

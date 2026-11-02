@@ -105,10 +105,15 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
                     iterator = (a, b) -> {};
                 }
 
-                // Expand outwards from the point
+                // Expand outwards from the point. A shape squeezed into a thin box can draw its outline over that
+                // point; the fill then starts from every cell the outline encloses instead.
                 Set<Point> visited = new HashSet<>();
                 List<Point> open = new ArrayList<>();
-                open.add(new Point(fillA, fillB));
+                if (getter.isFilled(fillA, fillB)) {
+                    open.addAll(enclosedPoints(getter, maxA, maxB));
+                } else {
+                    open.add(new Point(fillA, fillB));
+                }
                 while (!open.isEmpty()) {
                     List<Point> next = new ArrayList<>();
                     for (Point p : open) {
@@ -183,6 +188,45 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
             default:
                 throw new IllegalArgumentException("Unknown axis " + axis);
         }
+    }
+
+    /** The unset cells that no path of unset cells connects to the edge of the (0, 0) to (maxA, maxB) plane. Every
+     *  edge counts as outside: right for the closed shapes, whose thin boxes often draw the outline over the fill
+     *  point, but it would miss the inside of one that closes on the box edge (Semi-Circle, Arc). Of those only a
+     *  2-wide Semi-Circle asks, and its outline covers the whole box, so it has no inside to miss. */
+    private static List<Point> enclosedPoints(PositionGetter getter, int maxA, int maxB) {
+        boolean[][] outside = new boolean[maxA + 1][maxB + 1];
+        List<Point> open = new ArrayList<>();
+        for (int a = 0; a <= maxA; a++) {
+            for (int b = 0; b <= maxB; b++) {
+                if (a == 0 || b == 0 || a == maxA || b == maxB) {
+                    open.add(new Point(a, b));
+                }
+            }
+        }
+        while (!open.isEmpty()) {
+            List<Point> next = new ArrayList<>();
+            for (Point p : open) {
+                if (p.a < 0 || p.a > maxA || p.b < 0 || p.b > maxB || outside[p.a][p.b] || getter.isFilled(p.a, p.b)) {
+                    continue;
+                }
+                outside[p.a][p.b] = true;
+                next.add(new Point(p.a + 1, p.b));
+                next.add(new Point(p.a - 1, p.b));
+                next.add(new Point(p.a, p.b + 1));
+                next.add(new Point(p.a, p.b - 1));
+            }
+            open = next;
+        }
+        List<Point> enclosed = new ArrayList<>();
+        for (int a = 0; a <= maxA; a++) {
+            for (int b = 0; b <= maxB; b++) {
+                if (!outside[a][b] && !getter.isFilled(a, b)) {
+                    enclosed.add(new Point(a, b));
+                }
+            }
+        }
+        return enclosed;
     }
 
     protected abstract void genShape(int maxA, int maxB, LineList list);
@@ -264,18 +308,14 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
             double ra2 = ra * ra;
             double rb2 = rb * rb;
 
-            // TODO: Fix (or replace) this algorithm with one that doesn't miss ends
-
+            // Midpoint ellipse: one quadrant from (0, rb) to (ra, 0), the first loop stepping along a where the curve
+            // is flat, the second along b where it is steep. Where the loops meet, and wherever a thin ellipse makes
+            // one jump, the points need not touch, so they are joined with lines (#91: many box sizes left the curve
+            // dashed and the fill escaped through it). The quadrant is mirrored into the other three by 'type'.
+            List<int[]> quadrant = new ArrayList<>();
             double sigma = 2 * rb2 + ra2 * (1 - 2 * rb);
             for (int a = 0, b = (int) rb; rb2 * a <= ra2 * b; a++) {
-                iterator.iterate(ca - a, cb - b);
-                if (type.shouldDrawSecondQuadrant()) {
-                    iterator.iterate(ca + a + da, cb - b);
-                    if (type.shouldDrawAllQuadrants()) {
-                        iterator.iterate(ca - a, cb + b + db);
-                        iterator.iterate(ca + a + da, cb + b + db);
-                    }
-                }
+                quadrant.add(new int[] { a, b });
                 if (sigma >= 0) {
                     sigma += 4 * ra2 * (1 - b);
                     b--;
@@ -283,8 +323,21 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
                 sigma += rb2 * ((4 * a) + 6);
             }
 
+            List<int[]> steep = new ArrayList<>();
             sigma = 2 * ra2 + rb2 * (1 - 2 * ra);
             for (int a = (int) ra, b = 0; ra2 * b <= rb2 * a; b++) {
+                steep.add(new int[] { a, b });
+                if (sigma >= 0) {
+                    sigma += 4 * rb2 * (1 - a);
+                    a--;
+                }
+                sigma += ra2 * ((4 * b) + 6);
+            }
+            for (int i = steep.size() - 1; i >= 0; i--) {
+                quadrant.add(steep.get(i));
+            }
+
+            PathIterator2d mirrored = (a, b) -> {
                 iterator.iterate(ca - a, cb - b);
                 if (type.shouldDrawSecondQuadrant()) {
                     iterator.iterate(ca + a + da, cb - b);
@@ -293,11 +346,11 @@ public abstract class PatternShape2d extends Pattern implements IFillerPatternSh
                         iterator.iterate(ca + a + da, cb + b + db);
                     }
                 }
-                if (sigma >= 0) {
-                    sigma += 4 * rb2 * (1 - a);
-                    a--;
-                }
-                sigma += ra2 * ((4 * b) + 6);
+            };
+            int[] last = quadrant.get(0);
+            for (int[] point : quadrant) {
+                PositionUtil.forAllOnPath2d(last[0], last[1], point[0], point[1], mirrored);
+                last = point;
             }
         }
     }

@@ -602,10 +602,6 @@ public class PositionUtil {
         }
     }
 
-    public static void forAllOnArc2d(int a, int b, int degrees, PathIterator2d iter) {
-
-    }
-
     @FunctionalInterface
     public interface PathIterator2d {
         void iterate(int a, int b);

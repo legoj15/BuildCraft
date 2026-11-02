@@ -222,9 +222,10 @@ public class RenderHeatExchange implements BlockEntityRenderer<TileHeatExchange,
                 double otherEnd = flip ? p0 + length * progress : p1;
                 Vec3 vDiff = Vec3.atLowerCornerOf(diff);
                 // Flow volume is controlled by progress, not tank levels.
-                // Use raw fluid type (not smoothed amount) — matches 1.12.2 behavior.
-                FluidStack coolantFluid = sectionEnd.smoothedTankInput.getFluid();
-                FluidStack heatantFluid = section.smoothedTankInput.getFluid();
+                // Fluid type only, kept after the input tank empties so the flow recedes through
+                // STOPPING instead of vanishing with the tank — matches 1.12.2 behavior.
+                FluidStack coolantFluid = sectionEnd.smoothedTankInput.getRenderFluid();
+                FluidStack heatantFluid = section.smoothedTankInput.getRenderFluid();
                 // Render upper flow (coolant)
                 if (!coolantFluid.isEmpty()) {
                     //? if >=1.21.10 {

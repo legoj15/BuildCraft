@@ -28,6 +28,11 @@ public class FluidSmoother {
     private double displayAmountPrev;
     /** Whether the smoother has been initialized with a starting value. */
     private boolean initialized = false;
+    /**
+     * The last fluid the tank held. Kept after the tank empties, as the 1.12.2 client kept its fluid link, so the
+     * level drains to zero and the heat exchanger's flow recedes instead of popping out with the tank.
+     */
+    private FluidStack lastFluid = FluidStack.EMPTY;
 
     public FluidSmoother(BCFluidTank tank) {
         this.tank = tank;
@@ -39,6 +44,7 @@ public class FluidSmoother {
      */
     public void tick() {
         int target = tank.getAmountMb(0);
+        getRenderFluid(); // records the fluid so a tank that empties between frames still drains visibly
 
         if (!initialized) {
             displayAmount = target;
@@ -67,6 +73,7 @@ public class FluidSmoother {
      * current tank level without any interpolation.
      */
     public void resetSmoothing() {
+        getRenderFluid();
         displayAmount = tank.getAmountMb(0);
         displayAmountPrev = displayAmount;
         initialized = true;
@@ -84,11 +91,16 @@ public class FluidSmoother {
     }
 
     /**
-     * Returns the tank's fluid stack (type only — use {@link #getAmount} for
-     * the smoothed quantity).
+     * Returns the tank's fluid stack, or the last fluid it held once empty (type only — use {@link #getAmount} for
+     * the smoothed quantity). Empty only if the tank never held anything.
      */
-    public FluidStack getFluid() {
-        return tank.getFluidStack(0);
+    public FluidStack getRenderFluid() {
+        FluidStack current = tank.getFluidStack(0);
+        // Copy on change: the tank may shrink its own stack in place, which would empty a shared reference.
+        if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, lastFluid)) {
+            lastFluid = current.copyWithAmount(1);
+        }
+        return lastFluid;
     }
 
     /** Delegate for {@link BCFluidTank#getCapacityMb}. */
@@ -116,11 +128,11 @@ public class FluidSmoother {
     public record FluidStackInterp(FluidStack fluid, double amount) {}
 
     /**
-     * Returns a combined fluid type + smoothed amount for rendering,
-     * or {@code null} if the tank is empty.
+     * Returns a combined fluid type + smoothed amount for rendering, or {@code null} if the tank never held
+     * anything. An emptied tank keeps its last fluid while the amount drains to zero; callers skip a zero amount.
      */
     public FluidStackInterp getFluidForRender(double partialTicks) {
-        FluidStack res = tank.getFluidStack(0);
+        FluidStack res = getRenderFluid();
         if (res.isEmpty()) {
             return null;
         }

@@ -124,7 +124,8 @@ def tex_shell_side():
     hline(px, 6, 0, 15, I_BK)
     hline(px, 7, 0, 15, C_MD)
     hline(px, 8, 0, 15, C_DK)
-    hline(px, 9, 0, 15, I_DK)
+    # I_BK, not I_DK: I_DK is as bright as the seal on row 10, leaving a hue-only edge
+    hline(px, 9, 0, 15, I_BK)
     for x in (2, 6, 9, 13):
         px[7][x] = C_LT
     hline(px, 11, 0, 15, G_MD)

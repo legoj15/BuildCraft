@@ -8,7 +8,7 @@ Goal (user, 2026-11-01): the redesigned Heat Exchanger stood out next to the oth
 - review_fast (shop26 + glm-flash) on `232f75b90..ba01a90c3`: committed PNGs pixel-identical to the generator; both reviewers raise the same single finding (Next 1).
 
 ## Next
-1. Fix the shared review finding: in `tex_shell_side`, row 9 (I_DK #363636, luma ~54) sits directly on the seal row 10 (#24431b, luma ~53-57), so the bottom edge of every front/back sight slot is a hue-only boundary. Paint row 9 with I_BK (#2b2b2b), as `tex_shell_top` already does; do not darken I_DK itself (it is also the flange, cover and nozzle-bore recess). Regenerate with `python scripts/generate-heat-exchanger-assets.py`, then `git checkout --` the blockstate and the 9 model JSONs (the generator writes LF over the CRLF checkout: line-ending-only diffs). Re-run review_fast on the fix sha.
+1. DONE 2026-11-02: shell_side row 9 now I_BK (#2b2b2b), as shell_top; review_fast re-run on that sha.
 2. In-game look by the user (`./gradlew :26.3:runClient` from this worktree, or the `heat-exchanger-look` smoke scenario). Nothing was checked in a client this session.
 3. Merge the branch into main locally on the user's go-ahead (expect a changelog.md conflict).
 

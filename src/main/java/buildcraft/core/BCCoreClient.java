@@ -55,10 +55,13 @@ public class BCCoreClient {
                 net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
                 event -> buildcraft.core.client.DebugOverlayHelper.onClientTick()
         );
-        // Marker laser length under the crosshair: pick per tick, draw per frame
+        // Marker laser length and the volume marker distance readout under the crosshair: work out per tick, draw per frame
         NeoForge.EVENT_BUS.addListener(
                 net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
-                event -> buildcraft.core.client.MarkerLengthIndicator.onClientTick()
+                event -> {
+                    buildcraft.core.client.MarkerLengthIndicator.onClientTick();
+                    buildcraft.core.client.MarkerDistanceTracker.onClientTick();
+                }
         );
         // Register the fluid shard tint source for fragile fluid containers
         //? if >=1.21.10 {

@@ -37,6 +37,7 @@ import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.PositionUtil;
 import buildcraft.lib.misc.VecUtil;
 
+import buildcraft.core.client.MarkerDistanceTracker;
 import buildcraft.core.marker.PathSubCache;
 import buildcraft.core.marker.VolumeConnection;
 import buildcraft.core.marker.VolumeSubCache;
@@ -142,6 +143,11 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
         // this one rule. Past block reach nothing can hide a target, which lies within REACH, so no occlusion limit.
         if (!level.isClientSide() && !hitsBlock(level, player)) {
             doMarkerClick(level, player, null);
+        }
+        // A click at empty air with nothing marker-related aimed ends the volume marker distance readout. Client side
+        // only, where the readout lives; the tracker is named here only on that side.
+        if (level.isClientSide() && !hitsBlock(level, player) && !isAimingAtMarkerTarget(level, player, null)) {
+            MarkerDistanceTracker.clear();
         }
         // Always consume the action so the player gets swing feedback
         return InteractionResult.SUCCESS;

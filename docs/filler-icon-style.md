@@ -255,7 +255,7 @@ Parameters: the selected element is L; the frame or structure around it is K; se
 - Axis: glass cube, the four edges parallel to the axis are in that axis's colour (X, Y or Z), not L.
 - XZ direction: a top-down arrow.
 - Centre: a 3x3 grid, the chosen cell solid.
-- Rotation: a clock face, L wedge clockwise from 12 o'clock, one quarter per step.
+- Rotation: a clock face, L wedge clockwise from 12 o'clock, one quarter per step, its leading edge capped by a K arrowhead pointing clockwise.
 - Hollow family: one ring (RING12) in every icon; the L/M checker shows where blocks go: nowhere, inside, or
   outside to the box's edge (x, y = 1..14). The checker is this family's alone.
 - Y direction: a side-elevation staircase; ascending the right way up, descending upside down.
@@ -316,10 +316,10 @@ No letters except the face icons' side letters. Every other meaning is carried b
 | `filled_inner` | Filled | draw | RING12's K ring, its L cells as the L/M checker. |
 | `filled_outer` | Surrounded | draw | RING12's K ring; every other cell on x, y = 1..14 outside it as the L/M checker, its inside transparent. |
 | `hollow` | Hollow | draw | RING12's K ring only. |
-| `rotation_0` | No rotation | draw | DISC14's K pixels only (interior transparent), plus an L hand at x = 7,8 on rows 2-7. |
-| `rotation_1` | 90 degree rotation | draw | DISC14's K ring; every DISC14 L pixel whose centre lies less than 90 degrees clockwise from 12 o'clock around (8,8) is L, the rest transparent; then K at x = 7 on rows 2-7 (the wedge's 12 o'clock edge). |
-| `rotation_2` | 180 degree rotation | draw | As `rotation_1` with 180 degrees. |
-| `rotation_3` | 270 degree rotation | draw | As `rotation_1` with 270 degrees. |
+| `rotation_0` | No rotation | hand-drawn | DISC14's K ring, interior transparent; an L-cored hand at x = 7,8 down to row 7 under a K arrowhead at 12 o'clock. The PNG is the reference. |
+| `rotation_1` | 90 degree rotation | hand-drawn | DISC14's K ring; L wedge over the first quarter clockwise from 12 o'clock, K edges at 12 and 3 o'clock, K arrowhead at the 3 o'clock edge pointing clockwise. The PNG is the reference. |
+| `rotation_2` | 180 degree rotation | hand-drawn | As `rotation_1` with the wedge over half the face and the arrowhead at 6 o'clock. |
+| `rotation_3` | 270 degree rotation | hand-drawn | As `rotation_1` with the wedge over three quarters and the arrowhead at 9 o'clock. |
 | `stairs_ascend` | Up (Y direction; Pyramid and Stairs) | draw | Side elevation: L columns x = 2..5 (rows 8-13), x = 6..9 (rows 5-13), x = 10..13 (rows 2-13), so three 4px steps rise to the right on a flat base; K on the silhouette plus the two concave corners (6,8) and (10,5). |
 | `stairs_descend` | Down | draw | `stairs_ascend` mirrored top to bottom: the inverted pyramid, stairs hung from the top. |
 

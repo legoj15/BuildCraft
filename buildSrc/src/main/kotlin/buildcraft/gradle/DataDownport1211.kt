@@ -222,10 +222,12 @@ object DataDownport1211 {
                     // its content becomes the base inline instead of a parent reference. 1.21.1 bakes a nested
                     // item/generated model into the flat icon like a top-level one. GUI lighting comes from the
                     // wrapper's own gui_light, and a wrapper with no parent defaults to "side" (lit like a
-                    // block), so it carries the flat items' "front"; the particle comes from the base's own
-                    // textures, where vanilla's flat-item bake would have used layer0. One difference stays:
-                    // the wrapper reports no item transforms, so a dropped item floats 2 px higher than a plain
-                    // icon does there.
+                    // block), so it carries the flat items' "front". The particle is looked up in the unbaked
+                    // base, and vanilla's item/generated names none (a plain icon gets layer0 only when its icon
+                    // is generated), so the base carries it. One difference stays: ItemEntityRenderer lifts a
+                    // dropped item by a quarter of the ground scale the model reports, and the wrapper reports
+                    // no transforms (scale 1, not item/generated's 0.5), so it floats 2 px higher than a plain
+                    // icon. Drawing still goes through the base's transforms.
                     val fallbackId = modelId(spec["fallback"] ?: error("items/${f.name}: a select needs a fallback, the 1.21.1 base"))
                     val fallbackFile = modelsItemDir.parentFile.resolve(fallbackId.substringAfter(':') + ".json")
                     check(fallbackFile.isFile) { "items/${f.name}: fallback $fallbackId is not a model of this mod ($fallbackFile)" }

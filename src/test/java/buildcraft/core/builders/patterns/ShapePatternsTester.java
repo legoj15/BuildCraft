@@ -1,5 +1,6 @@
 package buildcraft.core.builders.patterns;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
@@ -145,10 +146,110 @@ public class ShapePatternsTester {
                     }
                 }
             }
+            // In any box, thin ones included, an outline is one unbroken line (touching diagonally counts) and Filled
+            // fills exactly what it encloses: the cells no unset path reaches from the box edge (#91: arcs came out
+            // dashed in many box sizes, so the fill escaped to the whole box, and thin shapes seeded the fill on their
+            // own outline, so Filled did nothing and Surrounded filled everything). Surrounded fills the rest. Semi-Circle
+            // closes on the box's south edge and Arc on its south and east edges, so those edges are walls, and their
+            // fill is checked unturned (the block above holds the turns to the unturned shape).
+            for (int w = 1; w <= 19; w++) {
+                for (int l = 1; l <= 19; l++) {
+                    BlockPos box = new BlockPos(w, 1, l);
+                    for (IFillerPatternShape pattern : patterns) {
+                        if (!(pattern instanceof PatternShape2d)) continue;
+                        boolean arc = pattern == BCBuildersStatements.PATTERN_ARC;
+                        boolean open = arc || pattern == BCBuildersStatements.PATTERN_SEMI_CIRCLE;
+                        for (PatternParameterRotation rotation : PatternParameterRotation.values()) {
+                            IFilledTemplate hollow = fill2d(pattern, box, PatternParameterHollow.HOLLOW, rotation);
+                            IFilledTemplate inner = fill2d(pattern, box, PatternParameterHollow.FILLED_INNER, rotation);
+                            IFilledTemplate outer = fill2d(pattern, box, PatternParameterHollow.FILLED_OUTER, rotation);
+                            if (!isOneLine(hollow, w, l)) {
+                                throw new IllegalStateException(pattern.getUniqueTag() + " rotated " + rotation + " in "
+                                    + box.toShortString() + " has a broken outline");
+                            }
+                            if (open && rotation != PatternParameterRotation.NONE) continue;
+                            boolean[][] enclosed = enclosedCells(hollow, w, l, arc, open);
+                            for (int z = 0; z < l; z++) {
+                                for (int x = 0; x < w; x++) {
+                                    boolean line = hollow.get(x, 0, z);
+                                    if (inner.get(x, 0, z) != (line || enclosed[x][z])
+                                        || outer.get(x, 0, z) != (line || !enclosed[x][z])) {
+                                        throw new IllegalStateException(pattern.getUniqueTag() + " rotated " + rotation + " in "
+                                            + box.toShortString() + " does not fill what its outline encloses, at (" + x + ", " + z + ")");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             helper.succeed();
         } catch (Throwable t) {
             helper.fail(t.getMessage());
         }
+    }
+
+    /** Whether the set cells of a one-high template all join up, touching sideways or diagonally. */
+    private static boolean isOneLine(IFilledTemplate template, int w, int l) {
+        boolean[][] reached = new boolean[w][l];
+        ArrayDeque<int[]> open = new ArrayDeque<>();
+        int set = 0;
+        for (int z = 0; z < l; z++) {
+            for (int x = 0; x < w; x++) {
+                if (!template.get(x, 0, z)) continue;
+                set++;
+                if (open.isEmpty() && !reached[x][z]) {
+                    reached[x][z] = true;
+                    open.add(new int[] { x, z });
+                }
+            }
+        }
+        int joined = 0;
+        while (!open.isEmpty()) {
+            int[] p = open.poll();
+            joined++;
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    int x = p[0] + dx, z = p[1] + dz;
+                    if (x < 0 || z < 0 || x >= w || z >= l || reached[x][z] || !template.get(x, 0, z)) continue;
+                    reached[x][z] = true;
+                    open.add(new int[] { x, z });
+                }
+            }
+        }
+        return joined == set;
+    }
+
+    /** The unset cells of a one-high template that no path of unset cells connects to the box edge, bar the east
+     *  and south edges when they are walls. */
+    private static boolean[][] enclosedCells(IFilledTemplate template, int w, int l, boolean eastWall, boolean southWall) {
+        boolean[][] outside = new boolean[w][l];
+        ArrayDeque<int[]> open = new ArrayDeque<>();
+        for (int z = 0; z < l; z++) {
+            for (int x = 0; x < w; x++) {
+                boolean edge = x == 0 || z == 0 || (x == w - 1 && !eastWall) || (z == l - 1 && !southWall);
+                if (edge && !template.get(x, 0, z)) {
+                    outside[x][z] = true;
+                    open.add(new int[] { x, z });
+                }
+            }
+        }
+        while (!open.isEmpty()) {
+            int[] p = open.poll();
+            for (int[] d : new int[][] { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                int x = p[0] + d[0], z = p[1] + d[1];
+                if (x < 0 || z < 0 || x >= w || z >= l || outside[x][z] || template.get(x, 0, z)) continue;
+                outside[x][z] = true;
+                open.add(new int[] { x, z });
+            }
+        }
+        boolean[][] enclosed = new boolean[w][l];
+        for (int z = 0; z < l; z++) {
+            for (int x = 0; x < w; x++) {
+                enclosed[x][z] = !outside[x][z] && !template.get(x, 0, z);
+            }
+        }
+        return enclosed;
     }
 
     private static int countSet(IFilledTemplate template) {

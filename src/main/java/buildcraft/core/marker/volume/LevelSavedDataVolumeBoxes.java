@@ -273,6 +273,29 @@ public class LevelSavedDataVolumeBoxes extends SavedData implements LegacySavedD
         return null;
     }
 
+    /**
+     * The box whose size the machine {@code machineBlock} at {@code machinePos} works to: the one it owns, else a free
+     * box it claimed (one its machine-use lock pins), else null. The lock must name this very block: a lock left by a
+     * machine replaced in the same tick (pruned only at the end of it) is not this machine's. A box can be claimed by
+     * several Fillers in an old save; each follows it.
+     */
+    @Nullable
+    public VolumeBox getHeldBy(BlockPos machinePos, Block machineBlock) {
+        VolumeBox owned = getOwnedBy(machinePos);
+        if (owned != null) {
+            return owned;
+        }
+        for (VolumeBox volumeBox : volumeBoxes) {
+            if (volumeBox.locks.stream().anyMatch(lock ->
+                    lock.cause instanceof Lock.Cause.CauseBlock cause && machinePos.equals(cause.pos)
+                        && cause.block == machineBlock
+                        && lock.targets.stream().anyMatch(Lock.Target.TargetUsedByMachine.class::isInstance))) {
+                return volumeBox;
+            }
+        }
+        return null;
+    }
+
     public void addVolumeBox(BlockPos pos) {
         volumeBoxes.add(new VolumeBox(world, pos));
         setDirty();

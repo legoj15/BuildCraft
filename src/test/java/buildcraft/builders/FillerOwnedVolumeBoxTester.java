@@ -406,6 +406,87 @@ public class FillerOwnedVolumeBoxTester {
         }
     }
 
+    /**
+     * A free box a Filler claimed stays editable, as a box it owns does: the Volume Wrench picks up its corner, the
+     * Filler waits while the drag is open, and once the new size is confirmed the Filler works on it. A claim that
+     * locked the box's size would leave the wrench nothing to grab; a Filler that kept its copied area would build the
+     * old size inside the new box.
+     */
+    public static void claimedBoxResizesWithTheFiller(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        LevelSavedDataVolumeBoxes boxes = LevelSavedDataVolumeBoxes.get(level);
+        BlockPos fillerRel = new BlockPos(0, 2, 1);
+        BlockPos fillerAbs = helper.absolutePos(fillerRel);
+        BlockPos min = helper.absolutePos(new BlockPos(1, 2, 1));
+        BlockPos max = helper.absolutePos(new BlockPos(3, 2, 3));
+        BlockPos newMax = helper.absolutePos(new BlockPos(4, 2, 3));
+        VolumeBox free = new VolumeBox(level, min);
+        free.box.extendToEncompass(max);
+        boxes.volumeBoxes.add(free);
+        try {
+            // Facing west, so the Filler's back (where it looks for an area) is the box at (1,2,1).
+            helper.setBlock(fillerRel, BCBuildersBlocks.FILLER.get().defaultBlockState()
+                .setValue(HorizontalDirectionalBlock.FACING, Direction.WEST));
+            if (!(level.getBlockEntity(fillerAbs) instanceof TileFiller filler)) {
+                throw new IllegalStateException("no Filler tile at " + fillerRel);
+            }
+            filler.onPlacedBy(null, ItemStack.EMPTY);
+            if (boxes.getFreeVolumeBoxAt(min) != null || !filler.getBox().max().equals(max)) {
+                throw new IllegalStateException("Precondition: the Filler did not claim the box");
+            }
+
+            // Use a Volume Wrench in the air, aimed west along the z=3 row at the box's (3,2,3) corner.
+            Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+            BlockPos eyeBlock = helper.absolutePos(new BlockPos(5, 2, 3));
+            player.setPos(eyeBlock.getX() + 0.8, eyeBlock.getY() + 0.5 - player.getEyeHeight(), eyeBlock.getZ() + 0.5);
+            player.setXRot(0);
+            player.setYRot(90);
+            Vec3 eye = player.getEyePosition();
+            Vec3 reach = eye.add(player.getLookAngle().scale(player.blockInteractionRange()));
+            if (level.clip(new ClipContext(eye, reach, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player))
+                    .getType() != HitResult.Type.MISS) {
+                throw new IllegalStateException("Precondition: a block is in reach, so the air click would do nothing");
+            }
+            ItemStack wrench = new ItemStack(BCCoreItems.VOLUME_WRENCH.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, wrench);
+            wrench.getItem().use(level, player, InteractionHand.MAIN_HAND);
+            if (!free.isEditingBy(player)) {
+                throw new IllegalStateException("The Volume Wrench could not pick up a corner of the claimed box");
+            }
+
+            // The drag moves the corner one block east; the Filler must not take a size that is still moving.
+            free.box.extendToEncompass(newMax);
+            filler.tick();
+            if (!filler.getBox().max().equals(max)) {
+                throw new IllegalStateException("The Filler took the box's size while it was still being dragged");
+            }
+
+            wrench.getItem().use(level, player, InteractionHand.MAIN_HAND);
+            if (free.isEditing() || !boxes.volumeBoxes.contains(free)) {
+                throw new IllegalStateException("The second click did not confirm the drag");
+            }
+            filler.tick();
+            if (!filler.getBox().min().equals(min) || !filler.getBox().max().equals(newMax)) {
+                throw new IllegalStateException("The Filler works on " + filler.getBox().min() + " to "
+                    + filler.getBox().max() + ", not the resized box's " + min + " to " + newMax);
+            }
+
+            // The claim still holds the box: a sneak-click does not remove it.
+            player.setShiftKeyDown(true);
+            wrench.getItem().use(level, player, InteractionHand.MAIN_HAND);
+            if (!boxes.volumeBoxes.contains(free)) {
+                throw new IllegalStateException("A sneak-click removed the box the Filler claimed");
+            }
+            helper.setBlock(fillerRel, Blocks.AIR);
+            helper.succeed();
+        } finally {
+            // Never leave a box in the dimension's saved data, whatever failed.
+            if (boxes.volumeBoxes.remove(free)) {
+                boxes.markDirtyAndBroadcast();
+            }
+        }
+    }
+
     public static void survivalMarkersBecomeABoxTheFillerOwns(GameTestHelper helper) {
         Session arena = MarkerArenaUtil.open(helper);
         BlockPos marker1 = new BlockPos(1, 2, 1);

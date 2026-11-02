@@ -120,8 +120,8 @@ public class TileFillerPlannerMigrationTest {
         TileFiller filler = loadedFiller(oldPlannerFillerTag());
         VolumeBox box = loadBox(oldVolumeBoxTag(true, FILLER_POS));
         Assertions.assertEquals(1, fillerLocks(box), "precondition: the old save holds the Filler's lock");
-        Assertions.assertEquals(3, box.locks.get(0).targets.size(),
-            "the retired ADDON target is dropped on load, leaving remove, resize and machine");
+        Assertions.assertEquals(2, box.locks.get(0).targets.size(),
+            "the retired ADDON and RESIZE targets are dropped on load, leaving remove and machine");
 
         filler.migrateOrphanedBoxOnce(() -> savedDataWith(box));
 

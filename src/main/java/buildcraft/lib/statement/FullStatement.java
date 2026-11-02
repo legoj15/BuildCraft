@@ -199,12 +199,13 @@ public class FullStatement<S extends IStatement> implements IReference<S> {
 
     public void set(S statement, IStatementParameter[] params) {
         set(statement);
-        if (statement == null) {
+        if (statement == null || params == null) {
             return;
         }
         int count = Math.min(Math.min(getParamCount(), params.length), statement.maxParameters());
         for (int i = 0; i < count; i++) {
-            set(i, params[i]);
+            // A gate save loads parameters by kind alone: a missing or wrong-kind one falls back to the default.
+            set(i, statement.createParameter(params[i], i));
         }
     }
 

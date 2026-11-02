@@ -51,9 +51,7 @@ DEFAULT_OUT = os.path.join(REPO, "src", "main", "resources", "assets", NS)
 # =========================================================================================
 
 # shell plate: the BC machine casing ramp (filler, quarry, builder, architect...): plate
-# #cbcbcb, panel light #d9d9d9, frame #a7a7a7, and their one-step mottles
-G_HI = (0xd9, 0xd9, 0xd9)
-G_LT = (0xcd, 0xcd, 0xcd)
+# #cbcbcb with its one-step mottles, and the 1px #a7a7a7 frame every casing face wears
 G_MD = (0xcb, 0xcb, 0xcb)
 G_M2 = (0xc6, 0xc6, 0xc6)  # plate mottling
 G_M3 = (0xcd, 0xcd, 0xcd)  # lighter plate mottling
@@ -69,9 +67,9 @@ S_DK = (0x84, 0x84, 0x84)
 S_DD = (0x63, 0x63, 0x63)
 S_XX = (0x45, 0x45, 0x45)
 S_BK = (0x2f, 0x2f, 0x2f)
-# interior
-I_BK = (0x14, 0x18, 0x16)
-I_DK = (0x22, 0x29, 0x25)
+# interior: the casings' recess greys (the quarry and builder displays' #363636)
+I_BK = (0x2b, 0x2b, 0x2b)
+I_DK = (0x36, 0x36, 0x36)
 # copper tube bundle seen through the sight slots
 C_LT = (0xad, 0x6c, 0x3a)
 C_MD = (0x86, 0x50, 0x2a)
@@ -113,12 +111,12 @@ def mottle(px, x0, y0, x1, y1, base, alt, seed):
 
 def tex_shell_side():
     """Front/back of the shell: rows 2-4 upper band, 5/10 green seal, 6-9 sight slot, 11-13 lower
-    band, rows 14-15 the slot walls (explicit UV), the same green as the seal."""
+    band, rows 14-15 the slot walls (explicit UV), the same green as the seal. Rows 2 and 13,
+    the shell's outer edges, are the casing frame."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 7)
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 29)
-    hline(px, 2, 0, 15, G_HI)
-    hline(px, 3, 0, 15, G_LT)
+    hline(px, 2, 0, 15, G_DD)
     # green seal above and below the slot
     hline(px, 5, 0, 15, SEAL)
     hline(px, 10, 0, 15, SEAL)
@@ -130,7 +128,6 @@ def tex_shell_side():
     for x in (2, 6, 9, 13):
         px[7][x] = C_LT
     hline(px, 11, 0, 15, G_MD)
-    hline(px, 12, 0, 15, G_DK)
     hline(px, 13, 0, 15, G_DD)
     mottle(px, 0, 11, 15, 11, G_MD, G_M2, 3)
     # slot walls: the seal's depth
@@ -144,13 +141,14 @@ def tex_shell_side():
 def tex_shell_top():
     """Top/bottom of the shell (u = x, v = z): the same slot layout as the sides turned flat.
     Rows 2-4 and 11-13 plate, 5/10 bezel, 6-9 what the slot sees (the core's face), rows 14-15
-    the slot walls (explicit UV). Rows 5 and 10 are both seal, so the bottom (which samples
-    the sheet flipped) still has it on both slot edges; the plate rows are not symmetric."""
+    the slot walls (explicit UV). Rows 5 and 10 are both seal and rows 2 and 13 (the outer
+    edges) both frame, so the bottom (which samples the sheet flipped) keeps both on the
+    same edges as the top; only the mottling differs."""
     px = new(G_MD)
     mottle(px, 0, 0, 15, 15, G_MD, G_M2, 11)
     mottle(px, 0, 0, 15, 15, G_MD, G_M3, 31)
-    hline(px, 2, 0, 15, G_LT)
-    hline(px, 13, 0, 15, G_DK)
+    hline(px, 2, 0, 15, G_DD)
+    hline(px, 13, 0, 15, G_DD)
     hline(px, 5, 0, 15, SEAL)
     hline(px, 10, 0, 15, SEAL)
     hline(px, 6, 0, 15, I_BK)

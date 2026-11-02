@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Heat Exchanger's block models, item model, blockstate and textures.
 
-The shell-and-tube look: an iron shell (the iron block's palette) with a sight slot
+The shell-and-tube look: a shell in the other BC machines' casing grey with a sight slot
 on all four long faces (the renderer's fluid flow shows through them), bolted steel flanges where two exchangers join,
 blind dished caps on a lone segment's open ends, and colour-banded nozzles where the fluids
 enter and leave a finished 3-5 block exchanger (START blue = cold side, END red = hot side,
@@ -50,20 +50,21 @@ DEFAULT_OUT = os.path.join(REPO, "src", "main", "resources", "assets", NS)
 # texel's place on the sheet is where it lands on the block.
 # =========================================================================================
 
-# shell plate: vanilla iron_block's ramp (#b1b0b0..#f2f2f2)
-G_HI = (0xf2, 0xf2, 0xf2)
-G_LT = (0xe6, 0xe6, 0xe6)
-G_MD = (0xdc, 0xdc, 0xdc)
-G_M2 = (0xd6, 0xd6, 0xd6)  # plate mottling
-G_M3 = (0xe0, 0xe0, 0xe0)  # lighter plate mottling
-G_DK = (0xc1, 0xc1, 0xc1)
-G_DD = (0xb1, 0xb0, 0xb0)
+# shell plate: the BC machine casing ramp (filler, quarry, builder, architect...): plate
+# #cbcbcb, panel light #d9d9d9, frame #a7a7a7, and their one-step mottles
+G_HI = (0xd9, 0xd9, 0xd9)
+G_LT = (0xcd, 0xcd, 0xcd)
+G_MD = (0xcb, 0xcb, 0xcb)
+G_M2 = (0xc6, 0xc6, 0xc6)  # plate mottling
+G_M3 = (0xcd, 0xcd, 0xcd)  # lighter plate mottling
+G_DK = (0xbd, 0xbd, 0xbd)
+G_DD = (0xa7, 0xa7, 0xa7)
 # window seal: one flat band in the old heat exchanger's dark green (its sprites' #24431b)
 SEAL = (0x24, 0x43, 0x1b)
-# steel
-S_HI = (0xde, 0xde, 0xde)
+# steel (shares the casing ramp's light and frame)
+S_HI = (0xd9, 0xd9, 0xd9)
 S_LT = (0xc2, 0xc2, 0xc2)
-S_MD = (0xa6, 0xa6, 0xa6)
+S_MD = (0xa7, 0xa7, 0xa7)
 S_DK = (0x84, 0x84, 0x84)
 S_DD = (0x63, 0x63, 0x63)
 S_XX = (0x45, 0x45, 0x45)

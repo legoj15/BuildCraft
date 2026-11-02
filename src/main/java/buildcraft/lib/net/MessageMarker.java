@@ -111,6 +111,10 @@ public record MessageMarker(
 
     /**
      * Client-side handler. Dispatches to the appropriate MarkerSubCache.
+     * <p>
+     * Already on the client main thread: the registrar's default {@code HandlerThread.MAIN} wraps it in NeoForge's
+     * {@code MainThreadPayloadHandler}, which enqueues it (FIFO with {@code MessageMarkerTrack}). So it never races
+     * the client-tick readers of the connection sets, and needs no {@code ctx.enqueueWork} of its own.
      */
     public static void handle(MessageMarker message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
         if (message.cacheId < 0 || message.cacheId >= MarkerCache.CACHES.size()) {

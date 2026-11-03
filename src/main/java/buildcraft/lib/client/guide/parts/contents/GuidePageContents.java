@@ -24,8 +24,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforgespi.language.IModInfo;
 
 import buildcraft.core.BCCore;
 
@@ -44,6 +42,7 @@ import buildcraft.lib.gui.pos.GuiRectangle;
 import buildcraft.lib.misc.GuiUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.search.ISuffixArray.SearchResult;
+import buildcraft.platform.Platform;
 
 /** The base menu for showing all the locations. Controls the guide book table of contents. */
 @SuppressWarnings("this-escape")
@@ -286,14 +285,7 @@ public class GuidePageContents extends GuidePageBase {
      *  be remembered on every port. Falls back to "?" if the container somehow isn't present. */
     private static String getModVersion() {
         if (modVersion == null) {
-            String found = "?";
-            for (IModInfo info : ModList.get().getMods()) {
-                if (BCCore.MODID.equals(info.getModId())) {
-                    found = info.getVersion().toString();
-                    break;
-                }
-            }
-            modVersion = found;
+            modVersion = Platform.loader().modVersion(BCCore.MODID).orElse("?");
         }
         return modVersion;
     }

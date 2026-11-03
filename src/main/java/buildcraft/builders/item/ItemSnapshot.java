@@ -19,9 +19,6 @@ import net.minecraft.world.item.component.TooltipDisplay;
 //?}
 import net.minecraft.nbt.CompoundTag;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.lib.client.ClientLocale;
 import buildcraft.lib.misc.HashUtil;
@@ -29,6 +26,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.TimeUtil;
 
 import buildcraft.builders.snapshot.Snapshot.Header;
+import buildcraft.platform.Platform;
 
 /**
  * Snapshot item — represents either a Blueprint or a Template, in clean or used state.
@@ -135,7 +133,7 @@ public class ItemSnapshot extends Item {
     /** The language a tooltip is read in: the client's selected one. Tooltips are only built on a client; the
      *  other branch keeps a server-side caller (a command, a test) from loading client classes. */
     private static Locale tooltipLocale() {
-        return FMLEnvironment.getDist() == Dist.CLIENT ? ClientLocale.current() : Locale.ROOT;
+        return Platform.loader().isPhysicalClient() ? ClientLocale.current() : Locale.ROOT;
     }
 
     // The 3D preview is drawn as a SECOND tooltip panel below this item's main tooltip — see

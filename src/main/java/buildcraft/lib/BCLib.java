@@ -12,6 +12,7 @@ import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.lib.fluid.FuelRegistry;
 import buildcraft.lib.fluid.CoolantRegistry;
 import buildcraft.lib.recipe.RefineryRecipeRegistry;
+import buildcraft.platform.Platform;
 
 /**
  * BuildCraft Lib initializer. No longer a separate @Mod — called from BCCore.
@@ -49,7 +50,7 @@ public class BCLib {
         buildcraft.lib.chunkload.ChunkLoaderManager.registerTicketController(modEventBus);
 
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.lib.client.BCLibClient.initClient(modEventBus);
         }
     }

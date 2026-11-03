@@ -9,8 +9,6 @@ package buildcraft.transport;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -31,6 +29,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.platform.Platform;
 import buildcraft.transport.net.MessageMultiPipeItem;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.net.PipeItemMessageQueue;
@@ -62,7 +61,7 @@ public class BCTransport {
         BCTransportAttachments.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.transport.client.BCTransportClient.initClient(modEventBus);
         }
 

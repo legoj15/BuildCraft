@@ -8,8 +8,6 @@ package buildcraft.silicon;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -23,6 +21,7 @@ import buildcraft.api.facades.FacadeAPI;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
 
 import buildcraft.core.BCCore;
+import buildcraft.platform.Platform;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
@@ -48,7 +47,7 @@ public class BCSilicon {
         BCSiliconStatements.preInit();
 
         // Register client-side extensions on the mod event bus
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.silicon.client.BCSiliconClient.initClient(modEventBus);
         }
 
@@ -173,7 +172,7 @@ public class BCSilicon {
             if (FacadeStateManager.isFacadeGenerationDisabled()) {
                 return; // no generated variants and nothing to dedup; the tab itself stays registered (empty)
             }
-            if (FMLEnvironment.getDist() == Dist.CLIENT) {
+            if (Platform.loader().isPhysicalClient()) {
                 // Primary dedup trigger is BCSiliconClient.GameBus.onClientLoggingIn (deterministic,
                 // off the JEI first-screen-open critical path). This call is the F3+T safety net:
                 // after a resource reload the model cache refills and the next tab rebuild re-dedups

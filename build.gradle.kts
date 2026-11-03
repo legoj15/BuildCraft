@@ -27,6 +27,12 @@ val javaVersion = property("java_version") as String
 val updateBranch = property("update_branch") as String
 val neoDepRange = property("neo_dep_range") as String
 val mcDepRange = property("mc_dep_range") as String
+// The mod loader this node builds against (root gradle.properties, overridable per node). It becomes the
+// Stonecutter constants `neoforge` / `fabric` below and is never derived from the node name.
+val loader = property("loader") as String
+if (loader != "neoforge" && loader != "fabric") {
+    throw GradleException("loader must be 'neoforge' or 'fabric', not '$loader'")
+}
 // True only on MC lines below 1.21.11 (the 1.21.10 and 1.21.1 nodes). Gates the back-compat source
 // replacements + the extra deps that the 26.1.2 / 1.21.11 nodes already get transitively.
 val isPre1_21_11 = stonecutter.eval(stonecutter.current.version, "<1.21.11")
@@ -52,6 +58,11 @@ val isPre26_3 = stonecutter.eval(stonecutter.current.version, "<26.3")
 // "the pre-1.21.11 name". The same goes for the other rules below (render-type packages, the 1.21.1
 // accessor renames, `helper.assertTrue(`).
 stonecutter {
+    // Loader constants: `//? if neoforge {` is live on a node whose `loader` is neoforge, `//? if fabric {` on a fabric
+    // one. match() sets the key equal to `loader` true and the other false (verified against 0.9.8's
+    // ConstantContainer). Directives in common code stay about MC versions; a loader arm belongs only in a
+    // buildcraft/platform/<loader>/ file or a binder holder (docs/platform-layer.md).
+    constants.match(loader, "neoforge", "fabric")
     replacements {
         regex {
             direction.set(isPre1_21_11)

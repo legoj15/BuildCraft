@@ -10,8 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.level.ExplosionEvent;
@@ -27,6 +25,7 @@ import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.robots.RobotManager;
 import buildcraft.core.BCCore;
 import buildcraft.lib.recipe.ProgrammingRecipeRegistry;
+import buildcraft.platform.Platform;
 import buildcraft.robotics.ai.AIRobotAttack;
 import buildcraft.robotics.ai.AIRobotBreak;
 import buildcraft.robotics.ai.AIRobotDeliverRequested;
@@ -152,7 +151,7 @@ public class BCRobotics {
         });
 
         // Register client-side extensions on the mod event bus
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.robotics.client.BCRoboticsClient.initClient(modEventBus);
         }
 

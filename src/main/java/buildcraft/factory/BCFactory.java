@@ -6,8 +6,6 @@
 package buildcraft.factory;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.world.item.ItemStack;
@@ -16,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import buildcraft.core.BCCore;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
+import buildcraft.platform.Platform;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.fluid.FluidResource;
@@ -42,7 +41,7 @@ public class BCFactory {
         BCFactoryAttachments.init(modEventBus);
 
         // Register client-side extensions on the mod event bus
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             buildcraft.factory.client.BCFactoryClient.initClient(modEventBus);
         }
 

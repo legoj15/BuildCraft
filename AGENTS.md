@@ -73,6 +73,10 @@ Order: `BCLib` → core registries → per-subsystem registries → `FMLCommonSe
 
 **Recipes** — `BuildcraftRecipeRegistry` for refinery recipes; JEI integration for display.
 
+### Platform layer
+
+Loader-facing seams live in `buildcraft.platform` (`Platform.loader()` today: side, mod list, game/config dirs, current server); common code goes through it, not straight to FML. Contract rule: the files in `buildcraft/platform/` outside the per-loader packages name only the JDK, vanilla and other `buildcraft.platform` types — never a loader type or a BC gameplay class. Loader code lives in `buildcraft/platform/<loader>/`, each file's body inside `//? if <loader> {` (Stonecutter constants `neoforge`/`fabric`, set from the `loader` property), and only the binder names an implementation. Standing design, slice plan and finish line: [docs/platform-layer.md](docs/platform-layer.md) (#98).
+
 ### Conventions
 
 - Deferred registries: use `DeferredRegister<T>` and `DeferredHolder<R,T>` — never direct registry access.

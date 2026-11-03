@@ -15,8 +15,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
+import buildcraft.platform.Platform;
 
 /** Client-side store of the recipes the guide book may display.
  *
@@ -76,7 +75,7 @@ public class ClientGuideRecipeCache {
         // jar, and on the 1.21.1 line FML's RuntimeDistCleaner hard-fails the class load on
         // DEDICATED_SERVER (newer FML merely returns null from getInstance()). Hence the
         // dist guard plus a nested holder so the client-only reference resolves lazily.
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             return ClientFallback.integratedServerRecipes();
         }
         return ImmutableList.of();

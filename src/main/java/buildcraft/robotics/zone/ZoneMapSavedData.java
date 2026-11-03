@@ -31,18 +31,16 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 //?}
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 //? if <1.21.10 {
 /*import net.neoforged.neoforge.common.IOUtilities;*/
 //?}
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import org.jspecify.annotations.Nullable;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.misc.LegacySavedData;
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.platform.Platform;
 
 /**
  * The zones written onto Zone Planner map locations, keyed by map id, the way vanilla keeps filled maps: the item
@@ -172,9 +170,9 @@ public class ZoneMapSavedData extends SavedData implements LegacySavedData.Recov
      */
     @Nullable
     public static ZoneMapSavedData forThisThread() {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = Platform.loader().currentServer();
         if (server == null) {
-            return FMLEnvironment.getDist() == Dist.CLIENT ? null : DETACHED;
+            return Platform.loader().isPhysicalClient() ? null : DETACHED;
         }
         if (!server.isSameThread()) {
             return null;

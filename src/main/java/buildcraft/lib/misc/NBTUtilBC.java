@@ -33,6 +33,8 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.platform.Platform;
+
 public class NBTUtilBC {
 
     /** Sentinel value representing "no NBT value found". Use EndTag.INSTANCE. */
@@ -52,12 +54,11 @@ public class NBTUtilBC {
      * client level's registry access → plain {@link NbtOps#INSTANCE} as a last-resort fallback
      * (lossy, but prevents NPE if invoked before any world is loaded). */
     public static DynamicOps<Tag> registryAwareOps() {
-        net.minecraft.server.MinecraftServer server =
-                net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        net.minecraft.server.MinecraftServer server = Platform.loader().currentServer();
         if (server != null) {
             return RegistryOps.create(NbtOps.INSTANCE, (HolderLookup.Provider) server.registryAccess());
         }
-        if (net.neoforged.fml.loading.FMLEnvironment.getDist() == net.neoforged.api.distmarker.Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             HolderLookup.Provider clientProvider = clientLevelRegistryAccess();
             if (clientProvider != null) {
                 return RegistryOps.create(NbtOps.INSTANCE, clientProvider);

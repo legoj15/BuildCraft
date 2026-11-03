@@ -33,6 +33,7 @@ import buildcraft.api.core.BCLog;
 
 import buildcraft.lib.net.MessageMarker;
 import buildcraft.lib.tile.TileMarker;
+import buildcraft.platform.Platform;
 
 public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
     public static final boolean DEBUG_FULL = BCDebugging.shouldDebugComplex("lib.marker.full");
@@ -316,7 +317,7 @@ public abstract class MarkerSubCache<C extends MarkerConnection<C>> {
      * Resolves the ServerLevel from the dimension key via the current server.
      */
     private void sendToDimension(MessageMarker message) {
-        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        net.minecraft.server.MinecraftServer server = Platform.loader().currentServer();
         if (server != null) {
             ServerLevel level = server.getLevel(dimensionId);
             if (level != null) {

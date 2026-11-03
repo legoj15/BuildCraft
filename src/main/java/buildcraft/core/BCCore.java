@@ -28,8 +28,6 @@ import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
 import com.mojang.serialization.Codec;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.api.distmarker.Dist;
 
 
 import buildcraft.lib.marker.MarkerCache;
@@ -50,6 +48,7 @@ import buildcraft.core.properties.WorldPropertyIsSoft;
 import buildcraft.core.properties.WorldPropertyIsWood;
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
+import buildcraft.platform.Platform;
 import buildcraft.robotics.zone.ZoneMapRef;
 
 @Mod(BCCore.MODID)
@@ -122,7 +121,7 @@ public class BCCore {
         //?} else {
         /*modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCUnifiedConfig.SPEC);
         *///?}
-        if (FMLEnvironment.getDist() == Dist.CLIENT) {
+        if (Platform.loader().isPhysicalClient()) {
             BCCoreClient.init(modContainer, modEventBus);
         }
 

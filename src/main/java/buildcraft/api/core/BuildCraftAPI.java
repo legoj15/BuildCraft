@@ -16,7 +16,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.ModContainer;
 
 public final class BuildCraftAPI {

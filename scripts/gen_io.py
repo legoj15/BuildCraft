@@ -36,9 +36,11 @@ def write_bytes(path, data):
     return True
 
 
-def prune(root, keep, pattern="**/*"):
+def prune(root, keep, pattern="**/*", owned=None):
     """Delete files under root matching pattern that are not in keep, then the directories those deletions left
-    empty (never root itself, never a directory nothing was deleted from). Returns the number of files deleted."""
+    empty (never root itself, never a directory nothing was deleted from). Returns the number of files deleted.
+    owned, when given, is a predicate on a path: a file it rejects was not written by the generator and is left
+    alone (an output folder that also holds hand-written files)."""
     root = Path(root).resolve()
     if not root.exists():
         return 0
@@ -50,7 +52,7 @@ def prune(root, keep, pattern="**/*"):
         # delete its target, possibly outside root)
         if p.is_symlink() or not p.is_file():
             continue
-        if p.resolve() not in keep:
+        if p.resolve() not in keep and (owned is None or owned(p)):
             p.unlink()
             removed += 1
             emptied.update(d for d in p.parents if d != root and root in d.parents)

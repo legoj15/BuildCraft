@@ -143,6 +143,9 @@ public class BCCoreCreativeTabs {
                                 output.accept(BCSiliconItems.CHIPSET_QUARTZ.get());
                                 output.accept(BCSiliconItems.CHIPSET_DIAMOND.get());
                                 output.accept(BCSiliconItems.REDSTONE_CRYSTAL.get());
+                                // Robot Goggles: 1.7.10 had none and 1.12.2 kept them dev-only, so this
+                                // slot (before the Gate Copier) is this port's own
+                                output.accept(BCCoreItems.GOGGLES.get());
                                 output.accept(BCSiliconItems.GATE_COPIER.get());
                                 // Fluids
                                 for (BCEnergyFluids.FluidEntry entry : BCEnergyFluids.ALL) {

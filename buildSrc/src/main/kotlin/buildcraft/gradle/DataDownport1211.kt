@@ -130,7 +130,13 @@ object DataDownport1211 {
             file.parentFile.mkdirs()
             file.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(model)))
         }
-        itemsDir.listFiles()?.filter { it.extension == "json" }?.forEach { f ->
+        val namespace = modelsItemDir.parentFile.parentFile.name
+        val itemFiles = itemsDir.listFiles()?.filter { it.extension == "json" } ?: emptyList()
+        // Every classic model a select rewrite replaces, known before any is written, so whether one select
+        // may point at another's does not depend on the order the files are listed in.
+        val selectIds = itemFiles.filter { ((slurper.parse(it) as? Map<*, *>)?.get("model") as? Map<*, *>)?.get("type") == "minecraft:select" }
+            .map { "$namespace:item/${it.nameWithoutExtension}" }.toSet()
+        itemFiles.forEach { f ->
             val root = slurper.parse(f) as? Map<String, Any?> ?: return@forEach
             val spec = root["model"] as? Map<String, Any?> ?: return@forEach
             val outFile = modelsItemDir.resolve("${f.nameWithoutExtension}.json")
@@ -197,22 +203,54 @@ object DataDownport1211 {
                     check(spec["property"] == "minecraft:display_context") {
                         "items/${f.name}: select on ${spec["property"]} has no 1.21.1 equivalent in DataDownport1211"
                     }
-                    fun modelId(node: Any?): String {
-                        val m = node as? Map<String, Any?>
-                        check(m?.get("type") == "minecraft:model") {
-                            "items/${f.name}: a display_context case must be a plain minecraft:model"
-                        }
-                        return m!!["model"] as String
+                    // 1.21.1 has nowhere to put a whole-item transformation (the classic model only has
+                    // per-view display blocks), so one on the select would silently vanish.
+                    check("transformation" !in spec) {
+                        "items/${f.name}: a select-level transformation has no 1.21.1 equivalent in DataDownport1211"
                     }
-                    // This output replaces the item's hand-authored classic model, so nothing may point at it.
-                    val ownId = "${modelsItemDir.parentFile.parentFile.name}:item/${f.nameWithoutExtension}"
+                    // This output replaces the item's hand-authored classic model, so no case may point at it.
+                    val ownId = "$namespace:item/${f.nameWithoutExtension}"
+                    // A plain minecraft:model of this mod, read from the processed output. Tints and
+                    // transformation have no 1.21.1 form; overrides are read only from the top-level model on
+                    // 1.21.1, so on an inlined base or a perspective parent they would never apply.
+                    fun modelOf(node: Any?, what: String): Pair<String, Map<String, Any?>> {
+                        val m = node as? Map<String, Any?> ?: error("items/${f.name}: the $what is not an object")
+                        val id = m["model"] as? String
+                        check(m["type"] == "minecraft:model" && id != null) {
+                            "items/${f.name}: the $what must be a plain minecraft:model with a model id"
+                        }
+                        val extra = m.keys - setOf("type", "model")
+                        check(extra.isEmpty()) { "items/${f.name}: the $what's $extra has no 1.21.1 equivalent" }
+                        check(id.substringBefore(':') == namespace) { "items/${f.name}: the $what $id is not a model of this mod" }
+                        // Another select's classic model is replaced by its wrapper, which 1.21.1 cannot nest.
+                        check(id == ownId || id !in selectIds) {
+                            "items/${f.name}: the $what $id is another select item's model, which its own rewrite replaces"
+                        }
+                        val file = modelsItemDir.parentFile.resolve(id.substringAfter(':') + ".json")
+                        check(file.isFile) { "items/${f.name}: the $what $id does not exist ($file)" }
+                        val content = runCatching { slurper.parse(file) }.getOrElse {
+                            error("items/${f.name}: the $what $id is not valid JSON ($file): ${it.message}")
+                        } as? Map<String, Any?> ?: error("items/${f.name}: the $what $id is not a JSON object")
+                        check("overrides" !in content) { "items/${f.name}: the $what $id has overrides, which 1.21.1 drops under a per-view model" }
+                        // Already a per-view model (hand-authored, or this rewrite's output on a second pass over
+                        // the same output): inlining or parenting it would nest one wrapper in another.
+                        check(content["loader"] != "neoforge:separate_transforms") {
+                            "items/${f.name}: the $what $id is already a neoforge:separate_transforms model, which 1.21.1 cannot nest"
+                        }
+                        return id to content
+                    }
+                    val cases = spec["cases"] as? List<*>
+                    check(!cases.isNullOrEmpty()) { "items/${f.name}: a select needs a non-empty cases list" }
                     val perspectives = linkedMapOf<String, Any?>()
-                    for (case in spec["cases"] as List<Map<String, Any?>>) {
-                        val target = modelId(case["model"])
-                        check(target != ownId) { "items/${f.name}: a case points at $ownId, the model this rewrite replaces" }
-                        val contexts = case["when"].let { if (it is List<*>) it else listOf(it) }
+                    for ((i, raw) in cases.withIndex()) {
+                        val case = raw as? Map<String, Any?> ?: error("items/${f.name}: case $i is not an object")
+                        val target = modelOf(case["model"], "case $i model").first
+                        check(target != ownId) { "items/${f.name}: case $i points at $ownId, the model this rewrite replaces" }
+                        val contexts = case["when"].let { if (it is List<*>) it else listOfNotNull(it) }
+                        check(contexts.isNotEmpty()) { "items/${f.name}: case $i has no \"when\"" }
                         contexts.forEach { c ->
-                            val name = c as String
+                            val name = c as? String ?: error("items/${f.name}: case $i \"when\" holds a non-string $c")
+                            check(name !in perspectives) { "items/${f.name}: display context \"$name\" is named twice" }
                             // An unknown name would never match on 1.21.1: that view would quietly keep the base.
                             check(name in CONTEXTS_1211) { "items/${f.name}: 1.21.1 has no display context \"$name\"" }
                             perspectives[name] = linkedMapOf("parent" to target)
@@ -228,10 +266,7 @@ object DataDownport1211 {
                     // dropped item by a quarter of the ground scale the model reports, and the wrapper reports
                     // no transforms (scale 1, not item/generated's 0.5), so it floats 2 px higher than a plain
                     // icon. Drawing still goes through the base's transforms.
-                    val fallbackId = modelId(spec["fallback"] ?: error("items/${f.name}: a select needs a fallback, the 1.21.1 base"))
-                    val fallbackFile = modelsItemDir.parentFile.resolve(fallbackId.substringAfter(':') + ".json")
-                    check(fallbackFile.isFile) { "items/${f.name}: fallback $fallbackId is not a model of this mod ($fallbackFile)" }
-                    val fallback = slurper.parse(fallbackFile) as Map<String, Any?>
+                    val fallback = modelOf(spec["fallback"] ?: error("items/${f.name}: a select needs a fallback, the 1.21.1 base"), "fallback").second
                     val wrapper = linkedMapOf<String, Any?>("loader" to "neoforge:separate_transforms")
                     val base = LinkedHashMap(fallback)
                     val flat = (fallback["parent"] as? String)?.removePrefix("minecraft:") in setOf("item/generated", "item/handheld")

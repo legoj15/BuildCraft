@@ -96,5 +96,9 @@ public class GogglesHeadModelTester {
             Assertions.assertTrue(perspectives.has("head"), "the head view is not switched: the goggles wear their icon");
             Assertions.assertEquals(WORN, perspectives.getAsJsonObject("head").get("parent").getAsString());
         }
+        // The route is only half of it: a worn model with no cuboids draws nothing on the head.
+        JsonObject worn = read("/assets/buildcraftunofficial/models/item/goggles_worn.json");
+        Assertions.assertTrue(worn.has("elements") && !worn.getAsJsonArray("elements").isEmpty(),
+            "the worn model has no elements, so the goggles are invisible on the head");
     }
 }

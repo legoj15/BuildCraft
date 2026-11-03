@@ -1,0 +1,40 @@
+{
+  "name": "goggles-curios",
+  "description": "Robot Goggles in the Curios head slot are drawn on the head (issue #97). Needs the node's Curios jar in run-smoke/mods (not shipped by the runner). The player wears the goggles in the Curios slot, first bare-headed and then under an iron helmet, seen in both third-person views; compare against goggles-worn's third-front/third-back, which draw the same model from the vanilla helmet slot.",
+  "base": [20, 150, 40],
+  "guiScale": 3,
+  "steps": [
+    { "do": "window", "width": 1600, "height": 900 },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 0 },
+    { "do": "cmd", "run": ["gamemode creative @p"] },
+    { "do": "wait", "ms": 3000 },
+    { "label": "floor, noon, bare head and hand, goggles into the Curios head slot", "do": "cmd", "echo": true, "run": [
+      "fill {X-8} {Y} {Z-6} {X+8} {Y+6} {Z+8} minecraft:air",
+      "fill {X-8} {Y-1} {Z-6} {X+8} {Y-1} {Z+8} minecraft:smooth_stone",
+      "?time set noon",
+      "item replace entity @p armor.head with minecraft:air",
+      "item replace entity @p weapon.mainhand with minecraft:air",
+      "curios replace head 0 @p with buildcraftunofficial:goggles"
+    ] },
+    { "do": "tp", "at": [0, 0, 0], "yaw": 0, "pitch": 0 },
+    { "do": "wait", "ms": 1000 },
+    { "label": "third person, from behind", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "curio-back", "look": "third person from behind, nothing in the helmet slot: strap round the back of the head with the redstone chipset, same as goggles-worn third-back" },
+    { "label": "third person, from the front", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "curio-front", "look": "third person facing the player: the 3D goggles over the eyes (green lenses, iron frame), not a flat icon and not floating off the head" },
+    { "label": "an iron helmet on as well", "do": "cmd", "run": ["item replace entity @p armor.head with minecraft:iron_helmet"] },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "curio-helmet-front", "look": "front view with an iron helmet: the goggles' frame and glass still show in front of the helmet's face opening" },
+    { "label": "sneak, so the head moves with the crouch", "do": "keybind", "key": "key.sneak", "action": "press" },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "curio-sneak", "look": "crouching, front view: the goggles stay on the face, they don't stay at standing height" },
+    { "do": "keybind", "key": "key.sneak", "action": "release" },
+    { "label": "back to first person", "do": "keybind", "key": "key.togglePerspective", "action": "tap" },
+    { "label": "clean up", "do": "cmd", "run": [
+      "item replace entity @p armor.head with minecraft:air",
+      "curios replace head 0 @p with minecraft:air"
+    ] }
+  ]
+}

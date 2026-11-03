@@ -111,3 +111,6 @@ _gametest-*.log
 
 # Python bytecode from the smoke scripts
 __pycache__/
+
+# Kotlin compiler daemon session files
+.kotlin/

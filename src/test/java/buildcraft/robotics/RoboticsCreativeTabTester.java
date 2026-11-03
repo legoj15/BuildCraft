@@ -35,9 +35,10 @@ import buildcraft.transport.BCTransportItems;
 
 /**
  * Pins the dedicated robotics creative tab: registration, title, icon, tab-row position, and the
- * 7.1.10 content layout (robots, then the robot station, then the Robot Goggles, then the boards, then the
- * two robot tables), plus the removals that move implies — robotics items (the Programming and Integration
- * Tables and the Robot Goggles included) off the main tab and the robot station off the pluggables tab.
+ * 7.1.10 content layout (robots, then the robot station, then the boards, then the two robot tables), plus
+ * the removals that move implies — robotics items (the Programming and Integration Tables included) off the
+ * main tab and the robot station off the pluggables tab. The Robot Goggles stay on the main tab, just before
+ * the Gate Copier.
  *
  * <p>Tab contents are rebuilt the way the game does it, {@link CreativeModeTab#buildContents}, which
  * also fires the tab-contents event — so the plugs-tab assertions exercise the very listener the
@@ -94,7 +95,6 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         int firstRobot = firstIndexForItem(items, BCRoboticsItems.ROBOT.get());
         int robotStation = firstIndexForItem(items, BCRoboticsItems.ROBOT_STATION.get());
         int firstBoard = firstIndexForItem(items, BCRoboticsItems.REDSTONE_BOARD.get());
-        int goggles = firstIndexForItem(items, BCCoreItems.GOGGLES.get());
 
         Assertions.assertTrue(zonePlanner >= 0, "the zone planner sits on the robots tab");
         Assertions.assertTrue(firstRobot >= 0, "the robot chassis stacks sit on the robots tab");
@@ -106,11 +106,8 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         Assertions.assertTrue(zonePlanner < firstRobot, "the zone planner leads the tab");
         Assertions.assertTrue(firstRobot < robotStation, "every robot comes before the robot station");
         Assertions.assertTrue(robotStation < firstBoard, "the boards trail the robot station");
-        // The Robot Goggles (a core item that only shows robots) follow the station and precede the boards.
-        Assertions.assertTrue(goggles > robotStation && goggles < firstBoard,
-                "the Robot Goggles sit between the robot station and the boards");
-        Assertions.assertEquals(1, countForItem(items, BCCoreItems.GOGGLES.get()),
-                "the Robot Goggles are on the robots tab exactly once");
+        Assertions.assertEquals(0, countForItem(items, BCCoreItems.GOGGLES.get()),
+                "the Robot Goggles are on the main tab, not the robots tab");
 
         // The empty-board chassis at flat charge, then each registered board's drained and full robot.
         Assertions.assertTrue(containsRobot(items, emptyBoard.getID(), 0),
@@ -144,12 +141,17 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         // proves the build ran, so the robotics absences below are not vacuous.
         Assertions.assertTrue(containsItem(main.getDisplayItems(), BCSiliconItems.ASSEMBLY_TABLE.get()),
                 "precondition: the main tab build is live");
+        List<ItemStack> mainItems = new ArrayList<>(main.getDisplayItems());
+        Assertions.assertEquals(1, countForItem(mainItems, BCCoreItems.GOGGLES.get()),
+                "the Robot Goggles are on the main tab exactly once");
+        Assertions.assertEquals(firstIndexForItem(mainItems, BCSiliconItems.GATE_COPIER.get()) - 1,
+                firstIndexForItem(mainItems, BCCoreItems.GOGGLES.get()),
+                "the Robot Goggles sit directly before the Gate Copier");
         for (ItemStack stack : main.getDisplayItems()) {
             Item item = stack.getItem();
             Assertions.assertTrue(item != BCRoboticsItems.ZONE_PLANNER.get()
                             && item != BCRoboticsItems.ROBOT.get()
                             && item != BCRoboticsItems.REDSTONE_BOARD.get()
-                            && item != BCCoreItems.GOGGLES.get()
                             && item != BCSiliconItems.PROGRAMMING_TABLE.get()
                             && item != BCSiliconItems.INTEGRATION_TABLE.get(),
                     "the main tab must no longer show robotics items (found " + stack + ")");

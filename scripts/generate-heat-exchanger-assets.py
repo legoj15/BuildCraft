@@ -40,6 +40,8 @@ import struct
 import sys
 import zlib
 
+import gen_io
+
 NS = "buildcraftunofficial"
 TEXDIR = NS + ":block/heat_exchange/"
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -282,8 +284,7 @@ def write_png(px, path):
            + chunk(b"IHDR", struct.pack(">IIBBBBB", len(px[0]), len(px), 8, 6, 0, 0, 0))
            + chunk(b"IDAT", zlib.compress(raw, 9))
            + chunk(b"IEND", b""))
-    with open(path, "wb") as f:
-        f.write(png)
+    gen_io.write_bytes(path, png)
 
 
 # =========================================================================================
@@ -537,8 +538,7 @@ def dump_model(model, path):
         else:
             lines.append('    "%s": %s%s' % (k, json.dumps(model[k], indent=4).replace("\n", "\n    "), tail))
     lines.append("}")
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
+    gen_io.write_text(path, "\n".join(lines) + "\n")
 
 
 # =========================================================================================
@@ -581,8 +581,7 @@ def dump_blockstate(bs, path):
             json.dumps(p["apply"]), json.dumps(p["when"]), "," if i < n - 1 else ""))
     lines.append("    ]")
     lines.append("}")
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
+    gen_io.write_text(path, "\n".join(lines) + "\n")
 
 
 def main():
@@ -593,15 +592,12 @@ def main():
     elif args:
         sys.exit(__doc__)
     tex_dir = os.path.join(out, "textures", "block", "heat_exchange")
-    os.makedirs(tex_dir, exist_ok=True)
     for name, painter in TEXTURE_PAINTERS.items():
         write_png(painter(), os.path.join(tex_dir, name + ".png"))
     for name, (elements, parent) in models().items():
         path = os.path.join(out, "models", name + ".json")
-        os.makedirs(os.path.dirname(path), exist_ok=True)
         dump_model(model_json(elements, parent), path)
     path = os.path.join(out, "blockstates", "heat_exchange.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
     dump_blockstate(blockstate(), path)
     print("heat exchanger assets written to", out)
 

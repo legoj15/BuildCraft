@@ -10,12 +10,13 @@
 - Volume-marker distance readout (wrench right-click a marker; branch `claude/marker-distance-expansion-119343`). Delegations: impl built it first try, all six nodes compiled; reviewer (Haiku) pass with nits; review_fast glm-flash approve, deepseek-flash (standing in for busy shop26) comment, both low. The low findings were fixed or narrowed in the docs. CME lead filed as #93. User approved it in-client on 26.3 (2026-11-02).
 - Marker-area lift (#32) is Volume Wrench only now, main hand decides (`087770eb1`). Done by the orchestrator. Delegations: reviewer (Haiku) FAIL on an offhand bypass, which was fixed with a game-test assertion that failed first; review_fast round 1 (shop26, glm-flash) found docs only, which were fixed; final-sha review_fast approved (one low: an offhand-only lift can only be confirmed by an air click, pre-existing, left). User approved it in-client.
 
+- #95: every generator script (`guide-to-guideme`, `guide-to-wiki`, `generate-heat-exchanger-assets`, `generate-gate-swap-recipes`) writes through `scripts/gen_io.py`: an unchanged file is skipped modulo line endings, a changed one keeps its own endings, and only outputs no longer generated are pruned. A full guide export on this checkout now changes 0 files.
+
 ## Next
 - Nothing queued here; planned work is in GitHub Issues (`issues.sh ready`).
 
 ## Open questions / leads (unverified)
 - Keep the heat exchanger's dark-green seal as its accent? Recommended yes (the 1.12.2 exchanger's colour); alternative is an #a7a7a7 bezel with green only on the slot walls.
-- Debt: `scripts/generate-heat-exchanger-assets.py` and `scripts/guide-to-guideme.py` rewrite unchanged files on every run (LF over the CRLF checkout; the guide export dirtied 243 files); #95 tracks a skip-unchanged fix for both.
 - `EnumColor.brushSprites` looks like dead code.
 - The Guava `ModelCache` may have a similar reload window to the one #81 closed. Not checked.
 - Stale worktrees under `.claude/worktrees/` (merged `heat-exchanger-redesign-cc2297`, `heat-exchanger-uniformity-130a0d`, three `agent-*`, sixteen `wf_*`) can be cleaned up.

@@ -32,9 +32,9 @@ import hashlib
 import json
 import posixpath
 import re
-import shutil
 import sys
 
+import gen_io
 from guide_model import (ASSETS, GUIDE_DIR, LANG, LANG_FILE, RECIPE_DIR, REPO, Guide, attrs_of, drop_block,
                          grouped, keep_block, lang_name, recipe_ingredient_ids, recipe_result_id, split_id,
                          strip_comment_lines, subtype_name, system_name, warn, warnings)
@@ -519,23 +519,19 @@ def main():
     for path in files:
         if not VALID_PAGE.fullmatch(path):
             warn(f"page id '{path}' is not a valid resource path")
-    if GUIDE_OUT.exists():
-        shutil.rmtree(GUIDE_OUT)
-    for path, text in files.items():
-        f = GUIDE_OUT / path
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(text.rstrip() + "\n", encoding="utf-8", newline="\n")
-    GUIDE_DEF.parent.mkdir(parents=True, exist_ok=True)
-    GUIDE_DEF.write_text(guide_definition(), encoding="utf-8", newline="\n")
+    changed = sum(gen_io.write_text(GUIDE_OUT / path, text.rstrip() + "\n") for path, text in files.items())
+    removed = gen_io.prune(GUIDE_OUT, [GUIDE_OUT / path for path in files])
+    changed += gen_io.write_text(GUIDE_DEF, guide_definition())
 
     keys = set(LANG.read)
     stamp = ["# Written by scripts/guide-to-guideme.py; GuideMeExportStalenessTest checks it. Do not edit.",
              f"inputs {input_hash(keys)}",
              f"outputs {_digest(output_files()).hexdigest()}"]
     stamp += [f"lang {k}" for k in sorted(keys)]
-    STAMP.write_text("\n".join(stamp) + "\n", encoding="utf-8", newline="\n")
+    gen_io.write_text(STAMP, "\n".join(stamp) + "\n")
 
-    print(f"Wrote {len(files)} GuideME pages ({len(ex.entries)} entries) to {GUIDE_OUT.relative_to(REPO)}")
+    print(f"Exported {len(files)} GuideME pages ({len(ex.entries)} entries) to {GUIDE_OUT.relative_to(REPO)}: "
+          f"{changed} file(s) changed, {removed} removed")
     print(f"Code-registered recipes left out: {ex.dropped_recipes}")
     if warnings:
         print(f"\n{len(warnings)} warning(s):")

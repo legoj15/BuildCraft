@@ -16,7 +16,7 @@ Robots fly off to work and vanish behind walls, trees and hillsides, and you onl
 
 ## Information
 
-Wear them in the head slot, or right-click with them to put them on. They give no armour, never wear out and cannot be enchanted.
+Wear them in the head slot, or right-click with them to put them on. With Curios installed they also fit its head slot, and with Accessories its face slot, so they can be worn alongside a helmet. They give no armour, never wear out and cannot be enchanted.
 
 While they are on, every [Robot](./robot.md) in range is outlined through walls, trees and hillsides. The outline shows its charge: red when the battery is empty, green when it is full, and a dimmer blend of the two in between. A robot low enough to go looking for a charging station is already mostly red. Only you see the outlines; they are not part of the world.
 

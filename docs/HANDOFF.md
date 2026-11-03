@@ -11,11 +11,11 @@
 - Marker-area lift (#32) is Volume Wrench only now, main hand decides (`087770eb1`). Done by the orchestrator. Delegations: reviewer (Haiku) FAIL on an offhand bypass, which was fixed with a game-test assertion that failed first; review_fast round 1 (shop26, glm-flash) found docs only, which were fixed; final-sha review_fast approved (one low: an offhand-only lift can only be confirmed by an air click, pre-existing, left). User approved it in-client.
 
 ## Next
-- #89: two unit tests were already red on 26.3: the GuideMeExportStalenessTest export is stale, and the zh_cn `generateQuarryPits` lang key is missing.
+- Nothing queued here; planned work is in GitHub Issues (`issues.sh ready`).
 
 ## Open questions / leads (unverified)
 - Keep the heat exchanger's dark-green seal as its accent? Recommended yes (the 1.12.2 exchanger's colour); alternative is an #a7a7a7 bezel with green only on the slot walls.
-- Debt: `scripts/generate-heat-exchanger-assets.py` rewrites every model JSON on each run (LF over the CRLF checkout), dirtying 9 files; make it skip unchanged content.
+- Debt: `scripts/generate-heat-exchanger-assets.py` and `scripts/guide-to-guideme.py` rewrite unchanged files on every run (LF over the CRLF checkout; the guide export dirtied 243 files); #95 tracks a skip-unchanged fix for both.
 - `EnumColor.brushSprites` looks like dead code.
 - The Guava `ModelCache` may have a similar reload window to the one #81 closed. Not checked.
 - Stale worktrees under `.claude/worktrees/` (merged `heat-exchanger-redesign-cc2297`, `heat-exchanger-uniformity-130a0d`, three `agent-*`, sixteen `wf_*`) can be cleaned up.

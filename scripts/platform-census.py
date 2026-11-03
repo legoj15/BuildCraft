@@ -34,7 +34,7 @@ What it measures, all on the live view (the code the node actually compiles):
     tagged (carry a @LoaderHook annotation) and untagged. A match counts only when the declaring BC type descends
     from the vanilla type that carries the extension (IBlockExtension -> Block, found through class headers in the
     same sources), so a BC method that merely shares a name with an extension method is not mistaken for a patch.
- 5. Implementation leaks (any one makes the exit code 1): a common file naming buildcraft.platform.neoforge other than
+ 5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge or .fabric) other than
     the binders, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package.
  6. Stonecutter directive lines remaining in common code.
  7. Test-tree figures (src/test/java), informational.
@@ -70,7 +70,7 @@ REPO = Path(__file__).resolve().parent.parent
 IMPL_PREFIX = "buildcraft/platform/neoforge/"
 #: Loader implementation packages. Contract rules apply to every other file under buildcraft/platform/.
 LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/")
-#: The only common files allowed to name buildcraft.platform.neoforge (the compile-time binders).
+#: The only common files allowed to name a loader implementation package (the compile-time binders).
 BINDERS = ("buildcraft/platform/Platform.java", "buildcraft/platform/client/ClientPlatform.java")
 #: The oldest node. Its commented arms do not count toward the finish line (NeoForge-only forever).
 LEGACY_NODE = "1.21.1"
@@ -736,7 +736,7 @@ def analyze(text, rel, nodes, warnings, ext_index):
             line = lx.line_of(offset + m.start())
             res.comment_refs.append((line, m.group(), states.nodes_at(line)))
 
-    if not rel.startswith(IMPL_PREFIX):
+    if not rel.startswith(LOADER_PREFIXES):
         if rel not in BINDERS:
             res.impl_named = [lx.line_of(m.start()) for m in _IMPL_NAME.finditer(masked)]
         if rel.startswith("buildcraft/platform/") and not rel.startswith(LOADER_PREFIXES):
@@ -998,7 +998,7 @@ def test_figures(results, top):
     return {"files": h["files"], "imports": h["imports"], "fqn": h["fqn"], "string_refs": h["string_refs"],
             "inside_platform_neoforge": h["impl"], "by_group": h["by_group"][:8], "top_files": h["top_files"][:5],
             "directive_lines": directive_figures(results, 1)["lines"],
-            "impl_named": sum(len(r.impl_named) for r in results if not r.rel.startswith(IMPL_PREFIX))}
+            "impl_named": sum(len(r.impl_named) for r in results if not r.rel.startswith(LOADER_PREFIXES))}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -1241,7 +1241,7 @@ def render_text(r):
     out.append("== 5. Impl leaks ==")
     out.append(f"  leaks: {lk['count']}")
     for item in lk["impl_named_outside_binder"]:
-        out.append(f"  LEAK names buildcraft.platform.neoforge outside the binders: {item['file']}:{item['line']}")
+        out.append(f"  LEAK names a loader impl package outside the binders: {item['file']}:{item['line']}")
     for item in lk["contract_violations"]:
         out.append(f"  LEAK platform contract names {item['what']} ({item['text']}): {item['file']}:{item['line']}")
     out.append("")
@@ -1263,7 +1263,7 @@ def render_text(r):
                    f"src/test/.../platform/neoforge ({t['string_refs']} more inside string literals); "
                    f"inside it: {t['inside_platform_neoforge']['files']} files / "
                    f"{t['inside_platform_neoforge']['imports']} imports / {t['inside_platform_neoforge']['fqn']} FQN")
-        out.append(f"  directive lines: {t['directive_lines']}; tests naming buildcraft.platform.neoforge outside "
+        out.append(f"  directive lines: {t['directive_lines']}; tests naming a loader impl package outside "
                    f"its test package: {t['impl_named']}")
         out += _table(["group", "imports", "fqn", "files"],
                       [(g["name"], g["imports"], g["fqn"], g["files"]) for g in t["by_group"]])

@@ -61,7 +61,9 @@ public abstract class BlockEngineBase_BC8 extends Block
         implements EntityBlock, ICustomRotationHandler, SimpleWaterloggedBlock {
 
     public BlockEngineBase_BC8(Properties properties) {
-        super(properties.noOcclusion());
+        // Not a redstone conductor, as in 1.7.10/1.12.2: a lever on the engine's back must switch the engine on
+        // without also powering (and pausing) the machine the engine drives.
+        super(properties.noOcclusion().isRedstoneConductor((state, level, pos) -> false));
         registerDefaultState(defaultBlockState()
             .setValue(BuildCraftProperties.BLOCK_FACING_6, Direction.UP)
             .setValue(BCWaterlogging.WATERLOGGED, false));

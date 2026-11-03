@@ -29,7 +29,6 @@ import buildcraft.lib.misc.RegistryKeyUtil;
 import buildcraft.lib.misc.VecUtil;
 import buildcraft.lib.misc.data.Box;
 
-import buildcraft.core.BCCoreBlocks;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.energy.BCEnergyFluids.FluidEntry;
@@ -455,9 +454,7 @@ public class OilGenerator {
                 // Radius 1 explicitly: `radius` above is only narrowed to 1 inside the spout branch, so with
                 // spouts disabled it would still hold the sphere's 4-16 and carve a giant oil column.
                 structures.add(createTube(new BlockPos(x, tubeStart, z), tubeLength, 1, Axis.Y));
-                if (BCCoreBlocks.SPRING_OIL != null) {
-                    structures.add(createSpring(new BlockPos(x, level.getMinY(), z)));
-                }
+                structures.add(createSpring(new BlockPos(x, level.getMinY(), z)));
             }
         }
         return structures;
@@ -560,9 +557,7 @@ public class OilGenerator {
         if (hasSpring) {
             int tubeStart = minY + 2;
             structures.add(createTube(new BlockPos(x, tubeStart, z), wellY - tubeStart, 1, Axis.Y, ReplaceType.ALWAYS, oil));
-            if (BCCoreBlocks.SPRING_OIL != null) {
-                structures.add(createSpring(new BlockPos(x, minY, z), oil));
-            }
+            structures.add(createSpring(new BlockPos(x, minY, z), oil));
         }
         return structures;
     }

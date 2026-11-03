@@ -1,6 +1,6 @@
 {
   "name": "goggles-worn",
-  "description": "Robot Goggles worn look (issue #45): the head layer draws the goggles through their own 3D item/goggles_worn model in the HEAD display context, every other view keeps the flat icon. 1.21.10+ switches models in items/goggles.json; 1.21.1 gets the same switch from the build's item-model downport (neoforge:separate_transforms), so the node to compare is 1.21.1 against the rest. Four husks (sun-proof, so they stand still at noon) show the goggles from the front, a three-quarter turn, the side and the back (strap and chipset), then the player wears them in both third-person views, in the inventory doll and as a held item.",
+  "description": "Robot Goggles worn look (issue #45): the head layer draws the goggles through their own 3D item/goggles_worn model in the HEAD display context, every other view keeps the flat icon. 1.21.10+ switches models in items/goggles.json; 1.21.1 gets the same switch from the build's item-model downport (neoforge:separate_transforms), so the node to compare is 1.21.1 against the rest. Four husks (sun-proof, so they stand still at noon) show the goggles from the front, a three-quarter turn, the side and the back (strap and chipset), two more pairs show them together with an iron helmet the way a bauble slot would draw both, then the player wears them in both third-person views, in the inventory doll and as a held item.",
   "base": [20, 150, 40],
   "guiScale": 3,
   "steps": [
@@ -31,16 +31,31 @@
     { "do": "shot", "name": "stands", "look": "four husks, each wearing the 3D goggles round its head (iron frame, glass, black strap), NOT a flat icon stuck to the face. The camera faces south, so right to left: front, three-quarter, side, back" },
     { "do": "tp", "at": [-3, 0, 2], "yaw": 0, "pitch": -3 },
     { "do": "wait", "ms": 800 },
-    { "do": "shot", "name": "front", "look": "close-up, face on: two lenses over the eye row, rounded frame corners, a plain bridge between them, strap running off both sides" },
+    { "do": "shot", "name": "front", "look": "close-up, face on: two green see-through lenses over the eye row (the eyes show behind them, the shine is a paler green), rounded frame corners, a plain bridge between them, strap running off both sides" },
     { "do": "tp", "at": [-1, 0, 2], "yaw": 0, "pitch": -3 },
     { "do": "wait", "ms": 800 },
     { "do": "shot", "name": "three-quarter", "look": "close-up, turned 45: the frame stands only slightly proud of the face, the strap wraps the side of the head" },
     { "do": "tp", "at": [1, 0, 2], "yaw": 0, "pitch": -3 },
     { "do": "wait", "ms": 800 },
-    { "do": "shot", "name": "side", "look": "close-up, side on: a thin profile, the strap a flat band round the head, no part floating off it" },
+    { "do": "shot", "name": "side", "look": "close-up, side on: a thin profile; only the iron frame has depth, the strap is a flat band with no edges, lying just off the head" },
     { "do": "tp", "at": [3, 0, 2], "yaw": 0, "pitch": -3 },
     { "do": "wait", "ms": 800 },
     { "do": "shot", "name": "back", "look": "close-up, from behind: the redstone chipset sits on the back of the strap" },
+    { "label": "a helmet and the goggles at once, as a bauble slot would draw them: each pair is a husk in an iron helmet and an invisible twin on the same spot wearing the goggles (no-AI mobs never apply a push, so the two heads stay aligned)", "do": "cmd", "run": [
+      "summon minecraft:husk {X-5}.5 {Y} {Z+4}.5 {Rotation:[135f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\",\"bcgoghelm\"]}",
+      "summon minecraft:husk {X-5}.5 {Y} {Z+4}.5 {Rotation:[135f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\",\"bcgogtwin\"]}",
+      "summon minecraft:husk {X+5}.5 {Y} {Z+4}.5 {Rotation:[315f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\",\"bcgoghelm\"]}",
+      "summon minecraft:husk {X+5}.5 {Y} {Z+4}.5 {Rotation:[315f,0f],NoAI:1b,Silent:1b,PersistenceRequired:1b,Tags:[\"bcgog\",\"bcgogtwin\"]}",
+      "item replace entity @e[type=minecraft:husk,tag=bcgoghelm] armor.head with minecraft:iron_helmet",
+      "item replace entity @e[type=minecraft:husk,tag=bcgogtwin] armor.head with buildcraftunofficial:goggles",
+      "effect give @e[type=minecraft:husk,tag=bcgogtwin] minecraft:invisibility infinite 0 true"
+    ] },
+    { "do": "tp", "at": [-5, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 1000 },
+    { "do": "shot", "name": "helmet-front", "look": "a husk in an iron helmet wearing the goggles too, turned 45: the iron frame and the green glass sit in front of the helmet's face opening, the strap hidden under the helmet's sides, no speckled or striped patch where goggles and helmet meet" },
+    { "do": "tp", "at": [5, 0, 2], "yaw": 0, "pitch": -3 },
+    { "do": "wait", "ms": 800 },
+    { "do": "shot", "name": "helmet-back", "look": "the same from behind: the chipset stands just proud of the helmet's back, no strap showing through the helmet's back" },
     { "label": "husks away (into the void, so no death puff or drops in the next shots), goggles on the player", "do": "cmd", "run": [
       "tp @e[type=minecraft:husk,tag=bcgog] {X} -200 {Z}",
       "item replace entity @p armor.head with buildcraftunofficial:goggles"

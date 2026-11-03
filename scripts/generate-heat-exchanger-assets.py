@@ -274,17 +274,42 @@ TEXTURE_PAINTERS = {
 
 
 def write_png(px, path):
-    """Minimal RGBA PNG writer (no Pillow needed). Pixel-deterministic; the bytes follow the local zlib build, so a regeneration on another machine can rewrite unchanged PNGs."""
+    """Minimal RGBA PNG writer (no Pillow needed). Pixel-deterministic; the compressed bytes follow the local zlib
+    build, so an existing PNG with the same header and pixels is left alone rather than byte-compared."""
     raw = b"".join(b"\x00" + bytes(v for (r, g, b) in row for v in (r, g, b, 255)) for row in px)
+    ihdr = struct.pack(">IIBBBBB", len(px[0]), len(px), 8, 6, 0, 0, 0)
+    if os.path.exists(path) and png_contents(path) == (ihdr, raw):
+        return
 
     def chunk(tag, data):
         return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
     png = (b"\x89PNG\r\n\x1a\n"
-           + chunk(b"IHDR", struct.pack(">IIBBBBB", len(px[0]), len(px), 8, 6, 0, 0, 0))
+           + chunk(b"IHDR", ihdr)
            + chunk(b"IDAT", zlib.compress(raw, 9))
            + chunk(b"IEND", b""))
     gen_io.write_bytes(path, png)
+
+
+def png_contents(path):
+    """(IHDR data, decompressed IDAT stream) of a PNG, or None if it cannot be read as one."""
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        if data[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        pos, ihdr, idat = 8, None, b""
+        while pos + 8 <= len(data):
+            n, tag = struct.unpack(">I4s", data[pos:pos + 8])
+            body = data[pos + 8:pos + 8 + n]
+            if tag == b"IHDR":
+                ihdr = body
+            elif tag == b"IDAT":
+                idat += body
+            pos += 12 + n
+        return ihdr, zlib.decompress(idat)
+    except (OSError, struct.error, zlib.error):
+        return None
 
 
 # =========================================================================================

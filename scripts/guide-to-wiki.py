@@ -414,9 +414,9 @@ def main():
         written += 1
 
     pages += [write_sidebar(entries), write_home(entries), write_footer()]
-    gen_io.prune(OUT, pages, "*.md")
+    removed = gen_io.prune(OUT, pages, "*.md")
 
-    print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs)")
+    print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs, {removed} stale removed)")
     print(f"Recipes indexed: {len(all_recipes)}")
     if warnings:
         print(f"\n{len(warnings)} warning(s):")

@@ -5,6 +5,7 @@ A Windows checkout (core.autocrlf=true) holds CRLF working copies of LF blobs. R
 with other line endings shows it as modified in git status, so a regeneration that touched 4 pages used to
 dirty 247. These helpers leave a file alone when only its line endings would change, keep the file's own
 line endings when its content does change (LF for a new file), and prune only outputs no longer generated.
+Needs Python 3.10+ (Path.write_text's newline argument).
 """
 
 from pathlib import Path
@@ -36,18 +37,24 @@ def write_bytes(path, data):
 
 
 def prune(root, keep, pattern="**/*"):
-    """Delete files under root matching pattern that are not in keep, then any directories left empty.
-    Returns the number of files deleted."""
-    root = Path(root)
+    """Delete files under root matching pattern that are not in keep, then the directories those deletions left
+    empty (never root itself, never a directory nothing was deleted from). Returns the number of files deleted."""
+    root = Path(root).resolve()
     if not root.exists():
         return 0
     keep = {Path(p).resolve() for p in keep}
+    emptied = set()
     removed = 0
     for p in root.glob(pattern):
-        if p.is_file() and p.resolve() not in keep:
+        # generators never write symlinks, so one is not ours to prune (and unlinking a resolved path would
+        # delete its target, possibly outside root)
+        if p.is_symlink() or not p.is_file():
+            continue
+        if p.resolve() not in keep:
             p.unlink()
             removed += 1
-    for d in sorted((d for d in root.rglob("*") if d.is_dir()), key=lambda d: len(d.parts), reverse=True):
+            emptied.update(d for d in p.parents if d != root and root in d.parents)
+    for d in sorted(emptied, key=lambda d: len(d.parts), reverse=True):
         if not any(d.iterdir()):
             d.rmdir()
     return removed

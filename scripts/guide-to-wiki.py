@@ -18,7 +18,7 @@ This script reads all of that and emits a self-contained GitHub wiki:
 Re-runnable: regenerate whenever the guide content changes. Output goes to
 wiki-export/ (gitignored), or pass the BuildCraft.wiki checkout as output_dir and commit
 and push it there. Stale pages are pruned only if they carry GENERATED_MARK, so pages
-written by hand on the wiki survive.
+written by hand on the wiki survive, and are listed under Other Pages in _Sidebar and Home.
 
 The guide itself (entries, titles, recipes, contents order) is read by guide_model.py, which
 scripts/guide-to-guideme.py shares; this file only renders it as wiki markdown.
@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 import gen_io
-from guide_model import (ASSETS, CATEGORY_GROUPS, COLOUR_TAGS, MODELS, REPO, Guide, drop_block, grouped,
+from guide_model import (ASSETS, CATEGORY_GROUPS, COLOUR_TAGS, CONFIG, MODELS, OTHER, REPO, Guide, drop_block, grouped,
                          ing_ids, keep_block, lang_name, prettify, split_id, strip_comment_lines,
                          subtype_name, system_name, warn, warnings)
 
@@ -426,7 +426,8 @@ def main():
         pages.append(page)
         written += 1
 
-    pages += [write_sidebar(entries), write_home(entries), write_footer()]
+    hand = hand_written_titles(pages)
+    pages += [write_sidebar(entries, hand), write_home(entries, hand), write_footer()]
     removed = gen_io.prune(OUT, pages, "*.md", owned=is_generated)
 
     print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs, {removed} stale removed)")
@@ -441,21 +442,40 @@ def main():
 # --------------------------------------------------------------------------- #
 # Sidebar / Home / Footer
 # --------------------------------------------------------------------------- #
-def write_sidebar(entries):
+def hand_written_titles(pages):
+    """Titles of the pages written by hand on the wiki (no GENERATED_MARK, not this run's output, not a _Sidebar-style
+    special page or Home). The wiki titles a page by its file name with dashes read as spaces."""
+    ours = {p.resolve() for p in pages}
+    return sorted((p.stem.replace("-", " ") for p in OUT.glob("*.md")
+                   if p.resolve() not in ours and not p.stem.startswith("_") and p.stem != "Home"
+                   and not p.is_symlink() and p.is_file() and not is_generated(p)), key=str.lower)
+
+def contents(entries, hand):
+    """grouped() as page titles, with the hand-written pages listed under Other Pages."""
+    out = [(key, [(sub, [e.title for e in es]) for sub, es in subs]) for key, subs in grouped(entries)]
+    if hand:
+        other = next((subs for key, subs in out if key == OTHER), None)
+        if other is None:  # the book has no system-less page: Other Pages goes where grouped() would put it
+            other = []
+            out.insert(next((i for i, (key, _) in enumerate(out) if key == CONFIG), len(out)), (OTHER, other))
+        other.append(("", list(hand)))
+    return out
+
+def write_sidebar(entries, hand):
     lines = ["### BuildCraft Wiki", "", "[Home](Home)", ""]
-    for key, subs in grouped(entries):
+    for key, subs in contents(entries, hand):
         lines.append(f"**{system_name(key)}**")
-        for sub, es in subs:
+        for sub, titles in subs:
             sn = subtype_name(sub)
             if sn and len(subs) > 1:
                 lines.append(f"- _{sn}_")
-                lines += [f"  - [[{e.title}]]" for e in es]
+                lines += [f"  - [[{t}]]" for t in titles]
             else:  # a lone or un-subtyped group sits directly under the system
-                lines += [f"- [[{e.title}]]" for e in es]
+                lines += [f"- [[{t}]]" for t in titles]
         lines.append("")
     return write_page(OUT / "_Sidebar.md", "\n".join(lines))
 
-def write_home(entries):
+def write_home(entries, hand):
     total = len(entries)
     # Intro wording is the user's own (hand-edited on the wiki 2026-05-31); keep it.
     lines = [
@@ -467,12 +487,12 @@ def write_home(entries):
         "",
         "## Sections", "",
     ]
-    for key, subs in grouped(entries):
-        count = sum(len(es) for _, es in subs)
+    for key, subs in contents(entries, hand):
+        count = sum(len(titles) for _, titles in subs)
         lines.append(f"### {system_name(key)} ({count})")
-        for sub, es in subs:
+        for sub, titles in subs:
             sn = subtype_name(sub)
-            names = ", ".join(f"[[{e.title}]]" for e in es)
+            names = ", ".join(f"[[{t}]]" for t in titles)
             lines.append(f"- **{sn}:** {names}" if sn else f"- {names}")
         lines.append("")
     lines += [

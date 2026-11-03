@@ -242,7 +242,7 @@ neoForge {
         register("client") {
             client()
             // Mirrors 1.12.2's VERSION.startsWith("$") fallback: any dev workspace is "DEV".
-            // Enables BCLib.DEV-gated affordances (Power Tester block, /bcsoundtest command, ...).
+            // Enables BCLib.DEV-gated affordances (the /bcsoundtest command, debug logging).
             systemProperty("buildcraft.dev", "true")
             // Optional quick-play: boot straight into a saved world for headless in-client checks.
             // `./gradlew :26.1.2:runClient -PbcQuickPlay=<saveFolderName>`. Inert without the property
@@ -272,9 +272,7 @@ neoForge {
         register("gameTestServer") {
             type = "gameTestServer"
             systemProperty("neoforge.enableGameTest", "true")
-            // Power Tester block (BCLib.DEV-gated) is used as the sink in
-            // PipeFlowPowerTester — it accepts unlimited MJ so the test isn't
-            // race-sensitive to a bounded battery filling up between ticks.
+            // Dev workspace, like every other BC run env (see the client run).
             systemProperty("buildcraft.dev", "true")
             gameDirectory = project.file("run-gameTestServer")
             // Optional test filter, on every node: `./gradlew :26.2:runGameTestServer -PbcTests=buildcraftunofficial:robot_*`
@@ -375,13 +373,9 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.test {
     useJUnitPlatform()
 
-    // The unit-test JVM is a dev workspace, like every other BC run env: client, server and
-    // gameTestServer all set -Dbuildcraft.dev=true, so they register the dev-gated content (the
-    // BCCoreItems/BCCoreBlocks/BCCoreBlockEntities static{} gates read BCLib.DEV). Without the
-    // flag here those items are absent from the live registry while their client item definitions
-    // still exist and ship (they are required content for dev runs), which reads as phantom
-    // orphans to ClientItemDefinitionCoverageTester. Keep the test registry identical to the envs
-    // the mod actually runs in.
+    // The unit-test JVM is a dev workspace, like every other BC run env (client, server and
+    // gameTestServer all set -Dbuildcraft.dev=true). No content is dev-gated, so the registry is
+    // the same either way; the flag only turns on dev affordances such as BCDebugging's logging.
     systemProperty("buildcraft.dev", "true")
 
     // CopyrightHeaderTester and StonecutterDirectiveGuardTester read source files themselves off

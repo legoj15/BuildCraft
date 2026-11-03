@@ -55,8 +55,7 @@ import buildcraft.transport.tile.TileFilteredBuffer;
  * <ul>
  *   <li><b>Decorated Laser block</b> — no-inventory baseline that exercises just the
  *       loot table + {@code requiresCorrectToolForDrops} pair. The laser variant is the
- *       only decorated block in public builds; the other five are gated behind
- *       {@code -Dbuildcraft.dev=true} and would resolve to {@code null} in this test.</li>
+ *       only decorated block.</li>
  *   <li><b>Chute</b> — itemManager-backed real inventory, the path most machines use.</li>
  *   <li><b>Autoworkbench</b> — itemManager with a mix of real and PHANTOM slots; verifies
  *       template/filter items are <em>not</em> duplicated on break.</li>

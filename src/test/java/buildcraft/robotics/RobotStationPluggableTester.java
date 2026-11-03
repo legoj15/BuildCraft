@@ -380,12 +380,6 @@ public class RobotStationPluggableTester {
         BlockPos woodPipePos = new BlockPos(2, 3, 5);
         BlockPos pipePos = new BlockPos(2, 4, 5);
 
-        if (BCCoreBlocks.ENGINE_CREATIVE == null) {
-            throw new IllegalStateException(
-                    "ENGINE_CREATIVE not registered — test JVM was launched without -Dbuildcraft.dev=true. "
-                            + "Check build.gradle gameTestServer run config.");
-        }
-
         // The rig is a column at x=2, z=5, but the framework forces only the structure's chunk and a 6x7 cell
         // straddles a chunk border in about 57% of runs: nothing in the column (engine, pipes, station) ticks until
         // its chunk does. Force the whole cell first, and gate the poll below on it ticking.

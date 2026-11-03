@@ -25,9 +25,7 @@ import buildcraft.robotics.zone.ZonePlan;
  * carries absolute coords) and {@link ItemMapLocation#setZone}/{@code getZone}. Also pins the output refusal:
  * a brush whose colour layer is empty must not run the transfer (no empty-zone maps, no map consumed), and
  * an inventory edit must mark the chunk dirty (the setChanged callback wiring that keeps rack contents from
- * silently vanishing on relog). A game test because it builds real {@link ItemStack}s with data components;
- * the {@code gameTestServer} run sets {@code buildcraft.dev=true}, so the otherwise dev-gated
- * {@code MAP_LOCATION} item exists here.
+ * silently vanishing on relog). A game test because it builds real {@link ItemStack}s with data components.
  */
 public class ZonePlannerTransferTester {
 

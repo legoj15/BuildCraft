@@ -36,9 +36,9 @@ import buildcraft.TestHelper;
  * goes in {@code washed_away_by_fluids}. On the older lines both tags are inert.
  * <p>
  * Every entry is written {@code {"id": ..., "required": false}}: these files merge into vanilla tags the whole game
- * reads, and one required entry naming a block that is not registered (the decorated blocks exist only in a dev
- * environment) makes the loader drop the merged tag, vanilla's own entries included, together with every tag that
- * includes it. Optional entries cannot do that; a misspelt id is still caught here, where every block is registered.
+ * reads, and one required entry naming a block that is not registered makes the loader drop the merged tag,
+ * vanilla's own entries included, together with every tag that includes it. Optional entries cannot do that; a
+ * misspelt id is still caught here, where every block is registered.
  * <p>
  * Breaks when a block is added, or its shape or {@code forceSolidOn/Off} changes, without updating the tag files, or
  * when an entry is written as a required one.

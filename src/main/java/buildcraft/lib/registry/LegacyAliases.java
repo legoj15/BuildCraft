@@ -67,8 +67,7 @@ import buildcraft.transport.BCTransportItems;
  * transparently remaps an old ID on load — across namespaces, with no event handler. The module merge
  * was a pure namespace flip (paths preserved), so the bulk of the table is <em>generated</em>: every
  * currently-registered path is re-namespaced under its old submod namespace ({@link #flip}). Path renames
- * (chipsets) and 1.12.2 metadata collapses are layered on as explicit exceptions. Because the generative
- * flip reads the live registers, dev-gated entries (null in public builds) are automatically skipped.
+ * (chipsets) and 1.12.2 metadata collapses are layered on as explicit exceptions.
  *
  * <h2>1.12.2 caveat</h2>
  * Only inventory <em>item stacks</em> survive a 1.12.2 load — placed pre-flatten blocks are turned to air

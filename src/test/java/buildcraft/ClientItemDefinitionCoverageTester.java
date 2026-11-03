@@ -30,8 +30,6 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 
-import buildcraft.lib.BCLib;
-
 /**
  * Pins every registered BuildCraft item to a client item definition, from both directions at once —
  * and the model pointers inside those definitions to model files that actually exist.
@@ -48,10 +46,7 @@ import buildcraft.lib.BCLib;
  *
  * <p>The live registry is the decision procedure, not a source scan: ids built by loops (the 16
  * wires, the 30 fluid buckets) or derived from block ids at runtime ({@code engine_rf}) are
- * invisible to greps over the registration call sites but obvious here. The comparison runs
- * against the DEV registry — the {@code test} task sets {@code -Dbuildcraft.dev=true} like every
- * other BuildCraft run environment — so the dev-gated items and their intentional definitions
- * compare 1:1 instead of reading as phantom orphans.
+ * invisible to greps over the registration call sites but obvious here.
  *
  * <p>Node gate: the three assertions live only on the 1.21.10+ nodes — the sweep was scoped there,
  * because that is where a missing file is directly user-visible: 1.21.10+ consumes these JSONs as
@@ -117,18 +112,6 @@ public class ClientItemDefinitionCoverageTester {
         return ids;
     }
 
-    /** Fails fast when the JVM was not launched with {@code -Dbuildcraft.dev=true}: Gradle's
-     * {@code test} task sets it, but a plain IDE JUnit launch does not, and without it the
-     * dev-gated items are absent from the registry while their definitions still exist — the
-     * reverse check would then report them as orphans and advise deleting required content. */
-    private static void requireDevRegistry() {
-        Assertions.assertTrue(BCLib.DEV,
-            "this guard compares against the DEV item registry — the JVM was launched without"
-                + " -Dbuildcraft.dev=true, so the dev-gated items are missing and their definitions"
-                + " would read as phantom orphans. Run through Gradle's test task (which sets the"
-                + " flag) or add it to the JUnit run config; do not weaken the guard instead.");
-    }
-
     /** Collects the {@code model} id of every node whose {@code type} is exactly
      *  {@code minecraft:model}, recursing into every other value regardless of its key: condition
      *  chains, {@code range_dispatch} entries and tint arrays all carry their file ids on typed
@@ -176,7 +159,6 @@ public class ClientItemDefinitionCoverageTester {
     //? if >=1.21.10 {
     @Test
     public void everyRegisteredItemHasADefinition() {
-        requireDevRegistry();
         Path dir = TestHelper.repoRoot().resolve(DEFINITION_DIR);
         List<String> missing = new ArrayList<>();
         for (String id : registeredItemIds()) {
@@ -198,7 +180,6 @@ public class ClientItemDefinitionCoverageTester {
      * an item was renamed or deleted while its JSON stayed behind. */
     @Test
     public void everyDefinitionBacksARegisteredItem() {
-        requireDevRegistry();
         Set<String> registered = registeredItemIds();
         List<String> orphans = new ArrayList<>();
         for (String id : definitionIds()) {

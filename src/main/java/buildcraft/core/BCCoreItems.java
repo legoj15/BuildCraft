@@ -21,7 +21,6 @@ import buildcraft.core.item.ItemMapLocation;
 import buildcraft.core.item.ItemPaintbrush_BC8;
 import buildcraft.core.item.ItemList_BC8;
 import buildcraft.api.items.FluidItemDrops;
-import buildcraft.lib.BCLib;
 
 public class BCCoreItems {
         public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(BCCore.MODID);
@@ -93,17 +92,8 @@ public class BCCoreItems {
         public static final DeferredItem<net.minecraft.world.item.BlockItem> MARKER_PATH = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.MARKER_PATH);
 
-        // Decorated block items — only LASER ships in public builds; the other five are
-        // dev-gated mirrors of BCCoreBlocks.DECORATED_* and are wired up in the static {}
-        // initializer below.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LASER = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.DECORATED_LASER);
-
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_DESTROY;
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_BLUEPRINT;
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_TEMPLATE;
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_PAPER;
-        public static final DeferredItem<net.minecraft.world.item.BlockItem> DECORATED_LEATHER;
 
         public static final DeferredItem<net.minecraft.world.item.BlockItem> SPRING_WATER = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.SPRING_WATER);
@@ -114,29 +104,6 @@ public class BCCoreItems {
         // Debug block item — sinks MJ power; useful next to an engine in creative.
         public static final DeferredItem<net.minecraft.world.item.BlockItem> POWER_TESTER = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.POWER_TESTER);
-
-        // ─── Dev-only items — gated behind -Dbuildcraft.dev=true ─────────────
-        // Registered only in a dev workspace so unfinished/experimental content isn't lost,
-        // but kept out of public releases. BCCoreClient tags them with a red "Dev only"
-        // tooltip via BCTooltips.markDevOnly.
-
-        static {
-                DECORATED_DESTROY = (BCLib.DEV && BCCoreBlocks.DECORATED_DESTROY != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_DESTROY)
-                                : null;
-                DECORATED_BLUEPRINT = (BCLib.DEV && BCCoreBlocks.DECORATED_BLUEPRINT != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_BLUEPRINT)
-                                : null;
-                DECORATED_TEMPLATE = (BCLib.DEV && BCCoreBlocks.DECORATED_TEMPLATE != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_TEMPLATE)
-                                : null;
-                DECORATED_PAPER = (BCLib.DEV && BCCoreBlocks.DECORATED_PAPER != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_PAPER)
-                                : null;
-                DECORATED_LEATHER = (BCLib.DEV && BCCoreBlocks.DECORATED_LEATHER != null)
-                                ? ITEMS.registerSimpleBlockItem(BCCoreBlocks.DECORATED_LEATHER)
-                                : null;
-        }
 
         public static void init(IEventBus modEventBus) {
                 ITEMS.register(modEventBus);

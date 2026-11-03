@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.api.enums.EnumSpring;
-import buildcraft.lib.BCLib;
 import buildcraft.core.block.BlockMarkerPath;
 import buildcraft.core.block.BlockPowerConsumerTester;
 import buildcraft.core.block.BlockSpring;
@@ -35,24 +34,13 @@ public class BCCoreBlocks {
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
     //
     // Only the LASER variant ever had a survival recipe in 1.12.2 (8 obsidian + redstone
-    // block → 16). The other five were creative-tab only; they remain dev-gated until a
-    // distinct, intentional recipe/use is designed for each — and so carry .noLootTable()
-    // (no shipped loot JSON) since a survival drop only makes sense once a survival path
-    // exists. A production build (no -Dbuildcraft.dev=true) never registers them, so shipping
-    // their loot tables would just orphan the item references and spam the server log; when a
-    // variant is promoted, give it a loot table + recipe and drop the .noLootTable() like LASER.
+    // block → 16); the other five 1.12.2 variants were creative-tab only and are not ported.
     public static final DeferredBlock<Block> DECORATED_LASER = BLOCKS.registerSimpleBlock(
             //? if >=1.21.10 {
             "decorated_laser", () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
             //?} else {
             /*"decorated_laser", BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());*/
             //?}
-
-    public static final DeferredBlock<Block> DECORATED_DESTROY;
-    public static final DeferredBlock<Block> DECORATED_BLUEPRINT;
-    public static final DeferredBlock<Block> DECORATED_TEMPLATE;
-    public static final DeferredBlock<Block> DECORATED_PAPER;
-    public static final DeferredBlock<Block> DECORATED_LEATHER;
 
     // Markers were Material.CIRCUITS in 1.12.2 → hand-breakable (no tool gate); torch-like, so they sound like a torch pitched up.
     private static final SoundType MARKER_SOUND = SoundUtil.pitched(SoundType.WOOD, 1.3f);
@@ -79,49 +67,6 @@ public class BCCoreBlocks {
             "power_tester",
             BlockPowerConsumerTester::new,
             () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
-
-    static {
-        DECORATED_DESTROY = BCLib.DEV
-                ? BLOCKS.registerSimpleBlock("decorated_destroy",
-                        //? if >=1.21.10 {
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
-                        //?} else {
-                        /*BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
-                        //?}
-                : null;
-        DECORATED_BLUEPRINT = BCLib.DEV
-                ? BLOCKS.registerSimpleBlock("decorated_blueprint",
-                        //? if >=1.21.10 {
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
-                        //?} else {
-                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
-                        //?}
-                : null;
-        DECORATED_TEMPLATE = BCLib.DEV
-                ? BLOCKS.registerSimpleBlock("decorated_template",
-                        //? if >=1.21.10 {
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
-                        //?} else {
-                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
-                        //?}
-                : null;
-        DECORATED_PAPER = BCLib.DEV
-                ? BLOCKS.registerSimpleBlock("decorated_paper",
-                        //? if >=1.21.10 {
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
-                        //?} else {
-                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
-                        //?}
-                : null;
-        DECORATED_LEATHER = BCLib.DEV
-                ? BLOCKS.registerSimpleBlock("decorated_leather",
-                        //? if >=1.21.10 {
-                        () -> BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())
-                        //?} else {
-                        /*BlockBehaviour.Properties.of().strength(3.0f).lightLevel(s -> 10).sound(SoundType.METAL).requiresCorrectToolForDrops().noLootTable())*/
-                        //?}
-                : null;
-    }
 
     public static void init(IEventBus modEventBus) {
         BLOCKS.register(modEventBus);

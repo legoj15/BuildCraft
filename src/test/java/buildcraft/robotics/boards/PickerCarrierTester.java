@@ -552,12 +552,6 @@ public class PickerCarrierTester {
         // poll's work budget only once it ticks.
         EntityArenaUtil.forceLoadCell(helper);
 
-        if (BCCoreBlocks.ENGINE_CREATIVE == null) {
-            throw new IllegalStateException(
-                    "ENGINE_CREATIVE not registered — test JVM was launched without -Dbuildcraft.dev=true. "
-                            + "Check build.gradle gameTestServer run config.");
-        }
-
         // Engine -> WOOD kinesis -> stone kinesis -> station. The wood pipe is load-bearing, not
         // decoration: only wood/diaWood kinesis pipes accept power from an engine, so an engine feeding
         // the stone pipe directly would transfer nothing at all.

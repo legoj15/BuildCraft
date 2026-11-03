@@ -132,14 +132,6 @@ public class BCCoreClient {
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.ENGINE_REDSTONE.get(), "tip.block.engine_redstone");
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_VOLUME.get(), "tip.block.marker_volume");
                         buildcraft.lib.client.BCTooltips.addTooltip(BCCoreItems.MARKER_PATH.get(), "tip.block.marker_path");
-                        // Dev-only items get a red "Dev only" tooltip marker.
-                        if (buildcraft.lib.BCLib.DEV) {
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_DESTROY.get());
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_BLUEPRINT.get());
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_TEMPLATE.get());
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_PAPER.get());
-                                buildcraft.lib.client.BCTooltips.markDevOnly(BCCoreItems.DECORATED_LEATHER.get());
-                        }
                 })
         );
         // Register List tooltip handler (shows 'Matches' in tooltip while List GUI is open)

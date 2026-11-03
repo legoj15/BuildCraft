@@ -9,6 +9,7 @@ package buildcraft.core.item;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 //? if <1.21.10 {
 /*import net.minecraft.world.InteractionHand;
@@ -16,10 +17,11 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Equipable;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.DispenserBlock;*/
 //?}
+
+import buildcraft.lib.compat.AccessorySlots;
 
 /**
  * The Robot Goggles: a head-slot item that shows what BuildCraft keeps out of sight. Robots are outlined through walls,
@@ -58,8 +60,15 @@ public class ItemGoggles extends Item {
     }*/
 //?}
 
-    /** Whether {@code entity} has Robot Goggles on its head. The one definition: every goggles-only view asks it. */
+    /** Whether {@code entity} has Robot Goggles on: in the head slot, or in a slot an accessory mod adds (Curios head,
+     *  Accessories face; see {@link AccessorySlots}), so a pack with one need not trade a helmet for them. The one
+     *  definition: every goggles-only view asks it. */
     public static boolean isWornBy(LivingEntity entity) {
-        return entity.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ItemGoggles;
+        return isGoggles(entity.getItemBySlot(EquipmentSlot.HEAD))
+                || AccessorySlots.isEquipped(entity, ItemGoggles::isGoggles);
+    }
+
+    private static boolean isGoggles(ItemStack stack) {
+        return stack.getItem() instanceof ItemGoggles;
     }
 }

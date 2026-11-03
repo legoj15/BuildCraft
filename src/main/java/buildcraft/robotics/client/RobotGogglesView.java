@@ -19,9 +19,24 @@ import buildcraft.core.item.ItemGoggles;
 public final class RobotGogglesView {
     private RobotGogglesView() {}
 
-    /** Whether the local player has Robot Goggles on. False before a world is joined. */
+    private static int cachedPlayerId = Integer.MIN_VALUE;
+    private static int cachedTick;
+    private static boolean cachedWorn;
+
+    /** Whether the local player has Robot Goggles on. False before a world is joined. Every robot asks it once or twice
+     *  a frame, and with an accessory mod installed the answer scans that mod's slots, so it is worked out once per
+     *  player tick (the slots cannot change in between; the player's own tick, not the level's, which stops under
+     *  {@code /tick freeze}). Keyed by entity id, not the player object, so no left world is kept alive. */
     public static boolean localPlayerWearsGoggles() {
         Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && ItemGoggles.isWornBy(mc.player);
+        if (mc.player == null) {
+            return false;
+        }
+        if (mc.player.getId() != cachedPlayerId || mc.player.tickCount != cachedTick) {
+            cachedPlayerId = mc.player.getId();
+            cachedTick = mc.player.tickCount;
+            cachedWorn = ItemGoggles.isWornBy(mc.player);
+        }
+        return cachedWorn;
     }
 }

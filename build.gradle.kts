@@ -186,6 +186,15 @@ repositories {
         forRepository { maven("https://maven.fabricmc.net/") }
         filter { includeModule("net.fabricmc", "fabric-loader") }
     }
+    // The accessory-slot mods (see the AccessorySlots dependencies below).
+    exclusiveContent {
+        forRepository { maven("https://maven.theillusivec4.top/") }
+        filter { includeGroup("top.theillusivec4.curios") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.wispforest.io/releases/") }
+        filter { includeModule("io.wispforest", "accessories-neoforge") }
+    }
     mavenCentral()
 }
 
@@ -341,6 +350,14 @@ dependencies {
         runtimeOnly("dev.architectury:architectury-neoforge:${property("architectury_version")}")
     } else {
         runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
+    }
+
+    // Accessory-slot mods, so Robot Goggles worn in a Curios or Accessories slot count (buildcraft.lib.compat.AccessorySlots).
+    // Compile-only: BC names their API only behind ModList checks. Accessories has no build past 1.21.10, so it is
+    // pinned only on those nodes; only its AccessoriesCapability is used, so its owo-lib dependency stays off the path.
+    compileOnly("top.theillusivec4.curios:curios-neoforge:${property("curios_version")}:api")
+    (findProperty("accessories_version") as String?)?.let {
+        compileOnly("io.wispforest:accessories-neoforge:$it") { isTransitive = false }
     }
 
     // GuideME (AE2's guide library), opt-in for dev runs: `./gradlew :26.3:runClient -PwithGuideMe` loads it so the

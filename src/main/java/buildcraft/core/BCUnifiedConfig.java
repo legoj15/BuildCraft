@@ -38,6 +38,7 @@ public class BCUnifiedConfig {
 
         builder.push("worldgen");
         BCCoreConfig.buildWorldgen(builder);
+        buildcraft.builders.BCBuildersConfig.buildWorldgen(builder);
         buildcraft.energy.BCEnergyConfig.buildWorldgen(builder);
         builder.pop();
 

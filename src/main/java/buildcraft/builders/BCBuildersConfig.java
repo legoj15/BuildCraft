@@ -95,13 +95,15 @@ public class BCBuildersConfig {
                          "A value of 0 means no limit, and a value of 0.5 will mine up to half a block per second.")
                 .defineInRange("quarryMaxBlockMineRate", 0.0, 0.0, 1000.0);
 
+        builder.pop();
+        builder.pop();
+    }
+
+    public static void buildWorldgen(ModConfigSpec.Builder builder) {
         generateQuarryPits = builder
                 .comment("Set true to generate abandoned quarry pits (a rotted frame over a half-dug hole) in new chunks.",
                          "Worlds created with Generate Structures off never get them.",
                          "How rare they are is set by the placed feature buildcraftunofficial:quarry_pit, which a datapack can override.")
                 .define("generateQuarryPits", true);
-
-        builder.pop();
-        builder.pop();
     }
 }

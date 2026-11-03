@@ -61,7 +61,9 @@ public class BCCoreItems {
                         ItemMapLocation::new, props -> props.stacksTo(16));
 
         // Robot Goggles: a head-slot item with no armour value and no durability. >=1.21.10 gets the head slot from
-        // the equippable component; 1.21.1 has none, so ItemGoggles implements Equipable there instead.
+        // the equippable component; 1.21.1 has none, so ItemGoggles implements Equipable there instead. The component
+        // carries no equipment asset on purpose: without one the head layer draws the item through its own HEAD-view
+        // item model, the 3D item/goggles_worn.
         //? if >=1.21.10 {
         public static final DeferredItem<ItemGoggles> GOGGLES = RegistrationUtilBC.registerItem(ITEMS,
                         "goggles",

@@ -21,6 +21,12 @@ import java.io.File
 
 object DataDownport1211 {
 
+    // ItemDisplayContext's serialized names on 1.21.1, the keys separate_transforms looks perspectives up by.
+    private val CONTEXTS_1211 = setOf(
+        "none", "thirdperson_lefthand", "thirdperson_righthand", "firstperson_lefthand", "firstperson_righthand",
+        "head", "gui", "ground", "fixed"
+    )
+
     fun convIngredient1211(v: Any?): Any? = when (v) {
         is String -> if (v.startsWith("#")) linkedMapOf("tag" to v.substring(1)) else linkedMapOf("item" to v)
         is List<*> -> v.map { convIngredient1211(it) }
@@ -111,6 +117,11 @@ object DataDownport1211 {
     //                                    set CUSTOM_MODEL_DATA on 1.21.1 (gated `else` branches in
     //                                    Item{Paintbrush_BC8,List_BC8,MapLocation,GateCopier}), so the
     //                                    overrides resolve the colour/state variant the selector picked.
+    //   • minecraft:select           -> NeoForge's per-view loader, neoforge:separate_transforms, which
+    //     (display_context)              replaces the classic model: the fallback's content is the base,
+    //                                    each case's contexts map to its model (the Goggles: a 3D model on
+    //                                    the head, the flat icon everywhere else). Any other select
+    //                                    property fails the build: no 1.21.1 equivalent.
     @Suppress("UNCHECKED_CAST")
     fun generateOldItemModels1211(itemsDir: File, modelsItemDir: File) {
         if (!itemsDir.isDirectory) return
@@ -181,6 +192,60 @@ object DataDownport1211 {
                         out["overrides"] = overrides
                         write(outFile, out)
                     }
+                }
+                "minecraft:select" -> {
+                    check(spec["property"] == "minecraft:display_context") {
+                        "items/${f.name}: select on ${spec["property"]} has no 1.21.1 equivalent in DataDownport1211"
+                    }
+                    fun modelId(node: Any?): String {
+                        val m = node as? Map<String, Any?>
+                        check(m?.get("type") == "minecraft:model") {
+                            "items/${f.name}: a display_context case must be a plain minecraft:model"
+                        }
+                        return m!!["model"] as String
+                    }
+                    // This output replaces the item's hand-authored classic model, so nothing may point at it.
+                    val ownId = "${modelsItemDir.parentFile.parentFile.name}:item/${f.nameWithoutExtension}"
+                    val perspectives = linkedMapOf<String, Any?>()
+                    for (case in spec["cases"] as List<Map<String, Any?>>) {
+                        val target = modelId(case["model"])
+                        check(target != ownId) { "items/${f.name}: a case points at $ownId, the model this rewrite replaces" }
+                        val contexts = case["when"].let { if (it is List<*>) it else listOf(it) }
+                        contexts.forEach { c ->
+                            val name = c as String
+                            // An unknown name would never match on 1.21.1: that view would quietly keep the base.
+                            check(name in CONTEXTS_1211) { "items/${f.name}: 1.21.1 has no display context \"$name\"" }
+                            perspectives[name] = linkedMapOf("parent" to target)
+                        }
+                    }
+                    // The fallback is usually the very model this rewrite replaces (the goggles' flat icon), so
+                    // its content becomes the base inline instead of a parent reference. 1.21.1 bakes a nested
+                    // item/generated model into the flat icon like a top-level one. GUI lighting comes from the
+                    // wrapper's own gui_light, and a wrapper with no parent defaults to "side" (lit like a
+                    // block), so it carries the flat items' "front". The particle is looked up in the unbaked
+                    // base, and vanilla's item/generated names none (a plain icon gets layer0 only when its icon
+                    // is generated), so the base carries it. One difference stays: ItemEntityRenderer lifts a
+                    // dropped item by a quarter of the ground scale the model reports, and the wrapper reports
+                    // no transforms (scale 1, not item/generated's 0.5), so it floats 2 px higher than a plain
+                    // icon. Drawing still goes through the base's transforms.
+                    val fallbackId = modelId(spec["fallback"] ?: error("items/${f.name}: a select needs a fallback, the 1.21.1 base"))
+                    val fallbackFile = modelsItemDir.parentFile.resolve(fallbackId.substringAfter(':') + ".json")
+                    check(fallbackFile.isFile) { "items/${f.name}: fallback $fallbackId is not a model of this mod ($fallbackFile)" }
+                    val fallback = slurper.parse(fallbackFile) as Map<String, Any?>
+                    val wrapper = linkedMapOf<String, Any?>("loader" to "neoforge:separate_transforms")
+                    val base = LinkedHashMap(fallback)
+                    val flat = (fallback["parent"] as? String)?.removePrefix("minecraft:") in setOf("item/generated", "item/handheld")
+                    if (flat) {
+                        (fallback["gui_light"] ?: "front").let { wrapper["gui_light"] = it }
+                        val textures = LinkedHashMap((fallback["textures"] as? Map<String, Any?>) ?: emptyMap())
+                        if ("particle" !in textures && "layer0" in textures) textures["particle"] = textures["layer0"]
+                        base["textures"] = textures
+                    } else {
+                        fallback["gui_light"]?.let { wrapper["gui_light"] = it }
+                    }
+                    wrapper["base"] = base
+                    wrapper["perspectives"] = perspectives
+                    write(outFile, wrapper)
                 }
             }
         }

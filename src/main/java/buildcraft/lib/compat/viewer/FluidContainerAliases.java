@@ -62,14 +62,7 @@ public final class FluidContainerAliases {
         // interpreter, REI comparator) ignores amount — any-mB shard the
         // player holds will still match this alias.
         registerProvider((fluidStack, sink) -> {
-            if (BCCoreItems.FRAGILE_FLUID_CONTAINER == null) {
-                return;
-            }
-            Item shardItem = BCCoreItems.FRAGILE_FLUID_CONTAINER.get();
-            if (shardItem == null) {
-                return;
-            }
-            ItemStack shard = new ItemStack(shardItem);
+            ItemStack shard = new ItemStack(BCCoreItems.FRAGILE_FLUID_CONTAINER.get());
             FluidStack copy = fluidStack.copy();
             copy.setAmount(ItemFragileFluidContainer.MAX_FLUID_HELD);
             ItemFragileFluidContainer.setFluid(shard, copy);

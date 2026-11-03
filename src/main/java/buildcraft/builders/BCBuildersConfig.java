@@ -24,7 +24,8 @@ public class BCBuildersConfig {
     /** The maximum number of blocks that the quarry is allowed to mine each second. 0 = no limit. */
     public static ModConfigSpec.DoubleValue quarryMaxBlockMineRate;
 
-    /** Whether abandoned quarry pits generate in new chunks (also gated by the core worldGen switch). */
+    /** Whether abandoned quarry pits generate in new chunks (also gated by the core worldGen switch and the
+     *  world's "Generate Structures" option). */
     public static ModConfigSpec.BooleanValue generateQuarryPits;
 
     /** The default for {@link #libraryMaxUploadMb}: the largest scan the default config can make (markers 64 apart
@@ -96,6 +97,7 @@ public class BCBuildersConfig {
 
         generateQuarryPits = builder
                 .comment("Set true to generate abandoned quarry pits (a rotted frame over a half-dug hole) in new chunks.",
+                         "Worlds created with Generate Structures off never get them.",
                          "How rare they are is set by the placed feature buildcraftunofficial:quarry_pit, which a datapack can override.")
                 .define("generateQuarryPits", true);
 

@@ -106,7 +106,10 @@ public record QuarryPitFeature() implements Feature {
             TagKey.create(Registries.BLOCK, Identifier.parse("buildcraftunofficial:quarry_pit_digs_through"));
 
     private static boolean generate(WorldGenLevel level, RandomSource random, BlockPos origin) {
-        if (!BCCoreConfig.worldGen.get() || !BCBuildersConfig.generateQuarryPits.get()) {
+        // A pit reads as a ruin, so the world's "Generate Structures" switch turns it off too; vanilla only gates
+        // registered structures with it, never features.
+        if (!BCCoreConfig.worldGen.get() || !BCBuildersConfig.generateQuarryPits.get()
+                || !level.getLevel().structureManager().shouldGenerateStructures()) {
             return false;
         }
         int x0 = origin.getX() - FRAME_SIZE / 2;

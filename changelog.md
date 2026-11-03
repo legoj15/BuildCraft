@@ -1,6 +1,7 @@
 ###### Changes since 2026.3.0:
 
 * Right-clicking a Volume Marker with a Marker Wrench or Volume Wrench now shows, under the crosshair, how far you stand from it. The distance turns yellow when it is exactly as far as a marker can connect and red, with "(too far)", past that, and a red "not aligned" tells you when you are not lined up with the marker along a direction it can still connect in. With the Volume Wrench, crouch-click a corner of a connected area to read it, since a plain click lifts the area. The readout ends once something connects to that marker, or when you click empty air with the wrench.
+* The mod's textures were recompressed losslessly, so the download is smaller and nothing looks any different.
 * Wrenches now swing faster (attack speed 2), and the Volume Wrench hits harder (4 damage, up from 3.5).
 * Lifting a marked-out area to resize it is now a Volume Wrench feature. A Marker Wrench click on a connected marker now tries to connect it and starts the distance readout, as on any other marker.
 * A Volume Box that a Filler or Architect Table took over can now be resized with the Volume Wrench, like an area marked out with markers; the machine waits while you drag and then works on the new size.

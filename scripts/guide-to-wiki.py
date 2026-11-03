@@ -323,7 +323,15 @@ def convert_body(md, page, ctx):
         # (the link silently disappears). Mirror that — these are stale source links.
         warn(f"{page.path}: unresolved <link to='{target}'> (omitted, as in-game)")
         return ""
-    s = re.sub(r"<link\b[^>]*/?>", do_link, s)
+    # A link alone on its line is the book's block link (one per row). A run of them becomes one list set off by
+    # blank lines: without the bullets GitHub joins a "See also" stack into one line, and without the blank lines
+    # the prose after the last bullet is lazily continued into it. Links inside prose stay inline.
+    def do_block_links(m):
+        items = [do_link(l) for l in re.finditer(r"<link\b[^>\n]*/?>", m.group(0))]
+        items = [f"- {t}" for t in items if t]
+        return "\n" + "\n".join(items) + "\n\n" if items else "\n"
+    s = re.sub(r"(?:^[ \t]*<link\b[^>\n]*/?>[ \t]*(?:\n|\Z))+", do_block_links, s, flags=re.M)
+    s = re.sub(r"<link\b[^>\n]*/?>", do_link, s)
 
     # 6) chapters / headings
     def do_chapter(m):

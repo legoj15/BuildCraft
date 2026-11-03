@@ -30,6 +30,7 @@ import re
 import sys
 from pathlib import Path
 
+import gen_io
 from guide_model import (ASSETS, CATEGORY_GROUPS, COLOUR_TAGS, MODELS, REPO, Guide, drop_block, grouped,
                          ing_ids, keep_block, lang_name, prettify, split_id, strip_comment_lines,
                          subtype_name, system_name, warn, warnings)
@@ -378,12 +379,9 @@ def main():
                link_titles=stack_to_title, page_titles=page_titles,
                category_titles=category_titles, leaf_titles=leaf_titles)
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    for old in OUT.glob("*.md"):
-        old.unlink()
-
     stub_count = 0
     written = 0
+    pages = []
     for e in entries:
         parts = [f"# {e.title}\n"]
         # hero icon
@@ -410,14 +408,15 @@ def main():
                 parts.append(f"\n## Crafting\n\n{r}")
         if e.creative:
             parts.append("\n<sub>⚙️ Creative-only — no survival recipe.</sub>")
-        (OUT / filename(e.title)).write_text("\n".join(parts).strip() + "\n", encoding="utf-8")
+        page = OUT / filename(e.title)
+        gen_io.write_text(page, "\n".join(parts).strip() + "\n")
+        pages.append(page)
         written += 1
 
-    write_sidebar(entries)
-    write_home(entries)
-    write_footer()
+    pages += [write_sidebar(entries), write_home(entries), write_footer()]
+    removed = gen_io.prune(OUT, pages, "*.md")
 
-    print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs)")
+    print(f"Wrote {written} pages to {OUT}  ({stub_count} content-less stubs, {removed} stale removed)")
     print(f"Recipes indexed: {len(all_recipes)}")
     if warnings:
         print(f"\n{len(warnings)} warning(s):")
@@ -441,7 +440,8 @@ def write_sidebar(entries):
             else:  # a lone or un-subtyped group sits directly under the system
                 lines += [f"- [[{e.title}]]" for e in es]
         lines.append("")
-    (OUT / "_Sidebar.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    gen_io.write_text(OUT / "_Sidebar.md", "\n".join(lines).strip() + "\n")
+    return OUT / "_Sidebar.md"
 
 def write_home(entries):
     total = len(entries)
@@ -471,13 +471,15 @@ def write_home(entries):
         "regeneration — change the source `.md` under "
         "`src/main/resources/assets/buildcraftunofficial/compat/buildcraft/guide/` instead.</sub>",
     ]
-    (OUT / "Home.md").write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+    gen_io.write_text(OUT / "Home.md", "\n".join(lines).strip() + "\n")
+    return OUT / "Home.md"
 
 def write_footer():
-    (OUT / "_Footer.md").write_text(
+    gen_io.write_text(OUT / "_Footer.md",
         "<sub>BuildCraft Redux for NeoForge · "
         "[Repository](https://github.com/legoj15/BuildCraft) · "
-        "Generated from the in-game Guide Book.</sub>\n", encoding="utf-8")
+        "Generated from the in-game Guide Book.</sub>\n")
+    return OUT / "_Footer.md"
 
 if __name__ == "__main__":
     main()

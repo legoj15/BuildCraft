@@ -15,7 +15,10 @@ Idempotent; safe to re-run. Output goes under
 src/main/resources/data/buildcraftunofficial/recipe/gate_swap_*.json.
 """
 
+import json
 from pathlib import Path
+
+import gen_io
 
 # Keep enum ordinals in lock-step with EnumGateMaterial / EnumGateLogic /
 # EnumGateModifier in src/main/java/buildcraft/silicon/gate/. If those reorder
@@ -68,8 +71,7 @@ def write_recipe(material: str, material_ord: int, modifier: str, modifier_ord: 
     }
 
     path = OUT_DIR / f"gate_swap_{src_variant}_to_{dst_logic}.json"
-    import json
-    path.write_text(json.dumps(recipe, indent=2) + "\n", encoding="utf-8")
+    gen_io.write_text(path, json.dumps(recipe, indent=2) + "\n")
 
 
 def main() -> None:

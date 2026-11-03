@@ -95,7 +95,7 @@ sync_one() {  # sync_one <neo_version> <mc_version>
         # moddev drops the patched-MC sources jar under the node's build dir AND/OR root
         # build/moddev; search both, version-keyed by filename. The jar is named differently
         # across NeoForge lines:
-        #   26.1.x -> minecraft-patched-<neo>-sources.jar   (patched MC only; NF framework
+        #   26.x   -> minecraft-patched-<neo>-sources.jar   (patched MC only; NF framework
         #                                                     sources come separately from the cache)
         #   1.21.x -> neoforge-<neo>-sources.jar            (a COMBINED MC + NF sources jar)
         # Match either, preferring the explicit patched-MC name when both are present.

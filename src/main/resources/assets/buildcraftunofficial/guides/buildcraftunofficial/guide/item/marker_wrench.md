@@ -12,18 +12,22 @@ item_ids:
 
 <ItemImage id="buildcraftunofficial:marker_wrench" scale="2" float="right" />
 
-Finer control over the areas that your machines work is vital in any large scale engineering project and you need a tool to control that.
+When working on creating paths or volumes, it seriously helps to be able to see the connections live.
 
 ## Information
 
-The Marker Wrench does everything the [Basic Wrench](./wrench.md) does, so it still turns blocks and machines with a click, and it wears down and mends just like it: one use per turn, hit or mined block, and iron ingots on an anvil. Linking markers and handling boxes costs it nothing.
+The Marker Wrench does everything the [Basic Wrench](./wrench.md) does, with the added ability to see marker connections before they are applied, and to keep track of the distances between them or you for easier planning. Linking markers and handling boxes costs no durability.
 
-Hold it and the links you can make between markers appear as thin lasers. Aim at one and click to link those two markers. A click that lands on a laser links it instead of turning the block behind it.
+To visualize connections and see current connection lengths, hold the tool in your hand. To measure distance between yourself and a marker, right-click on it and start walking in a straight line. A distance readout will appear beneath the crosshair. This is the distance from you to the marker, not the total length. The distance readout will persist even after putting the tool away. To remove it, either finish linking markers together, or right-click in the air.
 
-Crouch-click a floating box that no machine has taken to throw it away. To resize an area you have marked out, or drag the corners of any other area, you need the [Volume Wrench](./volume_wrench.md).
+To delete a volume you have created, either break a [Land Mark](../block/marker_volume.md), break the connected machine, or crouch and right-click on it if the markers are already gone without a paired machine.
 
 <Row>
 <RecipesFor id="buildcraftunofficial:marker_wrench" fallbackText="" />
 </Row>
 
 **Used to craft:** <ItemLink id="buildcraftunofficial:volume_wrench" />
+
+If you'd like to be able to edit volumes directly without having to clear and replace Land Marks, check out the Volume Wrench.
+
+- [Volume Wrench](./volume_wrench.md)

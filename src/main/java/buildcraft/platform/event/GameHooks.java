@@ -119,6 +119,12 @@ public interface GameHooks {
      */
     void onBlockPlace(HookOrder order, boolean receiveCancelled, Consumer<BlockPlace> listener);
 
+    /**
+     * Runs {@code listener} each time a player's dig speed is worked out (vanilla's destroy-progress maths, once per
+     * swing, for real and fake players alike, on both sides); it may change the speed.
+     */
+    void onBreakSpeed(BreakSpeed listener);
+
     /** Runs {@code listener} when a block change notifies its neighbours. */
     void onNeighborNotify(NeighborNotify listener);
 
@@ -174,6 +180,17 @@ public interface GameHooks {
     interface EntityInteract {
         /** {@code cancelled}: something before this listener refused the click. */
         void onInteract(Player player, Entity target, boolean cancelled);
+    }
+
+    @FunctionalInterface
+    interface BreakSpeed {
+        /**
+         * {@code pos}: the block being dug, or null when the speed is asked without one; {@code speed}: the speed so
+         * far (vanilla's, then each earlier listener's).
+         *
+         * @return the new speed ({@code speed} to leave it)
+         */
+        float onBreakSpeed(Player player, BlockState state, BlockPos pos, float speed);
     }
 
     @FunctionalInterface

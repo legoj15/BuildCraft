@@ -6,6 +6,9 @@
     "GameTestInfoChunkWaitMixin",
     "ServerLevelGameEventMixin"
   ],
+  "client": [
+    "ClientGameTestThreadStartMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

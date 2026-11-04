@@ -198,6 +198,12 @@ public final class NeoForgeGameHooks implements GameHooks {
     }
 
     @Override
+    public void onBreakSpeed(BreakSpeed listener) {
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.BreakSpeed event) -> event.setNewSpeed(listener.onBreakSpeed(
+                event.getEntity(), event.getState(), event.getPosition().orElse(null), event.getNewSpeed())));
+    }
+
+    @Override
     public void onNeighborNotify(NeighborNotify listener) {
         NeoForge.EVENT_BUS.addListener((BlockEvent.NeighborNotifyEvent event) -> {
             if (event.getLevel() instanceof net.minecraft.world.level.Level level) {

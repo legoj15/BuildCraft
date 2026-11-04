@@ -288,6 +288,31 @@ public final class LoaderTestEvents {
         //?}
     }
 
+    /**
+     * Calls {@code listener} with each player whose dig speed is worked out and the block dug (null when asked
+     * without one): BuildCraft's {@code GameHooks.onBreakSpeed} on both loaders, leaving the speed as it is.
+     */
+    public static Observer observeBreakSpeeds(
+            java.util.function.BiConsumer<net.minecraft.world.entity.player.Player, net.minecraft.core.BlockPos> listener) {
+        BreakSpeeds.OPEN.add(listener);
+        return () -> BreakSpeeds.OPEN.remove(listener);
+    }
+
+    /** The open break-speed observers: one {@code GameHooks.onBreakSpeed} listener, registered on first use. */
+    private static final class BreakSpeeds {
+        static final java.util.List<java.util.function.BiConsumer<net.minecraft.world.entity.player.Player,
+                net.minecraft.core.BlockPos>> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        static {
+            buildcraft.platform.Platform.gameHooks().onBreakSpeed((player, state, pos, speed) -> {
+                for (java.util.function.BiConsumer<net.minecraft.world.entity.player.Player, net.minecraft.core.BlockPos> each : OPEN) {
+                    each.accept(player, pos);
+                }
+                return speed;
+            });
+        }
+    }
+
     //? if fabric {
     /*/^* The open entity-interaction claims on Fabric: one UseEntityCallback per order, in its phase. *^/
     private static final class FabricInteractClaims {

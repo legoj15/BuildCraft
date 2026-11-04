@@ -171,11 +171,8 @@ public class RobotDeployerProtectionTester {
                     "both players were asked about, got " + claim.breakAsks);
             twoPlayerAsks = claim.breakAsks.size();
         }
-        // Fabric posts no event for a swing; its break asks are the probe's (both players) and the break's.
-        if (RobotOwnerIdentityTester.SWINGS_POSTED) {
-            check(!swingers.isEmpty() && swingers.stream().allMatch(GameProfileUtil.getId(deployer)::equals),
-                    "the robot swings as its deployer, got " + swingers);
-        }
+        check(!swingers.isEmpty() && swingers.stream().allMatch(GameProfileUtil.getId(deployer)::equals),
+                "the robot swings as its deployer, got " + swingers);
 
         helper.setBlock(stoneRel, Blocks.STONE);
         try (PlayerClaim claim = new PlayerClaim(stone, null)) {

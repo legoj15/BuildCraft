@@ -74,12 +74,7 @@ public class BoardRobotPump extends RedstoneBoardRobot {
 
     /** The mB the robot is currently carrying (0 when the tank is empty). */
     public int carriedFluid() {
-        //? if >=1.21.10 {
-        return robot.getFluidHandler().getAmountAsInt(0);
-        //?} else {
-        /*net.neoforged.neoforge.fluids.FluidStack carried = robot.getFluidHandler().getFluidInTank(0);
-        return carried == null ? 0 : carried.getAmount();*/
-        //?}
+        return robot.getFluidHandler().getFluidInTank(0).getAmount();
     }
 
     /** Refreshes {@link #fluidFilter} from the robot's LINKED (home) station — 7.1.x's

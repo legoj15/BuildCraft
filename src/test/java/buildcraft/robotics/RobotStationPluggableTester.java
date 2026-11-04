@@ -960,59 +960,15 @@ public class RobotStationPluggableTester {
         }
 
         // EntityRobotBase implements IFluidHandlerAdv — none of these tests touch fluid transfer, so
-        // every method here is an inert stub. Transfer API (>=1.21.10) vs classic IFluidHandler (1.21.1).
-        //? if >=1.21.10 {
+        // every method here is an inert stub.
         @Override
-        public int size() {
-            return 0;
-        }
-
-        @Override
-        public net.neoforged.neoforge.transfer.fluid.FluidResource getResource(int index) {
-            return net.neoforged.neoforge.transfer.fluid.FluidResource.EMPTY;
-        }
-
-        @Override
-        public long getAmountAsLong(int index) {
-            return 0;
-        }
-
-        @Override
-        public long getCapacityAsLong(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
-            return 0;
-        }
-
-        @Override
-        public boolean isValid(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
-            return false;
-        }
-
-        @Override
-        public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                           net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-            return 0;
-        }
-
-        @Override
-        public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                            net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-            return 0;
-        }
-
-        @Override
-        public int extract(buildcraft.api.core.IFluidFilter filter, int maxDrain,
-                            net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
-            return 0;
-        }
-        //?} else {
-        /*@Override
         public int getTanks() {
             return 0;
         }
 
         @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        public buildcraft.api.fluids.BCFluidStack getFluidInTank(int tank) {
+            return buildcraft.api.fluids.BCFluidStack.EMPTY;
         }
 
         @Override
@@ -1021,33 +977,25 @@ public class RobotStationPluggableTester {
         }
 
         @Override
-        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
-            return false;
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resource,
-                         net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
+        public int fill(buildcraft.api.fluids.BCFluidStack resource, boolean simulate) {
             return 0;
         }
 
         @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource,
-                         net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        public buildcraft.api.fluids.BCFluidStack drain(buildcraft.api.fluids.BCFluidStack resource, boolean simulate) {
+            return buildcraft.api.fluids.BCFluidStack.EMPTY;
         }
 
         @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain,
-                         net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
+        public buildcraft.api.fluids.BCFluidStack drain(int maxDrain, boolean simulate) {
+            return buildcraft.api.fluids.BCFluidStack.EMPTY;
         }
 
         @Override
-        public int extract(buildcraft.api.core.IFluidFilter filter, int maxDrain, boolean simulate) {
-            return 0;
-        }*/
-        //?}
+        public buildcraft.api.fluids.BCFluidStack drain(buildcraft.api.core.IFluidFilter filter, int maxDrain,
+                boolean simulate) {
+            return buildcraft.api.fluids.BCFluidStack.EMPTY;
+        }
 
         //? if >=1.21.10 {
         @Override

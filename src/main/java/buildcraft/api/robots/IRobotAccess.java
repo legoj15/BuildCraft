@@ -192,9 +192,9 @@ public interface IRobotAccess {
 
     ItemStack receiveItem(BlockEntity tile, ItemStack stack);
 
-    /** The robot's internal fluid tank (the pump board's cargo), exposed as an {@link IFluidHandlerAdv} —
-     *  the fluid twin of {@link #getTransactor()}. {@code EntityRobotBase} implements the interface itself,
-     *  so the concrete robot answers with {@code this}. */
+    /** The robot's internal fluid tank (the pump board's cargo), exposed as an {@link IFluidHandlerAdv} (a
+     *  BuildCraft view, so an AI working in transactions reads it back as BuildCraft's own storage) —
+     *  the fluid twin of {@link #getTransactor()}. */
     IFluidHandlerAdv getFluidHandler();
 
     /** Melee: attack {@code target} with whatever the robot is holding (the knight/butcher's only way to

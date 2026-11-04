@@ -17,7 +17,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
-import buildcraft.robotics.RobotFluids;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 
 /** Loads fluid from the robot's station input into the robot's own tank, one bucket per pass, until the
  *  tank is full or the station runs dry. Ported from 7.1.x {@code AIRobotLoadFluids} (7.1.x moved the
@@ -82,7 +82,7 @@ public class AIRobotLoadFluids extends AIRobot {
         // Provide Fluids gate action makes canRobotExtractFluid say yes — 7.1.x guarded exactly this with
         // `if (handler == null) return 0;`. Without it every fluid-loading robot's station search (which
         // dry-runs this) throws on the server thread.
-        BCFluidStorage input = RobotFluids.input(station);
+        BCFluidStorage input = FluidHandlerAdvs.storage(station.getFluidInput());
         if (input == null) {
             return 0;
         }
@@ -94,7 +94,7 @@ public class AIRobotLoadFluids extends AIRobot {
         if (filter != null && !filter.matches(resource)) {
             return 0;
         }
-        BCFluidStorage robotTank = RobotFluids.tank(robot);
+        BCFluidStorage robotTank = FluidHandlerAdvs.storage(robot.getFluidHandler());
         int room = robotTank.getCapacity(0, resource) - robotTank.getAmount(0);
         int amount = Math.min(Math.min(available, room), BUCKET);
         if (amount <= 0) {

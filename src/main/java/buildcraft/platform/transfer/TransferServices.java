@@ -27,6 +27,9 @@ public interface TransferServices {
     /** Opens a root transaction on the current thread (throws if one is already open there). */
     BCTransaction openRoot();
 
+    /** Opens a transaction nested in the one open on the current thread, or a root if none is. */
+    BCTransaction openInCurrent();
+
     /** A loader journal driving {@code callbacks}. */
     <S> JournalHandle newJournal(JournalCallbacks<S> callbacks);
 
@@ -45,12 +48,6 @@ public interface TransferServices {
     /** A cached {@link #findItem(Level, BlockPos, Direction)} for one position and side. */
     BCLookupCache<BCItemStorage> itemCache(ServerLevel level, BlockPos pos, Direction side);
 
-    /**
-     * The loader's own item handler for a BuildCraft storage (NeoForge 1.21.10+: a {@code ResourceHandler<ItemResource>};
-     * 1.21.1: an {@code IItemHandler}; Fabric: a {@code Storage<ItemVariant>}). Interim: only common code that still
-     * calls a loader fluid-container API on an item slot uses it, until that code moves behind the fluid seam.
-     */
-    Object toLoaderItemHandler(BCItemStorage storage);
 
     /** The energy storage of the block at {@code pos}, seen from {@code side} (null: unsided), or null if none. */
     BCEnergyStorage findEnergy(Level level, BlockPos pos, Direction side);
@@ -103,16 +100,6 @@ public interface TransferServices {
      */
     boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank);
 
-    /**
-     * The loader's own fluid handler for a BuildCraft storage (NeoForge 1.21.10+: a {@code ResourceHandler<FluidResource>};
-     * 1.21.1: an {@code IFluidHandler}; Fabric: a {@code Storage<FluidVariant>}), and back. Interim: only the robot
-     * API's fluid surface (IFluidHandlerAdv, DockingStation) still exposes loader handlers, until it gets BuildCraft
-     * types of its own.
-     */
-    Object toLoaderFluidHandler(BCFluidStorage storage);
-
-    /** {@link #toLoaderFluidHandler}'s inverse; null stays null. */
-    BCFluidStorage fromLoaderFluidHandler(Object handler);
 
     /** The loader journal behind one {@link BCSnapshotJournal}. */
     interface JournalHandle {

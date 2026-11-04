@@ -13,6 +13,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.transport.pipe.IFlowRedstoneFlux;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeApi;
@@ -90,7 +91,7 @@ public class PipeFlowRedstoneFlux extends AbstractPipeFlowPower implements IFlow
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (facing == null) {
             return null;
         }

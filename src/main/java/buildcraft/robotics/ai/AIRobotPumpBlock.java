@@ -21,7 +21,7 @@ import buildcraft.api.robots.IRobotAccess;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
-import buildcraft.robotics.RobotFluids;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.RobotProtection;
 
 /** Pumps a bucket of fluid out of the source block at {@code blockToPump} (through the in-tree
@@ -84,7 +84,7 @@ public class AIRobotPumpBlock extends AIRobot {
                 && BlockUtil.drainStaysInLoadedChunks(serverLevel, blockToPump, null)) {
             BCFluidStack preview = BlockUtil.drainBlock(serverLevel, blockToPump, false);
             if (preview != null) {
-                BCFluidStorage tank = RobotFluids.tank(robot);
+                BCFluidStorage tank = FluidHandlerAdvs.storage(robot.getFluidHandler());
                 int room = tank.getCapacity(0, preview) - tank.getAmount(0);
                 if (room >= BUCKET && isPermitted(serverLevel)) {
                     // The robot's tank journals its changes, and a journalling storage REQUIRES a live

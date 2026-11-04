@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 
 
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.statements.containers.IRedstoneStatementContainer;
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pluggable.PipePluggable;
@@ -42,9 +43,9 @@ public interface IPipeHolder extends IRedstoneStatementContainer {
     IPipe getNeighbourPipe(Direction side);
 
     /** Gets the given capability going outwards from the pipe. This will test the
-     * {@link PipePluggable#getInternalCapability(Object)} first, and the look at the neighbouring tile. */
+     * {@link PipePluggable#getInternalCapability(BCCapability)} first, and the look at the neighbouring tile. */
     @Nullable
-    <T> T getCapabilityFromPipe(Direction side, @Nonnull Object capability);
+    <T> T getCapabilityFromPipe(Direction side, @Nonnull BCCapability<T> capability);
 
     IWireManager getWireManager();
 

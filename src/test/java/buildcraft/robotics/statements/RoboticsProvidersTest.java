@@ -24,12 +24,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 //?}
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.VanillaSetupBaseTester;
@@ -126,27 +120,15 @@ public class RoboticsProvidersTest extends VanillaSetupBaseTester {
             return seams.contains(Seam.ITEM_INPUT) ? super.getItemInput() : null;
         }
 
-        //? if >=1.21.10 {
         @Override
-        public ResourceHandler<FluidResource> getFluidOutput() {
+        public buildcraft.api.core.IFluidHandlerAdv getFluidOutput() {
             return seams.contains(Seam.FLUID_OUTPUT) ? super.getFluidInput() : null;
         }
 
         @Override
-        public ResourceHandler<FluidResource> getFluidInput() {
+        public buildcraft.api.core.IFluidHandlerAdv getFluidInput() {
             return seams.contains(Seam.FLUID_INPUT) ? super.getFluidInput() : null;
         }
-        //?} else {
-        /*@Override
-        public IFluidHandler getFluidOutput() {
-            return seams.contains(Seam.FLUID_OUTPUT) ? super.getFluidInput() : null;
-        }
-
-        @Override
-        public IFluidHandler getFluidInput() {
-            return seams.contains(Seam.FLUID_INPUT) ? super.getFluidInput() : null;
-        }*/
-        //?}
 
         @Override
         public IRequestProvider getRequestProvider() {

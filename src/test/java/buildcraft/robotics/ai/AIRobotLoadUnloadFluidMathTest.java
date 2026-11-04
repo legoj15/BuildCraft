@@ -14,24 +14,17 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.world.level.material.Fluids;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
-//?}
 
 import buildcraft.VanillaSetupBaseTester;
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.api.statements.StatementSlot;
+import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
+import buildcraft.platform.transfer.BCTransactionContext;
 import buildcraft.robotics.statements.ActionRobotFilter;
 import buildcraft.robotics.statements.ActionStationAcceptFluids;
 import buildcraft.robotics.statements.ActionStationProvideFluids;
@@ -46,27 +39,13 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
 
     private final MockRobotAccess robot = new MockRobotAccess();
 
-    //? if >=1.21.10 {
     private int robotAmount() {
-        return robot.getFluidHandler().getAmountAsInt(0);
+        return robot.getFluidHandler().getFluidInTank(0).getAmount();
     }
 
     private void setRobotFluid(int amount) {
-        if (amount <= 0) {
-            robot.setFluid(FluidResource.EMPTY, 0);
-        } else {
-            robot.setFluid(FluidResource.of(new FluidStack(Fluids.WATER, amount)), amount);
-        }
+        robot.setFluid(amount <= 0 ? BCFluidStack.EMPTY : new BCFluidStack(Fluids.WATER, amount));
     }
-    //?} else {
-    /*private int robotAmount() {
-        return ((IFluidHandler) robot.getFluidHandler()).getFluidInTank(0).getAmount();
-    }
-
-    private void setRobotFluid(int amount) {
-        robot.setFluid(amount <= 0 ? FluidStack.EMPTY : new FluidStack(Fluids.WATER, amount));
-    }*/
-    //?}
 
     @Test
     public void loadDrainsABucketFromTheStationIntoTheRobot() {
@@ -338,9 +317,8 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
     // A DockingStation whose fluid input AND output are the same real single-slot tank — enough surface
     // for the load/unload math, nothing else.
 
-    //? if >=1.21.10 {
     private static final class FluidStation extends DockingStation {
-        private final FluidStacksResourceHandler tank;
+        private final BCFluidTank tank;
 
         FluidStation(int capacity) {
             this(capacity, false, Integer.MAX_VALUE);
@@ -356,14 +334,14 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
          *  (0 = refuses outright) — a source that lies about having fluid. */
         FluidStation(int capacity, boolean refuseFill, int drainCap) {
             super();
-            tank = new FluidStacksResourceHandler(1, capacity) {
+            tank = new BCFluidTank(1, capacity) {
                 @Override
-                public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
                     return refuseFill ? 0 : super.insert(index, resource, amount, transaction);
                 }
 
                 @Override
-                public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
+                public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
                     return super.extract(index, resource, Math.min(amount, drainCap), transaction);
                 }
             };
@@ -375,86 +353,21 @@ public class AIRobotLoadUnloadFluidMathTest extends VanillaSetupBaseTester {
         }
 
         @Override
-        public ResourceHandler<FluidResource> getFluidInput() {
-            return tank;
+        public buildcraft.api.core.IFluidHandlerAdv getFluidInput() {
+            return FluidHandlerAdvs.of(tank);
         }
 
         @Override
-        public ResourceHandler<FluidResource> getFluidOutput() {
-            return tank;
+        public buildcraft.api.core.IFluidHandlerAdv getFluidOutput() {
+            return FluidHandlerAdvs.of(tank);
         }
 
         void fill(int amount) {
-            if (amount <= 0) {
-                tank.set(0, FluidResource.EMPTY, 0);
-            } else {
-                tank.set(0, FluidResource.of(new FluidStack(Fluids.WATER, amount)), amount);
-            }
+            tank.setFluidStack(0, amount <= 0 ? BCFluidStack.EMPTY : new BCFluidStack(Fluids.WATER, amount));
         }
 
         int getAmount() {
-            return tank.getAmountAsInt(0);
+            return tank.getStack(0).getAmount();
         }
     }
-    //?} else {
-    /*private static final class FluidStation extends DockingStation {
-        private final FluidTank tank;
-
-        FluidStation(int capacity) {
-            this(capacity, false, Integer.MAX_VALUE);
-        }
-
-        FluidStation(int capacity, boolean refuseFill) {
-            this(capacity, refuseFill, Integer.MAX_VALUE);
-        }
-
-        // refuseFill: the tank still reports its capacity (so a caller sizes the transfer from the room it
-        // sees) but every fill returns 0 — a station that lies about having room.
-        // drainCap: the tank still reports what it holds but never yields more than this per drain (0 =
-        // refuses outright) — a source that lies about having fluid.
-        FluidStation(int capacity, boolean refuseFill, int drainCap) {
-            super();
-            tank = new FluidTank(capacity) {
-                @Override
-                public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
-                    return refuseFill ? 0 : super.fill(resource, action);
-                }
-
-                @Override
-                public FluidStack drain(FluidStack resource, IFluidHandler.FluidAction action) {
-                    return drainCap <= 0 ? FluidStack.EMPTY
-                            : super.drain(resource.copyWithAmount(Math.min(resource.getAmount(), drainCap)), action);
-                }
-
-                @Override
-                public FluidStack drain(int maxDrain, IFluidHandler.FluidAction action) {
-                    return drainCap <= 0 ? FluidStack.EMPTY : super.drain(Math.min(maxDrain, drainCap), action);
-                }
-            };
-        }
-
-        @Override
-        public Iterable<StatementSlot> getActiveActions() {
-            return Collections.emptyList();
-        }
-
-        @Override
-        public IFluidHandler getFluidInput() {
-            return tank;
-        }
-
-        @Override
-        public IFluidHandler getFluidOutput() {
-            return tank;
-        }
-
-        void fill(int amount) {
-            tank.fill(new FluidStack(Fluids.WATER, amount), IFluidHandler.FluidAction.EXECUTE);
-        }
-
-        int getAmount() {
-            return tank.getFluidInTank(0).getAmount();
-        }
-    }*/
-    //?}
 }

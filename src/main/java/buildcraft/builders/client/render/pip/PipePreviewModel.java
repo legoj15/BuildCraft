@@ -17,6 +17,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -130,7 +131,7 @@ public final class PipePreviewModel {
         }
 
         @Override
-        public <T> T getCapabilityFromPipe(Direction side, Object capability) {
+        public <T> T getCapabilityFromPipe(Direction side, BCCapability<T> capability) {
             return null;
         }
 

@@ -28,6 +28,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.core.BCLog;
@@ -214,7 +215,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     @Override
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (capability == CapUtil.CAP_FLUIDS) {
             return (T) sections.get(EnumPipePart.fromFacing(facing));
         }

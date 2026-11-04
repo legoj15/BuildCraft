@@ -5,9 +5,9 @@ import java.util.Map;
 
 import javax.annotation.Nonnull;
 
+import net.minecraft.resources.Identifier;
 
-
-import buildcraft.api.core.CapabilitiesHelper;
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.IStripesRegistry;
@@ -42,17 +42,23 @@ public final class PipeApi {
     public static final Map<PipeDefinition, PowerTransferInfo> powerTransferData = new IdentityHashMap<>();
     public static final Map<PipeDefinition, RedstoneFluxTransferInfo> rfTransferData = new IdentityHashMap<>();
 
+    // Pipe-internal tokens: flows, behaviours and pluggables answer them to one another (PipeFlowItems hands out its
+    // IInjectable for CAP_INJECTABLE); no block registers them.
     @Nonnull
-    public static final Object CAP_PIPE_HOLDER;
+    public static final BCCapability<IPipeHolder> CAP_PIPE_HOLDER = token("pipe_holder", IPipeHolder.class);
 
     @Nonnull
-    public static final Object CAP_PIPE;
+    public static final BCCapability<IPipe> CAP_PIPE = token("pipe", IPipe.class);
 
     @Nonnull
-    public static final Object CAP_PLUG;
+    public static final BCCapability<PipePluggable> CAP_PLUG = token("plug", PipePluggable.class);
 
     @Nonnull
-    public static final Object CAP_INJECTABLE;
+    public static final BCCapability<IInjectable> CAP_INJECTABLE = token("injectable", IInjectable.class);
+
+    private static <T> BCCapability<T> token(String path, Class<T> type) {
+        return BCCapability.of(Identifier.fromNamespaceAndPath("buildcraftunofficial", path), type);
+    }
 
     public static FluidTransferInfo getFluidTransferInfo(PipeDefinition def) {
         FluidTransferInfo info = fluidTransferData.get(def);
@@ -144,15 +150,6 @@ public final class PipeApi {
             this.transferPerTick = transferPerTick;
             this.isReceiver = isReceiver;
         }
-    }
-
-    // Internals
-
-    static {
-        CAP_PIPE = CapabilitiesHelper.registerCapability(IPipe.class);
-        CAP_PLUG = CapabilitiesHelper.registerCapability(PipePluggable.class);
-        CAP_PIPE_HOLDER = CapabilitiesHelper.registerCapability(IPipeHolder.class);
-        CAP_INJECTABLE = CapabilitiesHelper.registerCapability(IInjectable.class);
     }
 }
 

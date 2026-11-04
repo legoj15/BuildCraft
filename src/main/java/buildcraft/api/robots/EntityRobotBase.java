@@ -136,7 +136,8 @@ public abstract class EntityRobotBase extends Entity implements IRobotAccess, IF
     public abstract IRobotRegistry getRegistry();
 
     /** The robot's fluid tank, exposed to the pump board's AIs. The concrete robot implements
-     *  {@link IFluidHandlerAdv} itself, so the answer is {@code this}. */
+     *  {@link IFluidHandlerAdv} itself, so the default answer is {@code this}; a robot may hand out a view of its
+     *  tank instead. */
     @Override
     public IFluidHandlerAdv getFluidHandler() {
         return this;

@@ -19,19 +19,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
-//?}
 
 import buildcraft.api.boards.RedstoneBoardRobot;
-import buildcraft.api.core.IFluidFilter;
 import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IZone;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.mj.MjBattery;
@@ -40,7 +32,8 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceId;
-import buildcraft.platform.neoforge.NeoForgeFluids;
+import buildcraft.lib.fluid.BCFluidTank;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.entity.UnreachableBlockCache;
 
 /** A whole robot, as far as an AI test cares: a real {@link MjBattery}, a settable position and docking
@@ -57,7 +50,9 @@ public class MockRobotAccess implements IRobotAccess {
     private DockingStation dockingStation;
     private DockingStation linkedStation;
     private ItemStack heldItem = ItemStack.EMPTY;
-    private final RobotFluidTank fluidTank = new RobotFluidTank(4000);
+    /** The mock robot's fluid tank: a real single-slot BuildCraft tank, handed out through the API view. */
+    private final BCFluidTank fluidTank = new BCFluidTank(1, 4000);
+    private final IFluidHandlerAdv fluidHandler = FluidHandlerAdvs.of(fluidTank);
 
     public MockRobotAccess() {
         battery.addPower(TEST_CAPACITY, false);
@@ -67,23 +62,9 @@ public class MockRobotAccess implements IRobotAccess {
         heldItem = stack;
     }
 
-    //? if >=1.21.10 {
-    void setFluid(FluidResource resource, int amount) {
-        fluidTank.set(0, resource, amount);
+    void setFluid(BCFluidStack stack) {
+        fluidTank.setFluidStack(0, stack);
     }
-
-    FluidResource getFluidResource() {
-        return fluidTank.getResource(0);
-    }
-    //?} else {
-    /*void setFluid(FluidStack stack) {
-        fluidTank.setFluid(stack);
-    }
-
-    FluidStack getFluidStack() {
-        return fluidTank.getFluidInTank(0);
-    }*/
-    //?}
 
     void setPosition(Vec3 pos) {
         position = pos;
@@ -166,7 +147,7 @@ public class MockRobotAccess implements IRobotAccess {
 
     @Override
     public IFluidHandlerAdv getFluidHandler() {
-        return fluidTank;
+        return fluidHandler;
     }
 
     @Override
@@ -338,41 +319,6 @@ public class MockRobotAccess implements IRobotAccess {
         }
     }
 
-    /** The mock robot's fluid tank — a real single-slot tank, forked on the same cliff as
-     *  {@link IFluidHandlerAdv}: the Transfer API on 1.21.10+, the classic {@code IFluidHandler}
-     *  {@code FluidTank} on 1.21.1. */
-    //? if >=1.21.10 {
-    static class RobotFluidTank extends FluidStacksResourceHandler implements IFluidHandlerAdv {
-        RobotFluidTank(int capacity) {
-            super(1, capacity);
-        }
-
-        @Override
-        public int extract(IFluidFilter filter, int maxDrain, TransactionContext tx) {
-            FluidResource res = getResource(0);
-            if (res == null || res.isEmpty() || !filter.matches(NeoForgeFluids.fromNeo(res.toStack(getAmountAsInt(0))))) {
-                return 0;
-            }
-            return extract(0, res, maxDrain, tx);
-        }
-    }
-    //?} else {
-    /*static class RobotFluidTank extends FluidTank implements IFluidHandlerAdv {
-        RobotFluidTank(int capacity) {
-            super(capacity);
-        }
-
-        @Override
-        public int extract(IFluidFilter filter, int maxDrain, boolean simulate) {
-            FluidStack inTank = getFluidInTank(0);
-            if (inTank.isEmpty() || !filter.matches(NeoForgeFluids.fromNeo(inTank))) {
-                return 0;
-            }
-            return drain(maxDrain, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE
-                    : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
-        }
-    }*/
-    //?}
 
     @Override
     public long getRobotId() {

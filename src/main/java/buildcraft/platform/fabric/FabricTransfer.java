@@ -78,6 +78,12 @@ public final class FabricTransfer implements TransferServices {
     }
 
     @Override
+    public BCTransaction openInCurrent() {
+        TransactionContext current = Transaction.getCurrentUnsafe();
+        return new Owned(current == null ? Transaction.openOuter() : current.openNested());
+    }
+
+    @Override
     public <S> JournalHandle newJournal(JournalCallbacks<S> callbacks) {
         Participant<S> participant = new Participant<>(callbacks);
         return tx -> participant.updateSnapshots(unwrap(tx));
@@ -159,10 +165,6 @@ public final class FabricTransfer implements TransferServices {
         return null; // Gap: no standard Fabric entity item lookup (see the class notes).
     }
 
-    @Override
-    public Object toLoaderItemHandler(BCItemStorage storage) {
-        return FabricItemStorages.toFabric(storage);
-    }
 
     @Override
     public BCLookupCache<BCItemStorage> itemCache(ServerLevel level, BlockPos pos, Direction side) {
@@ -322,16 +324,6 @@ public final class FabricTransfer implements TransferServices {
         return false;
     }
 
-    @Override
-    public Object toLoaderFluidHandler(BCFluidStorage storage) {
-        return FabricFluidStorages.toFabric(storage);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public BCFluidStorage fromLoaderFluidHandler(Object handler) {
-        return FabricFluidStorages.fromFabric((Storage<FluidVariant>) handler);
-    }
 
     /^* The BuildCraft view of a Fabric transaction someone else opened: it can be nested into, never committed. ^/
 

@@ -80,6 +80,19 @@ public final class NeoForgeTransfer implements TransferServices {
     }
 
     @Override
+    // getCurrentOpenedTransaction is deprecated only as a hint to pass the context instead; a simulate-flag call has
+    // none to pass, which is the case it exists for.
+    @SuppressWarnings("deprecation")
+    public BCTransaction openInCurrent() {
+        //? if >=1.21.10 {
+        TransactionContext current = Transaction.getCurrentOpenedTransaction();
+        return new Owned(current == null ? Transaction.openRoot() : Transaction.open(current));
+        //?} else {
+        /*return LegacyTransactions.openInCurrent();
+        *///?}
+    }
+
+    @Override
     public <S> JournalHandle newJournal(JournalCallbacks<S> callbacks) {
         //? if >=1.21.10 {
         Journal<S> journal = new Journal<>(callbacks);
@@ -176,10 +189,6 @@ public final class NeoForgeTransfer implements TransferServices {
         *///?}
     }
 
-    @Override
-    public Object toLoaderItemHandler(BCItemStorage storage) {
-        return NeoForgeItemStorages.toNeo(storage);
-    }
 
     @Override
     public BCLookupCache<BCItemStorage> itemCache(ServerLevel level, BlockPos pos, @Nullable Direction side) {
@@ -279,21 +288,6 @@ public final class NeoForgeTransfer implements TransferServices {
         return NeoForgeFluidContainers.exchangeWithCarriedContainer(player, tank);
     }
 
-    @Override
-    public Object toLoaderFluidHandler(BCFluidStorage storage) {
-        return NeoForgeFluidStorages.toNeo(storage);
-    }
-
-    @Override
-    @Nullable
-    @SuppressWarnings("unchecked")
-    public BCFluidStorage fromLoaderFluidHandler(@Nullable Object handler) {
-        //? if >=1.21.10 {
-        return NeoForgeFluidStorages.fromNeo((ResourceHandler<FluidResource>) handler);
-        //?} else {
-        /*return NeoForgeFluidStorages.fromNeo((IFluidHandler) handler);*/
-        //?}
-    }
 
     //? if >=1.21.10 {
     /** The BuildCraft view of a NeoForge transaction someone else opened: it can be nested into, never committed. */

@@ -40,6 +40,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.InvalidInputDataException;
 import buildcraft.api.fluids.BCFluidStack;
@@ -843,8 +844,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
 
     @Nullable
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> T getCapabilityFromPipe(Direction side, @Nonnull Object capability) {
+    public <T> T getCapabilityFromPipe(Direction side, @Nonnull BCCapability<T> capability) {
         if (level == null || side == null) return null;
         // Check pluggable on this side first (mirrors 1.12.2 logic)
         PipePluggable plug = getPluggable(side);
@@ -868,21 +868,9 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         if (!level.isLoaded(neighborPos)) {
             return null;
         }
-        if (capability instanceof buildcraft.api.capability.BCCapability<?> bcCap) {
-            // BuildCraft's loader-neutral tokens: the platform layer's lookup (a BuildCraft view for the storage
-            // tokens, the loader capability of the same id for the MJ ones)
-            return (T) buildcraft.platform.transfer.TransferAccess.find(bcCap, level, neighborPos, side.getOpposite());
-        }
-        // For any other token, check if the neighbouring pipe's flow exposes it
-        BlockEntity neighbor = level.getBlockEntity(neighborPos);
-        if (neighbor == null) return null;
-        // MJ capabilities: check if the neighbor pipe's flow exposes them
-        IPipe neighborPipe = getNeighbourPipe(side);
-        if (neighborPipe != null && neighborPipe.getFlow() != null) {
-            T result = neighborPipe.getFlow().getCapability(capability, side.getOpposite());
-            if (result != null) return result;
-        }
-        return null;
+        // The platform layer's lookup: a BuildCraft view for the storage tokens, the loader capability of the same id
+        // for the MJ ones (a neighbouring pipe answers those through its own registrations)
+        return buildcraft.platform.transfer.TransferAccess.find(capability, level, neighborPos, side.getOpposite());
     }
 
     @Override

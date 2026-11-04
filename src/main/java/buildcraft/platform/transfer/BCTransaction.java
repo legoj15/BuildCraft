@@ -26,6 +26,14 @@ public interface BCTransaction extends BCTransactionContext, AutoCloseable {
         return Platform.transfer().openRoot();
     }
 
+    /**
+     * Opens a transaction nested in the one open on this thread, or a root if none is: what a call that carries only
+     * a {@code simulate} flag (no transaction of its own) runs in, so it joins a transaction its caller opened.
+     */
+    static BCTransaction openInCurrent() {
+        return Platform.transfer().openInCurrent();
+    }
+
     /** Opens a root transaction if {@code parent} is null, otherwise a transaction nested in it. */
     static BCTransaction open(BCTransactionContext parent) {
         return parent == null ? openRoot() : parent.openNested();

@@ -19,17 +19,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
 import buildcraft.platform.transfer.BCItemStorage;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
@@ -54,6 +48,7 @@ import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.OwnerData;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.robotics.statements.ActionRobotFilter;
 import buildcraft.robotics.statements.ActionRobotFilterTool;
 import buildcraft.robotics.statements.ActionStationAcceptFluids;
@@ -337,13 +332,8 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return h.getPipe().getBehaviour() instanceof PipeBehaviourWood wood ? wood.getCurrentDir() : null;
     }
 
-    //? if >=1.21.10 {
     @Override
-    public ResourceHandler<FluidResource> getFluidOutput() {
-    //?} else {
-    /*@Override
-    public IFluidHandler getFluidOutput() {
-    *///?}
+    public IFluidHandlerAdv getFluidOutput() {
         IPipeHolder h = getHolder();
         if (h == null || h.getPipe() == null
                 || !(h.getPipe().getFlow() instanceof PipeFlowFluids flow)) {
@@ -357,7 +347,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // virtue of being docked; getStationOutput is the force path, and unlike the pipe's own
         // capability it honours the transaction, so the unload AIs' per-station dry runs stay
         // observational.
-        return RobotFluids.toApi(flow.getStationOutput(side().getOpposite()));
+        return FluidHandlerAdvs.of(flow.getStationOutput(side().getOpposite()));
     }
 
     @Override
@@ -365,13 +355,8 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         return EnumPipePart.CENTER;
     }
 
-    //? if >=1.21.10 {
     @Override
-    public ResourceHandler<FluidResource> getFluidInput() {
-    //?} else {
-    /*@Override
-    public IFluidHandler getFluidInput() {
-    *///?}
+    public IFluidHandlerAdv getFluidInput() {
         IPipeHolder h = getHolder();
         Direction facing = fluidExtractionFacing(h);
         // In memory, not Level.isLoaded: the capability lookup below reads the neighbour cell, which loads a chunk that
@@ -384,7 +369,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // pipe's own extraction face, resolved through the neighbour's block capability exactly as the
         // item input is. A docked robot LOADS
         // fluid from here — 7.1.x's getFluidInput, which the fluid carrier board's load leg needs.
-        return RobotFluids.toApi(h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS));
+        return FluidHandlerAdvs.of(h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS));
     }
 
     @Override

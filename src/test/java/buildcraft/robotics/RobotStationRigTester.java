@@ -222,11 +222,10 @@ public class RobotStationRigTester {
                     "a pipe's neighbour lookup in an unloaded chunk answers nothing rather than loading it");
         }
         helper.assertFalse(level.isLoaded(farA), "the pipe's neighbour lookups loaded the unloaded chunk");
-        Object plainToken = new Object();
         for (Direction dir : Direction.values()) {
-            // Both lookup kinds: a NeoForge block capability, and a plain token resolved through the neighbour tile.
+            // Both lookup kinds: a storage token (adapted) and an MJ token (the loader capability of its id).
             cached.getCapabilityFromPipe(dir, CapUtil.CAP_FLUIDS);
-            cached.getCapabilityFromPipe(dir, plainToken);
+            cached.getCapabilityFromPipe(dir, buildcraft.api.mj.MjAPI.CAP_RECEIVER);
         }
         helper.assertFalse(level.isLoaded(farA), "the pipe's neighbour capability lookups loaded the unloaded chunk");
 

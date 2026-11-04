@@ -11,19 +11,19 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.silicon.recipe.FacadeSwapRecipe;
+import buildcraft.platform.registry.BCRegistrar;
 
 /** Custom crafting-recipe serializers for the Silicon subsystem. */
 public class BCSiliconRecipeSerializers {
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-            DeferredRegister.create(Registries.RECIPE_SERIALIZER, BCSilicon.MODID);
+    public static final BCRegistrar<RecipeSerializer<?>> RECIPE_SERIALIZERS =
+            BCRegistrar.create(Registries.RECIPE_SERIALIZER, BCSilicon.MODID);
 
     public static final Supplier<RecipeSerializer<FacadeSwapRecipe>> FACADE_SWAP =
             RECIPE_SERIALIZERS.register("facade_swap", () -> FacadeSwapRecipe.SERIALIZER);
 
     public static void init(IEventBus modEventBus) {
-        RECIPE_SERIALIZERS.register(modEventBus);
+        RECIPE_SERIALIZERS.subscribe();
     }
 }

@@ -291,8 +291,8 @@ class GuideTxtSystemTagTest {
             BCRoboticsItems.ROBOT.getId().toString(),
             BCRoboticsItems.REDSTONE_BOARD.getId().toString(),
             BCRoboticsItems.ROBOT_STATION.getId().toString(),
-            BCSiliconBlocks.PROGRAMMING_TABLE.getId().toString(),
-            BCSiliconBlocks.INTEGRATION_TABLE.getId().toString(),
+            BCSiliconBlocks.PROGRAMMING_TABLE.id().toString(),
+            BCSiliconBlocks.INTEGRATION_TABLE.id().toString(),
             BCRoboticsBlocks.ZONE_PLANNER.getId().toString(),
             BCRoboticsBlocks.REQUESTER.getId().toString());
         for (String id : expected) {

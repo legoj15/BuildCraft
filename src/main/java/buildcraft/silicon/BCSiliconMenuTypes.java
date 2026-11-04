@@ -12,16 +12,16 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.platform.Platform;
 import buildcraft.silicon.container.ContainerAdvancedCraftingTable;
 import buildcraft.silicon.container.ContainerAssemblyTable;
 import buildcraft.silicon.container.ContainerIntegrationTable;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCSiliconMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-        DeferredRegister.create(Registries.MENU, BCSilicon.MODID);
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+        BCRegistrar.create(Registries.MENU, BCSilicon.MODID);
 
     public static final Supplier<MenuType<ContainerAssemblyTable>> ASSEMBLY_TABLE =
         MENU_TYPES.register("assembly_table", () -> Platform.menus().create(ContainerAssemblyTable::new));
@@ -37,6 +37,6 @@ public class BCSiliconMenuTypes {
         MENU_TYPES.register("gate", () -> Platform.menus().create(buildcraft.silicon.container.ContainerGate::new));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }

@@ -10,15 +10,15 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCRoboticsEntities {
-    public static final DeferredRegister<EntityType<?>> ENTITIES =
-            DeferredRegister.create(Registries.ENTITY_TYPE, BCRobotics.MODID);
+    public static final BCRegistrar<EntityType<?>> ENTITIES =
+            BCRegistrar.create(Registries.ENTITY_TYPE, BCRobotics.MODID);
 
     /** The robot. {@code MobCategory.MISC} keeps it out of mob-cap/spawning entirely; the 0.25 cube matches
      * 7.1.x's model and {@code fireImmune} matches its lava behaviour (a robot flying over lava should not
@@ -39,6 +39,6 @@ public class BCRoboticsEntities {
                     //?}
 
     public static void init(IEventBus modEventBus) {
-        ENTITIES.register(modEventBus);
+        ENTITIES.subscribe();
     }
 }

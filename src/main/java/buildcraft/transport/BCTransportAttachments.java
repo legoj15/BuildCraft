@@ -6,7 +6,6 @@
 package buildcraft.transport;
 
 import java.util.Locale;
-import java.util.function.Supplier;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -17,41 +16,35 @@ import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.attachment.AttachmentType;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.common.util.ValueIOSerializable;
-//?}
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.lib.misc.AdvancementUtil;
+import buildcraft.platform.registry.BCAttachment;
+import buildcraft.platform.registry.BCAttachmentData;
+import buildcraft.platform.registry.BCAttachmentRegistrar;
 
 public class BCTransportAttachments {
-    public static final DeferredRegister<AttachmentType<?>> ATTACHMENTS =
-        DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, BCTransport.MODID);
+    public static final BCAttachmentRegistrar ATTACHMENTS = BCAttachmentRegistrar.create(BCTransport.MODID);
 
     /** Player-side bitmask of pipe-wire colours the player has ever placed. One bit per
      *  {@link DyeColor#getId()}; when all sixteen are set the {@code colorful_electrician}
      *  advancement fires. Persisted across save/load and copied on respawn so death does
      *  not reset progress. */
-    public static final Supplier<AttachmentType<WireColoursPlaced>> WIRE_COLOURS_PLACED =
-        ATTACHMENTS.register("wire_colours_placed",
-            () -> AttachmentType.serializable(WireColoursPlaced::new).copyOnDeath().build());
+    public static final BCAttachment<WireColoursPlaced> WIRE_COLOURS_PLACED =
+        ATTACHMENTS.register("wire_colours_placed", WireColoursPlaced::new, true);
 
     /** Player-side bitmask of pluggable kinds (one bit per {@link PluggablesPlaced.Kind}) the
      *  player has ever attached to a pipe. When all eight are set the {@code all_plugged_up}
      *  advancement fires. Persisted across save/load and copied on respawn. The {@code WIRE}
      *  bit collapses all 16 wire colours into a single placement signal — per-colour progress
      *  for {@code colorful_electrician} stays in {@link WireColoursPlaced}. */
-    public static final Supplier<AttachmentType<PluggablesPlaced>> PLUGGABLES_PLACED =
-        ATTACHMENTS.register("pluggables_placed",
-            () -> AttachmentType.serializable(PluggablesPlaced::new).copyOnDeath().build());
+    public static final BCAttachment<PluggablesPlaced> PLUGGABLES_PLACED =
+        ATTACHMENTS.register("pluggables_placed", PluggablesPlaced::new, true);
 
     private static final Identifier ALL_PLUGGED_UP =
         Identifier.parse("buildcraftunofficial:all_plugged_up");
 
     public static void init(IEventBus modEventBus) {
-        ATTACHMENTS.register(modEventBus);
+        ATTACHMENTS.subscribe();
     }
 
     /** Records that {@code player} has placed a pluggable of {@code kind}. On the first sight of
@@ -60,17 +53,13 @@ public class BCTransportAttachments {
      *  per-colour progress). No-ops on the client and on repeat sightings. */
     public static void recordPluggablePlacement(Player player, PluggablesPlaced.Kind kind) {
         if (player.level().isClientSide()) return;
-        PluggablesPlaced data = player.getData(PLUGGABLES_PLACED.get());
+        PluggablesPlaced data = PLUGGABLES_PLACED.get(player);
         if (data.markPlaced(kind)) {
             AdvancementUtil.unlockAdvancement(player, ALL_PLUGGED_UP, kind.criterionName());
         }
     }
 
-    //? if >=1.21.10 {
-    public static final class WireColoursPlaced implements ValueIOSerializable {
-    //?} else {
-    /*public static final class WireColoursPlaced implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
-    //?}
+    public static final class WireColoursPlaced implements BCAttachmentData {
         public static final int ALL_COLOURS_MASK = 0xFFFF; // 16 bits, one per DyeColor
 
         private int mask = 0;
@@ -113,11 +102,7 @@ public class BCTransportAttachments {
         //?}
     }
 
-    //? if >=1.21.10 {
-    public static final class PluggablesPlaced implements ValueIOSerializable {
-    //?} else {
-    /*public static final class PluggablesPlaced implements net.neoforged.neoforge.common.util.INBTSerializable<net.minecraft.nbt.CompoundTag> {*/
-    //?}
+    public static final class PluggablesPlaced implements BCAttachmentData {
         /** One enum value per kind shown in the "pluggables" creative tab. Ordinal is the bit
          *  index in {@link #mask}; {@link #criterionName()} matches the criterion ids defined in
          *  {@code data/buildcraftunofficial/advancement/all_plugged_up.json}. Reordering or

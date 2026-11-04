@@ -114,7 +114,7 @@ public enum FacadeStateManager implements IFacadeRegistry {
      *  recipes, the creative-tab variants, the JEI entries and the client texture-dedup scan) must
      *  be suppressed, while the facade item, plug and API surface stay live for world safety. */
     public static boolean isFacadeGenerationDisabled() {
-        // Guard against the spec not being loaded yet, matching RfEnabledCondition: the toggle
+        // Guard against the spec not being loaded yet, matching BCTransportConfig.rfPipeRecipesEnabled: the toggle
         // defaults to "generation enabled" in that case.
         if (!BCUnifiedConfig.SPEC.isLoaded()) {
             return false;

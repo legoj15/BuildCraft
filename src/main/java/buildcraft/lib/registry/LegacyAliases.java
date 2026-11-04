@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
@@ -47,6 +46,7 @@ import buildcraft.silicon.BCSiliconItems;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
+import buildcraft.platform.registry.BCRegistrar;
 
 /**
  * Backwards-compatibility registry aliases: makes block / item / block-entity / fluid / data-component
@@ -90,13 +90,13 @@ public final class LegacyAliases {
 
     // Alias-only deferred registers owned by this class. Decoupled from the subsystem registers:
     // an alias-only register with zero entries still flushes its aliases on RegisterEvent.
-    private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Registries.ITEM, BCCore.MODID);
-    private static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Registries.BLOCK, BCCore.MODID);
-    private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
-    private static final DeferredRegister<Fluid> FLUIDS = DeferredRegister.create(Registries.FLUID, BCCore.MODID);
-    private static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =
-            DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, BCCore.MODID);
+    private static final BCRegistrar<Item> ITEMS = BCRegistrar.create(Registries.ITEM, BCCore.MODID);
+    private static final BCRegistrar<Block> BLOCKS = BCRegistrar.create(Registries.BLOCK, BCCore.MODID);
+    private static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
+    private static final BCRegistrar<Fluid> FLUIDS = BCRegistrar.create(Registries.FLUID, BCCore.MODID);
+    private static final BCRegistrar<DataComponentType<?>> DATA_COMPONENTS =
+            BCRegistrar.create(Registries.DATA_COMPONENT_TYPE, BCCore.MODID);
 
     /** One registered alias, retained so the game test can verify every entry resolves to a live target. */
     public record Mapping(Registry<?> registry, Identifier from, Identifier to) {}
@@ -118,11 +118,11 @@ public final class LegacyAliases {
         addDataComponents();
         addNamespaceFlips();
 
-        ITEMS.register(modEventBus);
-        BLOCKS.register(modEventBus);
-        BLOCK_ENTITIES.register(modEventBus);
-        FLUIDS.register(modEventBus);
-        DATA_COMPONENTS.register(modEventBus);
+        ITEMS.subscribe();
+        BLOCKS.subscribe();
+        BLOCK_ENTITIES.subscribe();
+        FLUIDS.subscribe();
+        DATA_COMPONENTS.subscribe();
     }
 
     // ─── Generation 2/3 → 4 path renames ────────────────────────────────
@@ -210,10 +210,10 @@ public final class LegacyAliases {
     // ─── Helpers ────────────────────────────────────────────────────────
 
     /** Re-namespaces every entry of {@code source} under each of {@code oldNamespaces}, aliasing it to its current id. */
-    private static void flip(DeferredRegister<?> source, DeferredRegister<?> aliasRegister, Registry<?> registry,
+    private static void flip(BCRegistrar<?> source, BCRegistrar<?> aliasRegister, Registry<?> registry,
             String key, String... oldNamespaces) {
         for (var holder : source.getEntries()) {
-            Identifier to = holder.getId();
+            Identifier to = holder.id();
             for (String ns : oldNamespaces) {
                 add(aliasRegister, registry, key, id(ns, to.getPath()), to);
             }
@@ -228,7 +228,7 @@ public final class LegacyAliases {
         add(DATA_COMPONENTS, BuiltInRegistries.DATA_COMPONENT_TYPE, "component", from, to);
     }
 
-    private static void add(DeferredRegister<?> aliasRegister, Registry<?> registry, String key,
+    private static void add(BCRegistrar<?> aliasRegister, Registry<?> registry, String key,
             Identifier from, Identifier to) {
         if (from.equals(to) || !SEEN.add(key + "|" + from)) {
             return;

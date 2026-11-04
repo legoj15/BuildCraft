@@ -43,7 +43,7 @@ public class BCLib {
         BCFluidStack.setHoverNameProvider(
             stack -> Platform.fluids().hoverName(stack.getFluidHolder(), stack.getAmount(), stack.getComponentsPatch()));
 
-        BCLibItems.ITEMS.register(modEventBus);
+        BCLibItems.ITEMS.subscribe();
 
         //? if >=26.1 {
         // Retires a carried-over pre-26.1 saved-data file once its data is seen in the 26.1+ file.

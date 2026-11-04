@@ -1,0 +1,5 @@
+{
+  "buildcraftunofficial:oil_and_fuel_production": {amounts:[I;1234,0,16000,0,0,0,0,0,0,0]},
+  "buildcraftunofficial:pluggables_placed": {mask:136},
+  "buildcraftunofficial:wire_colours_placed": {mask:18432}
+}

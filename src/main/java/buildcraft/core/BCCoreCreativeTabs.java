@@ -14,8 +14,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.DyeColor;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.BCLibItems;
 import buildcraft.core.item.ItemPaintbrush_BC8;
@@ -28,16 +26,18 @@ import buildcraft.energy.BCEnergyFluids;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.silicon.BCSiliconBlocks;
 import buildcraft.silicon.BCSiliconItems;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
 
 public class BCCoreCreativeTabs {
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCCore.MODID);
+    public static final BCRegistrar<CreativeModeTab> CREATIVE_MODE_TABS =
+            BCRegistrar.create(Registries.CREATIVE_MODE_TAB, BCCore.MODID);
 
     public static final ResourceKey<CreativeModeTab> MAIN_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath(BCCore.MODID, "main"));
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB =
+    public static final BCHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB =
             CREATIVE_MODE_TABS.register("main", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.main"))
@@ -139,7 +139,7 @@ public class BCCoreCreativeTabs {
                             .build());
 
     public static void init(IEventBus modEventBus) {
-        CREATIVE_MODE_TABS.register(modEventBus);
+        CREATIVE_MODE_TABS.subscribe();
     }
 }
 

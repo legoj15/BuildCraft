@@ -11,17 +11,17 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.platform.Platform;
 import buildcraft.transport.container.ContainerDiamondPipe;
 import buildcraft.transport.container.ContainerDiamondWoodPipe;
 import buildcraft.transport.container.ContainerEmzuliPipe;
 import buildcraft.transport.container.ContainerFilteredBuffer;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCTransportMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, BCTransport.MODID);
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+            BCRegistrar.create(Registries.MENU, BCTransport.MODID);
 
     public static final Supplier<MenuType<ContainerFilteredBuffer>> FILTERED_BUFFER =
             MENU_TYPES.register("filtered_buffer",
@@ -40,6 +40,6 @@ public class BCTransportMenuTypes {
                     () -> Platform.menus().create(ContainerEmzuliPipe::new));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }

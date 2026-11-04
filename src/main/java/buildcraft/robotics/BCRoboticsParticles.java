@@ -12,20 +12,20 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.robotics.particle.RobotEnergyParticleOptions;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
 
 /** Robotics particle types. The client providers live in {@code BCRoboticsClient}. */
 public class BCRoboticsParticles {
-    public static final DeferredRegister<ParticleType<?>> PARTICLE_TYPES =
-            DeferredRegister.create(Registries.PARTICLE_TYPE, BCRobotics.MODID);
+    public static final BCRegistrar<ParticleType<?>> PARTICLE_TYPES =
+            BCRegistrar.create(Registries.PARTICLE_TYPE, BCRobotics.MODID);
 
     /** The robot's red energy exhaust (7.1.x {@code EntityRobotEnergyParticle}). Not limiter-overriding by
      *  type: the robot opts out of the limiter per spawn, because it applies 7.1.x's own particle-setting
      *  thinning ({@link buildcraft.robotics.entity.RobotExhaust}). */
-    public static final DeferredHolder<ParticleType<?>, ParticleType<RobotEnergyParticleOptions>> ROBOT_ENERGY =
+    public static final BCHolder<ParticleType<?>, ParticleType<RobotEnergyParticleOptions>> ROBOT_ENERGY =
             PARTICLE_TYPES.register("robot_energy", () -> new ParticleType<RobotEnergyParticleOptions>(false) {
                 @Override
                 public MapCodec<RobotEnergyParticleOptions> codec() {
@@ -39,6 +39,6 @@ public class BCRoboticsParticles {
             });
 
     public static void init(IEventBus modEventBus) {
-        PARTICLE_TYPES.register(modEventBus);
+        PARTICLE_TYPES.subscribe();
     }
 }

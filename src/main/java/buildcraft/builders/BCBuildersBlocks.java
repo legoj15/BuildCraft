@@ -6,9 +6,6 @@ package buildcraft.builders;
 
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import buildcraft.lib.misc.RegistrationUtilBC;
 
 import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
@@ -17,9 +14,11 @@ import buildcraft.builders.block.BlockFiller;
 import buildcraft.builders.block.BlockFrame;
 import buildcraft.builders.block.BlockQuarry;
 import buildcraft.builders.block.BlockReplacer;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCBlockHolder;
 
 public class BCBuildersBlocks {
-    public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(BCBuilders.MODID);
+    public static final BCRegistrar.Blocks BLOCKS = BCRegistrar.createBlocks(BCBuilders.MODID);
 
     // 1.12.2 Material.IRON → pickaxe required for drops (parity restored via
     // requiresCorrectToolForDrops + minecraft:mineable/pickaxe tag).
@@ -32,39 +31,39 @@ public class BCBuildersBlocks {
     // From 26.3 blocksMotion() is gone and both checks read block tags: the frame keeps this behaviour by
     // being in minecraft:blocks_motion_no_leaves and not in washed_away_by_fluids (BlockMotionTagsTester
     // derives those lists from isSolid(), which forceSolidOn() still drives).
-    public static final DeferredBlock<BlockFrame> FRAME = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockFrame> FRAME = BLOCKS.registerBlock(
             "frame",
             BlockFrame::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().forceSolidOn().sound(SoundType.COPPER_GRATE).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockFiller> FILLER = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockFiller> FILLER = BLOCKS.registerBlock(
             "filler",
             BlockFiller::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockBuilder> BUILDER = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockBuilder> BUILDER = BLOCKS.registerBlock(
             "builder",
             BlockBuilder::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
                 .requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockArchitectTable> ARCHITECT = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockArchitectTable> ARCHITECT = BLOCKS.registerBlock(
             "architect",
             BlockArchitectTable::new, () -> BlockBehaviour.Properties.of()
                 .strength(5.0f, 10.0f).sound(SoundType.METAL)
                 .requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockElectronicLibrary> LIBRARY = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockElectronicLibrary> LIBRARY = BLOCKS.registerBlock(
             "library",
             BlockElectronicLibrary::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockReplacer> REPLACER = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockReplacer> REPLACER = BLOCKS.registerBlock(
             "replacer",
             BlockReplacer::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static final DeferredBlock<BlockQuarry> QUARRY = RegistrationUtilBC.registerBlock(BLOCKS,
+    public static final BCBlockHolder<BlockQuarry> QUARRY = BLOCKS.registerBlock(
             "quarry",
             BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.ANVIL).requiresCorrectToolForDrops());
 
     public static void init(IEventBus modEventBus) {
-        BLOCKS.register(modEventBus);
+        BLOCKS.subscribe();
     }
 }

@@ -31,14 +31,14 @@ public class PluggablesPlacedTester {
 
     public static void testFreshAttachmentEmpty(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        PluggablesPlaced data = player.getData(BCTransportAttachments.PLUGGABLES_PLACED.get());
+        PluggablesPlaced data = BCTransportAttachments.PLUGGABLES_PLACED.get(player);
         helper.assertFalse(data.isComplete(), "Fresh attachment must not report complete");
         helper.succeed();
     }
 
     public static void testMarkPlacedReturnsTrueOnlyOnFirstSighting(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        PluggablesPlaced data = player.getData(BCTransportAttachments.PLUGGABLES_PLACED.get());
+        PluggablesPlaced data = BCTransportAttachments.PLUGGABLES_PLACED.get(player);
 
         helper.assertTrue(data.markPlaced(Kind.BLOCKER),
             "First BLOCKER placement must return true");
@@ -53,7 +53,7 @@ public class PluggablesPlacedTester {
 
     public static void testCompleteOnlyAfterAllEightKinds(GameTestHelper helper) {
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
-        PluggablesPlaced data = player.getData(BCTransportAttachments.PLUGGABLES_PLACED.get());
+        PluggablesPlaced data = BCTransportAttachments.PLUGGABLES_PLACED.get(player);
 
         Kind[] kinds = Kind.values();
         // Eight kinds is the contract carried in PluggablesPlaced.ALL_KINDS_MASK and the eight

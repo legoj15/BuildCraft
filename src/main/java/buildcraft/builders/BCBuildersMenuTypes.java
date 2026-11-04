@@ -9,7 +9,6 @@ package buildcraft.builders;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
@@ -19,10 +18,11 @@ import buildcraft.builders.container.ContainerElectronicLibrary;
 import buildcraft.builders.container.ContainerFiller;
 import buildcraft.builders.container.ContainerReplacer;
 import buildcraft.platform.Platform;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCBuildersMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, BCBuilders.MODID);
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+            BCRegistrar.create(Registries.MENU, BCBuilders.MODID);
 
     public static final Supplier<MenuType<ContainerFiller>> FILLER = MENU_TYPES.register(
             "filler",
@@ -45,6 +45,6 @@ public class BCBuildersMenuTypes {
             () -> Platform.menus().create(ContainerReplacer::new));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }

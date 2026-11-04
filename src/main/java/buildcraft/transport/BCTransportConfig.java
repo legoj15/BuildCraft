@@ -34,6 +34,27 @@ public class BCTransportConfig {
     /** Base multiplier for fluid pipe transfer rates (mB/t). Default: 10. */
     public static ModConfigSpec.IntValue baseFlowRate;
 
+    /**
+     * Whether the RF (Forge Energy) <em>pipe</em> recipes load: false when {@link #disableRfPipe} is set, which
+     * drops both the forward kinesis&rarr;RF crafts and the reverse RF&rarr;kinesis downgrades, so a disabled pipe
+     * is also uncraftable (absent from the recipe book and JEI) rather than only inert. The test of the
+     * {@code buildcraftunofficial:rf_enabled} load condition.
+     *
+     * <p>The MJ Dynamo (MJ&rarr;FE) and RF Engine (FE&rarr;MJ) are deliberately <strong>not</strong> gated: they are
+     * the only MJ&harr;FE conversion bridges, so they must stay craftable for BuildCraft to interoperate with another
+     * mod's energy system (which is the whole point of disabling BC's own RF pipes).
+     */
+    public static boolean rfPipeRecipesEnabled() {
+        // Guard against the spec not being loaded yet (e.g. if a datagen path is ever added):
+        // ModConfigSpec.BooleanValue#get() throws IllegalStateException when the config is unloaded,
+        // which would crash recipe loading. Default to "RF enabled" (recipes present) in that case,
+        // matching the disableRfPipe=false default.
+        if (!buildcraft.core.BCUnifiedConfig.SPEC.isLoaded()) {
+            return true;
+        }
+        return !disableRfPipe.get();
+    }
+
     public static void buildGeneral(ModConfigSpec.Builder builder) {
         builder.push("pipes");
 
@@ -108,7 +129,7 @@ public class BCTransportConfig {
         // unregister the items/BEs as 1.12.2 did), and they're hidden from the creative tab in
         // BCTransport#addCreativeTabItems. Their crafting recipes (the forward kinesis->RF crafts and the
         // reverse RF->kinesis downgrades) are dropped at datapack load by the buildcraftunofficial:rf_enabled
-        // condition (RfEnabledCondition), so disabled RF pipes are also uncraftable and absent from the recipe
+        // condition (rfPipeRecipesEnabled), so disabled RF pipes are also uncraftable and absent from the recipe
         // book and JEI. The MJ Dynamo and RF Engine (the MJ<->FE conversion bridges) are intentionally NOT
         // gated, so BuildCraft can still interoperate with another mod's energy system.
     }

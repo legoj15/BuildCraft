@@ -11,20 +11,20 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.core.list.ContainerList;
 import buildcraft.platform.Platform;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCCoreMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, BCCore.MODID);
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+            BCRegistrar.create(Registries.MENU, BCCore.MODID);
 
     public static final Supplier<MenuType<ContainerList>> LIST =
             MENU_TYPES.register("list",
                     () -> Platform.menus().create(ContainerList::fromNetwork));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }

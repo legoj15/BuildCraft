@@ -8,24 +8,21 @@ package buildcraft.energy;
 
 import java.util.function.Supplier;
 
-import com.mojang.serialization.MapCodec;
-
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.level.levelgen.feature.Feature;
-//? if <26.3 {
-/*import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
-*///?}
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.world.BiomeModifier;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.core.BCCore;
-import buildcraft.energy.generation.AddOilBiomeModifier;
 import buildcraft.energy.generation.OilFeature;
+import buildcraft.platform.Platform;
+import buildcraft.platform.registry.BCFeatureRegistrar;
 
 /**
- * Worldgen registrations for the energy subsystem: the oil {@link Feature} and the biome modifier
+ * Worldgen registrations for the energy subsystem: the oil {@code Feature} and the biome modifier
  * serializer that attaches it to every biome. The data-driven halves live under
  * {@code data/buildcraftunofficial/worldgen/} ({@code configured_feature/oil} below 26.3,
  * {@code feature/oil} from 26.3 where the configured-feature registry was merged into the feature
@@ -34,32 +31,24 @@ import buildcraft.energy.generation.OilFeature;
  * ignores the feature directory it has no registry for, so both ship in the same jar.
  */
 public class BCEnergyFeatures {
-    //? if >=26.3 {
-    // 26.3 split the old Feature registry: the code-side registry holds feature TYPES (MapCodecs); the
-    // Feature registry (Registries.FEATURE) is now datapack-driven (data/<ns>/worldgen/feature/*.json).
-    public static final DeferredRegister<MapCodec<? extends Feature>> FEATURES =
-            DeferredRegister.create(Registries.FEATURE_TYPE, BCCore.MODID);
-    //?} else {
-    /*public static final DeferredRegister<Feature<?>> FEATURES =
-            DeferredRegister.create(Registries.FEATURE, BCCore.MODID);
-    *///?}
+    // The registry OIL lands in (feature types from 26.3, features below) is BCFeatureRegistrar's business.
+    public static final BCFeatureRegistrar FEATURES = new BCFeatureRegistrar(BCCore.MODID);
 
-    public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
-            DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, BCCore.MODID);
+    public static final Supplier<?> OIL = FEATURES.register("oil", OilFeature::new);
 
-    //? if >=26.3 {
-    public static final Supplier<MapCodec<OilFeature>> OIL = FEATURES.register(
-            "oil", () -> OilFeature.CODEC);
-    //?} else {
-    /*public static final Supplier<OilFeature> OIL = FEATURES.register(
-            "oil", () -> new OilFeature(NoneFeatureConfiguration.CODEC));
-    *///?}
+    /** The biome-modifier type that adds the oil feature to <b>every</b> biome, in every dimension, at
+     *  {@code top_layer_modification} (after {@code vegetal_decoration}, so the surface pools' tree clearing sees
+     *  the chunk's trees). No biome tag can say "all biomes including other mods'", and oil eligibility is
+     *  per-chunk, so {@link OilFeature#place} applies the biome/dimension filters itself. */
+    public static final Identifier ADD_OIL_MODIFIER = Identifier.fromNamespaceAndPath(BCCore.MODID, "add_oil");
 
-    public static final Supplier<MapCodec<AddOilBiomeModifier>> ADD_OIL_MODIFIER =
-            BIOME_MODIFIER_SERIALIZERS.register("add_oil", () -> AddOilBiomeModifier.CODEC);
+    /** The placed feature {@code neoforge/biome_modifier/add_oil.json} names. */
+    public static final ResourceKey<PlacedFeature> OIL_PLACED =
+            ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(BCCore.MODID, "oil"));
 
     public static void init(IEventBus modEventBus) {
-        FEATURES.register(modEventBus);
-        BIOME_MODIFIER_SERIALIZERS.register(modEventBus);
+        FEATURES.subscribe();
+        Platform.data().registerAllBiomesFeature(ADD_OIL_MODIFIER, GenerationStep.Decoration.TOP_LAYER_MODIFICATION,
+                OIL_PLACED);
     }
 }

@@ -12,8 +12,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.api.boards.RedstoneBoardNBT;
 import buildcraft.api.boards.RedstoneBoardRegistry;
@@ -22,10 +20,12 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
 import buildcraft.silicon.BCSiliconCreativeTabs;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
 
 public class BCRoboticsCreativeTabs {
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCRobotics.MODID);
+    public static final BCRegistrar<CreativeModeTab> CREATIVE_MODE_TABS =
+            BCRegistrar.create(Registries.CREATIVE_MODE_TAB, BCRobotics.MODID);
 
     public static final ResourceKey<CreativeModeTab> ROBOTS_TAB_KEY =
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
@@ -37,7 +37,7 @@ public class BCRoboticsCreativeTabs {
     // and its icon code resolved that through the registry to the empty board's clean chip — a
     // data-less stack here would instead fall through the icon dispatch to the 1.12.2-line fallback
     // PCB and show a second, wrong "empty board" look.
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> ROBOTS_TAB =
+    public static final BCHolder<CreativeModeTab, CreativeModeTab> ROBOTS_TAB =
             CREATIVE_MODE_TABS.register("robots", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.robots"))
@@ -98,6 +98,6 @@ public class BCRoboticsCreativeTabs {
                             .build());
 
     public static void init(IEventBus modEventBus) {
-        CREATIVE_MODE_TABS.register(modEventBus);
+        CREATIVE_MODE_TABS.subscribe();
     }
 }

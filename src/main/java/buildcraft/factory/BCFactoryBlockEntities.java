@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
@@ -22,10 +21,11 @@ import buildcraft.factory.tile.TileTank;
 import buildcraft.factory.tile.TileChute;
 import buildcraft.factory.tile.TileDistiller_BC8;
 import buildcraft.factory.tile.TileHeatExchange;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCFactoryBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCFactory.MODID);
+    public static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCFactory.MODID);
 
     public static final Supplier<BlockEntityType<TileAutoWorkbenchItems>> AUTO_WORKBENCH_ITEMS =
             BLOCK_ENTITIES.register("autoworkbench_item",
@@ -68,6 +68,6 @@ public class BCFactoryBlockEntities {
                             BCFactoryBlocks.HEAT_EXCHANGE.get()));
 
     public static void init(IEventBus modEventBus) {
-        BLOCK_ENTITIES.register(modEventBus);
+        BLOCK_ENTITIES.subscribe();
     }
 }

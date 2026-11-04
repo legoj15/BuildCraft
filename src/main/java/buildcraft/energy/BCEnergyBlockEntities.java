@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.core.BCCore;
@@ -22,11 +21,12 @@ import buildcraft.energy.tile.TileEngineStone_BC8;
 import buildcraft.energy.tile.TileEngineIron_BC8;
 import buildcraft.energy.tile.TileEngineFE;
 import buildcraft.energy.tile.TileDynamoMJ;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCEnergyBlockEntities {
     // All block entities under the unified namespace — no more cross-module hack
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
+    public static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCCore.MODID);
 
     public static final Supplier<BlockEntityType<TileSpringOil>> SPRING_OIL = BLOCK_ENTITIES.register(
             "spring_oil",
@@ -49,7 +49,7 @@ public class BCEnergyBlockEntities {
             () -> BlockEntityTypeUtilBC.create(TileDynamoMJ::new, BCEnergyBlocks.DYNAMO_MJ.get()));
 
     public static void init(IEventBus modEventBus) {
-        BLOCK_ENTITIES.register(modEventBus);
+        BLOCK_ENTITIES.subscribe();
         // Wire the core-side spring block to construct our energy-side oil tile.
         BlockSpring.oilTileFactory = TileSpringOil::new;
     }

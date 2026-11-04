@@ -316,7 +316,7 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
         if (server == null) return;
         net.minecraft.server.level.ServerPlayer player = server.getPlayerList().getPlayer(GameProfileUtil.getId(owner));
         if (player == null) return;
-        var tracker = player.getData(BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get());
+        var tracker = BCFactoryAttachments.OIL_AND_FUEL_PRODUCTION.get(player);
         String gasBase = BCEnergyFluids.getBaseName(outGas.getFluid());
         if (gasBase != null) {
             String justSaturated = tracker.recordProduction(gasBase, outGas.getAmount());

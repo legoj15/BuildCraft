@@ -8,26 +8,23 @@ package buildcraft.transport;
 
 import java.util.function.Supplier;
 
-import com.mojang.serialization.MapCodec;
-
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.conditions.ICondition;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import net.minecraft.world.item.crafting.ShapelessRecipe;
 
 import buildcraft.transport.recipe.DyedPipeRecipe;
 import buildcraft.transport.recipe.HiddenShapelessRecipe;
 import buildcraft.transport.recipe.PipePaintRecipe;
-import buildcraft.transport.recipe.RfEnabledCondition;
+import buildcraft.platform.Platform;
+import buildcraft.platform.registry.BCRegistrar;
 
 /** Custom crafting-recipe serializers for the Transport subsystem. */
 public class BCTransportRecipeSerializers {
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS =
-            DeferredRegister.create(Registries.RECIPE_SERIALIZER, BCTransport.MODID);
+    public static final BCRegistrar<RecipeSerializer<?>> RECIPE_SERIALIZERS =
+            BCRegistrar.create(Registries.RECIPE_SERIALIZER, BCTransport.MODID);
 
     public static final Supplier<RecipeSerializer<PipePaintRecipe>> PIPE_PAINT =
             RECIPE_SERIALIZERS.register("pipe_paint", () -> PipePaintRecipe.SERIALIZER);
@@ -40,19 +37,14 @@ public class BCTransportRecipeSerializers {
     public static final Supplier<RecipeSerializer<ShapelessRecipe>> HIDDEN_SHAPELESS =
             RECIPE_SERIALIZERS.register("hidden_shapeless", () -> HiddenShapelessRecipe.SERIALIZER);
 
-    /** Recipe-condition codecs. Conditions filter recipes at datapack load (server-side, synced to
-     *  clients). The registration mechanism is node-uniform across every MC line. */
-    public static final DeferredRegister<MapCodec<? extends ICondition>> CONDITION_CODECS =
-            DeferredRegister.create(NeoForgeRegistries.Keys.CONDITION_CODECS, BCTransport.MODID);
-
-    /** Drops the RF pipe recipes (forward crafts + reverse downgrades) when {@code disableRfPipe} is set.
-     *  The MJ dynamo / RF engine MJ&lt;-&gt;FE converters are intentionally left craftable. Referenced from the
-     *  recipe JSON as {@code buildcraftunofficial:rf_enabled}. */
-    public static final Supplier<MapCodec<RfEnabledCondition>> RF_ENABLED =
-            CONDITION_CODECS.register("rf_enabled", () -> RfEnabledCondition.CODEC);
+    /** The recipe condition that drops the RF pipe recipes (forward crafts + reverse downgrades) when
+     *  {@code disableRfPipe} is set; see {@link BCTransportConfig#rfPipeRecipesEnabled}. Conditions filter
+     *  recipes at datapack load (server-side, synced to clients). Referenced from the recipe JSON as
+     *  {@code buildcraftunofficial:rf_enabled}. */
+    public static final Identifier RF_ENABLED = Identifier.fromNamespaceAndPath(BCTransport.MODID, "rf_enabled");
 
     public static void init(IEventBus modEventBus) {
-        RECIPE_SERIALIZERS.register(modEventBus);
-        CONDITION_CODECS.register(modEventBus);
+        RECIPE_SERIALIZERS.subscribe();
+        Platform.data().registerCondition(RF_ENABLED, BCTransportConfig::rfPipeRecipesEnabled);
     }
 }

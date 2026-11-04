@@ -9,7 +9,6 @@ package buildcraft.energy;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.function.Supplier;
 
@@ -18,10 +17,11 @@ import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.energy.container.ContainerEngineFE;
 import buildcraft.energy.container.ContainerDynamoMJ;
 import buildcraft.platform.Platform;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCEnergyMenuTypes {
-    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
-            DeferredRegister.create(Registries.MENU, "buildcraftunofficial");
+    public static final BCRegistrar<MenuType<?>> MENU_TYPES =
+            BCRegistrar.create(Registries.MENU, "buildcraftunofficial");
 
     public static final Supplier<MenuType<ContainerEngineStone>> ENGINE_STONE = MENU_TYPES.register(
             "engine_stone",
@@ -40,7 +40,7 @@ public class BCEnergyMenuTypes {
             () -> Platform.menus().create(ContainerDynamoMJ::new));
 
     public static void init(IEventBus modEventBus) {
-        MENU_TYPES.register(modEventBus);
+        MENU_TYPES.subscribe();
     }
 }
 

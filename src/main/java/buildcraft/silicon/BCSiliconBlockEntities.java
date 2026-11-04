@@ -11,7 +11,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
@@ -19,10 +18,11 @@ import buildcraft.silicon.tile.TileAssemblyTable;
 import buildcraft.silicon.tile.TileIntegrationTable;
 import buildcraft.silicon.tile.TileLaser;
 import buildcraft.silicon.tile.TileProgrammingTable;
+import buildcraft.platform.registry.BCRegistrar;
 
 public class BCSiliconBlockEntities {
-    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
-            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, BCSilicon.MODID);
+    public static final BCRegistrar<BlockEntityType<?>> BLOCK_ENTITIES =
+            BCRegistrar.create(Registries.BLOCK_ENTITY_TYPE, BCSilicon.MODID);
 
     public static final Supplier<BlockEntityType<TileLaser>> LASER =
             BLOCK_ENTITIES.register("laser",
@@ -51,6 +51,6 @@ public class BCSiliconBlockEntities {
                             BCSiliconBlocks.INTEGRATION_TABLE.get()));
 
     public static void init(IEventBus modEventBus) {
-        BLOCK_ENTITIES.register(modEventBus);
+        BLOCK_ENTITIES.subscribe();
     }
 }

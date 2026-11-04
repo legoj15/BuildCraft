@@ -12,16 +12,17 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
+import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
+import buildcraft.platform.registry.BCRegistrar;
+import buildcraft.platform.registry.BCHolder;
 
 public class BCSiliconCreativeTabs {
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
-            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BCSilicon.MODID);
+    public static final BCRegistrar<CreativeModeTab> CREATIVE_MODE_TABS =
+            BCRegistrar.create(Registries.CREATIVE_MODE_TAB, BCSilicon.MODID);
 
     // Reference the transport plugs tab key by identifier (avoids cross-module compile dependency)
     static final ResourceKey<CreativeModeTab> TRANSPORT_PLUGS_TAB_KEY =
@@ -32,7 +33,7 @@ public class BCSiliconCreativeTabs {
             ResourceKey.create(Registries.CREATIVE_MODE_TAB,
                     Identifier.fromNamespaceAndPath(BCSilicon.MODID, "facades"));
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> FACADE_TAB =
+    public static final BCHolder<CreativeModeTab, CreativeModeTab> FACADE_TAB =
             CREATIVE_MODE_TABS.register("facades", () ->
                     CreativeModeTab.builder()
                             .title(Component.translatable("itemGroup.buildcraft.facades"))
@@ -45,9 +46,10 @@ public class BCSiliconCreativeTabs {
                                 return BCSiliconItems.PLUG_FACADE.get().getDefaultInstance();
                             })
                             .withTabsBefore(TRANSPORT_PLUGS_TAB_KEY)
+                            .displayItems(CreativeTabContents.generator(FACADE_TAB_KEY))
                             .build());
 
     public static void init(IEventBus modEventBus) {
-        CREATIVE_MODE_TABS.register(modEventBus);
+        CREATIVE_MODE_TABS.subscribe();
     }
 }

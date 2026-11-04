@@ -13,6 +13,9 @@ import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
+import buildcraft.platform.registry.AttachmentServices;
+import buildcraft.platform.registry.DataServices;
+import buildcraft.platform.registry.RegistryServices;
 
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
@@ -95,6 +98,21 @@ public final class Platform {
     /** Loot context parameters the loader adds. */
     public static LootServices loot() {
         return LootHolder.INSTANCE;
+    }
+
+    /** Registries: registrars and the holders they hand back. */
+    public static RegistryServices registries() {
+        return RegistriesHolder.INSTANCE;
+    }
+
+    /** Data-driven hooks: load conditions and biome modifiers. */
+    public static DataServices data() {
+        return DataHolder.INSTANCE;
+    }
+
+    /** Saved entity data attachments. */
+    public static AttachmentServices attachments() {
+        return AttachmentsHolder.INSTANCE;
     }
 
     private static final class LoaderHolder {
@@ -273,6 +291,42 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeLootServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricLootServices();
+            *///?}
+        }
+    }
+
+    private static final class RegistriesHolder {
+        static final RegistryServices INSTANCE = create();
+
+        private static RegistryServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeRegistryServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricRegistryServices();
+            *///?}
+        }
+    }
+
+    private static final class DataHolder {
+        static final DataServices INSTANCE = create();
+
+        private static DataServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeDataServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricDataServices();
+            *///?}
+        }
+    }
+
+    private static final class AttachmentsHolder {
+        static final AttachmentServices INSTANCE = create();
+
+        private static AttachmentServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeAttachmentServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricAttachmentServices();
             *///?}
         }
     }

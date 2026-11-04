@@ -7,8 +7,6 @@
 package buildcraft.factory.client;
 
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
 import buildcraft.factory.BCFactoryBlockEntities;
@@ -24,22 +22,25 @@ import buildcraft.factory.client.render.RenderHeatExchange;
 import buildcraft.factory.client.render.RenderMiningWell;
 import buildcraft.factory.client.render.RenderPump;
 import buildcraft.factory.client.render.RenderTank;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCFactoryClient {
-    @SubscribeEvent
-    public static void setupClient(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.factory.BCFactoryItems.MINING_WELL.get(), "tip.block.mining_well");
-        });
-    }
+    private static void registerClientContent(ClientRegistrationSinks sinks) {
+        sinks.clientSetup(() ->
+                buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.factory.BCFactoryItems.MINING_WELL.get(), "tip.block.mining_well"));
 
-    @SubscribeEvent
-    public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(BCFactoryMenuTypes.AUTO_WORKBENCH_ITEMS.get(), GuiAutoCraftItems::new);
-        event.register(BCFactoryMenuTypes.TANK.get(), GuiTank::new);
-        event.register(BCFactoryMenuTypes.CHUTE.get(), GuiChute::new);
-        event.register(BCFactoryMenuTypes.DISTILLER.get(), GuiDistiller::new);
-        event.register(BCFactoryMenuTypes.HEAT_EXCHANGE.get(), GuiHeatExchange::new);
+        sinks.menuScreen(BCFactoryMenuTypes.AUTO_WORKBENCH_ITEMS, GuiAutoCraftItems::new);
+        sinks.menuScreen(BCFactoryMenuTypes.TANK, GuiTank::new);
+        sinks.menuScreen(BCFactoryMenuTypes.CHUTE, GuiChute::new);
+        sinks.menuScreen(BCFactoryMenuTypes.DISTILLER, GuiDistiller::new);
+        sinks.menuScreen(BCFactoryMenuTypes.HEAT_EXCHANGE, GuiHeatExchange::new);
+
+        sinks.blockEntityRenderer(BCFactoryBlockEntities.TANK, RenderTank::new);
+        sinks.blockEntityRenderer(BCFactoryBlockEntities.DISTILLER, RenderDistiller::new);
+        sinks.blockEntityRenderer(BCFactoryBlockEntities.HEAT_EXCHANGE, RenderHeatExchange::new);
+        sinks.blockEntityRenderer(BCFactoryBlockEntities.PUMP, RenderPump::new);
+        sinks.blockEntityRenderer(BCFactoryBlockEntities.MINING_WELL, RenderMiningWell::new);
     }
 
     // Tube blocks are RenderShape.INVISIBLE; their visuals come from TubeRenderer's
@@ -50,17 +51,9 @@ public class BCFactoryClient {
         event.registerBlock(buildcraft.lib.client.NoParticleClientExtensions.INSTANCE, BCFactoryBlocks.TUBE.get());
     }
 
-    @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(BCFactoryBlockEntities.TANK.get(), RenderTank::new);
-        event.registerBlockEntityRenderer(BCFactoryBlockEntities.DISTILLER.get(), RenderDistiller::new);
-        event.registerBlockEntityRenderer(BCFactoryBlockEntities.HEAT_EXCHANGE.get(), RenderHeatExchange::new);
-        event.registerBlockEntityRenderer(BCFactoryBlockEntities.PUMP.get(), RenderPump::new);
-        event.registerBlockEntityRenderer(BCFactoryBlockEntities.MINING_WELL.get(), RenderMiningWell::new);
-    }
-
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCFactoryClient.class);
+        registerClientContent(ClientPlatform.sinks());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 //? if >=26.1 {
                 net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,

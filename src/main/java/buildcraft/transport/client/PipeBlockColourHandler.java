@@ -20,12 +20,10 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
-
 import buildcraft.api.transport.pluggable.PipePluggable;
 
 import buildcraft.lib.misc.ColourUtil;
+import buildcraft.platform.client.ClientRegistrationSinks;
 import buildcraft.silicon.client.model.plug.PlugBakerFacade;
 import buildcraft.silicon.plug.PluggableFacade;
 import buildcraft.transport.BCTransportBlocks;
@@ -45,8 +43,8 @@ import buildcraft.transport.tile.TilePipeHolder;
  * </ul>
  *
  * <p>MC 26.1 replaced the old BlockColor callback with {@link BlockTintSource}
- * objects, registered per-block via
- * {@link RegisterColorHandlersEvent.BlockTintSources}.
+ * objects, registered per-block through
+ * {@link ClientRegistrationSinks#blockTintSources}.
  * Each tint index maps to one entry in the List parameter.
  *
  * <p>All return values are ARGB (0xAARRGGBB) — MC 26.1 tint multiplication
@@ -102,8 +100,12 @@ public class PipeBlockColourHandler {
         }
     }
 
-    @SubscribeEvent
-    public static void onRegisterBlockTintSources(RegisterColorHandlersEvent.BlockTintSources event) {
+    /** Registers pipe_holder's tint sources (built when the colour handlers register). */
+    public static void register(ClientRegistrationSinks sinks) {
+        sinks.blockTintSources(BCTransportBlocks.PIPE_HOLDER, PipeBlockColourHandler::tintSources);
+    }
+
+    private static List<BlockTintSource> tintSources() {
         List<BlockTintSource> sources = new ArrayList<>(PlugBakerFacade.FACADE_TINT_LIST_SIZE);
         sources.add(NO_TINT);
         sources.add(PIPE_COLOUR_TINT);
@@ -112,15 +114,14 @@ public class PipeBlockColourHandler {
                 sources.add(new FacadeTintSource(data, side));
             }
         }
-        event.register(sources, BCTransportBlocks.PIPE_HOLDER.get());
+        return sources;
     }
     //?} else {
     /*// 1.21.11 uses the old single BlockColor callback keyed by tintIndex (no per-index
     // BlockTintSource objects). One lambda replicates: idx 0 = no tint, idx 1 = pipe colour,
     // idx>=FACADE_TINT_BASE = facade slot decoded as (wrappedTintIndex, side).
-    @SubscribeEvent
-    public static void onRegisterBlockColors(RegisterColorHandlersEvent.Block event) {
-        event.register((state, level, pos, tintIndex) -> {
+    public static void register(ClientRegistrationSinks sinks) {
+        sinks.blockColor((state, level, pos, tintIndex) -> {
             if (tintIndex <= 0) {
                 return 0xFFFFFFFF;
             }
@@ -143,7 +144,7 @@ public class PipeBlockColourHandler {
             if (!(plug instanceof PluggableFacade facade)) return -1;
             BlockState wrappedState = facade.states.phasedStates[facade.activeState].stateInfo.state;
             return 0xFF000000 | Minecraft.getInstance().getBlockColors().getColor(wrappedState, level, pos, wrappedTintIndex);
-        }, BCTransportBlocks.PIPE_HOLDER.get());
+        }, BCTransportBlocks.PIPE_HOLDER);
     }*/
     //?}
 }

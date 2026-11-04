@@ -14,15 +14,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
 //?} else {
 /*import net.neoforged.neoforge.client.event.RenderHighlightEvent;*/
 //?}
 import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -61,6 +58,8 @@ import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.PipeFlowPower;
 import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 import buildcraft.transport.wire.ClientWireSystems;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCTransportClient {
     // Static model holders for plug rendering
@@ -80,7 +79,13 @@ public class BCTransportClient {
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCTransportClient.class);
         init();
-        modEventBus.register(PipeBlockColourHandler.class);
+        registerClientContent(ClientPlatform.sinks());
+        // Set the API registry so other modules (e.g. silicon) can register bakers, and register the flow
+        // renderers PipeRegistryClient dispatches to. Both only have to be in place before the first model bake
+        // (silicon and robotics register their bakers from ModifyBakingResult); they used to ride along with the
+        // pipe BER registration.
+        PipeApiClient.registry = PipeRegistryClient.INSTANCE;
+        registerFlowRenderers();
         // The client's wire systems belong to the level they were sent for. A client level closing (disconnect, or the
         // old dimension on a dimension change; Minecraft posts Unload for it on every node) must not leave them for the
         // next level: the server sends none for a level with no wire in view, so nothing else would clear them. Client
@@ -100,59 +105,42 @@ public class BCTransportClient {
         //?}
     }
 
-    @SubscribeEvent
-    public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(BCTransportMenuTypes.FILTERED_BUFFER.get(), GuiFilteredBuffer::new);
-        event.register(BCTransportMenuTypes.DIAMOND_PIPE.get(), GuiDiamondPipe::new);
-        event.register(BCTransportMenuTypes.DIAMOND_WOOD_PIPE.get(), GuiDiamondWoodPipe::new);
-        event.register(BCTransportMenuTypes.EMZULI_PIPE.get(), GuiEmzuliPipe::new);
-    }
+    private static void registerClientContent(ClientRegistrationSinks sinks) {
+        sinks.menuScreen(BCTransportMenuTypes.FILTERED_BUFFER, GuiFilteredBuffer::new);
+        sinks.menuScreen(BCTransportMenuTypes.DIAMOND_PIPE, GuiDiamondPipe::new);
+        sinks.menuScreen(BCTransportMenuTypes.DIAMOND_WOOD_PIPE, GuiDiamondWoodPipe::new);
+        sinks.menuScreen(BCTransportMenuTypes.EMZULI_PIPE, GuiEmzuliPipe::new);
 
-    @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER.get(), RenderPipeHolder::new);
-        // Set the API registry so other modules (e.g. silicon) can register bakers
-        PipeApiClient.registry = PipeRegistryClient.INSTANCE;
-        // Register flow renderers so PipeRegistryClient can dispatch render calls
-        registerFlowRenderers();
+        sinks.blockEntityRenderer(BCTransportBlockEntities.PIPE_HOLDER, RenderPipeHolder::new);
+
+        // The pipe colour tint source, so item model JSON can reference it.
+        //? if >=1.21.10 {
+        sinks.itemTintSource(Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
+                PipeColourTintSource.MAP_CODEC);
+        //?} else {
+        /*// 1.21.1 has no data-driven ItemTintSource, so register PipeColourTintSource as a classic ItemColor
+        // for every pipe item. PipeItemModel's 1.21.1 painted overlay emits its mask quads at tintIndex 0,
+        // which this handler tints with the (semi-transparent) PIPE_COLOUR; the dyed-sprite fluid-pipe
+        // variant bakes the colour into the texture and carries no tintindex, so it is unaffected.
+        sinks.itemColor(PipeColourTintSource.INSTANCE, () -> {
+            java.util.List<Item> pipeItems = new java.util.ArrayList<>();
+            for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
+                Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
+                if (pipeItem != null) {
+                    pipeItems.add(pipeItem);
+                }
+            }
+            return pipeItems.toArray(new net.minecraft.world.level.ItemLike[0]);
+        });*/
+        //?}
+
+        PipeBlockColourHandler.register(sinks);
     }
 
     @SubscribeEvent
     public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
         event.registerBlock(PipeHolderClientExtensions.INSTANCE, BCTransportBlocks.PIPE_HOLDER.get());
     }
-
-    /**
-     * Register the pipe colour tint source so item model JSON can reference it.
-     */
-    //? if >=1.21.10 {
-    @SubscribeEvent
-    public static void registerItemTintSources(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.ItemTintSources event) {
-        event.register(
-                Identifier.fromNamespaceAndPath(BCTransport.MODID, "pipe_colour"),
-                PipeColourTintSource.MAP_CODEC
-        );
-    }
-    //?}
-    //? if <1.21.10 {
-    /*// 1.21.1 has no data-driven ItemTintSource, so register PipeColourTintSource as a classic ItemColor
-    // for every pipe item. PipeItemModel's 1.21.1 painted overlay emits its mask quads at tintIndex 0,
-    // which this handler tints with the (semi-transparent) PIPE_COLOUR; the dyed-sprite fluid-pipe
-    // variant bakes the colour into the texture and carries no tintindex, so it is unaffected.
-    @SubscribeEvent
-    public static void registerItemColors(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
-        java.util.List<Item> pipeItems = new java.util.ArrayList<>();
-        for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
-            Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
-            if (pipeItem != null) {
-                pipeItems.add(pipeItem);
-            }
-        }
-        if (!pipeItems.isEmpty()) {
-            event.register(PipeColourTintSource.INSTANCE, pipeItems.toArray(new Item[0]));
-        }
-    }*/
-    //?}
 
 
     /**

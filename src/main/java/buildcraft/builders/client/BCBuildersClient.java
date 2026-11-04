@@ -6,14 +6,12 @@
 
 package buildcraft.builders.client;
 
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
+import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.BCBuildersEntities;
 import buildcraft.builders.BCBuildersEventDist;
@@ -24,10 +22,12 @@ import buildcraft.builders.gui.GuiElectronicLibrary;
 import buildcraft.builders.gui.GuiFiller;
 import buildcraft.builders.gui.GuiReplacer;
 import buildcraft.builders.gui.GuiBuilder;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCBuildersClient {
     public static void initClient(IEventBus modEventBus) {
-        modEventBus.register(BCBuildersClient.class);
+        registerClientContent(ClientPlatform.sinks());
         NeoForge.EVENT_BUS.addListener(
                 //? if >=26.1 {
                 net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent.class,
@@ -66,49 +66,28 @@ public class BCBuildersClient {
                 SchematicSingleTooltipOverlay::onPreTooltip);
     }
 
-    @SubscribeEvent
-    public static void setupClient(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.QUARRY.get(), "tip.block.quarry");
-        });
-    }
+    private static void registerClientContent(ClientRegistrationSinks sinks) {
+        sinks.clientSetup(() ->
+                buildcraft.lib.client.BCTooltips.addTooltip(buildcraft.builders.BCBuildersItems.QUARRY.get(), "tip.block.quarry"));
 
-    @SubscribeEvent
-    public static void registerMenuScreens(RegisterMenuScreensEvent event) {
-        event.register(BCBuildersMenuTypes.FILLER.get(), GuiFiller::new);
-        event.register(BCBuildersMenuTypes.BUILDER.get(), GuiBuilder::new);
-        event.register(BCBuildersMenuTypes.ARCHITECT.get(), GuiArchitectTable::new);
-        event.register(BCBuildersMenuTypes.LIBRARY.get(), GuiElectronicLibrary::new);
-        event.register(BCBuildersMenuTypes.REPLACER.get(), GuiReplacer::new);
-    }
+        sinks.menuScreen(BCBuildersMenuTypes.FILLER, GuiFiller::new);
+        sinks.menuScreen(BCBuildersMenuTypes.BUILDER, GuiBuilder::new);
+        sinks.menuScreen(BCBuildersMenuTypes.ARCHITECT, GuiArchitectTable::new);
+        sinks.menuScreen(BCBuildersMenuTypes.LIBRARY, GuiElectronicLibrary::new);
+        sinks.menuScreen(BCBuildersMenuTypes.REPLACER, GuiReplacer::new);
 
-    @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(BCBuildersEntities.QUARRY_RIG.get(), net.minecraft.client.renderer.entity.NoopRenderer::new);
-        event.registerBlockEntityRenderer(
-                buildcraft.builders.BCBuildersBlockEntities.QUARRY.get(),
-                buildcraft.builders.client.render.RenderQuarry::new);
-        event.registerBlockEntityRenderer(
-                buildcraft.builders.BCBuildersBlockEntities.ARCHITECT.get(),
+        sinks.entityRenderer(BCBuildersEntities.QUARRY_RIG, net.minecraft.client.renderer.entity.NoopRenderer::new);
+        sinks.blockEntityRenderer(BCBuildersBlockEntities.QUARRY, buildcraft.builders.client.render.RenderQuarry::new);
+        sinks.blockEntityRenderer(BCBuildersBlockEntities.ARCHITECT,
                 buildcraft.builders.client.render.RenderArchitectTable::new);
-        event.registerBlockEntityRenderer(
-                buildcraft.builders.BCBuildersBlockEntities.FILLER.get(),
-                buildcraft.builders.client.render.RenderFiller::new);
-    }
+        sinks.blockEntityRenderer(BCBuildersBlockEntities.FILLER, buildcraft.builders.client.render.RenderFiller::new);
 
-    /**
-     * Register the PictureInPicture renderer that paints blueprint previews into an offscreen
-     * texture as real 3D block models. Without this, any
-     * {@code BlueprintPipRenderState} submitted by {@link buildcraft.builders.client.render.BlueprintRenderer}
-     * would be silently dropped by the GuiRenderer (no matching renderer class).
-     */
-    //? if >=1.21.10 {
-    @SubscribeEvent
-    public static void registerPipRenderers(
-            net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
-        event.register(
-                buildcraft.builders.client.render.pip.BlueprintPipRenderState.class,
+        // The PictureInPicture renderer that paints blueprint previews into an offscreen texture as real 3D
+        // block models. Without this, any BlueprintPipRenderState submitted by BlueprintRenderer would be
+        // silently dropped by the GuiRenderer (no matching renderer class).
+        //? if >=1.21.10 {
+        sinks.pipRenderer(buildcraft.builders.client.render.pip.BlueprintPipRenderState.class,
                 buildcraft.builders.client.render.pip.BlueprintPipRenderer::new);
+        //?}
     }
-    //?}
 }

@@ -17,6 +17,23 @@ public final class ClientPlatform {
         return ConfigScreensHolder.INSTANCE;
     }
 
+    /** Client registration: screens, renderers, particles, HUD layers, tints, pipelines, sprites, reload listeners. */
+    public static ClientRegistrationSinks sinks() {
+        return SinksHolder.INSTANCE;
+    }
+
+    private static final class SinksHolder {
+        static final ClientRegistrationSinks INSTANCE = create();
+
+        private static ClientRegistrationSinks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.client.NeoForgeClientRegistrationSinks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.client.FabricClientRegistrationSinks();
+            *///?}
+        }
+    }
+
     private static final class ConfigScreensHolder {
         static final ClientConfigScreens INSTANCE = create();
 

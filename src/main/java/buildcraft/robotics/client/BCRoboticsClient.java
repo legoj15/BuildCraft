@@ -11,11 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ModelEvent;
-import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
-import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 import buildcraft.api.transport.pipe.PipeApiClient;
 import buildcraft.api.transport.pluggable.IPluggableStaticBaker;
@@ -39,6 +35,8 @@ import buildcraft.robotics.client.render.RenderRobot;
 import buildcraft.robotics.client.render.RenderZonePlanner;
 import buildcraft.robotics.client.zone.ZonePlannerMapDataClient;
 import buildcraft.robotics.entity.RobotExhaust;
+import buildcraft.platform.client.ClientPlatform;
+import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCRoboticsClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(BCRoboticsClient.class);
@@ -50,80 +48,50 @@ public class BCRoboticsClient {
     public static final IPluggableStaticBaker<KeyPlugRobotStation> BAKER_PLUG_ROBOT_STATION =
         new PlugBakerSimple<>(RobotStationModel::bakedQuads);
 
-    @SubscribeEvent
-    public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(BCRoboticsMenuTypes.ZONE_PLANNER.get(), GuiZonePlanner::new);
-        event.register(BCRoboticsMenuTypes.PROGRAMMING_TABLE.get(),
-                buildcraft.robotics.client.gui.GuiProgrammingTable::new);
-        event.register(BCRoboticsMenuTypes.REQUESTER.get(),
-                buildcraft.robotics.client.gui.GuiRequester::new);
-    }
+    private static void registerClientContent(ClientRegistrationSinks sinks) {
+        sinks.menuScreen(BCRoboticsMenuTypes.ZONE_PLANNER, GuiZonePlanner::new);
+        sinks.menuScreen(BCRoboticsMenuTypes.PROGRAMMING_TABLE, buildcraft.robotics.client.gui.GuiProgrammingTable::new);
+        sinks.menuScreen(BCRoboticsMenuTypes.REQUESTER, buildcraft.robotics.client.gui.GuiRequester::new);
 
-    /** Registers the Zone Planner's in-world face preview renderer (the live terrain "screen") and the
-     *  robot entity renderer. {@code registerEntityRenderer} has the same signature on all five nodes, so
-     *  this line needs no directive — the two renderer generations are absorbed inside
-     *  {@link RenderRobot} itself. */
-    @SubscribeEvent
-    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerBlockEntityRenderer(BCRoboticsBlockEntities.ZONE_PLANNER.get(), RenderZonePlanner::new);
-        event.registerEntityRenderer(BCRoboticsEntities.ROBOT.get(), RenderRobot::new);
-    }
+        // The Zone Planner's in-world face preview renderer (the live terrain "screen") and the robot entity
+        // renderer; the two renderer generations are absorbed inside RenderRobot itself.
+        sinks.blockEntityRenderer(BCRoboticsBlockEntities.ZONE_PLANNER, RenderZonePlanner::new);
+        sinks.entityRenderer(BCRoboticsEntities.ROBOT, RenderRobot::new);
 
-    /** The robot's red energy exhaust. {@code registerSpriteSet}'s functional parameter type moved from
-     *  {@code ParticleEngine} to {@code ParticleResources} at 1.21.10; a constructor reference fits both, so
-     *  this line needs no directive. */
-    @SubscribeEvent
-    public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
-        event.registerSpriteSet(BCRoboticsParticles.ROBOT_ENERGY.get(), RobotEnergyParticle.Provider::new);
-    }
+        // The robot's red energy exhaust. The sprite-set registration type moved from ParticleEngine to
+        // ParticleResources at 1.21.10; a constructor reference fits both.
+        sinks.particleSpriteSet(BCRoboticsParticles.ROBOT_ENERGY, RobotEnergyParticle.Provider::new);
 
-    // 1.21.1-only: registers the buildcraftunofficial:board item property that drives the per-board
-    // robot and board icons through classic model overrides. On the newer nodes the items/*.json
-    // condition chains do the same job and no registration is needed — see RoboticsBoardItemProperties.
-    //? if <1.21.10 {
-    /*@SubscribeEvent
-    public static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
-        event.enqueueWork(buildcraft.robotics.client.model.RoboticsBoardItemProperties::register);
-    }*/
-    //?}
+        // 1.21.1-only: registers the buildcraftunofficial:board item property that drives the per-board
+        // robot and board icons through classic model overrides. On the newer nodes the items/*.json
+        // condition chains do the same job and no registration is needed — see RoboticsBoardItemProperties.
+        //? if <1.21.10 {
+        /*sinks.clientSetup(buildcraft.robotics.client.model.RoboticsBoardItemProperties::register);*/
+        //?}
 
-    /** The robot icon's charge-faded eye decals: {@code RobotChargeTintSource} reads the stack's
-     *  energy and returns a neutral multiplier at the charge fraction, tinting the red eye decal
-     *  (tintindex 0) of {@code robot_chassis_base.json} — 7.1.x's decal pass, which faded the same
-     *  art by alpha. Registered per node family — data-driven tint source id on 1.21.10+ (referenced
-     *  by the {@code tints} of every {@code items/robot.json} model leaf; the always-on cyan
-     *  under-port is a vanilla constant there), classic per-item {@code ItemColor} on 1.21.1, which
-     *  has no tint-source registry and answers both tintindexes from this one class. */
-    //? if >=1.21.10 {
-    @SubscribeEvent
-    public static void registerItemTintSources(RegisterColorHandlersEvent.ItemTintSources event) {
-        event.register(Identifier.fromNamespaceAndPath(BCRobotics.MODID, "robot_charge"),
+        // The robot icon's charge-faded eye decals: RobotChargeTintSource reads the stack's energy and returns a
+        // neutral multiplier at the charge fraction, tinting the red eye decal (tintindex 0) of
+        // robot_chassis_base.json — 7.1.x's decal pass, which faded the same art by alpha. Registered per node
+        // family — data-driven tint source id on 1.21.10+ (referenced by the tints of every items/robot.json model
+        // leaf; the always-on cyan under-port is a vanilla constant there), classic per-item ItemColor on 1.21.1,
+        // which has no tint-source registry and answers both tintindexes from this one class.
+        //? if >=1.21.10 {
+        sinks.itemTintSource(Identifier.fromNamespaceAndPath(BCRobotics.MODID, "robot_charge"),
                 RobotChargeTintSource.MAP_CODEC);
-    }
-    //?}
-    //? if <1.21.10 {
-    /*@SubscribeEvent
-    public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
-        event.register(RobotChargeTintSource.INSTANCE, BCRoboticsItems.ROBOT.get());
-    }*/
-    //?}
+        //?} else {
+        /*sinks.itemColor(RobotChargeTintSource.INSTANCE,
+                () -> new net.minecraft.world.level.ItemLike[] {BCRoboticsItems.ROBOT.get()});*/
+        //?}
 
-    /**
-     * Registers the PictureInPicture renderer that paints the Zone Planner's terrain map into an
-     * offscreen texture. Without it, the {@code ZoneMapPipRenderState} the GUI submits each frame is
-     * silently dropped (no matching renderer). The 1.21.1 line lacks the vanilla picture-in-picture
-     * class, so this registration is gated out there — 1.21.1 instead draws the same map straight into
-     * the GUI via {@code ZoneMapGuiRenderer} (no registration needed).
-     */
-    //? if >=1.21.10 {
-    @SubscribeEvent
-    public static void registerPipRenderers(
-            net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) {
-        event.register(
-                buildcraft.robotics.client.render.ZoneMapPipRenderState.class,
+        // The PictureInPicture renderer that paints the Zone Planner's terrain map into an offscreen texture.
+        // Without it, the ZoneMapPipRenderState the GUI submits each frame is silently dropped (no matching
+        // renderer). The 1.21.1 line lacks the vanilla picture-in-picture class, so this registration is gated
+        // out there — 1.21.1 instead draws the same map straight into the GUI via ZoneMapGuiRenderer.
+        //? if >=1.21.10 {
+        sinks.pipRenderer(buildcraft.robotics.client.render.ZoneMapPipRenderState.class,
                 buildcraft.robotics.client.render.ZoneMapPipRenderer::new);
+        //?}
     }
-    //?}
 
     /**
      * Both docking-station caches hold TextureAtlasSprite references, which a resource reload
@@ -214,6 +182,7 @@ public class BCRoboticsClient {
 
     public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
         modEventBus.register(BCRoboticsClient.class);
+        registerClientContent(ClientPlatform.sinks());
         // Guide book: Programming/Integration Table steps on board and robot pages (type="programming"/"integration").
         buildcraft.robotics.client.guide.RoboticsGuideRecipes.register();
         // Guide book: the programmed-board icon of the Robots > Boards pages (icon kind "board").

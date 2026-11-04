@@ -75,7 +75,9 @@ yourself; adding to `registerAll` is every node at once.
 `nodeVerification`). It compiles src/test/java minus the JUnit files and the files `bc.fabric.gradle.kts` lists
 (`fabricGameTestExcludes`). So a new test body must compile on Fabric: reach the loader through `Platform` seams
 (`Platform.fakePlayers()`, `Platform.extensions()`, `Platform.protection()`, `TransferAccess`) and fire loader events
-through `buildcraft.lib.test.LoaderTestEvents`, never `NeoForge.EVENT_BUS` or a NeoForge type in the body. A test
+through `buildcraft.lib.test.LoaderTestEvents` (whose `claim...`/`observe...` methods also stand up a claim mod or an
+observer on the loader's own event, at a `HookOrder` where the order matters), never `NeoForge.EVENT_BUS` or a
+NeoForge type in the body. A test
 that cannot run on Fabric (a documented Fabric gap, or NeoForge-only machinery) goes in a `//? if neoforge {` arm in
 `registerAll` under a `// Not on Fabric: <reason>` line; the Fabric build drops the manifests of tests it does not
 register, so nothing else is needed. A file that cannot even compile there goes on the bc.fabric exclude list with

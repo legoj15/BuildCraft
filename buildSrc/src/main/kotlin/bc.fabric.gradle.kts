@@ -56,17 +56,12 @@ sourceSets {
 // - every JUnit file: unit tests stay NeoForge-only (FML-JUnit has no Fabric twin; docs/platform-layer.md test plan);
 // - buildcraft/platform/neoforge/**: tests of the NeoForge implementations, and NeoForgeGameTestHooks, the NeoForge
 //   hook that makes the same registration from FMLConstructModEvent;
-// - NeoForge-typed test fixtures, each named below with why.
+// - NeoForge-typed test fixtures, each named below with why (none today: the claim mods and saved-data tests reach
+//   the loader through LoaderTestEvents and loader arms).
 // A game test the Fabric node cannot run sits in a `//? if neoforge {` arm of BuildCraftGameTests.registerAll with
 // its reason, and the manifests of tests not registered here are dropped from the resources (FabricGameTests).
 val fabricGameTestExcludes = listOf(
     "buildcraft/platform/neoforge/**",
-    // Robot protection against claim mods written as NeoForge event listeners at chosen priorities (break speed,
-    // placement, entity join, drops, attacks).
-    "buildcraft/robotics/ai/RobotDeployerProtectionTester.java",
-    "buildcraft/robotics/ai/RobotOwnerIdentityTester.java",
-    // The entity-interaction refusal, against NeoForge's cancellation result and listener priorities.
-    "buildcraft/transport/pipe/behaviour/PipeBehaviourStripesEntityClaimTester.java",
 )
 fabricApi {
     configureTests {

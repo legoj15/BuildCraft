@@ -26,17 +26,13 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.misc.MachineBreakAttributionTester;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.LoaderTestEvents;
+import buildcraft.platform.Platform;
 import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.entity.EntityRobot;
 
@@ -52,6 +48,10 @@ import buildcraft.robotics.entity.EntityRobot;
  *
  * <p>A used tool is also in the fake player's hand while it is used: a claim or tool listener reads the player's
  * hand, not the item stack the event carries.
+ *
+ * <p>The observers are the loader's own events ({@link LoaderTestEvents}); on Fabric the placement is a Common
+ * Protection API provider's ask, and the swing, which fires no break-speed event there, is seen through the break asks
+ * ({@link #observeSwings}).
  */
 public class RobotOwnerIdentityTester {
 
@@ -76,10 +76,43 @@ public class RobotOwnerIdentityTester {
         return robot;
     }
 
+    /** Whether the loader posts an event for each of a robot's swings at a block ({@link #observeSwings}). */
+    //? if neoforge {
+    static final boolean SWINGS_POSTED = true;
+    //?} else {
+    /*static final boolean SWINGS_POSTED = false;*/
+    //?}
+
+    /**
+     * Calls {@code swinger} with the player of each swing at {@code pos}: NeoForge's break-speed event, posted once per
+     * swing by vanilla's destroy-progress maths. Fabric posts no break-speed event (the dig-speed gap,
+     * docs/platform-layer.md), so there ({@link #SWINGS_POSTED} false) it is the break asks at {@code pos} instead, the
+     * player identity a Fabric claim mod sees for a break.
+     */
+    static LoaderTestEvents.Observer observeSwings(BlockPos pos, Consumer<Player> swinger) {
+        //? if neoforge {
+        Consumer<net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed> observer = event -> {
+            if (event.getPosition().filter(pos::equals).isPresent()) {
+                swinger.accept(event.getEntity());
+            }
+        };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.event.entity.player.PlayerEvent.BreakSpeed.class, observer);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(observer);
+        //?} else {
+        /*buildcraft.platform.event.PlatformProtection.Registration registration = Platform.protection().onBreak(event -> {
+            if (event.pos().equals(pos) && event.player() != null) {
+                swinger.accept(event.player());
+            }
+        });
+        return registration::close;*/
+        //?}
+    }
+
     private static void requireActedAs(GameTestHelper helper, List<Entity> actors, GameProfile owner, String what) {
         helper.assertTrue(!actors.isEmpty(), what + ": the event must have been posted");
         for (Entity actor : actors) {
-            helper.assertTrue(actor instanceof FakePlayer, what + ": acts as a fake player, got " + actor);
+            helper.assertTrue(Platform.fakePlayers().isFakePlayer(actor), what + ": acts as a fake player, got " + actor);
             helper.assertTrue(GameProfileUtil.getId(owner).equals(actor.getUUID()),
                     what + ": acts as the station owner " + GameProfileUtil.getName(owner)
                             + ", got " + actor.getName().getString() + " (" + actor.getUUID() + ")");
@@ -100,20 +133,17 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.WHEAT_SEEDS));
 
         List<Entity> placers = new ArrayList<>();
-        Consumer<BlockEvent.EntityPlaceEvent> observer = event -> {
-            if (event.getPos().equals(planted)) {
-                placers.add(event.getEntity());
+        try (LoaderTestEvents.Observer observer = LoaderTestEvents.claimPlacements((placer, pos) -> {
+            if (pos.equals(planted)) {
+                placers.add(placer);
             }
-        };
-        NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, observer);
-        try {
+            return false;
+        })) {
             AIRobotPlant planter = new AIRobotPlant(robot, helper.absolutePos(soilRel.below()));
             for (int cycles = 0; cycles < 80 && !level.getBlockState(planted).is(Blocks.WHEAT); cycles++) {
                 planter.cycle();
             }
             helper.assertTrue(level.getBlockState(planted).is(Blocks.WHEAT), "precondition: the seed was planted");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(observer);
         }
         requireActedAs(helper, placers, owner, "planting");
         helper.succeed();
@@ -131,28 +161,24 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
 
         List<Entity> users = new ArrayList<>();
-        Consumer<PlayerInteractEvent.RightClickBlock> observer = event -> {
-            if (event.getPos().equals(dirt)) {
-                Player player = event.getEntity();
+        try (LoaderTestEvents.Observer observer = LoaderTestEvents.observeRightClickBlocks((player, pos) -> {
+            if (pos.equals(dirt)) {
                 users.add(player);
             }
-        };
-        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, observer);
-        try {
+        })) {
             AIRobotUseToolOnBlock user = new AIRobotUseToolOnBlock(robot, dirt);
             for (int cycles = 0; cycles < 80 && !level.getBlockState(dirt).is(Blocks.FARMLAND); cycles++) {
                 user.cycle();
             }
             helper.assertTrue(level.getBlockState(dirt).is(Blocks.FARMLAND), "precondition: the dirt was tilled");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(observer);
         }
         requireActedAs(helper, users, owner, "tool use");
         helper.succeed();
     }
 
     /** The robot's swings at a block run as the owner: the break-speed event, posted once per cycle by vanilla's
-     *  destroy-progress maths, names the owner's fake player, never the generic "[BuildCraft]" one. */
+     *  destroy-progress maths, names the owner's fake player, never the generic "[BuildCraft]" one (on Fabric, which
+     *  posts none, the break's asks do: {@link #observeSwings}). */
     public static void breakActsAsTheStationOwner(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         GameProfile owner = ownerProfile("bc_robot_break_owner");
@@ -164,20 +190,13 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_PICKAXE));
 
         List<Entity> swingers = new ArrayList<>();
-        Consumer<PlayerEvent.BreakSpeed> observer = event -> {
-            if (event.getPosition().filter(stone::equals).isPresent()) {
-                swingers.add(event.getEntity());
-            }
-        };
-        NeoForge.EVENT_BUS.addListener(PlayerEvent.BreakSpeed.class, observer);
-        try {
+        try (LoaderTestEvents.Observer observer = observeSwings(stone, swingers::add)) {
             AIRobotBreak breaker = new AIRobotBreak(robot, stone);
             for (int cycles = 0; cycles < 40 && !level.getBlockState(stone).isAir(); cycles++) {
                 breaker.cycle();
             }
             helper.assertTrue(level.getBlockState(stone).isAir(), "precondition: the stone was broken");
         } finally {
-            NeoForge.EVENT_BUS.unregister(observer);
             for (ItemEntity drop : EntityArenaUtil.droppedItems(helper, stoneRel, 0.75)) {
                 drop.discard();
             }
@@ -229,20 +248,16 @@ public class RobotOwnerIdentityTester {
         robot.setItemInUse(new ItemStack(Items.DIAMOND_HOE));
 
         List<ItemStack> hands = new ArrayList<>();
-        Consumer<PlayerInteractEvent.RightClickBlock> observer = event -> {
-            if (event.getPos().equals(dirt)) {
-                hands.add(event.getEntity().getMainHandItem().copy());
+        try (LoaderTestEvents.Observer observer = LoaderTestEvents.observeRightClickBlocks((player, pos) -> {
+            if (pos.equals(dirt)) {
+                hands.add(player.getMainHandItem().copy());
             }
-        };
-        NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.RightClickBlock.class, observer);
-        try {
+        })) {
             AIRobotUseToolOnBlock user = new AIRobotUseToolOnBlock(robot, dirt);
             for (int cycles = 0; cycles < 80 && !level.getBlockState(dirt).is(Blocks.FARMLAND); cycles++) {
                 user.cycle();
             }
             helper.assertTrue(level.getBlockState(dirt).is(Blocks.FARMLAND), "precondition: the dirt was tilled");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(observer);
         }
         helper.assertTrue(!hands.isEmpty(), "the right-click-block event must have been posted");
         for (ItemStack inHand : hands) {

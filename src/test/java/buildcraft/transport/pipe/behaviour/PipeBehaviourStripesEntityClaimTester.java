@@ -6,28 +6,28 @@
 package buildcraft.transport.pipe.behaviour;
 
 import java.util.Set;
-import java.util.function.Consumer;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-
 import buildcraft.api.transport.pipe.PipeEventItem;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.LoaderTestEvents;
+import buildcraft.lib.test.LoaderTestEvents.InteractAnswer;
 import buildcraft.lib.test.WorkClaimMod;
+import buildcraft.platform.event.HookOrder;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester.StripesRig;
 
 /**
- * The stripes pipe's entity-interaction refusal, against NeoForge's cancellable {@code EntityInteract} event: its
- * cancellation result and its listener priorities are NeoForge's own, so this test is not in the Fabric node's set
- * (bc.fabric). Split from {@link PipeBehaviourStripesDropTester}, which shares the rig.
+ * The stripes pipe's entity-interaction refusal, against the loader's entity-interaction event (NeoForge's cancellable
+ * {@code EntityInteract}, Fabric's {@code UseEntityCallback}, which BuildCraft asks for a fake player's click), its
+ * refusal results and its listener order ({@link LoaderTestEvents#claimEntityInteractions}). Split from
+ * {@link PipeBehaviourStripesDropTester}, which shares the rig.
  */
 public class PipeBehaviourStripesEntityClaimTester {
 
@@ -35,8 +35,8 @@ public class PipeBehaviourStripesEntityClaimTester {
 
     /**
      * A claim that refuses the interaction with a mob in front of the pipe ends the whole dispatch: the entity
-     * handler's refusal is a cancelled entity-interaction event, which comes back from {@code Player#interactOn} as
-     * the default PASS, indistinguishable from a mob that simply ignored the item. The dispatch used to go on to the
+     * handler's refusal is a cancelled entity-interaction event, which comes back from {@code Player#interactOn} on
+     * NeoForge as the default PASS, indistinguishable from a mob that simply ignored the item. The dispatch used to go on to the
      * dispenser fallback and right-click the mob's block with the same item. The control shows the fallback is
      * reached when nothing refuses, so the absence of the click is the refusal and not an unreachable item.
      */
@@ -58,15 +58,16 @@ public class PipeBehaviourStripesEntityClaimTester {
             cow[0].setNoGravity(true);
             Set<BlockPos> watched = Set.of(target);
             int[] interactions = new int[1];
-            // A claim cancelling the interaction: the cancellation result is left at its default, PASS.
-            Consumer<PlayerInteractEvent.EntityInteract> protectCow = event -> {
-                if (event.getTarget() == cow[0]) {
-                    interactions[0]++;
-                    event.setCanceled(true);
-                }
-            };
-            NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.EntityInteract.class, protectCow);
-            try (WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
+            // A claim refusing the interaction: on NeoForge the cancellation result is left at its default, PASS.
+            try (LoaderTestEvents.Observer protectCow = LoaderTestEvents.claimEntityInteractions(HookOrder.DEFAULT,
+                    (player, entity) -> {
+                        if (entity == cow[0]) {
+                            interactions[0]++;
+                            return InteractAnswer.REFUSE;
+                        }
+                        return InteractAnswer.ALLOW;
+                    });
+                    WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
                 PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.STICK, 3));
                 rig.stripes().onDrop(refused);
 
@@ -76,22 +77,21 @@ public class PipeBehaviourStripesEntityClaimTester {
                                 + claim.toolAsks(target));
                 helper.assertTrue(refused.getStack().is(Items.STICK) && refused.getStack().getCount() == 3,
                         "...and the refused item is not consumed, got " + refused.getStack());
-            } finally {
-                NeoForge.EVENT_BUS.unregister(protectCow);
             }
 
-            // The same refusal from a claim that leaves a consuming result on the cancelled event: Player#interactOn
-            // then answers "used", yet nothing was done to the cow, so the item must come back unused all the same.
+            // The same refusal from a claim that leaves a consuming result (NeoForge's cancelled event answering
+            // CONSUME, a Fabric callback answering CONSUME): Player#interactOn then answers "used", yet nothing was done
+            // to the cow, so the item must come back unused all the same.
             int[] swallowed = new int[1];
-            Consumer<PlayerInteractEvent.EntityInteract> swallowCow = event -> {
-                if (event.getTarget() == cow[0]) {
-                    swallowed[0]++;
-                    event.setCanceled(true);
-                    event.setCancellationResult(InteractionResult.CONSUME);
-                }
-            };
-            NeoForge.EVENT_BUS.addListener(PlayerInteractEvent.EntityInteract.class, swallowCow);
-            try (WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
+            try (LoaderTestEvents.Observer swallowCow = LoaderTestEvents.claimEntityInteractions(HookOrder.DEFAULT,
+                    (player, entity) -> {
+                        if (entity == cow[0]) {
+                            swallowed[0]++;
+                            return InteractAnswer.REFUSE_CONSUMING;
+                        }
+                        return InteractAnswer.ALLOW;
+                    });
+                    WorkClaimMod claim = new WorkClaimMod(watched::contains, pos -> false)) {
                 PipeEventItem.Drop refused = rig.drop(new ItemStack(Items.STICK, 3));
                 rig.stripes().onDrop(refused);
 
@@ -101,8 +101,6 @@ public class PipeBehaviourStripesEntityClaimTester {
                                 + " right-clicked, got " + claim.toolAsks(target));
                 helper.assertTrue(refused.getStack().is(Items.STICK) && refused.getStack().getCount() == 3,
                         "...and the item is not taken as used, got " + refused.getStack());
-            } finally {
-                NeoForge.EVENT_BUS.unregister(swallowCow);
             }
 
             // The same refusal from a claim that cancels at LOWEST and registered its listener while the mods
@@ -140,26 +138,38 @@ public class PipeBehaviourStripesEntityClaimTester {
     }
 
     /**
-     * A claim mod that cancels mob interactions at LOWEST and registers its listener during mod loading (common
-     * setup), so after BuildCraft's construction-time listeners: the case a recorder registered with BuildCraft
-     * misses, since one priority's listeners run in registration order. Inert unless a test arms {@link #target}.
+     * A claim mod that refuses mob interactions LATE (NeoForge's LOWEST) and registers its listener after BuildCraft's
+     * own: on NeoForge during mod loading (common setup), after BuildCraft's construction-time listeners, the case a
+     * recorder registered with BuildCraft misses, since one priority's listeners run in registration order; on Fabric
+     * the first time a test arms it, long after BuildCraft's init, in the same phase as BuildCraft's LATE recorder.
+     * Inert unless a test arms {@link #target}.
      */
+    //? if neoforge {
     @net.neoforged.fml.common.EventBusSubscriber(modid = "buildcraftunofficial")
+    //?}
     public static final class LoadTimeLowestClaim {
-        static volatile net.minecraft.world.entity.Entity target;
+        static volatile Entity target;
         static int cancels;
 
+        //? if neoforge {
         @net.neoforged.bus.api.SubscribeEvent
         public static void onCommonSetup(net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event) {
-            event.enqueueWork(() -> NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,
-                    PlayerInteractEvent.EntityInteract.class, LoadTimeLowestClaim::onEntityInteract));
+            event.enqueueWork(LoadTimeLowestClaim::register);
         }
+        //?} else {
+        /*static {
+            register();
+        }*/
+        //?}
 
-        private static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-            if (target != null && event.getTarget() == target) {
-                cancels++;
-                event.setCanceled(true);
-            }
+        private static void register() {
+            LoaderTestEvents.claimEntityInteractions(HookOrder.LATE, (player, entity) -> {
+                if (target != null && entity == target) {
+                    cancels++;
+                    return InteractAnswer.REFUSE;
+                }
+                return InteractAnswer.ALLOW;
+            });
         }
     }
 }

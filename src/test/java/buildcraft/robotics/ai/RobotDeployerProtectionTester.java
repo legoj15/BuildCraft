@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -44,20 +43,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.EventPriority;
-
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
 
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.EntityArenaUtil;
+import buildcraft.lib.test.LoaderTestEvents;
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.DockingStationPipe;
 import buildcraft.robotics.RobotArenaUtil;
@@ -69,6 +61,7 @@ import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.tile.TilePipeHolder;
 
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.HookOrder;
 import buildcraft.platform.event.PlatformProtection;
 
 /**
@@ -85,6 +78,7 @@ import buildcraft.platform.event.PlatformProtection;
  * and one that cannot name its owner at all refuses everything.
  *
  * <p>Like {@link RobotPumpProtectionTester}, the AIs are cycled by hand on a robot that is never added to the level.
+ * The claims and observers are the loader's own events ({@link LoaderTestEvents}, {@code Platform.protection()}).
  */
 public class RobotDeployerProtectionTester {
 
@@ -166,25 +160,22 @@ public class RobotDeployerProtectionTester {
 
         helper.setBlock(stoneRel, Blocks.STONE);
         List<UUID> swingers = new ArrayList<>();
-        Consumer<PlayerEvent.BreakSpeed> swingObserver = event -> {
-            if (event.getPosition().filter(stone::equals).isPresent()) {
-                swingers.add(event.getEntity().getUUID());
-            }
-        };
-        NeoForge.EVENT_BUS.addListener(PlayerEvent.BreakSpeed.class, swingObserver);
         int twoPlayerAsks;
-        try (PlayerClaim claim = new PlayerClaim(stone, null)) {
+        try (LoaderTestEvents.Observer swingObserver = RobotOwnerIdentityTester.observeSwings(stone,
+                player -> swingers.add(player.getUUID()));
+                PlayerClaim claim = new PlayerClaim(stone, null)) {
             check(breakWith(helper, robot(helper, robotRel, deployer, owner), stoneRel),
                     "a robot whose deployer and station's owner are both trusted breaks the block");
             check(claim.breakAsks.contains(GameProfileUtil.getId(deployer))
                             && claim.breakAsks.contains(GameProfileUtil.getId(owner)),
                     "both players were asked about, got " + claim.breakAsks);
             twoPlayerAsks = claim.breakAsks.size();
-        } finally {
-            NeoForge.EVENT_BUS.unregister(swingObserver);
         }
-        check(!swingers.isEmpty() && swingers.stream().allMatch(GameProfileUtil.getId(deployer)::equals),
-                "the robot swings as its deployer, got " + swingers);
+        // Fabric posts no event for a swing; its break asks are the probe's (both players) and the break's.
+        if (RobotOwnerIdentityTester.SWINGS_POSTED) {
+            check(!swingers.isEmpty() && swingers.stream().allMatch(GameProfileUtil.getId(deployer)::equals),
+                    "the robot swings as its deployer, got " + swingers);
+        }
 
         helper.setBlock(stoneRel, Blocks.STONE);
         try (PlayerClaim claim = new PlayerClaim(stone, null)) {
@@ -377,15 +368,15 @@ public class RobotDeployerProtectionTester {
         List<Entity> thrown = new ArrayList<>();
         // The snowball is caught as it joins, by where it is thrown from (other tests throw some too), and kept out of
         // the world: only that it was thrown matters here.
-        Consumer<EntityJoinLevelEvent> catcher = event -> {
-            if (event.getEntity() instanceof ItemSupplier supplier && supplier.getItem().is(Items.SNOWBALL)
-                    && event.getEntity().position().closerThan(Vec3.atCenterOf(target), 2)) {
-                thrown.add(event.getEntity());
-                event.setCanceled(true);
+        try (LoaderTestEvents.Observer catcher = LoaderTestEvents.claimEntityJoins(HookOrder.DEFAULT, entity -> {
+            if (entity instanceof ItemSupplier supplier && supplier.getItem().is(Items.SNOWBALL)
+                    && entity.position().closerThan(Vec3.atCenterOf(target), 2)) {
+                thrown.add(entity);
+                return true;
             }
-        };
-        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, catcher);
-        try (PlayerClaim claim = new PlayerClaim(target, owner)) {
+            return false;
+        });
+                PlayerClaim claim = new PlayerClaim(target, owner)) {
             EntityRobot robot = robot(helper, targetRel.above(), deployer, owner);
             robot.setItemInUse(new ItemStack(Items.SNOWBALL, 4));
             AIRobotStripesHandler user = new AIRobotStripesHandler(robot, target);
@@ -398,8 +389,6 @@ public class RobotDeployerProtectionTester {
             check(!user.refused(), "the throw is not reported as refused");
             check(robot.getHeldItem().getCount() == 3, "the rest of the snowballs stay in hand, got "
                     + robot.getHeldItem());
-        } finally {
-            NeoForge.EVENT_BUS.unregister(catcher);
         }
         helper.succeed();
     }
@@ -563,17 +552,14 @@ public class RobotDeployerProtectionTester {
             }
         };
         PrimedTnt[] primed = new PrimedTnt[1];
-        Consumer<EntityJoinLevelEvent> catcher = event -> {
-            if (event.getEntity() instanceof PrimedTnt tnt && event.getLevel() == helper.getLevel()) {
+        try (LoaderTestEvents.Observer catcher = LoaderTestEvents.claimEntityJoins(HookOrder.DEFAULT, entity -> {
+            if (entity instanceof PrimedTnt tnt && entity.level() == helper.getLevel()) {
                 primed[0] = tnt;
-                event.setCanceled(true);
+                return true;
             }
-        };
-        NeoForge.EVENT_BUS.addListener(EntityJoinLevelEvent.class, catcher);
-        try {
+            return false;
+        })) {
             board.delegateAIEnded(arrived);
-        } finally {
-            NeoForge.EVENT_BUS.unregister(catcher);
         }
         return primed[0];
     }
@@ -646,17 +632,15 @@ public class RobotDeployerProtectionTester {
         // its blast spares the station owner's claim too. The primed TNT is caught last and kept out of the world.
         helper.setBlock(blastRel, Blocks.TNT);
         PrimedTnt[] chained = new PrimedTnt[1];
-        Consumer<EntityJoinLevelEvent> chainCatcher = event -> {
-            if (event.getEntity() instanceof PrimedTnt tnt && event.getLevel() == helper.getLevel()) {
+        try (LoaderTestEvents.Observer chainCatcher = LoaderTestEvents.claimEntityJoins(HookOrder.LATE, entity -> {
+            if (entity instanceof PrimedTnt tnt && entity.level() == helper.getLevel()) {
                 chained[0] = tnt;
-                event.setCanceled(true);
+                return true;
             }
-        };
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, EntityJoinLevelEvent.class, chainCatcher);
-        try (PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), null)) {
+            return false;
+        });
+                PlayerClaim claim = new PlayerClaim(helper.absolutePos(blastRel), null)) {
             blowUp(helper, bomb, blastRel, null);
-        } finally {
-            NeoForge.EVENT_BUS.unregister(chainCatcher);
         }
         check(chained[0] != null, "a robot's blast sets off the TNT block it takes");
         helper.setBlock(blastRel, Blocks.SLIME_BLOCK);
@@ -803,17 +787,13 @@ public class RobotDeployerProtectionTester {
                 ItemStack sword = new ItemStack(Items.DIAMOND_SWORD);
                 sword.enchant(looting, 3);
                 int[] lootingAtDeath = {-1};
-                Consumer<LivingDropsEvent> drops = event -> {
-                    if (event.getEntity() == victim && event.getSource().getEntity() instanceof LivingEntity killer) {
+                try (LoaderTestEvents.Observer drops = LoaderTestEvents.observeLivingDrops((dying, killedBy) -> {
+                    if (dying == victim && killedBy.getEntity() instanceof LivingEntity killer) {
                         lootingAtDeath[0] = EnchantmentHelper.getEnchantmentLevel(looting, killer);
                     }
-                };
-                NeoForge.EVENT_BUS.addListener(LivingDropsEvent.class, drops);
-                try {
+                })) {
                     victim.setHealth(1.0F);
                     attackWith(robot, victim, sword);
-                } finally {
-                    NeoForge.EVENT_BUS.unregister(drops);
                 }
                 check(victim.isDeadOrDying(), "a one-health cow dies to the robot's sword");
                 check(lootingAtDeath[0] == 3, "a robot's kill rolls its loot with the weapon's Looting III, got "
@@ -869,25 +849,23 @@ public class RobotDeployerProtectionTester {
      *  it was posted for and cancels those of {@code refused} (none when null). */
     private static final class AttackClaim implements AutoCloseable {
         final List<UUID> asks = new ArrayList<>();
-        private final Consumer<AttackEntityEvent> listener;
+        private final LoaderTestEvents.Observer listener;
 
         AttackClaim(Entity target, @Nullable GameProfile refused) {
             UUID refusedId = refused == null ? null : GameProfileUtil.getId(refused);
-            listener = event -> {
-                if (event.getTarget() == target) {
-                    UUID id = event.getEntity().getUUID();
-                    asks.add(id);
-                    if (id.equals(refusedId)) {
-                        event.setCanceled(true);
-                    }
+            listener = LoaderTestEvents.claimAttacks((attacker, attacked) -> {
+                if (attacked != target) {
+                    return false;
                 }
-            };
-            NeoForge.EVENT_BUS.addListener(AttackEntityEvent.class, listener);
+                UUID id = attacker.getUUID();
+                asks.add(id);
+                return id.equals(refusedId);
+            });
         }
 
         @Override
         public void close() {
-            NeoForge.EVENT_BUS.unregister(listener);
+            listener.close();
         }
     }
 
@@ -900,7 +878,7 @@ public class RobotDeployerProtectionTester {
         final List<UUID> breakAsks = new ArrayList<>();
         final List<UUID> placeAsks = new ArrayList<>();
         private final PlatformProtection.Registration breakToken;
-        private final Consumer<BlockEvent.EntityPlaceEvent> placeListener;
+        private final LoaderTestEvents.Observer placeListener;
 
         PlayerClaim(BlockPos pos, @Nullable GameProfile refused) {
             UUID refusedId = refused == null ? null : GameProfileUtil.getId(refused);
@@ -914,23 +892,20 @@ public class RobotDeployerProtectionTester {
                     }
                 }
             });
-            placeListener = event -> {
-                if (event.getPos().equals(pos)) {
-                    Entity placer = event.getEntity();
-                    UUID id = placer == null ? null : placer.getUUID();
-                    placeAsks.add(id);
-                    if (id != null && id.equals(refusedId)) {
-                        event.setCanceled(true);
-                    }
+            placeListener = LoaderTestEvents.claimPlacements((placer, at) -> {
+                if (!at.equals(pos)) {
+                    return false;
                 }
-            };
-            NeoForge.EVENT_BUS.addListener(BlockEvent.EntityPlaceEvent.class, placeListener);
+                UUID id = placer == null ? null : placer.getUUID();
+                placeAsks.add(id);
+                return id != null && id.equals(refusedId);
+            });
         }
 
         @Override
         public void close() {
             breakToken.close();
-            NeoForge.EVENT_BUS.unregister(placeListener);
+            placeListener.close();
         }
     }
 

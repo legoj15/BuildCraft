@@ -7,7 +7,11 @@ package buildcraft.platform.fabric;
 
 //? if fabric {
 /*import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -22,12 +26,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Explosion;
@@ -35,6 +41,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
+
+import eu.pb4.common.protection.api.CommonProtection;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
@@ -59,15 +69,16 @@ import buildcraft.platform.event.HookOrder;
  * event: the chunk sent to a player ({@code PlayerChunkSenderMixin}), the spawn finalize ({@code MobMixin}), the dying
  * entity's drops ({@code LivingEntityMixin}, collected at the drop sites NeoForge captures), the neighbour notify
  * ({@code ServerLevelMixin}, {@code DiodeBlockMixin}), the explosion's lists ({@code ServerExplosionMixin}), each
- * player's own tick ({@code PlayerMixin}) and the client level's unload ({@code client.MinecraftMixin}).
+ * player's own tick ({@code PlayerMixin}), a fake player's entity interaction ({@code PlayerMixin}, see
+ * {@link #fireFakePlayerEntityInteract}) and the client level's unload ({@code client.MinecraftMixin}).
  *
  * <p><b>Gap</b> (the hook registers nothing): {@link #syncRecipeTypes} (Fabric syncs recipes per serializer, not per
  * type). Narrower than NeoForge: {@link #onBlockPlace} sees only the placements BuildCraft's machines make through
  * {@code FabricProtection} (Fabric API has no placement event; a player's own placement still reaches the
  * neighbour-notify listeners), {@link #onFinalizeSpawn} runs from inside {@code Mob}'s own finalize (a mob whose
  * override never calls it is not seen, and a spawner that skips the finalize posts nothing), and a
- * {@code receiveCancelled} {@link #onEntityInteract} listener is never told about a refused click, because a Fabric
- * callback that refuses stops the event there.
+ * {@code receiveCancelled} {@link #onEntityInteract} listener is told about a refused click by a fake player only
+ * (Fabric API asks a real player's click in its packet handler, where a refusing callback ends the event).
  *^/
 public final class FabricGameHooks implements GameHooks {
 
@@ -81,6 +92,17 @@ public final class FabricGameHooks implements GameHooks {
     private static final List<NeighborNotify> NEIGHBOR_NOTIFY = new CopyOnWriteArrayList<>();
     private static final List<Consumer<ServerPlayer>> PLAYER_TICK_END = new CopyOnWriteArrayList<>();
     private static final List<Consumer<LevelAccessor>> CLIENT_LEVEL_UNLOAD = new CopyOnWriteArrayList<>();
+    /^* The {@code receiveCancelled} entity-interaction listeners, by order, told how a fake player's click ended. *^/
+    private static final EnumMap<HookOrder, List<EntityInteract>> INTERACT_RECEIVE_CANCELLED = new EnumMap<>(
+            java.util.Map.of(HookOrder.EARLY, new CopyOnWriteArrayList<>(),
+                    HookOrder.DEFAULT, new CopyOnWriteArrayList<>(),
+                    HookOrder.LATE, new CopyOnWriteArrayList<>()));
+    /^* The fake player's entity interaction {@link #fireFakePlayerEntityInteract} is asking right now, or null.
+     *  Server thread only. *^/
+    private static InteractDispatch interactInFlight;
+
+    /^* One fake player's click being asked: the {@code receiveCancelled} listeners the callback has reached so far. *^/
+    private record InteractDispatch(Player player, Entity target, Set<EntityInteract> reached) {}
     private static final Event<ExplosionDetonate> EXPLOSION_DETONATE = EventFactory.createArrayBacked(
             ExplosionDetonate.class, listeners -> (level, explosion, blocks, entities) -> {
                 for (ExplosionDetonate listener : listeners) {
@@ -88,8 +110,8 @@ public final class FabricGameHooks implements GameHooks {
                 }
             });
 
-    /^* Registers {@code listener} on {@code event} in the phase {@code order} names. *^/
-    static <T> void register(Event<T> event, HookOrder order, T listener) {
+    /^* Registers {@code listener} on {@code event} in the phase {@code order} names (also the game tests' claims). *^/
+    public static <T> void register(Event<T> event, HookOrder order, T listener) {
         switch (order) {
             case EARLY -> {
                 event.addPhaseOrdering(EARLY_PHASE, Event.DEFAULT_PHASE);
@@ -190,8 +212,21 @@ public final class FabricGameHooks implements GameHooks {
 
     @Override
     public void onEntityInteract(HookOrder order, boolean receiveCancelled, EntityInteract listener) {
-        // A callback before this one that refused the click stopped the event: this one only sees allowed clicks
+        // A callback before this one that refused the click stopped the event: in it, this one only sees allowed
+        // clicks. A receiveCancelled one is also told, by fireFakePlayerEntityInteract, about a fake player's click
+        // that was refused before it; a LATE one is told about every fake player's click only there, once the
+        // callback has ended, so it sees what every listener decided.
+        if (receiveCancelled) {
+            INTERACT_RECEIVE_CANCELLED.get(order).add(listener);
+        }
         register(UseEntityCallback.EVENT, order, (player, level, hand, entity, hit) -> {
+            InteractDispatch dispatch = interactInFlight;
+            if (receiveCancelled && dispatch != null && dispatch.player() == player && dispatch.target() == entity) {
+                if (order == HookOrder.LATE) {
+                    return InteractionResult.PASS;
+                }
+                dispatch.reached().add(listener);
+            }
             listener.onInteract(player, entity, false);
             return InteractionResult.PASS;
         });
@@ -271,6 +306,50 @@ public final class FabricGameHooks implements GameHooks {
     public static void firePlayerTickEnd(ServerPlayer player) {
         for (Consumer<ServerPlayer> listener : PLAYER_TICK_END) {
             listener.accept(player);
+        }
+    }
+
+    /^*
+     * A fake player is interacting with {@code target} ({@code Player.interactOn}, where NeoForge posts its
+     * entity-interaction event; Fabric API asks only a real player's click, in its packet handler): the protection
+     * providers are asked about the click, then {@code UseEntityCallback}, and the {@code receiveCancelled}
+     * listeners are told how it ended (see {@link #onEntityInteract}).
+     *
+     * @return null when the click may go on, else what {@code interactOn} answers instead: FAIL for a refusal, or the
+     *         result the refusing callback gave (a consuming one is a callback that took the click itself)
+     *^/
+    @Nullable
+    public static InteractionResult fireFakePlayerEntityInteract(Player player, Entity target, InteractionHand hand,
+            Vec3 location) {
+        if (!CommonProtection.canInteractEntity(player.level(), target, player.nameAndId(), player)) {
+            tellInteractEnded(player, target, true, Set.of());
+            return InteractionResult.FAIL;
+        }
+        InteractDispatch outer = interactInFlight;
+        InteractDispatch dispatch = new InteractDispatch(player, target,
+                Collections.newSetFromMap(new IdentityHashMap<>()));
+        interactInFlight = dispatch;
+        InteractionResult result;
+        try {
+            result = UseEntityCallback.EVENT.invoker()
+                    .interact(player, player.level(), hand, target, new EntityHitResult(target, location));
+        } finally {
+            interactInFlight = outer;
+        }
+        boolean refused = result != InteractionResult.PASS;
+        tellInteractEnded(player, target, refused, dispatch.reached());
+        return refused ? result : null;
+    }
+
+    /^* Tells the receiveCancelled listeners not yet {@code reached} about a click: the LATE ones always, the others
+     *  only when it was {@code refused} (they saw an allowed one inside the callback). *^/
+    private static void tellInteractEnded(Player player, Entity target, boolean refused, Set<EntityInteract> reached) {
+        for (HookOrder order : HookOrder.values()) {
+            for (EntityInteract listener : INTERACT_RECEIVE_CANCELLED.get(order)) {
+                if ((order == HookOrder.LATE || refused) && !reached.contains(listener)) {
+                    listener.onInteract(player, target, refused);
+                }
+            }
         }
     }
 

@@ -19,10 +19,17 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.platform.event.HookOrder;
+
 /**
  * The loader events a game test fires itself, so the wiring from the loader's event to BuildCraft's listener is under
  * test, not just the listener: each posts the event the running loader would post (NeoForge's bus, or the Fabric API
- * event's invoker), so every listener the loader holds runs, BuildCraft's {@code Platform} hooks included.
+ * event's invoker), so every listener the loader holds runs, BuildCraft's {@code Platform} hooks included. The
+ * {@code claim...} and {@code observe...} methods stand up a claim mod or an observer on the running loader's own
+ * event for as long as the returned handle is open; a {@link HookOrder} is the claim's place among the listeners
+ * (NeoForge's priority, or the Fabric event phase BuildCraft's own hooks use for it). Fabric events cannot be
+ * unregistered, so each Fabric claim kind is one callback registered once (per order), handing the click to the open
+ * claims.
  */
 public final class LoaderTestEvents {
 
@@ -163,8 +170,243 @@ public final class LoaderTestEvents {
         //?}
     }
 
+    /** How an entity-interaction claim ({@link #claimEntityInteractions}) answers a click. */
+    public enum InteractAnswer {
+        /** Lets the click through. */
+        ALLOW,
+        /** Refuses it: NeoForge's cancelled event with its default PASS result, Fabric's FAIL. */
+        REFUSE,
+        /** Refuses it leaving a consuming result: NeoForge's cancelled event answering CONSUME, a Fabric callback
+         *  answering CONSUME (one that took the click itself). */
+        REFUSE_CONSUMING
+    }
+
+    /**
+     * A claim on players' right-clicks on entities, at {@code order} (NeoForge {@code PlayerInteractEvent.EntityInteract}
+     * at the order's priority; Fabric {@code UseEntityCallback} in the order's phase, which BuildCraft's
+     * {@code PlayerMixin} also asks for a fake player's click, where NeoForge posts its event).
+     */
+    public static Observer claimEntityInteractions(HookOrder order,
+            java.util.function.BiFunction<net.minecraft.world.entity.player.Player, Entity, InteractAnswer> claim) {
+        //? if neoforge {
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.EntityInteract> neo = event -> {
+            InteractAnswer answer = claim.apply(event.getEntity(), event.getTarget());
+            if (answer != InteractAnswer.ALLOW) {
+                event.setCanceled(true);
+                if (answer == InteractAnswer.REFUSE_CONSUMING) {
+                    event.setCancellationResult(net.minecraft.world.InteractionResult.CONSUME);
+                }
+            }
+        };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                buildcraft.platform.neoforge.NeoForgeGameHooks.priority(order),
+                net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.EntityInteract.class, neo);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
+        //?} else {
+        /*return FabricInteractClaims.open(order, claim);*/
+        //?}
+    }
+
+    /**
+     * A claim on entities joining a level, at {@code order}: {@code claim} answering true keeps the entity out (NeoForge
+     * {@code EntityJoinLevelEvent} cancelled at the order's priority; Fabric {@code ServerEntityEvents.ALLOW_LOAD}
+     * answering false in the order's phase).
+     */
+    public static Observer claimEntityJoins(HookOrder order, java.util.function.Predicate<Entity> claim) {
+        //? if neoforge {
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.EntityJoinLevelEvent> neo = event -> {
+            if (claim.test(event.getEntity())) {
+                event.setCanceled(true);
+            }
+        };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                buildcraft.platform.neoforge.NeoForgeGameHooks.priority(order),
+                net.neoforged.neoforge.event.entity.EntityJoinLevelEvent.class, neo);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
+        //?} else {
+        /*return FabricJoinClaims.open(order, claim);*/
+        //?}
+    }
+
+    /**
+     * A claim on block placements: {@code claim} is asked about each placement by an entity at a position and refuses
+     * it by answering true (NeoForge {@code BlockEvent.EntityPlaceEvent} cancelled; on Fabric a Common Protection API
+     * provider, which is how a Fabric claim mod answers placements: asked by BuildCraft's placement probe and by the
+     * blocks a machine's item use placed, once per cell).
+     */
+    public static Observer claimPlacements(java.util.function.BiPredicate<Entity, net.minecraft.core.BlockPos> claim) {
+        //? if neoforge {
+        java.util.function.Consumer<net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent> neo = event -> {
+            if (claim.test(event.getEntity(), event.getPos())) {
+                event.setCanceled(true);
+            }
+        };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent.class, neo);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
+        //?} else {
+        /*net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.fromNamespaceAndPath(
+                "buildcraftunofficial_gametest", "placement_claim_" + FabricPlacementClaims.IDS.incrementAndGet());
+        eu.pb4.common.protection.api.CommonProtection.register(id, new FabricPlacementClaims(claim));
+        return () -> eu.pb4.common.protection.api.CommonProtection.remove(id);*/
+        //?}
+    }
+
+    /**
+     * Calls {@code listener} with each player's right-click on a block (NeoForge {@code PlayerInteractEvent.RightClickBlock};
+     * Fabric {@code UseBlockCallback}, answering PASS).
+     */
+    public static Observer observeRightClickBlocks(
+            java.util.function.BiConsumer<net.minecraft.world.entity.player.Player, net.minecraft.core.BlockPos> listener) {
+        //? if neoforge {
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock> neo =
+                event -> listener.accept(event.getEntity(), event.getPos());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class, neo);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
+        //?} else {
+        /*FabricRightClicks.OPEN.add(listener);
+        return () -> FabricRightClicks.OPEN.remove(listener);*/
+        //?}
+    }
+
+    /**
+     * Calls {@code listener} with each dying entity and what killed it as its drops are collected (NeoForge
+     * {@code LivingDropsEvent}; Fabric BuildCraft's {@code GameHooks.onLivingDrops}, fed by its
+     * {@code LivingEntityMixin}).
+     */
+    public static Observer observeLivingDrops(java.util.function.BiConsumer<LivingEntity, DamageSource> listener) {
+        //? if neoforge {
+        java.util.function.Consumer<net.neoforged.neoforge.event.entity.living.LivingDropsEvent> neo =
+                event -> listener.accept(event.getEntity(), event.getSource());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                net.neoforged.neoforge.event.entity.living.LivingDropsEvent.class, neo);
+        return () -> net.neoforged.neoforge.common.NeoForge.EVENT_BUS.unregister(neo);
+        //?} else {
+        /*FabricLivingDrops.OPEN.add(listener);
+        return () -> FabricLivingDrops.OPEN.remove(listener);*/
+        //?}
+    }
+
     //? if fabric {
-    /*/^* The game-event observers open on Fabric; the game-test mod's {@code ServerLevelGameEventMixin} tells them. *^/
+    /*/^* The open entity-interaction claims on Fabric: one UseEntityCallback per order, in its phase. *^/
+    private static final class FabricInteractClaims {
+        private static final java.util.Map<HookOrder, java.util.List<java.util.function.BiFunction<
+                net.minecraft.world.entity.player.Player, Entity, InteractAnswer>>> OPEN = new java.util.EnumMap<>(HookOrder.class);
+
+        static {
+            for (HookOrder order : HookOrder.values()) {
+                java.util.List<java.util.function.BiFunction<net.minecraft.world.entity.player.Player, Entity, InteractAnswer>> open =
+                        new java.util.concurrent.CopyOnWriteArrayList<>();
+                OPEN.put(order, open);
+                buildcraft.platform.fabric.FabricGameHooks.register(net.fabricmc.fabric.api.event.player.UseEntityCallback.EVENT,
+                        order, (player, level, hand, entity, hit) -> {
+                            InteractAnswer answer = InteractAnswer.ALLOW;
+                            for (java.util.function.BiFunction<net.minecraft.world.entity.player.Player, Entity, InteractAnswer> claim : open) {
+                                InteractAnswer each = claim.apply(player, entity);
+                                if (each.ordinal() > answer.ordinal()) {
+                                    answer = each;
+                                }
+                            }
+                            return switch (answer) {
+                                case ALLOW -> net.minecraft.world.InteractionResult.PASS;
+                                case REFUSE -> net.minecraft.world.InteractionResult.FAIL;
+                                case REFUSE_CONSUMING -> net.minecraft.world.InteractionResult.CONSUME;
+                            };
+                        });
+            }
+        }
+
+        static Observer open(HookOrder order,
+                java.util.function.BiFunction<net.minecraft.world.entity.player.Player, Entity, InteractAnswer> claim) {
+            OPEN.get(order).add(claim);
+            return () -> OPEN.get(order).remove(claim);
+        }
+    }
+
+    /^* The open entity-join claims on Fabric: one ALLOW_LOAD callback per order, in its phase. *^/
+    private static final class FabricJoinClaims {
+        private static final java.util.Map<HookOrder, java.util.List<java.util.function.Predicate<Entity>>> OPEN =
+                new java.util.EnumMap<>(HookOrder.class);
+
+        static {
+            for (HookOrder order : HookOrder.values()) {
+                java.util.List<java.util.function.Predicate<Entity>> open = new java.util.concurrent.CopyOnWriteArrayList<>();
+                OPEN.put(order, open);
+                buildcraft.platform.fabric.FabricGameHooks.register(
+                        net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ALLOW_LOAD, order,
+                        (entity, level, reason, loadedFromDisk) -> {
+                            boolean refused = false;
+                            for (java.util.function.Predicate<Entity> claim : open) {
+                                refused |= claim.test(entity);
+                            }
+                            return !refused;
+                        });
+            }
+        }
+
+        static Observer open(HookOrder order, java.util.function.Predicate<Entity> claim) {
+            OPEN.get(order).add(claim);
+            return () -> OPEN.get(order).remove(claim);
+        }
+    }
+
+    /^* One placement claim on Fabric: a Common Protection API provider that refuses only placements. *^/
+    private static final class FabricPlacementClaims implements eu.pb4.common.protection.api.ProtectionProvider {
+        static final java.util.concurrent.atomic.AtomicInteger IDS = new java.util.concurrent.atomic.AtomicInteger();
+        private final java.util.function.BiPredicate<Entity, net.minecraft.core.BlockPos> claim;
+
+        FabricPlacementClaims(java.util.function.BiPredicate<Entity, net.minecraft.core.BlockPos> claim) {
+            this.claim = claim;
+        }
+
+        @Override
+        public boolean isProtected(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos) {
+            return false;
+        }
+
+        @Override
+        public boolean isAreaProtected(net.minecraft.world.level.Level level, net.minecraft.world.phys.AABB area) {
+            return false;
+        }
+
+        @Override
+        public boolean canPlaceBlock(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                net.minecraft.server.players.NameAndId profile, net.minecraft.world.entity.player.Player player) {
+            return !claim.test(player, pos);
+        }
+    }
+
+    /^* The open right-click-block observers on Fabric: one UseBlockCallback, answering PASS. *^/
+    private static final class FabricRightClicks {
+        static final java.util.List<java.util.function.BiConsumer<net.minecraft.world.entity.player.Player,
+                net.minecraft.core.BlockPos>> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        static {
+            net.fabricmc.fabric.api.event.player.UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+                for (java.util.function.BiConsumer<net.minecraft.world.entity.player.Player, net.minecraft.core.BlockPos> listener : OPEN) {
+                    listener.accept(player, hit.getBlockPos());
+                }
+                return net.minecraft.world.InteractionResult.PASS;
+            });
+        }
+    }
+
+    /^* The open drop observers on Fabric: one GameHooks.onLivingDrops listener. *^/
+    private static final class FabricLivingDrops {
+        static final java.util.List<java.util.function.BiConsumer<LivingEntity, DamageSource>> OPEN =
+                new java.util.concurrent.CopyOnWriteArrayList<>();
+
+        static {
+            buildcraft.platform.Platform.gameHooks().onLivingDrops((entity, source, recentlyHit, drops) -> {
+                for (java.util.function.BiConsumer<LivingEntity, DamageSource> listener : OPEN) {
+                    listener.accept(entity, source);
+                }
+            });
+        }
+    }
+
+    /^* The game-event observers open on Fabric; the game-test mod's {@code ServerLevelGameEventMixin} tells them. *^/
     public static final class FabricGameEvents {
         static final java.util.List<GameEventListener> OPEN = new java.util.concurrent.CopyOnWriteArrayList<>();
 

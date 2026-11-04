@@ -230,10 +230,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_air_use_bucket_asks_cells_it_touches", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseBucketAsksTheCellsItTouches);
         reg.accept("buildcraftunofficial:stripes_air_use_hands_product_back_down_pipe", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseHandsTheProductBackDownThePipe);
         reg.accept("buildcraftunofficial:stripes_refused_till_ends_hoe_handler", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedTillEndsTheHoeHandler);
-        // Not on Fabric: NeoForge's EntityInteract cancellation result and listener priorities.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_refused_entity_interaction_ends_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesEntityClaimTester::testRefusedEntityInteractionEndsTheDispatch);
-        //?}
         reg.accept("buildcraftunofficial:stripes_other_players_refusal_keeps_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAnotherPlayersRefusalDoesNotEndTheDispatch);
         reg.accept("buildcraftunofficial:stripes_handler_may_change_registry_while_dispatched", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHandlerMayChangeTheRegistryWhileItIsDispatched);
         reg.accept("buildcraftunofficial:stripes_alias_sweep_sends_once", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAliasedStackIsSentBackOnce);
@@ -1430,16 +1427,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_board_skips_miner_tube", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsWaterloggedMinerTube);
         reg.accept("buildcraftunofficial:robot_pump_leaves_source_beside_absent_chunk", () -> buildcraft.robotics.ai.RobotPumpUnloadedChunkTester::pumpLeavesASourceBesideAnAbsentChunkAlone);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
-        // Not on Fabric: its claim mods are NeoForge event listeners at chosen priorities.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_harvest_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::harvestActsAsTheStationOwner);
-        //?}
         reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
-        // Not on Fabric: its claim mods are NeoForge event listeners at chosen priorities.
-        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
         reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
         reg.accept("buildcraftunofficial:robot_deployer_break_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::breakNeedsDeployerAndStationOwner);
@@ -1451,7 +1443,6 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_deployer_station_owner_remembered", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stationRemembersItsOwnerAndUnknownFailsClosed);
         reg.accept("buildcraftunofficial:robot_deployer_bomber_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::bomberNeedsBothAndTntIsTheDeployers);
         reg.accept("buildcraftunofficial:robot_deployer_melee_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::meleeNeedsBothAndNamesTheDeployer);
-        //?}
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

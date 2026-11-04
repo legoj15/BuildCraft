@@ -26,6 +26,7 @@ run_server
 run-gameTestServer
 run-smoke
 run-showcase
+run-boot
 
 #mac
 .DS_Store

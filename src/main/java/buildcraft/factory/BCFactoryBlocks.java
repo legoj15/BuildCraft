@@ -5,7 +5,6 @@
 
 package buildcraft.factory;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.factory.block.BlockAutoWorkbenchItems;
@@ -72,7 +71,7 @@ public class BCFactoryBlocks {
                     .strength(0.6f)
                     .sound(net.minecraft.world.level.block.SoundType.SLIME_BLOCK));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

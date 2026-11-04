@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
@@ -50,7 +49,7 @@ public class BCSiliconBlockEntities {
                     () -> BlockEntityTypeUtilBC.create(TileIntegrationTable::new,
                             BCSiliconBlocks.INTEGRATION_TABLE.get()));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

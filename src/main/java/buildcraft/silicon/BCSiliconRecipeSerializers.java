@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.silicon.recipe.FacadeSwapRecipe;
 import buildcraft.platform.registry.BCRegistrar;
@@ -23,7 +22,7 @@ public class BCSiliconRecipeSerializers {
     public static final Supplier<RecipeSerializer<FacadeSwapRecipe>> FACADE_SWAP =
             RECIPE_SERIALIZERS.register("facade_swap", () -> FacadeSwapRecipe.SERIALIZER);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         RECIPE_SERIALIZERS.subscribe();
     }
 }

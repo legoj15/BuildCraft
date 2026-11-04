@@ -5,7 +5,6 @@
 
 package buildcraft.core;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.entity.EquipmentSlot;
 import buildcraft.core.item.ItemGoggles;
@@ -104,7 +103,7 @@ public class BCCoreItems {
         public static final BCItemHolder<net.minecraft.world.item.BlockItem> POWER_TESTER = ITEMS
                         .registerSimpleBlockItem(BCCoreBlocks.POWER_TESTER);
 
-        public static void init(IEventBus modEventBus) {
+        public static void init() {
                 ITEMS.subscribe();
         }
 

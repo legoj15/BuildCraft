@@ -10,7 +10,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.energy.BCEnergyFluids;
 import buildcraft.platform.registry.BCAttachment;
@@ -28,7 +27,7 @@ public class BCFactoryAttachments {
     public static final BCAttachment<OilAndFuelProduction> OIL_AND_FUEL_PRODUCTION =
         ATTACHMENTS.register("oil_and_fuel_production", OilAndFuelProduction::new, true);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ATTACHMENTS.subscribe();
     }
 

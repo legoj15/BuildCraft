@@ -6,7 +6,6 @@
 
 package buildcraft.energy;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.energy.block.BlockEngineStone_BC8;
@@ -37,7 +36,7 @@ public class BCEnergyBlocks {
             "mj_dynamo",
             BlockDynamoMJ::new, () -> BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

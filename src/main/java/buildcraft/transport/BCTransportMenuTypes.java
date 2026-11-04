@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.platform.Platform;
 import buildcraft.transport.container.ContainerDiamondPipe;
@@ -39,7 +38,7 @@ public class BCTransportMenuTypes {
             MENU_TYPES.register("emzuli_pipe",
                     () -> Platform.menus().create(ContainerEmzuliPipe::new));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         MENU_TYPES.subscribe();
     }
 }

@@ -5,7 +5,6 @@
 
 package buildcraft.factory;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
@@ -47,7 +46,7 @@ public class BCFactoryItems {
 
     public static final BCItemHolder<Item> GELLED_WATER = ITEMS.registerSimpleItem("gelled_water");
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
     }
 }

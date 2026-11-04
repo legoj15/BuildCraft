@@ -54,7 +54,7 @@ import buildcraft.platform.event.HookOrder;
 public final class NeoForgeGameHooks implements GameHooks {
 
     /** The NeoForge priority a {@link HookOrder} names. */
-    static EventPriority priority(HookOrder order) {
+    public static EventPriority priority(HookOrder order) {
         return switch (order) {
             case EARLY -> EventPriority.HIGH;
             case DEFAULT -> EventPriority.NORMAL;

@@ -5,7 +5,6 @@
 
 package buildcraft.factory;
 
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.world.item.ItemStack;
@@ -32,21 +31,21 @@ public class BCFactory {
     public static final String MODID = BCCore.MODID;
     private static final Logger LOGGER = LoggerFactory.getLogger(BCFactory.class);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Register all deferred registries
-        BCFactoryBlocks.init(modEventBus);
-        BCFactoryItems.init(modEventBus);
-        BCFactoryBlockEntities.init(modEventBus);
-        BCFactoryMenuTypes.init(modEventBus);
-        BCFactoryAttachments.init(modEventBus);
+        BCFactoryBlocks.init();
+        BCFactoryItems.init();
+        BCFactoryBlockEntities.init();
+        BCFactoryMenuTypes.init();
+        BCFactoryAttachments.init();
 
         // Register client-side extensions on the mod event bus
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.factory.client.BCFactoryClient.initClient(modEventBus);
+            buildcraft.factory.client.BCFactoryClient.initClient();
         }
 
         // Register capabilities
-        modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
+        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
 

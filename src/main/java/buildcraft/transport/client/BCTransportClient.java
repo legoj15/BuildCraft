@@ -12,9 +12,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.ModelEvent;
 
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.api.transport.pipe.PipeApiClient;
@@ -52,6 +49,7 @@ import buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux;
 import buildcraft.transport.wire.ClientWireSystems;
 import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
+import buildcraft.platform.event.HookOrder;
 
 public class BCTransportClient {
     // Static model holders for plug rendering
@@ -68,8 +66,9 @@ public class BCTransportClient {
     public static void init() {
     }
 
-    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
-        modEventBus.register(BCTransportClient.class);
+    public static void initClient() {
+        ClientPlatform.sinks().onModelsBaked(HookOrder.LATE, BCTransportClient::onBakingCompleted);
+        ClientPlatform.sinks().editBakedModels(BCTransportClient::onModifyBakingResult);
         init();
         registerClientContent(ClientPlatform.sinks());
         // Set the API registry so other modules (e.g. silicon) can register bakers, and register the flow
@@ -130,8 +129,7 @@ public class BCTransportClient {
      * uploads them itself just before this event). LOWEST priority so the joined cache goes after
      * the plug bakers' caches (silicon, robotics), or it could re-join their stale quads.
      */
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBakingCompleted(ModelEvent.BakingCompleted event) {
+    public static void onBakingCompleted() {
         PipeBaseModelGenStandard.clearSpriteCaches();
         PipeBehaviourRendererStripes.onModelBake();
         PipeFlowRendererItems.onModelBake();
@@ -142,12 +140,16 @@ public class BCTransportClient {
      * Swap the vanilla-baked pipe_holder model with PipeBlockStateModel, and
      * wrap each pipe item's vanilla model with PipeItemModel for dynamic colour overlays.
      */
-    @SubscribeEvent
-    public static void onModifyBakingResult(ModelEvent.ModifyBakingResult event) {
+    //? if >=1.21.10 {
+    public static void onModifyBakingResult(net.minecraft.client.resources.model.ModelBakery.BakingResult bakingResult) {
+    //?} else {
+    /*public static void onModifyBakingResult(java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation,
+            net.minecraft.client.resources.model.BakedModel> bakedModels) {*/
+    //?}
         //? if >=1.21.10 {
         // Block model swap — every blockstate (waterlogged true/false), so a flooded pipe doesn't
         // keep the un-swapped placeholder model.
-        var blockModels = event.getBakingResult().blockStateModels();
+        var blockModels = bakingResult.blockStateModels();
         for (BlockState pipeState : BCTransportBlocks.PIPE_HOLDER.get().getStateDefinition().getPossibleStates()) {
             BlockStateModel vanillaModel = blockModels.get(pipeState);
             if (vanillaModel != null) {
@@ -156,7 +158,7 @@ public class BCTransportClient {
         }
 
         // Item model swap — wrap each pipe item with PipeItemModel
-        var itemModels = event.getBakingResult().itemStackModels();
+        var itemModels = bakingResult.itemStackModels();
         for (PipeDefinition def : PipeApi.pipeRegistry.getAllRegisteredPipes()) {
             Item pipeItem = (Item) PipeApi.pipeRegistry.getItemForPipe(def);
             if (pipeItem != null) {
@@ -172,7 +174,7 @@ public class BCTransportClient {
         //?} else {
         /*// 1.21.1: all baked models (block + item) live in one Map<ModelResourceLocation, BakedModel>.
         java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
-            event.getModels();
+            bakedModels;
         // Block model swap — keyed by each pipe_holder blockstate's ModelResourceLocation (waterlogged
         // true/false), so a flooded pipe doesn't keep the un-swapped placeholder model.
         for (BlockState pipeState : BCTransportBlocks.PIPE_HOLDER.get().getStateDefinition().getPossibleStates()) {

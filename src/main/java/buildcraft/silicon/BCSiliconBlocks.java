@@ -6,7 +6,6 @@
 
 package buildcraft.silicon;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.silicon.block.BlockLaser;
@@ -46,7 +45,7 @@ public class BCSiliconBlocks {
             props -> new BlockLaserTable(props,
                 BCSiliconBlockEntities.INTEGRATION_TABLE), () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).noOcclusion().sound(SoundType.METAL).requiresCorrectToolForDrops());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

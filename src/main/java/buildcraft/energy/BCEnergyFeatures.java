@@ -14,7 +14,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.core.BCCore;
 import buildcraft.energy.generation.OilFeature;
@@ -46,7 +45,7 @@ public class BCEnergyFeatures {
     public static final ResourceKey<PlacedFeature> OIL_PLACED =
             ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(BCCore.MODID, "oil"));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         FEATURES.subscribe();
         Platform.data().registerAllBiomesFeature(ADD_OIL_MODIFIER, GenerationStep.Decoration.TOP_LAYER_MODIFICATION,
                 OIL_PLACED);

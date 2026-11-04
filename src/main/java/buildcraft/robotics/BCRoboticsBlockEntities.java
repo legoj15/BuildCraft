@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.robotics.tile.TileRequester;
@@ -34,7 +33,7 @@ public class BCRoboticsBlockEntities {
                 () -> BlockEntityTypeUtilBC.create(TileRequester::new, BCRoboticsBlocks.REQUESTER.get()));
     }
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

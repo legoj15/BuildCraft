@@ -22,9 +22,11 @@ submods such as `energy`, `silicon`, `transport`, `api`, `lib`, `factory`, `buil
 
 ## Initialization Pattern
 
-`BCCore` is the single `@Mod` entry point. It calls a per-subsystem `BC{Name}.init(modEventBus)`
-(e.g. `BCTransport.init`, `BCEnergy.init`) which registers that subsystem's
-`DeferredRegister<T>` instances onto the mod event bus. These `BC{Name}` classes are
+`platform/neoforge/BCNeoForgeEntrypoint` is the single `@Mod` entry point, and the only class that
+sees the mod bus and container (it hands them to `NeoForgeModBus`, which the platform implementations
+read). It runs `BCCore.init()`, then `BCCoreClient.init()` on a physical client. `BCCore.init()` calls a
+per-subsystem `BC{Name}.init()` (e.g. `BCTransport.init`, `BCEnergy.init`) which subscribes that
+subsystem's `BCRegistrar` instances. These `BC{Name}` classes are
 registration helpers grouped by topic — they are *not* sub-mods. Client-only code lives in
 `BC{Name}Client` classes, instantiated only on `Dist.CLIENT`.
 

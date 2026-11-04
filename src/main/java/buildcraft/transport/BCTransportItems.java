@@ -15,7 +15,6 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.api.transport.pipe.PipeDefinition;
 
@@ -159,7 +158,7 @@ public class BCTransportItems {
         return Collections.unmodifiableCollection(PIPE_ITEMS.values());
     }
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
         DATA_COMPONENTS.subscribe();
     }

@@ -6,7 +6,6 @@
 
 package buildcraft.builders.client;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersMenuTypes;
@@ -23,7 +22,7 @@ import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCBuildersClient {
-    public static void initClient(IEventBus modEventBus) {
+    public static void initClient() {
         registerClientContent(ClientPlatform.sinks());
         // One level-render pass: the laser frames and boxes, then (26.1+) the place-task animations, which used to
         // sit on a second, adjacent subscription to the same event.

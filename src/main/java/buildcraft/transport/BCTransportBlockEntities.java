@@ -10,7 +10,6 @@ import java.util.function.Supplier;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.BlockEntityTypeUtilBC;
 import buildcraft.transport.tile.TileFilteredBuffer;
@@ -31,7 +30,7 @@ public class BCTransportBlockEntities {
                     () -> BlockEntityTypeUtilBC.create(TilePipeHolder::new,
                             BCTransportBlocks.PIPE_HOLDER.get()));
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCK_ENTITIES.subscribe();
     }
 }

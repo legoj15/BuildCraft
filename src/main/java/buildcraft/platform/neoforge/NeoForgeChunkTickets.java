@@ -11,7 +11,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
 import net.neoforged.neoforge.common.world.chunk.TicketController;
 
@@ -27,8 +26,8 @@ public final class NeoForgeChunkTickets implements ChunkTickets {
 
     @Override
     public void register() {
-        // Called from the mod constructor, where the active container is this mod's.
-        IEventBus modEventBus = ModLoadingContext.get().getActiveContainer().getEventBus();
+        // Called from BuildCraft's init, while the mod bus still takes registration listeners.
+        IEventBus modEventBus = NeoForgeModBus.get();
         modEventBus.addListener((RegisterTicketControllersEvent event) -> event.register(CONTROLLER));
     }
 

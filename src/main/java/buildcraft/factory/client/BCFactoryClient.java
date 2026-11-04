@@ -45,7 +45,7 @@ public class BCFactoryClient {
         sinks.blockParticles(BCFactoryBlocks.TUBE, buildcraft.lib.client.NoParticleClientExtensions.INSTANCE);
     }
 
-    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+    public static void initClient() {
         registerClientContent(ClientPlatform.sinks());
         ClientPlatform.hooks().onLevelRender(buildcraft.factory.client.render.TubeRenderer::onRenderLevel);
     }

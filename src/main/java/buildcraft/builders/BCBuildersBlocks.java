@@ -5,8 +5,7 @@
 package buildcraft.builders;
 
 import net.minecraft.world.level.block.SoundType;
-import net.minecraft.world.level.block.state.BlockBehaviour;import net.neoforged.bus.api.IEventBus;
-
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import buildcraft.builders.block.BlockArchitectTable;
 import buildcraft.builders.block.BlockBuilder;
 import buildcraft.builders.block.BlockElectronicLibrary;
@@ -63,7 +62,7 @@ public class BCBuildersBlocks {
             "quarry",
             BlockQuarry::new, () -> BlockBehaviour.Properties.of().strength(5.0f, 10.0f).sound(SoundType.ANVIL).requiresCorrectToolForDrops());
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         BLOCKS.subscribe();
     }
 }

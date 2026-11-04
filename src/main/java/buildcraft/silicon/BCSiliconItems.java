@@ -6,7 +6,6 @@
 
 package buildcraft.silicon;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 
@@ -89,7 +88,7 @@ public class BCSiliconItems {
             ITEMS.registerItem("plug_timer", props -> new buildcraft.transport.item.ItemPluggableSimple(props, buildcraft.silicon.BCSiliconPlugs.timer, null));
 
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
     }
 }

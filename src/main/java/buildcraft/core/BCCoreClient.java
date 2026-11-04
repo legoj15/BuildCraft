@@ -6,15 +6,14 @@
 
 package buildcraft.core;
 
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.common.NeoForge;
 
 import buildcraft.platform.client.ClientPlatform;
 import buildcraft.platform.client.ClientRegistrationSinks;
 
 public class BCCoreClient {
-    public static void init(ModContainer modContainer, IEventBus modEventBus) {
+    /** BuildCraft's client init, run by the loader entrypoint on a physical client, after {@link BCCore#init}. */
+    public static void init() {
         ClientRegistrationSinks sinks = ClientPlatform.sinks();
         // Per-player display preferences — registered client-side only so each client owns its own copy.
         buildcraft.platform.Platform.configRegistrar().register(buildcraft.platform.config.BCConfigType.CLIENT,
@@ -56,11 +55,8 @@ public class BCCoreClient {
         // (~0.001) is below 1.21.1's classic item-render depth precision; modern nodes render it fine,
         // so this is a 1.21.1-only swap (their model-baking-result API differs anyway).
         //? if <1.21.10 {
-        /*modEventBus.addListener(
-                net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult.class,
-                event -> {
-                    java.util.Map<net.minecraft.client.resources.model.ModelResourceLocation, net.minecraft.client.resources.model.BakedModel> models =
-                            event.getModels();
+        /*sinks.editBakedModels(
+                models -> {
                     net.minecraft.client.resources.model.ModelResourceLocation mrl =
                             net.minecraft.client.resources.model.ModelResourceLocation.inventory(
                                     net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(

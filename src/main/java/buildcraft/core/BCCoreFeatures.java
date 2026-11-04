@@ -7,7 +7,6 @@ package buildcraft.core;
 
 import java.util.function.Supplier;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.core.gen.SpringFeature;
 import buildcraft.platform.registry.BCFeatureRegistrar;
@@ -18,7 +17,7 @@ public class BCCoreFeatures {
 
     public static final Supplier<?> SPRING = FEATURES.register("spring", SpringFeature::new);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         FEATURES.subscribe();
     }
 }

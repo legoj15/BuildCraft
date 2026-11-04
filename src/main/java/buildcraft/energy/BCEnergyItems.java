@@ -5,7 +5,6 @@
 
 package buildcraft.energy;
 
-import net.neoforged.bus.api.IEventBus;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -48,7 +47,7 @@ public class BCEnergyItems {
 
     public static final BCItemHolder<Item> GLOB_OF_OIL = ITEMS.registerSimpleItem("glob_of_oil");
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
     }
 }

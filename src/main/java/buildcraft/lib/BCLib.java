@@ -5,7 +5,6 @@
  */
 package buildcraft.lib;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.fluids.BCFluidStack;
@@ -33,7 +32,7 @@ public class BCLib {
      */
     public static final boolean DEV = Boolean.getBoolean("buildcraft.dev");
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Wire fuel/coolant registries
         BuildcraftFuelRegistry.fuel = FuelRegistry.INSTANCE;
         BuildcraftFuelRegistry.coolant = CoolantRegistry.INSTANCE;
@@ -60,7 +59,7 @@ public class BCLib {
 
         // Wire ModelHolderRegistry into NeoForge model baking lifecycle
         if (Platform.loader().isPhysicalClient()) {
-            buildcraft.lib.client.BCLibClient.initClient(modEventBus);
+            buildcraft.lib.client.BCLibClient.initClient();
         }
     }
 }

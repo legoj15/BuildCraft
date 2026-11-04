@@ -6,7 +6,6 @@
 
 package buildcraft.robotics;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.robotics.item.ItemRedstoneBoard;
 import buildcraft.robotics.item.ItemRobot;
@@ -55,7 +54,7 @@ public class BCRoboticsItems {
             props -> props.stacksTo(16));
     }
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ITEMS.subscribe();
     }
 }

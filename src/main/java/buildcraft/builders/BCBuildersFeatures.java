@@ -7,7 +7,6 @@ package buildcraft.builders;
 
 import java.util.function.Supplier;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.builders.gen.QuarryPitFeature;
 import buildcraft.core.BCCore;
@@ -24,7 +23,7 @@ public class BCBuildersFeatures {
 
     public static final Supplier<?> QUARRY_PIT = FEATURES.register("quarry_pit", QuarryPitFeature::new);
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         FEATURES.subscribe();
     }
 }

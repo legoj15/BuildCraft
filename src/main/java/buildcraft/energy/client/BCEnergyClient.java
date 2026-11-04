@@ -70,7 +70,7 @@ public class BCEnergyClient {
         });
     }
 
-    public static void initClient(net.neoforged.bus.api.IEventBus modEventBus) {
+    public static void initClient() {
         ClientRegistrationSinks sinks = ClientPlatform.sinks();
         BCEnergyFluidsClient.register(sinks);
         registerScreens(sinks);

@@ -20,7 +20,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.builders.BCBuildersBlockEntities;
 import buildcraft.builders.BCBuildersBlocks;
@@ -111,7 +110,7 @@ public final class LegacyAliases {
      * Registers every legacy alias. Must run before {@code RegisterEvent} fires (i.e. during mod
      * construction) and after the subsystem registers are populated, so {@link #flip} can read them.
      */
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         // Explicit exceptions first so they win any (theoretical) collision with a generated flip.
         addRenames();
         addMetadataCollapses();

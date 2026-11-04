@@ -6,7 +6,6 @@
 package buildcraft.platform.neoforge;
 
 //? if neoforge {
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.event.config.ModConfigEvent;
 
 import buildcraft.platform.config.ConfigHooks;
@@ -16,7 +15,7 @@ public final class NeoForgeConfigHooks implements ConfigHooks {
 
     @Override
     public void onLoad(Object spec, Runnable action) {
-        ModLoadingContext.get().getActiveContainer().getEventBus().addListener((ModConfigEvent.Loading event) -> {
+        NeoForgeModBus.get().addListener((ModConfigEvent.Loading event) -> {
             if (event.getConfig().getSpec() == spec) {
                 action.run();
             }
@@ -25,7 +24,7 @@ public final class NeoForgeConfigHooks implements ConfigHooks {
 
     @Override
     public void onReload(Object spec, Runnable action) {
-        ModLoadingContext.get().getActiveContainer().getEventBus().addListener((ModConfigEvent.Reloading event) -> {
+        NeoForgeModBus.get().addListener((ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getSpec() == spec) {
                 action.run();
             }

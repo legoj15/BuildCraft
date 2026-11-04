@@ -15,7 +15,6 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
-import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.platform.registry.BCAttachment;
@@ -43,7 +42,7 @@ public class BCTransportAttachments {
     private static final Identifier ALL_PLUGGED_UP =
         Identifier.parse("buildcraftunofficial:all_plugged_up");
 
-    public static void init(IEventBus modEventBus) {
+    public static void init() {
         ATTACHMENTS.subscribe();
     }
 

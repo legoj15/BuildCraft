@@ -207,37 +207,9 @@ public class SchematicBlockPipePluggablePricingTester extends VanillaSetupBaseTe
         plugs.put(Direction.EAST.getName(), entryOf(new PluggableGate(gateDef, null, Direction.EAST,
             new GateVariant(EnumGateLogic.OR, EnumGateMaterial.GOLD, EnumGateModifier.DIAMOND))));
 
-        plugs.put(Direction.NORTH.getName(), unrebuildableGateEntry());
-        plugs.put(Direction.SOUTH.getName(), unknownPluggableEntry());
+        plugs.put(Direction.NORTH.getName(), SchematicBlockPipeTester.unrebuildableGateEntry());
+        plugs.put(Direction.SOUTH.getName(), SchematicBlockPipeTester.unknownPluggableEntry());
         return pipeWith(plugs);
-    }
-
-    /**
-     * A gate entry whose pluggable cannot be rebuilt. A clay brick gate holds one slot and a quartz modifier halves
-     * the slots: zero slots, so constructing it fails (its connection array would be -1 long). Not something a player
-     * can make; something a hand-made or damaged blueprint can carry. Reading it into a live pipe holder fails the
-     * same way.
-     */
-    static CompoundTag unrebuildableGateEntry() {
-        CompoundTag variant = new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK,
-            EnumGateModifier.NO_MODIFIER).writeToNBT();
-        variant.putByte("modifier", (byte) EnumGateModifier.QUARTZ.ordinal());
-        CompoundTag logic = new CompoundTag();
-        logic.put("variant", variant);
-        CompoundTag data = new CompoundTag();
-        data.put("data", logic);
-        CompoundTag entry = new CompoundTag();
-        entry.putString("id", "buildcraftunofficial:gate");
-        entry.put("data", data);
-        return entry;
-    }
-
-    /** An entry naming a pluggable no loaded mod registers (an add-on that was removed since the capture). */
-    static CompoundTag unknownPluggableEntry() {
-        CompoundTag entry = new CompoundTag();
-        entry.putString("id", "buildcraftunofficial:no_such_pluggable");
-        entry.put("data", new CompoundTag());
-        return entry;
     }
 
     @Test
@@ -267,7 +239,7 @@ public class SchematicBlockPipePluggablePricingTester extends VanillaSetupBaseTe
 
     @Test
     public void aPipeWhoseEveryPluggableIsUnpriceableIsPlacedWithNone() {
-        SchematicBlockPipe schematic = pipeWith(plugsOf("down", unknownPluggableEntry()));
+        SchematicBlockPipe schematic = pipeWith(plugsOf("down", SchematicBlockPipeTester.unknownPluggableEntry()));
         CompoundTag placed = SchematicBlockPipe.withoutUnpriceablePluggables(schematic.tileNbt);
         Assertions.assertEquals(List.of(), facesIn(placed), "nothing priced, so no face keeps a pluggable");
         Assertions.assertEquals(schematic.tileNbt.get("pipe"), placed.get("pipe"), "the pipe itself is untouched");

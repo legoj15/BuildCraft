@@ -30,8 +30,6 @@ import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
-
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
@@ -209,7 +207,7 @@ public class MachineProtectionTester {
             check(level.getBlockState(target).is(Blocks.STONE), "a refused stripes pipe must not break the block");
             check(!claim.askedBy.isEmpty(), "the stripes pipe must ask before breaking");
             Player asker = claim.askedBy.get(0);
-            check(asker instanceof FakePlayer, "the stripes pipe asks as a fake player");
+            check(Platform.fakePlayers().isFakePlayer(asker), "the stripes pipe asks as a fake player");
             check(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE).equals(asker.getUUID()),
                     "an unowned stripes pipe asks as the [BuildCraft] identity");
         }

@@ -8,8 +8,9 @@ The project is a mix of Java 25 and Java 21 out of necessity.
 # BuildCraft builds with Stonecutter: ONE source tree, one node per MC LINE.
 # Six nodes today: 1.21.1, 1.21.10, 1.21.11, 26.1.2, 26.2, 26.3 (26.3 is the primary from its first release; nothing ships until the user says so).
 # Plus one Fabric node, 26.3-fabric (#98): all of BuildCraft on Fabric Loader + Fabric API + Forge Config API Port,
-# jar BuildCraftRedux-<v>+mc26.3-fabric.jar; :26.3-fabric:runServer / :26.3-fabric:runClient work. No JUnit tests on it
-# (FML-JUnit has no Fabric twin). Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
+# jar BuildCraftRedux-<v>+mc26.3-fabric.jar; :26.3-fabric:runServer / :26.3-fabric:runClient work, and
+# :26.3-fabric:runGameTest runs the shared game tests on Fabric. No JUnit tests on it (FML-JUnit has no Fabric twin).
+# Build logic per loader: buildSrc/src/main/kotlin/bc.<loader>.gradle.kts.
 # Tasks are per-node — qualify with :<node>:. Unqualified tasks run across all nodes.
 # `./gradlew fullTestSuite` (root) runs unit + game tests + jar for EVERY NeoForge node, and the Fabric node's nodeVerification.
 # The ACTIVE node (the raw text of src/, what the IDE sees) is 26.3; see stonecutter.gradle.kts.
@@ -120,7 +121,7 @@ Agent-config directories are gitignored except what must be shared: `.claude/` e
 
 ## Testing
 
-Unit tests use JUnit 5 and live under `src/test/`. NeoForge game tests are registered dynamically via `RegisterEvent` on `Registries.TEST_FUNCTION` and cover pipes, transport, fluids, inventory, shapes, markers, and engines.
+Unit tests use JUnit 5 and live under `src/test/`. Game tests are registered by `BuildCraftGameTests.register` through BuildCraft's registrar on `Registries.TEST_FUNCTION` (a loader hook calls it: `NeoForgeGameTestHooks` from `FMLConstructModEvent`, the Fabric game-test mod's initializer on `26.3-fabric`) and cover pipes, transport, fluids, inventory, shapes, markers, and engines. The Fabric node runs the same bodies (`:26.3-fabric:runGameTest`), so a game-test body reaches the loader only through `Platform` seams and `lib.test.LoaderTestEvents`; the skill has the rules.
 
 Unit tests run under moddev's FML-JUnit environment (`neoForge { unitTest }` in [build.gradle.kts](build.gradle.kts)): each node's `test` task boots a real FML loader plus full mod loading before the JUnit engine, so tests can freely use `Entity`, `ItemStack`, registries, and BC's own content. `FmlJunitEnvironmentTest` pins this wiring on every node.
 

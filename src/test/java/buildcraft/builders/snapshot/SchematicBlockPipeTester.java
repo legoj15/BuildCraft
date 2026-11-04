@@ -25,6 +25,10 @@ import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.SchematicBlockContext;
 
 import buildcraft.lib.misc.NBTUtilBC;
+import buildcraft.silicon.gate.EnumGateLogic;
+import buildcraft.silicon.gate.EnumGateMaterial;
+import buildcraft.silicon.gate.EnumGateModifier;
+import buildcraft.silicon.gate.GateVariant;
 
 import buildcraft.transport.BCTransportBlocks;
 import buildcraft.transport.BCTransportItems;
@@ -212,8 +216,8 @@ public class SchematicBlockPipeTester {
                 "Pipe holder should route to SchematicBlockPipe, got " + captured.getClass().getSimpleName());
         SchematicBlockPipe schematic = (SchematicBlockPipe) captured;
         CompoundTag plugs = NBTUtilBC.getCompound(schematic.tileNbt, "plugs").copy();
-        plugs.put(Direction.NORTH.getName(), SchematicBlockPipePluggablePricingTester.unrebuildableGateEntry());
-        plugs.put(Direction.SOUTH.getName(), SchematicBlockPipePluggablePricingTester.unknownPluggableEntry());
+        plugs.put(Direction.NORTH.getName(), unrebuildableGateEntry());
+        plugs.put(Direction.SOUTH.getName(), unknownPluggableEntry());
         schematic.tileNbt.put("plugs", plugs);
 
         List<ItemStack> required = schematic.computeRequiredItems();
@@ -308,5 +312,34 @@ public class SchematicBlockPipeTester {
             sb.append(BuiltInRegistries.ITEM.getKey(stacks.get(i).getItem()));
         }
         return sb.append("]").toString();
+    }
+
+    /**
+     * A gate entry whose pluggable cannot be rebuilt (shared with the unit-level
+     * SchematicBlockPipePluggablePricingTester; it lives here because the Fabric node compiles the game tests without
+     * the JUnit files). A clay brick gate holds one slot and a quartz modifier halves the slots: zero slots, so constructing it fails (its connection array would be -1 long). Not something a player
+     * can make; something a hand-made or damaged blueprint can carry. Reading it into a live pipe holder fails the
+     * same way.
+     */
+    static CompoundTag unrebuildableGateEntry() {
+        CompoundTag variant = new GateVariant(EnumGateLogic.AND, EnumGateMaterial.CLAY_BRICK,
+            EnumGateModifier.NO_MODIFIER).writeToNBT();
+        variant.putByte("modifier", (byte) EnumGateModifier.QUARTZ.ordinal());
+        CompoundTag logic = new CompoundTag();
+        logic.put("variant", variant);
+        CompoundTag data = new CompoundTag();
+        data.put("data", logic);
+        CompoundTag entry = new CompoundTag();
+        entry.putString("id", "buildcraftunofficial:gate");
+        entry.put("data", data);
+        return entry;
+    }
+
+    /** An entry naming a pluggable no loaded mod registers (an add-on that was removed since the capture). */
+    static CompoundTag unknownPluggableEntry() {
+        CompoundTag entry = new CompoundTag();
+        entry.putString("id", "buildcraftunofficial:no_such_pluggable");
+        entry.put("data", new CompoundTag());
+        return entry;
     }
 }

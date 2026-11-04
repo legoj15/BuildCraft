@@ -13,21 +13,28 @@ import net.minecraft.world.entity.vehicle.minecart.Minecart;
 /*import net.minecraft.world.entity.vehicle.Minecart;*/
 //?}
 
+//? if neoforge {
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+//?}
 
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+//? if neoforge {
 import buildcraft.platform.neoforge.NeoForgeItemStorages;
+//?}
 
 
 /**
  * A minecart as a mod can make one: not a vanilla {@code Container}, its items reachable only through the entity item
  * capability. The capability is registered on the plain minecart type (which has none of its own), answering only for
  * instances of this class, so every other minecart in a test world is untouched. Lives in the test source set only.
+ * Fabric has no standard entity item lookup (FabricTransfer.findItem), so there it is a plain minecart.
  */
+//? if neoforge {
 @EventBusSubscriber(modid = "buildcraftunofficial")
+//?}
 public final class CapabilityOnlyCart extends Minecart {
 
     /** What the cart carries, and what its capability exposes. */
@@ -45,14 +52,17 @@ public final class CapabilityOnlyCart extends Minecart {
         //?}
     }
 
+    //? if neoforge && >=1.21.10 {
     @SubscribeEvent
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
-        //? if >=1.21.10 {
         event.registerEntity(Capabilities.Item.ENTITY, minecartType(),
                 (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);
-        //?} else {
-        /*event.registerEntity(Capabilities.ItemHandler.ENTITY, minecartType(),
-                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);*/
-        //?}
     }
+    //?} elif neoforge {
+    /*@SubscribeEvent
+    public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerEntity(Capabilities.ItemHandler.ENTITY, minecartType(),
+                (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);
+    }*/
+    //?}
 }

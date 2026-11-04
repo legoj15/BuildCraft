@@ -14,7 +14,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 
+//? if neoforge {
 import net.neoforged.neoforge.capabilities.Capabilities;
+//?}
 
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IPipe.ConnectedType;
@@ -359,8 +361,11 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
-        //? if >=1.21.10 {
+        // Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages).
+        //? if neoforge && >=1.21.10 {
         var handler = level.getCapability(Capabilities.Item.BLOCK, absPos, Direction.NORTH);
+        //?} elif fabric {
+        /*var handler = buildcraft.platform.transfer.TransferAccess.findItem(level, absPos, Direction.NORTH);*/
         //?} else {
         /*var handler = level.getCapability(Capabilities.ItemHandler.BLOCK, absPos, Direction.NORTH);*/
         //?}
@@ -397,8 +402,11 @@ public class MachinePipeConnectivityTester {
         helper.setBlock(relPos, block);
         ServerLevel level = helper.getLevel();
         BlockPos absPos = helper.absolutePos(relPos);
-        //? if >=1.21.10 {
+        // Fabric: Team Reborn Energy's EnergyStorage.SIDED (FabricEnergyStorages).
+        //? if neoforge && >=1.21.10 {
         var energy = level.getCapability(Capabilities.Energy.BLOCK, absPos, Direction.NORTH);
+        //?} elif fabric {
+        /*var energy = buildcraft.platform.transfer.TransferAccess.findEnergy(level, absPos, Direction.NORTH);*/
         //?} else {
         /*var energy = level.getCapability(Capabilities.EnergyStorage.BLOCK, absPos, Direction.NORTH);*/
         //?}

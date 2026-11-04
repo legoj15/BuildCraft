@@ -186,9 +186,13 @@ public class PipeDropsTester {
             // Click-break path: BlockPipeHolder.onDestroyedByPlayer should detect the plug hit,
             // pop the plug item, remove the plug from the tile, and return false to cancel the
             // pipe break.
-            //? if >=1.21.10 {
+            // Fabric asks the same guard from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes).
+            //? if neoforge && >=1.21.10 {
             boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                     player.getMainHandItem(), false, fluidState);
+            //?} elif fabric {
+            /*boolean removed = !((buildcraft.platform.hook.PlayerBreakGuard) state.getBlock())
+                    .keepsBlockOnPlayerBreak(state, level, absPos, player);*/
             //?} else {
             /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                     false, fluidState);*/
@@ -224,9 +228,13 @@ public class PipeDropsTester {
             Player player = playerLookingDownAt(helper, absPos, 0.21875, 0.21875, ItemStack.EMPTY);
             FluidState fluidState = level.getFluidState(absPos);
 
-            //? if >=1.21.10 {
+            // Fabric asks the same guard from PlayerBlockBreakEvents.BEFORE (FabricLoaderHookRoutes).
+            //? if neoforge && >=1.21.10 {
             boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                     player.getMainHandItem(), false, fluidState);
+            //?} elif fabric {
+            /*boolean removed = !((buildcraft.platform.hook.PlayerBreakGuard) state.getBlock())
+                    .keepsBlockOnPlayerBreak(state, level, absPos, player);*/
             //?} else {
             /*boolean removed = state.getBlock().onDestroyedByPlayer(state, level, absPos, player,
                     false, fluidState);*/

@@ -13,8 +13,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
-
 import buildcraft.api.mj.MjAPI;
 import buildcraft.core.BCCoreConfig;
 import buildcraft.factory.tile.TilePump;
@@ -23,6 +21,7 @@ import buildcraft.lib.misc.GameProfileUtil;
 import buildcraft.lib.test.ClaimProtectionMod;
 import buildcraft.lib.test.RefusingSourceBlock;
 import buildcraft.lib.test.TestOnlyBlocks;
+import buildcraft.platform.Platform;
 
 /**
  * Pumps ask before they drain, and do not keep asking a cell that said no.
@@ -112,7 +111,7 @@ public class PumpProtectionTester {
                     + claim.asks() + " times in " + PUMP_TICKS + " pump ticks");
             check(open.asks() == 1, "an allowed cell is asked about once per bucket, asked " + open.asks());
             Player asker = claim.askedBy.get(0);
-            check(asker instanceof FakePlayer, "the pump asks as a fake player");
+            check(Platform.fakePlayers().isFakePlayer(asker), "the pump asks as a fake player");
             check(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE).equals(asker.getUUID()),
                     "an unowned pump asks as the [BuildCraft] identity");
         }

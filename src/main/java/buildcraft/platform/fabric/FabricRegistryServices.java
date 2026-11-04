@@ -33,12 +33,16 @@ import buildcraft.platform.registry.RegistryServices;
  * So each entry is queued at its register call and built and {@code Registry.registerForHolder}ed either when first
  * asked for ({@link BCHolder#get}) or by {@link #registerPending}, which the Fabric entrypoint calls after BuildCraft's
  * init, registry by registry in NeoForge's order and in call order within one (the block and item helpers have
- * already set the id on the properties, as on NeoForge). Gap: Fabric has no registry
+ * already set the id on the properties, as on NeoForge). A registrar subscribed after that (another mod's initializer
+ * running after BuildCraft's, such as the game-test mod) has its queued entries built at its {@link
+ * BCRegistrar#subscribe}, since nothing else would build them. Gap: Fabric has no registry
  * alias API, so {@link BCRegistrar#addAlias} records nothing and old ids do not resolve.
  *^/
 public final class FabricRegistryServices implements RegistryServices {
     /^* Every queued entry, in register-call order. ^/
     private static final List<Pending<?>> PENDING = new ArrayList<>();
+    /^* Set once {@link #registerPending} has run: from then on {@code subscribe()} builds its own entries. ^/
+    private static volatile boolean initRegistered;
 
     /^*
      * Registers every entry not yet registered: NeoForge's registry order (attributes, data components and particle
@@ -69,6 +73,7 @@ public final class FabricRegistryServices implements RegistryServices {
         for (Pending<?> entry : pending) {
             entry.holder(); // any registry the order above did not name
         }
+        initRegistered = true;
     }
 
     /^* One queued entry: built and registered on its first {@link #holder} call. ^/
@@ -170,7 +175,13 @@ public final class FabricRegistryServices implements RegistryServices {
 
         @Override
         public void subscribe() {
-            // Entries are registered when first asked for, or by registerPending after BuildCraft's init.
+            // Entries are registered when first asked for, or by registerPending after BuildCraft's init. A registrar
+            // subscribed after that has no later point to be built at, so it is built now.
+            if (initRegistered) {
+                for (BCHolder<T, ? extends T> entry : entries) {
+                    entry.holder();
+                }
+            }
         }
     }
 }

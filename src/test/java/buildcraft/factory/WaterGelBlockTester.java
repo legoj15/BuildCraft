@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import buildcraft.factory.block.BlockWaterGel;
 import buildcraft.factory.block.BlockWaterGel.GelStage;
+import buildcraft.platform.Platform;
 
 /**
  * Water gel's per-stage break speed and sounds, as 1.12.2 shipped them ({@code BlockWaterGel.GelStage}: pitch,
@@ -64,7 +65,7 @@ public final class WaterGelBlockTester {
                 stage + ": bare-hand dig progress per tick must be 1/(" + hardness + "*30) = " + expected
                     + ", got " + progress);
 
-            SoundType sound = placed.getSoundType(helper.getLevel(), abs, player);
+            SoundType sound = Platform.extensions().soundType(placed, helper.getLevel(), abs, player);
             helper.assertTrue(sound.getBreakSound() == SoundEvents.SLIME_BLOCK_BREAK
                     && sound.getStepSound() == SoundEvents.SLIME_BLOCK_STEP
                     && sound.getPlaceSound() == SoundEvents.SLIME_BLOCK_PLACE

@@ -19,8 +19,8 @@ import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
+import buildcraft.platform.Platform;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 /**
  * An advancement earned through a fake player (a stripes pipe using a list, a machine acting for its owner) belongs
@@ -53,7 +53,7 @@ public class AdvancementUtilFakePlayerTester {
         helper.assertTrue(holder != null, "precondition: the list advancement exists");
 
         // Offline owner: nobody receives it, and the fake player's own tracker is never written.
-        FakePlayer offlineMachine = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "bc_adv_offline"));
+        ServerPlayer offlineMachine = Platform.fakePlayers().create(level, new GameProfile(UUID.randomUUID(), "bc_adv_offline"));
         AdvancementUtil.unlockAdvancement(offlineMachine, LIST_ADVANCEMENT);
         helper.assertTrue(!offlineMachine.getAdvancements().getOrStartProgress(holder).isDone(),
                 "an offline owner's fake player records nothing");
@@ -64,7 +64,7 @@ public class AdvancementUtilFakePlayerTester {
         Map<UUID, ServerPlayer> online = playersByUuid(level.getServer().getPlayerList());
         online.put(owner.getUUID(), owner);
         try {
-            FakePlayer machine = new FakePlayer(level, ownerProfile);
+            ServerPlayer machine = Platform.fakePlayers().create(level, ownerProfile);
             AdvancementUtil.unlockAdvancement(machine, LIST_ADVANCEMENT);
             helper.assertTrue(owner.getAdvancements().getOrStartProgress(holder).isDone(),
                     "an advancement earned by the owner's machine reaches the online owner");

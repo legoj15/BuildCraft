@@ -6,7 +6,6 @@
 package buildcraft.transport.pipe.behaviour;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -23,9 +22,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.PipeEventItem;
@@ -41,6 +37,7 @@ import buildcraft.transport.pipe.Pipe;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 import buildcraft.transport.pipe.flow.TravellingItem;
 import buildcraft.transport.tile.TilePipeHolder;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * The stripes handlers that act on the pipe line or on what stands in front rather than on the item in hand, both
@@ -82,15 +79,13 @@ public class PipeBehaviourStripesMovesTester {
         boolean[] refuse = { true };
         int[] phase = { 0 };
         long[] storedBefore = { 0 };
-        Consumer<AttackEntityEvent> claim = event -> {
-            if (cart[0] != null && event.getTarget() == cart[0]) {
+        LoaderTestEvents.Observer claim = LoaderTestEvents.claimAttacks((attacker, target) -> {
+            if (cart[0] != null && target == cart[0]) {
                 asks[0]++;
-                if (refuse[0]) {
-                    event.setCanceled(true);
-                }
+                return refuse[0];
             }
-        };
-        NeoForge.EVENT_BUS.addListener(AttackEntityEvent.class, claim);
+            return false;
+        });
         EntityArenaUtil.tickUntil(helper, POLL_TICKS, () -> {
             switch (phase[0]) {
                 case 0 -> {
@@ -131,7 +126,7 @@ public class PipeBehaviourStripesMovesTester {
                     "breaking the cart costs the fixed block-handler price, stored " + stripes.getStoredPower());
             helper.succeed();
         }, "the stripes pipe never broke the minecart in front of it", () -> {
-            NeoForge.EVENT_BUS.unregister(claim);
+            claim.close();
             EntityArenaUtil.discard(cart[0]);
             empty(feeder, tile);
         });

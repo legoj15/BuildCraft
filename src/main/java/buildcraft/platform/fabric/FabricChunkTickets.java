@@ -12,24 +12,39 @@ import java.util.Map;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 import buildcraft.platform.ChunkTickets;
 
 /^*
- * {@link ChunkTickets} on Fabric: vanilla's forced-chunk set, with the owners tracked here so a chunk is unforced only
- * when its last owner lets go. Gap: vanilla persists the forced set but this owner map is in memory, so after a restart
- * a forced chunk stays forced until some tile re-requests and releases it; NeoForge's tickets persist with their owners.
+ * {@link ChunkTickets} on Fabric: a ticket type of BuildCraft's own ({@code buildcraftunofficial:chunkloader}, the
+ * twin of NeoForge's ticket controller), with the owners tracked here so a chunk's ticket goes only when its last owner
+ * lets go. Not vanilla's forced-chunk set: that set is shared with /forceload, other mods and the game-test framework,
+ * so releasing a chunk there unforced it for all of them too. Gap: the ticket persists with the level but this owner
+ * map is in memory, so after a restart a chunk stays loaded until some tile re-requests and releases it; NeoForge's
+ * tickets persist with their owners.
  *^/
 public final class FabricChunkTickets implements ChunkTickets {
+    /^* The forced chunk level (entity ticking), what {@code ServerLevel.setChunkForced} gives a chunk. ^/
+    private static final int RADIUS = 2;
+
     private final Map<ResourceKey<Level>, Map<Long, Set<BlockPos>>> owners = new HashMap<>();
+    private TicketType type;
 
     @Override
     public void register() {
-        // Nothing to register: vanilla's forced-chunk set needs no owner registry.
+        // Vanilla's FORCED flags (persisted, loading, simulating, keeping the dimension active) and no timeout.
+        type = Registry.register(BuiltInRegistries.TICKET_TYPE,
+            Identifier.fromNamespaceAndPath("buildcraftunofficial", "chunkloader"), new TicketType(TicketType.NO_TIMEOUT,
+                TicketType.FLAG_PERSIST | TicketType.FLAG_LOADING | TicketType.FLAG_SIMULATION
+                    | TicketType.FLAG_KEEP_DIMENSION_ACTIVE));
     }
 
     @Override
@@ -38,15 +53,19 @@ public final class FabricChunkTickets implements ChunkTickets {
         long key = ChunkPos.pack(chunkX, chunkZ);
         Set<BlockPos> held = byChunk.computeIfAbsent(key, k -> new HashSet<>());
         BlockPos immutable = owner.immutable();
+        ChunkPos pos = new ChunkPos(chunkX, chunkZ);
         if (add) {
+            boolean first = held.isEmpty();
             held.add(immutable);
-            level.setChunkForced(chunkX, chunkZ, true);
-        } else {
-            held.remove(immutable);
-            if (held.isEmpty()) {
-                byChunk.remove(key);
-                level.setChunkForced(chunkX, chunkZ, false);
+            if (first) {
+                level.getChunkSource().addTicketWithRadius(type, pos, RADIUS);
+                level.getChunk(chunkX, chunkZ); // loaded now, as setChunkForced does
             }
+        } else if (held.remove(immutable) && held.isEmpty()) {
+            byChunk.remove(key);
+            level.getChunkSource().removeTicketWithRadius(type, pos, RADIUS);
+        } else if (held.isEmpty()) {
+            byChunk.remove(key);
         }
     }
 }

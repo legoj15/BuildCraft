@@ -17,11 +17,9 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-
 import buildcraft.lib.test.EntityArenaUtil;
 import buildcraft.lib.test.StubMarkerCache;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * The server half of the marker join resync: a player entering a level is handed to every registered
@@ -47,8 +45,8 @@ public class MarkerJoinResyncTester {
         ServerPlayer player = new ServerPlayer(level.getServer(), level,
                 new GameProfile(UUID.randomUUID(), "marker-join-test"), ClientInformation.createDefault());
         ItemEntity item = new ItemEntity(level, 0.5, 0.5, 0.5, new ItemStack(Items.STONE));
-        NeoForge.EVENT_BUS.post(new EntityJoinLevelEvent(item, level));
-        NeoForge.EVENT_BUS.post(new EntityJoinLevelEvent(player, level));
+        LoaderTestEvents.entityJoin(item, level);
+        LoaderTestEvents.entityJoin(player, level);
 
         EntityArenaUtil.tickUntil(helper, RESYNC_TICKS, () -> !sub.joined.isEmpty(), () -> {
             cache.unregister();

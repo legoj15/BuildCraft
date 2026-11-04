@@ -20,8 +20,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
-import net.neoforged.neoforge.common.util.FakePlayer;
-
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.statements.StatementSlot;
 import buildcraft.core.BCCoreConfig;
@@ -35,6 +33,7 @@ import buildcraft.lib.test.TestOnlyBlocks;
 import buildcraft.robotics.RobotArenaUtil;
 import buildcraft.robotics.boards.BoardRobotPump;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.platform.Platform;
 
 /**
  * The pump robot asks protection mods before it drains, and its board does not send it back to a block that refused.
@@ -95,7 +94,7 @@ public class RobotPumpProtectionTester {
             check(level.getFluidState(well).isSource(), "a refused robot must leave the claimed source alone");
             check(claim.asks() == 1, "the robot asks once, got " + claim.asks());
             Player asker = claim.askedBy.get(0);
-            check(asker instanceof FakePlayer, "the pump robot asks as a fake player");
+            check(Platform.fakePlayers().isFakePlayer(asker), "the pump robot asks as a fake player");
             check(GameProfileUtil.getId(FakePlayerUtil.BUILDCRAFT_PROFILE).equals(asker.getUUID()),
                     "an unowned robot asks as the [BuildCraft] identity");
         }

@@ -60,14 +60,26 @@ the safety net — this skill is the manual.
 ## The 1.21.1 node is different (but the manifest still matters)
 
 1.21.1 predates the dynamic `Registries.TEST_FUNCTION` registry and has no native
-`test_instance` support: `onRegisterGameTests` reflects each registration straight into
+`test_instance` support: its NeoForge hook (`platform/neoforge/NeoForgeGameTestHooks`, test source set) reflects each registration straight into
 `GameTestRegistry.TEST_FUNCTIONS` against the `buildcraftunofficial:empty` arena
 (`data/buildcraftunofficial/structure/empty.nbt` — a 16x16x16 air stand-in for
 `minecraft:empty`, sized so `encaseStructure` has room for the oil-gen surface scan, with
 `skyAccess=true` so no barrier ceiling blocks top-down scans). Its watchdog `max_ticks` is read
 from the SAME JSON manifests the modern nodes consume — so a missing manifest degrades 1.21.1
 too, and every manifest field you write is live on every node. You never write any of this
-yourself; adding to `registerAll` is every NeoForge node at once (a Fabric node runs no game tests yet).
+yourself; adding to `registerAll` is every node at once.
+
+## The Fabric node runs the same tests
+
+`26.3-fabric` runs `registerAll` too (`:26.3-fabric:runGameTest`, Fabric API's game-test runner; part of its
+`nodeVerification`). It compiles src/test/java minus the JUnit files and the files `bc.fabric.gradle.kts` lists
+(`fabricGameTestExcludes`). So a new test body must compile on Fabric: reach the loader through `Platform` seams
+(`Platform.fakePlayers()`, `Platform.extensions()`, `Platform.protection()`, `TransferAccess`) and fire loader events
+through `buildcraft.lib.test.LoaderTestEvents`, never `NeoForge.EVENT_BUS` or a NeoForge type in the body. A test
+that cannot run on Fabric (a documented Fabric gap, or NeoForge-only machinery) goes in a `//? if neoforge {` arm in
+`registerAll` under a `// Not on Fabric: <reason>` line; the Fabric build drops the manifests of tests it does not
+register, so nothing else is needed. A file that cannot even compile there goes on the bc.fabric exclude list with
+its reason.
 
 ## Never assert on a fixed tick after placing blocks/entities
 

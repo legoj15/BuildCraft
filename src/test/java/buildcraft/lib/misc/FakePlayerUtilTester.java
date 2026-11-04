@@ -11,7 +11,6 @@ import static buildcraft.lib.test.GameTestUtil.check;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import com.mojang.authlib.GameProfile;
 
@@ -27,11 +26,9 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.event.VanillaGameEvent;
-
 import buildcraft.api.core.BuildCraftAPI;
+import buildcraft.lib.test.LoaderTestEvents;
+import buildcraft.platform.Platform;
 
 /**
  * Game tests for BuildCraft's cached fake players ({@link BuildCraftAPI#fakePlayerProvider}).
@@ -152,7 +149,7 @@ public class FakePlayerUtilTester {
         check(apples.getCount() == 3 && cobble.getCount() == 7 && carried.getCount() == 2,
                 "the reset leaves the previous caller's stacks intact");
 
-        FakePlayer fresh = new FakePlayer(level, owner);
+        ServerPlayer fresh = Platform.fakePlayers().create(level, owner);
         check(again.getYRot() == homeYRot, "yRot is back to its creation value (" + again.getYRot() + ")");
         check(again.getXRot() == homeXRot, "xRot is back to its creation value (" + again.getXRot() + ")");
         check(again.getYHeadRot() == homeYHeadRot, "head rotation is back to its creation value");
@@ -335,7 +332,7 @@ public class FakePlayerUtilTester {
     public static void testResetsLivingState(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
-        FakePlayer fresh = new FakePlayer(level, owner);
+        ServerPlayer fresh = Platform.fakePlayers().create(level, owner);
 
         ServerPlayer player = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         player.getFoodData().setFoodLevel(3);
@@ -435,7 +432,7 @@ public class FakePlayerUtilTester {
 
         ServerPlayer beforeLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         // Stands in for the owner's real ServerPlayer: the handlers only read the UUID.
-        FakePlayer ownerSession = new FakePlayer(level, owner);
+        ServerPlayer ownerSession = Platform.fakePlayers().create(level, owner);
         FakePlayerUtil.onPlayerLoggedOut(ownerSession);
         ServerPlayer afterLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(afterLogout != beforeLogout, "the owner's logout evicts the owner's cached player");
@@ -464,13 +461,11 @@ public class FakePlayerUtilTester {
         ServerLevel level = helper.getLevel();
         GameProfile owner = uniqueProfile();
         List<Entity> finishCauses = new ArrayList<>();
-        Consumer<VanillaGameEvent> listener = event -> {
-            if (event.getVanillaEvent().is(GameEvent.ITEM_INTERACT_FINISH.key())) {
-                finishCauses.add(event.getCause());
+        try (LoaderTestEvents.Observer observer = LoaderTestEvents.observeGameEvents((event, position, cause) -> {
+            if (event.is(GameEvent.ITEM_INTERACT_FINISH.key())) {
+                finishCauses.add(cause);
             }
-        };
-        NeoForge.EVENT_BUS.addListener(listener);
-        try {
+        })) {
             ServerPlayer leased;
             try (FakePlayerUtil.Lease lease = FakePlayerUtil.lease(level, owner, helper.absolutePos(new BlockPos(1, 1, 1)))) {
                 leased = lease.player();
@@ -490,8 +485,6 @@ public class FakePlayerUtilTester {
             check(!again.isUsingItem() && again.getUseItem().isEmpty(), "the fetch-time reset ends the use");
             check(again.getUsedItemHand() == InteractionHand.MAIN_HAND, "the used-hand flag is back to a fresh player's");
             check(!finishCauses.contains(again), "the fetch-time reset emits no ITEM_INTERACT_FINISH vibration");
-        } finally {
-            NeoForge.EVENT_BUS.unregister(listener);
         }
 
         helper.succeed();

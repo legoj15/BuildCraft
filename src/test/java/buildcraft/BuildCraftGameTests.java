@@ -6,138 +6,58 @@
 
 package buildcraft;
 
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.minecraft.core.Registry;
-import net.minecraft.gametest.framework.GameTestHelper;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import net.minecraft.resources.ResourceKey;
+import java.util.function.Supplier;
+
+import net.minecraft.gametest.framework.GameTestHelper;
 
 import buildcraft.integration.pipes.PipeRoutingTest;
+import buildcraft.lib.test.TestOnlyBlocks;
 
-// Bare @EventBusSubscriber on every node: FML auto-detects each method's bus from the event type
-// (RegisterEvent on >=1.21.10; RegisterGameTestsEvent on 1.21.1 — both IModBusEvent). The 1.21.1
-// loader still has the legacy bus() element but is pinned past the build that ignores it at
-// runtime, so the element is simply omitted; 1.21.1 game-test count parity is verified per run.
-@EventBusSubscriber(modid = "buildcraftunofficial")
+/**
+ * Every BuildCraft game test, registered the same way on every loader. A loader hook calls {@link #register} during
+ * mod construction: {@code platform.neoforge.NeoForgeGameTestHooks} from {@code FMLConstructModEvent} on NeoForge,
+ * {@code platform.fabric.BCFabricGameTestEntrypoint} from the game-test mod's initializer on Fabric. 1.21.1 predates
+ * the dynamic {@code TEST_FUNCTION} registry, so its NeoForge hook feeds {@link #registerAll} into
+ * {@code GameTestRegistry} instead (see that hook).
+ *
+ * <p>A test the Fabric node cannot run sits in a {@code //? if neoforge} arm of {@link #registerAll} with its reason;
+ * the Fabric build drops the manifests of the tests it does not register (bc.fabric, {@code FabricGameTests}).
+ */
 public class BuildCraftGameTests {
 
-    // Game-test registration. 1.21.5+ uses the dynamic Registries.TEST_FUNCTION registry + JSON
-    // test_instance manifests; 1.21.1 (below that cliff) has neither, so it reflects TestFunctions
-    // straight into GameTestRegistry against the buildcraftunofficial:empty arena
-    // (data/buildcraftunofficial/structure/empty.nbt — a 16x16x16 air arena standing in for the
-    // 1.21.5+ minecraft:empty structure, with the 1.21.1 DataVersion; the size gives encaseStructure
-    // room for the oil-gen surface scan). registerAll() below is the SINGLE source of truth for all
-    // node lines;
-    // each node only differs in the registrar lambda it passes.
+    private static final String NAMESPACE = "buildcraftunofficial";
+
+    private BuildCraftGameTests() {}
+
     //? if >=1.21.10 {
-    @net.neoforged.bus.api.SubscribeEvent
-    public static void onRegister(net.neoforged.neoforge.registries.RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.TEST_FUNCTION)) {
-            registerAll((id, sup) -> event.register(Registries.TEST_FUNCTION, net.minecraft.resources.Identifier.parse(id), sup));
+    /**
+     * Registers the test-only blocks (in a game-test run only: {@code gameTestRun}) and every game test, through
+     * BuildCraft's registrar on {@code Registries.TEST_FUNCTION}. Call it once, during mod construction.
+     */
+    public static void register(boolean gameTestRun) {
+        if (gameTestRun) {
+            TestOnlyBlocks.register();
         }
+        buildcraft.platform.registry.BCRegistrar<Consumer<GameTestHelper>> functions =
+                buildcraft.platform.registry.BCRegistrar.create(net.minecraft.core.registries.Registries.TEST_FUNCTION, NAMESPACE);
+        registerAll((id, sup) -> functions.register(path(id), sup));
+        functions.subscribe();
     }
-    //?} else {
-    /*@net.neoforged.bus.api.SubscribeEvent
-    public static void onRegisterGameTests(net.neoforged.neoforge.event.RegisterGameTestsEvent event) {
-        String filter = System.getProperty("buildcraft.gameTestFilter");
-        if (filter == null || filter.isBlank()) {
-            registerAll((id, sup) -> addReflectively(id, sup));
-            return;
-        }
-        // `-PbcTests=<glob>` (build.gradle.kts sets the property on this node only). 1.21.1's server Main has
-        // no `--tests` option and its runner takes every TestFunction already in GameTestRegistry, so the
-        // filter has to act here, before the runner reads the list. Same matching as the modern selector
-        // (ResourceSelectorArgument): a pattern without a colon gets "minecraft:", then a case-sensitive
-        // commons-io wildcard match (`*`/`?`) against the full test id.
-        String pattern = filter.strip();
-        if (!pattern.contains(":")) pattern = "minecraft:" + pattern;
-        final String glob = pattern;
-        java.util.concurrent.atomic.AtomicInteger selected = new java.util.concurrent.atomic.AtomicInteger();
-        java.util.concurrent.atomic.AtomicInteger total = new java.util.concurrent.atomic.AtomicInteger();
-        registerAll((id, sup) -> {
-            total.incrementAndGet();
-            if (org.apache.commons.io.FilenameUtils.wildcardMatch(id, glob)) {
-                selected.incrementAndGet();
-                addReflectively(id, sup);
-            }
-        });
-        // WARN so it clears the quiet game-test console mirror (gameTestServerLog4j2-quiet.xml).
-        org.slf4j.Logger log = com.mojang.logging.LogUtils.getLogger();
-        log.warn("BuildCraft game-test filter '{}' selected {} of {} tests", glob, selected.get(), total.get());
-        if (selected.get() == 0) {
-            log.error("-PbcTests='{}' matched none of the {} BuildCraft game tests; expected a namespace:glob such as "
-                + "buildcraftunofficial:painted_pipe_*", filter, total.get());
-            // Throwing from this listener only reaches server Main, which logs "Failed to start the minecraft
-            // server" and returns normally, so Gradle would report a green run of zero tests for a mistyped
-            // glob. Exit non-zero so the task fails like a failing game test does.
-            System.exit(1);
-        }
-    }
-
-    // 1.21.1 has no dynamic TEST_FUNCTION registry; GameTestRegistry.TEST_FUNCTIONS is a private
-    // mutable list the runner reads via getAllTestFunctions(). We build a TestFunction from the same
-    // (id, supplier) the modern path registers and add it directly (dev/CI-only path).
-    private static void addReflectively(String id, java.util.function.Supplier<java.util.function.Consumer<GameTestHelper>> sup) {
-        try {
-            java.lang.reflect.Field f = net.minecraft.gametest.framework.GameTestRegistry.class.getDeclaredField("TEST_FUNCTIONS");
-            f.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            java.util.Collection<net.minecraft.gametest.framework.TestFunction> coll =
-                (java.util.Collection<net.minecraft.gametest.framework.TestFunction>) f.get(null);
-            // skyAccess=true (11th arg) so StructureUtils.encaseStructure omits the BARRIER CEILING
-            // (it always builds walls, but adds a ceiling only when !skyAccess). Without it the oil-gen
-            // surface-scan (findSolidSurfaceTop, top-down) hits the ceiling instead of the test floor,
-            // and spring tests can't place fluid above. Full ctor: batch, name, structure, rotation,
-            // maxTicks, setupTicks, required, manualOnly, maxAttempts, requiredSuccesses, skyAccess, fn.
-            coll.add(new net.minecraft.gametest.framework.TestFunction(
-                readBatch(id), id, "buildcraftunofficial:empty",
-                net.minecraft.world.level.block.Rotation.NONE, readMaxTicks(id, 100), 0L, true, false, 1, 1, true, sup.get()));
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("Failed to register 1.21.1 game test " + id, e);
-        }
-    }
-
-    // 1.21.1 has no test_environment either, but its batch NAME plays the same role (tests of one batch run
-    // concurrently, batches run one after another), so a manifest's "environment" becomes the batch name.
-    // Without this every test, the marker tests included, would share "defaultBatch" and run concurrently
-    // in neighbouring arenas, which is exactly the crosstalk the per-test marker environments exist to prevent
-    // (see MarkerTester). minecraft:default / no environment stay in the shared default batch.
-    private static String readBatch(String id) {
-        String path = id.substring(id.indexOf(':') + 1);
-        try (java.io.InputStream in = BuildCraftGameTests.class.getResourceAsStream(
-                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
-            if (in == null) return GameTestBatchNames.DEFAULT;
-            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
-                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            return GameTestBatchNames.forEnvironment(o.has("environment") ? o.get("environment").getAsString() : null);
-        } catch (Exception e) {
-            return GameTestBatchNames.DEFAULT;
-        }
-    }
-
-    // 1.21.1 has no test_instance manifests, so read each test's declared max_ticks straight from the
-    // same JSON resource the modern nodes consume, keeping the legacy ctor's watchdog in lock-step with
-    // the per-test timeouts (the old hard-coded 100 guillotined longer tests like the overheat hold).
-    private static int readMaxTicks(String id, int fallback) {
-        String path = id.substring(id.indexOf(':') + 1);
-        try (java.io.InputStream in = BuildCraftGameTests.class.getResourceAsStream(
-                "/data/buildcraftunofficial/test_instance/" + path + ".json")) {
-            if (in == null) return fallback;
-            com.google.gson.JsonObject o = com.google.gson.JsonParser.parseReader(
-                    new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            return o.has("max_ticks") ? o.get("max_ticks").getAsInt() : fallback;
-        } catch (Exception e) {
-            return fallback;
-        }
-    }*/
     //?}
 
-    /** Single source of truth for every game-test registration. Both nodes call this; only the
-     *  registrar differs (modern dynamic registry vs 1.21.1 GameTestRegistry reflection). */
-    private static void registerAll(java.util.function.BiConsumer<String, java.util.function.Supplier<java.util.function.Consumer<GameTestHelper>>> reg) {
+    /** The path of a test id, which must be in BuildCraft's namespace. */
+    public static String path(String id) {
+        if (!id.startsWith(NAMESPACE + ":")) {
+            throw new IllegalArgumentException("Game test id outside " + NAMESPACE + ": " + id);
+        }
+        return id.substring(NAMESPACE.length() + 1);
+    }
+
+    /** Single source of truth for every game-test registration. Every node and loader calls this; only the
+     *  registrar differs (the registry through BuildCraft's registrar, or 1.21.1's GameTestRegistry reflection). */
+    public static void registerAll(BiConsumer<String, Supplier<Consumer<GameTestHelper>>> reg) {
         // Pipes
         reg.accept("buildcraftunofficial:pipe_routing_test_simple", () -> PipeRoutingTest::testSimplePipeExtraction);
         reg.accept("buildcraftunofficial:pipe_records_owner_on_placement", () -> buildcraft.transport.PipeOwnerTester::testPipeRecordsOwnerOnPlacement);
@@ -242,35 +162,49 @@ public class BuildCraftGameTests {
         // Fluids
         reg.accept("buildcraftunofficial:oil_water_interaction", () -> buildcraft.energy.OilWaterInteractionTest::testOilOverWater);
         reg.accept("buildcraftunofficial:oil_spread_skips_same_fluid", () -> buildcraft.energy.OilWaterInteractionTest::testOilSpreadSkipsSameFluidNeighbour);
+        // Not on Fabric: NeoForge FluidType water physics; Fabric has no fluid type (docs/platform-layer.md, fluids).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:oil_bobbing_physics", () -> buildcraft.energy.FluidPhysicsTest::testOilBobbing);
         reg.accept("buildcraftunofficial:energy_fluid_motion_scale_water_like", () -> buildcraft.energy.FluidPhysicsTest::energyFluidsMotionScaleIsWaterLike);
         reg.accept("buildcraftunofficial:crude_oil_is_not_water_like", () -> buildcraft.energy.FluidPhysicsTest::crudeOilIsNotWaterLike);
+        //?}
         reg.accept("buildcraftunofficial:oil_burns_with_vanilla_fire", () -> buildcraft.energy.FluidFireTester::testOilBurnsWithVanillaFire);
         reg.accept("buildcraftunofficial:gas_detonates_and_chain_is_bounded", () -> buildcraft.energy.FluidFireTester::testGasDetonatesAndChainIsBounded);
+        // Not on Fabric: Fabric API has no explosion event, so a blast does not set off the tank it broke (FabricGameHooks.onExplosionDetonate gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:tank_of_gas_detonates", () -> buildcraft.energy.ContainedFluidDetonationTester::testTankOfGasDetonates);
+        //?}
 
         // Inventory Transactors
         reg.accept("buildcraftunofficial:item_transactor_simple_moving", () -> buildcraft.lib.inventory.ItemTransactorTester::testSimpleMoving);
         reg.accept("buildcraftunofficial:item_transactor_limited_inventory", () -> buildcraft.lib.inventory.ItemTransactorTester::testLimitedInventory);
         reg.accept("buildcraftunofficial:item_handler_simple_component_round_trip", () -> buildcraft.lib.inventory.ItemTransactorTester::testComponentRoundTrip);
         reg.accept("buildcraftunofficial:item_handler_simple_legacy_id_count_fallback", () -> buildcraft.lib.inventory.ItemTransactorTester::testLegacyIdCountFallback);
+        // BuildCraft's chunk tickets are its own: releasing one leaves a chunk someone else forced still forced.
+        reg.accept("buildcraftunofficial:chunk_ticket_release_keeps_other_forced_chunk", () -> buildcraft.lib.misc.ChunkTicketSharingTester::releaseKeepsAnotherOwnersForcedChunk);
         reg.accept("buildcraftunofficial:fake_player_provider_reuses_instance", () -> buildcraft.lib.misc.FakePlayerUtilTester::testReusesInstance);
         reg.accept("buildcraftunofficial:fake_player_provider_resets_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsState);
         reg.accept("buildcraftunofficial:fake_player_provider_positions_player", () -> buildcraft.lib.misc.FakePlayerUtilTester::testPositionsPlayer);
         reg.accept("buildcraftunofficial:fake_player_lease_isolates_nested_fetches", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeaseIsolatesNestedFetches);
         reg.accept("buildcraftunofficial:fake_player_cache_drops_unloaded_level", () -> buildcraft.lib.misc.FakePlayerUtilTester::testUnloadDropsLevelPlayers);
         reg.accept("buildcraftunofficial:fake_player_owner_session_change_evicts", () -> buildcraft.lib.misc.FakePlayerUtilTester::testOwnerSessionChangeEvicts);
+        // Not on Fabric: observes vanilla game events through NeoForge's VanillaGameEvent; Fabric API has no game-event hook.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:fake_player_scrub_is_silent", () -> buildcraft.lib.misc.FakePlayerUtilTester::testScrubIsSilent);
+        //?}
         reg.accept("buildcraftunofficial:fake_player_api_separate_from_leases", () -> buildcraft.lib.misc.FakePlayerUtilTester::testApiPlayerIsSeparateFromLeases);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_released", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsReleased);
         reg.accept("buildcraftunofficial:fake_player_leaked_lease_swept_at_tick_start", () -> buildcraft.lib.misc.FakePlayerUtilTester::testLeakedLeaseIsSweptWhenATickStarts);
         reg.accept("buildcraftunofficial:fake_player_resets_living_state", () -> buildcraft.lib.misc.FakePlayerUtilTester::testResetsLivingState);
         reg.accept("buildcraftunofficial:fake_player_advancements_reach_owner", () -> buildcraft.lib.misc.AdvancementUtilFakePlayerTester::fakePlayerAwardsReachTheOwner);
         reg.accept("buildcraftunofficial:machine_protection_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::probeIsNotABlockUpdate);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:machine_protection_place_probe_is_not_block_update", () -> buildcraft.lib.misc.MachineProtectionTester::placeProbeIsNotABlockUpdate);
         reg.accept("buildcraftunofficial:builder_claim_filler_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::fillerAsksLikeAPlayerAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_asks_and_parks", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderAsksBeforePlacingAndParksRefusedCells);
         reg.accept("buildcraftunofficial:builder_claim_blueprint_entity_parks_busy", () -> buildcraft.builders.snapshot.BuilderClaimTester::blueprintBuilderParksRefusedEntityAndStaysBusy);
+        //?}
         // A stalled Builder names the cells it is skipping (and why), and a bedrock block no longer stalls every placement.
         reg.accept("buildcraftunofficial:builder_stall_floating_torch_cant_stand", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderReportsAFloatingTorchAsCantStand);
         reg.accept("buildcraftunofficial:builder_stall_unbreakable_does_not_block_placing", () -> buildcraft.builders.snapshot.BuilderStallTester::blueprintBuilderPlacesAroundUnbreakableBlockAndReportsIt);
@@ -299,27 +233,45 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_hoe_asks_right_click_before_tilling", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHoeAsksTheRightClickEventBeforeTilling);
         reg.accept("buildcraftunofficial:stripes_refused_click_ends_dispenser_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickEndsTheDispenserFallthrough);
         reg.accept("buildcraftunofficial:stripes_refused_soil_click_ends_seed_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedSoilClickEndsTheSeedFallthrough);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_refused_claim_stops_block_placement", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClaimStopsAStripesPipePlacingABlock);
         reg.accept("buildcraftunofficial:stripes_fire_needs_placement_ask_at_target", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testFireNeedsThePlacementAskAtTheTarget);
+        //?}
+        // Not on Fabric: Fabric has no shearable-block extension (FabricShearServices gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_shears_ask_break_protection", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testShearsAskBreakProtectionBeforeCutting);
         reg.accept("buildcraftunofficial:stripes_refused_click_after_shears_pass_keeps_digging", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickAfterShearsPassDoesNotStopTheDig);
+        //?}
         reg.accept("buildcraftunofficial:stripes_air_use_asks_item_right_click", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseAsksTheItemRightClickEvent);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_air_use_bucket_asks_cells_it_touches", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseBucketAsksTheCellsItTouches);
+        //?}
         reg.accept("buildcraftunofficial:stripes_air_use_hands_product_back_down_pipe", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseHandsTheProductBackDownThePipe);
         reg.accept("buildcraftunofficial:stripes_refused_till_ends_hoe_handler", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedTillEndsTheHoeHandler);
-        reg.accept("buildcraftunofficial:stripes_refused_entity_interaction_ends_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedEntityInteractionEndsTheDispatch);
+        // Not on Fabric: NeoForge's EntityInteract cancellation result and listener priorities.
+        //? if neoforge {
+        reg.accept("buildcraftunofficial:stripes_refused_entity_interaction_ends_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesEntityClaimTester::testRefusedEntityInteractionEndsTheDispatch);
+        //?}
         reg.accept("buildcraftunofficial:stripes_other_players_refusal_keeps_dispatch", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAnotherPlayersRefusalDoesNotEndTheDispatch);
         reg.accept("buildcraftunofficial:stripes_handler_may_change_registry_while_dispatched", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testHandlerMayChangeTheRegistryWhileItIsDispatched);
         reg.accept("buildcraftunofficial:stripes_alias_sweep_sends_once", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAliasedStackIsSentBackOnce);
         reg.accept("buildcraftunofficial:stripes_breaks_minecart_after_attack_ask", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testMinecartInFrontIsBrokenAfterAnAttackAsk);
         reg.accept("buildcraftunofficial:stripes_minecart_stuck_slot_keeps_cart", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testSlotThatWillNotClearKeepsTheCartAndItsItem);
         reg.accept("buildcraftunofficial:stripes_minecart_no_pick_result_destroyed_its_own_way", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCartThatNamesNoItemIsDestroyedItsOwnWay);
+        // Not on Fabric: no standard Fabric entity item lookup (FabricTransfer.findItem gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_minecart_capability_only_cart_emptied", () -> buildcraft.transport.stripes.StripesHandlerMinecartDestroyTester::testCapabilityOnlyCartIsEmptiedBeforeItIsBroken);
+        //?}
         reg.accept("buildcraftunofficial:stripes_item_pipe_extends_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testItemPipeExtendsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_line", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsTheLine);
         reg.accept("buildcraftunofficial:stripes_void_pipe_retracts_sideways", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testVoidPipeRetractsSideways);
         reg.accept("buildcraftunofficial:stripes_refused_extension_returns_stack", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedExtensionSendsTheStackBack);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_refused_placement_returns_same_tick_stacks", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testRefusedPlacementSendsBothSameTickStacksBack);
+        //?}
         reg.accept("buildcraftunofficial:stripes_lone_pipe_drops_what_it_cannot_send_back", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesMovesTester::testLoneStripesPipeDropsWhatItCannotSendBack);
         
         // Shape Patterns
@@ -356,7 +308,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:marker_volume_triangulation_2d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation2D);
         reg.accept("buildcraftunofficial:marker_volume_triangulation_3d", () -> buildcraft.core.marker.MarkerTester::testVolumeTriangulation3D);
         // Join resync: what a joining client is sent, and that a player joining a level triggers it.
+        // Not on Fabric: posts a level unload for a stand-in client level; Fabric has no client level-unload event.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:marker_join_sync_replays_markers_and_connections", () -> buildcraft.core.marker.MarkerTester::testJoinSyncReplaysMarkersAndConnections);
+        //?}
         reg.accept("buildcraftunofficial:marker_join_event_resyncs_player", () -> buildcraft.lib.marker.MarkerJoinResyncTester::aPlayerJoiningALevelIsResynced);
         // Hermeticity of the marker tests themselves: leftovers from earlier batches must neither corrupt a connection nor survive MarkerArenaUtil.open.
         reg.accept("buildcraftunofficial:marker_leftovers_do_not_corrupt_connections", () -> buildcraft.core.marker.MarkerTester::testLeftoverMarkersDoNotCorruptConnections);
@@ -426,7 +381,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:gui_test_dynamo_upgrade", () -> buildcraft.lib.test.gui.GuiTester::testDynamoUpgrade);
         reg.accept("buildcraftunofficial:gui_test_filler_ui", () -> buildcraft.lib.test.gui.GuiTester::testFillerUI);
         // Guide book recipe lookups off the server-synced cache (multiplayer recipe-panel fix)
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:guide_recipe_lookup_synced_cache", () -> buildcraft.lib.test.guide.GuideRecipeLookupTester::testGuideRecipeLookupFromSyncedCache);
+        //?}
         // Slot Tests
         reg.accept("buildcraftunofficial:slot_max_stack_size", () -> buildcraft.lib.gui.SlotBaseTester::testSlotMaxStackSize);
 
@@ -522,10 +480,13 @@ public class BuildCraftGameTests {
         // The frame block is placed by the quarry itself, so it asks for the placement like the Builder does: a frame-line
         // cell a claim refuses is a parked gap, asked again once its window ends (the cell stays air, so the retry cannot
         // tell the lift by the cell changing), and a claim that appears while the block is being made still stops it.
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:quarry_frame_skips_cell_where_placement_refused", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameSkipsCellWherePlacementIsRefused);
         reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_claim_lifted", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementClaimIsLifted);
         reg.accept("buildcraftunofficial:quarry_frame_fills_gap_after_placement_lifted_under_break_claim", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameFillsGapAfterPlacementLiftedUnderBreakClaim);
         reg.accept("buildcraftunofficial:quarry_frame_cell_claimed_mid_task_not_framed", () -> buildcraft.builders.tile.TileQuarryUnminableFrameTester::testFrameCellClaimedMidTaskIsNotFramed);
+        //?}
         // A finished (or not-yet-working) quarry must request 0 MJ so feeding engines idle down
         // instead of overheating while topping off a 24k buffer that's about to be torn down.
         reg.accept("buildcraftunofficial:quarry_idle_requests_no_power", () -> buildcraft.builders.tile.TileQuarryIdlePowerTester::testIdleQuarryRequestsNoPower);
@@ -712,14 +673,23 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:flood_gate_wrench_on_top_face_falls_through", () -> buildcraft.factory.FloodGateTester::testWrenchOnTopFaceFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_non_wrench_falls_through", () -> buildcraft.factory.FloodGateTester::testNonWrenchItemFallsThrough);
         reg.accept("buildcraftunofficial:flood_gate_flooding_the_world_advancement", () -> buildcraft.factory.FloodGateTester::testFloodingTheWorldAdvancement);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:flood_gate_respects_claimed_cells", () -> buildcraft.factory.FloodGateTester::testRefusedCellIsNotFlooded);
+        //?}
 
         // The wrenches as real tools (issue #34): mining rules, wear, and the zombies that carry or drop one
         reg.accept("buildcraftunofficial:wrench_tool_mining_rules", () -> buildcraft.core.item.WrenchToolTester::miningRules);
         reg.accept("buildcraftunofficial:wrench_wear_follows_wrench_actions", () -> buildcraft.core.item.WrenchToolTester::wearFollowsWrenchActions);
         reg.accept("buildcraftunofficial:wrench_hit_on_a_mob_wears_one_use", () -> buildcraft.core.item.WrenchToolTester::hitOnAMobWearsOneUse);
+        // Not on Fabric: Fabric API has no spawn-finalize event (FabricGameHooks.onFinalizeSpawn gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:zombies_sometimes_carry_a_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesCarryAWrench);
+        //?}
+        // Not on Fabric: posts a drops-list event; Fabric's drops route (AFTER_DEATH) puts the drops straight in the level.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:zombies_sometimes_drop_a_worn_wrench", () -> buildcraft.core.item.WrenchToolTester::zombiesSometimesDropAWornWrench);
+        //?}
 
         // Filler building_for_the_future advancement (LOOP-mode completion + setControlMode re-arm)
         reg.accept("buildcraftunofficial:filler_building_for_the_future_advancement", () -> buildcraft.builders.FillerAdvancementTester::testBuildingForTheFutureAdvancement);
@@ -787,8 +757,11 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_claimed_water", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesClaimedWaterAlone);
         // ... and a tube is a block placed: it asks for the placement of an air cell too (and of a water cell, besides the
         // break ask), and asks only about the cells that are to receive a tube.
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:mining_well_tube_asks_placement_before_air", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeAsksPlacementBeforeTakingAir);
         reg.accept("buildcraftunofficial:mining_well_tube_leaves_water_where_placement_refused", () -> buildcraft.factory.tile.TileMinerTubeClaimTester::testWellTubeLeavesWaterWherePlacementIsRefused);
+        //?}
 
         // An idle pump backs its flood-fill rebuilds off, yet still finds fluid reaching its column at the old cadence
         // and wakes on an adjacent block change.
@@ -909,7 +882,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:pipe_hand_break_drops_everything", () -> buildcraft.transport.PipeDropsTester::testPipeHandBreakDropsEverything);
         reg.accept("buildcraftunofficial:pipe_fluid_break_drops_shards", () -> buildcraft.transport.PipeDropsTester::testFluidPipeBreakDropsFluidShards);
         reg.accept("buildcraftunofficial:pipe_facade_explosion_resistance", () -> buildcraft.transport.PipeExplosionResistanceTester::testFacadeArmoursTheSideItCovers);
+        // Not on Fabric: the sound type is vanilla's position-free one there (docs/platform-layer.md, Fabric gaps).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:pipe_sound_follows_material", () -> buildcraft.transport.PipeSoundTester::testPlacedPipeSoundsLikeItsMaterial);
+        //?}
         // Non-player removal (piston / mod setBlock) spills the in-transit cargo only — the
         // pipe / pluggables / wires are lost. Regression guard for the dropPipeCargo catch-all.
         reg.accept("buildcraftunofficial:pipe_nonplayer_break_drops_cargo", () -> buildcraft.transport.PipeDropsTester::testNonPlayerBreakDropsCargoOnly);
@@ -994,7 +970,10 @@ public class BuildCraftGameTests {
         // input with the correct variant (was rendering as default CLAY_BRICK "Basic Gate"
         // because `Ingredient.items()` drops data-component patches) and that CLAY_BRICK
         // Basic Gate has no assembly usages.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:guide_modifier_recipe_renders_correct_input_variant", () -> buildcraft.silicon.GateRecipeVariantTester::testGuideBookModifierRecipeRendersCorrectInputVariant);
+        //?}
         reg.accept("buildcraftunofficial:basic_clay_brick_gate_has_no_assembly_usages", () -> buildcraft.silicon.GateRecipeVariantTester::testBasicClayBrickGateHasNoAssemblyUsages);
         // Facade recipe redirects are server-authoritative: stackRedirects is published only when an
         // integrated server shares the client JVM, and empty on a dedicated server. Pin both halves —
@@ -1085,7 +1064,10 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:wire_visible_only_to_players_whose_view_holds_system", () -> buildcraft.transport.WireSystemTester::testWireVisibleOnlyToPlayersWhoseViewHoldsTheSystem);
         reg.accept("buildcraftunofficial:wire_system_spanning_two_chunks_seen_from_either", () -> buildcraft.transport.WireSystemTester::testWireSystemSpanningTwoChunksIsSeenFromEither);
         reg.accept("buildcraftunofficial:wire_chunk_delivery_queues_only_wire_chunks", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryQueuesPlayerOnlyForChunksHoldingWires);
+        // Not on Fabric: Fabric API has no chunk-sent event (FabricGameHooks.onChunkSent gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:wire_chunk_sent_event_queues_player", () -> buildcraft.transport.WireSystemTester::testChunkSentEventQueuesPlayerForWireChunk);
+        //?}
         reg.accept("buildcraftunofficial:wire_chunk_burst_resends_once_then_trails", () -> buildcraft.transport.WireSystemTester::testChunkDeliveryBurstGivesOneImmediateAndOneTrailingResend);
 
         // Silicon — Gates: redstone-trigger sync. Pins that runtime display state
@@ -1111,7 +1093,10 @@ public class BuildCraftGameTests {
 
         // Backwards-compat registry aliases (LegacyAliases) — every legacy block/item/BE/fluid ID
         // must resolve to a live current entry, so old worlds and inventories keep their content.
+        // Not on Fabric: Fabric has no registry alias API (FabricRegistryServices.addAlias gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_aliases_resolve", () -> buildcraft.lib.registry.LegacyAliasTester::testAliasesResolve);
+        //?}
 
         // Robotics — Zone Planner slot transfer: a ZONE map location <-> tile layer round trip
         // through serverTick (input read + output write), with the world<->tile-relative offset and
@@ -1143,13 +1128,22 @@ public class BuildCraftGameTests {
         // Robotics — Zone Planner map overlay as the viewport emits it: one quad per painted column on mapped
         // terrain in view (a counting vertex consumer), one per terrain sample at survey zoom, the stroke preview
         // in place of its layer, and nothing out of view or off the mapped terrain.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_overlay_in_view", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayDrawsOnlyPaintedMappedColumnsInView);
         reg.accept("buildcraftunofficial:zone_planner_overlay_survey_zoom", () -> buildcraft.robotics.ZonePlannerOverlayTester::overlayAtSurveyZoomDrawsOneQuadPerTerrainSample);
         reg.accept("buildcraftunofficial:zone_planner_cull_above_camera", () -> buildcraft.robotics.ZonePlannerOverlayTester::terrainAndOverlayLeaveOutColumnsReachingTheCamera);
+        //?}
         // ...and terrain far below the planner, de-magnified into view from beyond the ground span, is still drawn.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_edge_low_terrain", () -> buildcraft.robotics.ZonePlannerOverlayTester::lowTerrainAtTheEdgeOfSurveyZoomIsDrawn);
+        //?}
         // ...and the survey-square outline is made of the terrain's own cells.
+        // Not on Fabric: loads client classes, which Fabric's dedicated game-test server refuses to load.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:zone_planner_survey_outline_on_cells", () -> buildcraft.robotics.ZonePlannerOverlayTester::surveyOutlineIsDrawnOnTerrainCells);
+        //?}
 
         // Robotics — Zone Planner terrain colour cache: refreshed after an age (the client is never told a
         // block changed), invalidated on a chunk reload, and never shared between levels.
@@ -1274,11 +1268,14 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_farmer_moves_on_from_refused_till", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerMovesOnFromARefusedTill);
         reg.accept("buildcraftunofficial:robot_farmer_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSleepsAfterRepeatedRefusals);
         reg.accept("buildcraftunofficial:robot_farmer_skips_dirt_it_may_not_break", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::farmerSkipsDirtItMayNotBreak);
+        // Not on Fabric: Fabric API has no placement event, so a claim never sees the placement (FabricProtection.canPlace gap).
+        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_plant_failure_keeps_seed", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::refusedPlantingKeepsTheSeed);
         reg.accept("buildcraftunofficial:robot_plant_asks_right_click_first", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::plantingAsksTheRightClickEventFirst);
         reg.accept("buildcraftunofficial:robot_planter_does_not_retry_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterDoesNotRetryARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_moves_on_from_refused_planting", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterMovesOnFromARefusedPlanting);
         reg.accept("buildcraftunofficial:robot_planter_sleeps_after_repeated_refusals", () -> buildcraft.robotics.boards.FarmPlantRefusalTester::planterSleepsAfterRepeatedRefusals);
+        //?}
         // The break boards and the harvester remember a break that simply failed (a block that refuses), then sleep.
         reg.accept("buildcraftunofficial:robot_break_board_does_not_retry_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardDoesNotRetryABlockItCannotBreak);
         reg.accept("buildcraftunofficial:robot_break_board_moves_on_from_unbreakable_block", () -> buildcraft.robotics.boards.BreakFailureMemoryTester::breakBoardMovesOnFromABlockItCannotBreak);
@@ -1342,18 +1339,30 @@ public class BuildCraftGameTests {
         // ...and two robots never share an id: one arriving with a live robot's id is given a fresh one.
         reg.accept("buildcraftunofficial:robot_registry_id_collision_reissues_arriving", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithALiveRobotsIdIsGivenAFreshOne);
         reg.accept("buildcraftunofficial:robot_registry_id_of_dead_holder_is_kept", () -> buildcraft.robotics.RobotRegistryLiveTester::aRobotArrivingWithADeadRobotsIdKeepsIt);
+        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_pre_26_file_is_picked_up", () -> buildcraft.lib.misc.LegacySavedDataTester::aPre26OverworldFileIsPickedUpByTheRealStorage);
+        //?}
         // ...but once a 26.1+ file exists it wins, and the pre-26.1 file is left on disk (recoverable).
+        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_both_files_current_wins", () -> buildcraft.lib.misc.LegacySavedDataTester::bothFilesPresentTheCurrentWinsAndTheLegacyIsKept);
+        //?}
         // Every real saved-data type against a temporary world layout: an EMPTY 26.1+ file (the one a 26.x build from
         // before the migration wrote) gives way to the 1.21.x data, a 26.1+ file with content never does, and a
         // 1.21.x file alone still migrates; the old file is retired once its data is written, so deleted data stays
         // deleted.
+        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_empty_current_is_recovered", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeRecoversTheLegacyDataOverAnEmptyCurrentFile);
         reg.accept("buildcraftunofficial:legacy_saved_data_content_current_wins_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeKeepsACurrentFileWithContent);
         reg.accept("buildcraftunofficial:legacy_saved_data_legacy_alone_migrates_every_type", () -> buildcraft.lib.misc.LegacySavedDataTester::everyTypeMigratesALegacyFileAlone);
+        //?}
         // The volume boxes' 26.1+ type builds for the level the storage hands it, not the one its builder was given.
+        // Not on Fabric: drives NeoForge's level-aware SavedDataType/SavedDataStorage API directly.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:legacy_saved_data_volume_boxes_use_storage_level", () -> buildcraft.lib.misc.LegacySavedDataTester::volumeBoxesTypeBuildsForTheStoragesLevel);
+        //?}
         // Removing a box that was on disk at load reaches the clients (no ghost box until rejoin).
         reg.accept("buildcraftunofficial:volume_box_loaded_removal_reaches_clients", () -> buildcraft.core.marker.volume.VolumeBoxSyncTester::removingABoxLoadedFromDiskReachesClients);
         reg.accept("buildcraftunofficial:volume_box_one_shot_taken_once", () -> buildcraft.core.marker.volume.VolumeBoxOneShotTester::markerBoxIsTakenOnceAfterTheMarkersBreak);
@@ -1483,11 +1492,19 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_pump_board_skips_miner_tube", () -> buildcraft.robotics.ai.RobotPumpProtectionTester::boardSkipsWaterloggedMinerTube);
         reg.accept("buildcraftunofficial:robot_pump_leaves_source_beside_absent_chunk", () -> buildcraft.robotics.ai.RobotPumpUnloadedChunkTester::pumpLeavesASourceBesideAnAbsentChunkAlone);
         reg.accept("buildcraftunofficial:robot_use_tool_hoes_dirt_into_farmland", () -> buildcraft.robotics.ai.RobotActionAIsTester::useToolHoesDirtIntoFarmland);
+        // Not on Fabric: its claim mods are NeoForge event listeners at chosen priorities.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_plant_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::plantActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_use_tool_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_break_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::breakActsAsTheStationOwner);
         reg.accept("buildcraftunofficial:robot_harvest_acts_as_station_owner", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::harvestActsAsTheStationOwner);
+        //?}
+        // Not on Fabric: observes vanilla game events through NeoForge's VanillaGameEvent; Fabric API has no game-event hook.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:machine_break_is_done_by_owner", () -> buildcraft.lib.misc.MachineBreakAttributionTester::machineBreakIsDoneByTheOwner);
+        //?}
+        // Not on Fabric: its claim mods are NeoForge event listeners at chosen priorities.
+        //? if neoforge {
         reg.accept("buildcraftunofficial:robot_use_tool_holds_tool_in_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolHoldsTheToolInTheFakePlayersHand);
         reg.accept("buildcraftunofficial:robot_use_tool_breaking_tool_empties_hand", () -> buildcraft.robotics.ai.RobotOwnerIdentityTester::useToolBreakingTheToolEmptiesTheRobotsHand);
         reg.accept("buildcraftunofficial:robot_deployer_break_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::breakNeedsDeployerAndStationOwner);
@@ -1499,6 +1516,7 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:robot_deployer_station_owner_remembered", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::stationRemembersItsOwnerAndUnknownFailsClosed);
         reg.accept("buildcraftunofficial:robot_deployer_bomber_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::bomberNeedsBothAndTntIsTheDeployers);
         reg.accept("buildcraftunofficial:robot_deployer_melee_needs_both", () -> buildcraft.robotics.ai.RobotDeployerProtectionTester::meleeNeedsBothAndNamesTheDeployer);
+        //?}
         reg.accept("buildcraftunofficial:robot_attack_formula_and_cadence", () -> buildcraft.robotics.ai.RobotActionAIsTester::attackFormulaAndCadenceFellTheTarget);
         reg.accept("buildcraftunofficial:robot_search_entity_nearest_and_range", () -> buildcraft.robotics.ai.RobotActionAIsTester::searchEntityFindsNearestAndHonoursRange);
         reg.accept("buildcraftunofficial:robot_knight_fights_zombie", () -> buildcraft.robotics.ai.RobotActionAIsTester::knightFightsZombieToTheDeath);

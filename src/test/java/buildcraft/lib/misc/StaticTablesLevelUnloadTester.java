@@ -15,9 +15,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.LevelEvent;
-
 import buildcraft.core.marker.VolumeCache;
 import buildcraft.core.block.BlockMarkerVolume;
 import buildcraft.core.marker.VolumeSubCache;
@@ -28,6 +25,7 @@ import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotFetchItem;
 import buildcraft.robotics.boards.BoardRobotPicker;
 import buildcraft.robotics.entity.EntityRobot;
+import buildcraft.lib.test.LoaderTestEvents;
 
 /**
  * Static / singleton tables that hold block entities, entities or AIs - and through them a whole {@code Level} -
@@ -37,7 +35,7 @@ import buildcraft.robotics.entity.EntityRobot;
  * (loaded marker block entities, keyed by dimension and so also handed to the NEXT world that has the same
  * dimension), and the picker's fetch-claim table (claimant AI -> robot -> level).
  *
- * <p>The event goes through the REAL NeoForge bus, so the wiring is under test, not just the handlers - on a
+ * <p>The event goes through the REAL loader event (LoaderTestEvents), so the wiring is under test, not just the handlers - on a
  * secondary level (the nether), never the arena's own: posting an unload for the arena level would wipe state the
  * sibling tests are using. The only other listeners of {@code LevelEvent.Unload} are NeoForge's fake-player
  * cleanup and BuildCraft's own fake-player cache, both harmless for a level no test touches.
@@ -104,7 +102,7 @@ public class StaticTablesLevelUnloadTester {
             helper.assertTrue(BoardRobotPicker.isTargetted(otherItem) && BoardRobotPicker.isTargetted(arenaItem),
                     "precondition: both claims are live");
 
-            NeoForge.EVENT_BUS.post(new LevelEvent.Unload(other));
+            LoaderTestEvents.levelUnload(other);
 
             helper.assertTrue(LocalBlockUpdateNotifier.instance(other) != otherNotifier,
                     "the unloaded level's block-update notifier (and the lasers it holds) must be dropped");
@@ -145,11 +143,17 @@ public class StaticTablesLevelUnloadTester {
         TileMarkerVolume marker = new TileMarkerVolume(new BlockPos(0, 64, 0), markerBlock.defaultBlockState());
         marker.setLevel(other);
 
-        NeoForge.EVENT_BUS.post(new LevelEvent.Unload(other));
+        LoaderTestEvents.levelUnload(other);
         helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
                 "precondition: the unload dropped the level's marker sub-cache");
 
+        // What the loader calls: NeoForge's patched onChunkUnloaded, or Fabric's chunk-unload route
+        // (FabricLoaderHookRoutes), which calls the hook's onChunkUnload.
+        //? if neoforge {
         marker.onChunkUnloaded();
+        //?} else {
+        /*marker.onChunkUnload();*/
+        //?}
 
         helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
                 "a marker's chunk unload after its level unloaded must not rebuild the sub-cache - it would pin the "
@@ -172,7 +176,7 @@ public class StaticTablesLevelUnloadTester {
         TileMarkerVolume marker = new TileMarkerVolume(new BlockPos(0, 64, 0), markerBlock.defaultBlockState());
         marker.setLevel(other);
 
-        NeoForge.EVENT_BUS.post(new LevelEvent.Unload(other));
+        LoaderTestEvents.levelUnload(other);
         helper.assertTrue(VolumeCache.INSTANCE.getSubCacheIfPresent(other) == null,
                 "precondition: the unload dropped the level's marker sub-cache");
 

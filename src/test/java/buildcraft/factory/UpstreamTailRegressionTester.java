@@ -16,8 +16,10 @@ import net.minecraft.world.level.block.entity.ComparatorBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
+//? if neoforge {
 import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
+//?}
+//? if neoforge && >=1.21.10 {
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 //?}
@@ -73,7 +75,7 @@ public class UpstreamTailRegressionTester {
 
         // Deliver the missing input the way a hopper or pipe would: through the block's item capability.
         BlockPos abs = helper.absolutePos(workbenchPos);
-        //? if >=1.21.10 {
+        //? if neoforge && >=1.21.10 {
         var handler = helper.getLevel().getCapability(Capabilities.Item.BLOCK, abs, Direction.UP);
         helper.assertTrue(handler != null, "Precondition: the workbench must expose an item capability");
         int inserted;
@@ -81,6 +83,11 @@ public class UpstreamTailRegressionTester {
             inserted = handler.insert(ItemResource.of(new ItemStack(Items.OAK_LOG)), 1, tx);
             tx.commit();
         }
+        //?} elif fabric {
+        /*// Fabric: the item storage BuildCraft's lookup finds there (ItemStorage.SIDED, FabricItemStorages).
+        var handler = buildcraft.platform.transfer.TransferAccess.findItem(helper.getLevel(), abs, Direction.UP);
+        helper.assertTrue(handler != null, "Precondition: the workbench must expose an item capability");
+        int inserted = buildcraft.lib.transfer.ItemStorageUtil.insertStacking(handler, new ItemStack(Items.OAK_LOG), 1, null);*/
         //?} else {
         /*var handler = helper.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, abs, Direction.UP);
         helper.assertTrue(handler != null, "Precondition: the workbench must expose an item capability");

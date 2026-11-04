@@ -6,8 +6,8 @@
 
 /**
  * The transfer contract: transactions and snapshot journals, then BuildCraft's storage views and capability lookup
- * (epic #98, S14). Reached through {@code buildcraft.platform.Platform#transfer()}. Contract files only: JDK, vanilla
- * and {@code buildcraft.api.fluids} types.
+ * (epic #98, S14). Reached through {@code buildcraft.platform.Platform#transfer()}. Contract files only: JDK, vanilla,
+ * {@code buildcraft.api.fluids} and {@code buildcraft.api.capability} types.
  *
  * <p>A {@link buildcraft.platform.transfer.BCTransaction} is the loader's own transaction underneath (NeoForge
  * {@code Transaction} on 1.21.10+, Fabric {@code Transaction}). On 1.21.1, which has no transfer transactions, a small

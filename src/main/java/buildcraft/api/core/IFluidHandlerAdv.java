@@ -1,30 +1,43 @@
 package buildcraft.api.core;
 
-import javax.annotation.Nullable;
-
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?}
+import buildcraft.api.fluids.BCFluidStack;
 
 /** A fluid handler that can extract a fluid which a fluid filter accepts.
- * <p>On 1.21.10+ this is a NeoForge {@code ResourceHandler<FluidResource>} (the Transfer API); on 1.21.1 the
- * Transfer API does not exist, so it is a classic {@code IFluidHandler} and the transaction context collapses to
- * a {@code boolean simulate}. The {@code >=1.21.10} branch is exactly today's declaration, so the released nodes
- * are unchanged. */
-//? if >=1.21.10 {
-public interface IFluidHandlerAdv extends ResourceHandler<FluidResource> {
-    /** Extracts fluid out of internal tanks, distribution is left entirely to the ResourceHandler.
+ *
+ * <p>A BuildCraft-owned shape in the style of the old BuildCraft API (the 1.12 {@code IFluidHandler} it used to
+ * extend): plain methods with a {@code simulate} flag over {@link BCFluidStack}s, no loader handler and no transaction
+ * types, so the API names no loader. BuildCraft adapts it to and from its transactional fluid storages
+ * ({@code buildcraft.lib.transfer.FluidHandlerAdvs}): each call there is a transaction of its own, nested in the one
+ * open on the thread if any, committed unless the call simulates. Amounts are millibuckets. */
+public interface IFluidHandlerAdv {
+    /** @return The number of tanks. */
+    int getTanks();
+
+    /** @return A copy of the fluid in {@code tank}, or {@link BCFluidStack#EMPTY}. */
+    BCFluidStack getFluidInTank(int tank);
+
+    /** @return How many millibuckets {@code tank} holds at most. */
+    int getTankCapacity(int tank);
+
+    /** Fills the handler with up to {@code resource}'s amount of its fluid.
+     *
+     * @return The amount that went in (or would have, when simulating). */
+    int fill(BCFluidStack resource, boolean simulate);
+
+    /** Drains up to {@code resource}'s amount of its fluid.
+     *
+     * @return What came out (or would have), or {@link BCFluidStack#EMPTY}. */
+    BCFluidStack drain(BCFluidStack resource, boolean simulate);
+
+    /** Drains up to {@code maxDrain} of whatever fluid the first non-empty tank holds.
+     *
+     * @return What came out (or would have), or {@link BCFluidStack#EMPTY}. */
+    BCFluidStack drain(int maxDrain, boolean simulate);
+
+    /** Extracts fluid out of internal tanks, distribution is left entirely to the handler.
      *
      * @param filter A filter to filter the possible fluids that can be extracted.
      * @param maxDrain The maximum amount of fluid to extract
-     * @param tx The transaction context for simulated or executed behavior.
-     * @return The amount of fluid that was extracted. */
-    int extract(IFluidFilter filter, int maxDrain, TransactionContext tx);
+     * @return What came out (or would have), or {@link BCFluidStack#EMPTY}. */
+    BCFluidStack drain(IFluidFilter filter, int maxDrain, boolean simulate);
 }
-//?} else {
-/*public interface IFluidHandlerAdv extends net.neoforged.neoforge.fluids.capability.IFluidHandler {
-    int extract(IFluidFilter filter, int maxDrain, boolean simulate);
-}*/
-//?}

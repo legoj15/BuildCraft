@@ -15,6 +15,7 @@ import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nonnull;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
@@ -228,7 +229,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
     /** Outward face: what a machine placed directly against this station queries. */
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T getCapability(@Nonnull Object cap) {
+    public <T> T getCapability(@Nonnull BCCapability<T> cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
             IMjReceiver receiver = chargeReceiver();
             if (receiver != null) {
@@ -259,7 +260,7 @@ public class RobotStationPluggable extends PipePluggable implements IDockingStat
      * only from the pipe it is mounted on. */
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T getInternalCapability(@Nonnull Object cap) {
+    public <T> T getInternalCapability(@Nonnull BCCapability<T> cap) {
         if (cap == MjAPI.CAP_RECEIVER) {
             IMjReceiver receiver = chargeReceiver();
             if (receiver != null) {

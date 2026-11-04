@@ -10,9 +10,10 @@
  *
  * <p><b>Contract rule.</b> The files directly in this package, and in its sub-packages other than the
  * per-loader ones, are loader-neutral contracts. They may name only the JDK, vanilla, other
- * {@code buildcraft.platform} types and {@code buildcraft.api.fluids} (the {@code BCFluidStack} value type: it is
- * vanilla-only, and every loader's node compiles that package): never a loader type, and never any other BuildCraft
- * class. That is what lets a node for another loader compile the contracts alone.
+ * {@code buildcraft.platform} types, {@code buildcraft.api.fluids} (the {@code BCFluidStack} value type) and
+ * {@code buildcraft.api.capability} (the {@code BCCapability} token): both are vanilla-only, and every loader's node
+ * compiles those packages. Never a loader type, and never any other BuildCraft class. That is what lets a node for
+ * another loader compile the contracts alone.
  *
  * <p><b>Binder rule.</b> {@link buildcraft.platform.Platform} has one static accessor per service, each reading a
  * {@code static final} field of its own lazy holder class, so reaching one service never loads another's

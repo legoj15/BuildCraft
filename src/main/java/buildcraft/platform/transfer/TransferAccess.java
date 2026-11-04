@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.platform.Platform;
 
 /**
@@ -21,15 +22,21 @@ import buildcraft.platform.Platform;
 public final class TransferAccess {
     private TransferAccess() {}
 
-    /** The storage {@code capability} names at {@code pos} seen from {@code side}, or null if there is none. */
+    /**
+     * What {@code capability} names at {@code pos} seen from {@code side}, or null if there is none: a BuildCraft view
+     * for a storage token ({@link StorageTokens}), the object itself for any other token (the MJ capabilities).
+     */
     public static <T> T find(BCCapability<T> capability, Level level, BlockPos pos, Direction side) {
-        if (capability == BCCapability.ITEM) {
+        if (capability == StorageTokens.ITEM) {
             return capability.type().cast(findItem(level, pos, side));
         }
-        if (capability == BCCapability.FLUID) {
+        if (capability == StorageTokens.FLUID) {
             return capability.type().cast(findFluid(level, pos, side));
         }
-        throw new IllegalArgumentException("Unknown capability " + capability);
+        if (capability == StorageTokens.ENERGY) {
+            return capability.type().cast(findEnergy(level, pos, side));
+        }
+        return Platform.transfer().findDirect(capability, level, pos, side);
     }
 
     /** The item storage at {@code pos} seen from {@code side} (null: unsided), or null if there is none. */
@@ -45,6 +52,11 @@ public final class TransferAccess {
     /** The fluid storage at {@code pos} seen from {@code side} (null: unsided), or null if there is none. */
     public static BCFluidStorage findFluid(Level level, BlockPos pos, Direction side) {
         return Platform.transfer().findFluid(level, pos, side);
+    }
+
+    /** The energy storage at {@code pos} seen from {@code side} (null: unsided), or null if there is none. */
+    public static BCEnergyStorage findEnergy(Level level, BlockPos pos, Direction side) {
+        return Platform.transfer().findEnergy(level, pos, side);
     }
 
     /** A cached fluid lookup at one position and side. */

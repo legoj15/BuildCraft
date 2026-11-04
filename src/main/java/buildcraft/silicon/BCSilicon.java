@@ -6,8 +6,6 @@
 
 package buildcraft.silicon;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
@@ -51,9 +49,7 @@ public class BCSilicon {
 
         // Register capabilities, lifecycle events, and creative tab contents (after transport's on the plugs tab:
         // transport inits first)
-        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
-            registerCapabilities(event);
-        });
+        Platform.transfer().registerCapabilities(BCSilicon::registerCapabilities);
         Platform.transfer().registerCapabilities(BCSilicon::registerTransfer);
         Platform.lifecycle().onCommonSetupOnMain(BCSilicon::commonSetup);
         CreativeTabContents.contribute(BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY,
@@ -69,15 +65,9 @@ public class BCSilicon {
         LOGGER.info("BuildCraft Silicon initialized");
     }
 
-    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
-        //? if >=1.21.10 {
-        var energyCap = Capabilities.Energy.BLOCK;
-        //?} else {
-        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
-        //?}
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCSiliconBlockEntities.LASER.get(),
-            laser -> laser.getMjReceiver(), energyCap,
+    private static void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCSiliconBlockEntities.LASER.get(),
+            laser -> laser.getMjReceiver(),
             laser -> MjBatteryEnergyHandler.createIfRfEnabled(laser.getBattery()));
     }
 

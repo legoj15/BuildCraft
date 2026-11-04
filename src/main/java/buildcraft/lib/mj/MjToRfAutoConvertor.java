@@ -1,37 +1,28 @@
-package buildcraft.api.mj;
+package buildcraft.lib.mj;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.energy.EnergyHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.energy.IEnergyStorage;*/
-//?}
+import buildcraft.api.mj.IMjConnector;
+import buildcraft.api.mj.IMjReadable;
+import buildcraft.api.mj.IMjReceiver;
+import buildcraft.api.mj.IMjRedstoneReceiver;
+import buildcraft.api.mj.MjAPI;
+import buildcraft.platform.transfer.BCEnergyStorage;
+import buildcraft.platform.transfer.BCTransaction;
 
 /**
  * Automatic conversion utility: wraps a Forge energy handler (FE/RF) and presents it as an MJ
  * receiver/provider. Used by BC engines to send MJ power to non-MJ machines that only expose FE/RF.
  *
- * <p>On 1.21.10+ the wrapped handler is a NeoForge transactional {@code EnergyHandler}; on 1.21.1
- * the Transfer API does not exist, so it is the classic {@code IEnergyStorage} and the transaction
- * collapses to a {@code boolean simulate}. All four {@code fe*} accessors below hide that split so the
- * MJ-facing logic is shared; the {@code >=1.21.10} code is exactly today's.
+ * <p>The wrapped handler is the platform layer's {@link BCEnergyStorage} view of the neighbour's energy handler
+ * (moved out of the API in the transfer slice: the API may not name the platform's types).
  */
 public class MjToRfAutoConvertor implements IMjReadable {
 
-    //? if >=1.21.10 {
-    final EnergyHandler fe;
-    //?} else {
-    /*final IEnergyStorage fe;*/
-    //?}
+    final BCEnergyStorage fe;
 
     /** @return An {@link MjToRfAutoConvertor} that implements {@link IMjReceiver} if the given handler can receive
      *         energy, or null if the given handler is null, or if RF&lt;-&gt;MJ autoconversion is not enabled
      *         ( {@link MjAPI#isRfAutoConversionEnabled()} ) */
-    //? if >=1.21.10 {
-    public static MjToRfAutoConvertor create(EnergyHandler fe) {
-    //?} else {
-    /*public static MjToRfAutoConvertor create(IEnergyStorage fe) {*/
-    //?}
+    public static MjToRfAutoConvertor create(BCEnergyStorage fe) {
         if (fe == null) {
             return null;
         }
@@ -45,11 +36,7 @@ public class MjToRfAutoConvertor implements IMjReadable {
 
     /** @return An {@link MjToRfAutoConvertor} that implements {@link IMjReceiver}
      *         if autoconversion is enabled, or null otherwise. */
-    //? if >=1.21.10 {
-    public static IMjReceiver createReceiver(EnergyHandler fe) {
-    //?} else {
-    /*public static IMjReceiver createReceiver(IEnergyStorage fe) {*/
-    //?}
+    public static IMjReceiver createReceiver(BCEnergyStorage fe) {
         MjToRfAutoConvertor convertor = create(fe);
         if (convertor instanceof IMjReceiver) {
             return (IMjReceiver) convertor;
@@ -58,45 +45,29 @@ public class MjToRfAutoConvertor implements IMjReadable {
         }
     }
 
-    //? if >=1.21.10 {
-    MjToRfAutoConvertor(EnergyHandler handler) {
-    //?} else {
-    /*MjToRfAutoConvertor(IEnergyStorage handler) {*/
-    //?}
+    MjToRfAutoConvertor(BCEnergyStorage handler) {
         this.fe = handler;
     }
 
     // --- Version-neutral accessors over the wrapped Forge energy handler ---
 
     private long feStored() {
-        //? if >=1.21.10 {
         return fe.getAmountAsLong();
-        //?} else {
-        /*return fe.getEnergyStored();*/
-        //?}
     }
 
     private long feCapacity() {
-        //? if >=1.21.10 {
         return fe.getCapacityAsLong();
-        //?} else {
-        /*return fe.getMaxEnergyStored();*/
-        //?}
     }
 
     /** Insert up to {@code rf} into the handler; returns the amount actually inserted. */
     private int feInsert(int rf, boolean simulate) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int received = fe.insert(rf, tx);
             if (!simulate) {
                 tx.commit();
             }
             return received;
         }
-        //?} else {
-        /*return fe.receiveEnergy(rf, simulate);*/
-        //?}
     }
 
     /** @return true. (Redstone-like engines are expected to not connect due to this class never implementing
@@ -134,11 +105,7 @@ public class MjToRfAutoConvertor implements IMjReadable {
 
 final class OfBoth extends MjToRfAutoConvertor implements IMjReceiver {
 
-    //? if >=1.21.10 {
-    OfBoth(net.neoforged.neoforge.transfer.energy.EnergyHandler handler) {
-    //?} else {
-    /*OfBoth(net.neoforged.neoforge.energy.IEnergyStorage handler) {*/
-    //?}
+    OfBoth(BCEnergyStorage handler) {
         super(handler);
     }
 

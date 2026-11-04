@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -69,12 +70,12 @@ public class PipeFlowPower extends AbstractPipeFlowPower implements IFlowPower {
             net.minecraft.world.level.Level level = pipe.getHolder().getPipeWorld();
             net.minecraft.core.BlockPos neighborPos = pipe.getHolder().getPipePos().relative(face);
             // Check for MJ receiver (engines, machines)
-            IMjReceiver receiver = level.getCapability(MjAPI.CAP_RECEIVER, neighborPos, face.getOpposite());
+            IMjReceiver receiver = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_RECEIVER, level, neighborPos, face.getOpposite());
             if (receiver != null) {
                 return true;
             }
             // Check for MJ connector (other power entities)
-            IMjConnector connector = level.getCapability(MjAPI.CAP_CONNECTOR, neighborPos, face.getOpposite());
+            IMjConnector connector = buildcraft.platform.transfer.TransferAccess.find(MjAPI.CAP_CONNECTOR, level, neighborPos, face.getOpposite());
             if (connector != null && connector.canConnect(getSection(face))) {
                 return true;
             }
@@ -143,7 +144,7 @@ public class PipeFlowPower extends AbstractPipeFlowPower implements IFlowPower {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (facing == null) {
             return null;
         } else if (capability == MjAPI.CAP_RECEIVER) {

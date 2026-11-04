@@ -21,6 +21,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -270,7 +271,7 @@ public class PipeBehaviourObsidian extends PipeBehaviour implements IMjRedstoneR
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (capability == MjAPI.CAP_RECEIVER
             || capability == MjAPI.CAP_CONNECTOR
             || capability == MjAPI.CAP_REDSTONE_RECEIVER) {

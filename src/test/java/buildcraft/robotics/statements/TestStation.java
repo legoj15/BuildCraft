@@ -12,14 +12,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.FluidStack;*/
-//?}
 
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.lib.inventory.InventoryWrapper;
@@ -49,88 +41,11 @@ public class TestStation extends DockingStation {
         return new InventoryWrapper(new SimpleContainer(27));
     }
 
-    //? if >=1.21.10 {
     @Override
-    public ResourceHandler<FluidResource> getFluidInput() {
-        // An empty handler: the provider tests only need the seam non-null.
-        return new ResourceHandler<>() {
-            @Override
-            public int size() {
-                return 0;
-            }
-
-            @Override
-            public FluidResource getResource(int index) {
-                return FluidResource.EMPTY;
-            }
-
-            @Override
-            public long getAmountAsLong(int index) {
-                return 0;
-            }
-
-            @Override
-            public long getCapacityAsLong(int index, FluidResource resource) {
-                return 0;
-            }
-
-            @Override
-            public boolean isValid(int index, FluidResource resource) {
-                return false;
-            }
-
-            @Override
-            public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
-                return 0;
-            }
-
-            @Override
-            public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
-                return 0;
-            }
-        };
+    public buildcraft.api.core.IFluidHandlerAdv getFluidInput() {
+        // An empty storage's view: the provider tests only need the seam non-null.
+        return buildcraft.lib.transfer.FluidHandlerAdvs.of(new buildcraft.lib.fluid.BCFluidTank(0, 0));
     }
-    //?} else {
-    /*@Override
-    public IFluidHandler getFluidInput() {
-        return new IFluidHandler() {
-            @Override
-            public int getTanks() {
-                return 0;
-            }
-
-            @Override
-            public FluidStack getFluidInTank(int tank) {
-                return FluidStack.EMPTY;
-            }
-
-            @Override
-            public int getTankCapacity(int tank) {
-                return 0;
-            }
-
-            @Override
-            public boolean isFluidValid(int tank, FluidStack stack) {
-                return false;
-            }
-
-            @Override
-            public int fill(FluidStack resource, FluidAction action) {
-                return 0;
-            }
-
-            @Override
-            public FluidStack drain(FluidStack resource, FluidAction action) {
-                return FluidStack.EMPTY;
-            }
-
-            @Override
-            public FluidStack drain(int maxDrain, FluidAction action) {
-                return FluidStack.EMPTY;
-            }
-        };
-    }*/
-    //?}
 
     @Override
     public IRequestProvider getRequestProvider() {

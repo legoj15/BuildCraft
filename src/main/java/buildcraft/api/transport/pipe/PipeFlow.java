@@ -14,6 +14,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.phys.HitResult;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.transport.pipe.IPipeHolder.IWriter;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
@@ -112,11 +113,11 @@ public abstract class PipeFlow {
         return false;
     }
 
-    public final boolean hasCapability(@Nonnull Object capability, Direction facing) {
+    public final boolean hasCapability(@Nonnull BCCapability<?> capability, Direction facing) {
         return getCapability(capability, facing) != null;
     }
 
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         return null;
     }
 }

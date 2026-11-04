@@ -13,7 +13,6 @@ import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 import buildcraft.core.BCCore;
 import buildcraft.core.BCCoreClient;
-import buildcraft.lib.misc.CapabilityListeners;
 import buildcraft.platform.Platform;
 
 /**

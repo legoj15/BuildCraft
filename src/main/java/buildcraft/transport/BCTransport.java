@@ -6,8 +6,6 @@
 
 package buildcraft.transport;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
@@ -79,9 +77,7 @@ public class BCTransport {
                 (params, output) -> addCreativeTabItems(BCTransportCreativeTabs.PIPES_TAB_KEY, output));
 
         // Register NeoForge capabilities for pipe holders
-        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
-            registerCapabilities(event);
-        });
+        Platform.transfer().registerCapabilities(BCTransport::registerCapabilities);
         Platform.transfer().registerCapabilities(registrar -> {
             registrar.blockItems(BCTransportBlockEntities.FILTERED_BUFFER.get(), (tile, side) -> tile.getItemHandler(side));
             // Fluid pipes: the flow's per-face section, unless a blocking pluggable covers that face.
@@ -213,14 +209,8 @@ public class BCTransport {
     }
 
     @SuppressWarnings("unchecked")
-    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
-        //? if >=1.21.10 {
-        var energyCap = Capabilities.Energy.BLOCK;
-        //?} else {
-        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
-        //?}
-        event.registerBlockEntity(
+    private static void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        registrar.block(
             MjAPI.CAP_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
@@ -237,7 +227,7 @@ public class BCTransport {
             }
         );
 
-        event.registerBlockEntity(
+        registrar.block(
             MjAPI.CAP_REDSTONE_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
@@ -254,7 +244,7 @@ public class BCTransport {
             }
         );
 
-        event.registerBlockEntity(
+        registrar.block(
             MjAPI.CAP_CONNECTOR, BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 Pipe pipe = tile.getPipe();
@@ -271,8 +261,8 @@ public class BCTransport {
             }
         );
 
-        event.registerBlockEntity(
-            energyCap, BCTransportBlockEntities.PIPE_HOLDER.get(),
+        registrar.blockEnergy(
+            BCTransportBlockEntities.PIPE_HOLDER.get(),
             (tile, side) -> {
                 if (side != null) {
                     buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
@@ -281,7 +271,7 @@ public class BCTransport {
                 
                 buildcraft.api.transport.pipe.IPipe pipe = tile.getPipe();
                 if (pipe != null && pipe.getFlow() != null) {
-                    return pipe.getFlow().getCapability(energyCap, side);
+                    return pipe.getFlow().getCapability(CapUtil.CAP_ENERGY, side);
                 }
                 return null;
             }

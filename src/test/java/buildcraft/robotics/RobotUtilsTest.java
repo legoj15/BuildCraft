@@ -16,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IDockingStationProvider;
 import buildcraft.api.transport.IWireManager;
@@ -184,7 +185,7 @@ public class RobotUtilsTest {
         }
 
         @Override
-        public <T> T getCapabilityFromPipe(Direction side, Object capability) {
+        public <T> T getCapabilityFromPipe(Direction side, BCCapability<T> capability) {
             throw new UnsupportedOperationException();
         }
 

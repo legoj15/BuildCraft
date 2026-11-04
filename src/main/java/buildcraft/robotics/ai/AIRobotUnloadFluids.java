@@ -16,7 +16,7 @@ import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCTransaction;
-import buildcraft.robotics.RobotFluids;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 
 /** Unloads fluid from the robot's own tank into its station output, one bucket per pass, until the tank
  *  is empty or the station is full. Ported from 7.1.x {@code AIRobotUnloadFluids} (7.1.x moved the fluid
@@ -61,7 +61,7 @@ public class AIRobotUnloadFluids extends AIRobot {
             return 0;
         }
 
-        BCFluidStorage robotTank = RobotFluids.tank(robot);
+        BCFluidStorage robotTank = FluidHandlerAdvs.storage(robot.getFluidHandler());
         BCFluidStack carried = robotTank.getStack(0);
         if (carried.isEmpty()) {
             return 0;
@@ -74,7 +74,7 @@ public class AIRobotUnloadFluids extends AIRobot {
         // A station whose pipe carries no fluid flow has NO fluid output, even when an Accept Fluids gate
         // action makes canRobotAcceptFluid say yes — 7.1.x guarded exactly this with
         // `if (fluidHandler == null) return 0;`.
-        BCFluidStorage output = RobotFluids.output(station);
+        BCFluidStorage output = FluidHandlerAdvs.storage(station.getFluidOutput());
         if (output == null) {
             return 0;
         }

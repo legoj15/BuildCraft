@@ -5,8 +5,6 @@
 
 package buildcraft.factory;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,9 +36,7 @@ public class BCFactory {
         }
 
         // Register capabilities
-        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
-            registerCapabilities(event);
-        });
+        Platform.transfer().registerCapabilities(BCFactory::registerCapabilities);
         Platform.transfer().registerCapabilities(BCFactory::registerTransfer);
 
         // Notify TilePump when COMMON config reloads so running pumps re-evaluate
@@ -85,30 +81,23 @@ public class BCFactory {
             (heatExchange, direction) -> heatExchange.getFluidTankForDirection(direction));
     }
 
-    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Version-neutral capability-token locals: the Transfer-API tokens on 1.21.10+, the classic
-        // handler tokens on 1.21.1. Used as the BlockCapability for every registerBlockEntity below.
-        //? if >=1.21.10 {
-        var energyCap = Capabilities.Energy.BLOCK;
-        //?} else {
-        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
-        //?}
+    private static void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
         // The Auto Workbench now backs its craft progress with a real MjBattery, so it exposes the
         // Forge-Energy cap (rf_enabled-gated) like every other machine — previously it was dead on FE cables.
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
-            workbench -> workbench.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
+            workbench -> workbench.getMjReceiver(),
             workbench -> MjBatteryEnergyHandler.createIfRfEnabled(workbench.getBattery()));
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.MINING_WELL.get(),
-            miner -> miner.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCFactoryBlockEntities.MINING_WELL.get(),
+            miner -> miner.getMjReceiver(),
             miner -> MjBatteryEnergyHandler.createIfRfEnabled(miner.getBattery()));
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.PUMP.get(),
-            pump -> pump.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCFactoryBlockEntities.PUMP.get(),
+            pump -> pump.getMjReceiver(),
             pump -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.CHUTE.get(),
-            chute -> chute.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCFactoryBlockEntities.CHUTE.get(),
+            chute -> chute.getMjReceiver(),
             chute -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
-        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.DISTILLER.get(),
-            distiller -> distiller.getMjReceiver(), energyCap,
+        buildcraft.lib.mj.MjCapabilities.registerMjConsumer(registrar, BCFactoryBlockEntities.DISTILLER.get(),
+            distiller -> distiller.getMjReceiver(),
             distiller -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));
     }
 }

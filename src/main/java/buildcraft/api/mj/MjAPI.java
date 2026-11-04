@@ -9,9 +9,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.capabilities.BlockCapability;
-
-import org.jspecify.annotations.Nullable;
+import buildcraft.api.capability.BCCapability;
 
 public class MjAPI {
 
@@ -98,24 +96,25 @@ public class MjAPI {
 
     // ###############
     //
-    // Capabilities (NeoForge BlockCapability)
+    // Capabilities (BCCapability tokens; the loader capability of the same id carries them: a NeoForge
+    // BlockCapability, sided, or a Fabric BlockApiLookup keyed on Direction)
     //
     // ###############
 
     /** MJ connector capability — used for visual connection checks. */
     @Nonnull
-    public static final BlockCapability<IMjConnector, @Nullable Direction> CAP_CONNECTOR =
-        BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_connector"), IMjConnector.class);
+    public static final BCCapability<IMjConnector> CAP_CONNECTOR =
+        BCCapability.of(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_connector"), IMjConnector.class);
 
     /** MJ receiver capability — used by engines to find power consumers. */
     @Nonnull
-    public static final BlockCapability<IMjReceiver, @Nullable Direction> CAP_RECEIVER =
-        BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_receiver"), IMjReceiver.class);
+    public static final BCCapability<IMjReceiver> CAP_RECEIVER =
+        BCCapability.of(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_receiver"), IMjReceiver.class);
 
     /** MJ redstone receiver capability — used by stripes pipe and other similar blocks. */
     @Nonnull
-    public static final BlockCapability<IMjRedstoneReceiver, @Nullable Direction> CAP_REDSTONE_RECEIVER =
-        BlockCapability.createSided(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_redstone_receiver"), IMjRedstoneReceiver.class);
+    public static final BCCapability<IMjRedstoneReceiver> CAP_REDSTONE_RECEIVER =
+        BCCapability.of(Identifier.fromNamespaceAndPath("buildcraftunofficial", "mj_redstone_receiver"), IMjRedstoneReceiver.class);
 
     private static long getMjValue() {
         return 1_000_000L;

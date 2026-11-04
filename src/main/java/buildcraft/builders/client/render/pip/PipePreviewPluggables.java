@@ -32,6 +32,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.transport.IWireManager;
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -225,7 +226,7 @@ public final class PipePreviewPluggables {
         @Override public PipePluggable getPluggable(Direction side) { return plugs[side.ordinal()]; }
         @Override public BlockEntity getNeighbourTile(Direction side) { return null; }
         @Override public IPipe getNeighbourPipe(Direction side) { return null; }
-        @Override public <T> T getCapabilityFromPipe(Direction side, Object capability) { return null; }
+        @Override public <T> T getCapabilityFromPipe(Direction side, BCCapability<T> capability) { return null; }
         @Override public IWireManager getWireManager() { return null; }
         @Override public GameProfile getOwner() { return null; }
         @Override public boolean fireEvent(PipeEvent event) { return false; }

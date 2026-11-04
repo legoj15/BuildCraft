@@ -367,5 +367,93 @@ final class NeoForgeFluidContainers {
         }
     }*/
     //?}
+
+    /**
+     * Registers {@code item} as a drain-only fluid container that is used up once empty, its fluid in the
+     * {@code SimpleFluidContent} component {@code content} (the fragile fluid shard), moved verbatim from
+     * {@code BCCore}.
+     */
+    @SuppressWarnings("unchecked")
+    static void registerDrainOnlyConsumable(net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event,
+            net.minecraft.world.level.ItemLike item,
+            java.util.function.Supplier<? extends net.minecraft.core.component.DataComponentType<?>> content,
+            int capacity) {
+        java.util.function.Supplier<net.minecraft.core.component.DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>> component =
+            (java.util.function.Supplier<net.minecraft.core.component.DataComponentType<net.neoforged.neoforge.fluids.SimpleFluidContent>>) content;
+        //? if >=1.21.10 {
+        event.registerItem(
+                Capabilities.Fluid.ITEM,
+                (stack, ctx) -> new net.neoforged.neoforge.transfer.fluid.ItemAccessFluidHandler(ctx,
+                        component.get(), capacity) {
+                    @Override
+                    public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource,
+                            int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+                        return 0; // cannot fill!
+                    }
+
+                    @Override
+                    public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+                        java.util.Objects.checkIndex(index, size());
+                        net.neoforged.neoforge.transfer.TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+
+                        int accessAmount = itemAccess.getAmount();
+                        if (accessAmount == 0) {
+                            return 0;
+                        }
+
+                        net.neoforged.neoforge.transfer.item.ItemResource accessResource = itemAccess.getResource();
+                        net.neoforged.neoforge.transfer.fluid.FluidResource currentResource = getResourceFrom(accessResource, index);
+
+                        if (resource.equals(currentResource)) {
+                            int currentAmountPerItem = getAmountFrom(accessResource, index);
+                            int extractedPerItem = Math.min(amount / accessAmount, currentAmountPerItem);
+
+                            if (extractedPerItem > 0) {
+                                net.neoforged.neoforge.transfer.item.ItemResource emptiedResource = update(accessResource, index, resource, currentAmountPerItem - extractedPerItem);
+
+                                if (!emptiedResource.isEmpty()) {
+                                    return extractedPerItem * itemAccess.exchange(emptiedResource, accessAmount, transaction);
+                                } else if (currentAmountPerItem - extractedPerItem == 0) {
+                                    // Fully consume the item since it has no valid remaining state
+                                    int extractedItems = itemAccess.extract(accessResource, accessAmount, transaction);
+                                    if (extractedItems == accessAmount) {
+                                        return extractedPerItem * accessAmount;
+                                    }
+                                }
+                            }
+                        }
+                        return 0;
+                    }
+
+                    @Override
+                    protected net.neoforged.neoforge.transfer.item.ItemResource update(
+                            net.neoforged.neoforge.transfer.item.ItemResource accessResource,
+                            int index,
+                            net.neoforged.neoforge.transfer.fluid.FluidResource newResource,
+                            int newAmount) {
+                        if (newAmount == 0) {
+                            return net.neoforged.neoforge.transfer.item.ItemResource.EMPTY;
+                        }
+                        return super.update(accessResource, index, newResource, newAmount);
+                    }
+                },
+                item);
+        //?} else {
+        /*// 1.21.1: the fragile container is an extract-only, consume-on-empty fluid item. The classic
+        // FluidHandlerItemStack.Consumable already shatters the shard when drained (setContainerToEmpty
+        // -> container.shrink(1)); overriding canFillFluidType to false makes it un-fillable (the modern
+        // ItemAccessFluidHandler override returned 0 from insert for the same reason).
+        event.registerItem(
+                Capabilities.FluidHandler.ITEM,
+                (stack, ctx) -> new net.neoforged.neoforge.fluids.capability.templates.FluidHandlerItemStack.Consumable(
+                        component, stack, capacity) {
+                    @Override
+                    public boolean canFillFluidType(net.neoforged.neoforge.fluids.FluidStack fluid) {
+                        return false;
+                    }
+                },
+                item);*/
+        //?}
+    }
 }
 //?}

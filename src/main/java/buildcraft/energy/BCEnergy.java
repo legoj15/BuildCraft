@@ -5,8 +5,6 @@
 
 package buildcraft.energy;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,9 +38,7 @@ public class BCEnergy {
         }
 
         // Register NeoForge capabilities for engines
-        buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
-            registerCapabilities(event);
-        });
+        Platform.transfer().registerCapabilities(BCEnergy::registerCapabilities);
         Platform.transfer().registerCapabilities(BCEnergy::registerTransfer);
 
         // Setup event for things that need registries to be frozen
@@ -71,24 +67,18 @@ public class BCEnergy {
             (engine, direction) -> direction == engine.getOrientation() ? null : engine.combinedFluidHandler);
     }
 
-    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
-        //? if >=1.21.10 {
-        var energyCap = Capabilities.Energy.BLOCK;
-        //?} else {
-        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
-        //?}
-        event.registerBlockEntity(
+    private static void registerCapabilities(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.ENGINE_STONE.get(),
             (engine, direction) -> engine.getMjConnector()
         );
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.ENGINE_IRON.get(),
             (engine, direction) -> engine.getMjConnector()
         );
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.ENGINE_FE.get(),
             (engine, direction) -> {
@@ -97,7 +87,7 @@ public class BCEnergy {
                 return engine.getMjConnector();
             }
         );
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.DYNAMO_MJ.get(),
             (engine, direction) -> {
@@ -107,7 +97,7 @@ public class BCEnergy {
             }
         );
         // CAP_RECEIVER is what engines check for auto-rotation and power delivery
-        event.registerBlockEntity(
+        registrar.block(
             buildcraft.api.mj.MjAPI.CAP_RECEIVER,
             BCEnergyBlockEntities.DYNAMO_MJ.get(),
             (dynamo, direction) -> {
@@ -118,16 +108,16 @@ public class BCEnergy {
             }
         );
 
-        event.registerBlockEntity(
-            energyCap, BCEnergyBlockEntities.ENGINE_FE.get(),
+        registrar.blockEnergy(
+            BCEnergyBlockEntities.ENGINE_FE.get(),
             (engine, direction) -> {
                 // FE input on non-facing sides only (facing side outputs MJ)
                 if (direction == engine.getOrientation()) return null;
                 return engine.energyStorage;
             }
         );
-        event.registerBlockEntity(
-            energyCap, BCEnergyBlockEntities.DYNAMO_MJ.get(),
+        registrar.blockEnergy(
+            BCEnergyBlockEntities.DYNAMO_MJ.get(),
             (dynamo, direction) -> {
                 // FE output on facing direction only
                 if (direction != dynamo.getOrientation()) return null;

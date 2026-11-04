@@ -36,7 +36,7 @@ What it measures, all on the live view (the code the node actually compiles):
     same sources), so a BC method that merely shares a name with an extension method is not mistaken for a patch.
  5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge or .fabric) other than
     the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package (any BC
-    package but buildcraft.platform and buildcraft.api.fluids).
+    package but buildcraft.platform, buildcraft.api.fluids and buildcraft.api.capability).
  6. Stonecutter directive lines remaining in common code.
  7. Test-tree figures (src/test/java), informational.
 
@@ -89,20 +89,6 @@ ALLOWLIST = {
             r"net\.neoforged\.fml\.config\.ModConfig(?:\.|$)",
         ],
         "paths": [],
-    },
-    "api-transfer": {
-        "reason": "the API's transfer and capability types (fluid/item handler views, the MJ capability token, the "
-                  "MJ-to-FE convertor, the docking station's fluid view, the pluggable capability provider) move "
-                  "with slice S14 (transfer and capabilities); the rest of buildcraft/api/** is loader-free since S16",
-        "types": [],
-        "paths": [
-            "buildcraft/api/core/IFluidHandlerAdv.java",
-            "buildcraft/api/inventory/IItemHandlerFiltered.java",
-            "buildcraft/api/mj/MjAPI.java",
-            "buildcraft/api/mj/MjToRfAutoConvertor.java",
-            "buildcraft/api/robots/DockingStation.java",
-            "buildcraft/api/transport/pluggable/PipePluggable.java",
-        ],
     },
 }
 
@@ -667,9 +653,11 @@ _IMPL_NAME = re.compile(r"(?<![\w.$])buildcraft\.platform\.(?:neoforge|fabric)\b
 _CONTRACT_BANS = (
     (re.compile(r"(?<![\w.$])net\.neoforged\b"), "net.neoforged"),
     (re.compile(r"(?<![\w.$])net\.fabricmc\b"), "net.fabricmc"),
-    # buildcraft.api.fluids is the one other BC package a contract may name: BCFluidStack is vanilla-only and the
-    # Fabric node compiles it (bc.fabric.gradle.kts), so the fluid storage contracts carry it (S14d).
-    (re.compile(r"(?<![\w.$])buildcraft\.(?!platform\b|api\.fluids\b)[A-Za-z_]\w*"), "BC gameplay package"),
+    # buildcraft.api.fluids and buildcraft.api.capability are the only other BC packages a contract may name:
+    # BCFluidStack and the BCCapability token are vanilla-only and the Fabric node compiles them (bc.fabric.gradle.kts),
+    # so the fluid storage contracts (S14d) and the capability registrar and lookups (S14e) carry them.
+    (re.compile(r"(?<![\w.$])buildcraft\.(?!platform\b|api\.fluids\b|api\.capability\b)[A-Za-z_]\w*"),
+     "BC gameplay package"),
 )
 
 

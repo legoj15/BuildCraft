@@ -30,6 +30,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.transport.IInjectable;
 import buildcraft.api.transport.pipe.IFlowItems;
@@ -280,7 +281,7 @@ public final class PipeFlowItems extends PipeFlow implements IFlowItems {
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (capability == PipeApi.CAP_INJECTABLE) {
             return (T) this;
         }

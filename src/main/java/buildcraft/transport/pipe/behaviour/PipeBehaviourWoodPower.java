@@ -41,11 +41,8 @@ public class PipeBehaviourWoodPower extends PipeBehaviour {
             return 0;
         }
         if (pipe.getFlow() instanceof buildcraft.transport.pipe.flow.PipeFlowRedstoneFlux) {
-            //? if >=1.21.10 {
-            net.neoforged.neoforge.transfer.energy.EnergyHandler handler = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK);
-            //?} else {
-            /*net.neoforged.neoforge.energy.IEnergyStorage handler = pipe.getHolder().getCapabilityFromPipe(face, net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK);*/
-            //?}
+            buildcraft.platform.transfer.BCEnergyStorage handler =
+                pipe.getHolder().getCapabilityFromPipe(face, buildcraft.lib.misc.CapUtil.CAP_ENERGY);
             if (handler == null) return 1;
 
             // Exclude Redstone Engine (FE Consumer) from generating an extraction plug
@@ -57,13 +54,9 @@ public class PipeBehaviourWoodPower extends PipeBehaviour {
             // OUT of (a source). Test extractability, not "can't receive" — a pure sink that
             // momentarily rejects power (e.g. AE2's bufferless Energy Acceptor whenever its ME
             // grid has no demand) must NOT be mistaken for an emitter and shown an extraction plug.
-            //? if >=1.21.10 {
-            try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
+            try (buildcraft.platform.transfer.BCTransaction tx = buildcraft.platform.transfer.BCTransaction.openRoot()) {
                 return handler.extract(1, tx) > 0 ? 1 : 0;
             }
-            //?} else {
-            /*return handler.extractEnergy(1, true) > 0 ? 1 : 0;*/
-            //?}
         } else {
             // Check if neighbour can receive MJ — use NeoForge capability lookup
             IMjReceiver recv = pipe.getHolder().getCapabilityFromPipe(face, MjAPI.CAP_RECEIVER);

@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pluggable.PipePluggable;
@@ -78,7 +79,7 @@ public class PluggablePowerAdaptor extends PipePluggable {
     }
 
     @Override
-    public <T> T getCapability(@Nonnull Object cap) {
+    public <T> T getCapability(@Nonnull BCCapability<T> cap) {
         if (cap == MjAPI.CAP_CONNECTOR || cap == MjAPI.CAP_RECEIVER || cap == MjAPI.CAP_REDSTONE_RECEIVER) {
             return holder.getPipe().getBehaviour().getCapability(cap, side);
         }

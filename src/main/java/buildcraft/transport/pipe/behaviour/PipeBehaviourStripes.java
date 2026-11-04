@@ -26,6 +26,7 @@ import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -434,7 +435,7 @@ public class PipeBehaviourStripes extends PipeBehaviour implements IStripesActiv
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         if (capability == MjAPI.CAP_REDSTONE_RECEIVER) {
             return (T) this;
         }

@@ -16,6 +16,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.HitResult;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.core.EnumPipePart;
 
 public abstract class PipeBehaviour {
@@ -78,7 +79,7 @@ public abstract class PipeBehaviour {
     public void readPayload(FriendlyByteBuf buffer, Object ctx) throws java.io.IOException {
     }
 
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         return null;
     }
 

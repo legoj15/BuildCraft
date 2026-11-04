@@ -12,6 +12,7 @@ import javax.annotation.Nullable;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.core.Direction;
 
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.IMjConnector;
 import buildcraft.api.mj.IMjRedstoneReceiver;
@@ -119,7 +120,7 @@ public class PipeBehaviourWood extends PipeBehaviourDirectional implements IMjRe
 
     @SuppressWarnings("unchecked")
     @Override
-    public <T> T getCapability(@Nonnull Object capability, Direction facing) {
+    public <T> T getCapability(@Nonnull BCCapability<T> capability, Direction facing) {
         // Expose this wood pipe as an MJ receiver/connector so engines can discover it
         if (capability == MjAPI.CAP_RECEIVER || capability == MjAPI.CAP_CONNECTOR) {
             return (T) this;

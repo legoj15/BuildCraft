@@ -21,15 +21,10 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IFluidFilter;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.statements.StatementSlot;
@@ -291,29 +286,19 @@ public abstract class DockingStation {
         return EnumPipePart.CENTER;
     }
 
-    //? if >=1.21.10 {
-    public ResourceHandler<FluidResource> getFluidOutput() {
+    /** Where a docked robot unloads fluid, or null if this station takes none. */
+    public IFluidHandlerAdv getFluidOutput() {
         return null;
     }
-    //?} else {
-    /*public IFluidHandler getFluidOutput() {
-        return null;
-    }*/
-    //?}
 
     public EnumPipePart getFluidOutputSide() {
         return EnumPipePart.CENTER;
     }
 
-    //? if >=1.21.10 {
-    public ResourceHandler<FluidResource> getFluidInput() {
+    /** The fluid a docked robot loads from, or null if this station supplies none. */
+    public IFluidHandlerAdv getFluidInput() {
         return null;
     }
-    //?} else {
-    /*public IFluidHandler getFluidInput() {
-        return null;
-    }*/
-    //?}
 
     public EnumPipePart getFluidInputSide() {
         return EnumPipePart.CENTER;

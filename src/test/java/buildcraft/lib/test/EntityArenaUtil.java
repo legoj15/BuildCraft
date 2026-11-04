@@ -475,29 +475,14 @@ public final class EntityArenaUtil {
         //?}
     }
 
-    /** Fills tank 0 of a BuildCraft fluid handler. The Transfer API (>=1.21.10) replaced the classic
-     *  {@code fill(FluidStack, FluidAction)} with an indexed, transactional insert. */
+    /** Fills a BuildCraft fluid handler (the robot API's simulate-flag shape). */
     public static int fillTank(IFluidHandlerAdv handler, Fluid fluid, int amount) {
-        //? if >=1.21.10 {
-        try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-            int filled = handler.insert(0, net.neoforged.neoforge.transfer.fluid.FluidResource.of(fluid), amount, tx);
-            tx.commit();
-            return filled;
-        }
-        //?} else {
-        /*return handler.fill(new net.neoforged.neoforge.fluids.FluidStack(fluid, amount),
-                net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
-        //?}
+        return handler.fill(new buildcraft.api.fluids.BCFluidStack(fluid, amount), false);
     }
 
     /** @return the contents of tank 0, in mB. */
     public static long tankAmount(IFluidHandlerAdv handler) {
-        //? if >=1.21.10 {
-        return handler.getAmountAsLong(0);
-        //?} else {
-        /*return handler.getFluidInTank(0).getAmount();*/
-        //?}
+        return handler.getFluidInTank(0).getAmount();
     }
 
     /** Every loose {@link ItemEntity} within {@code radius} of {@code relPos}. Uses

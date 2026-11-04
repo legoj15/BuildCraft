@@ -74,6 +74,7 @@ import buildcraft.api.core.BCLog;
 import buildcraft.api.core.IStackFilter;
 import buildcraft.api.core.IZone;
 import buildcraft.api.events.RobotEvent;
+import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.inventory.IItemTransactor;
 import buildcraft.api.mj.MjAPI;
@@ -88,7 +89,7 @@ import buildcraft.api.statements.StatementSlot;
 import buildcraft.api.tiles.IDebuggable;
 
 import buildcraft.lib.inventory.AbstractInvItemTransactor;
-import buildcraft.platform.Platform;
+import buildcraft.lib.transfer.FluidHandlerAdvs;
 import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCSnapshotJournal;
 import buildcraft.platform.transfer.BCTransactionContext;
@@ -2035,8 +2036,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     // contract — and the station searches dry-run those on every candidate, so a committing fork really
     // filled the robot's tank or spilled its cargo one bucket per station scanned).
     //
-    // The robot API still types the tank as the loader's fluid handler (IFluidHandlerAdv), so the methods
-    // below forward to the loader's view of fluidTank until that API gets BuildCraft types of its own.
+    // The robot API's simulate-flag IFluidHandlerAdv forwards to a view of fluidTank (FluidHandlerAdvs).
 
     /** A copy, never the live stack — {@code fillTank}/{@code drainTank} mutate a non-empty tank in place
      *  ({@code setAmount}), so a snapshot aliasing the field would revert to the mutated state. */
@@ -2109,7 +2109,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         }
     };
 
-    /** The robot's tank as a BuildCraft storage (the fluid AIs reach it through the loader view below). */
+    /** The robot's tank as a BuildCraft storage (the fluid AIs reach it through the API view below). */
     public BCFluidStorage getFluidStorage() {
         return fluidTank;
     }
@@ -2152,122 +2152,47 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
         return drained;
     }
 
-    //? if >=1.21.10 {
-    @Nullable
-    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> loaderTank;
-
-    @SuppressWarnings("unchecked")
-    private net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> loaderTank() {
-        if (loaderTank == null) {
-            loaderTank = (net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource>)
-                    Platform.transfer().toLoaderFluidHandler(fluidTank);
-        }
-        return loaderTank;
-    }
+    /** The robot API's view of the tank: each call a transaction of its own, so the fluid AIs, which read the
+     *  tank back through {@code FluidHandlerAdvs.storage}, get {@link #fluidTank} itself. */
+    private final IFluidHandlerAdv fluidHandler = FluidHandlerAdvs.of(fluidTank);
 
     @Override
-    public int size() {
-        return loaderTank().size();
-    }
-
-    @Override
-    public net.neoforged.neoforge.transfer.fluid.FluidResource getResource(int index) {
-        return loaderTank().getResource(index);
-    }
-
-    @Override
-    public long getAmountAsLong(int index) {
-        return loaderTank().getAmountAsLong(index);
-    }
-
-    @Override
-    public long getCapacityAsLong(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
-        return loaderTank().getCapacityAsLong(index, resource);
-    }
-
-    @Override
-    public boolean isValid(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
-        return loaderTank().isValid(index, resource);
-    }
-
-    @Override
-    public int insert(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                      net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-        return loaderTank().insert(index, resource, amount, transaction);
-    }
-
-    @Override
-    public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                       net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-        return loaderTank().extract(index, resource, amount, transaction);
-    }
-
-    @Override
-    public int extract(buildcraft.api.core.IFluidFilter filter, int maxDrain,
-                       net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
-        if (tank.isEmpty() || !filter.matches(tank)) {
-            return 0;
-        }
-        return loaderTank().extract(0, loaderTank().getResource(0), maxDrain, tx);
-    }
-    //?} else {
-    /*@Nullable
-    private net.neoforged.neoforge.fluids.capability.IFluidHandler loaderTank;
-
-    private net.neoforged.neoforge.fluids.capability.IFluidHandler loaderTank() {
-        if (loaderTank == null) {
-            loaderTank = (net.neoforged.neoforge.fluids.capability.IFluidHandler)
-                    Platform.transfer().toLoaderFluidHandler(fluidTank);
-        }
-        return loaderTank;
+    public IFluidHandlerAdv getFluidHandler() {
+        return fluidHandler;
     }
 
     @Override
     public int getTanks() {
-        return loaderTank().getTanks();
+        return fluidHandler.getTanks();
     }
 
     @Override
-    public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-        return loaderTank().getFluidInTank(tank);
+    public BCFluidStack getFluidInTank(int tankIndex) {
+        return fluidHandler.getFluidInTank(tankIndex);
     }
 
     @Override
-    public int getTankCapacity(int tank) {
-        return loaderTank().getTankCapacity(tank);
+    public int getTankCapacity(int tankIndex) {
+        return fluidHandler.getTankCapacity(tankIndex);
     }
 
     @Override
-    public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
-        return loaderTank().isFluidValid(tank, stack);
+    public int fill(BCFluidStack resource, boolean simulate) {
+        return fluidHandler.fill(resource, simulate);
     }
 
     @Override
-    public int fill(net.neoforged.neoforge.fluids.FluidStack resource,
-                    net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-        return loaderTank().fill(resource, action);
+    public BCFluidStack drain(BCFluidStack resource, boolean simulate) {
+        return fluidHandler.drain(resource, simulate);
     }
 
     @Override
-    public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resource,
-                    net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-        return loaderTank().drain(resource, action);
+    public BCFluidStack drain(int maxDrain, boolean simulate) {
+        return fluidHandler.drain(maxDrain, simulate);
     }
 
     @Override
-    public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain,
-                    net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-        return loaderTank().drain(maxDrain, action);
+    public BCFluidStack drain(buildcraft.api.core.IFluidFilter filter, int maxDrain, boolean simulate) {
+        return fluidHandler.drain(filter, maxDrain, simulate);
     }
-
-    @Override
-    public int extract(buildcraft.api.core.IFluidFilter filter, int maxDrain, boolean simulate) {
-        if (tank.isEmpty() || !filter.matches(tank)) {
-            return 0;
-        }
-        return loaderTank().drain(maxDrain, simulate
-                ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE
-                : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
-    }*/
-    //?}
 }

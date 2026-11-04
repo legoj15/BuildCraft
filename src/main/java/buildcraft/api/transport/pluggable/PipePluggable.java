@@ -22,11 +22,7 @@ import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.BlockGetter;
 
 
-import net.neoforged.neoforge.capabilities.ICapabilityProvider;
-
-
-
-
+import buildcraft.api.capability.BCCapability;
 import buildcraft.api.transport.pipe.IPipeHolder;
 import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 
@@ -93,19 +89,18 @@ public abstract class PipePluggable {
         return false;
     }
 
-    /** Gets the value of a specified capability key, or null if the given capability is not supported at the call time.
-     * This is effectively {@link ICapabilityProvider}, but where
-     * {@link ICapabilityProvider#hasCapability(Object, Direction)} will return true when this returns a non-null
-     * value. */
-    public <T> T getCapability(@Nonnull Object cap) {
+    /** Gets the value of a specified capability key, or null if the given capability is not supported at the call
+     * time: what a block outside the pipe sees on this face (the pipe holder registers it for every
+     * {@link BCCapability} BuildCraft exposes). */
+    public <T> T getCapability(@Nonnull BCCapability<T> cap) {
         return null;
     }
 
-    /** Gets the {@link Object} that is accessible from the pipe that this is attached to.
+    /** Gets the object for {@code cap} that is accessible from the pipe that this is attached to.
      * 
      * @param cap
      * @return */
-    public <T> T getInternalCapability(@Nonnull Object cap) {
+    public <T> T getInternalCapability(@Nonnull BCCapability<T> cap) {
         return null;
     }
 

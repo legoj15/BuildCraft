@@ -43,6 +43,11 @@ dependencies {
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
 }
 
+// Stonecutter already runs stonecutterGenerate before compileJava (observed on a clean versions/26.3-fabric/build),
+// but the edge is stated, as bc.neoforge does for createMinecraftArtifacts: a compile against a stale or empty
+// generated copy would pass this node's only gate vacuously.
+tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
+
 // No tests and no jar: the node exists only to prove the platform layer compiles against Fabric.
 tasks.named("test") { enabled = false }
 tasks.named("jar") { enabled = false }

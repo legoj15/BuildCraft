@@ -74,7 +74,7 @@ LOADER_PREFIXES = (IMPL_PREFIX, "buildcraft/platform/fabric/")
 BINDERS = ("buildcraft/platform/Platform.java", "buildcraft/platform/client/ClientPlatform.java")
 #: The oldest node. Its commented arms do not count toward the finish line (NeoForge-only forever).
 LEGACY_NODE = "1.21.1"
-FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3")
+FALLBACK_NODES = ("1.21.1", "1.21.10", "1.21.11", "26.1.2", "26.2", "26.3", "26.3-fabric")
 
 #: References that are tolerated for now. Matched in order: `paths` are source-root-relative prefixes, `types` are
 #: regexes over the fully qualified name. A reference matching an entry counts as allowlisted, not remaining.
@@ -736,10 +736,12 @@ def analyze(text, rel, nodes, warnings, ext_index):
             line = lx.line_of(offset + m.start())
             res.comment_refs.append((line, m.group(), states.nodes_at(line)))
 
-    if not rel.startswith(LOADER_PREFIXES):
-        if rel not in BINDERS:
-            res.impl_named = [lx.line_of(m.start()) for m in _IMPL_NAME.finditer(masked)]
-        if rel.startswith("buildcraft/platform/") and not rel.startswith(LOADER_PREFIXES):
+    # A loader impl package may name itself, never a sibling loader's package; common files name neither.
+    own_impl = next((p.rstrip("/").replace("/", ".") for p in LOADER_PREFIXES if rel.startswith(p)), None)
+    if rel not in BINDERS:
+        res.impl_named = [lx.line_of(m.start()) for m in _IMPL_NAME.finditer(masked) if m.group() != own_impl]
+    if own_impl is None:
+        if rel.startswith("buildcraft/platform/"):
             for rx, what in _CONTRACT_BANS:
                 for m in rx.finditer(masked):
                     res.contract_leaks.append((lx.line_of(m.start()), what, m.group()))
@@ -1018,7 +1020,7 @@ def discover_nodes():
     versions = REPO / "versions"
     found = [p.name for p in versions.iterdir() if p.is_dir()] if versions.is_dir() else []
     names = [n for n in found if re.fullmatch(r"\d+(?:\.\d+)*(?:-\w+)?", n)]
-    names = sorted(names, key=lambda n: _vkey(n.split("-")[0])) or list(FALLBACK_NODES)
+    names = sorted(names, key=lambda n: (_vkey(n.split("-")[0]), n)) or list(FALLBACK_NODES)
     return [Node(n) for n in names]
 
 

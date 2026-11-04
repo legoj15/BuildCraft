@@ -5,7 +5,11 @@
  */
 package buildcraft.platform;
 
+import buildcraft.platform.config.BCConfigType;
+import buildcraft.platform.config.ConfigHooks;
+import buildcraft.platform.config.ConfigRegistrar;
 import buildcraft.platform.event.PlatformProtection;
+import buildcraft.platform.network.BCNetwork;
 
 /**
  * The compile-time binder: one static accessor per platform service. Each accessor reads a {@code static final} field
@@ -20,6 +24,11 @@ public final class Platform {
         return LoaderHolder.INSTANCE;
     }
 
+    /** Networking: payload registration and sending. */
+    public static BCNetwork network() {
+        return NetworkHolder.INSTANCE;
+    }
+
     /** Protection: the permission events a machine posts for its fake player (break, place, attack, clicks). */
     public static PlatformProtection protection() {
         return ProtectionHolder.INSTANCE;
@@ -28,6 +37,65 @@ public final class Platform {
     /** The loader's fake-player class. */
     public static FakePlayers fakePlayers() {
         return FakePlayersHolder.INSTANCE;
+    }
+
+    /** Config registration: maps a {@link BCConfigType} onto the loader's own config types. */
+    public static ConfigRegistrar configRegistrar() {
+        return ConfigRegistrarHolder.INSTANCE;
+    }
+
+    /** Config load and reload listeners. */
+    public static ConfigHooks configHooks() {
+        return ConfigHooksHolder.INSTANCE;
+    }
+
+    /** Sounds: deferred sound types and fluid bucket sounds. */
+    public static SoundServices sounds() {
+        return SoundHolder.INSTANCE;
+    }
+
+    /** Chunk loading tickets. */
+    public static ChunkTickets chunkTickets() {
+        return ChunkTicketsHolder.INSTANCE;
+    }
+
+    /** Crafting: component-matching ingredients. */
+    public static CraftingServices crafting() {
+        return CraftingHolder.INSTANCE;
+    }
+
+    /** Shearing blocks. */
+    public static ShearServices shearing() {
+        return ShearHolder.INSTANCE;
+    }
+
+    /** Loot context parameters the loader adds. */
+    public static LootServices loot() {
+        return LootHolder.INSTANCE;
+    }
+
+    private static final class LoaderHolder {
+        static final LoaderServices INSTANCE = create();
+
+        private static LoaderServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            *///?}
+        }
+    }
+
+    private static final class NetworkHolder {
+        static final BCNetwork INSTANCE = create();
+
+        private static BCNetwork create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeNetwork();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricNetwork();
+            *///?}
+        }
     }
 
     private static final class ProtectionHolder {
@@ -54,20 +122,28 @@ public final class Platform {
         }
     }
 
-    private static final class LoaderHolder {
-        static final LoaderServices INSTANCE = create();
+    private static final class ConfigRegistrarHolder {
+        static final ConfigRegistrar INSTANCE = create();
 
-        private static LoaderServices create() {
+        private static ConfigRegistrar create() {
             //? if neoforge {
-            return new buildcraft.platform.neoforge.NeoForgeLoaderServices();
+            return new buildcraft.platform.neoforge.NeoForgeConfigRegistrar();
             //?} elif fabric {
-            /*return new buildcraft.platform.fabric.FabricLoaderServices();
+            /*return new buildcraft.platform.fabric.FabricConfigRegistrar();
             *///?}
         }
     }
 
-    public static SoundServices sounds() {
-        return SoundHolder.INSTANCE;
+    private static final class ConfigHooksHolder {
+        static final ConfigHooks INSTANCE = create();
+
+        private static ConfigHooks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeConfigHooks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricConfigHooks();
+            *///?}
+        }
     }
 
     private static final class SoundHolder {
@@ -82,10 +158,6 @@ public final class Platform {
         }
     }
 
-    public static ChunkTickets chunkTickets() {
-        return ChunkTicketsHolder.INSTANCE;
-    }
-
     private static final class ChunkTicketsHolder {
         static final ChunkTickets INSTANCE = create();
 
@@ -96,10 +168,6 @@ public final class Platform {
             /*return new buildcraft.platform.fabric.FabricChunkTickets();
             *///?}
         }
-    }
-
-    public static CraftingServices crafting() {
-        return CraftingHolder.INSTANCE;
     }
 
     private static final class CraftingHolder {
@@ -114,10 +182,6 @@ public final class Platform {
         }
     }
 
-    public static ShearServices shearing() {
-        return ShearHolder.INSTANCE;
-    }
-
     private static final class ShearHolder {
         static final ShearServices INSTANCE = create();
 
@@ -128,10 +192,6 @@ public final class Platform {
             /*return new buildcraft.platform.fabric.FabricShearServices();
             *///?}
         }
-    }
-
-    public static LootServices loot() {
-        return LootHolder.INSTANCE;
     }
 
     private static final class LootHolder {

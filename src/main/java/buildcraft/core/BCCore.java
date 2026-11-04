@@ -112,15 +112,12 @@ public class BCCore {
         buildcraft.lib.registry.LegacyAliases.init(modEventBus);
 
         // ─── Single unified config ──────────────────────────────────────────
-        //? if >=26.3 {
-        // FML 12 split COMMON into LOCAL (both sides, global file, never synced: the exact old behaviour)
-        // and SYNCED, and names the file after the type ("-local"). Keep the legacy file name so a tuned
-        // buildcraftunofficial-common.toml is still the file that gets read.
-        modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.LOCAL, BCUnifiedConfig.SPEC,
+        // Both sides, never synced, in the legacy file name so a tuned buildcraftunofficial-common.toml is still the
+        // file that gets read (the 26.3 FML 12 type split lives in the platform implementation).
+        Platform.configRegistrar().register(buildcraft.platform.config.BCConfigType.LOCAL, BCUnifiedConfig.SPEC,
                 MODID + "-common.toml");
-        //?} else {
-        /*modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, BCUnifiedConfig.SPEC);
-        *///?}
+        Platform.configHooks().onLoad(BCUnifiedConfig.SPEC, BCCore::applyConfig);
+        Platform.configHooks().onReload(BCUnifiedConfig.SPEC, BCCore::applyConfig);
         if (Platform.loader().isPhysicalClient()) {
             BCCoreClient.init(modContainer, modEventBus);
         }
@@ -130,7 +127,6 @@ public class BCCore {
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
-        modEventBus.addListener(this::onConfigChanged);
 
         // Block-break notifier: the break-event class differs across 26.1.x, so register it
         // through PlatformProtection#onBreak instead of @SubscribeEvent.
@@ -230,10 +226,8 @@ public class BCCore {
      * {@link buildcraft.lib.misc.BlockUtil#miningMultiplier}, which drives the MJ-per-block
      * cost math for every mining machine (Quarry, Mining Well, Builder/Filler clear-mode).
      */
-    private void onConfigChanged(net.neoforged.fml.event.config.ModConfigEvent event) {
-        if (event.getConfig().getSpec() == BCUnifiedConfig.SPEC) {
-            buildcraft.lib.misc.BlockUtil.miningMultiplier = BCCoreConfig.miningMultiplier.get();
-        }
+    private static void applyConfig() {
+        buildcraft.lib.misc.BlockUtil.miningMultiplier = BCCoreConfig.miningMultiplier.get();
     }
 
     private void preInit(FMLCommonSetupEvent event) {

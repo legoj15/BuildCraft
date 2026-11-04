@@ -10,25 +10,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.FluidActionResult;*/
-//?}
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
 import buildcraft.api.fuels.ISolidCoolant;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.ContainerBC_Neptune;
 import buildcraft.lib.gui.Widget_Neptune;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.Platform;
 import buildcraft.platform.network.PacketContext;
+import buildcraft.platform.transfer.BCTransaction;
 
 /**
  * Widget that allows clicking on a fluid tank in a GUI to fill/drain with the carried item.
@@ -62,69 +54,6 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
         sendWidgetData(buf -> buf.writeByte(NET_CLICK));
     }
 
-    /**
-     * Walk the player inventory looking for an empty fluid container we can fill from
-     * the tank. Used as a fallback when the cursor is already holding a full bucket of
-     * the tank's fluid — without this, repeated clicks on an output tank stop draining
-     * after the first bucket because the cursor has no room and the tank rejects the
-     * filled bucket as input. Returns {@code true} on success.
-     */
-    //? if >=1.21.10 {
-    private boolean drainTankIntoInventoryBucket(Player player) {
-        FluidResource tankFluid = tank.size() > 0 ? tank.getResource(0) : FluidResource.EMPTY;
-        if (tankFluid.isEmpty() || tank.getAmountAsLong(0) <= 0) {
-            return false;
-        }
-        net.minecraft.world.entity.player.Inventory inv = player.getInventory();
-        int size = inv.getContainerSize();
-        for (int i = 0; i < size; i++) {
-            ItemStack invStack = inv.getItem(i);
-            if (invStack.isEmpty()) continue;
-            net.neoforged.neoforge.transfer.access.ItemAccess slotAccess =
-                    net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerSlot(player, i).oneByOne();
-            ResourceHandler<FluidResource> slotCap = slotAccess.getCapability(Capabilities.Fluid.ITEM);
-            if (slotCap == null || slotCap.size() == 0) continue;
-            // Skip non-empty containers — only fill empty ones to avoid silently swapping
-            // the player's existing fluid containers.
-            if (!slotCap.getResource(0).isEmpty()) continue;
-            try (Transaction tx = Transaction.openRoot()) {
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                        tank, slotCap, r -> true, Integer.MAX_VALUE, tx);
-                if (moved > 0) {
-                    tx.commit();
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    //?} else {
-    /*private boolean drainTankIntoInventoryBucket(Player player) {
-        if (tank.isTankEmpty(0) || tank.getAmountMb(0) <= 0) {
-            return false;
-        }
-        net.minecraft.world.entity.player.Inventory inv = player.getInventory();
-        int size = inv.getContainerSize();
-        for (int i = 0; i < size; i++) {
-            ItemStack invStack = inv.getItem(i);
-            if (invStack.isEmpty()) continue;
-            // Skip non-empty containers — only fill empty ones to avoid silently swapping
-            // the player's existing fluid containers.
-            if (!FluidUtil.getFluidContained(invStack).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY).isEmpty()) continue;
-            ItemStack single = invStack.copyWithCount(1);
-            FluidActionResult result = FluidUtil.tryFillContainer(single, tank, Integer.MAX_VALUE, player, true);
-            if (result.isSuccess()) {
-                invStack.shrink(1);
-                ItemStack filled = result.getResult();
-                if (!filled.isEmpty() && !inv.add(filled)) {
-                    player.drop(filled, false);
-                }
-                return true;
-            }
-        }
-        return false;
-    }*/
-    //?}
 
     /**
      * Handle a GUI click on this tank. Tries to transfer fluid between the
@@ -151,94 +80,14 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
      *
      * @return The resulting ItemStack after the transfer attempt
      */
-    //? if >=1.21.10 {
     private void transferStackToTank(Player player) {
         if (player.level().isClientSide()) {
             return;
         }
-        ItemStack carried = player.containerMenu.getCarried();
-        boolean isCreative = player.getAbilities().instabuild;
-
-        if (isCreative) {
-            // ItemAccess.forInfiniteMaterials had a nasty interaction with the bucket fluid
-            // capability: the move(bucket -> tank) path would swap the cursor bucket to an empty
-            // one via the infinite-materials sink but fail to actually commit the fluid into the
-            // tank, so the player lost their bucket AND got no fluid. Bypass the accessor here
-            // and do the bucket-fluid read against a detached copy so the cursor is untouched,
-            // then fill the tank with the bucket's full fluid contents.
-            ItemStack bucketCopy = carried.copy();
-            net.neoforged.neoforge.transfer.access.ItemAccess copyAccess =
-                net.neoforged.neoforge.transfer.access.ItemAccess.forStack(bucketCopy);
-            ResourceHandler<FluidResource> bucketCap = copyAccess.getCapability(Capabilities.Fluid.ITEM);
-
-            if (bucketCap != null && bucketCap.size() > 0) {
-                FluidResource bucketFluid = bucketCap.getResource(0);
-                long bucketAmount = bucketCap.getAmountAsLong(0);
-                if (!bucketFluid.isEmpty() && bucketAmount > 0) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        int filled = tank.insert(0, bucketFluid, (int) bucketAmount, tx);
-                        if (filled > 0) {
-                            tx.commit();
-                        }
-                    }
-                    return;
-                }
-                // Empty container in creative: drain one bucket's worth per click, don't swap
-                // the carried item (creative abundance — player keeps their empty bucket, tank
-                // gives up a bucket of fluid at a time matching the survival-mode feel).
-                if (!tank.getResource(0).isEmpty() && tank.getAmountAsLong(0) > 0) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        int drained = tank.extract(0,
-                            tank.getResource(0),
-                            (int) Math.min(1000L, tank.getAmountAsLong(0)),
-                            tx);
-                        if (drained > 0) {
-                            tx.commit();
-                        }
-                    }
-                }
-                return;
-            }
-            // A non-fluid-container item (e.g. an ice block) — fall through to the
-            // solid-coolant conversion below, exactly as the survival branch does.
-        } else {
-            ItemStack original = carried.copy();
-            net.neoforged.neoforge.transfer.access.ItemAccess access = net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerCursor(player, player.containerMenu).oneByOne();
-            ResourceHandler<FluidResource> itemHandlerIn = access.getCapability(Capabilities.Fluid.ITEM);
-
-            if (itemHandlerIn != null) {
-                // Try filling the tank from the item
-                try (Transaction tx = Transaction.openRoot()) {
-                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                            itemHandlerIn, tank, r -> true, Integer.MAX_VALUE, tx
-                    );
-                    if (moved > 0) {
-                        tx.commit();
-                        return;
-                    }
-                }
-
-                // Try draining the tank into the item
-                try (Transaction tx = Transaction.openRoot()) {
-                    int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                            tank, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
-                    );
-                    if (moved > 0) {
-                        tx.commit();
-                        return;
-                    }
-                }
-
-                // Cursor-direct flow above is one-shot per bucket: with a 1-stack bucket the
-                // cursor swaps to a filled bucket on the first click, and a second click finds
-                // the same fluid in the cursor and the tank with no room to grow on either side.
-                // Repeated clicks then appear to do nothing. Fall back to the inventory: locate
-                // an empty bucket and fill it, leaving the cursor untouched. This mirrors the
-                // way 1.12.2's in-world right-click happily swallowed buckets in succession.
-                if (drainTankIntoInventoryBucket(player)) {
-                    return;
-                }
-            }
+        // A fluid container on the cursor: empty it into the tank, else fill it, else fill an empty container
+        // in the inventory (creative leaves the cursor item alone). The platform layer does the item swap.
+        if (Platform.transfer().exchangeWithCarriedContainer(player, tank)) {
+            return;
         }
 
         // --- Try solid coolant conversion (ice → water, ported from 1.12.2 Tank.map()) ---
@@ -249,99 +98,20 @@ public class WidgetFluidTank extends Widget_Neptune<ContainerBC_Neptune> {
             if (solidCoolant != null) {
                 BCFluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
                 if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
-                    try (Transaction tx = Transaction.openRoot()) {
-                        int filled = tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(fluidCoolant)), fluidCoolant.getAmount(), tx);
+                    try (BCTransaction tx = BCTransaction.openRoot()) {
+                        int filled = tank.insert(0, fluidCoolant, fluidCoolant.getAmount(), tx);
                         if (filled == fluidCoolant.getAmount()) {
                             tx.commit();
                             // Trigger "Ice cool" advancement for using solid coolant
                             buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
                                 player, net.minecraft.resources.Identifier.parse("buildcraftunofficial:ice_cool"));
-                            if (!isCreative) {
+                            if (!player.getAbilities().instabuild) {
                                 stack.shrink(1);
                             }
-                            return;
                         }
                     }
                 }
             }
         }
     }
-    //?} else {
-    /*private void transferStackToTank(Player player) {
-        if (player.level().isClientSide()) {
-            return;
-        }
-        ItemStack carried = player.containerMenu.getCarried();
-        boolean isCreative = player.getAbilities().instabuild;
-
-        boolean isFluidContainer = FluidUtil.getFluidHandler(carried.copy()).isPresent();
-        if (isFluidContainer) {
-            BCFluidStack contained = NeoFluidStacks.fromNeo(FluidUtil.getFluidContained(carried).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));
-            if (isCreative) {
-                // Creative: act on a detached copy so the cursor item is never consumed.
-                if (!contained.isEmpty()) {
-                    tank.fill(0, contained, false);
-                    return;
-                }
-                // Empty container in creative: drain one bucket's worth per click, cursor untouched.
-                if (!tank.isTankEmpty(0) && tank.getAmountMb(0) > 0) {
-                    tank.drain(0, Math.min(1000, tank.getAmountMb(0)), false);
-                }
-                return;
-            } else {
-                ItemStack single = carried.copyWithCount(1);
-                // Try filling the tank from the item.
-                FluidActionResult emptied = FluidUtil.tryEmptyContainer(single, tank, Integer.MAX_VALUE, player, true);
-                if (emptied.isSuccess()) {
-                    updateCarried(player, carried, emptied.getResult());
-                    return;
-                }
-                // Try draining the tank into the item.
-                FluidActionResult filled = FluidUtil.tryFillContainer(single, tank, Integer.MAX_VALUE, player, true);
-                if (filled.isSuccess()) {
-                    updateCarried(player, carried, filled.getResult());
-                    return;
-                }
-                // Cursor-direct flow is one-shot per bucket; fall back to filling an empty
-                // inventory bucket, mirroring the 1.21.10+ path.
-                if (drainTankIntoInventoryBucket(player)) {
-                    return;
-                }
-            }
-        }
-
-        // --- Try solid coolant conversion (ice -> water, ported from 1.12.2 Tank.map()) ---
-        if (BuildcraftFuelRegistry.coolant != null) {
-            ItemStack stack = player.containerMenu.getCarried();
-            ItemStack singleCopyCoolant = stack.copyWithCount(1);
-            ISolidCoolant solidCoolant = BuildcraftFuelRegistry.coolant.getSolidCoolant(singleCopyCoolant);
-            if (solidCoolant != null) {
-                BCFluidStack fluidCoolant = solidCoolant.getFluidFromSolidCoolant(singleCopyCoolant);
-                if (fluidCoolant != null && !fluidCoolant.isEmpty()) {
-                    if (tank.fill(0, fluidCoolant, true) == fluidCoolant.getAmount()) {
-                        tank.fill(0, fluidCoolant, false);
-                        // Trigger "Ice cool" advancement for using solid coolant
-                        buildcraft.lib.misc.AdvancementUtil.unlockAdvancement(
-                            player, net.minecraft.resources.Identifier.parse("buildcraftunofficial:ice_cool"));
-                        if (!player.getAbilities().instabuild) {
-                            stack.shrink(1);
-                        }
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    private void updateCarried(Player player, ItemStack original, ItemStack result) {
-        if (original.getCount() == 1) {
-            player.containerMenu.setCarried(result);
-        } else {
-            original.shrink(1);
-            if (!result.isEmpty() && !player.getInventory().add(result)) {
-                player.drop(result, false);
-            }
-        }
-    }*/
-    //?}
 }

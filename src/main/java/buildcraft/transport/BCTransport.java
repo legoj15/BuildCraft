@@ -82,8 +82,17 @@ public class BCTransport {
         buildcraft.lib.misc.CapabilityListeners.add((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
-        Platform.transfer().registerCapabilities(registrar -> registrar.blockItems(
-            BCTransportBlockEntities.FILTERED_BUFFER.get(), (tile, side) -> tile.getItemHandler(side)));
+        Platform.transfer().registerCapabilities(registrar -> {
+            registrar.blockItems(BCTransportBlockEntities.FILTERED_BUFFER.get(), (tile, side) -> tile.getItemHandler(side));
+            // Fluid pipes: the flow's per-face section, unless a blocking pluggable covers that face.
+            registrar.blockFluids(BCTransportBlockEntities.PIPE_HOLDER.get(), (tile, side) -> {
+                Pipe pipe = tile.getPipe();
+                if (pipe == null || side == null) return null;
+                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
+                if (plug != null && plug.isBlocking()) return null;
+                return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
+            });
+        });
 
         // Register network payloads
         registerPayloads();
@@ -207,11 +216,9 @@ public class BCTransport {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
-        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         event.registerBlockEntity(
             MjAPI.CAP_RECEIVER, BCTransportBlockEntities.PIPE_HOLDER.get(),
@@ -261,17 +268,6 @@ public class BCTransport {
                 IMjConnector c = pipe.getBehaviour().getCapability(MjAPI.CAP_CONNECTOR, side);
                 if (c != null) return c;
                 return pipe.getFlow().getCapability(MjAPI.CAP_CONNECTOR, side);
-            }
-        );
-
-        event.registerBlockEntity(
-            fluidCap, BCTransportBlockEntities.PIPE_HOLDER.get(),
-            (tile, side) -> {
-                Pipe pipe = tile.getPipe();
-                if (pipe == null || side == null) return null;
-                buildcraft.api.transport.pluggable.PipePluggable plug = tile.getPluggable(side);
-                if (plug != null && plug.isBlocking()) return null;
-                return pipe.getFlow().getCapability(CapUtil.CAP_FLUIDS, side);
             }
         );
 

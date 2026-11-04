@@ -20,11 +20,9 @@ import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?}
 
 import buildcraft.api.enums.EnumPowerStage;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.properties.BuildCraftProperties;
 import buildcraft.core.BCCoreBlocks;
 import buildcraft.core.tile.TilePowerConsumerTester;
@@ -353,11 +351,7 @@ public class EngineTester {
 
             // Survival: ice converts to water and the block is consumed.
             clickCoolantTankWithIce(helper, engine, false);
-            //? if >=1.21.10 {
-            engine.tankCoolant.set(0, FluidResource.EMPTY, 0);
-            //?} else {
-            /*engine.tankCoolant.setFluidStack(0, buildcraft.api.fluids.BCFluidStack.EMPTY);*/
-            //?}
+            engine.tankCoolant.setFluidStack(0, BCFluidStack.EMPTY);
             // Creative: ice converts to water and the block is NOT consumed (the regressed path).
             clickCoolantTankWithIce(helper, engine, true);
 
@@ -386,26 +380,15 @@ public class EngineTester {
         container.widgetCoolant.handleWidgetDataServer(null, buffer);
         buffer.release();
 
-        //? if >=1.21.10 {
-        long amount = engine.tankCoolant.getAmountAsLong(0);
-        //?} else {
-        /*long amount = engine.tankCoolant.getAmountMb(0);*/
-        //?}
+        long amount = engine.tankCoolant.getAmount(0);
         if (amount != 1500) {
             throw new IllegalStateException(who + " player: clicking the coolant tank with an ice "
                     + "block should fill it with 1500 mB of water, got " + amount + " mB");
         }
-        //? if >=1.21.10 {
-        if (!engine.tankCoolant.getResource(0).is(Fluids.WATER)) {
+        if (!engine.tankCoolant.getStack(0).is(Fluids.WATER)) {
             throw new IllegalStateException(who + " player: coolant tank should hold water after "
-                    + "ice conversion, got " + engine.tankCoolant.getResource(0));
+                    + "ice conversion, got " + engine.tankCoolant.getStack(0));
         }
-        //?} else {
-        /*if (!engine.tankCoolant.getFluidStack(0).is(Fluids.WATER)) {
-            throw new IllegalStateException(who + " player: coolant tank should hold water after "
-                    + "ice conversion, got " + engine.tankCoolant.getFluidStack(0));
-        }*/
-        //?}
 
         ItemStack cursor = container.getCarried();
         if (creative && (cursor.isEmpty() || cursor.getCount() != 1)) {

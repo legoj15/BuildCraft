@@ -14,15 +14,8 @@ import org.slf4j.LoggerFactory;
 import buildcraft.core.BCCore;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
 import buildcraft.platform.Platform;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?}
-//? if <1.21.10 {
-/*import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
+import buildcraft.lib.transfer.FluidStorageUtil;
+import buildcraft.platform.transfer.BCFluidStorage;
 
 /**
  * BuildCraft Factory initializer. No longer a separate @Mod — called from BCCore.
@@ -59,7 +52,7 @@ public class BCFactory {
         LOGGER.info("BuildCraft Factory initialized");
     }
 
-    /** The item storages, through the platform layer's capability registrar. */
+    /** The item and fluid storages, through the platform layer's capability registrar. */
     private static void registerTransfer(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
         registrar.blockItems(BCFactoryBlockEntities.AUTO_WORKBENCH_ITEMS.get(),
             (workbench, direction) -> workbench.getItemHandler(direction));
@@ -70,17 +63,35 @@ public class BCFactory {
         registrar.blockItems(BCFactoryBlockEntities.MINING_WELL.get(),
             (miner, direction) -> buildcraft.lib.transfer.ItemStorageUtil.EMPTY);
         registrar.blockItems(BCFactoryBlockEntities.CHUTE.get(), (chute, direction) -> chute.getItemHandler(direction));
+
+        // Fluid storages.
+        registrar.blockFluids(BCFactoryBlockEntities.TANK.get(),
+            (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank));
+        // Pump: drain-only.
+        registrar.blockFluids(BCFactoryBlockEntities.PUMP.get(),
+            (pump, direction) -> FluidStorageUtil.extractOnly(pump.getTank()));
+        registrar.blockFluids(BCFactoryBlockEntities.FLOOD_GATE.get(),
+            (floodGate, direction) -> floodGate.getTank());
+        // Distiller: the input tank is fill-only, the output tanks are drain-only.
+        registrar.blockFluids(BCFactoryBlockEntities.DISTILLER.get(),
+            (distiller, direction) -> {
+                BCFluidStorage tank = distiller.getTankForSide(direction);
+                if (tank == null) return null;
+                return tank == distiller.getTankIn()
+                    ? FluidStorageUtil.insertOnly(tank)
+                    : FluidStorageUtil.extractOnly(tank);
+            });
+        registrar.blockFluids(BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
+            (heatExchange, direction) -> heatExchange.getFluidTankForDirection(direction));
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability-token locals: the Transfer-API tokens on 1.21.10+, the classic
         // handler tokens on 1.21.1. Used as the BlockCapability for every registerBlockEntity below.
         //? if >=1.21.10 {
-        var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
-        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         // The Auto Workbench now backs its craft progress with a real MjBattery, so it exposes the
         // Forge-Energy cap (rf_enabled-gated) like every other machine — previously it was dead on FE cables.
@@ -93,99 +104,11 @@ public class BCFactory {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.PUMP.get(),
             pump -> pump.getMjReceiver(), energyCap,
             pump -> MjBatteryEnergyHandler.createIfRfEnabled(pump.getBattery()));
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.TANK.get(),
-            (tank, direction) -> new buildcraft.factory.tile.TankColumnResourceHandler(tank));
-        //? if >=1.21.10 {
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> new ResourceHandler<FluidResource>() {
-                private final ResourceHandler<FluidResource> tank = pump.getTank();
-                @Override public int size() { return tank.size(); }
-                @Override public FluidResource getResource(int index) { return tank.getResource(index); }
-                @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
-                @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
-                @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
-                @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.extract(index, resource, amount, tx); }
-                @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
-            });
-        //?} else {
-        /*// Pump exposes an extract-only fluid handler (drain allowed, fill blocked).
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.PUMP.get(),
-            (pump, direction) -> new IFluidHandler() {
-                private final buildcraft.lib.fluid.BCFluidTank tank = pump.getTank();
-                @Override public int getTanks() { return tank.getTanks(); }
-                @Override public FluidStack getFluidInTank(int i) { return tank.getFluidInTank(i); }
-                @Override public int getTankCapacity(int i) { return tank.getTankCapacity(i); }
-                @Override public boolean isFluidValid(int i, FluidStack s) { return tank.isFluidValid(i, s); }
-                @Override public FluidStack drain(FluidStack r, IFluidHandler.FluidAction a) { return tank.drain(r, a); }
-                @Override public FluidStack drain(int amt, IFluidHandler.FluidAction a) { return tank.drain(amt, a); }
-                @Override public int fill(FluidStack r, IFluidHandler.FluidAction a) { return 0; }
-            });*/
-        //?}
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.FLOOD_GATE.get(),
-            (floodGate, direction) -> floodGate.getTank());
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.CHUTE.get(),
             chute -> chute.getMjReceiver(), energyCap,
             chute -> MjBatteryEnergyHandler.createIfRfEnabled(chute.getBattery()));
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCFactoryBlockEntities.DISTILLER.get(),
             distiller -> distiller.getMjReceiver(), energyCap,
             distiller -> MjBatteryEnergyHandler.createIfRfEnabled(distiller.getBattery()));
-        //? if >=1.21.10 {
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.DISTILLER.get(),
-            (distiller, direction) -> {
-                ResourceHandler<FluidResource> tank = distiller.getTankForSide(direction);
-                if (tank == null) return null;
-                if (tank == distiller.getTankIn()) {
-                    return new ResourceHandler<FluidResource>() {
-                        @Override public int size() { return tank.size(); }
-                        @Override public FluidResource getResource(int index) { return tank.getResource(index); }
-                        @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
-                        @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
-                        @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
-                        @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.insert(index, resource, amount, tx); }
-                        @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
-                    };
-                } else {
-                    return new ResourceHandler<FluidResource>() {
-                        @Override public int size() { return tank.size(); }
-                        @Override public FluidResource getResource(int index) { return tank.getResource(index); }
-                        @Override public long getAmountAsLong(int index) { return tank.getAmountAsLong(index); }
-                        @Override public long getCapacityAsLong(int index, FluidResource resource) { return tank.getCapacityAsLong(index, resource); }
-                        @Override public boolean isValid(int index, FluidResource resource) { return tank.isValid(index, resource); }
-                        @Override public int extract(int index, FluidResource resource, int amount, TransactionContext tx) { return tank.extract(index, resource, amount, tx); }
-                        @Override public int insert(int index, FluidResource resource, int amount, TransactionContext tx) { return 0; }
-                    };
-                }
-            });
-        //?} else {
-        /*// Distiller: input tank is fill-only, output tank is drain-only.
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.DISTILLER.get(),
-            (distiller, direction) -> {
-                buildcraft.lib.fluid.BCFluidTank tank = distiller.getTankForSide(direction);
-                if (tank == null) return null;
-                if (tank == distiller.getTankIn()) {
-                    return new IFluidHandler() {
-                        @Override public int getTanks() { return tank.getTanks(); }
-                        @Override public FluidStack getFluidInTank(int i) { return tank.getFluidInTank(i); }
-                        @Override public int getTankCapacity(int i) { return tank.getTankCapacity(i); }
-                        @Override public boolean isFluidValid(int i, FluidStack s) { return tank.isFluidValid(i, s); }
-                        @Override public int fill(FluidStack r, IFluidHandler.FluidAction a) { return tank.fill(r, a); }
-                        @Override public FluidStack drain(FluidStack r, IFluidHandler.FluidAction a) { return FluidStack.EMPTY; }
-                        @Override public FluidStack drain(int amt, IFluidHandler.FluidAction a) { return FluidStack.EMPTY; }
-                    };
-                } else {
-                    return new IFluidHandler() {
-                        @Override public int getTanks() { return tank.getTanks(); }
-                        @Override public FluidStack getFluidInTank(int i) { return tank.getFluidInTank(i); }
-                        @Override public int getTankCapacity(int i) { return tank.getTankCapacity(i); }
-                        @Override public boolean isFluidValid(int i, FluidStack s) { return tank.isFluidValid(i, s); }
-                        @Override public int fill(FluidStack r, IFluidHandler.FluidAction a) { return 0; }
-                        @Override public FluidStack drain(FluidStack r, IFluidHandler.FluidAction a) { return tank.drain(r, a); }
-                        @Override public FluidStack drain(int amt, IFluidHandler.FluidAction a) { return tank.drain(amt, a); }
-                    };
-                }
-            });*/
-        //?}
-        event.registerBlockEntity(fluidCap, BCFactoryBlockEntities.HEAT_EXCHANGE.get(),
-            (heatExchange, direction) -> heatExchange.getFluidTankForDirection(direction));
     }
 }

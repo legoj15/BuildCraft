@@ -14,21 +14,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.statements.IStatement;
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
 import buildcraft.lib.client.sprite.SpriteHolderRegistry.SpriteHolder;
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.TransferAccess;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.LocaleUtil;
 
@@ -54,102 +48,10 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
         return LocaleUtil.localize("gate.trigger.fluid." + state.name().toLowerCase(Locale.ROOT));
     }
 
-    //? if >=1.21.10 {
     @Override
     public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
         IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        ResourceHandler<FluidResource> handler = level.getCapability(
-            Capabilities.Fluid.BLOCK, pos, side != null ? side.getOpposite() : null
-        );
-
-        if (handler == null) {
-            return false;
-        }
-
-        FluidResource searchedFluid = FluidResource.EMPTY;
-
-        if (parameters != null && parameters.length >= 1 && parameters[0] != null && !parameters[0].getItemStack().isEmpty()) {
-            net.minecraft.world.item.ItemStack stack = parameters[0].getItemStack();
-            searchedFluid = FluidResource.of(NeoFluidStacks.toNeo(FluidUtilBC.getFluidContained(stack)));
-        }
-
-        int tanks = handler.size();
-        if (tanks == 0) {
-            return false;
-        }
-
-        switch (state) {
-            case EMPTY: {
-                for (int i = 0; i < tanks; i++) {
-                    FluidResource fluid = handler.getResource(i);
-                    if (!fluid.isEmpty() && handler.getAmountAsInt(i) > 0) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            case CONTAINS: {
-                for (int i = 0; i < tanks; i++) {
-                    FluidResource fluid = handler.getResource(i);
-                    if (!fluid.isEmpty() && handler.getAmountAsInt(i) > 0
-                        && (searchedFluid.isEmpty() || fluid.equals(searchedFluid))) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-            case SPACE: {
-                if (searchedFluid.isEmpty()) {
-                    for (int i = 0; i < tanks; i++) {
-                        FluidResource fluid = handler.getResource(i);
-                        long cap = handler.getCapacityAsLong(i, fluid);
-                        if (fluid.isEmpty() || handler.getAmountAsInt(i) < cap) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-                // Probe with an unbounded amount, never committed: a cauldron takes fluid only in whole steps, so a
-                // 1 mB probe always failed and a filtered SPACE read false (and FULL true) on an empty one.
-                try (Transaction tx = Transaction.openRoot()) {
-                    for (int i = 0; i < tanks; i++) {
-                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            }
-            case FULL: {
-                if (searchedFluid.isEmpty()) {
-                    for (int i = 0; i < tanks; i++) {
-                        FluidResource fluid = handler.getResource(i);
-                        long cap = handler.getCapacityAsLong(i, fluid);
-                        if (fluid.isEmpty() || handler.getAmountAsInt(i) < cap) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-                try (Transaction tx = Transaction.openRoot()) {
-                    for (int i = 0; i < tanks; i++) {
-                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    //?} else {
-    /*@Override
-    public boolean isTriggerActive(Level level, BlockPos pos, @Nullable BlockEntity tile, Direction side,
-        IStatementContainer statementContainer, IStatementParameter[] parameters) {
-        IFluidHandler handler = level.getCapability(
-            Capabilities.FluidHandler.BLOCK, pos, side != null ? side.getOpposite() : null
-        );
+        BCFluidStorage handler = TransferAccess.findFluid(level, pos, side != null ? side.getOpposite() : null);
 
         if (handler == null) {
             return false;
@@ -162,7 +64,7 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             searchedFluid = FluidUtilBC.getFluidContained(stack);
         }
 
-        int tanks = handler.getTanks();
+        int tanks = handler.size();
         if (tanks == 0) {
             return false;
         }
@@ -170,8 +72,8 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
         switch (state) {
             case EMPTY: {
                 for (int i = 0; i < tanks; i++) {
-                    BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
-                    if (!fluid.isEmpty() && fluid.getAmount() > 0) {
+                    BCFluidStack fluid = handler.getStack(i);
+                    if (!fluid.isEmpty() && handler.getAmount(i) > 0) {
                         return false;
                     }
                 }
@@ -179,8 +81,8 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             }
             case CONTAINS: {
                 for (int i = 0; i < tanks; i++) {
-                    BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
-                    if (!fluid.isEmpty() && fluid.getAmount() > 0
+                    BCFluidStack fluid = handler.getStack(i);
+                    if (!fluid.isEmpty() && handler.getAmount(i) > 0
                         && (searchedFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(fluid, searchedFluid))) {
                         return true;
                     }
@@ -190,9 +92,9 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
             case SPACE: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
-                        int cap = handler.getTankCapacity(i);
-                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                        BCFluidStack fluid = handler.getStack(i);
+                        long cap = handler.getCapacity(i, fluid);
+                        if (fluid.isEmpty() || handler.getAmount(i) < cap) {
                             return true;
                         }
                     }
@@ -200,29 +102,38 @@ public class TriggerFluidContainer extends AbstractContainerStateTrigger {
                 }
                 // Probe with an unbounded amount, never committed: a cauldron takes fluid only in whole steps, so a
                 // 1 mB probe always failed and a filtered SPACE read false (and FULL true) on an empty one.
-                BCFluidStack probe = searchedFluid.copy();
-                probe.setAmount(Integer.MAX_VALUE);
-                return handler.fill(NeoFluidStacks.toNeo(probe), IFluidHandler.FluidAction.SIMULATE) > 0;
+                try (BCTransaction tx = BCTransaction.openRoot()) {
+                    for (int i = 0; i < tanks; i++) {
+                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
             }
             case FULL: {
                 if (searchedFluid.isEmpty()) {
                     for (int i = 0; i < tanks; i++) {
-                        BCFluidStack fluid = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
-                        int cap = handler.getTankCapacity(i);
-                        if (fluid.isEmpty() || fluid.getAmount() < cap) {
+                        BCFluidStack fluid = handler.getStack(i);
+                        long cap = handler.getCapacity(i, fluid);
+                        if (fluid.isEmpty() || handler.getAmount(i) < cap) {
                             return false;
                         }
                     }
                     return true;
                 }
-                BCFluidStack probe = searchedFluid.copy();
-                probe.setAmount(Integer.MAX_VALUE);
-                return handler.fill(NeoFluidStacks.toNeo(probe), IFluidHandler.FluidAction.SIMULATE) <= 0;
+                try (BCTransaction tx = BCTransaction.openRoot()) {
+                    for (int i = 0; i < tanks; i++) {
+                        if (handler.insert(i, searchedFluid, Integer.MAX_VALUE, tx) > 0) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
             }
         }
         return false;
-    }*/
-    //?}
+    }
 
     @Override
     public IStatement[] getPossible() {

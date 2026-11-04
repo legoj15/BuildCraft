@@ -21,28 +21,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
-import net.neoforged.neoforge.transfer.access.ItemAccess;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.fluids.FluidActionResult;
-import net.neoforged.neoforge.fluids.FluidUtil;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.core.IFluidFilter;
-import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.lib.transfer.FluidStorageUtil;
+import buildcraft.platform.Platform;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.TransferAccess;
 
 public class FluidUtilBC {
 
@@ -70,49 +58,18 @@ public class FluidUtilBC {
         return !stack.isEmpty() && shouldRenderTranslucent(stack.getFluid());
     }
 
-    /**
-     * Pushes fluid from the given FluidStacksResourceHandler to all adjacent fluid-capable blocks.
-     * Uses NeoForge 1.21.11's Capabilities.Fluid.BLOCK with ResourceHandler API.
-     */
-    //? if >=1.21.10 {
-    public static void pushFluidToNeighbors(Level level, BlockPos pos, FluidStacksResourceHandler tank) {
-        if (tank.getAmountAsLong(0) <= 0) return;
-        for (Direction dir : Direction.values()) {
-            if (tank.getAmountAsLong(0) <= 0) break;
-            BlockPos neighborPos = pos.relative(dir);
-            ResourceHandler<FluidResource> neighbor = level.getCapability(
-                    Capabilities.Fluid.BLOCK, neighborPos, dir.getOpposite());
-            if (neighbor == null) continue;
-
-            FluidResource resource = tank.getResource(0);
-            if (resource.isEmpty()) break;
-
-            int amountToTry = (int) Math.min(tank.getAmountAsLong(0), 1000);
-
-            try (Transaction tx = Transaction.openRoot()) {
-                int accepted = ResourceHandlerUtil.move(
-                        tank, neighbor, r -> true, amountToTry, tx);
-                if (accepted > 0) {
-                    tx.commit();
-                }
-            }
-        }
-    }
-    //?} else {
-    /*public static void pushFluidToNeighbors(Level level, BlockPos pos, BCFluidTank tank) {
+    /** Pushes up to a bucket of the tank's first slot into each adjacent fluid storage, in direction order. */
+    public static void pushFluidToNeighbors(Level level, BlockPos pos, BCFluidTank tank) {
         if (tank.getAmountMb(0) <= 0) return;
         for (Direction dir : Direction.values()) {
             if (tank.getAmountMb(0) <= 0) break;
-            BlockPos neighborPos = pos.relative(dir);
-            IFluidHandler neighbor = level.getCapability(
-                    Capabilities.FluidHandler.BLOCK, neighborPos, dir.getOpposite());
+            BCFluidStorage neighbor = TransferAccess.findFluid(level, pos.relative(dir), dir.getOpposite());
             if (neighbor == null) continue;
             if (tank.isTankEmpty(0)) break;
             int amountToTry = Math.min(tank.getAmountMb(0), 1000);
-            FluidUtil.tryFluidTransfer(neighbor, tank, amountToTry, true);
+            FluidStorageUtil.move(tank, neighbor, r -> true, amountToTry, null);
         }
-    }*/
-    //?}
+    }
 
     public static List<BCFluidStack> mergeSameFluids(List<BCFluidStack> fluids) {
         List<BCFluidStack> stacks = new ArrayList<>();
@@ -148,62 +105,24 @@ public class FluidUtilBC {
         return a == b || a.getFluidType() == b.getFluidType();
     }
 
-    /** 
-     * Moves fluid between two generic ResourceHandlers.
-     * @return The fluidstack that was moved, or null if no fluid was moved. 
+    /**
+     * Moves fluid between two storages.
+     * @return The fluidstack that was moved, or null if no fluid was moved.
      */
-    //? if >=1.21.10 {
     @Nullable
-    public static BCFluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
+    public static BCFluidStack move(BCFluidStorage from, BCFluidStorage to) {
         return move(from, to, Integer.MAX_VALUE);
     }
 
     /**
-     * Moves a maximum amount of fluid between two generic ResourceHandlers.
+     * Moves a maximum amount of fluid between two storages.
      * @param max The maximum amount of fluid to move.
      * @return The fluidstack that was moved, or null if no fluid was moved.
      */
     @Nullable
-    public static BCFluidStack move(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to, int max) {
-        if (from == null || to == null) {
-            return null;
-        }
-
-        try (Transaction tx = Transaction.openRoot()) {
-            // Check what fluid we have before moving, so we can return the correct stack
-            FluidResource firstAvailable = FluidResource.EMPTY;
-            for (int i = 0; i < from.size(); i++) {
-                if (!from.getResource(i).isEmpty()) {
-                    firstAvailable = from.getResource(i);
-                    break;
-                }
-            }
-
-            if (firstAvailable.isEmpty()) return null;
-
-            int moved = ResourceHandlerUtil.move(from, to, r -> true, max, tx);
-            if (moved > 0) {
-                tx.commit();
-                return NeoFluidStacks.fromNeo(firstAvailable.toStack(moved));
-            }
-        }
-        return null;
+    public static BCFluidStack move(BCFluidStorage from, BCFluidStorage to, int max) {
+        return FluidStorageUtil.moveAndReport(from, to, max);
     }
-    //?} else {
-    /*@Nullable
-    public static BCFluidStack move(IFluidHandler from, IFluidHandler to) {
-        return move(from, to, Integer.MAX_VALUE);
-    }
-
-    @Nullable
-    public static BCFluidStack move(IFluidHandler from, IFluidHandler to, int max) {
-        if (from == null || to == null) {
-            return null;
-        }
-        BCFluidStack moved = NeoFluidStacks.fromNeo(FluidUtil.tryFluidTransfer(to, from, max, true));
-        return moved.isEmpty() ? null : moved;
-    }*/
-    //?}
 
     /** @return A debug string representation of the given fluid stack, or "empty" if empty. */
     public static String getDebugString(BCFluidStack stack) {
@@ -228,112 +147,30 @@ public class FluidUtilBC {
         return fluid != null && fluid.getFluidType().isLighterThanAir();
     }
 
-    //? if >=1.21.10 {
-    public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
-        ResourceHandler<FluidResource> fluidHandler) {
-        ItemStack held = player.getItemInHand(hand);
-        if (held.isEmpty()) return false;
-        Level world = player.level();
-        if (world.isClientSide()) return true;
-
-        boolean isCreative = player.getAbilities().instabuild;
-        ItemStack singleCopy = held.copyWithCount(1);
-        ResourceHandler<FluidResource> itemHandlerIn = singleCopy.getCapability(Capabilities.Fluid.ITEM, net.neoforged.neoforge.transfer.access.ItemAccess.forPlayerInteraction(player, hand));
-        if (itemHandlerIn != null) {
-            // First try draining tank -> item (filling bucket)
-            try (Transaction tx = Transaction.openRoot()) {
-                FluidResource tankFluid = fluidHandler.size() > 0 ? fluidHandler.getResource(0) : FluidResource.EMPTY;
-                int moved = ResourceHandlerUtil.move(
-                        fluidHandler, itemHandlerIn, r -> true, Integer.MAX_VALUE, tx
-                );
-                if (moved > 0) {
-                    tx.commit();
-                    if (!tankFluid.isEmpty()) SoundUtil.playBucketFill(world, pos, NeoFluidStacks.fromNeo(tankFluid.toStack(moved)));
-                    
-                    if (isCreative) return true;
-                    if (held.getCount() == 1) {
-                        player.setItemInHand(hand, singleCopy);
-                    } else {
-                        held.shrink(1);
-                        if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                            EntityUtil.dropOverflow(player, singleCopy);
-                        }
-                    }
-                    player.containerMenu.broadcastChanges();
-                    return true;
-                }
-            }
-
-            // Next try item -> tank (emptying bucket)
-            try (Transaction tx = Transaction.openRoot()) {
-                FluidResource itemFluid = itemHandlerIn.size() > 0 ? itemHandlerIn.getResource(0) : FluidResource.EMPTY;
-                int moved = ResourceHandlerUtil.move(
-                        itemHandlerIn, fluidHandler, r -> true, Integer.MAX_VALUE, tx
-                );
-                if (moved > 0) {
-                    tx.commit();
-                    if (!itemFluid.isEmpty()) SoundUtil.playBucketEmpty(world, pos, NeoFluidStacks.fromNeo(itemFluid.toStack(moved)));
-
-                    if (isCreative) return true;
-                    if (held.getCount() == 1) {
-                        player.setItemInHand(hand, singleCopy);
-                    } else {
-                        held.shrink(1);
-                        if (!singleCopy.isEmpty() && !player.getInventory().add(singleCopy)) {
-                            EntityUtil.dropOverflow(player, singleCopy);
-                        }
-                    }
-                    player.containerMenu.broadcastChanges();
-                    return true;
-                }
-            }
-        }
-        return false;
+    /**
+     * A right click on a tank with a held item: fills the item from the tank, else empties it into the tank,
+     * swapping the held item and playing the bucket sound. Returns whether anything happened (true on the client).
+     */
+    public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand, BCFluidStorage fluidHandler) {
+        return Platform.transfer().interactWithHeldContainer(player, hand, pos, fluidHandler);
     }
-    //?} else {
-    /*public static boolean onTankActivated(Player player, BlockPos pos, InteractionHand hand,
-        IFluidHandler fluidHandler) {
-        ItemStack held = player.getItemInHand(hand);
-        if (held.isEmpty()) return false;
-        Level world = player.level();
-        if (world.isClientSide()) return true;
-        return FluidUtil.interactWithFluidHandler(player, hand, fluidHandler);
-    }*/
-    //?}
 
     // ---- Item fluid containers -------------------------------------------------------------------------------
-    // NeoForge deprecated the classic net.neoforged.neoforge.fluids.FluidUtil (and IFluidHandler / FluidActionResult)
-    // for removal at 1.21.9. These four helpers are the single seam every BuildCraft call site uses to read, fill or
-    // empty a fluid container item, so the call sites stay directive-free: on 1.21.10+ they ride the Transfer API
-    // (Capabilities.Fluid.ITEM through an ItemAccess); on 1.21.1 the classic helpers are still current and are used
-    // as-is. FluidContainerHelperTest pins that both halves behave the same.
+    // The single seam every BuildCraft call site uses to read, fill or empty a fluid container item, so the call
+    // sites stay loader-free: the platform layer does the item swap the loader's way (NeoForge 1.21.10+: an ItemAccess;
+    // 1.21.1: the classic FluidUtil; Fabric: a ContainerItemContext). FluidContainerHelperTest pins the behaviour.
 
     /**
      * The fluid held by ONE item of the given stack (the stack's count is ignored), or {@link BCFluidStack#EMPTY} for
      * an empty container, a non-container or the empty stack. Never modifies {@code stack}.
      */
     public static BCFluidStack getFluidContained(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return BCFluidStack.EMPTY;
-        }
-        //? if >=1.21.10 {
-        // Reads through a one-by-one ItemAccess over the stack: getResource/getAmount only, nothing is extracted.
-        return NeoFluidStacks.fromNeo(net.neoforged.neoforge.transfer.fluid.FluidUtil.getFirstStackContained(stack));
-        //?} else {
-        /*return NeoFluidStacks.fromNeo(FluidUtil.getFluidContained(stack).orElse(net.neoforged.neoforge.fluids.FluidStack.EMPTY));*/
-        //?}
+        return stack.isEmpty() ? BCFluidStack.EMPTY : Platform.transfer().getFluidContained(stack);
     }
 
     /** Whether the item exposes an item fluid handler at all — empty containers (e.g. an empty bucket) included. */
     public static boolean isFluidContainer(ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        //? if >=1.21.10 {
-        return ItemAccess.forStack(stack).oneByOne().getCapability(Capabilities.Fluid.ITEM) != null;
-        //?} else {
-        /*return FluidUtil.getFluidHandler(stack.copyWithCount(1)).isPresent();*/
-        //?}
+        return !stack.isEmpty() && Platform.transfer().isFluidContainer(stack);
     }
 
     /**
@@ -344,22 +181,11 @@ public class FluidUtilBC {
      *
      * @return true if any fluid moved.
      */
-    public static boolean drainContainerSlot(ItemHandlerSimple slots, int slot, BCFluidTank tank) {
-        ItemStack stack = slots.getStackInSlot(slot);
-        if (stack.getCount() != 1) {
+    public static boolean drainContainerSlot(ItemHandlerSimple slots, int slot, BCFluidStorage tank) {
+        if (slots.getStackInSlot(slot).getCount() != 1) {
             return false; // an empty slot, or a stack with nowhere to put the swapped container
         }
-        //? if >=1.21.10 {
-        ResourceHandler<FluidResource> container =
-                ItemAccess.forHandlerIndexStrict(neoSlots(slots), slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
-        return container != null && moveAll(container, tank);
-        //?} else {
-        /*FluidActionResult result = FluidUtil.tryEmptyContainer(stack, tank, Integer.MAX_VALUE, null, true);
-        if (result.isSuccess()) {
-            slots.setStackInSlot(slot, result.getResult());
-        }
-        return result.isSuccess();*/
-        //?}
+        return Platform.transfer().drainContainerSlot(slots, slot, result -> slots.setStackInSlot(slot, result), tank);
     }
 
     /**
@@ -368,44 +194,12 @@ public class FluidUtilBC {
      *
      * @return true if any fluid moved.
      */
-    public static boolean fillContainerSlot(ItemHandlerSimple slots, int slot, BCFluidTank tank) {
-        ItemStack stack = slots.getStackInSlot(slot);
-        if (stack.getCount() != 1) {
+    public static boolean fillContainerSlot(ItemHandlerSimple slots, int slot, BCFluidStorage tank) {
+        if (slots.getStackInSlot(slot).getCount() != 1) {
             return false; // an empty slot, or a stack with nowhere to put the swapped container
         }
-        //? if >=1.21.10 {
-        ResourceHandler<FluidResource> container =
-                ItemAccess.forHandlerIndexStrict(neoSlots(slots), slot).oneByOne().getCapability(Capabilities.Fluid.ITEM);
-        return container != null && moveAll(tank, container);
-        //?} else {
-        /*FluidActionResult result = FluidUtil.tryFillContainer(stack, tank, Integer.MAX_VALUE, null, true);
-        if (result.isSuccess()) {
-            slots.setStackInSlot(slot, result.getResult());
-        }
-        return result.isSuccess();*/
-        //?}
+        return Platform.transfer().fillContainerSlot(slots, slot, result -> slots.setStackInSlot(slot, result), tank);
     }
-
-    //? if >=1.21.10 {
-    // The container handlers above come from a STRICT slot access: the filled/emptied item replaces the container in
-    // that same slot, never overflowing into the tile's other slots. Everything moves in one root transaction.
-    @SuppressWarnings("unchecked")
-    private static ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> neoSlots(ItemHandlerSimple slots) {
-        return (ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource>)
-                buildcraft.platform.Platform.transfer().toLoaderItemHandler(slots);
-    }
-
-    private static boolean moveAll(ResourceHandler<FluidResource> from, ResourceHandler<FluidResource> to) {
-
-        try (Transaction tx = Transaction.openRoot()) {
-            if (ResourceHandlerUtil.move(from, to, r -> true, Integer.MAX_VALUE, tx) > 0) {
-                tx.commit();
-                return true;
-            }
-        }
-        return false;
-    }
-    //?}
 
     public static ItemStack getFilledBucket(BCFluidStack fluidStack) {
         if (fluidStack == null || fluidStack.isEmpty()) {
@@ -418,6 +212,6 @@ public class FluidUtilBC {
                 return new ItemStack(net.minecraft.world.item.Items.LAVA_BUCKET);
             }
         }
-        return fluidStack.getFluid().getFluidType().getBucket(NeoFluidStacks.toNeo(fluidStack));
+        return Platform.fluids().filledBucket(fluidStack);
     }
 }

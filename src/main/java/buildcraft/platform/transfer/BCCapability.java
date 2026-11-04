@@ -17,6 +17,9 @@ public final class BCCapability<T> {
     /** Item storages: {@link BCItemStorage}. */
     public static final BCCapability<BCItemStorage> ITEM = new BCCapability<>("item", BCItemStorage.class);
 
+    /** Fluid storages: {@link BCFluidStorage}. */
+    public static final BCCapability<BCFluidStorage> FLUID = new BCCapability<>("fluid", BCFluidStorage.class);
+
     private final String name;
     private final Class<T> type;
 

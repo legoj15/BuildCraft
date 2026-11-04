@@ -30,7 +30,6 @@ import buildcraft.lib.client.guide.data.JsonTypeTags;
 import buildcraft.lib.client.guide.parts.GuidePart;
 import buildcraft.lib.client.guide.parts.contents.PageLinkFluidStack;
 import buildcraft.lib.client.guide.ref.GuideGroupManager;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiFluid;
 import buildcraft.lib.gui.ISimpleDrawable;
 
@@ -67,7 +66,7 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
             if (stack.isEmpty()) continue;
             // Dedup against guide-defined fluid entries (refinery fuels, coolants).
             if (!GuideManager.INSTANCE.objectsAdded.add(fluid)) continue;
-            String displayName = fluid.getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
+            String displayName = stack.getHoverName().getString();
             if (displayName == null || displayName.trim().isEmpty()) continue;
             consumer.addChild(OTHER_FLUIDS_TAGS, PageLinkFluidStack.create(false, stack, prof));
         }
@@ -93,7 +92,7 @@ public class PageEntryFluidStack extends PageValueType<FluidStackValueFilter> {
     @Override
     public String getTitle(FluidStackValueFilter value) {
         BCFluidStack stack = value.stack;
-        return stack.getFluid().getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
+        return stack.getHoverName().getString();
     }
 
     @Override

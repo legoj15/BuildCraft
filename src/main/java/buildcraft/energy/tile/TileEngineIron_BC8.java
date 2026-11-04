@@ -17,14 +17,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.block.state.BlockState;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
 import buildcraft.api.enums.EnumPowerStage;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.fuels.BuildcraftFuelRegistry;
@@ -38,11 +30,12 @@ import buildcraft.energy.container.ContainerEngineIron;
 import buildcraft.lib.engine.EngineConnector;
 import buildcraft.lib.engine.TileEngineBase_BC8;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
 import buildcraft.lib.misc.GameProfileUtil;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
  * Combustion engine (Iron Engine). Burns fluid fuels and requires fluid coolant.
@@ -360,36 +353,25 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
      * Combined handler exposing 3 tanks: fuel (0), coolant (1), residue (2).
      * Fuel and coolant tanks accept fills; residue tank allows drains.
      */
-    //? if >=1.21.10 {
-    public final ResourceHandler<FluidResource> combinedFluidHandler = new ResourceHandler<FluidResource>() {
+    public final BCFluidStorage combinedFluidHandler = new BCFluidStorage() {
         @Override
         public int size() { return 3; }
 
         @Override
-        public FluidResource getResource(int tank) {
+        public BCFluidStack getStack(int tank) {
             return switch (tank) {
-                case 0 -> tankFuel.getResource(0);
-                case 1 -> tankCoolant.getResource(0);
-                case 2 -> tankResidue.getResource(0);
-                default -> FluidResource.EMPTY;
+                case 0 -> tankFuel.getFluidStack(0);
+                case 1 -> tankCoolant.getFluidStack(0);
+                case 2 -> tankResidue.getFluidStack(0);
+                default -> BCFluidStack.EMPTY;
             };
         }
 
         @Override
-        public long getAmountAsLong(int tank) {
-            return switch (tank) {
-                case 0 -> tankFuel.getAmountAsLong(0);
-                case 1 -> tankCoolant.getAmountAsLong(0);
-                case 2 -> tankResidue.getAmountAsLong(0);
-                default -> 0;
-            };
-        }
+        public int getCapacity(int tank, BCFluidStack resource) { return MAX_FLUID; }
 
         @Override
-        public long getCapacityAsLong(int tank, FluidResource resource) { return MAX_FLUID; }
-
-        @Override
-        public boolean isValid(int tank, FluidResource stack) {
+        public boolean isValid(int tank, BCFluidStack stack) {
             return switch (tank) {
                 case 0 -> tankFuel.isValid(0, stack);
                 case 1 -> tankCoolant.isValid(0, stack);
@@ -398,75 +380,18 @@ public class TileEngineIron_BC8 extends TileEngineBase_BC8 {
         }
 
         @Override
-        public int insert(int index, FluidResource resource, int amount, TransactionContext tx) {
+        public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             if (index == 0) return tankFuel.insert(0, resource, amount, tx);
             if (index == 1) return tankCoolant.insert(0, resource, amount, tx);
             return 0; // cannot insert to residue
         }
 
         @Override
-        public int extract(int index, FluidResource resource, int amount, TransactionContext tx) {
+        public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             if (index == 2) return tankResidue.extract(0, resource, amount, tx);
             return 0; // only residue can be extracted
         }
     };
-    //?} else {
-    /*public final IFluidHandler combinedFluidHandler = new IFluidHandler() {
-        @Override
-        public int getTanks() { return 3; }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            return NeoFluidStacks.toNeo(switch (tank) {
-                case 0 -> tankFuel.getFluidStack(0);
-                case 1 -> tankCoolant.getFluidStack(0);
-                case 2 -> tankResidue.getFluidStack(0);
-                default -> BCFluidStack.EMPTY;
-            });
-        }
-
-        @Override
-        public int getTankCapacity(int tank) {
-            return switch (tank) {
-                case 0 -> tankFuel.getCapacityMb(0);
-                case 1 -> tankCoolant.getCapacityMb(0);
-                case 2 -> tankResidue.getCapacityMb(0);
-                default -> 0;
-            };
-        }
-
-        @Override
-        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stack) {
-            return switch (tank) {
-                case 0 -> tankFuel.isFluidValid(0, stack);
-                case 1 -> tankCoolant.isFluidValid(0, stack);
-                default -> false;
-            };
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            boolean simulate = action.simulate();
-            int filled = tankFuel.fill(0, resource, simulate);
-            if (filled > 0) return filled;
-            return tankCoolant.fill(0, resource, simulate);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            BCFluidStack inResidue = tankResidue.getFluidStack(0);
-            if (!inResidue.isEmpty() && BCFluidStack.isSameFluidSameComponents(inResidue, resource)) {
-                return NeoFluidStacks.toNeo(tankResidue.drain(0, resource.getAmount(), action.simulate()));
-            }
-            return net.neoforged.neoforge.fluids.FluidStack.EMPTY;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-            return NeoFluidStacks.toNeo(tankResidue.drain(0, maxDrain, action.simulate()));
-        }
-    };*/
-    //?}
 
 
     // --- NBT ---

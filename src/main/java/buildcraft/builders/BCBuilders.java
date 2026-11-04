@@ -75,11 +75,9 @@ public class BCBuilders {
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
-        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
         // Quarry — advertises as an MJ connector too so kinesis pipes route power to it (a receiver IS a
         // connector), and gates FE insertion on the same wantsPower predicate as the MJ receiver, so a
@@ -100,8 +98,6 @@ public class BCBuilders {
         buildcraft.lib.mj.MjCapabilities.registerMjConsumer(event, BCBuildersBlockEntities.BUILDER.get(),
             builder -> builder.getMjReceiver(), energyCap,
             builder -> MjBatteryEnergyHandler.createIfRfEnabled(builder.getBattery()));
-        event.registerBlockEntity(fluidCap, BCBuildersBlockEntities.BUILDER.get(),
-            (builder, direction) -> builder.getTankManager());
     }
 
     /** The item storages, through the platform layer's capability registrar. */
@@ -114,6 +110,8 @@ public class BCBuilders {
         // Builder — pipes push resources into the 27-slot grid.
         registrar.blockItems(BCBuildersBlockEntities.BUILDER.get(),
             (builder, direction) -> builder.getItemHandler(direction));
+        // ... and fluid pipes top off its 4 tanks for fluid-block placement.
+        registrar.blockFluids(BCBuildersBlockEntities.BUILDER.get(), (builder, direction) -> builder.getTankManager());
 
         // Electronic Library — exposes its snapshot up/download slots to item pipes.
         registrar.blockItems(BCBuildersBlockEntities.LIBRARY.get(),

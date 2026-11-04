@@ -14,9 +14,5 @@ public interface ITileForBlueprintBuilder extends ITileForSnapshotBuilder {
 
     IItemTransactor getInvResources();
 
-    //? if >=1.21.10 {
-    net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.fluid.FluidResource> getTankManager();
-    //?} else {
-    /*net.neoforged.neoforge.fluids.capability.IFluidHandler getTankManager();*/
-    //?}
+    buildcraft.platform.transfer.BCFluidStorage getTankManager();
 }

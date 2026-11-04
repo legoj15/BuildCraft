@@ -40,7 +40,7 @@ import buildcraft.api.robots.EntityRobotBase;
 import buildcraft.api.robots.IRobotAccess;
 import buildcraft.api.robots.IRobotRegistry;
 import buildcraft.api.robots.ResourceId;
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.neoforge.NeoForgeFluids;
 import buildcraft.robotics.entity.UnreachableBlockCache;
 
 /** A whole robot, as far as an AI test cares: a real {@link MjBattery}, a settable position and docking
@@ -350,7 +350,7 @@ public class MockRobotAccess implements IRobotAccess {
         @Override
         public int extract(IFluidFilter filter, int maxDrain, TransactionContext tx) {
             FluidResource res = getResource(0);
-            if (res == null || res.isEmpty() || !filter.matches(NeoFluidStacks.fromNeo(res.toStack(getAmountAsInt(0))))) {
+            if (res == null || res.isEmpty() || !filter.matches(NeoForgeFluids.fromNeo(res.toStack(getAmountAsInt(0))))) {
                 return 0;
             }
             return extract(0, res, maxDrain, tx);
@@ -365,7 +365,7 @@ public class MockRobotAccess implements IRobotAccess {
         @Override
         public int extract(IFluidFilter filter, int maxDrain, boolean simulate) {
             FluidStack inTank = getFluidInTank(0);
-            if (inTank.isEmpty() || !filter.matches(NeoFluidStacks.fromNeo(inTank))) {
+            if (inTank.isEmpty() || !filter.matches(NeoForgeFluids.fromNeo(inTank))) {
                 return 0;
             }
             return drain(maxDrain, simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE

@@ -13,7 +13,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.fluids.BCFluidStack;
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.client.ClientPlatform;
 
 /**
  * Client-only lookup of how a fluid stack looks outside the world: its still sprite and its tint. Every tank, gauge,
@@ -54,12 +54,11 @@ public final class FluidSprites {
         //?} else {
         /*// Same rule as the 26.1+ model(): a fluid that declares no texture, or one that never reached the atlas,
         // falls back to water's instead of drawing the missing texture.
-        Identifier texture = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid())
-            .getStillTexture(NeoFluidStacks.toNeo(stack));
+        Identifier texture = ClientPlatform.fluids().stillTexture(stack);
         boolean missing = texture == null || blocksAtlas().getSprite(texture).contents().name()
             .equals(net.minecraft.client.renderer.texture.MissingTextureAtlasSprite.getLocation());
         return missing
-            ? net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(Fluids.WATER).getStillTexture()
+            ? ClientPlatform.fluids().stillTexture(new BCFluidStack(Fluids.WATER, 1))
             : texture;*/
         //?}
     }
@@ -70,12 +69,7 @@ public final class FluidSprites {
         if (stack.isEmpty()) {
             return 0xFFFFFFFF;
         }
-        //? if >=26.1 {
-        net.neoforged.neoforge.client.fluid.FluidTintSource source = model(stack).fluidTintSource();
-        int tint = source != null ? source.colorAsStack(NeoFluidStacks.toNeo(stack)) : 0xFFFFFFFF;
-        //?} else {
-        /*int tint = net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions.of(stack.getFluid()).getTintColor(NeoFluidStacks.toNeo(stack));*/
-        //?}
+        int tint = ClientPlatform.fluids().tint(stack);
         return (tint >>> 24) == 0 ? tint | 0xFF000000 : tint;
     }
 

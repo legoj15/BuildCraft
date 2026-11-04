@@ -12,6 +12,7 @@ import net.neoforged.neoforge.capabilities.BlockCapability;
 import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.platform.transfer.BCCapability;
+import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCItemStorage;
 
 /** Capability tokens for BuildCraft's internal capability routing.
@@ -31,19 +32,17 @@ public class CapUtil {
     @Nonnull
     public static final BCCapability<BCItemStorage> CAP_ITEMS = BCCapability.ITEM;
 
-    //? if >=1.21.10 {
-    /** Token for fluid handler capability. Routes to Capabilities.Fluid.BLOCK. */
+    /** Token for fluid storages: the loader-neutral {@link BCCapability#FLUID}, which the pipe holder resolves through
+     *  {@link buildcraft.platform.transfer.TransferAccess} to a {@link buildcraft.platform.transfer.BCFluidStorage}. */
     @Nonnull
-    public static final Object CAP_FLUIDS = Capabilities.Fluid.BLOCK;
+    public static final BCCapability<BCFluidStorage> CAP_FLUIDS = BCCapability.FLUID;
 
+    //? if >=1.21.10 {
     /** Token for energy handler capability. Routes to Capabilities.Energy.BLOCK. */
     @Nonnull
     public static final Object CAP_ENERGY = Capabilities.Energy.BLOCK;
     //?} else {
     /*@Nonnull
-    public static final Object CAP_FLUIDS = Capabilities.FluidHandler.BLOCK;
-
-    @Nonnull
     public static final Object CAP_ENERGY = Capabilities.EnergyStorage.BLOCK;*/
     //?}
 }

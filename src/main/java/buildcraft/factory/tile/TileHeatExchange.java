@@ -34,14 +34,11 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
-
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.lib.transfer.FluidStorageUtil;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransactionContext;
+import buildcraft.platform.transfer.TransferAccess;
 import buildcraft.api.recipes.BuildcraftRecipeRegistry;
 import buildcraft.api.recipes.IRefineryRecipeManager;
 import buildcraft.api.recipes.IRefineryRecipeManager.ICoolableRecipe;
@@ -678,12 +675,10 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             this.tile = tile;
         }
 
-        //? if >=1.21.10 {
         @Nullable
-        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
+        BCFluidStorage getFluidAutoOutputTarget() {
             return null;
         }
-        //?}
     }
 
     /**
@@ -722,12 +717,9 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             }
         }
 
-        //? if >=1.21.10 {
-        /** Modern-only: the original Transfer-API internal insert, retained so the shared-transaction
-         *  atomicity/rollback unit tests (HeatExchangerTester) keep exercising the path 26.1.2 ships.
-         *  Production craft() uses the version-neutral {@link #fillInternal}. */
-        public int insertInternal(int index, FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        /** The transactional internal insert, so the shared-transaction atomicity/rollback unit tests
+         *  (HeatExchangerTester) keep exercising it. Production craft() uses {@link #fillInternal}. */
+        public int insertInternal(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             internalInsert = true;
             try {
                 return insert(index, resource, amount, tx);
@@ -735,7 +727,6 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
                 internalInsert = false;
             }
         }
-        //?}
     }
 
     public static class ExchangeSectionStart extends ExchangeSection {
@@ -768,17 +759,14 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             return manager.getHeatableRegistry().getRecipeForInput(fluid) != null;
         }
 
-        //? if >=1.21.10 {
         @Nullable
         @Override
-        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
+        BCFluidStorage getFluidAutoOutputTarget() {
             Direction facing = getTile().getFacing();
             if (facing == null || getTile().level == null) return null;
             BlockPos targetPos = getTile().worldPosition.relative(facing.getClockWise());
-            return getTile().level.getCapability(
-                    Capabilities.Fluid.BLOCK, targetPos, facing.getCounterClockWise());
+            return TransferAccess.findFluid(getTile().level, targetPos, facing.getCounterClockWise());
         }
-        //?}
 
         @Override
         void tick() {
@@ -986,12 +974,13 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
 
         private void output() {
             //? if >=1.21.10 {
-            ResourceHandler<FluidResource> thisOut = getFluidAutoOutputTarget();
+            // 1.21.1 never auto-outputs (it did not before the platform layer either).
+            BCFluidStorage thisOut = getFluidAutoOutputTarget();
             if (thisOut != null) {
                 moveFluid(tankOutput, thisOut, 1000);
             }
             if (endSection != null) {
-                ResourceHandler<FluidResource> endOut = endSection.getFluidAutoOutputTarget();
+                BCFluidStorage endOut = endSection.getFluidAutoOutputTarget();
                 if (endOut != null) {
                     moveFluid(endSection.tankOutput, endOut, 1000);
                 }
@@ -1046,16 +1035,9 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             return t.drain(0, fluid.getAmount(), simulate).getAmount() == fluid.getAmount();
         }
 
-        //? if >=1.21.10 {
-        private static void moveFluid(BCFluidTank from, ResourceHandler<FluidResource> to, int maxAmount) {
-            try (Transaction tx = Transaction.openRoot()) {
-                int moved = net.neoforged.neoforge.transfer.ResourceHandlerUtil.move(
-                    from, to, r -> true, maxAmount, tx
-                );
-                if (moved > 0) tx.commit();
-            }
+        private static void moveFluid(BCFluidTank from, BCFluidStorage to, int maxAmount) {
+            FluidStorageUtil.move(from, to, r -> true, maxAmount, null);
         }
-        //?}
     }
 
     public static class ExchangeSectionEnd extends ExchangeSection {
@@ -1070,15 +1052,11 @@ public class TileHeatExchange extends AbstractBCSyncedBlockEntity implements IBC
             return manager.getCoolableRegistry().getRecipeForInput(fluid) != null;
         }
 
-        //? if >=1.21.10 {
         @Nullable
         @Override
-        ResourceHandler<FluidResource> getFluidAutoOutputTarget() {
+        BCFluidStorage getFluidAutoOutputTarget() {
             if (getTile().level == null) return null;
-            return getTile().level.getCapability(
-                    Capabilities.Fluid.BLOCK,
-                    getTile().worldPosition.above(), Direction.DOWN);
+            return TransferAccess.findFluid(getTile().level, getTile().worldPosition.above(), Direction.DOWN);
         }
-        //?}
     }
 }

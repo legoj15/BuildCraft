@@ -6,7 +6,7 @@
 package buildcraft.lib.fluid;
 
 // Version-split bodies: 1.21.10+ exercises the NeoForge Transfer API directly
-// (ResourceHandler / FluidResource / FluidStacksResourceHandler / Transaction — no such API
+// (ResourceHandler / FluidResource / BCFluidTank / Transaction — no such API
 // pre-1.21.9); 1.21.1 stands in the classic IFluidHandler surface (BCFluidTank's fill/drain
 // plus FluidAction.SIMULATE) and pins the weaker cross-call composite properties — see the
 // per-test notes.
@@ -15,18 +15,10 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.material.Fluids;
 
 import buildcraft.api.fluids.BCFluidStack;
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransactionContext;
+import buildcraft.platform.transfer.BCTransaction;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 
 /**
  * Tank bookkeeping coverage. The 1.12.2 original tested a {@code TankManager} class that owned
@@ -54,48 +46,30 @@ public class TankManagerTester {
 
     /** Cap-3 single-slot tank: insert 2 → 2; insert 2 more → 1 (only 1 of capacity left). */
     public static void testSingleTankCapacityRespect(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 3);
-        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
-        try (Transaction tx = Transaction.openRoot()) {
+        BCFluidTank tank = new BCFluidTank(1, 3);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int first = tank.insert(0, water, 2, tx);
             assertTrue(first == 2, "first insert into cap-3 tank with 2 should fit fully, got " + first);
             int second = tank.insert(0, water, 2, tx);
             assertTrue(second == 1, "second insert into a 2/3-full tank with 2 should only fit 1, got " + second);
             tx.commit();
         }
-        assertTrue(tank.getAmountAsLong(0) == 3, "tank should be at capacity 3, got " + tank.getAmountAsLong(0));
-        //?} else {
-        /*BCFluidTank tank = new BCFluidTank(1, 3);
-        BCFluidStack water = new BCFluidStack(Fluids.WATER, 2);
-        int first = tank.fill(0, water, false);
-        assertTrue(first == 2, "first fill into cap-3 tank with 2 should fit fully, got " + first);
-        int second = tank.fill(0, water, false);
-        assertTrue(second == 1, "second fill into a 2/3-full tank with 2 should only fit 1, got " + second);
-        assertTrue(tank.getAmountMb(0) == 3, "tank should be at capacity 3, got " + tank.getAmountMb(0));*/
-        //?}
+        assertTrue(tank.getAmount(0) == 3, "tank should be at capacity 3, got " + tank.getAmount(0));
         helper.succeed();
     }
 
     /** Extract more than is held → returns only what's actually present. */
     public static void testSingleTankExtractReturnsOnlyWhatExists(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        FluidStacksResourceHandler tank = new FluidStacksResourceHandler(1, 3);
-        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
-        tank.set(0, water, 3);
-        try (Transaction tx = Transaction.openRoot()) {
+        BCFluidTank tank = new BCFluidTank(1, 3);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
+        tank.setFluidStack(0, water.copyWithAmount(3));
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int drained = tank.extract(0, water, 5, tx);
             assertTrue(drained == 3, "extract(5) on a tank holding 3 should return 3, got " + drained);
             tx.commit();
         }
-        assertTrue(tank.getAmountAsLong(0) == 0, "tank should be empty after drain, got " + tank.getAmountAsLong(0));
-        //?} else {
-        /*BCFluidTank tank = new BCFluidTank(1, 3);
-        tank.setFluidStack(0, new BCFluidStack(Fluids.WATER, 3));
-        BCFluidStack drained = tank.drain(0, 5, false);
-        assertTrue(drained.getAmount() == 3, "drain(5) on a tank holding 3 should return 3, got " + drained.getAmount());
-        assertTrue(tank.getAmountMb(0) == 0, "tank should be empty after drain, got " + tank.getAmountMb(0));*/
-        //?}
+        assertTrue(tank.getAmount(0) == 0, "tank should be empty after drain, got " + tank.getAmount(0));
         helper.succeed();
     }
 
@@ -109,34 +83,17 @@ public class TankManagerTester {
      * anything (a LIFO reorder ends with the per-slot amounts swapped and fails).
      */
     public static void testCompositeInsertSpillsAcrossSlots(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        FluidStacksResourceHandler t0 = new FluidStacksResourceHandler(1, 3);
-        FluidStacksResourceHandler t1 = new FluidStacksResourceHandler(1, 3);
-        ResourceHandler<FluidResource> composite = composeTwo(t0, t1);
-        FluidResource lava = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.LAVA, 1)));
-        try (Transaction tx = Transaction.openRoot()) {
+        BCFluidTank t0 = new BCFluidTank(1, 3);
+        BCFluidTank t1 = new BCFluidTank(1, 3);
+        BCFluidStorage composite = composeTwo(t0, t1);
+        BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 1);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = composite.insert(lava, 5, tx);
             assertTrue(inserted == 5, "composite insert(5) across two cap-3 tanks should accept all 5, got " + inserted);
             tx.commit();
         }
-        assertTrue(t0.getAmountAsLong(0) == 3, "slot 0 should be full at 3, got " + t0.getAmountAsLong(0));
-        assertTrue(t1.getAmountAsLong(0) == 2, "slot 1 should hold spillover 2, got " + t1.getAmountAsLong(0));
-        //?} else {
-        /*// 1.21.1: no in-one-call spillover — the classic composite returns at the first
-        // matching slot, and each call re-offers its amount from scratch, so the caller
-        // re-issues only the remainder to lay the 5 out as {3, 2}.
-        BCFluidTank t0 = new BCFluidTank(1, 3);
-        BCFluidTank t1 = new BCFluidTank(1, 3);
-        IFluidHandler composite = composeTwo(t0, t1);
-        BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 5);
-        int first = composite.fill(NeoFluidStacks.toNeo(lava), FluidAction.EXECUTE);
-        assertTrue(first == 3, "first fill(5) can only top up slot 0's cap of 3, got " + first);
-        int second = composite.fill(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.LAVA, 5 - first)), FluidAction.EXECUTE);
-        assertTrue(second == 2, "second fill of the remaining 2 should land in slot 1, got " + second);
-        assertTrue(first + second == 5, "conservation: the offered 5 must all be stored, got " + (first + second));
-        assertTrue(t0.getAmountMb(0) == 3, "slot 0 should be full at 3, got " + t0.getAmountMb(0));
-        assertTrue(t1.getAmountMb(0) == 2, "slot 1 should hold spillover 2, got " + t1.getAmountMb(0));*/
-        //?}
+        assertTrue(t0.getAmount(0) == 3, "slot 0 should be full at 3, got " + t0.getAmount(0));
+        assertTrue(t1.getAmount(0) == 2, "slot 1 should hold spillover 2, got " + t1.getAmount(0));
         helper.succeed();
     }
 
@@ -149,36 +106,19 @@ public class TankManagerTester {
      * leaves the per-slot amounts wrong and fails.
      */
     public static void testCompositeExtractDrainsAcrossSlots(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        FluidStacksResourceHandler t0 = new FluidStacksResourceHandler(1, 3);
-        FluidStacksResourceHandler t1 = new FluidStacksResourceHandler(1, 3);
-        FluidResource lava = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.LAVA, 1)));
-        t0.set(0, lava, 3);
-        t1.set(0, lava, 3);
-        ResourceHandler<FluidResource> composite = composeTwo(t0, t1);
-        try (Transaction tx = Transaction.openRoot()) {
+        BCFluidTank t0 = new BCFluidTank(1, 3);
+        BCFluidTank t1 = new BCFluidTank(1, 3);
+        BCFluidStack lava = new BCFluidStack(Fluids.LAVA, 1);
+        t0.setFluidStack(0, lava.copyWithAmount(3));
+        t1.setFluidStack(0, lava.copyWithAmount(3));
+        BCFluidStorage composite = composeTwo(t0, t1);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int drained = composite.extract(lava, 4, tx);
             assertTrue(drained == 4, "composite extract(4) across two full cap-3 tanks should return 4, got " + drained);
             tx.commit();
         }
-        assertTrue(t0.getAmountAsLong(0) == 0, "slot 0 should be drained empty, got " + t0.getAmountAsLong(0));
-        assertTrue(t1.getAmountAsLong(0) == 2, "slot 1 should hold 2 remaining, got " + t1.getAmountAsLong(0));
-        //?} else {
-        /*// 1.21.1: the classic composite drains only the first non-empty slot per call — the
-        // caller re-issues the remainder to finish the pull across calls.
-        BCFluidTank t0 = new BCFluidTank(1, 3);
-        BCFluidTank t1 = new BCFluidTank(1, 3);
-        t0.setFluidStack(0, new BCFluidStack(Fluids.LAVA, 3));
-        t1.setFluidStack(0, new BCFluidStack(Fluids.LAVA, 3));
-        IFluidHandler composite = composeTwo(t0, t1);
-        BCFluidStack first = NeoFluidStacks.fromNeo(composite.drain(4, FluidAction.EXECUTE));
-        assertTrue(first.getAmount() == 3, "first drain(4) can only pull slot 0's 3, got " + first.getAmount());
-        BCFluidStack second = NeoFluidStacks.fromNeo(composite.drain(4 - first.getAmount(), FluidAction.EXECUTE));
-        assertTrue(second.getAmount() == 1, "second drain of the remaining 1 should come from slot 1, got " + second.getAmount());
-        assertTrue(first.getAmount() + second.getAmount() == 4, "conservation: 4 total drained");
-        assertTrue(t0.getAmountMb(0) == 0, "slot 0 should be drained empty, got " + t0.getAmountMb(0));
-        assertTrue(t1.getAmountMb(0) == 2, "slot 1 should hold 2 remaining, got " + t1.getAmountMb(0));*/
-        //?}
+        assertTrue(t0.getAmount(0) == 0, "slot 0 should be drained empty, got " + t0.getAmount(0));
+        assertTrue(t1.getAmount(0) == 2, "slot 1 should hold 2 remaining, got " + t1.getAmount(0));
         helper.succeed();
     }
 
@@ -192,133 +132,52 @@ public class TankManagerTester {
      * and deliver exactly the promise on execute.
      */
     public static void testCompositeInsertRollsBackOnAbort(GameTestHelper helper) {
-        //? if >=1.21.10 {
-        FluidStacksResourceHandler t0 = new FluidStacksResourceHandler(1, 3);
-        FluidStacksResourceHandler t1 = new FluidStacksResourceHandler(1, 3);
-        ResourceHandler<FluidResource> composite = composeTwo(t0, t1);
-        FluidResource water = FluidResource.of(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 1)));
-        try (Transaction tx = Transaction.openRoot()) {
+        BCFluidTank t0 = new BCFluidTank(1, 3);
+        BCFluidTank t1 = new BCFluidTank(1, 3);
+        BCFluidStorage composite = composeTwo(t0, t1);
+        BCFluidStack water = new BCFluidStack(Fluids.WATER, 1);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int inserted = composite.insert(water, 5, tx);
             assertTrue(inserted == 5, "insert inside tx should still report 5 accepted, got " + inserted);
             // No tx.commit() — try-with-resources close aborts.
         }
-        assertTrue(t0.getAmountAsLong(0) == 0, "slot 0 should be untouched after abort, got " + t0.getAmountAsLong(0));
-        assertTrue(t1.getAmountAsLong(0) == 0, "slot 1 should be untouched after abort, got " + t1.getAmountAsLong(0));
-        //?} else {
-        /*// 1.21.1: no transactions — FluidAction.SIMULATE is the rollback stand-in.
-        BCFluidTank t0 = new BCFluidTank(1, 3);
-        BCFluidTank t1 = new BCFluidTank(1, 3);
-        IFluidHandler composite = composeTwo(t0, t1);
-        BCFluidStack water = new BCFluidStack(Fluids.WATER, 5);
-        int promised = composite.fill(NeoFluidStacks.toNeo(water), FluidAction.SIMULATE);
-        assertTrue(promised == 3, "simulate fill should promise only slot 0's 3 of the offered 5, got " + promised);
-        assertTrue(t0.getAmountMb(0) == 0, "SIMULATE must not mutate slot 0, got " + t0.getAmountMb(0));
-        assertTrue(t1.getAmountMb(0) == 0, "SIMULATE must not mutate slot 1, got " + t1.getAmountMb(0));
-        // The promise must be honest: executing the promised amount lands exactly that.
-        int landed = composite.fill(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, promised)), FluidAction.EXECUTE);
-        assertTrue(landed == promised, "execute should deliver the promised " + promised + ", got " + landed);
-        assertTrue(t0.getAmountMb(0) == 3 && t1.getAmountMb(0) == 0,
-                "executed fill must land only in slot 0, got slot0=" + t0.getAmountMb(0) + " slot1=" + t1.getAmountMb(0));*/
-        //?}
+        assertTrue(t0.getAmount(0) == 0, "slot 0 should be untouched after abort, got " + t0.getAmount(0));
+        assertTrue(t1.getAmount(0) == 0, "slot 1 should be untouched after abort, got " + t1.getAmount(0));
         helper.succeed();
     }
 
-    //? if >=1.21.10 {
     /** Mirrors {@code TileBuilder.tankManager}: a 2-slot composite over two single-slot tanks. */
-    private static ResourceHandler<FluidResource> composeTwo(FluidStacksResourceHandler t0,
-                                                              FluidStacksResourceHandler t1) {
-        FluidStacksResourceHandler[] tanks = { t0, t1 };
-        return new ResourceHandler<>() {
+    private static BCFluidStorage composeTwo(BCFluidTank t0,
+                                                              BCFluidTank t1) {
+        BCFluidTank[] tanks = { t0, t1 };
+        return new BCFluidStorage() {
             @Override
             public int size() { return tanks.length; }
 
             @Override
-            public FluidResource getResource(int slot) {
-                return slot >= 0 && slot < tanks.length ? tanks[slot].getResource(0) : FluidResource.EMPTY;
+            public BCFluidStack getStack(int slot) {
+                return slot >= 0 && slot < tanks.length ? tanks[slot].getStack(0) : BCFluidStack.EMPTY;
             }
 
             @Override
-            public long getAmountAsLong(int slot) {
-                return slot >= 0 && slot < tanks.length ? tanks[slot].getAmountAsLong(0) : 0;
+            public int getCapacity(int slot, BCFluidStack resource) {
+                return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacity(0, resource) : 0;
             }
 
             @Override
-            public long getCapacityAsLong(int slot, FluidResource resource) {
-                return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacityAsLong(0, resource) : 0;
-            }
-
-            @Override
-            public boolean isValid(int slot, FluidResource resource) {
+            public boolean isValid(int slot, BCFluidStack resource) {
                 return slot >= 0 && slot < tanks.length && tanks[slot].isValid(0, resource);
             }
 
             @Override
-            public int insert(int slot, FluidResource resource, int amount, TransactionContext ctx) {
+            public int insert(int slot, BCFluidStack resource, int amount, BCTransactionContext ctx) {
                 return slot >= 0 && slot < tanks.length ? tanks[slot].insert(0, resource, amount, ctx) : 0;
             }
 
             @Override
-            public int extract(int slot, FluidResource resource, int amount, TransactionContext ctx) {
+            public int extract(int slot, BCFluidStack resource, int amount, BCTransactionContext ctx) {
                 return slot >= 0 && slot < tanks.length ? tanks[slot].extract(0, resource, amount, ctx) : 0;
             }
         };
     }
-    //?} else {
-    /*// 1.21.1 mirror of TileBuilder.tankManager's classic composite: fill and drain both
-    // return at the first matching slot per call — no in-call spillover.
-    private static IFluidHandler composeTwo(BCFluidTank t0, BCFluidTank t1) {
-        BCFluidTank[] tanks = { t0, t1 };
-        return new IFluidHandler() {
-            @Override
-            public int getTanks() { return tanks.length; }
-
-            @Override
-            public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int slot) {
-                return NeoFluidStacks.toNeo(slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : BCFluidStack.EMPTY);
-            }
-
-            @Override
-            public int getTankCapacity(int slot) {
-                return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacityMb(0) : 0;
-            }
-
-            @Override
-            public boolean isFluidValid(int slot, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
-                return slot >= 0 && slot < tanks.length && tanks[slot].isFluidValid(0, stackNeo);
-            }
-
-            @Override
-            public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-                for (int i = 0; i < tanks.length; i++) {
-                    int n = tanks[i].fill(0, resource, action.simulate());
-                    if (n > 0) {
-                        return n;
-                    }
-                }
-                return 0;
-            }
-
-            @Override
-            public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-                for (int i = 0; i < tanks.length; i++) {
-                    BCFluidStack inTank = tanks[i].getFluidStack(0);
-                    if (!inTank.isEmpty() && BCFluidStack.isSameFluidSameComponents(inTank, resource)) {
-                        return NeoFluidStacks.toNeo(tanks[i].drain(0, resource.getAmount(), action.simulate()));
-                    }
-                }
-                return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-            }
-
-            @Override
-            public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-                for (int i = 0; i < tanks.length; i++) {
-                    if (!tanks[i].getFluidStack(0).isEmpty()) {
-                        return NeoFluidStacks.toNeo(tanks[i].drain(0, maxDrain, action.simulate()));
-                    }
-                }
-                return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-            }
-        };
-    }*/
-    //?}
 }

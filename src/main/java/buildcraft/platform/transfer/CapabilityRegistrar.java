@@ -19,6 +19,9 @@ public interface CapabilityRegistrar {
     /** Exposes {@code type}'s item storage per side ({@code side} is null for an unsided query). */
     <T extends BlockEntity> void blockItems(BlockEntityType<T> type, BlockProvider<T, BCItemStorage> provider);
 
+    /** Exposes {@code type}'s fluid storage per side ({@code side} is null for an unsided query). */
+    <T extends BlockEntity> void blockFluids(BlockEntityType<T> type, BlockProvider<T, BCFluidStorage> provider);
+
     /** A block entity's storage for one side, or null if that side has none. */
     @FunctionalInterface
     interface BlockProvider<T, S> {

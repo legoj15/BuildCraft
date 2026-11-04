@@ -26,6 +26,9 @@ public final class TransferAccess {
         if (capability == BCCapability.ITEM) {
             return capability.type().cast(findItem(level, pos, side));
         }
+        if (capability == BCCapability.FLUID) {
+            return capability.type().cast(findFluid(level, pos, side));
+        }
         throw new IllegalArgumentException("Unknown capability " + capability);
     }
 
@@ -37,6 +40,16 @@ public final class TransferAccess {
     /** {@code entity}'s whole inventory, or null. */
     public static BCItemStorage findItem(Entity entity) {
         return Platform.transfer().findItem(entity);
+    }
+
+    /** The fluid storage at {@code pos} seen from {@code side} (null: unsided), or null if there is none. */
+    public static BCFluidStorage findFluid(Level level, BlockPos pos, Direction side) {
+        return Platform.transfer().findFluid(level, pos, side);
+    }
+
+    /** A cached fluid lookup at one position and side. */
+    public static BCLookupCache<BCFluidStorage> fluidCache(ServerLevel level, BlockPos pos, Direction side) {
+        return Platform.transfer().fluidCache(level, pos, side);
     }
 
     /** A cached item lookup at one position and side. */

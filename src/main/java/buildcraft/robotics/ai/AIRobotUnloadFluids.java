@@ -10,20 +10,13 @@ package buildcraft.robotics.ai;
 
 import javax.annotation.Nullable;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
-import buildcraft.api.core.IFluidHandlerAdv;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.robotics.RobotFluids;
 
 /** Unloads fluid from the robot's own tank into its station output, one bucket per pass, until the tank
  *  is empty or the station is full. Ported from 7.1.x {@code AIRobotUnloadFluids} (7.1.x moved the fluid
@@ -68,39 +61,34 @@ public class AIRobotUnloadFluids extends AIRobot {
             return 0;
         }
 
-        //? if >=1.21.10 {
-        IFluidHandlerAdv robotTank = robot.getFluidHandler();
-        FluidResource resource = robotTank.getResource(0);
-        if (resource.isEmpty()) {
-            return 0;
-        }
-        int carried = robotTank.getAmountAsInt(0);
-        if (carried <= 0) {
+        BCFluidStorage robotTank = RobotFluids.tank(robot);
+        BCFluidStack carried = robotTank.getStack(0);
+        if (carried.isEmpty()) {
             return 0;
         }
         // 7.1.x gated the unload on ActionRobotFilter.canInteractWithFluid(station,
         // SimpleFluidFilter(carried), ActionStationAcceptFluids.class) — the D1 policy takes the filter.
-        if (!station.canRobotAcceptFluid(stack -> BCFluidStack.isSameFluid(stack, NeoFluidStacks.fromNeo(resource.toStack(1))))) {
+        if (!station.canRobotAcceptFluid(stack -> BCFluidStack.isSameFluid(stack, carried))) {
             return 0;
         }
         // A station whose pipe carries no fluid flow has NO fluid output, even when an Accept Fluids gate
         // action makes canRobotAcceptFluid say yes — 7.1.x guarded exactly this with
         // `if (fluidHandler == null) return 0;`.
-        ResourceHandler<FluidResource> output = station.getFluidOutput();
+        BCFluidStorage output = RobotFluids.output(station);
         if (output == null) {
             return 0;
         }
-        int room = output.getCapacityAsInt(0, resource) - output.getAmountAsInt(0);
-        int amount = Math.min(Math.min(carried, room), BUCKET);
+        int room = output.getCapacity(0, carried) - output.getAmount(0);
+        int amount = Math.min(Math.min(carried.getAmount(), room), BUCKET);
         if (amount <= 0) {
             return 0;
         }
-        try (Transaction tx = Transaction.openRoot()) {
-            int extracted = robotTank.extract(0, resource, amount, tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int extracted = robotTank.extract(0, carried, amount, tx);
             if (extracted <= 0) {
                 return 0;
             }
-            if (output.insert(0, resource, extracted, tx) < extracted) {
+            if (output.insert(0, carried, extracted, tx) < extracted) {
                 return 0;
             }
             if (doUnload) {
@@ -108,56 +96,6 @@ public class AIRobotUnloadFluids extends AIRobot {
             }
             return extracted;
         }
-        //?} else {
-        /*IFluidHandlerAdv robotTank = robot.getFluidHandler();
-        BCFluidStack carriedStack = NeoFluidStacks.fromNeo(robotTank.getFluidInTank(0));
-        if (carriedStack.isEmpty()) {
-            return 0;
-        }
-        if (!station.canRobotAcceptFluid(stack -> BCFluidStack.isSameFluid(stack, carriedStack))) {
-            return 0;
-        }
-        IFluidHandler output = station.getFluidOutput();
-        if (output == null) {
-            return 0;
-        }
-        int room = output.getTankCapacity(0) - output.getFluidInTank(0).getAmount();
-        int amount = Math.min(Math.min(carriedStack.getAmount(), room), BUCKET);
-        if (amount <= 0) {
-            return 0;
-        }
-        // The classic getFluidInTank may ALIAS the handler's internal stack (FluidTank does), which
-        // drain() then shrinks — so the request is copied up front, and the fill always uses a fresh stack
-        // a drain returned, never carriedStack (copyWithAmount on an emptied alias hands fill an EMPTY
-        // stack and 0 comes back).
-        BCFluidStack wanted = carriedStack.copyWithAmount(amount);
-        // Same order as the 1.21.10+ branch's rolled-back transaction: prove BOTH halves in simulation
-        // first, and only then execute. Draining the robot first and learning afterwards that the station
-        // refuses the fill destroys the carried fluid.
-        BCFluidStack simulated = NeoFluidStacks.fromNeo(robotTank.drain(NeoFluidStacks.toNeo(wanted), IFluidHandler.FluidAction.SIMULATE));
-        int extractable = simulated.getAmount();
-        if (extractable <= 0) {
-            return 0;
-        }
-        if (output.fill(NeoFluidStacks.toNeo(simulated), IFluidHandler.FluidAction.SIMULATE) < extractable) {
-            return 0;
-        }
-        if (!doUnload) {
-            return extractable;
-        }
-        BCFluidStack drained = NeoFluidStacks.fromNeo(robotTank.drain(NeoFluidStacks.toNeo(wanted.copyWithAmount(extractable)), IFluidHandler.FluidAction.EXECUTE));
-        int extracted = drained.getAmount();
-        if (extracted <= 0) {
-            return 0;
-        }
-        int filled = output.fill(NeoFluidStacks.toNeo(drained), IFluidHandler.FluidAction.EXECUTE);
-        if (filled < extracted) {
-            // The station changed between the dry run and the real fill (cannot happen inside one server
-            // tick, but a destroyed bucket is worse than a defensive line): hand the rest back.
-            robotTank.fill(NeoFluidStacks.toNeo(drained.copyWithAmount(extracted - filled)), IFluidHandler.FluidAction.EXECUTE);
-        }
-        return filled;*/
-        //?}
     }
 
     @Override

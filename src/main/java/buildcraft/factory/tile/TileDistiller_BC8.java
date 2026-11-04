@@ -27,6 +27,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?}
 
+import buildcraft.platform.transfer.BCTransactionContext;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -609,18 +610,15 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
             }
         }
 
-        //? if >=1.21.10 {
-        /** Modern external-extract guard: the capability + the atomicity unit tests reach the tank via
-         *  the Transfer-API {@code extract} (which ignores validity), so block it here unless internal. */
+        /** External-extract guard: the capability and the atomicity unit tests reach the tank through the
+         *  transactional {@code extract} (which ignores validity), so block it here unless internal. */
         @Override
-        public int extract(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             return internalExtract ? super.extract(index, resource, amount, tx) : 0;
         }
 
-        /** Modern Transfer-API internal extract retained for the shared-transaction unit tests. */
-        public int extractInternal(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        /** Transactional internal extract, for the shared-transaction unit tests. */
+        public int extractInternal(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             internalExtract = true;
             try {
                 return super.extract(index, resource, amount, tx);
@@ -628,7 +626,6 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
                 internalExtract = false;
             }
         }
-        //?}
     }
 
     /**
@@ -663,10 +660,8 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
             }
         }
 
-        //? if >=1.21.10 {
-        /** Modern Transfer-API internal insert retained for the shared-transaction unit tests. */
-        public int insertInternal(int index, net.neoforged.neoforge.transfer.fluid.FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext tx) {
+        /** Transactional internal insert, for the shared-transaction unit tests. */
+        public int insertInternal(int index, BCFluidStack resource, int amount, BCTransactionContext tx) {
             internalInsert = true;
             try {
                 return super.insert(index, resource, amount, tx);
@@ -674,7 +669,6 @@ public class TileDistiller_BC8 extends AbstractBCSyncedBlockEntity implements IB
                 internalInsert = false;
             }
         }
-        //?}
     }
 }
 

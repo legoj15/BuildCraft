@@ -37,7 +37,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.factory.BCFactoryBlockEntities;
 import buildcraft.factory.tile.TileTank;
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.block.BlockBCTile_Waterloggable;
@@ -203,11 +202,7 @@ public class BlockTank extends BlockBCTile_Waterloggable<TileTank> implements IT
         // (tank full/empty) — consume silently without opening the GUI, matching
         // 1.12.2 behavior where repeated right-clicking with a bucket did nothing.
         // Only open the GUI for non-fluid items (e.g. a wrench or empty hand fallback).
-        //? if >=1.21.10 {
-        boolean isFluidContainer = stack.getCapability(Capabilities.Fluid.ITEM, null) != null;
-        //?} else {
-        /*boolean isFluidContainer = stack.getCapability(Capabilities.FluidHandler.ITEM, null) != null;*/
-        //?}
+        boolean isFluidContainer = FluidUtilBC.isFluidContainer(stack);
         if (!isFluidContainer && !level.isClientSide()) {
             tank.openFor(player);
         }

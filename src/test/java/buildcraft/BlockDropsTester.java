@@ -17,12 +17,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluids;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.builders.BCBuildersBlocks;
 import buildcraft.builders.tile.TileArchitectTable;
@@ -42,7 +39,6 @@ import buildcraft.factory.tile.TileHeatExchange;
 import buildcraft.factory.tile.TilePump;
 import buildcraft.factory.tile.TileTank;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.test.DropArenaUtil;
 import buildcraft.lib.test.DropArenaUtil.Drops;
 import buildcraft.transport.BCTransportBlocks;
@@ -207,15 +203,10 @@ public class BlockDropsTester {
     }
 
     private static void fillBcTank(BCFluidTank tank, BCFluidStack stack) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.open(null)) {
-            tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
+        try (BCTransaction tx = BCTransaction.open(null)) {
+            tank.insert(0, stack, stack.getAmount(), tx);
             tx.commit();
         }
-        //?} else {
-        /*// 1.21.1 has no Transfer API; BCFluidTank exposes a version-neutral fill(slot, stack, simulate).
-        tank.fill(0, stack, false);*/
-        //?}
     }
 
     // ---------- Non-player removal (explosion / piston / mod tool) spills contents ----------

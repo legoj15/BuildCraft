@@ -40,17 +40,23 @@ public class FluidSpritesGuardTester {
             .orElseThrow(() -> new AssertionError(relativePath + " is missing from this node's main sources"));
     }
 
+    /** The loader-side lookup ({@code ClientPlatform.fluids()}) on NeoForge. */
+    private static final String NEOFORGE_LOOKUP = "buildcraft/platform/neoforge/client/NeoForgeClientFluids.java";
+
     /** The lookup reads the fluid's own client data, stack-aware, through the API this node has. */
     @Test
     public void lookupAsksTheFluidForItsStackAwareTextureAndTint() {
-        // The NeoForge client APIs take NeoForge's FluidStack: since S13 the BCFluidStack is converted at the call.
-        String code = MainSourceSet.codeOnly(file(LOOKUP).text()).replace("NeoFluidStacks.toNeo(stack", "stack");
+        // The NeoForge client APIs take NeoForge's FluidStack: the BCFluidStack is converted at the call.
+        String code = MainSourceSet.codeOnly(file(NEOFORGE_LOOKUP).text()).replace("NeoForgeFluids.toNeo(stack", "stack");
         boolean clientExtensions = code.contains("getStillTexture(stack") && code.contains("getTintColor(stack");
         boolean fluidModels = code.contains("getFluidStateModelSet(") && code.contains("stillMaterial()")
             && code.contains("colorAsStack(stack");
         Assertions.assertTrue(clientExtensions ^ fluidModels,
-            "FluidSprites must resolve through IClientFluidTypeExtensions (below 26.1) or the FluidModel set (26.1+), "
-                + "passing the stack; found neither or both live on this node");
+            "NeoForgeClientFluids must resolve through IClientFluidTypeExtensions (below 26.1) or the FluidModel set "
+                + "(26.1+), passing the stack; found neither or both live on this node");
+        String sprites = MainSourceSet.codeOnly(file(LOOKUP).text());
+        Assertions.assertTrue(sprites.contains("ClientPlatform.fluids().tint(stack"),
+            "FluidSprites must take a fluid's tint from the platform layer's client fluid lookup");
     }
 
     /** The lookup names no texture at all — not even a fallback — so no fluid can be special-cased back into a guess.

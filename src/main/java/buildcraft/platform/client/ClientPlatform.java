@@ -44,6 +44,23 @@ public final class ClientPlatform {
         }
     }
 
+    /** How the loader draws a fluid: its still texture and tint. */
+    public static ClientFluids fluids() {
+        return FluidsHolder.INSTANCE;
+    }
+
+    private static final class FluidsHolder {
+        static final ClientFluids INSTANCE = create();
+
+        private static ClientFluids create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.client.NeoForgeClientFluids();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.client.FabricClientFluids();
+            *///?}
+        }
+    }
+
     private static final class HooksHolder {
         static final ClientHooks INSTANCE = create();
 

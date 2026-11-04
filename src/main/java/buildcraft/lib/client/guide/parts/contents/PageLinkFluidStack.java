@@ -16,7 +16,6 @@ import buildcraft.lib.client.guide.entry.PageEntryFluidStack;
 import buildcraft.lib.client.guide.entry.PageValue;
 import buildcraft.lib.client.guide.parts.GuidePage;
 import buildcraft.lib.client.guide.parts.GuidePageFactory;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiFluid;
 import buildcraft.lib.gui.ISimpleDrawable;
 
@@ -33,7 +32,7 @@ public final class PageLinkFluidStack extends PageLink {
 
     public static PageLinkFluidStack create(boolean startVisible, BCFluidStack stack, ProfilerFiller prof) {
         prof.push("create_page_link_fluid");
-        String displayName = stack.getFluid().getFluidType().getDescription(NeoFluidStacks.toNeo(stack)).getString();
+        String displayName = stack.getHoverName().getString();
         List<String> tooltip = Collections.singletonList(displayName);
         String searchText = displayName.toLowerCase(Locale.ROOT);
         ISimpleDrawable icon = new GuiFluid(stack);

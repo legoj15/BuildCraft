@@ -5,137 +5,176 @@
  */
 package buildcraft.lib.fluid;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.Identifier;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.material.Fluid;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 //? if >=1.21.10 {
-import java.util.ArrayList;
-import java.util.List;
-
 import com.mojang.serialization.Codec;
-import net.minecraft.core.NonNullList;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
 //?} else {
-/*import java.util.function.Predicate;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;*/
+/*import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.material.Fluid;*/
 //?}
 
 /**
- * Version-neutral multi-slot fluid tank. On 1.21.10+ this IS a NeoForge Transfer-API
- * {@link FluidStacksResourceHandler} (so it can still be exposed via {@code Capabilities.Fluid.BLOCK} and the
- * inherited Transfer-API methods keep working unchanged); on 1.21.1 the Transfer API does not exist, so it is a
- * classic {@code IFluidHandler} backed by {@code FluidTank[]} ({@code Capabilities.FluidHandler.BLOCK}).
+ * Loader-neutral multi-slot fluid tank, a {@link BCFluidStorage} on every node (the platform layer exposes it as the
+ * loader's fluid handler). Its transfer semantics are NeoForge's {@code FluidStacksResourceHandler}, which it used to
+ * extend on 1.21.10+: an index takes a fluid while empty or holding the same fluid and components, up to one shared
+ * capacity, each index journals its own stack, and the change hook fires once per index when the root transaction
+ * commits (or at once for {@link #setFluidStack}).
  *
- * <p>BuildCraft tiles use the version-neutral, {@link BCFluidStack}-based convenience API below
- * ({@link #getFluidStack}, {@link #fill}, {@link #drain}, …) and override the {@link #isFluidValid} /
- * {@link #onChanged} hooks instead of the Transfer-API {@code isValid(int, FluidResource)} /
- * {@code onContentsChanged} — so tile bodies never name {@code FluidResource} or {@code TransactionContext}.
- * The {@code >=1.21.10} method bodies are exactly what BuildCraft did before, so the released nodes are
- * behaviour-identical.
+ * <p>BuildCraft tiles use the convenience API below ({@link #getFluidStack}, {@link #fill}, {@link #drain}, ...) and
+ * override the {@link #isFluidValid} / {@link #onChanged} hooks.
  */
-//? if >=1.21.10 {
-public class BCFluidTank extends FluidStacksResourceHandler {
+public class BCFluidTank implements BCFluidStorage {
     /**
-     * The save key of the per-slot list. BuildCraft owns it: it is the value NeoForge's
+     * The save key of the per-slot list on 1.21.10+. BuildCraft owns it: it is the value NeoForge's
      * {@code StacksResourceHandler.VALUE_IO_KEY} had when BC inherited it, pinned by the golden fixtures, and
-     * {@code TileTank.removeComponentsFromTag} strips it.
+     * {@code TileTank.removeComponentsFromTag} strips it. 1.21.1 writes {@code fluid<i>}/{@code amount<i>} instead.
      */
     public static final String STACKS_KEY = "stacks";
 
+    //? if >=1.21.10 {
     /** One {@link BCFluidStack#OPTIONAL_CODEC} entry per slot, so an empty slot is {@code {}}. */
     private static final Codec<List<BCFluidStack>> STACKS_CODEC = BCFluidStack.OPTIONAL_CODEC.listOf();
+    //?}
+
+    protected int capacity;
+    private BCFluidStack[] stacks;
+    private final List<StackJournal> journals = new ArrayList<>();
 
     public BCFluidTank(int size, int capacity) {
-        super(size, capacity);
+        this.capacity = capacity;
+        this.stacks = new BCFluidStack[size];
+        Arrays.fill(stacks, BCFluidStack.EMPTY);
+        updateJournals();
     }
 
-    /**
-     * Writes exactly what the inherited {@code StacksResourceHandler.serialize} wrote (the {@code "stacks"} list of
-     * optional fluid stacks), but through BuildCraft's own codec, so the format no longer rides on the parent.
-     */
-    @Override
-    public void serialize(ValueOutput output) {
-        List<BCFluidStack> list = new ArrayList<>(size());
-        for (int i = 0; i < size(); i++) {
-            list.add(getFluidStack(i));
+    private void updateJournals() {
+        while (journals.size() < stacks.length) {
+            journals.add(new StackJournal(journals.size()));
         }
-        output.store(STACKS_KEY, STACKS_CODEC, list);
+        if (journals.size() > stacks.length) {
+            journals.subList(stacks.length, journals.size()).clear();
+        }
     }
 
-    /**
-     * Mirrors the inherited {@code deserialize}: an absent key leaves the contents alone, a present list replaces
-     * them wholesale (its length becomes the slot count) without firing the change hook.
-     */
+    // --- BCFluidStorage ---
+
     @Override
-    public void deserialize(ValueInput input) {
-        input.read(STACKS_KEY, STACKS_CODEC).ifPresent(list -> {
-            NonNullList<FluidStack> neo =
-                    NonNullList.withSize(list.size(), FluidStack.EMPTY);
-            for (int i = 0; i < list.size(); i++) {
-                neo.set(i, NeoFluidStacks.toNeo(list.get(i)));
+    public int size() {
+        return stacks.length;
+    }
+
+    @Override
+    public BCFluidStack getStack(int index) {
+        return stacks[Objects.checkIndex(index, stacks.length)].copy();
+    }
+
+    @Override
+    public int getAmount(int index) {
+        return stacks[Objects.checkIndex(index, stacks.length)].getAmount();
+    }
+
+    @Override
+    public int getCapacity(int index, BCFluidStack resource) {
+        Objects.checkIndex(index, stacks.length);
+        return resource.isEmpty() || isValid(index, resource) ? capacity : 0;
+    }
+
+    @Override
+    public boolean isValid(int index, BCFluidStack resource) {
+        return isFluidValid(resource.copyWithAmount(1));
+    }
+
+    @Override
+    public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
+        Objects.checkIndex(index, stacks.length);
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
+        BCFluidStack current = stacks[index];
+        int currentAmount = current.getAmount();
+        if ((currentAmount == 0 || BCFluidStack.isSameFluidSameComponents(current, resource)) && isValid(index, resource)) {
+            int inserted = Math.min(amount, capacity - currentAmount);
+            if (inserted > 0) {
+                journals.get(index).updateSnapshots(transaction);
+                stacks[index] = resource.copyWithAmount(currentAmount + inserted);
+                return inserted;
             }
-            //? if >=1.21.11 {
-            setStacks(neo);
-            //?} else {
-            /*stacks = neo; // 21.10's parent has no setStacks and assigns the field itself, journals untouched
-            *///?}
-        });
-    }
-
-    // Bridge the Transfer-API hooks to the version-neutral ones tiles override.
-    @Override
-    public boolean isValid(int index, FluidResource resource) {
-        return isFluidValid(NeoFluidStacks.fromNeo(resource.toStack(1)));
+        }
+        return 0;
     }
 
     @Override
-    protected void onContentsChanged(int index, FluidStack previousContents) {
-        onChanged();
+    public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
+        Objects.checkIndex(index, stacks.length);
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
+        BCFluidStack current = stacks[index];
+        if (!current.isEmpty() && BCFluidStack.isSameFluidSameComponents(current, resource)) {
+            int extracted = Math.min(amount, current.getAmount());
+            if (extracted > 0) {
+                journals.get(index).updateSnapshots(transaction);
+                stacks[index] = current.copyWithAmount(current.getAmount() - extracted);
+                if (stacks[index].isEmpty()) {
+                    stacks[index] = BCFluidStack.EMPTY;
+                }
+                return extracted;
+            }
+        }
+        return 0;
     }
+
+    // --- Convenience API ---
 
     public BCFluidStack getFluidStack(int slot) {
-        FluidResource r = getResource(slot);
-        return r.isEmpty() ? BCFluidStack.EMPTY : NeoFluidStacks.fromNeo(r.toStack(getAmountAsInt(slot)));
+        return getStack(slot);
     }
 
     public int getAmountMb(int slot) {
-        return getAmountAsInt(slot);
+        return getAmount(slot);
     }
 
+    /**
+     * The tank's raw capacity, NOT the validity-gated {@link #getCapacity}: guarded output tanks (e.g. the
+     * Distiller/Heat Exchanger OutputTank, whose isFluidValid only passes mid-internal-insert) reject the very fluid
+     * they hold, so the gated capacity of the held fluid is 0 once the fill finishes.
+     */
     public int getCapacityMb(int slot) {
-        // Report the tank's raw capacity, NOT the validity-gated one. getCapacityAsLong returns 0 for a
-        // non-empty resource that fails isValid(), and guarded output tanks (e.g. the Distiller/Heat
-        // Exchanger OutputTank, whose isFluidValid only passes mid-internal-insert) reject the very fluid
-        // they hold — so passing the held resource here reports capacity 0 once the fill finishes. Pass
-        // EMPTY to take getCapacityAsLong's empty/estimate branch, which returns the true constant capacity.
-        return getCapacityAsInt(slot, FluidResource.EMPTY);
+        return getCapacity(slot, BCFluidStack.EMPTY);
     }
 
+    /** Replaces the contents of {@code slot} outright (no journal, no validity check) and fires the change hook. */
     public void setFluidStack(int slot, BCFluidStack stack) {
-        set(slot, stack.isEmpty() ? FluidResource.EMPTY : FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount());
+        Objects.checkIndex(slot, stacks.length);
+        BCFluidStack old = stacks[slot];
+        stacks[slot] = stack.isEmpty() ? BCFluidStack.EMPTY : stack.copy();
+        onContentsChanged(slot, old);
     }
 
     public boolean isTankEmpty(int slot) {
-        return getResource(slot).isEmpty();
+        return stacks[Objects.checkIndex(slot, stacks.length)].isEmpty();
     }
 
     public int fill(int slot, BCFluidStack stack, boolean simulate) {
         if (stack.isEmpty()) {
             return 0;
         }
-        try (Transaction tx = Transaction.openRoot()) {
-            int n = insert(slot, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            int n = insert(slot, stack, stack.getAmount(), tx);
             if (!simulate && n > 0) {
                 tx.commit();
             }
@@ -144,141 +183,64 @@ public class BCFluidTank extends FluidStacksResourceHandler {
     }
 
     public BCFluidStack drain(int slot, int maxMb, boolean simulate) {
-        FluidResource r = getResource(slot);
+        BCFluidStack r = getStack(slot);
         if (r.isEmpty() || maxMb <= 0) {
             return BCFluidStack.EMPTY;
         }
-        try (Transaction tx = Transaction.openRoot()) {
+        try (BCTransaction tx = BCTransaction.openRoot()) {
             int n = extract(slot, r, maxMb, tx);
             if (!simulate && n > 0) {
                 tx.commit();
             }
-            return n <= 0 ? BCFluidStack.EMPTY : NeoFluidStacks.fromNeo(r.toStack(n));
+            return n <= 0 ? BCFluidStack.EMPTY : r.copyWithAmount(n);
         }
     }
 
-    /** Overridable validity hook (replaces {@code isValid(int, FluidResource)}). */
+    /** Overridable validity hook: whether the tank accepts {@code stack}'s fluid at all. */
     protected boolean isFluidValid(BCFluidStack stack) {
         return true;
     }
 
-    /** Overridable change hook (replaces overriding insert/extract just to mark dirty). */
+    /** Overridable change hook (fires once per changed slot when a transaction commits). */
     protected void onChanged() {}
-}
-//?} else {
-/*public class BCFluidTank implements IFluidHandler {
-    private final FluidTank[] tanks;
 
-    public BCFluidTank(int size, int capacity) {
-        this.tanks = new FluidTank[size];
-        Predicate<FluidStack> validator = stack -> isFluidValid(NeoFluidStacks.fromNeo(stack));
-        for (int i = 0; i < size; i++) {
-            this.tanks[i] = new FluidTank(capacity, validator);
-        }
-    }
-
-    public int size() {
-        return tanks.length;
-    }
-
-    public BCFluidStack getFluidStack(int slot) {
-        return NeoFluidStacks.fromNeo(tanks[slot].getFluid());
-    }
-
-    public int getAmountMb(int slot) {
-        return tanks[slot].getFluidAmount();
-    }
-
-    public int getCapacityMb(int slot) {
-        return tanks[slot].getCapacity();
-    }
-
-    public void setFluidStack(int slot, BCFluidStack stack) {
-        tanks[slot].setFluid(NeoFluidStacks.toNeo(stack));
+    /** Called with the slot's contents before the change, after the change is final. */
+    protected void onContentsChanged(int slot, BCFluidStack previousContents) {
         onChanged();
     }
 
-    public boolean isTankEmpty(int slot) {
-        return tanks[slot].getFluid().isEmpty();
-    }
+    // --- Save format ---
 
-    public int fill(int slot, BCFluidStack stack, boolean simulate) {
-        int n = tanks[slot].fill(NeoFluidStacks.toNeo(stack), simulate ? FluidAction.SIMULATE : FluidAction.EXECUTE);
-        if (!simulate && n > 0) {
-            onChanged();
+    //? if >=1.21.10 {
+    /** Writes the {@code "stacks"} list of optional fluid stacks (the format NeoForge's parent wrote). */
+    public void serialize(ValueOutput output) {
+        List<BCFluidStack> list = new ArrayList<>(stacks.length);
+        for (BCFluidStack stack : stacks) {
+            list.add(stack.copy());
         }
-        return n;
+        output.store(STACKS_KEY, STACKS_CODEC, list);
     }
 
-    public BCFluidStack drain(int slot, int maxMb, boolean simulate) {
-        BCFluidStack out = NeoFluidStacks.fromNeo(tanks[slot].drain(maxMb, simulate ? FluidAction.SIMULATE : FluidAction.EXECUTE));
-        if (!simulate && !out.isEmpty()) {
-            onChanged();
-        }
-        return out;
-    }
-
-    // --- classic IFluidHandler (capability exposure) ---
-
-    @Override
-    public int getTanks() {
-        return tanks.length;
-    }
-
-    @Override
-    public FluidStack getFluidInTank(int tank) {
-        return tanks[tank].getFluid();
-    }
-
-    @Override
-    public int getTankCapacity(int tank) {
-        return tanks[tank].getCapacity();
-    }
-
-    @Override
-    public boolean isFluidValid(int tank, FluidStack stack) {
-        return isFluidValid(NeoFluidStacks.fromNeo(stack));
-    }
-
-    @Override
-    public int fill(FluidStack resource, FluidAction action) {
-        for (int i = 0; i < tanks.length; i++) {
-            int n = fill(i, NeoFluidStacks.fromNeo(resource), action.simulate());
-            if (n > 0) {
-                return n;
+    /**
+     * An absent key leaves the contents alone; a present list replaces them wholesale (its length becomes the slot
+     * count) without firing the change hook, as NeoForge's parent did.
+     */
+    public void deserialize(ValueInput input) {
+        input.read(STACKS_KEY, STACKS_CODEC).ifPresent(list -> {
+            BCFluidStack[] read = new BCFluidStack[list.size()];
+            for (int i = 0; i < read.length; i++) {
+                BCFluidStack stack = list.get(i);
+                read[i] = stack.isEmpty() ? BCFluidStack.EMPTY : stack.copy();
             }
-        }
-        return 0;
+            stacks = read;
+            updateJournals();
+        });
     }
-
-    @Override
-    public FluidStack drain(FluidStack resource, FluidAction action) {
-        for (int i = 0; i < tanks.length; i++) {
-            FluidStack inTank = tanks[i].getFluid();
-            if (!inTank.isEmpty() && FluidStack.isSameFluidSameComponents(inTank, resource)) {
-                return NeoFluidStacks.toNeo(drain(i, resource.getAmount(), action.simulate()));
-            }
-        }
-        return FluidStack.EMPTY;
-    }
-
-    @Override
-    public FluidStack drain(int maxDrain, FluidAction action) {
-        for (int i = 0; i < tanks.length; i++) {
-            if (!tanks[i].getFluid().isEmpty()) {
-                return NeoFluidStacks.toNeo(drain(i, maxDrain, action.simulate()));
-            }
-        }
-        return FluidStack.EMPTY;
-    }
-
-    // --- NBT (id + amount per slot; no registry provider needed) ---
-
-    public static final String STACKS_KEY = "stacks"; // not written here: 1.21.1 keeps fluid<i>/amount<i>
-
+    //?} else {
+    /*// NBT: id + amount per slot (no registry provider needed); components are not written.
     public void serialize(CompoundTag tag) {
-        for (int i = 0; i < tanks.length; i++) {
-            FluidStack fs = tanks[i].getFluid();
+        for (int i = 0; i < stacks.length; i++) {
+            BCFluidStack fs = stacks[i];
             if (!fs.isEmpty()) {
                 tag.putString("fluid" + i, BuiltInRegistries.FLUID.getKey(fs.getFluid()).toString());
                 tag.putInt("amount" + i, fs.getAmount());
@@ -287,20 +249,43 @@ public class BCFluidTank extends FluidStacksResourceHandler {
     }
 
     public void deserialize(CompoundTag tag) {
-        for (int i = 0; i < tanks.length; i++) {
+        for (int i = 0; i < stacks.length; i++) {
             if (tag.contains("fluid" + i)) {
                 Fluid f = BuiltInRegistries.FLUID.get(Identifier.parse(tag.getString("fluid" + i)));
-                tanks[i].setFluid(new FluidStack(f, tag.getInt("amount" + i)));
+                BCFluidStack read = new BCFluidStack(f, tag.getInt("amount" + i));
+                stacks[i] = read.isEmpty() ? BCFluidStack.EMPTY : read;
             } else {
-                tanks[i].setFluid(FluidStack.EMPTY);
+                stacks[i] = BCFluidStack.EMPTY;
             }
         }
+    }*/
+    //?}
+
+    @Override
+    public String toString() {
+        return "BCFluidTank" + Arrays.toString(stacks);
     }
 
-    protected boolean isFluidValid(BCFluidStack stack) {
-        return true;
-    }
+    private final class StackJournal extends BCSnapshotJournal<BCFluidStack> {
+        private final int index;
 
-    protected void onChanged() {}
-}*/
-//?}
+        StackJournal(int index) {
+            this.index = index;
+        }
+
+        @Override
+        protected BCFluidStack createSnapshot() {
+            return stacks[index].copy();
+        }
+
+        @Override
+        protected void revertToSnapshot(BCFluidStack snapshot) {
+            stacks[index] = snapshot;
+        }
+
+        @Override
+        protected void onRootCommit(BCFluidStack originalState) {
+            onContentsChanged(index, originalState);
+        }
+    }
+}

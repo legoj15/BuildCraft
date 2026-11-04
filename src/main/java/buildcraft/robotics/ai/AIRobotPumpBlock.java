@@ -13,18 +13,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 
 import buildcraft.api.core.NbtApiUtil;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.robots.AIRobot;
 import buildcraft.api.robots.IRobotAccess;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.robotics.RobotFluids;
 import buildcraft.robotics.RobotProtection;
 
 /** Pumps a bucket of fluid out of the source block at {@code blockToPump} (through the in-tree
@@ -87,19 +84,16 @@ public class AIRobotPumpBlock extends AIRobot {
                 && BlockUtil.drainStaysInLoadedChunks(serverLevel, blockToPump, null)) {
             BCFluidStack preview = BlockUtil.drainBlock(serverLevel, blockToPump, false);
             if (preview != null) {
-                //? if >=1.21.10 {
-                FluidResource resource = FluidResource.of(NeoFluidStacks.toNeo(preview));
-                int room = robot.getFluidHandler().getCapacityAsInt(0, resource)
-                        - robot.getFluidHandler().getAmountAsInt(0);
+                BCFluidStorage tank = RobotFluids.tank(robot);
+                int room = tank.getCapacity(0, preview) - tank.getAmount(0);
                 if (room >= BUCKET && isPermitted(serverLevel)) {
-                    // The robot's tank journals through SnapshotJournal on this line, and a journalling
-                    // handler REQUIRES a live transaction — the bare (…, null) insert threw NPE on every
-                    // pump cycle (a production bug the Ph9 pump game test caught). Commit only when the
-                    // bucket actually moved AND the world gave it up (a pickup can refuse; committing
-                    // first would mint fluid), so the tank and the world change together.
-                    try (net.neoforged.neoforge.transfer.transaction.Transaction tx =
-                            net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                        int inserted = robot.getFluidHandler().insert(0, resource, BUCKET, tx);
+                    // The robot's tank journals its changes, and a journalling storage REQUIRES a live
+                    // transaction (a bare insert threw NPE on every pump cycle, a production bug the Ph9 pump
+                    // game test caught). Commit only when the bucket actually moved AND the world gave it up
+                    // (a pickup can refuse; committing first would mint fluid), so the tank and the world
+                    // change together.
+                    try (BCTransaction tx = BCTransaction.openRoot()) {
+                        int inserted = tank.insert(0, preview, BUCKET, tx);
                         if (inserted >= BUCKET) {
                             if (BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
                                 tx.commit();
@@ -110,17 +104,6 @@ public class AIRobotPumpBlock extends AIRobot {
                         }
                     }
                 }
-                //?} else {
-                /*int room = robot.getFluidHandler().fill(NeoFluidStacks.toNeo(preview), IFluidHandler.FluidAction.SIMULATE);
-                if (room >= BUCKET && isPermitted(serverLevel)) {
-                    if (BlockUtil.drainBlock(serverLevel, blockToPump, true) != null) {
-                        robot.getFluidHandler().fill(NeoFluidStacks.toNeo(preview), IFluidHandler.FluidAction.EXECUTE);
-                        pumped = BUCKET;
-                    } else {
-                        refused = true;
-                    }
-                }*/
-                //?}
             }
         }
         terminate();

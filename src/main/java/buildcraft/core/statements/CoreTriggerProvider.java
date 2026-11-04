@@ -15,7 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.capabilities.Capabilities;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.ITriggerExternal;
@@ -91,13 +90,8 @@ public enum CoreTriggerProvider implements ITriggerProvider {
         }
 
         if (!blockFluidHandlerTriggers) {
-            //? if >=1.21.10 {
-            var fluidHandler = level.getCapability(Capabilities.Fluid.BLOCK, pos, side.getOpposite());
+            var fluidHandler = TransferAccess.findFluid(level, pos, side.getOpposite());
             boolean hasFluid = fluidHandler != null && fluidHandler.size() > 0;
-            //?} else {
-            /*var fluidHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, side.getOpposite());
-            boolean hasFluid = fluidHandler != null && fluidHandler.getTanks() > 0;*/
-            //?}
             if (hasFluid) {
                 res.add(BCCoreStatements.TRIGGER_FLUID_EMPTY);
                 res.add(BCCoreStatements.TRIGGER_FLUID_SPACE);

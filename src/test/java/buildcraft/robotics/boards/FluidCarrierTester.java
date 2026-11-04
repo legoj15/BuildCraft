@@ -11,12 +11,9 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluids;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.api.mj.MjAPI;
 import buildcraft.api.robots.DockingStation;
 import buildcraft.api.robots.RobotManager;
@@ -25,7 +22,6 @@ import buildcraft.api.statements.IStatement;
 import buildcraft.core.BCCoreStatements;
 import buildcraft.factory.BCFactoryBlocks;
 import buildcraft.factory.tile.TileTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 import buildcraft.lib.test.EntityArenaUtil;
@@ -121,36 +117,22 @@ public class FluidCarrierTester {
 
     /** The mB the robot is currently carrying (0 when its tank is empty). */
     private static int carriedBy(EntityRobot robot) {
-        //? if >=1.21.10 {
-        return robot.getFluidHandler().getAmountAsInt(0);
-        //?} else {
-        /*net.neoforged.neoforge.fluids.FluidStack carried = robot.getFluidHandler().getFluidInTank(0);
-        return carried == null ? 0 : carried.getAmount();*/
-        //?}
+        return robot.getFluidStorage().getAmount(0);
     }
 
     private static void fillTank(TileTank tank, BCFluidStack stack) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.open(null)) {
-            tank.tank.insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
+        try (BCTransaction tx = BCTransaction.open(null)) {
+            tank.tank.insert(0, stack, stack.getAmount(), tx);
             tx.commit();
         }
-        //?} else {
-        /*// 1.21.1 has no Transfer API; BCFluidTank exposes a version-neutral fill(slot, stack, simulate).
-        tank.tank.fill(0, stack, false);*/
-        //?}
     }
 
     /** Seeds the robot's own 4000 mB tank directly (the E2E fills it through the load path instead). */
     private static void fillRobotTank(EntityRobot robot, BCFluidStack stack) {
-        //? if >=1.21.10 {
-        try (Transaction tx = Transaction.open(null)) {
-            robot.getFluidHandler().insert(0, FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
+        try (BCTransaction tx = BCTransaction.open(null)) {
+            robot.getFluidStorage().insert(0, stack, stack.getAmount(), tx);
             tx.commit();
         }
-        //?} else {
-        /*robot.getFluidHandler().fill(NeoFluidStacks.toNeo(stack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
-        //?}
     }
 
     // ---------- supply-station discovery (the fluid twin of the D6 rule) ----------

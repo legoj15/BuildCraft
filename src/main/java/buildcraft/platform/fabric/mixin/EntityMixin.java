@@ -46,10 +46,11 @@ import buildcraft.platform.hook.PositionalSoundBlock;
  * drops, what {@code spawnAtLocation} drops is collected instead of put in the level. And NeoForge's fluid-type
  * checks in {@code baseTick} and {@code updateFluidInteraction} for BuildCraft's fluids ({@link FabricFluidPhysics}):
  * in water and eyes in water mean a water-like fluid, each fluid's own current pushes, and a fluid that is not
- * water-like damps the fall distance. A {@link PositionalSoundBlock} steps with its own sound.
+ * water-like damps the fall distance. A {@link PositionalSoundBlock} steps with its own sound, also as the muffled
+ * half of a player's step on a carpet or snow layer ({@link FabricVanillaExtensions.StepSoundPositions}).
  *^/
 @Mixin(Entity.class)
-abstract class EntityMixin implements FabricGameHooks.DropCapture {
+abstract class EntityMixin implements FabricGameHooks.DropCapture, FabricVanillaExtensions.StepSoundPositions {
 
     @Shadow
     @Final
@@ -73,6 +74,15 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture {
     @Unique
     @Nullable
     private List<ItemEntity> buildcraft$capturedDrops;
+
+    /^* The primary (carpet, snow layer) and muffled positions of the step sound being played, or null. *^/
+    @Unique
+    @Nullable
+    private BlockPos buildcraft$primaryStepPos;
+
+    @Unique
+    @Nullable
+    private BlockPos buildcraft$muffledStepPos;
 
     @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Entity;isEyeInFluid(Lnet/minecraft/tags/TagKey;)Z"))
@@ -134,6 +144,34 @@ abstract class EntityMixin implements FabricGameHooks.DropCapture {
         return state.getBlock() instanceof PositionalSoundBlock
                 ? FabricVanillaExtensions.positionalSoundType(state, self.level(), pos, self)
                 : original.call(state);
+    }
+
+    /^* The two halves of NeoForge's position-aware combination step ({@code playCombinationStepSounds}). *^/
+    @WrapOperation(method = "playCombinationStepSounds", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
+    private SoundType buildcraft$combinationStepSound(BlockState state, Operation<SoundType> original) {
+        return stepSoundAt(state, buildcraft$primaryStepPos, original);
+    }
+
+    @WrapOperation(method = "playMuffledStepSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/state/BlockState;getSoundType()Lnet/minecraft/world/level/block/SoundType;"))
+    private SoundType buildcraft$muffledStepSound(BlockState state, Operation<SoundType> original) {
+        return stepSoundAt(state, buildcraft$muffledStepPos, original);
+    }
+
+    /^* Without a position (a caller other than {@code Player.playStepSound}), the state's own sound. *^/
+    @Unique
+    private SoundType stepSoundAt(BlockState state, @Nullable BlockPos pos, Operation<SoundType> original) {
+        Entity self = (Entity) (Object) this;
+        return pos != null && state.getBlock() instanceof PositionalSoundBlock
+                ? FabricVanillaExtensions.positionalSoundType(state, self.level(), pos, self)
+                : original.call(state);
+    }
+
+    @Override
+    public void buildcraft$setStepSoundPositions(@Nullable BlockPos primary, @Nullable BlockPos muffled) {
+        buildcraft$primaryStepPos = primary;
+        buildcraft$muffledStepPos = muffled;
     }
 
     @Override

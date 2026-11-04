@@ -6,14 +6,21 @@
 package buildcraft.platform.fabric.mixin;
 
 //? if fabric {
-/*import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+/*import javax.annotation.Nullable;
+
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -25,11 +32,14 @@ import net.minecraft.world.phys.Vec3;
 import net.fabricmc.fabric.api.entity.FakePlayer;
 
 import buildcraft.platform.fabric.FabricGameHooks;
+import buildcraft.platform.fabric.FabricVanillaExtensions;
 
 /^* NeoForge's {@code PlayerTickEvent.Post} on Fabric ({@link FabricGameHooks#onPlayerTickEnd}): the end of a server
  *  player's own tick; and its entity-interaction event for a fake player's click
  *  ({@link FabricGameHooks#fireFakePlayerEntityInteract}), at the same point of {@code interactOn}; and its break-speed
- *  event ({@link FabricGameHooks#fireBreakSpeed}) at the end of {@code getDestroySpeed}, for real and fake players. *^/
+ *  event ({@link FabricGameHooks#fireBreakSpeed}) at the end of {@code getDestroySpeed}, for real and fake players;
+ *  and the positions NeoForge passes to the combination and muffled step sounds
+ *  ({@link FabricVanillaExtensions.StepSoundPositions}). *^/
 @Mixin(Player.class)
 abstract class PlayerMixin {
 
@@ -43,6 +53,33 @@ abstract class PlayerMixin {
     @ModifyReturnValue(method = "getDestroySpeed", at = @At("RETURN"))
     private float buildcraft$breakSpeed(float speed, BlockState state) {
         return FabricGameHooks.fireBreakSpeed((Player) (Object) this, state, speed);
+    }
+
+    /^* On a carpet or snow layer: the primary block above, the muffled one below ({@code onPos}). *^/
+    @WrapOperation(method = "playStepSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Player;playCombinationStepSounds(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    private void buildcraft$combinationStepPositions(Player self, BlockState primary, BlockState muffled,
+            Operation<Void> original, @Local(argsOnly = true) BlockPos onPos, @Local(ordinal = 1) BlockPos primaryPos) {
+        withStepPositions(self, primaryPos, onPos, () -> original.call(self, primary, muffled));
+    }
+
+    /^* In water: the muffled step on {@code onPos}. *^/
+    @WrapOperation(method = "playStepSound", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Player;playMuffledStepSound(Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    private void buildcraft$muffledStepPosition(Player self, BlockState muffled, Operation<Void> original,
+            @Local(argsOnly = true) BlockPos onPos) {
+        withStepPositions(self, null, onPos, () -> original.call(self, muffled));
+    }
+
+    @Unique
+    private static void withStepPositions(Player self, @Nullable BlockPos primary, BlockPos muffled, Runnable play) {
+        FabricVanillaExtensions.StepSoundPositions positions = (FabricVanillaExtensions.StepSoundPositions) self;
+        positions.buildcraft$setStepSoundPositions(primary, muffled);
+        try {
+            play.run();
+        } finally {
+            positions.buildcraft$setStepSoundPositions(null, null);
+        }
     }
 
     // A spectator's click opens a menu and asks nothing, as on NeoForge.

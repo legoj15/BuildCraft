@@ -35,3 +35,6 @@ accessible	field	net/minecraft/world/item/crafting/RecipeManager	recipes	Lnet/mi
 accessible	method	net/minecraft/client/renderer/item/CuboidItemModelWrapper	<init>	(Ljava/util/List;Lnet/minecraft/client/resources/model/geometry/QuadCollection;Lnet/minecraft/client/renderer/item/ModelRenderProperties;Lorg/joml/Matrix4fc;)V
 accessible	class	net/minecraft/client/resources/model/cuboid/ItemModelGenerator$ItemLayerKey
 accessible	method	net/minecraft/client/resources/model/cuboid/ItemModelGenerator$ItemLayerKey	<init>	(Lnet/minecraft/client/resources/model/sprite/Material$Baked;Lnet/minecraft/client/renderer/block/dispatch/ModelState;I)V
+# Members NeoForge reaches through its own patches (AbstractHorse.getInventory, the side-effect-free setItemSlot): the entity item fallback in FabricEntityItems.
+accessible	field	net/minecraft/world/entity/LivingEntity	equipment	Lnet/minecraft/world/entity/EntityEquipment;
+accessible	field	net/minecraft/world/entity/animal/equine/AbstractHorse	inventory	Lnet/minecraft/world/SimpleContainer;

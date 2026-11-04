@@ -53,6 +53,15 @@ import buildcraft.platform.fabric.mixin.FlowingFluidAccessor;
  * the storage was made for ({@code SavedDataStorageMixin}).
  *^/
 public final class FabricVanillaExtensions implements VanillaExtensions {
+    /^*
+     * The positions of a player's two-block step sound, which vanilla's {@code playCombinationStepSounds} and
+     * {@code playMuffledStepSound} are not given: {@code PlayerMixin} sets them around those calls in
+     * {@code Player.playStepSound} (where NeoForge passes them) and {@code EntityMixin} reads them there.
+     *^/
+    public interface StepSoundPositions {
+        void buildcraft$setStepSoundPositions(@Nullable BlockPos primary, @Nullable BlockPos muffled);
+    }
+
     /^* The entity's persistent compound: BuildCraft's own attachment, as Fabric has no shared one. ^/
     private static final AttachmentType<CompoundTag> PERSISTENT_DATA = AttachmentRegistry.create(
             Identifier.fromNamespaceAndPath("buildcraftunofficial", "persistent_data"),

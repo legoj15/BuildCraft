@@ -69,16 +69,16 @@ public abstract class TileMarker<C extends MarkerConnection<C>> extends Abstract
     }
 
     @Override
-    public void onLoad() {
-        super.onLoad();
+    protected void onLoaded() {
+        super.onLoaded();
         if (level != null && !level.isClientSide()) {
             getLocalCache().loadMarker(getBlockPos(), this);
         }
     }
 
     @Override
-    public void onChunkUnloaded() {
-        super.onChunkUnloaded();
+    protected void onChunkUnloading() {
+        super.onChunkUnloading();
         chunkUnloading = true;
         if (level != null && !level.isClientSide()) {
             // Just unload the tile reference — keep the position and connections in the cache. Never builds the

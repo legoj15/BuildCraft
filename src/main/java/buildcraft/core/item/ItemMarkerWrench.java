@@ -54,7 +54,7 @@ import buildcraft.core.tile.TileMarkerVolume;
  * <b>Click priority.</b> A marker laser hangs in the air, so the block behind the crosshair is usually the ground,
  * and the wrench would rotate that instead. {@link #isAimingAtMarkerTarget} tells whether the click is meant for a
  * marker target (a laser, a box to remove, a box being edited, or a corner this wrench may drag);
- * {@link #onItemUseFirst} then does the marker work itself and consumes the click, so neither the wrench rotation
+ * {@link #useBeforeBlock} then does the marker work itself and consumes the click, so neither the wrench rotation
  * nor the block's own use runs (a chest or machine behind the laser would otherwise open its screen: the wrench
  * lets sneak-clicks through to blocks). The server does the work; the client only answers with the same success,
  * which keeps it from also sending a {@code use}. A click in the air goes to {@link #use} as before; on the server
@@ -96,7 +96,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
     }
 
     @Override
-    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+    public InteractionResult useBeforeBlock(ItemStack stack, UseOnContext context) {
         Player player = context.getPlayer();
         if (player != null && isAimingAtMarkerTarget(context.getLevel(), player, context.getClickLocation())
                 && !leavesClickToMarker(context.getLevel(), player, context.getClickedPos())) {
@@ -106,7 +106,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
             }
             return InteractionResult.SUCCESS;
         }
-        return super.onItemUseFirst(stack, context);
+        return super.useBeforeBlock(stack, context);
     }
 
     /**
@@ -460,7 +460,7 @@ public class ItemMarkerWrench extends ItemWrench_Neptune {
      * {@code markerPos}, hit at {@code hit}. When the player clicks with one and that marker is a corner of a
      * connected volume that no box overlaps and no lift holds, the markers' box is lifted into a one-shot
      * {@link VolumeBox} and resizing starts from that corner. Returns false when the click was not that, so the marker
-     * handles it. (A click that confirms or cancels a drag in progress never gets here: {@link #onItemUseFirst} takes
+     * handles it. (A click that confirms or cancels a drag in progress never gets here: {@link #useBeforeBlock} takes
      * it, except a click on a marker that does not back the dragged box, which is left to connect.)
      */
     public static boolean onUseOnVolumeMarker(Level level, Player player, BlockPos markerPos, Vec3 hit) {

@@ -34,6 +34,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import buildcraft.factory.tile.TileMiner;
 import buildcraft.lib.block.BCWaterlogging;
+import buildcraft.platform.LoaderHook;
 
 /**
  * The tube block placed below a mining well / quarry as it drills down.
@@ -128,6 +129,7 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock {
         return true;
     }
 
+    @LoaderHook("neoforge:IBlockExtension#onDestroyedByPlayer")
     @Override
     //? if >=1.21.10 {
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
@@ -137,12 +139,7 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock {
     /*public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
             boolean willHarvest, net.minecraft.world.level.material.FluidState fluid) {*/
     //?}
-        // Walk upwards to find if a TileMiner is above this tube column
-        BlockPos checkPos = pos;
-        while (level.getBlockState(checkPos = checkPos.above()).getBlock() == this) {
-            // keep going up
-        }
-        if (level.getBlockEntity(checkPos) instanceof TileMiner) {
+        if (isOwnedByMiner(level, pos)) {
             // Don't allow breaking — the miner owns this tube
             return false;
         }
@@ -151,5 +148,15 @@ public class BlockTube extends Block implements SimpleWaterloggedBlock {
         //?} else {
         /*return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);*/
         //?}
+    }
+
+    /** True if a mining machine sits on top of the tube column holding {@code pos}. */
+    private boolean isOwnedByMiner(Level level, BlockPos pos) {
+        // Walk upwards to find if a TileMiner is above this tube column
+        BlockPos checkPos = pos;
+        while (level.getBlockState(checkPos = checkPos.above()).getBlock() == this) {
+            // keep going up
+        }
+        return level.getBlockEntity(checkPos) instanceof TileMiner;
     }
 }

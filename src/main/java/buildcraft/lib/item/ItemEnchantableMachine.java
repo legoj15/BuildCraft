@@ -13,6 +13,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.Block;
 
 import buildcraft.lib.misc.MachineEnchantments;
+import buildcraft.platform.LoaderHook;
 
 /**
  * The item of a mining machine that takes Silk Touch, Fortune and Efficiency at an anvil (the Quarry and the Mining
@@ -30,6 +31,7 @@ public class ItemEnchantableMachine extends BlockItem {
         super(block, properties);
     }
 
+    @LoaderHook("neoforge:IItemExtension#supportsEnchantment")
     @Override
     public boolean supportsEnchantment(ItemStack stack, Holder<Enchantment> enchantment) {
         return MachineEnchantments.enabled() && MachineEnchantments.isUseful(enchantment);

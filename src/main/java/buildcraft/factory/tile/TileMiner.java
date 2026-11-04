@@ -14,9 +14,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-//? if >=1.21.10 {
-import net.minecraft.world.level.storage.ValueInput;
-//?}
 
 import buildcraft.api.mj.IMjReceiver;
 import buildcraft.api.mj.MjAPI;
@@ -115,7 +112,9 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
         }
     }
 
-    public void onLoad() {
+    @Override
+    protected void onLoaded() {
+        super.onLoaded();
         if (level != null && level.getRandom() != null) {
             offset = level.getRandom().nextInt(10);
         }
@@ -267,18 +266,6 @@ public abstract class TileMiner extends TileBC_Neptune implements IHasWork {
     public MjBattery getBattery() {
         return battery;
     }
-
-    //? if >=1.21.10 {
-    @Override
-    public void handleUpdateTag(ValueInput input) {
-        super.handleUpdateTag(input);
-    }
-    //?} else {
-    /*@Override
-    public void handleUpdateTag(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider lookupProvider) {
-        super.handleUpdateTag(tag, lookupProvider);
-    }*/
-    //?}
 
     // --- Save / Load ---
 

@@ -63,6 +63,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.tile.AbstractBCBlockEntity;
 import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.LoaderHook;
 import buildcraft.platform.Platform;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
@@ -276,8 +277,8 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     //?}
 
     @Override
-    public void onLoad() {
-        super.onLoad();
+    protected void onLoaded() {
+        super.onLoaded();
         if (pipe != null) {
             pipe.onLoad();
         }
@@ -309,27 +310,28 @@ public class TilePipeHolder extends AbstractBCBlockEntity
     }
 
     //? if >=1.21.10 {
+    @LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
     @Override
     public void handleUpdateTag(net.minecraft.world.level.storage.ValueInput input) {
         super.handleUpdateTag(input);
-        applyClientUpdateData(new BCValueInput(input));
-        afterClientNbtUpdate();
+        onClientUpdate(new BCValueInput(input));
     }
 
+    @LoaderHook("neoforge:IBlockEntityExtension#onDataPacket")
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.world.level.storage.ValueInput input) {
         super.onDataPacket(net, input);
-        applyClientUpdateData(new BCValueInput(input));
-        afterClientNbtUpdate();
+        onClientUpdate(new BCValueInput(input));
     }
     //?} else {
-    /*@Override
+    /*@LoaderHook("neoforge:IBlockEntityExtension#handleUpdateTag")
+    @Override
     public void handleUpdateTag(CompoundTag tag, net.minecraft.core.HolderLookup.Provider provider) {
         super.handleUpdateTag(tag, provider);
-        applyClientUpdateData(new BCValueInput(tag));
-        afterClientNbtUpdate();
+        onClientUpdate(new BCValueInput(tag));
     }
 
+    @LoaderHook("neoforge:IBlockEntityExtension#onDataPacket")
     @Override
     public void onDataPacket(net.minecraft.network.Connection net, net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket pkt, net.minecraft.core.HolderLookup.Provider provider) {
         super.onDataPacket(net, pkt, provider);
@@ -339,6 +341,12 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         afterClientNbtUpdate();
     }*/
     //?}
+
+    /** Client side: applies an update tag or block-entity data packet the server sent, then refreshes the render. */
+    private void onClientUpdate(BCValueInput input) {
+        applyClientUpdateData(input);
+        afterClientNbtUpdate();
+    }
 
     // Schedule client-side render refresh after receiving updated state.
     // UPDATE_CLIENTS (not UPDATE_ALL): client doesn't need the UPDATE_NEIGHBORS bit, and on
@@ -1006,6 +1014,7 @@ public class TilePipeHolder extends AbstractBCBlockEntity
         }
     }
 
+    @LoaderHook("neoforge:IBlockEntityExtension#getModelData")
     @Override
     public net.neoforged.neoforge.model.data.ModelData getModelData() {
         return net.neoforged.neoforge.model.data.ModelData.builder()

@@ -28,6 +28,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 import buildcraft.lib.misc.BCValueInput;
 import buildcraft.lib.misc.BCValueOutput;
+import buildcraft.platform.LoaderHook;
 
 /**
  * The thin base shared by ALL BuildCraft block entities — both {@link TileBC_Neptune} (the
@@ -89,6 +90,29 @@ public abstract class AbstractBCBlockEntity extends BlockEntity implements Clear
 
     /** Version-neutral read hook. Subclasses override this (NOT loadAdditional) and call {@code super.readData(in)}. */
     protected void readData(BCValueInput in) {}
+
+    // --- Level lifecycle ---
+    // The loader's load/chunk-unload hooks land here once; subclasses override the common onLoaded/onChunkUnloading.
+
+    @LoaderHook("neoforge:IBlockEntityExtension#onLoad")
+    @Override
+    public final void onLoad() {
+        super.onLoad();
+        onLoaded();
+    }
+
+    /** Runs when this tile joins a level: placed, or its chunk loaded. Subclasses call {@code super.onLoaded()}. */
+    protected void onLoaded() {}
+
+    @LoaderHook("neoforge:IBlockEntityExtension#onChunkUnloaded")
+    @Override
+    public final void onChunkUnloaded() {
+        super.onChunkUnloaded();
+        onChunkUnloading();
+    }
+
+    /** Runs when the chunk holding this tile unloads (not when the tile is broken). Subclasses call super. */
+    protected void onChunkUnloading() {}
 
     // --- Owner tracking ---
     // The owner field + placement entry point shared by TileBC_Neptune and the raw machine tiles. The

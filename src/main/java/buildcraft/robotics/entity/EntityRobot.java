@@ -98,6 +98,7 @@ import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.misc.StackUtil;
 import buildcraft.lib.tile.OwnerData;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.platform.LoaderHook;
 
 import buildcraft.robotics.BCRoboticsEntities;
 import buildcraft.robotics.ai.AIRobotMain;
@@ -532,20 +533,30 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
 
     /** Carries the wearables list. Uniform across all five nodes. Nothing can put a wearable on a robot until
      *  Ph9, so this is an empty list today — it ships now purely so the spawn payload never changes shape. */
+    @LoaderHook("neoforge:IEntityWithComplexSpawn#writeSpawnData")
     @Override
     public void writeSpawnData(RegistryFriendlyByteBuf buffer) {
+        writeWearables(buffer);
+    }
+
+    @LoaderHook("neoforge:IEntityWithComplexSpawn#readSpawnData")
+    @Override
+    public void readSpawnData(RegistryFriendlyByteBuf additionalData) {
+        readWearables(additionalData);
+    }
+
+    private void writeWearables(RegistryFriendlyByteBuf buffer) {
         buffer.writeVarInt(wearables.size());
         for (ItemStack wearable : wearables) {
             ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, wearable);
         }
     }
 
-    @Override
-    public void readSpawnData(RegistryFriendlyByteBuf additionalData) {
+    private void readWearables(RegistryFriendlyByteBuf buffer) {
         wearables.clear();
-        int count = additionalData.readVarInt();
+        int count = buffer.readVarInt();
         for (int i = 0; i < count && i < MAX_WEARABLES; i++) {
-            wearables.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(additionalData));
+            wearables.add(ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer));
         }
     }
 
@@ -1000,6 +1011,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
      *  {@code isAffectedByBlocks()} is false on 26.x). Clearing {@code noPhysics} would bring them back, and every
      *  other block effect with them; the {@code robot_ignores_flowing_water} game test holds a robot in a rising and
      *  a sinking column to catch that. */
+    @LoaderHook("neoforge:IEntityExtension#isPushedByFluid")
     @Override
     public boolean isPushedByFluid(FluidType type) {
         return false;
@@ -1224,6 +1236,7 @@ public class EntityRobot extends EntityRobotBase implements IEntityWithComplexSp
     /** The chunk-unload path — {@code unloadRobot}, never {@code killRobot}. Both this and
      *  {@link #remove(RemovalReason)} can fire for one removal; {@link #deregister} is one-shot so the second
      *  one is inert. */
+    @LoaderHook("neoforge:IEntityExtension#onRemovedFromLevel")
     @Override
     public void onRemovedFromLevel() {
         deregister(true);

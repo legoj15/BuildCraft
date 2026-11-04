@@ -18,6 +18,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuConstructor;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import buildcraft.platform.LoaderHook;
 import buildcraft.platform.Platform;
 
 /**
@@ -55,8 +56,8 @@ public interface IBCMenuProvider extends MenuProvider {
         }
     }
 
-    // @LoaderHook("neoforge:IMenuProviderExtension#writeClientSideData") (tag pending: the annotation lands with
-    // the override-tagging slice). The spectator path described above relies on it.
+    // The spectator path described above relies on this hook.
+    @LoaderHook("neoforge:IMenuProviderExtension#writeClientSideData")
     @Override
     default void writeClientSideData(AbstractContainerMenu menu, RegistryFriendlyByteBuf buffer) {
         writeOpeningData(buffer);

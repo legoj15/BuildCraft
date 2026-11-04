@@ -23,6 +23,7 @@ import buildcraft.api.tools.IToolWrench;
 import buildcraft.lib.misc.AdvancementUtil;
 import buildcraft.lib.misc.EntityUtil;
 import buildcraft.lib.misc.SoundUtil;
+import buildcraft.platform.LoaderHook;
 
 /**
  * The basic wrench, and a real tool: it has durability, can be enchanted and mended, and hits like a light tool.
@@ -93,13 +94,20 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
     }*/
     //?}
 
+    // true = sneak-clicks pass through to the block's useItemOn. Required so
+    // engine/dynamo blocks can intercept crouch+wrench and open the GUI instead
+    // of being short-circuited to the wrench's own rotation path.
+    @LoaderHook("neoforge:IItemExtension#doesSneakBypassUse")
     @Override
     public boolean doesSneakBypassUse(ItemStack stack, net.minecraft.world.level.LevelReader level,
             net.minecraft.core.BlockPos pos, Player player) {
-        // true = sneak-clicks pass through to the block's useItemOn. Required so
-        // engine/dynamo blocks can intercept crouch+wrench and open the GUI instead
-        // of being short-circuited to the wrench's own rotation path.
         return true;
+    }
+
+    @LoaderHook("neoforge:IItemExtension#onItemUseFirst")
+    @Override
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+        return useBeforeBlock(stack, context);
     }
 
     /**
@@ -107,6 +115,9 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
      * through to the block's normal interaction (trapdoor opens, lever flips,
      * furnace opens its menu, …). This matches the 1.12.2 UX where the player had
      * to crouch to "switch the wrench on" for vanilla blocks.
+     * <p>
+     * Runs before the clicked block's own interaction (the loader's {@code onItemUseFirst} hook); PASS hands the
+     * click on to the block.
      * <p>
      * Why this lives in {@code onItemUseFirst} rather than relying on sneak naturally
      * suppressing the block: with {@code doesSneakBypassUse=true} (needed so BC
@@ -122,8 +133,7 @@ public class ItemWrench_Neptune extends Item implements IToolWrench {
      * directly and keep their existing UX through {@link #useOn} and their own
      * {@code useItemOn}: non-crouch wrench rotates, crouch wrench opens the GUI.
      */
-    @Override
-    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
+    public InteractionResult useBeforeBlock(ItemStack stack, UseOnContext context) {
         Player player = context.getPlayer();
         if (player == null || !player.isShiftKeyDown()) {
             return InteractionResult.PASS;

@@ -378,8 +378,8 @@ public class TileLaser extends AbstractBCSyncedBlockEntity implements ILocalBloc
     // --- Lifecycle ---
 
     @Override
-    public void onLoad() {
-        super.onLoad();
+    protected void onLoaded() {
+        super.onLoaded();
         if (level != null && level.isClientSide()) {
             buildcraft.silicon.client.RenderLaser.addLaser(this);
         }

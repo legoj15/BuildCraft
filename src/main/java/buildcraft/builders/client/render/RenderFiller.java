@@ -45,6 +45,7 @@ import buildcraft.lib.client.render.tile.RenderPartCube;
 
 import buildcraft.builders.snapshot.Template;
 import buildcraft.builders.tile.TileFiller;
+import buildcraft.platform.LoaderHook;
 
 /**
  * Block entity renderer for the filler. Renders two LEDs on all four horizontal
@@ -124,6 +125,7 @@ public class RenderFiller implements BlockEntityRenderer<TileFiller, BCRenderSta
     //?}
 
     /** The block, or — with the preview on — the block and the whole box, so the frustum test keeps the renderer alive. */
+    @LoaderHook("neoforge:IBlockEntityRendererExtension#getRenderBoundingBox")
     @Override
     public AABB getRenderBoundingBox(TileFiller tile) {
         return tile.getRenderBounds();

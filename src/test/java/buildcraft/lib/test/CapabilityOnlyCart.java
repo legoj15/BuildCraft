@@ -30,7 +30,8 @@ import buildcraft.platform.neoforge.NeoForgeItemStorages;
  * A minecart as a mod can make one: not a vanilla {@code Container}, its items reachable only through the entity item
  * capability. The capability is registered on the plain minecart type (which has none of its own), answering only for
  * instances of this class, so every other minecart in a test world is untouched. Lives in the test source set only.
- * Fabric has no standard entity item lookup (FabricTransfer.findItem), so there it is a plain minecart.
+ * On Fabric the capability is BuildCraft's own entity item lookup (FabricEntityItems), registered by
+ * {@code registerLookup} there.
  */
 //? if neoforge {
 @EventBusSubscriber(modid = "buildcraftunofficial")
@@ -63,6 +64,13 @@ public final class CapabilityOnlyCart extends Minecart {
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         event.registerEntity(Capabilities.ItemHandler.ENTITY, minecartType(),
                 (entity, ctx) -> entity instanceof CapabilityOnlyCart cart ? NeoForgeItemStorages.toNeo(cart.store) : null);
+    }*/
+    //?} else {
+    /*/^* BuildCraft's own entity item lookup (FabricEntityItems), from the game-test mod's initializer. ^/
+    public static void registerLookup() {
+        buildcraft.platform.fabric.FabricEntityItems.LOOKUP.registerForType((entity, ctx) ->
+                entity instanceof CapabilityOnlyCart cart
+                        ? buildcraft.platform.fabric.FabricItemStorages.toFabric(cart.store) : null, minecartType());
     }*/
     //?}
 }

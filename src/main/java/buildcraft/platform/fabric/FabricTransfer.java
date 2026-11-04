@@ -63,8 +63,8 @@ import buildcraft.platform.transfer.TransferServices;
  * taken since the outer transaction opened and hands that to {@code onRootCommit}, matching NeoForge.
  *
  * <p><b>Lookups.</b> Items go through {@link ItemStorage#SIDED}; registrations become
- * {@code registerForBlockEntity} providers at once, since Fabric registers content eagerly. Gap: Fabric has no
- * standard entity item lookup, so {@link #findItem(Entity)} finds nothing.
+ * {@code registerForBlockEntity} providers at once, since Fabric registers content eagerly. Fabric has no standard
+ * entity item lookup, so {@link #findItem(Entity)} reads BuildCraft's own ({@link FabricEntityItems}).
  *
  * <p><b>Energy</b> is Team Reborn Energy's {@code EnergyStorage.SIDED}, used only when that optional mod is loaded
  * ({@link FabricEnergyStorages}); without it BuildCraft exposes and finds no FE/RF here. Every other
@@ -162,7 +162,8 @@ public final class FabricTransfer implements TransferServices {
 
     @Override
     public BCItemStorage findItem(Entity entity) {
-        return null; // Gap: no standard Fabric entity item lookup (see the class notes).
+        Storage<ItemVariant> storage = FabricEntityItems.LOOKUP.find(entity, null);
+        return storage == null ? null : FabricItemStorages.fromFabric(storage);
     }
 
 

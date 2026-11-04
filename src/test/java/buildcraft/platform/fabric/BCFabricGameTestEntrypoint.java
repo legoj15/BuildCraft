@@ -20,6 +20,8 @@ public final class BCFabricGameTestEntrypoint implements ModInitializer {
     @Override
     public void onInitialize() {
         BuildCraftGameTests.register(System.getProperty("fabric-api.gametest") != null);
+        // The test-only cart's items, through the entity item lookup (NeoForge: a RegisterCapabilitiesEvent listener).
+        buildcraft.lib.test.CapabilityOnlyCart.registerLookup();
     }
 }
 *///?}

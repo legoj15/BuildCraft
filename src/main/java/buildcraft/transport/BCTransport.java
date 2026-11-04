@@ -15,8 +15,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +28,7 @@ import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.platform.Platform;
+import buildcraft.platform.network.BCNetwork;
 import buildcraft.transport.net.MessageMultiPipeItem;
 import buildcraft.transport.net.MessagePipePayload;
 import buildcraft.transport.net.PipeItemMessageQueue;
@@ -89,9 +88,7 @@ public class BCTransport {
         });
 
         // Register network payloads
-        modEventBus.addListener((RegisterPayloadHandlersEvent event) -> {
-            registerPayloads(event);
-        });
+        registerPayloads();
 
         // Register server tick event for flushing pipe item packets
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
@@ -186,29 +183,29 @@ public class BCTransport {
         }
     }
 
-    private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        final PayloadRegistrar registrar = event.registrar("1");
-        registrar.playToClient(
+    private static void registerPayloads() {
+        final BCNetwork network = Platform.network();
+        network.clientbound(
                 MessageMultiPipeItem.TYPE,
                 MessageMultiPipeItem.STREAM_CODEC,
                 MessageMultiPipeItem::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 MessagePipePayload.TYPE,
                 MessagePipePayload.STREAM_CODEC,
                 MessagePipePayload::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.transport.wire.PayloadWireSystems.TYPE,
                 buildcraft.transport.wire.PayloadWireSystems.STREAM_CODEC,
                 buildcraft.transport.wire.PayloadWireSystems::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.transport.wire.PayloadWireSystemsPowered.TYPE,
                 buildcraft.transport.wire.PayloadWireSystemsPowered.STREAM_CODEC,
                 buildcraft.transport.wire.PayloadWireSystemsPowered::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.transport.net.MessagePipeLandingEffect.TYPE,
                 buildcraft.transport.net.MessagePipeLandingEffect.STREAM_CODEC,
                 buildcraft.transport.net.MessagePipeLandingEffect::handle

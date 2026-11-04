@@ -18,6 +18,7 @@ import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.net.NetEnumUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.transport.BCTransportMenuTypes;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond;
 import buildcraft.transport.pipe.behaviour.PipeBehaviourWoodDiamond.FilterMode;
@@ -70,7 +71,7 @@ public class ContainerDiamondWoodPipe extends ContainerBC_Neptune {
 
     @Override
     public void readMessage(int id, PacketBufferBC buffer, boolean isClient,
-            net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+            PacketContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
         if (id == NET_FILTER_MODE && !isClient) {
             behaviour.setFilterMode(NetEnumUtil.read(buffer, FilterMode.class));

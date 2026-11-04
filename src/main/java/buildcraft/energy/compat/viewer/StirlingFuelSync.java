@@ -22,12 +22,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import net.neoforged.neoforge.event.OnDatapackSyncEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.tile.TileEngineStone_BC8;
+import buildcraft.platform.Platform;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * The Stirling engine's fuel list, computed by the server and sent to every player (26.3 only).
@@ -64,14 +63,14 @@ public record StirlingFuelSync(List<StirlingFuel> fuels) implements CustomPacket
         received = List.of();
     }
 
-    public static void registerPayload(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToClient(TYPE, STREAM_CODEC, StirlingFuelSync::handle);
+    public static void registerPayload() {
+        Platform.network().clientbound(TYPE, STREAM_CODEC, StirlingFuelSync::handle);
     }
 
     /** Sends the list to the players a datapack sync is for (the one joining, or everyone on {@code /reload}). */
     public static void onDatapackSync(OnDatapackSyncEvent event) {
         StirlingFuelSync message = new StirlingFuelSync(compute(event.getPlayerList().getServer().overworld()));
-        event.getRelevantPlayers().forEach(player -> PacketDistributor.sendToPlayer(player, message));
+        event.getRelevantPlayers().forEach(player -> Platform.network().sendToPlayer(player, message));
     }
 
     /** Every item with a cooking-fuel component that the Stirling engine would burn, with its burn time. */
@@ -90,8 +89,8 @@ public record StirlingFuelSync(List<StirlingFuel> fuels) implements CustomPacket
         return out;
     }
 
-    private static void handle(StirlingFuelSync message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> received = List.copyOf(message.fuels()));
+    private static void handle(StirlingFuelSync message, PacketContext ctx) {
+        ctx.runOnMain(() -> received = List.copyOf(message.fuels()));
     }
 
     @Override

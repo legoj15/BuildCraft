@@ -7,8 +7,6 @@ package buildcraft.core;
 
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
@@ -49,6 +47,7 @@ import buildcraft.core.properties.WorldPropertyIsWood;
 import buildcraft.lib.BCLibItems;
 import buildcraft.lib.item.ItemGuide;
 import buildcraft.platform.Platform;
+import buildcraft.platform.network.BCNetwork;
 import buildcraft.robotics.zone.ZoneMapRef;
 
 @Mod(BCCore.MODID)
@@ -126,7 +125,7 @@ public class BCCore {
         modEventBus.addListener(this::init);
         modEventBus.addListener(this::postInit);
         modEventBus.addListener(this::registerCapabilities);
-        modEventBus.addListener(this::registerPayloads);
+        registerPayloads();
 
         // Block-break notifier: the break-event class differs across 26.1.x, so register it
         // through PlatformProtection#onBreak instead of @SubscribeEvent.
@@ -309,81 +308,73 @@ public class BCCore {
         event.enqueueWork(buildcraft.lib.misc.MachineRefusals::registerRecorder);
     }
 
-    private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        final PayloadRegistrar registrar = event.registrar("1");
+    private static void registerPayloads() {
+        final BCNetwork network = Platform.network();
         // Version 2: the marker count is a VarInt now (it was a short). NeoForge compares versions per payload at
         // login, so an older client or server is refused with a version message instead of misreading marker syncs.
-        registrar.versioned("2").playToClient(
+        network.clientbound(
                 MessageMarker.TYPE,
                 MessageMarker.STREAM_CODEC,
-                MessageMarker::handle
+                MessageMarker::handle,
+                "2"
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.core.marker.volume.MessageVolumeBoxes.TYPE,
                 buildcraft.core.marker.volume.MessageVolumeBoxes.STREAM_CODEC,
                 buildcraft.core.marker.volume.MessageVolumeBoxes::handle
         );
         // Volume-marker distance readout: the server names the marker and its own connection limit
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.core.marker.MessageMarkerTrack.TYPE,
                 buildcraft.core.marker.MessageMarkerTrack.STREAM_CODEC,
                 buildcraft.core.marker.MessageMarkerTrack::handle
         );
-        //? if >=1.21.10 {
-        registrar.playBidirectional(
+        network.bidirectional(
                 MessageContainerPayload.TYPE,
                 MessageContainerPayload.STREAM_CODEC,
-                MessageContainerPayload::handle,
                 MessageContainerPayload::handle
         );
-        //?} else {
-        /*registrar.playBidirectional(
-                MessageContainerPayload.TYPE,
-                MessageContainerPayload.STREAM_CODEC,
-                MessageContainerPayload::handle
-        );*/
-        //?}
         // F3 debug overlay networking
-        registrar.playToServer(
+        network.serverbound(
                 MessageDebugRequest.TYPE,
                 MessageDebugRequest.STREAM_CODEC,
                 MessageDebugRequest::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 MessageDebugResponse.TYPE,
                 MessageDebugResponse.STREAM_CODEC,
                 MessageDebugResponse::handle
         );
         // Action-bar messages naming an energy figure: the server sends the raw amount, the client formats it
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.lib.net.MessageEnergyOverlay.TYPE,
                 buildcraft.lib.net.MessageEnergyOverlay.STREAM_CODEC,
                 buildcraft.lib.net.MessageEnergyOverlay::handle
         );
         // Snapshots / Blueprints
-        registrar.playToServer(
+        network.serverbound(
                 buildcraft.builders.snapshot.SnapshotRequestPayload.TYPE,
                 buildcraft.builders.snapshot.SnapshotRequestPayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.SnapshotRequestPayload::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.builders.snapshot.SnapshotResponsePayload.TYPE,
                 buildcraft.builders.snapshot.SnapshotResponsePayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.SnapshotResponsePayload::handle
         );
         // Architect Table live-area preview
-        registrar.playToServer(
+        network.serverbound(
                 buildcraft.builders.snapshot.ArchitectPreviewRequestPayload.TYPE,
                 buildcraft.builders.snapshot.ArchitectPreviewRequestPayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.ArchitectPreviewRequestPayload::handle
         );
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.builders.snapshot.ArchitectPreviewResponsePayload.TYPE,
                 buildcraft.builders.snapshot.ArchitectPreviewResponsePayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.ArchitectPreviewResponsePayload::handle
         );
         // Architect Table scan-cube digitizing effect
-        registrar.playToClient(
+        network.clientbound(
                 buildcraft.builders.snapshot.ArchitectScanPayload.TYPE,
                 buildcraft.builders.snapshot.ArchitectScanPayload.STREAM_CODEC,
                 buildcraft.builders.snapshot.ArchitectScanPayload::handle

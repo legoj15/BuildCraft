@@ -21,7 +21,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.gui.ContainerBCCrafting;
 import buildcraft.lib.gui.ContainerBCTile;
@@ -32,6 +31,7 @@ import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.CraftingUtil;
 import buildcraft.lib.net.PacketBufferBC;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.silicon.BCSiliconMenuTypes;
 import buildcraft.silicon.tile.TileAdvancedCraftingTable;
 
@@ -105,7 +105,7 @@ public class ContainerAdvancedCraftingTable extends ContainerBCCrafting<TileAdva
     // --- Cycle Output ---
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_CYCLE_OUTPUT && !isClient) {
             boolean next = buffer.readBoolean();
             tile.cycleCraftingOutput(next ? 1 : -1);

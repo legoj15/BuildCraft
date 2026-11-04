@@ -12,7 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import buildcraft.platform.network.PacketContext;
 import buildcraft.transport.client.PipeHolderClientExtensions;
 
 public record MessagePipeLandingEffect(
@@ -39,8 +39,8 @@ public record MessagePipeLandingEffect(
         return TYPE;
     }
 
-    public static void handle(MessagePipeLandingEffect message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(MessagePipeLandingEffect message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Level level = ctx.player().level();
             if (level != null && level.isClientSide()) {
                 PipeHolderClientExtensions.spawnLandingParticles(level, message.pos, message.x, message.y, message.z, message.numberOfParticles);

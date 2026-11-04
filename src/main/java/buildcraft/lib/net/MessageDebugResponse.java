@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.lib.debug.ClientDebuggables;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Sent from server to client in response to a {@link MessageDebugRequest}.
@@ -66,7 +67,7 @@ public record MessageDebugResponse(
     }
 
     /** Client-side handler. Stores the server debug info for display on the F3 overlay. */
-    public static void handle(MessageDebugResponse message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+    public static void handle(MessageDebugResponse message, PacketContext ctx) {
         ClientDebuggables.SERVER_LEFT.clear();
         ClientDebuggables.SERVER_LEFT.addAll(message.left);
         ClientDebuggables.SERVER_RIGHT.clear();

@@ -18,7 +18,6 @@ import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.world.phys.BlockHitResult;
 import javax.annotation.Nullable;
 
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import buildcraft.lib.block.BlockMarkerBase;
 
@@ -26,6 +25,7 @@ import buildcraft.core.BCCoreConfig;
 import buildcraft.core.item.ItemMarkerWrench;
 import buildcraft.core.marker.MessageMarkerTrack;
 import buildcraft.core.tile.TileMarkerVolume;
+import buildcraft.platform.Platform;
 
 public class BlockMarkerVolume extends BlockMarkerBase {
     public BlockMarkerVolume(Properties properties) {
@@ -50,7 +50,7 @@ public class BlockMarkerVolume extends BlockMarkerBase {
                     if (wrench && player instanceof ServerPlayer serverPlayer) {
                         // The wrench click that lifted no box starts the distance readout. Sent after the attempt: any
                         // connection it made is already on its way to the client, ahead of this.
-                        PacketDistributor.sendToPlayer(serverPlayer,
+                        Platform.network().sendToPlayer(serverPlayer,
                             new MessageMarkerTrack(pos, BCCoreConfig.markerMaxDistance.get()));
                     }
                 }

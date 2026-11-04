@@ -18,6 +18,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.enums.EnumSnapshotType;
 import buildcraft.lib.net.NetCodecSanity;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Server -> client: a batch of block positions the Architect Table scanned this tick. Used to
@@ -58,7 +59,7 @@ public record ArchitectScanPayload(List<BlockPos> positions) implements CustomPa
     }
 
     public static void handle(ArchitectScanPayload payload,
-                              net.neoforged.neoforge.network.handling.IPayloadContext context) {
-        context.enqueueWork(() -> ClientArchitectScans.INSTANCE.onReceived(payload.positions()));
+                              PacketContext context) {
+        context.runOnMain(() -> ClientArchitectScans.INSTANCE.onReceived(payload.positions()));
     }
 }

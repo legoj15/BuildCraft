@@ -12,6 +12,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 import buildcraft.core.client.MarkerDistanceTracker;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Server -> client: start the distance readout for one volume marker (see {@link MarkerDistanceTracker}).
@@ -43,7 +44,7 @@ public record MessageMarkerTrack(BlockPos pos, int maxDistance) implements Custo
 
     /** Client-side handler. The tracker is named only inside the queued task, which a dedicated server never runs
      *  (this message goes to clients), so linking this class does not load it. */
-    public static void handle(MessageMarkerTrack message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
-        ctx.enqueueWork(() -> MarkerDistanceTracker.start(message.pos, message.maxDistance, ctx.player().level()));
+    public static void handle(MessageMarkerTrack message, PacketContext ctx) {
+        ctx.runOnMain(() -> MarkerDistanceTracker.start(message.pos, message.maxDistance, ctx.player().level()));
     }
 }

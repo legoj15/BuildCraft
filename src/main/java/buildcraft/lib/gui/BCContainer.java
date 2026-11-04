@@ -11,10 +11,10 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * The shared BuildCraft-menu contract, implemented by BOTH menu bases —
@@ -56,7 +56,7 @@ public interface BCContainer {
     }
 
     /** Dispatch an incoming container message. Implemented on the bases (each adds its own IDs). */
-    void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx);
+    void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx);
 
     /** From {@code AbstractContainerMenu}; declared here so the message dispatch can reach-check. */
     boolean stillValid(Player player);

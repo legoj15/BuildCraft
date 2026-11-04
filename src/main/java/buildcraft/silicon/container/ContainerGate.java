@@ -21,7 +21,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.EnumPipePart;
@@ -36,6 +35,7 @@ import buildcraft.lib.statement.ActionWrapper;
 import buildcraft.lib.statement.StatementWrapper;
 import buildcraft.lib.statement.TriggerWrapper;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.silicon.gate.GateContext;
 import buildcraft.silicon.gate.GateContext.GateGroup;
 import buildcraft.silicon.gate.GateLogic;
@@ -151,7 +151,7 @@ public class ContainerGate extends ContainerBC_Neptune {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         super.readMessage(id, buffer, isClient, ctx);
         if (!isClient) {
             if (id == ID_CONNECTION) {

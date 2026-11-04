@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 
-import net.neoforged.neoforge.network.connection.ConnectionType;
+import buildcraft.platform.Platform;
 
 /**
  * The client side of the Builder's {@code NET_DISPLAY_LIST} container message. The count comes straight off the wire
@@ -26,7 +26,7 @@ public class ContainerBuilderDisplayListTester {
     /** A message claiming {@code claimed} stacks and carrying {@code actual} of them, all empty (a single 0 each). */
     private static RegistryFriendlyByteBuf message(int claimed, int actual) {
         RegistryFriendlyByteBuf buf =
-            new RegistryFriendlyByteBuf(Unpooled.buffer(), RegistryAccess.EMPTY, ConnectionType.NEOFORGE);
+            Platform.network().registryBuf(Unpooled.buffer(), RegistryAccess.EMPTY);
         buf.writeVarInt(claimed);
         for (int i = 0; i < actual; i++) {
             buf.writeVarInt(0);

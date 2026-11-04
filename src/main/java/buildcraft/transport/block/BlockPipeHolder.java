@@ -52,6 +52,7 @@ import buildcraft.api.transport.pipe.PipeDefinition;
 
 import buildcraft.lib.block.BCWaterlogging;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.platform.Platform;
 import buildcraft.transport.BCTransportBlockEntities;
 import buildcraft.transport.BCTransportItems;
 import buildcraft.transport.pipe.Pipe;
@@ -997,7 +998,7 @@ public class BlockPipeHolder extends Block implements EntityBlock, ICustomPaintH
     // We delegate to a custom packet to spawn the correct pipe-specific texture on clients.
     @Override
     public boolean addLandingEffects(BlockState state1, net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState state2, net.minecraft.world.entity.LivingEntity entity, int numberOfParticles) {
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+        Platform.network().sendToTrackingChunk(
             level, new net.minecraft.world.level.ChunkPos(pos.getX() >> 4, pos.getZ() >> 4),
             new buildcraft.transport.net.MessagePipeLandingEffect(pos, entity.getX(), entity.getY(), entity.getZ(), numberOfParticles)
         );

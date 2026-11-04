@@ -12,6 +12,8 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import buildcraft.platform.Platform;
+
 public enum ClientSnapshots {
     INSTANCE;
 
@@ -36,11 +38,7 @@ public enum ClientSnapshots {
                 LOGGER.debug("Resending unanswered SnapshotRequest to server: hash={} hasHeader={}",
                         hashHex, key.header != null);
             }
-            //? if >=1.21.10 {
-            net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(new SnapshotRequestPayload(key));
-            //?} else {
-            /*net.neoforged.neoforge.network.PacketDistributor.sendToServer(new SnapshotRequestPayload(key));*/
-            //?}
+            Platform.network().sendToServer(new SnapshotRequestPayload(key));
         }
         return found;
     }

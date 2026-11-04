@@ -22,7 +22,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.factory.BCFactoryMenuTypes;
 import buildcraft.factory.tile.TileAutoWorkbenchItems;
@@ -35,6 +34,7 @@ import buildcraft.lib.gui.slot.SlotOutput;
 import buildcraft.lib.gui.slot.SlotPhantom;
 import buildcraft.lib.misc.CraftingUtil;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkbenchItems> implements IBCRecipeBookMenu {
@@ -118,7 +118,7 @@ public class ContainerAutoCraftItems extends ContainerBCCrafting<TileAutoWorkben
     // --- Cycle Output ---
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_CYCLE_OUTPUT && !isClient) {
             boolean next = buffer.readBoolean();
             tile.cycleCraftingOutput(next ? 1 : -1);

@@ -23,7 +23,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.transport.pipe.IPipe;
 import buildcraft.api.transport.pipe.IPipeHolder;
@@ -32,6 +31,7 @@ import buildcraft.api.transport.pipe.PipeFlow;
 import buildcraft.lib.net.NetCodecSanity;
 import buildcraft.lib.net.NetEnumUtil;
 
+import buildcraft.platform.network.PacketContext;
 import buildcraft.transport.pipe.flow.PipeFlowItems;
 
 /**
@@ -116,8 +116,8 @@ public class MessageMultiPipeItem implements CustomPacketPayload {
 
     // --- Client handler ---
 
-    public static void handle(MessageMultiPipeItem message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(MessageMultiPipeItem message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Level world = ctx.player().level();
             if (world == null) return;
             for (var entry : message.items.entrySet()) {

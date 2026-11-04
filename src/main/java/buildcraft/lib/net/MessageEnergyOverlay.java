@@ -17,6 +17,7 @@ import net.minecraft.resources.Identifier;
 import buildcraft.energy.BCEnergyConfig;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MessageUtil;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Server -> client: an action-bar message that names an energy figure, as DATA rather than text.
@@ -97,7 +98,7 @@ public record MessageEnergyOverlay(String key, Kind kind, long amount, boolean d
 
     /** Client-side handler: shows the resolved message on the action bar. Reaches no client-only class
      *  ({@code ctx.player()} is the local player), so it is safe to link on either side. */
-    public static void handle(MessageEnergyOverlay message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
-        ctx.enqueueWork(() -> MessageUtil.sendOverlayMessage(ctx.player(), message.resolve()));
+    public static void handle(MessageEnergyOverlay message, PacketContext ctx) {
+        ctx.runOnMain(() -> MessageUtil.sendOverlayMessage(ctx.player(), message.resolve()));
     }
 }

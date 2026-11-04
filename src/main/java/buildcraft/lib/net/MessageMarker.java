@@ -16,6 +16,7 @@ import net.minecraft.resources.Identifier;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.lib.marker.MarkerCache;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Syncs marker positions and connections from server to client.
@@ -114,9 +115,9 @@ public record MessageMarker(
      * <p>
      * Already on the client main thread: the registrar's default {@code HandlerThread.MAIN} wraps it in NeoForge's
      * {@code MainThreadPayloadHandler}, which enqueues it (FIFO with {@code MessageMarkerTrack}). So it never races
-     * the client-tick readers of the connection sets, and needs no {@code ctx.enqueueWork} of its own.
+     * the client-tick readers of the connection sets, and needs no {@code ctx.runOnMain} of its own.
      */
-    public static void handle(MessageMarker message, net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+    public static void handle(MessageMarker message, PacketContext ctx) {
         if (message.cacheId < 0 || message.cacheId >= MarkerCache.CACHES.size()) {
             BCLog.logger.warn("[lib.messages][marker] Invalid cache ID: " + message.cacheId);
             return;

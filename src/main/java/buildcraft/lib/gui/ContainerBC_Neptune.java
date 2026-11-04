@@ -17,10 +17,10 @@ import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.net.IPayloadWriter;
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 
 /**
  * Base container class for the majority of BuildCraft GUIs — those that do NOT use vanilla's recipe
@@ -108,7 +108,7 @@ public abstract class ContainerBC_Neptune extends AbstractContainerMenu implemen
      * This base has no recipe-book placement to do — that moved to {@link ContainerBCCrafting}.
      */
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         support.readMessage(id, buffer, isClient, ctx);
     }
 

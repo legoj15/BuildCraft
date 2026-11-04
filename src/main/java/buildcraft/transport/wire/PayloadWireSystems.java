@@ -18,7 +18,8 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import buildcraft.platform.network.PacketContext;
+
 
 public class PayloadWireSystems implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<PayloadWireSystems> TYPE =
@@ -67,8 +68,8 @@ public class PayloadWireSystems implements CustomPacketPayload {
         return TYPE;
     }
 
-    public static void handle(PayloadWireSystems message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(PayloadWireSystems message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             ClientWireSystems.INSTANCE.wireSystems.clear();
             ClientWireSystems.INSTANCE.wireSystems.putAll(message.wireSystems);
         });

@@ -15,7 +15,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.transport.pipe.IPipe;
@@ -23,6 +22,7 @@ import buildcraft.api.transport.pipe.IPipeHolder.PipeMessageReceiver;
 import buildcraft.api.transport.pipe.PipeFlow;
 
 import buildcraft.lib.net.PacketBufferBC;
+import buildcraft.platform.network.PacketContext;
 import buildcraft.transport.pipe.Pipe;
 
 /**
@@ -71,8 +71,8 @@ public record MessagePipePayload(
      * Client-side handler. Looks up the pipe at the given position and
      * dispatches the payload to the correct receiver (flow, behaviour, or pluggable).
      */
-    public static void handle(MessagePipePayload message, IPayloadContext ctx) {
-        ctx.enqueueWork(() -> {
+    public static void handle(MessagePipePayload message, PacketContext ctx) {
+        ctx.runOnMain(() -> {
             Level world = ctx.player().level();
             if (world == null) return;
 

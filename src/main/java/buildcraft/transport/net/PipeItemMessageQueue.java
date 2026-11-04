@@ -19,7 +19,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.neoforge.network.PacketDistributor;
+import buildcraft.platform.Platform;
+
 
 /**
  * Collects travelling item data per-player per-tick and sends batched packets at end of each server tick.
@@ -35,7 +36,7 @@ public class PipeItemMessageQueue {
      */
     public static void serverTick() {
         for (var entry : cachedPlayerPackets.entrySet()) {
-            PacketDistributor.sendToPlayer(entry.getKey(), entry.getValue());
+            Platform.network().sendToPlayer(entry.getKey(), entry.getValue());
         }
         cachedPlayerPackets.clear();
     }

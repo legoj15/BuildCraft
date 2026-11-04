@@ -10,7 +10,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import buildcraft.lib.gui.ContainerBCTile;
 import buildcraft.lib.gui.slot.SlotBase;
@@ -20,6 +19,7 @@ import buildcraft.builders.BCBuildersMenuTypes;
 import buildcraft.builders.item.ItemSnapshot;
 import buildcraft.builders.snapshot.Snapshot;
 import buildcraft.builders.tile.TileReplacer;
+import buildcraft.platform.network.PacketContext;
 
 @SuppressWarnings("this-escape")
 public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
@@ -68,7 +68,7 @@ public class ContainerReplacer extends ContainerBCTile<TileReplacer> {
     }
 
     @Override
-    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, IPayloadContext ctx) {
+    public void readMessage(int id, PacketBufferBC buffer, boolean isClient, PacketContext ctx) {
         if (id == NET_REPLACE && !isClient) {
             String newName = buffer.readUtf();
             if (tile != null) {

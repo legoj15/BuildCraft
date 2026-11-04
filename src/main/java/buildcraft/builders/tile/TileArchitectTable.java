@@ -76,6 +76,7 @@ import buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes;
 import buildcraft.core.marker.volume.Lock;
 import buildcraft.core.marker.volume.VolumeBox;
 import buildcraft.core.tile.TileMarkerVolume;
+import buildcraft.platform.Platform;
 
 public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, IBCMenuProvider {
 
@@ -387,7 +388,7 @@ public class TileArchitectTable extends TileBC_Neptune implements IDebuggable, I
         }
 
         if (!scannedThisTick.isEmpty() && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
-            net.neoforged.neoforge.network.PacketDistributor.sendToPlayersTrackingChunk(
+            Platform.network().sendToTrackingChunk(
                     serverLevel,
                     new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4),
                     new buildcraft.builders.snapshot.ArchitectScanPayload(new ArrayList<>(scannedThisTick))

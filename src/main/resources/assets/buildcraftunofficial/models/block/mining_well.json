@@ -4,6 +4,7 @@
         "particle": "buildcraftunofficial:block/mining_well/side",
         "down": "buildcraftunofficial:block/mining_well/bottom",
         "up": "buildcraftunofficial:block/mining_well/top",
+        "top": "buildcraftunofficial:block/mining_well/top",
         "north": "buildcraftunofficial:block/mining_well/front",
         "east": "buildcraftunofficial:block/mining_well/side",
         "south": "buildcraftunofficial:block/mining_well/back",

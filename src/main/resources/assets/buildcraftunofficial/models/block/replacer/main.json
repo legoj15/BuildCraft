@@ -4,6 +4,7 @@
         "particle": "buildcraftunofficial:block/replacer/side",
         "down": "buildcraftunofficial:block/replacer/bottom",
         "up": "buildcraftunofficial:block/replacer/top",
+        "top": "buildcraftunofficial:block/replacer/top",
         "north": "buildcraftunofficial:block/replacer/front",
         "east": "buildcraftunofficial:block/replacer/side",
         "south": "buildcraftunofficial:block/replacer/side",

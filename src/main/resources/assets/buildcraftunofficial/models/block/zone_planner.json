@@ -4,6 +4,7 @@
         "particle": "buildcraftunofficial:block/zone_planner/default",
         "down": "buildcraftunofficial:block/zone_planner/default",
         "up": "buildcraftunofficial:block/zone_planner/top",
+        "top": "buildcraftunofficial:block/zone_planner/top",
         "north": "buildcraftunofficial:block/zone_planner/front",
         "east": "buildcraftunofficial:block/zone_planner/right",
         "south": "buildcraftunofficial:block/zone_planner/back",

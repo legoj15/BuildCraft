@@ -4,6 +4,7 @@
         "particle": "buildcraftunofficial:block/architect/back",
         "down": "buildcraftunofficial:block/architect/bottom",
         "up": "buildcraftunofficial:block/architect/top",
+        "top": "buildcraftunofficial:block/architect/top",
         "north": "buildcraftunofficial:block/architect/front",
         "east": "buildcraftunofficial:block/architect/left",
         "south": "buildcraftunofficial:block/architect/back",

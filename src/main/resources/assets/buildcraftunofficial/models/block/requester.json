@@ -5,6 +5,7 @@
         "particle": "buildcraftunofficial:block/requester/side",
         "down": "buildcraftunofficial:block/requester/bottom",
         "up": "buildcraftunofficial:block/requester/top",
+        "top": "buildcraftunofficial:block/requester/top",
         "north": "buildcraftunofficial:block/requester/front",
         "east": "buildcraftunofficial:block/requester/side",
         "south": "buildcraftunofficial:block/requester/back",

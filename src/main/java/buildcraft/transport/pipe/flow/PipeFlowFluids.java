@@ -28,15 +28,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.level.Level;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?}
-//? if <1.21.10 {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.FluidItemDrops;
 import buildcraft.api.core.BCLog;
@@ -56,12 +47,15 @@ import buildcraft.api.transport.pipe.PipeEventHandler;
 import buildcraft.api.transport.pipe.PipeEventStatement;
 import buildcraft.api.transport.pipe.PipeFlow;
 
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.CapUtil;
 import buildcraft.lib.misc.LocaleUtil;
 import buildcraft.lib.misc.MathUtil;
 import buildcraft.lib.misc.NBTUtilBC;
 import buildcraft.lib.net.NetEnumUtil;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCSnapshotJournal;
+import buildcraft.platform.transfer.BCTransaction;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 import buildcraft.core.BCCoreConfig;
 import buildcraft.transport.BCTransportStatements;
@@ -283,11 +277,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         if (from == null || millibuckets <= 0) {
             return null;
         }
-        //? if >=1.21.10 {
-        ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
-        //?} else {
-        /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);*/
-        //?}
+        BCFluidStorage handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
         if (handler == null) {
             return null;
         }
@@ -300,34 +290,28 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
 
         int extracted;
         BCFluidStack toAdd;
-        //? if >=1.21.10 {
-        // Determine what fluid resource to extract
-        FluidResource resource;
+        // Determine what fluid to extract
+        BCFluidStack resource;
         if (filter != null && !filter.isEmpty()) {
-            resource = FluidResource.of(NeoFluidStacks.toNeo(filter));
+            resource = filter;
         } else if (!currentFluid.isEmpty()) {
             // The pipe holds one fluid: pull only more of it, never whatever the handler lists first.
-            resource = FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
+            resource = currentFluid;
         } else {
             // Extract whatever the handler has
-            resource = handler.getResource(0);
-            if (resource == null || resource.isEmpty()) {
+            resource = handler.getStack(0);
+            if (resource.isEmpty()) {
                 return null;
             }
         }
-        if (!currentFluid.isEmpty() && !resource.matches(NeoFluidStacks.toNeo(currentFluid))) {
+        if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, resource)) {
             return null;
         }
 
-        if (simulate) {
-            try (Transaction tx = Transaction.openRoot()) {
-                extracted = handler.extract(resource, millibuckets, tx);
-                // tx is not committed — rolls back automatically (simulate)
-            }
-        } else {
-            try (Transaction tx = Transaction.openRoot()) {
-                extracted = handler.extract(resource, millibuckets, tx);
-                tx.commit();
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            extracted = handler.extract(resource, millibuckets, tx);
+            if (!simulate) {
+                tx.commit(); // a simulation rolls back when tx closes
             }
         }
 
@@ -335,36 +319,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return null;
         }
 
-        toAdd = NeoFluidStacks.fromNeo(resource.toStack(extracted));
-        //?} else {
-        /*// Determine what fluid to extract
-        BCFluidStack drainFilter;
-        if (filter != null && !filter.isEmpty()) {
-            drainFilter = filter;
-        } else if (!currentFluid.isEmpty()) {
-            // The pipe holds one fluid: pull only more of it, never whatever the handler lists first.
-            drainFilter = currentFluid;
-        } else {
-            // Extract whatever the handler has
-            drainFilter = NeoFluidStacks.fromNeo(handler.getFluidInTank(0));
-            if (drainFilter == null || drainFilter.isEmpty()) {
-                return null;
-            }
-        }
-        if (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, drainFilter)) {
-            return null;
-        }
-
-        BCFluidStack drained = NeoFluidStacks.fromNeo(handler.drain(NeoFluidStacks.toNeo(drainFilter.copyWithAmount(millibuckets)),
-            simulate ? IFluidHandler.FluidAction.SIMULATE : IFluidHandler.FluidAction.EXECUTE));
-        extracted = drained.getAmount();
-
-        if (extracted <= 0) {
-            return null;
-        }
-
-        toAdd = drained.copy();
-        *///?}
+        toAdd = resource.copyWithAmount(extracted);
         if (currentFluid.isEmpty() && !simulate) {
             setFluid(toAdd);
         }
@@ -425,7 +380,6 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         return filled;
     }
 
-    //? if >=1.21.10 {
     /** The complete server-side fill state of every section, so an insert made inside a transaction that is
      *  later aborted leaves no trace. Both transactional entry points journal through {@link #journal}
      *  before they mutate anything: the per-face {@link Section} capability, because
@@ -435,7 +389,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
      *  source's extraction rolled back while the pipe kept what it had taken.
      *
      *  <p>Snapshots are reused (see {@link #journal}): once warm, journalling the per-tick pipe-to-pipe push
-     *  (which commits every time) allocates no snapshot. The push's own transaction and side checks are
+     *  (which commits every time) allocates no snapshot, since a root commit or an abort hands it back. The push's own transaction and side checks are
      *  outside this class's control. */
     private final class FlowSnapshot {
         private BCFluidStack fluid = BCFluidStack.EMPTY;
@@ -492,33 +446,38 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     @Nullable
     private FlowSnapshot spareSnapshot;
 
-    private final net.neoforged.neoforge.transfer.transaction.SnapshotJournal<FlowSnapshot> journal =
-            new net.neoforged.neoforge.transfer.transaction.SnapshotJournal<>() {
-                @Override
-                protected FlowSnapshot createSnapshot() {
-                    FlowSnapshot snapshot = spareSnapshot;
-                    spareSnapshot = null;
-                    return (snapshot != null ? snapshot : new FlowSnapshot()).capture();
-                }
+    private final BCSnapshotJournal<FlowSnapshot> journal = new BCSnapshotJournal<>() {
+        @Override
+        protected FlowSnapshot createSnapshot() {
+            FlowSnapshot snapshot = spareSnapshot;
+            spareSnapshot = null;
+            return (snapshot != null ? snapshot : new FlowSnapshot()).capture();
+        }
 
-                @Override
-                protected void revertToSnapshot(FlowSnapshot snapshot) {
-                    snapshot.restore();
-                }
+        @Override
+        protected void revertToSnapshot(FlowSnapshot snapshot) {
+            snapshot.restore();
+            park(snapshot);
+        }
 
-                @Override
-                protected void releaseSnapshot(FlowSnapshot snapshot) {
-                    snapshot.fluid = BCFluidStack.EMPTY; // do not pin a stack while parked
-                    spareSnapshot = snapshot;
-                }
-            };
+        @Override
+        protected void onRootCommit(FlowSnapshot originalState) {
+            park(originalState);
+        }
+    };
 
-    /** A fluid handler a docking station on {@code face} hands to a docked robot. */
-    public ResourceHandler<FluidResource> getStationOutput(Direction face) {
+    /** Keeps a snapshot the journal is done with for the next transaction. */
+    private void park(FlowSnapshot snapshot) {
+        snapshot.fluid = BCFluidStack.EMPTY; // do not pin a stack while parked
+        spareSnapshot = snapshot;
+    }
+
+    /** A fluid storage a docking station on {@code face} hands to a docked robot. */
+    public BCFluidStorage getStationOutput(Direction face) {
         return new StationOutput(face);
     }
 
-    private final class StationOutput implements ResourceHandler<FluidResource> {
+    private final class StationOutput implements BCFluidStorage {
         private final Direction face;
 
         StationOutput(Direction face) {
@@ -537,113 +496,46 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public FluidResource getResource(int index) {
-            return index == 0 && !currentFluid.isEmpty() && stored() > 0
-                    ? FluidResource.of(NeoFluidStacks.toNeo(currentFluid))
-                    : FluidResource.EMPTY;
+        public BCFluidStack getStack(int index) {
+            int stored = stored();
+            return index == 0 && !currentFluid.isEmpty() && stored > 0
+                    ? currentFluid.copyWithAmount(stored)
+                    : BCFluidStack.EMPTY;
         }
 
         @Override
-        public long getAmountAsLong(int index) {
-            return index == 0 ? stored() : 0;
+        public int getCapacity(int index, BCFluidStack resource) {
+            return index == 0 ? capacity * 2 : 0;
         }
 
         @Override
-        public long getCapacityAsLong(int index, FluidResource resource) {
-            return index == 0 ? capacity * 2L : 0;
-        }
-
-        @Override
-        public boolean isValid(int index, FluidResource resource) {
+        public boolean isValid(int index, BCFluidStack resource) {
             if (index != 0 || resource.isEmpty()) {
                 return false;
             }
-            return currentFluid.isEmpty()
-                    || BCFluidStack.isSameFluidSameComponents(currentFluid, NeoFluidStacks.fromNeo(resource.toStack(1)));
+            return currentFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(currentFluid, resource);
         }
 
         @Override
-        public int insert(int index, FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-            if (index != 0 || amount <= 0) {
+        public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
+            if (index != 0 || amount <= 0 || resource.isEmpty()) {
                 return 0;
             }
-            int accepted = insertFluidForce(NeoFluidStacks.fromNeo(resource.toStack(amount)), face, true);
+            int accepted = insertFluidForce(resource.copyWithAmount(amount), face, true);
             if (accepted <= 0) {
                 return 0;
             }
             journal.updateSnapshots(transaction);
-            return insertFluidForce(NeoFluidStacks.fromNeo(resource.toStack(accepted)), face, false);
+            return insertFluidForce(resource.copyWithAmount(accepted), face, false);
         }
 
         @Override
-        public int extract(int index, FluidResource resource, int amount,
-                net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+        public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
             // A station never drains the pipe through this seam — a robot LOADS from getFluidInput, the
             // block the wooden pipe is pointed at, not from the pipe's own contents.
             return 0;
         }
     }
-    //?} else {
-    /*/^* A fluid handler a docking station on {@code face} hands to a docked robot. *^/
-    public IFluidHandler getStationOutput(Direction face) {
-        return new StationOutput(face);
-    }
-
-    private final class StationOutput implements IFluidHandler {
-        private final Direction face;
-
-        StationOutput(Direction face) {
-            this.face = face;
-        }
-
-        private int stored() {
-            return sections.get(EnumPipePart.fromFacing(face)).amount
-                    + sections.get(EnumPipePart.CENTER).amount;
-        }
-
-        @Override
-        public int getTanks() {
-            return 1;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            return NeoFluidStacks.toNeo(tank == 0 && !currentFluid.isEmpty() && stored() > 0
-                    ? currentFluid.copyWithAmount(stored())
-                    : BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public int getTankCapacity(int tank) {
-            return tank == 0 ? capacity * 2 : 0;
-        }
-
-        @Override
-        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
-            if (tank != 0 || stack.isEmpty()) {
-                return false;
-            }
-            return currentFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(currentFluid, stack);
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            // The classic API carries its own simulate flag, so no snapshot journal is needed here.
-            return insertFluidForce(resource, face, action.simulate());
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-    }*/
-    //?}
 
     @Override
     public Object tryExtractFluidAdv(int millibuckets, Direction from, IFluidFilter filter, boolean simulate) {
@@ -656,40 +548,22 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
         // Scan the source handler's tanks for the first fluid the filter accepts, then extract it
         // through tryExtractFluid (which fills the pipe sections and runs under a Transaction).
-        //? if >=1.21.10 {
-        ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
+        BCFluidStorage handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
         if (handler == null) {
             return null;
         }
         for (int i = 0; i < handler.size(); i++) {
-            FluidResource res = handler.getResource(i);
+            BCFluidStack inTank = handler.getStack(i);
             // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
-            if (res == null || res.isEmpty() || (!currentFluid.isEmpty() && !res.matches(NeoFluidStacks.toNeo(currentFluid)))) {
-                continue;
-            }
-            if (filter.matches(NeoFluidStacks.fromNeo(res.toStack(1)))) {
-                return tryExtractFluid(millibuckets, from, NeoFluidStacks.fromNeo(res.toStack(millibuckets)), simulate);
-            }
-        }
-        return null;
-        //?} else {
-        /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(from, CapUtil.CAP_FLUIDS);
-        if (handler == null) {
-            return null;
-        }
-        for (int i = 0; i < handler.getTanks(); i++) {
-            BCFluidStack inTank = NeoFluidStacks.fromNeo(handler.getFluidInTank(i));
-            // Skip what the pipe cannot take: it holds one fluid, and tryExtractFluid refuses any other.
-            if (inTank == null || inTank.isEmpty()
+            if (inTank.isEmpty()
                     || (!currentFluid.isEmpty() && !BCFluidStack.isSameFluidSameComponents(currentFluid, inTank))) {
                 continue;
             }
-            if (filter.matches(inTank)) {
-                return tryExtractFluid(millibuckets, from, inTank, simulate);
+            if (filter.matches(inTank.copyWithAmount(1))) {
+                return tryExtractFluid(millibuckets, from, inTank.copyWithAmount(millibuckets), simulate);
             }
         }
         return null;
-        *///?}
     }
 
     @Override
@@ -951,15 +825,13 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                 sideCheck.disallowAllExcept(part.face);
                 pipe.getHolder().fireEvent(sideCheck);
                 if (sideCheck.getOrder().size() == 1) {
-                    //? if >=1.21.10 {
-                    ResourceHandler<FluidResource> handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
+                    BCFluidStorage handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
                     if (handler == null) continue;
 
                     if (maxDrain > 0) {
-                        FluidResource resource = FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
                         int filled;
-                        try (Transaction tx = Transaction.openRoot()) {
-                            filled = handler.insert(resource, maxDrain, tx);
+                        try (BCTransaction tx = BCTransaction.openRoot()) {
+                            filled = handler.insert(currentFluid, maxDrain, tx);
                             tx.commit();
                         }
                         if (filled > 0) {
@@ -973,8 +845,8 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                             // would fire its TryInsert event twice a tick). A pipe face is TILE only behind the
                             // neighbour's blocking plug, where BCTransport's pipe_holder provider gives no fluid handler.
                             int settled = section.getSettled();
-                            try (Transaction tx = Transaction.openRoot()) {
-                                filled = handler.insert(resource, settled, tx);
+                            try (BCTransaction tx = BCTransaction.openRoot()) {
+                                filled = handler.insert(currentFluid, settled, tx);
                                 tx.commit();
                             }
                             if (filled > 0) {
@@ -983,31 +855,6 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
                             }
                         }
                     }
-                    //?} else {
-                    /*IFluidHandler handler = pipe.getHolder().getCapabilityFromPipe(part.face, CapUtil.CAP_FLUIDS);
-                    if (handler == null) continue;
-
-                    if (maxDrain > 0) {
-                        int filled = handler.fill(NeoFluidStacks.toNeo(currentFluid.copyWithAmount(maxDrain)), IFluidHandler.FluidAction.EXECUTE);
-                        if (filled > 0) {
-                            section.drainInternal(filled, true);
-                            section.ticksInDirection = COOLDOWN_OUTPUT;
-                        } else if (section.getSettled() > maxDrain
-                                && pipe.getConnectedType(part.face) == IPipe.ConnectedType.TILE) {
-                            // A target that only takes whole steps larger than one tick's transfer (a cauldron moves
-                            // 1000 mB) refused the slice: offer it everything that has settled in this section.
-                            // TILE faces only, so never a pipe neighbour (a full pipe refuses every amount, and this
-                            // would fire its TryInsert event twice a tick). A pipe face is TILE only behind the
-                            // neighbour's blocking plug, where BCTransport's pipe_holder provider gives no fluid handler.
-                            int settled = section.getSettled();
-                            filled = handler.fill(NeoFluidStacks.toNeo(currentFluid.copyWithAmount(settled)), IFluidHandler.FluidAction.EXECUTE);
-                            if (filled > 0) {
-                                section.amount -= Math.min(filled, settled);
-                                section.ticksInDirection = COOLDOWN_OUTPUT;
-                            }
-                        }
-                    }
-                    *///?}
                 }
             }
         }
@@ -1219,11 +1066,7 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
     }
 
     /** Holds data about a single section of this pipe. */
-    //? if >=1.21.10 {
-    class Section implements ResourceHandler<FluidResource> {
-    //?} else {
-    /*class Section implements net.neoforged.neoforge.fluids.capability.IFluidHandler {*/
-    //?}
+    class Section implements BCFluidStorage {
         final EnumPipePart part;
 
         int amount = 0;
@@ -1461,44 +1304,41 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
             return filled;
         }
 
-        // Fluid-handler capability surface — Transfer API (ResourceHandler<FluidResource>) on 1.21.10+,
-        // classic IFluidHandler on 1.21.1. The pipe section is a single tank (size/getTanks == 1).
-        //? if >=1.21.10 {
+        // Fluid storage surface (the platform layer exposes it as the loader's fluid handler). The pipe section is
+        // a single tank.
         @Override
         public int size() {
             return 1;
         }
 
         @Override
-        public FluidResource getResource(int index) {
+        public BCFluidStack getStack(int index) {
             if (index == 0 && !currentFluid.isEmpty() && amount > 0) {
-                return FluidResource.of(NeoFluidStacks.toNeo(currentFluid));
+                return currentFluid.copyWithAmount(amount);
             }
-            return FluidResource.EMPTY;
+            return BCFluidStack.EMPTY;
         }
 
         @Override
-        public long getAmountAsLong(int index) {
+        public int getAmount(int index) {
             return index == 0 ? amount : 0;
         }
 
         @Override
-        public long getCapacityAsLong(int index, FluidResource resource) {
+        public int getCapacity(int index, BCFluidStack resource) {
             return index == 0 ? capacity : 0;
         }
 
         @Override
-        public boolean isValid(int index, FluidResource resource) {
+        public boolean isValid(int index, BCFluidStack resource) {
             if (index != 0) return false;
-            return currentFluid.isEmpty()
-                || BCFluidStack.isSameFluidSameComponents(currentFluid, NeoFluidStacks.fromNeo(resource.toStack(1)));
+            return currentFluid.isEmpty() || BCFluidStack.isSameFluidSameComponents(currentFluid, resource);
         }
 
         @Override
-        public int insert(int index, FluidResource resource, int insertAmount,
-                          net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
-            if (index != 0 || insertAmount <= 0) return 0;
-            BCFluidStack fluidStack = NeoFluidStacks.fromNeo(resource.toStack(insertAmount));
+        public int insert(int index, BCFluidStack resource, int insertAmount, BCTransactionContext transaction) {
+            if (index != 0 || insertAmount <= 0 || resource.isEmpty()) return 0;
+            BCFluidStack fluidStack = resource.copyWithAmount(insertAmount);
             int accepted = measureNeighbourInsert(fluidStack);
             if (accepted <= 0) {
                 return 0;
@@ -1509,59 +1349,10 @@ public class PipeFlowFluids extends PipeFlow implements IFlowFluid, IDebuggable 
         }
 
         @Override
-        public int extract(int index, FluidResource resource, int extractAmount,
-                           net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
+        public int extract(int index, BCFluidStack resource, int extractAmount, BCTransactionContext transaction) {
             // Pipe sections don't support external drain
             return 0;
         }
-        //?} else {
-        /*@Override
-        public int getTanks() {
-            return 1;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int tank) {
-            if (tank == 0 && !currentFluid.isEmpty() && amount > 0) {
-                return NeoFluidStacks.toNeo(currentFluid.copyWithAmount(amount));
-            }
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public int getTankCapacity(int tank) {
-            return tank == 0 ? capacity : 0;
-        }
-
-        @Override
-        public boolean isFluidValid(int tank, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
-            if (tank != 0) return false;
-            return currentFluid.isEmpty()
-                || BCFluidStack.isSameFluidSameComponents(currentFluid, stack);
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack fluidStackNeo, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) { BCFluidStack fluidStack = NeoFluidStacks.fromNeo(fluidStackNeo);
-            int accepted = measureNeighbourInsert(fluidStack);
-            if (accepted <= 0 || action.simulate()) {
-                // A dry run leaves no trace: no fluid type, no input cooldown.
-                return Math.max(accepted, 0);
-            }
-            return commitNeighbourInsert(fluidStack, accepted);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            // Pipe sections don't support external drain
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction action) {
-            // Pipe sections don't support external drain
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-        *///?}
     }
 
     /** Enum used for the current direction that a fluid is flowing. */

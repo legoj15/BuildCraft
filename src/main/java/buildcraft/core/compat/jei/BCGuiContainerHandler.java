@@ -13,7 +13,6 @@ import net.minecraft.client.renderer.Rect2i;
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.gui.GuiBC8;
 import buildcraft.lib.gui.IGuiElement;
 import buildcraft.lib.gui.elem.GuiElementFluidTank;
@@ -21,7 +20,7 @@ import buildcraft.lib.gui.ledger.Ledger_Neptune;
 
 import mezz.jei.api.gui.builder.IClickableIngredientFactory;
 import mezz.jei.api.gui.handlers.IGuiContainerHandler;
-import mezz.jei.api.neoforge.NeoForgeTypes;
+import mezz.jei.api.helpers.IPlatformFluidHelper;
 import mezz.jei.api.runtime.IClickableIngredient;
 
 /**
@@ -31,6 +30,13 @@ import mezz.jei.api.runtime.IClickableIngredient;
  * accept hover-over-a-tank as a fluid focus).
  */
 public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
+    /** JEI's fluid ingredient type for this loader, so a tank's fluid crosses without naming the loader's stack. */
+    private final IPlatformFluidHelper<?> fluidHelper;
+
+    public BCGuiContainerHandler(IPlatformFluidHelper<?> fluidHelper) {
+        this.fluidHelper = fluidHelper;
+    }
+
 
     @Override
     public List<Rect2i> getGuiExtraAreas(GuiBC8<?> screen) {
@@ -72,9 +78,15 @@ public class BCGuiContainerHandler implements IGuiContainerHandler<GuiBC8<?>> {
             long amount = tank.getAmountMb(0);
             if (stack.isEmpty() || amount <= 0) continue;
 
-            return builder.createBuilder(NeoForgeTypes.FLUID_STACK, NeoFluidStacks.toNeo(stack))
-                    .buildWithArea((int) x, (int) y, (int) Math.ceil(w), (int) Math.ceil(h));
+            return clickable(builder, fluidHelper, stack,
+                    (int) x, (int) y, (int) Math.ceil(w), (int) Math.ceil(h));
         }
         return Optional.empty();
+    }
+
+    private static <T> Optional<IClickableIngredient<T>> clickable(IClickableIngredientFactory builder,
+            IPlatformFluidHelper<T> helper, BCFluidStack stack, int x, int y, int w, int h) {
+        T ingredient = helper.create(stack.getFluidHolder(), stack.getAmount(), stack.getComponentsPatch());
+        return builder.createBuilder(helper.getFluidIngredientType(), ingredient).buildWithArea(x, y, w, h);
     }
 }

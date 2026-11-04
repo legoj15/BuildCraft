@@ -67,26 +67,17 @@ public class BCEnergy {
     private static void registerTransfer(buildcraft.platform.transfer.CapabilityRegistrar registrar) {
         registrar.blockItems(BCEnergyBlockEntities.ENGINE_STONE.get(),
             (engine, direction) -> direction == engine.getOrientation() ? null : engine.fuelItemHandler);
+        registrar.blockFluids(BCEnergyBlockEntities.ENGINE_IRON.get(),
+            (engine, direction) -> direction == engine.getOrientation() ? null : engine.combinedFluidHandler);
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
         // Version-neutral capability tokens: Transfer-API on 1.21.10+, classic handler tokens on 1.21.1.
         //? if >=1.21.10 {
-        var fluidCap = Capabilities.Fluid.BLOCK;
         var energyCap = Capabilities.Energy.BLOCK;
         //?} else {
-        /*var fluidCap = Capabilities.FluidHandler.BLOCK;
-        var energyCap = Capabilities.EnergyStorage.BLOCK;*/
+        /*var energyCap = Capabilities.EnergyStorage.BLOCK;*/
         //?}
-        event.registerBlockEntity(
-            fluidCap,
-            BCEnergyBlockEntities.ENGINE_IRON.get(),
-            (engine, direction) -> {
-                if (direction == engine.getOrientation()) return null;
-                return engine.combinedFluidHandler;
-            }
-        );
-
         event.registerBlockEntity(
             buildcraft.api.mj.MjAPI.CAP_CONNECTOR,
             BCEnergyBlockEntities.ENGINE_STONE.get(),

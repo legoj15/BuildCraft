@@ -357,7 +357,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // virtue of being docked; getStationOutput is the force path, and unlike the pipe's own
         // capability it honours the transaction, so the unload AIs' per-station dry runs stay
         // observational.
-        return flow.getStationOutput(side().getOpposite());
+        return RobotFluids.toApi(flow.getStationOutput(side().getOpposite()));
     }
 
     @Override
@@ -384,7 +384,7 @@ public class DockingStationPipe extends DockingStation implements IRequestProvid
         // pipe's own extraction face, resolved through the neighbour's block capability exactly as the
         // item input is. A docked robot LOADS
         // fluid from here — 7.1.x's getFluidInput, which the fluid carrier board's load leg needs.
-        return h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS);
+        return RobotFluids.toApi(h.getCapabilityFromPipe(facing, CapUtil.CAP_FLUIDS));
     }
 
     @Override

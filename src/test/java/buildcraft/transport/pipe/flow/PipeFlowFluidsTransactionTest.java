@@ -14,22 +14,16 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.material.Fluids;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.transaction.Transaction;
-//?} else {
-/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
 
 import buildcraft.VanillaSetupBaseTester;
 
 import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.lib.transfer.FluidStorageUtil;
+import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.api.transport.pipe.IPipeHolder;
 
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.CapUtil;
 
 import buildcraft.transport.BCTransportPipes;
@@ -73,16 +67,15 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
         return tank;
     }
 
-    //? if >=1.21.10 {
-    private static ResourceHandler<FluidResource> section(PipeFlowFluids flow, Direction face) {
+    private static BCFluidStorage section(PipeFlowFluids flow, Direction face) {
         return flow.getCapability(CapUtil.CAP_FLUIDS, face);
     }
 
     /** The mB held across all seven sections. */
     private static long pipeTotal(PipeFlowFluids flow) {
-        long total = section(flow, null).getAmountAsLong(0);
+        long total = section(flow, null).getAmount(0);
         for (Direction face : Direction.values()) {
-            total += section(flow, face).getAmountAsLong(0);
+            total += section(flow, face).getAmount(0);
         }
         return total;
     }
@@ -93,8 +86,8 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
         BCFluidTank tank = waterTank(1000);
 
         int simulated;
-        try (Transaction tx = Transaction.openRoot()) {
-            simulated = ResourceHandlerUtil.move(tank, section(flow, FACE), r -> true, 100, tx);
+        try (BCTransaction tx = BCTransaction.openRoot()) {
+            simulated = FluidStorageUtil.move(tank, section(flow, FACE), r -> true, 100, tx);
             // not committed: the canonical Transfer-API dry run
         }
         Assertions.assertTrue(simulated > 0, "precondition: the dry run must report an accepted amount");
@@ -111,13 +104,13 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
         BCFluidTank tank = waterTank(1000);
 
         int moved;
-        try (Transaction root = Transaction.openRoot()) {
-            try (Transaction nested = Transaction.open(root)) {
-                ResourceHandlerUtil.move(tank, section(flow, FACE), r -> true, 100, nested);
+        try (BCTransaction root = BCTransaction.openRoot()) {
+            try (BCTransaction nested = root.openNested()) {
+                FluidStorageUtil.move(tank, section(flow, FACE), r -> true, 100, nested);
                 // nested aborted: what ResourceHandlerUtil.move itself does when the source under-delivers
             }
             Assertions.assertEquals(0, pipeTotal(flow), "the nested abort must already have restored the pipe");
-            moved = ResourceHandlerUtil.move(tank, section(flow, FACE), r -> true, 100, root);
+            moved = FluidStorageUtil.move(tank, section(flow, FACE), r -> true, 100, root);
             root.commit();
         }
         Assertions.assertTrue(moved > 0, "precondition: the committed move must transfer something");
@@ -125,37 +118,4 @@ public class PipeFlowFluidsTransactionTest extends VanillaSetupBaseTester {
         Assertions.assertEquals(moved, pipeTotal(flow), "a committed move lands exactly what left the tank");
         Assertions.assertEquals(1000, tank.getAmountMb(0) + pipeTotal(flow), "fluid is conserved");
     }
-    //?} else {
-    /*private static IFluidHandler section(PipeFlowFluids flow, Direction face) {
-        return flow.getCapability(CapUtil.CAP_FLUIDS, face);
-    }
-
-    private static long pipeTotal(PipeFlowFluids flow) {
-        long total = section(flow, null).getFluidInTank(0).getAmount();
-        for (Direction face : Direction.values()) {
-            total += section(flow, face).getFluidInTank(0).getAmount();
-        }
-        return total;
-    }
-
-    @Test
-    public void simulatedFillLeavesNoTrace() {
-        PipeFlowFluids flow = newConnectedFluidPipe();
-        int simulated = section(flow, FACE).fill(NeoFluidStacks.toNeo(new BCFluidStack(Fluids.WATER, 100)), IFluidHandler.FluidAction.SIMULATE);
-        Assertions.assertTrue(simulated > 0, "precondition: the dry run must report an accepted amount");
-        Assertions.assertEquals(0, pipeTotal(flow), "a simulated fill must not add fluid");
-        Assertions.assertNull(flow.getFluidStackForRender(), "a simulated fill must not set the pipe's fluid type");
-    }
-
-    @Test
-    public void executedFillIsConserved() {
-        PipeFlowFluids flow = newConnectedFluidPipe();
-        BCFluidTank tank = waterTank(1000);
-        // BCFluidTank.drain's third argument is `simulate`: offer 100 mB without taking it yet
-        int filled = section(flow, FACE).fill(NeoFluidStacks.toNeo(tank.drain(0, 100, true)), IFluidHandler.FluidAction.EXECUTE);
-        Assertions.assertTrue(filled > 0, "precondition: the fill must transfer something");
-        tank.drain(0, filled, false); // simulate=false: take from the tank exactly what landed in the pipe
-        Assertions.assertEquals(1000, tank.getAmountMb(0) + pipeTotal(flow), "fluid is conserved");
-    }*/
-    //?}
 }

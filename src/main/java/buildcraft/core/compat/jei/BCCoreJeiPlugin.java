@@ -56,6 +56,7 @@ public class BCCoreJeiPlugin implements IModPlugin {
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
         // Tell JEI about BuildCraft ledger exclusion areas so the ingredient
         // list is pushed out of the way when ledgers are open.
-        registration.addGenericGuiContainerHandler(GuiBC8.class, new BCGuiContainerHandler());
+        registration.addGenericGuiContainerHandler(GuiBC8.class,
+            new BCGuiContainerHandler(registration.getJeiHelpers().getPlatformFluidHelper()));
     }
 }

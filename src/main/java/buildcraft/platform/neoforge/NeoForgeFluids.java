@@ -9,6 +9,7 @@ package buildcraft.platform.neoforge;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -26,6 +27,11 @@ public final class NeoForgeFluids implements FluidServices {
     @Override
     public Component hoverName(Holder<Fluid> fluid, int amount, DataComponentPatch components) {
         return new FluidStack(fluid, amount, components).getHoverName();
+    }
+
+    @Override
+    public ItemStack filledBucket(BCFluidStack stack) {
+        return stack.getFluid().getFluidType().getBucket(toNeo(stack));
     }
 
     /** The NeoForge twin of a BuildCraft stack ({@link FluidStack#EMPTY} for an empty one). */

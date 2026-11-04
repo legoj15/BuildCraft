@@ -8,33 +8,20 @@ package buildcraft.factory.tile;
 
 import java.util.List;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.TransferPreconditions;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-//?} else {
-/*import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;*/
-//?}
-
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.misc.FluidUtilBC;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 /**
- * A column-aware fluid handler for tanks. Delegates fill/drain across the entire
+ * A column-aware fluid storage for tanks. Delegates insert/extract across the entire
  * vertical column of connected {@link TileTank}s, mirroring the 1.12.2 behaviour
  * where {@code TileTank.fill()} and {@code drain()} iterated over all stacked tanks.
  * <p>
- * Liquids fill from bottom to top and drain from top to bottom.
- * <p>
- * On 1.21.10+ this is a NeoForge Transfer-API {@code ResourceHandler<FluidResource>};
- * on 1.21.1 the Transfer API does not exist, so it is a classic {@code IFluidHandler}.
- * The {@code >=1.21.10} branch is exactly today's code, so the released nodes are
- * behaviour-identical.
+ * Liquids fill from bottom to top and drain from top to bottom; gases the other way round.
+ * The platform layer exposes it as the loader's fluid handler.
  */
-//? if >=1.21.10 {
-public class TankColumnResourceHandler implements ResourceHandler<FluidResource> {
+public class TankColumnResourceHandler implements BCFluidStorage {
 
     private final TileTank owner;
 
@@ -42,63 +29,56 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
         this.owner = owner;
     }
 
-    // --- ResourceHandler implementation ---
-
     @Override
     public int size() {
         return 1; // Column presents as a single logical tank
     }
 
     @Override
-    public FluidResource getResource(int index) {
+    public BCFluidStack getStack(int index) {
         checkIndex(index);
-        // Return the fluid type from the first non-empty tank in the column
+        // The fluid of the first non-empty tank in the column, with the whole column's amount
+        BCFluidStack fluid = BCFluidStack.EMPTY;
+        long total = 0;
         for (TileTank t : owner.getTankColumn()) {
-            FluidResource fluid = t.tank.getResource(0);
-            if (!fluid.isEmpty()) {
-                return fluid;
+            BCFluidStack held = t.tank.getFluidStack(0);
+            if (!held.isEmpty()) {
+                if (fluid.isEmpty()) fluid = held;
+                total += held.getAmount();
             }
         }
-        return FluidResource.EMPTY;
+        return fluid.isEmpty() ? BCFluidStack.EMPTY : fluid.copyWithAmount((int) Math.min(total, Integer.MAX_VALUE));
     }
 
     @Override
-    public long getAmountAsLong(int index) {
+    public int getCapacity(int index, BCFluidStack resource) {
         checkIndex(index);
         long total = 0;
         for (TileTank t : owner.getTankColumn()) {
-            total += t.tank.getAmountAsLong(0);
+            total += t.tank.getCapacity(0, resource);
         }
-        return total;
+        return (int) Math.min(total, Integer.MAX_VALUE);
     }
 
     @Override
-    public long getCapacityAsLong(int index, FluidResource resource) {
-        checkIndex(index);
-        long total = 0;
-        for (TileTank t : owner.getTankColumn()) {
-            total += t.tank.getCapacityAsLong(0, resource);
-        }
-        return total;
-    }
-
-    @Override
-    public boolean isValid(int index, FluidResource resource) {
+    public boolean isValid(int index, BCFluidStack resource) {
         checkIndex(index);
         return !resource.isEmpty();
     }
 
     @Override
-    public int insert(int index, FluidResource resource, int amount, TransactionContext transaction) {
+    public int insert(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         checkIndex(index);
-        TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
 
         List<TileTank> tanks = owner.getTankColumn();
 
         // Check that existing fluid in the column is compatible
         for (TileTank t : tanks) {
-            FluidResource current = t.tank.getResource(0);
-            if (!current.isEmpty() && !current.equals(resource)) {
+            BCFluidStack current = t.tank.getFluidStack(0);
+            if (!current.isEmpty() && !BCFluidStack.isSameFluidSameComponents(current, resource)) {
                 return 0; // Different fluid already present
             }
         }
@@ -134,9 +114,11 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
     }
 
     @Override
-    public int extract(int index, FluidResource resource, int amount, TransactionContext transaction) {
+    public int extract(int index, BCFluidStack resource, int amount, BCTransactionContext transaction) {
         checkIndex(index);
-        TransferPreconditions.checkNonEmptyNonNegative(resource, amount);
+        if (resource.isEmpty() || amount <= 0) {
+            return 0;
+        }
 
         List<TileTank> tanks = owner.getTankColumn();
 
@@ -176,137 +158,3 @@ public class TankColumnResourceHandler implements ResourceHandler<FluidResource>
         }
     }
 }
-//?} else {
-/*public class TankColumnResourceHandler implements IFluidHandler {
-
-    private final TileTank owner;
-
-    public TankColumnResourceHandler(TileTank owner) {
-        this.owner = owner;
-    }
-
-    @Override
-    public int getTanks() {
-        return 1; // Column presents as a single logical tank
-    }
-
-    @Override
-    public FluidStack getFluidInTank(int tank) {
-        FluidStack fluid = FluidStack.EMPTY;
-        long total = 0;
-        for (TileTank t : owner.getTankColumn()) {
-            FluidStack held = NeoFluidStacks.toNeo(t.tank.getFluidStack(0));
-            if (!held.isEmpty()) {
-                if (fluid.isEmpty()) fluid = held.copy();
-                total += t.tank.getAmountMb(0);
-            }
-        }
-        if (fluid.isEmpty()) return FluidStack.EMPTY;
-        fluid.setAmount((int) Math.min(total, Integer.MAX_VALUE));
-        return fluid;
-    }
-
-    @Override
-    public int getTankCapacity(int tank) {
-        long total = 0;
-        for (TileTank t : owner.getTankColumn()) {
-            total += t.tank.getCapacityMb(0);
-        }
-        return (int) Math.min(total, Integer.MAX_VALUE);
-    }
-
-    @Override
-    public boolean isFluidValid(int tank, FluidStack stack) {
-        return !stack.isEmpty();
-    }
-
-    @Override
-    public int fill(FluidStack resource, FluidAction action) {
-        if (resource.isEmpty()) return 0;
-        List<TileTank> tanks = owner.getTankColumn();
-
-        // Check that existing fluid in the column is compatible
-        for (TileTank t : tanks) {
-            FluidStack current = NeoFluidStacks.toNeo(t.tank.getFluidStack(0));
-            if (!current.isEmpty() && !FluidStack.isSameFluidSameComponents(current, resource)) {
-                return 0; // Different fluid already present
-            }
-        }
-
-        boolean gaseous = FluidUtilBC.isGaseous(resource.getFluid());
-        boolean simulate = action.simulate();
-        int remaining = resource.getAmount();
-        int totalFilled = 0;
-
-        if (gaseous) {
-            for (int i = tanks.size() - 1; i >= 0; i--) {
-                if (remaining <= 0) break;
-                FluidStack toFill = resource.copy();
-                toFill.setAmount(remaining);
-                int filled = tanks.get(i).tank.fill(0, NeoFluidStacks.fromNeo(toFill), simulate);
-                remaining -= filled;
-                totalFilled += filled;
-            }
-        } else {
-            for (TileTank t : tanks) {
-                if (remaining <= 0) break;
-                FluidStack toFill = resource.copy();
-                toFill.setAmount(remaining);
-                int filled = t.tank.fill(0, NeoFluidStacks.fromNeo(toFill), simulate);
-                remaining -= filled;
-                totalFilled += filled;
-            }
-        }
-
-        return totalFilled;
-    }
-
-    @Override
-    public FluidStack drain(FluidStack resource, FluidAction action) {
-        if (resource.isEmpty()) return FluidStack.EMPTY;
-        FluidStack avail = getFluidInTank(0);
-        if (avail.isEmpty() || !FluidStack.isSameFluidSameComponents(avail, resource)) {
-            return FluidStack.EMPTY;
-        }
-        return drainColumn(resource.getAmount(), action);
-    }
-
-    @Override
-    public FluidStack drain(int maxDrain, FluidAction action) {
-        return drainColumn(maxDrain, action);
-    }
-
-    private FluidStack drainColumn(int maxDrain, FluidAction action) {
-        if (maxDrain <= 0) return FluidStack.EMPTY;
-        List<TileTank> tanks = owner.getTankColumn();
-        FluidStack representative = getFluidInTank(0);
-        if (representative.isEmpty()) return FluidStack.EMPTY;
-
-        boolean gaseous = FluidUtilBC.isGaseous(representative.getFluid());
-        boolean simulate = action.simulate();
-        int remaining = maxDrain;
-        int totalDrained = 0;
-
-        if (gaseous) {
-            for (TileTank t : tanks) {
-                if (remaining <= 0) break;
-                FluidStack drained = NeoFluidStacks.toNeo(t.tank.drain(0, remaining, simulate));
-                remaining -= drained.getAmount();
-                totalDrained += drained.getAmount();
-            }
-        } else {
-            for (int i = tanks.size() - 1; i >= 0; i--) {
-                if (remaining <= 0) break;
-                FluidStack drained = NeoFluidStacks.toNeo(tanks.get(i).tank.drain(0, remaining, simulate));
-                remaining -= drained.getAmount();
-                totalDrained += drained.getAmount();
-            }
-        }
-
-        if (totalDrained <= 0) return FluidStack.EMPTY;
-        FluidStack result = representative.copy();
-        result.setAmount(totalDrained);
-        return result;
-    }
-}*/
-//?}

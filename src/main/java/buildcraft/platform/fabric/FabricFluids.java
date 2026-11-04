@@ -9,6 +9,9 @@ package buildcraft.platform.fabric;
 /*import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluid;
 
 import net.fabricmc.fabric.api.transfer.v1.fluid.FluidConstants;
@@ -34,6 +37,13 @@ public final class FabricFluids implements FluidServices {
     @Override
     public Component hoverName(Holder<Fluid> fluid, int amount, DataComponentPatch components) {
         return FluidVariantAttributes.getName(FluidVariant.of(fluid.value(), components));
+    }
+
+    @Override
+    public ItemStack filledBucket(BCFluidStack stack) {
+        // Fabric has no fluid-type bucket hook: the fluid's own bucket item, without the stack's components.
+        Item bucket = stack.isEmpty() ? Items.AIR : stack.getFluid().getBucket();
+        return bucket == Items.AIR ? ItemStack.EMPTY : new ItemStack(bucket);
     }
 
     /^* The variant of a BuildCraft stack: its fluid and component patch ({@link FluidVariant#blank()} if empty). ^/

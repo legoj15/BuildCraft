@@ -6,6 +6,7 @@ import javax.annotation.Nullable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.NonNullList;
@@ -18,7 +19,6 @@ import java.util.function.Consumer;
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.api.items.IItemFluidShard;
 import buildcraft.core.BCCore;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.misc.LocaleUtil;
 
 public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
@@ -98,7 +98,10 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
             container.remove(BCCore.FLUID_CONTENT.get());
             return;
         }
-        container.set(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.copyOf(NeoFluidStacks.toNeo(fluid)));
+        // The component is still NeoForge's SimpleFluidContent (the fragile container's item capability is built on
+        // it), so the stack crosses here; both go behind the platform layer with the item fluid capability.
+        container.set(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.copyOf(new FluidStack(
+            fluid.getFluidHolder(), fluid.getAmount(), fluid.getComponentsPatch())));
     }
 
     public static BCFluidStack getFluid(ItemStack container) {
@@ -106,6 +109,8 @@ public class ItemFragileFluidContainer extends Item implements IItemFluidShard {
             return BCFluidStack.EMPTY;
         }
         SimpleFluidContent content = container.getOrDefault(BCCore.FLUID_CONTENT.get(), SimpleFluidContent.EMPTY);
-        return NeoFluidStacks.fromNeo(content.copy());
+        FluidStack stored = content.copy();
+        return stored.isEmpty() ? BCFluidStack.EMPTY
+            : new BCFluidStack(stored.getFluid(), stored.getAmount(), stored.getComponentsPatch());
     }
 }

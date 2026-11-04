@@ -42,7 +42,7 @@ import buildcraft.api.schematics.ISchematicBlock;
 import buildcraft.api.schematics.ISchematicEntity;
 import buildcraft.api.schematics.SchematicEntityContext;
 
-import buildcraft.lib.fluid.NeoFluidStacks;
+import buildcraft.platform.transfer.BCTransaction;
 import buildcraft.lib.misc.BlockUtil;
 import buildcraft.lib.misc.FluidUtilBC;
 import buildcraft.lib.misc.NBTUtilBC;
@@ -192,15 +192,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                     ) &&
                     FluidUtilBC.mergeSameFluids(requiredFluids).stream()
                         .allMatch(stack -> {
-                            //? if >=1.21.10 {
-                            try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                                int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(stack)), stack.getAmount(), tx);
+                            try (BCTransaction tx = BCTransaction.openRoot()) {
+                                int extracted = tile.getTankManager().extract(stack, stack.getAmount(), tx);
                                 return extracted == stack.getAmount();
                             }
-                            //?} else {
-                            /*int extracted = tile.getTankManager().drain(NeoFluidStacks.toNeo(stack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE).getAmount();
-                            return extracted == stack.getAmount();*/
-                            //?}
                         })
             )
                 ?
@@ -218,16 +213,11 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
                                 ),
                             FluidUtilBC.mergeSameFluids(requiredFluids).stream()
                                 .map(fluidStack -> {
-                                    //? if >=1.21.10 {
-                                    try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                                        int extracted = tile.getTankManager().extract(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(fluidStack)), fluidStack.getAmount(), tx);
+                                    try (BCTransaction tx = BCTransaction.openRoot()) {
+                                        int extracted = tile.getTankManager().extract(fluidStack, fluidStack.getAmount(), tx);
                                         if (!simulate) tx.commit();
                                         return new BCFluidStack(fluidStack.getFluid(), extracted);
                                     }
-                                    //?} else {
-                                    /*int extracted = tile.getTankManager().drain(NeoFluidStacks.toNeo(fluidStack), simulate ? net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.SIMULATE : net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE).getAmount();
-                                    return new BCFluidStack(fluidStack.getFluid(), extracted);*/
-                                    //?}
                                 })
                                 .map(fluidStack -> {
                                     ItemStack stack = buildcraft.lib.misc.FluidUtilBC.getFilledBucket(fluidStack);
@@ -507,14 +497,10 @@ public class BlueprintBuilder extends SnapshotBuilder<ITileForBlueprintBuilder> 
             // FluidResource.EMPTY.
             .filter(fluidStack -> !fluidStack.isEmpty() && fluidStack.getAmount() > 0)
             .forEach(fluidStack -> {
-                //? if >=1.21.10 {
-                try (net.neoforged.neoforge.transfer.transaction.Transaction tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
-                    tile.getTankManager().insert(net.neoforged.neoforge.transfer.fluid.FluidResource.of(NeoFluidStacks.toNeo(fluidStack)), fluidStack.getAmount(), tx);
+                try (BCTransaction tx = BCTransaction.openRoot()) {
+                    tile.getTankManager().insert(fluidStack, fluidStack.getAmount(), tx);
                     tx.commit();
                 }
-                //?} else {
-                /*tile.getTankManager().fill(NeoFluidStacks.toNeo(fluidStack), net.neoforged.neoforge.fluids.capability.IFluidHandler.FluidAction.EXECUTE);*/
-                //?}
             });
     }
 

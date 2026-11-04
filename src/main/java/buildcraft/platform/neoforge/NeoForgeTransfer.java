@@ -13,7 +13,10 @@ import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -24,14 +27,18 @@ import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 //? if >=1.21.10 {
 import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 //?} else {
-/*import net.neoforged.neoforge.items.IItemHandler;
+/*import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 *///?}
 
+import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCItemStorage;
 import buildcraft.platform.transfer.BCLookupCache;
 import buildcraft.platform.transfer.BCTransaction;
@@ -47,7 +54,8 @@ import buildcraft.platform.transfer.TransferServices;
  *
  * <p><b>Capabilities.</b> Each {@link #registerCapabilities} call subscribes its own {@code RegisterCapabilitiesEvent}
  * listener on the mod bus of the mod being constructed, so registrations keep the order of the calls relative to
- * every other listener of that event. Storages cross as {@link NeoForgeItemStorages} adapters, which unwrap each other.
+ * every other listener of that event. Storages cross as {@link NeoForgeItemStorages} and {@link NeoForgeFluidStorages} adapters, which unwrap each
+ * other.
  */
 public final class NeoForgeTransfer implements TransferServices {
     @Override
@@ -82,6 +90,12 @@ public final class NeoForgeTransfer implements TransferServices {
             event.registerBlockEntity(itemBlockCap(), type,
                 (tile, side) -> NeoForgeItemStorages.toNeo(provider.get(tile, side)));
         }
+
+        @Override
+        public <T extends BlockEntity> void blockFluids(BlockEntityType<T> type, BlockProvider<T, BCFluidStorage> provider) {
+            event.registerBlockEntity(fluidBlockCap(), type,
+                (tile, side) -> NeoForgeFluidStorages.toNeo(provider.get(tile, side)));
+        }
     }
 
     //? if >=1.21.10 {
@@ -91,6 +105,16 @@ public final class NeoForgeTransfer implements TransferServices {
     //?} else {
     /*private static BlockCapability<IItemHandler, Direction> itemBlockCap() {
         return Capabilities.ItemHandler.BLOCK;
+    }*/
+    //?}
+
+    //? if >=1.21.10 {
+    private static BlockCapability<ResourceHandler<FluidResource>, Direction> fluidBlockCap() {
+        return Capabilities.Fluid.BLOCK;
+    }
+    //?} else {
+    /*private static BlockCapability<IFluidHandler, Direction> fluidBlockCap() {
+        return Capabilities.FluidHandler.BLOCK;
     }*/
     //?}
 
@@ -133,6 +157,78 @@ public final class NeoForgeTransfer implements TransferServices {
                 return view;
             }
         };
+    }
+
+    @Override
+    @Nullable
+    public BCFluidStorage findFluid(Level level, BlockPos pos, @Nullable Direction side) {
+        return NeoForgeFluidStorages.fromNeo(level.getCapability(fluidBlockCap(), pos, side));
+    }
+
+    @Override
+    public BCLookupCache<BCFluidStorage> fluidCache(ServerLevel level, BlockPos pos, @Nullable Direction side) {
+        var cache = BlockCapabilityCache.create(fluidBlockCap(), level, pos, side);
+        return new BCLookupCache<>() {
+            private Object handler;
+            private BCFluidStorage view;
+
+            @Override
+            @Nullable
+            public BCFluidStorage get() {
+                var current = cache.getCapability();
+                if (current != handler) {
+                    handler = current;
+                    view = NeoForgeFluidStorages.fromNeo(current);
+                }
+                return view;
+            }
+        };
+    }
+
+    @Override
+    public BCFluidStack getFluidContained(ItemStack stack) {
+        return NeoForgeFluidContainers.getFluidContained(stack);
+    }
+
+    @Override
+    public boolean isFluidContainer(ItemStack stack) {
+        return NeoForgeFluidContainers.isFluidContainer(stack);
+    }
+
+    @Override
+    public boolean drainContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
+        return NeoForgeFluidContainers.drainContainerSlot(slots, slot, setSlot, tank);
+    }
+
+    @Override
+    public boolean fillContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
+        return NeoForgeFluidContainers.fillContainerSlot(slots, slot, setSlot, tank);
+    }
+
+    @Override
+    public boolean interactWithHeldContainer(Player player, InteractionHand hand, BlockPos pos, BCFluidStorage tank) {
+        return NeoForgeFluidContainers.interactWithHeldContainer(player, hand, pos, tank);
+    }
+
+    @Override
+    public boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank) {
+        return NeoForgeFluidContainers.exchangeWithCarriedContainer(player, tank);
+    }
+
+    @Override
+    public Object toLoaderFluidHandler(BCFluidStorage storage) {
+        return NeoForgeFluidStorages.toNeo(storage);
+    }
+
+    @Override
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public BCFluidStorage fromLoaderFluidHandler(@Nullable Object handler) {
+        //? if >=1.21.10 {
+        return NeoForgeFluidStorages.fromNeo((ResourceHandler<FluidResource>) handler);
+        //?} else {
+        /*return NeoForgeFluidStorages.fromNeo((IFluidHandler) handler);*/
+        //?}
     }
 
     //? if >=1.21.10 {

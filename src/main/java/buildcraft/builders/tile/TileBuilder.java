@@ -34,17 +34,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 
-//? if >=1.21.10 {
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.transaction.TransactionContext;
-import net.neoforged.neoforge.transfer.fluid.FluidResource;
-//?}
 
 import buildcraft.api.fluids.BCFluidStack;
 import buildcraft.lib.fluid.BCFluidTank;
-import buildcraft.lib.fluid.NeoFluidStacks;
 import buildcraft.lib.tile.item.ItemHandlerManager.EnumAccess;
 import buildcraft.lib.tile.item.ItemHandlerSimple;
+import buildcraft.platform.transfer.BCFluidStorage;
+import buildcraft.platform.transfer.BCTransactionContext;
 
 import buildcraft.api.core.EnumPipePart;
 import buildcraft.api.core.IPathProvider;
@@ -167,103 +163,38 @@ public class TileBuilder extends TileBC_Neptune
         };
     }
 
-    /** Combined read/write view over {@link #tanks} exposed via {@link #getTankManager()}.
-     *  On 1.21.10+ this is a Transfer-API {@code ResourceHandler<FluidResource>}; on 1.21.1
-     *  (no Transfer API) it is a classic {@code IFluidHandler} fanning across the 4 single-slot
-     *  {@link BCFluidTank}s — insert tries each tank in order, extract until one yields. */
-    //? if >=1.21.10 {
-    private final ResourceHandler<FluidResource> tankManager = new ResourceHandler<>() {
+    /** Combined read/write view over {@link #tanks} exposed via {@link #getTankManager()}: one index per tank. */
+    private final BCFluidStorage tankManager = new BCFluidStorage() {
         @Override
         public int size() {
             return tanks.length;
         }
 
         @Override
-        public FluidResource getResource(int slot) {
-            return slot >= 0 && slot < tanks.length ? tanks[slot].getResource(0) : FluidResource.EMPTY;
+        public BCFluidStack getStack(int slot) {
+            return slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : BCFluidStack.EMPTY;
         }
 
         @Override
-        public long getAmountAsLong(int slot) {
-            return slot >= 0 && slot < tanks.length ? tanks[slot].getAmountAsLong(0) : 0;
+        public int getCapacity(int slot, BCFluidStack resource) {
+            return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacity(0, resource) : 0;
         }
 
         @Override
-        public long getCapacityAsLong(int slot, FluidResource resource) {
-            return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacityAsLong(0, resource) : 0;
-        }
-
-        @Override
-        public boolean isValid(int slot, FluidResource resource) {
+        public boolean isValid(int slot, BCFluidStack resource) {
             return slot >= 0 && slot < tanks.length && tanks[slot].isValid(0, resource);
         }
 
         @Override
-        public int insert(int slot, FluidResource resource, int amount, TransactionContext ctx) {
+        public int insert(int slot, BCFluidStack resource, int amount, BCTransactionContext ctx) {
             return slot >= 0 && slot < tanks.length ? tanks[slot].insert(0, resource, amount, ctx) : 0;
         }
 
         @Override
-        public int extract(int slot, FluidResource resource, int amount, TransactionContext ctx) {
+        public int extract(int slot, BCFluidStack resource, int amount, BCTransactionContext ctx) {
             return slot >= 0 && slot < tanks.length ? tanks[slot].extract(0, resource, amount, ctx) : 0;
         }
     };
-    //?} else {
-    /*private final net.neoforged.neoforge.fluids.capability.IFluidHandler tankManager =
-            new net.neoforged.neoforge.fluids.capability.IFluidHandler() {
-        @Override
-        public int getTanks() {
-            return tanks.length;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack getFluidInTank(int slot) {
-            return NeoFluidStacks.toNeo(slot >= 0 && slot < tanks.length ? tanks[slot].getFluidStack(0) : BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public int getTankCapacity(int slot) {
-            return slot >= 0 && slot < tanks.length ? tanks[slot].getCapacityMb(0) : 0;
-        }
-
-        @Override
-        public boolean isFluidValid(int slot, net.neoforged.neoforge.fluids.FluidStack stackNeo) { BCFluidStack stack = NeoFluidStacks.fromNeo(stackNeo);
-            return slot >= 0 && slot < tanks.length && tanks[slot].isFluidValid(0, stackNeo);
-        }
-
-        @Override
-        public int fill(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            for (int i = 0; i < tanks.length; i++) {
-                int n = tanks[i].fill(0, resource, action.simulate());
-                if (n > 0) {
-                    return n;
-                }
-            }
-            return 0;
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(net.neoforged.neoforge.fluids.FluidStack resourceNeo, FluidAction action) { BCFluidStack resource = NeoFluidStacks.fromNeo(resourceNeo);
-            for (int i = 0; i < tanks.length; i++) {
-                BCFluidStack inTank = tanks[i].getFluidStack(0);
-                if (!inTank.isEmpty() && BCFluidStack.isSameFluidSameComponents(inTank, resource)) {
-                    return NeoFluidStacks.toNeo(tanks[i].drain(0, resource.getAmount(), action.simulate()));
-                }
-            }
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-
-        @Override
-        public net.neoforged.neoforge.fluids.FluidStack drain(int maxDrain, FluidAction action) {
-            for (int i = 0; i < tanks.length; i++) {
-                if (!tanks[i].getFluidStack(0).isEmpty()) {
-                    return NeoFluidStacks.toNeo(tanks[i].drain(0, maxDrain, action.simulate()));
-                }
-            }
-            return NeoFluidStacks.toNeo(BCFluidStack.EMPTY);
-        }
-    };*/
-    //?}
 
     @SuppressWarnings("this-escape")
     public TileBuilder(BlockPos pos, BlockState state) {
@@ -978,15 +909,9 @@ public class TileBuilder extends TileBC_Neptune
     }
 
     @Override
-    //? if >=1.21.10 {
-    public ResourceHandler<FluidResource> getTankManager() {
+    public BCFluidStorage getTankManager() {
         return tankManager;
     }
-    //?} else {
-    /*public net.neoforged.neoforge.fluids.capability.IFluidHandler getTankManager() {
-        return tankManager;
-    }*/
-    //?}
 
     // Destruction-laser tier + drop routing ─────────────────────────────────────
 

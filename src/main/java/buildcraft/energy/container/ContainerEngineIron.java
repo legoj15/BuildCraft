@@ -68,21 +68,12 @@ public class ContainerEngineIron extends ContainerBCTile<TileEngineIron_BC8> {
                         case DATA_BURNING -> engine.isBurning() ? 1 : 0;
                         case DATA_CURRENT_OUTPUT_HI -> (int) (engine.currentOutput >>> 32);
                         case DATA_CURRENT_OUTPUT_LO -> (int) (engine.currentOutput & 0xFFFFFFFFL);
-                        //? if >=1.21.10 {
-                        case DATA_FUEL_AMOUNT -> (int) engine.tankFuel.getAmountAsLong(0);
-                        case DATA_COOLANT_AMOUNT -> (int) engine.tankCoolant.getAmountAsLong(0);
-                        case DATA_RESIDUE_AMOUNT -> (int) engine.tankResidue.getAmountAsLong(0);
-                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getResource(0));
-                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getResource(0));
-                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getResource(0));
-                        //?} else {
-                        /*case DATA_FUEL_AMOUNT -> engine.tankFuel.getFluidInTank(0).getAmount();
-                        case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getFluidInTank(0).getAmount();
-                        case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getFluidInTank(0).getAmount();
-                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getFluidInTank(0));
-                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getFluidInTank(0));
-                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getFluidInTank(0));*/
-                        //?}
+                        case DATA_FUEL_AMOUNT -> engine.tankFuel.getAmountMb(0);
+                        case DATA_COOLANT_AMOUNT -> engine.tankCoolant.getAmountMb(0);
+                        case DATA_RESIDUE_AMOUNT -> engine.tankResidue.getAmountMb(0);
+                        case DATA_FUEL_FLUID_ID -> getFluidRegistryId(engine.tankFuel.getFluidStack(0));
+                        case DATA_COOLANT_FLUID_ID -> getFluidRegistryId(engine.tankCoolant.getFluidStack(0));
+                        case DATA_RESIDUE_FLUID_ID -> getFluidRegistryId(engine.tankResidue.getFluidStack(0));
                         default -> 0;
                     };
                 }
@@ -170,11 +161,7 @@ public class ContainerEngineIron extends ContainerBCTile<TileEngineIron_BC8> {
         return getFluidFromRegistryId(data.get(DATA_RESIDUE_FLUID_ID));
     }
 
-    //? if >=1.21.10 {
-    private static int getFluidRegistryId(net.neoforged.neoforge.transfer.fluid.FluidResource resource) {
-    //?} else {
-    /*private static int getFluidRegistryId(net.neoforged.neoforge.fluids.FluidStack resource) {*/
-    //?}
+    private static int getFluidRegistryId(buildcraft.api.fluids.BCFluidStack resource) {
         if (resource.isEmpty()) return -1;
         return BuiltInRegistries.FLUID.getId(resource.getFluid());
     }

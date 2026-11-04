@@ -8,7 +8,10 @@ package buildcraft.platform;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
+
+import buildcraft.api.fluids.BCFluidStack;
 
 /**
  * What the loader knows about a fluid stack that vanilla does not. The stack is passed as its vanilla parts (fluid,
@@ -19,4 +22,7 @@ import net.minecraft.world.level.material.Fluid;
 public interface FluidServices {
     /** The display name of a stack of the fluid, as the loader names it (NeoForge: the fluid type's description). */
     Component hoverName(Holder<Fluid> fluid, int amount, DataComponentPatch components);
+
+    /** A bucket filled with {@code stack}'s fluid, as the loader makes one; empty if the fluid has no bucket. */
+    ItemStack filledBucket(BCFluidStack stack);
 }

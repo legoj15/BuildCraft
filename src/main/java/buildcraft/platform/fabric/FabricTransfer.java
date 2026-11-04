@@ -11,19 +11,32 @@ package buildcraft.platform.fabric;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 
 import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorageUtil;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.item.PlayerInventoryStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
 import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.SlottedStorage;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
+import net.fabricmc.fabric.api.transfer.v1.storage.StorageUtil;
+import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
 
+import buildcraft.api.fluids.BCFluidStack;
+import buildcraft.platform.transfer.BCFluidStorage;
 import buildcraft.platform.transfer.BCItemStorage;
 import buildcraft.platform.transfer.BCLookupCache;
 import buildcraft.platform.transfer.BCTransaction;
@@ -64,6 +77,13 @@ public final class FabricTransfer implements TransferServices {
                 ItemStorage.SIDED.registerForBlockEntity(
                     (tile, side) -> FabricItemStorages.toFabric(provider.get(tile, side)), type);
             }
+
+            @Override
+            public <T extends BlockEntity> void blockFluids(BlockEntityType<T> type,
+                    BlockProvider<T, BCFluidStorage> provider) {
+                FluidStorage.SIDED.registerForBlockEntity(
+                    (tile, side) -> FabricFluidStorages.toFabric(provider.get(tile, side)), type);
+            }
         });
     }
 
@@ -99,6 +119,156 @@ public final class FabricTransfer implements TransferServices {
                 return view;
             }
         };
+    }
+
+    @Override
+    public BCFluidStorage findFluid(Level level, BlockPos pos, Direction side) {
+        return FabricFluidStorages.fromFabric(FluidStorage.SIDED.find(level, pos, side));
+    }
+
+    @Override
+    public BCLookupCache<BCFluidStorage> fluidCache(ServerLevel level, BlockPos pos, Direction side) {
+        BlockApiCache<Storage<FluidVariant>, Direction> cache = BlockApiCache.create(FluidStorage.SIDED, level, pos);
+        return new BCLookupCache<>() {
+            private Storage<FluidVariant> handler;
+            private BCFluidStorage view;
+
+            @Override
+            public BCFluidStorage get() {
+                Storage<FluidVariant> current = cache.find(side);
+                if (current != handler) {
+                    handler = current;
+                    view = FabricFluidStorages.fromFabric(current);
+                }
+                return view;
+            }
+        };
+    }
+
+    @Override
+    public BCFluidStack getFluidContained(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return BCFluidStack.EMPTY;
+        }
+        Storage<FluidVariant> container = ContainerItemContext.withConstant(stack.copyWithCount(1)).find(FluidStorage.ITEM);
+        if (container != null) {
+            for (StorageView<FluidVariant> view : container.nonEmptyViews()) {
+                return FabricFluids.fromVariant(view.getResource(), view.getAmount());
+            }
+        }
+        return BCFluidStack.EMPTY;
+    }
+
+    @Override
+    public boolean isFluidContainer(ItemStack stack) {
+        return !stack.isEmpty()
+            && ContainerItemContext.withConstant(stack.copyWithCount(1)).find(FluidStorage.ITEM) != null;
+    }
+
+    @Override
+    public boolean drainContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
+        Storage<FluidVariant> container = slotContainer(slots, slot);
+        return container != null && moveAll(container, FabricFluidStorages.toFabric(tank));
+    }
+
+    @Override
+    public boolean fillContainerSlot(BCItemStorage slots, int slot, Consumer<ItemStack> setSlot, BCFluidStorage tank) {
+        Storage<FluidVariant> container = slotContainer(slots, slot);
+        return container != null && moveAll(FabricFluidStorages.toFabric(tank), container);
+    }
+
+    /^* The fluid storage of the container in one slot, its swapped item written back to that same slot. ^/
+    private static Storage<FluidVariant> slotContainer(BCItemStorage slots, int slot) {
+        if (!(FabricItemStorages.toFabric(slots) instanceof SlottedStorage<ItemVariant> slotted)) {
+            return null;
+        }
+        return ContainerItemContext.ofSingleSlot(slotted.getSlot(slot)).find(FluidStorage.ITEM);
+    }
+
+    private static boolean moveAll(Storage<FluidVariant> from, Storage<FluidVariant> to) {
+        try (Transaction tx = Transaction.openOuter()) {
+            if (StorageUtil.move(from, to, v -> true, Long.MAX_VALUE, tx) > 0) {
+                tx.commit();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean interactWithHeldContainer(Player player, InteractionHand hand, BlockPos pos, BCFluidStorage tank) {
+        if (player.getItemInHand(hand).isEmpty()) {
+            return false;
+        }
+        if (player.level().isClientSide()) {
+            return true;
+        }
+        // Fabric's own right-click helper: it swaps the held item, plays the bucket sounds and spares creative items.
+        return FluidStorageUtil.interactWithFluidStorage(FabricFluidStorages.toFabric(tank), player, hand);
+    }
+
+    @Override
+    public boolean exchangeWithCarriedContainer(Player player, BCFluidStorage tank) {
+        ItemStack carried = player.containerMenu.getCarried();
+        Storage<FluidVariant> tankStorage = FabricFluidStorages.toFabric(tank);
+        if (player.getAbilities().instabuild) {
+            // Creative: the cursor item never changes. A full container fills the tank, an empty one drains a bucket.
+            if (!isFluidContainer(carried)) {
+                return false;
+            }
+            BCFluidStack contained = getFluidContained(carried);
+            try (BCTransaction tx = openRoot()) {
+                int moved;
+                if (!contained.isEmpty()) {
+                    moved = tank.insert(0, contained, contained.getAmount(), tx);
+                } else {
+                    BCFluidStack inTank = tank.getStack(0);
+                    moved = inTank.isEmpty() ? 0 : tank.extract(0, inTank, Math.min(1000, inTank.getAmount()), tx);
+                }
+                if (moved > 0) {
+                    tx.commit();
+                }
+            }
+            return true;
+        }
+        Storage<FluidVariant> container =
+            ContainerItemContext.ofPlayerCursor(player, player.containerMenu).find(FluidStorage.ITEM);
+        if (container == null) {
+            return false;
+        }
+        if (moveAll(container, tankStorage) || moveAll(tankStorage, container)) {
+            return true;
+        }
+        // The cursor flow is one-shot per bucket: fall back to filling an empty container in the inventory.
+        if (tank.getStack(0).isEmpty()) {
+            return false;
+        }
+        PlayerInventoryStorage inventory = PlayerInventoryStorage.of(player);
+        for (int i = 0; i < inventory.getSlotCount(); i++) {
+            if (inventory.getSlot(i).isResourceBlank()) {
+                continue;
+            }
+            Storage<FluidVariant> slotContainer =
+                ContainerItemContext.ofPlayerSlot(player, inventory.getSlot(i)).find(FluidStorage.ITEM);
+            if (slotContainer == null || StorageUtil.findStoredResource(slotContainer) != null) {
+                continue; // only fill empty containers, never swap full ones
+            }
+            if (moveAll(tankStorage, slotContainer)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public Object toLoaderFluidHandler(BCFluidStorage storage) {
+        return FabricFluidStorages.toFabric(storage);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public BCFluidStorage fromLoaderFluidHandler(Object handler) {
+        return FabricFluidStorages.fromFabric((Storage<FluidVariant>) handler);
     }
 
     /^* The BuildCraft view of a Fabric transaction someone else opened: it can be nested into, never committed. ^/

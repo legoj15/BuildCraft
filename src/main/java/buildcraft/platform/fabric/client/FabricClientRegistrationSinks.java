@@ -22,6 +22,7 @@ import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
@@ -46,7 +47,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderingRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.BlockColorRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.SpriteSourceRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -78,7 +78,7 @@ public final class FabricClientRegistrationSinks implements ClientRegistrationSi
     @Override
     public <T extends Entity> void entityRenderer(Supplier<? extends EntityType<? extends T>> type,
             EntityRendererProvider<T> provider) {
-        EntityRendererRegistry.register(type.get(), provider);
+        EntityRenderers.register(type.get(), provider);
     }
 
     @Override

@@ -41,22 +41,24 @@ tasks.register<Exec>("runReleaseMatrix") {
 // game-test crash went unnoticed — a `:<node>:` qualifier (or a broken node) quietly dropped coverage.
 // Here every node's share is a hard dependency; drop a node only by removing it from the tree. A node's share is
 // its `nodeVerification` task, which its loader convention plugin registers: unit tests + headless game tests + jar
-// build on a NeoForge node (bc.neoforge), compileJava plus the transformed resources on the compile-only Fabric
-// node (bc.fabric). The node owns the list because only the node knows its loader.
+// build on a NeoForge node (bc.neoforge); the compile, the class-tweaker check, the transformed resources and the
+// jar on the Fabric node (bc.fabric), which has no tests yet. The node owns the list because only the node knows its
+// loader.
 //
 // No active-node switching is needed: each node compiles its OWN stonecutterGenerate output, so
 // `:1.21.1:test` and `:26.2:test` are correct in one invocation regardless of which node is "active"
 // (see build.gradle.kts, the stonecutter{} replacements comment). Task PATH STRINGS keep the wiring
 // lazy — subprojects aren't forced to configure at root-eval time.
 //
-// buildAndCollect produces the fresh +mc jars the boot/connect matrix stages; it's a dependency here so
+// buildAndCollect produces the fresh +mc jars the boot/connect matrix stages (the Fabric jar's name ends -fabric, so
+// a harness matching "+mc<mc>.jar" still finds only the NeoForge one); it's a dependency here so
 // the OUTER Gradle builds them and the matrix can run with -SkipBuild (a nested buildAndCollect would
 // deadlock on the project lock). The matrix itself auto-skips when the gitignored testing/ harness is
 // absent, so third-party clones still get all nodes' unit + game tests.
 val perNodeVerification = subprojects.map { node -> "${node.path}:nodeVerification" }
 tasks.register("fullTestSuite") {
     group = "verification"
-    description = "ALL nodes: unit tests + headless game tests + jar build (compile only on a Fabric node), then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
+    description = "ALL nodes: unit tests + headless game tests + jar build (no tests on a Fabric node), then the production boot/connect matrix (matrix auto-skips if the testing/ harness is absent)."
     dependsOn(perNodeVerification)
     dependsOn(tasks.named("runReleaseMatrix"))
 }

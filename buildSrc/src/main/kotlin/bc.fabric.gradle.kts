@@ -58,7 +58,9 @@ tasks.named<ProcessResources>("processResources") {
         "fabric_api_version" to fabricApiVersion,
     )
     inputs.properties(replaceProperties)
-    filesMatching("fabric.mod.json") { expand(replaceProperties) }
+    // escapeBackslash: the template engine would otherwise turn the JSON escape backslash-n in the
+    // description into a raw newline, which is not valid JSON.
+    filesMatching("fabric.mod.json") { expand(replaceProperties) { escapeBackslash = true } }
     // A file present in both resource trees is a mistake, not something to drop silently.
     duplicatesStrategy = DuplicatesStrategy.FAIL
     // The NeoForge -> Fabric data transform (conditions, components ingredients, biome modifiers, fluid_container
@@ -122,14 +124,35 @@ dependencies {
 // generated copy would pass this node's only gate vacuously.
 tasks.named("compileJava") { dependsOn("stonecutterGenerate") }
 
-// No tests and no jar yet.
+// No unit tests: FML-JUnit has no Fabric twin (docs/platform-layer.md, test plan).
 tasks.named("test") { enabled = false }
-tasks.named("jar") { enabled = false }
 
-// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the class tweaker and the
-// transformed resources. The NeoForge twin in bc.neoforge adds unit tests, game tests and the jar.
+// ─── Distribution JAR ────────────────────────────────────────────────────────
+// The NeoForge jar's name (bc.neoforge) plus the loader: BuildCraftRedux-<mod_version>+mc<mc>-fabric.jar, so both
+// loaders' jars for one MC version sit side by side in build/libs/<mod_version>/. Loom on 26.x does not remap, so
+// `jar` is the shipped jar. The licence texts ride along exactly as in the NeoForge jar.
+tasks.named<Jar>("jar") {
+    archiveBaseName = "BuildCraftRedux"
+    archiveVersion = "$modVersion+mc$minecraftVersion"
+    archiveClassifier = "fabric"
+    from(rootProject.file("LICENSE")) { into("META-INF") }
+    from(rootProject.file("LICENSE.API")) { into("META-INF") }
+    from(rootProject.file("LICENSE.MMPL")) { into("META-INF") }
+    from(rootProject.file("NOTICE.md")) { into("META-INF") }
+}
+
+// The twin of bc.neoforge's buildAndCollect: this node's jar into the same build/libs/<mod_version>/.
+tasks.register<Copy>("buildAndCollect") {
+    group = "build"
+    from(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+    into(rootProject.layout.buildDirectory.dir("libs/$modVersion"))
+    dependsOn("assemble")
+}
+
+// What the root `fullTestSuite` (stonecutter.gradle.kts) runs on this node: the compile, the class tweaker, the
+// transformed resources and the collected jar. The NeoForge twin in bc.neoforge adds unit tests and game tests.
 tasks.register("nodeVerification") {
     group = "verification"
-    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation and the Fabric data transform (nothing ships yet)."
-    dependsOn("compileJava", "validateAccessWidener", "processResources")
+    description = "This Fabric node's share of fullTestSuite: compileJava, the class-tweaker validation, the Fabric data transform and the collected jar."
+    dependsOn("compileJava", "validateAccessWidener", "processResources", "jar", "buildAndCollect")
 }

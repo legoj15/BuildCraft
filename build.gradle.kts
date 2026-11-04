@@ -182,6 +182,7 @@ apply(plugin = "bc.$loader")
 // ─── Full pre-release verification ───────────────────────────────────────────
 // `fullTestSuite` is defined ONCE on the ROOT (stonecutter.gradle.kts), NOT per-node: it enumerates
 // every node from the tree and depends on each one's `nodeVerification` (registered by the convention plugin:
-// `test` + `runGameTestServer` + `buildAndCollect` on a NeoForge node, `compileJava` on a Fabric one) so coverage
+// `test` + `runGameTestServer` + `buildAndCollect` on a NeoForge node; the compile, class tweaker, resources and
+// `buildAndCollect` on a Fabric one) so coverage
 // can't silently narrow to a single line. Run it with `./gradlew fullTestSuite`. For a single node during
 // development, run that node's tasks directly, e.g. `:1.21.1:test :1.21.1:runGameTestServer`.

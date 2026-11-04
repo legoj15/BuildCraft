@@ -16,7 +16,7 @@ import buildcraft.lib.misc.AdvancementUtil;
  *
  * <p>Oil placement itself no longer lives here — it runs as a proper worldgen feature
  * ({@link buildcraft.energy.generation.OilFeature}, registered in {@link BCEnergyFeatures} and
- * attached to every biome by {@code AddOilBiomeModifier}) inside the chunk-generation pipeline.
+ * attached to every biome by {@code BCEnergyFeatures.ADD_OIL_MODIFIER}) inside the chunk-generation pipeline.
  * The old {@code ChunkEvent.Load} + SavedData model generated against the live {@code ServerLevel},
  * where any stray read/write into an ungenerated neighbour chunk force-loaded it and parked the
  * server thread forever (GitHub issue #26 and friends); a feature's {@code WorldGenRegion} cannot

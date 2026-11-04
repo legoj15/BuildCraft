@@ -16,7 +16,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 
 /**
  * Guards the {@code buildcraftunofficial:rf_enabled} recipe condition (see
- * {@link buildcraft.transport.recipe.RfEnabledCondition}) that gates the RF <em>pipe</em> recipes behind
+ * {@link buildcraft.transport.BCTransportConfig#rfPipeRecipesEnabled}) that gates the RF <em>pipe</em> recipes behind
  * the {@code disableRfPipe} config.
  *
  * <p>Asserts two invariants directly:

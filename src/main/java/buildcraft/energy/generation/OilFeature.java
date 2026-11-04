@@ -46,7 +46,7 @@ import buildcraft.energy.BCEnergyConfig;
  *
  * <p>Runs at {@code top_layer_modification} — after {@code vegetal_decoration}, so the surface-pool
  * tree clearing sees the chunk's trees. It is attached to <b>every</b> biome by
- * {@link AddOilBiomeModifier}; biome/dimension eligibility, rates, and config gates are evaluated
+ * {@link buildcraft.energy.BCEnergyFeatures#ADD_OIL_MODIFIER}; biome/dimension eligibility, rates, and config gates are evaluated
  * here at place time (they always were runtime config reads — a datapack biome list could not
  * express them).
  *

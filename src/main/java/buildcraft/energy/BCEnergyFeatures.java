@@ -8,16 +8,17 @@ package buildcraft.energy;
 
 import java.util.function.Supplier;
 
-import com.mojang.serialization.MapCodec;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.levelgen.GenerationStep;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.world.BiomeModifier;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import buildcraft.core.BCCore;
-import buildcraft.energy.generation.AddOilBiomeModifier;
 import buildcraft.energy.generation.OilFeature;
+import buildcraft.platform.Platform;
 import buildcraft.platform.registry.BCFeatureRegistrar;
 
 /**
@@ -33,16 +34,21 @@ public class BCEnergyFeatures {
     // The registry OIL lands in (feature types from 26.3, features below) is BCFeatureRegistrar's business.
     public static final BCFeatureRegistrar FEATURES = new BCFeatureRegistrar(BCCore.MODID);
 
-    public static final DeferredRegister<MapCodec<? extends BiomeModifier>> BIOME_MODIFIER_SERIALIZERS =
-            DeferredRegister.create(NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS, BCCore.MODID);
-
     public static final Supplier<?> OIL = FEATURES.register("oil", OilFeature::new);
 
-    public static final Supplier<MapCodec<AddOilBiomeModifier>> ADD_OIL_MODIFIER =
-            BIOME_MODIFIER_SERIALIZERS.register("add_oil", () -> AddOilBiomeModifier.CODEC);
+    /** The biome-modifier type that adds the oil feature to <b>every</b> biome, in every dimension, at
+     *  {@code top_layer_modification} (after {@code vegetal_decoration}, so the surface pools' tree clearing sees
+     *  the chunk's trees). No biome tag can say "all biomes including other mods'", and oil eligibility is
+     *  per-chunk, so {@link OilFeature#place} applies the biome/dimension filters itself. */
+    public static final Identifier ADD_OIL_MODIFIER = Identifier.fromNamespaceAndPath(BCCore.MODID, "add_oil");
+
+    /** The placed feature {@code neoforge/biome_modifier/add_oil.json} names. */
+    public static final ResourceKey<PlacedFeature> OIL_PLACED =
+            ResourceKey.create(Registries.PLACED_FEATURE, Identifier.fromNamespaceAndPath(BCCore.MODID, "oil"));
 
     public static void init(IEventBus modEventBus) {
         FEATURES.subscribe();
-        BIOME_MODIFIER_SERIALIZERS.register(modEventBus);
+        Platform.data().registerAllBiomesFeature(ADD_OIL_MODIFIER, GenerationStep.Decoration.TOP_LAYER_MODIFICATION,
+                OIL_PLACED);
     }
 }

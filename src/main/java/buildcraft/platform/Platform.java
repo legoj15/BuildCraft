@@ -13,6 +13,7 @@ import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
+import buildcraft.platform.registry.DataServices;
 import buildcraft.platform.registry.RegistryServices;
 
 /**
@@ -96,6 +97,11 @@ public final class Platform {
     /** Registries: registrars and the holders they hand back. */
     public static RegistryServices registries() {
         return RegistriesHolder.INSTANCE;
+    }
+
+    /** Data-driven hooks: load conditions and biome modifiers. */
+    public static DataServices data() {
+        return DataHolder.INSTANCE;
     }
 
     private static final class LoaderHolder {
@@ -274,6 +280,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeRegistryServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricRegistryServices();
+            *///?}
+        }
+    }
+
+    private static final class DataHolder {
+        static final DataServices INSTANCE = create();
+
+        private static DataServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeDataServices();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricDataServices();
             *///?}
         }
     }

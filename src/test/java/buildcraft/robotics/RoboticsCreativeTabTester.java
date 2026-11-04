@@ -41,9 +41,9 @@ import buildcraft.transport.BCTransportItems;
  * the Gate Copier.
  *
  * <p>Tab contents are rebuilt the way the game does it, {@link CreativeModeTab#buildContents}, which
- * also fires the tab-contents event — so the plugs-tab assertions exercise the very listener the
- * robot station used to ride on, not a mock. The liveness precondition (the blocker must be present)
- * guards against that event path being silently dead in the FML-JUnit environment, which would make
+ * runs the tab's {@code CreativeTabContents} contributions — so the plugs-tab assertions exercise the very
+ * contribution list the robot station used to ride on, not a mock. The liveness precondition (the blocker must be
+ * present) guards against that path being silently dead in the FML-JUnit environment, which would make
  * the "station is gone" assertion vacuously true.
  */
 public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
@@ -174,13 +174,33 @@ public class RoboticsCreativeTabTester extends VanillaSetupBaseTester {
         CreativeModeTab plugs = BCTransportCreativeTabs.PLUGS_TAB.get();
         plugs.buildContents(displayParameters());
 
-        // Liveness: the plugs tab is fed entirely by the tab-contents event; if the blocker is
-        // absent the build never reached those listeners and the assert below would be vacuous.
+        // Liveness: the plugs tab is fed entirely by its contributions; if the blocker is
+        // absent the build never reached them and the assert below would be vacuous.
         Assertions.assertTrue(containsItem(plugs.getDisplayItems(), BCTransportItems.PLUG_BLOCKER.get()),
-                "precondition: the event-fed plugs build is live");
+                "precondition: the contribution-fed plugs build is live");
 
         Assertions.assertFalse(containsItem(plugs.getDisplayItems(), BCRoboticsItems.ROBOT_STATION.get()),
                 "the robot station moved off the pluggables tab");
+    }
+
+    @Test
+    public void plugsTabListsTransportsPluggablesBeforeSilicons() {
+        // The plugs tab is fed by two contributions, transport's first (blocker, power adaptor, the sixteen
+        // wires) and silicon's after it (gates, lenses and filters, pulsar, light sensor, timer). Pins that order.
+        CreativeModeTab plugs = BCTransportCreativeTabs.PLUGS_TAB.get();
+        plugs.buildContents(displayParameters());
+        List<ItemStack> items = new ArrayList<>(plugs.getDisplayItems());
+        Assertions.assertEquals(0, firstIndexForItem(items, BCTransportItems.PLUG_BLOCKER.get()),
+                "the blocker leads the plugs tab");
+        int lastWire = -1;
+        for (net.minecraft.world.item.DyeColor colour : net.minecraft.world.item.DyeColor.values()) {
+            lastWire = Math.max(lastWire, firstIndexForItem(items, BCTransportItems.WIRE_ITEMS.get(colour).get()));
+        }
+        int firstGate = firstIndexForItem(items, BCSiliconItems.PLUG_GATE.get());
+        Assertions.assertTrue(firstGate > lastWire && lastWire > 0,
+                "silicon's gates come after transport's wires (wire " + lastWire + ", gate " + firstGate + ")");
+        Assertions.assertEquals(items.size() - 1, firstIndexForItem(items, BCSiliconItems.PLUG_TIMER.get()),
+                "the timer closes the plugs tab");
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

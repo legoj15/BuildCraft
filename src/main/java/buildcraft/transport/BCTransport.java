@@ -6,11 +6,11 @@
 
 package buildcraft.transport;
 
-import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +23,7 @@ import buildcraft.api.mj.MjAPI;
 import buildcraft.api.transport.pipe.PipeApi;
 import buildcraft.core.BCCore;
 import buildcraft.lib.misc.CapUtil;
+import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.platform.Platform;
 import buildcraft.platform.network.BCNetwork;
 import buildcraft.transport.net.MessageMultiPipeItem;
@@ -71,10 +72,12 @@ public class BCTransport {
         // Initialize stripes registry and handlers
         initStripesRegistry();
 
-        // Register creative tab — LOW priority so transport items appear after core/factory/silicon items
-        modEventBus.addListener(EventPriority.LOW, (BuildCreativeModeTabContentsEvent event) -> {
-            addCreativeTabItems(event);
-        });
+        // Creative tab contents. Transport inits before silicon, so on the plugs tab transport's plugs and wires
+        // come first and silicon's gates and plugs after them (the old LOW/LOWEST listener pair did the same).
+        CreativeTabContents.contribute(BCTransportCreativeTabs.PLUGS_TAB_KEY,
+                (params, output) -> addCreativeTabItems(BCTransportCreativeTabs.PLUGS_TAB_KEY, output));
+        CreativeTabContents.contribute(BCTransportCreativeTabs.PIPES_TAB_KEY,
+                (params, output) -> addCreativeTabItems(BCTransportCreativeTabs.PIPES_TAB_KEY, output));
 
         // Register NeoForge capabilities for pipe holders
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
@@ -103,10 +106,10 @@ public class BCTransport {
         LOGGER.info("BuildCraft Transport initialized");
     }
 
-    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+    private static void addCreativeTabItems(ResourceKey<CreativeModeTab> tabKey, CreativeModeTab.Output event) {
 
         // Pluggable items go in the dedicated Pluggables tab
-        if (event.getTabKey() == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
+        if (tabKey == BCTransportCreativeTabs.PLUGS_TAB_KEY) {
             event.accept(BCTransportItems.PLUG_BLOCKER.get());
             event.accept(BCTransportItems.PLUG_POWER_ADAPTOR.get());
             // Wire items
@@ -116,7 +119,7 @@ public class BCTransport {
         }
 
         // All pipe items go in the dedicated Pipes tab
-        if (event.getTabKey() == BCTransportCreativeTabs.PIPES_TAB_KEY) {
+        if (tabKey == BCTransportCreativeTabs.PIPES_TAB_KEY) {
             event.accept(BCTransportItems.PIPE_STRUCTURE.get());
             event.accept(BCTransportItems.PIPE_WOOD_ITEM.get());
             event.accept(BCTransportItems.PIPE_COBBLE_ITEM.get());

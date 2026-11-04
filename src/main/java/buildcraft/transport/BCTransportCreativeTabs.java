@@ -14,6 +14,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 
 import buildcraft.core.BCCoreCreativeTabs;
+import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.platform.registry.BCRegistrar;
 import buildcraft.platform.registry.BCHolder;
 
@@ -31,6 +32,7 @@ public class BCTransportCreativeTabs {
                             .title(Component.translatable("itemGroup.buildcraft.pipes"))
                             .icon(() -> BCTransportItems.PIPE_DIAMOND_ITEM.get().getDefaultInstance())
                             .withTabsBefore(BCCoreCreativeTabs.MAIN_TAB_KEY)
+                            .displayItems(CreativeTabContents.generator(PIPES_TAB_KEY))
                             .build());
 
     public static final ResourceKey<CreativeModeTab> PLUGS_TAB_KEY =
@@ -43,6 +45,7 @@ public class BCTransportCreativeTabs {
                             .title(Component.translatable("itemGroup.buildcraft.plugs"))
                             .icon(() -> BCTransportItems.PLUG_BLOCKER.get().getDefaultInstance())
                             .withTabsBefore(PIPES_TAB_KEY)
+                            .displayItems(CreativeTabContents.generator(PLUGS_TAB_KEY))
                             .build());
 
     public static void init(IEventBus modEventBus) {

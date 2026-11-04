@@ -9,7 +9,8 @@ package buildcraft.silicon;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import buildcraft.api.facades.FacadeAPI;
 import buildcraft.lib.mj.MjBatteryEnergyHandler;
 
 import buildcraft.core.BCCore;
+import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.platform.Platform;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
@@ -48,14 +50,16 @@ public class BCSilicon {
             buildcraft.silicon.client.BCSiliconClient.initClient(modEventBus);
         }
 
-        // Register capabilities, lifecycle events, and creative tab
+        // Register capabilities, lifecycle events, and creative tab contents (after transport's on the plugs tab:
+        // transport inits first)
         modEventBus.addListener((RegisterCapabilitiesEvent event) -> {
             registerCapabilities(event);
         });
         Platform.lifecycle().onCommonSetupOnMain(BCSilicon::commonSetup);
-        modEventBus.addListener(net.neoforged.bus.api.EventPriority.LOWEST, (BuildCreativeModeTabContentsEvent event) -> {
-            addCreativeTabItems(event);
-        });
+        CreativeTabContents.contribute(BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY,
+                (params, output) -> addCreativeTabItems(BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY, output));
+        CreativeTabContents.contribute(BCSiliconCreativeTabs.FACADE_TAB_KEY,
+                (params, output) -> addCreativeTabItems(BCSiliconCreativeTabs.FACADE_TAB_KEY, output));
 
 
 
@@ -101,9 +105,9 @@ public class BCSilicon {
         BCSiliconRecipes.ensureInitialized();
     }
 
-    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+    private static void addCreativeTabItems(ResourceKey<CreativeModeTab> tabKey, CreativeModeTab.Output event) {
 
-        if (event.getTabKey() == BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY) {
+        if (tabKey == BCSiliconCreativeTabs.TRANSPORT_PLUGS_TAB_KEY) {
             buildcraft.silicon.item.ItemPluggableGate gateItem = BCSiliconItems.PLUG_GATE.get();
             for (buildcraft.silicon.gate.EnumGateMaterial material : buildcraft.silicon.gate.EnumGateMaterial.VALUES) {
                 if (!material.canBeModified) {
@@ -157,7 +161,7 @@ public class BCSilicon {
             event.accept(new ItemStack(BCSiliconItems.PLUG_TIMER.get()));
         }
 
-        if (event.getTabKey() == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
+        if (tabKey == BCSiliconCreativeTabs.FACADE_TAB_KEY) {
             // ensureInitialized is needed for the multiplayer-client case (ServerAboutToStartEvent
             // only fires on the integrated server; a connected client gets no other init trigger).
             FacadeStateManager.ensureInitialized();

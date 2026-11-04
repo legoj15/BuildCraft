@@ -13,6 +13,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.neoforged.bus.api.IEventBus;
 
+import buildcraft.lib.registry.CreativeTabContents;
 import buildcraft.silicon.plug.FacadeBlockStateInfo;
 import buildcraft.silicon.plug.FacadeInstance;
 import buildcraft.silicon.plug.FacadeStateManager;
@@ -45,6 +46,7 @@ public class BCSiliconCreativeTabs {
                                 return BCSiliconItems.PLUG_FACADE.get().getDefaultInstance();
                             })
                             .withTabsBefore(TRANSPORT_PLUGS_TAB_KEY)
+                            .displayItems(CreativeTabContents.generator(FACADE_TAB_KEY))
                             .build());
 
     public static void init(IEventBus modEventBus) {

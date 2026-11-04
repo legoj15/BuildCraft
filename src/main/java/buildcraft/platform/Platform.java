@@ -60,6 +60,11 @@ public final class Platform {
         return SoundHolder.INSTANCE;
     }
 
+    /** Fluids: what the loader adds to a fluid stack (its display name). */
+    public static FluidServices fluids() {
+        return FluidsHolder.INSTANCE;
+    }
+
     /** Chunk loading tickets. */
     public static ChunkTickets chunkTickets() {
         return ChunkTicketsHolder.INSTANCE;
@@ -172,6 +177,18 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeSoundServices();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricSoundServices();
+            *///?}
+        }
+    }
+
+    private static final class FluidsHolder {
+        static final FluidServices INSTANCE = create();
+
+        private static FluidServices create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeFluids();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricFluids();
             *///?}
         }
     }

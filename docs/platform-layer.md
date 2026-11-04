@@ -147,6 +147,7 @@ Never build a generic BC event bus. It is the Architectury trap the issue reject
 ### Fluids (value type)
 - **Shape.** `buildcraft.api.fluids.BCFluidStack` mirrors NeoForge `FluidStack`'s method names (`EMPTY`, `getFluid`, `getAmount`, `grow`/`shrink`, `copy`, `copyWithAmount`, `isSameFluid`, `isSameFluidSameComponents`, `getComponents`, `CODEC`, `OPTIONAL_CODEC`, `STREAM_CODEC`, `getHoverName`). The 477 uses then migrate as an import swap.
 - **Typing.** BC-owned. Conversion happens only in `platform/neoforge`.
+  - Built (S13a): `NeoForgeFluids.toNeo`/`fromNeo` and Fabric's `FabricFluids` (`FluidVariant`, x81 droplets, floored back). `getHoverName` goes through a provider that `BCLib` installs from `Platform.fluids()` (`FluidServices`), since the api may not name the platform. The Fabric node also compiles `buildcraft/api/fluids/**` to keep the type loader-neutral.
 - **Format risk is high.** `CODEC` must emit NeoForge's exact shape (`id`, `amount`, `components`). It is used in the `SimpleFluidContent` component (`BCCore.java:63-65`), `RequiredExtractorTank` snapshots, and the distiller, heat-exchanger and robot NBT. A codec-parity test is written first.
 - **Properties.** `FluidType` reads (density, viscosity, temperature, lighter-than-air, bucket, sounds) go through a BC `FluidProperties` record. The NeoForge implementation builds the `FluidType` from it, and `BCEnergyFluids`' subclasses move whole.
 - **Units.** Integer mB internally. The Fabric adapter multiplies by 81, floors offers, and extracts in whole mB. That is an accepted Fabric-only gap.

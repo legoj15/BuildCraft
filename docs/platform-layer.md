@@ -333,7 +333,7 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
   - The robot's `isPushedByFluid(FluidType)` has a `fabric` arm on vanilla's `isPushedByFluid()`.
 - **Fabric gaps.**
   - No accessory slots: Curios and Accessories have no Fabric 26.3 build, so the goggles count in the head slot only and are not drawn on a curio.
-  - The robot's spawn data (the wearables list, always empty today) is not sent.
+  - Extra spawn data (`platform.hook.SpawnDataEntity`, the robot's wearables list) arrives one packet after the spawn, not inside it: `FabricSpawnData` sends it from `EntityTrackingEvents.START_TRACKING` and applies it to the client entity by id.
   - No creative-tab ordering: tabs follow registration order.
   - The sound type, explosion resistance and face culling are vanilla's position-free ones.
   - The dig speed fires no break-speed event.

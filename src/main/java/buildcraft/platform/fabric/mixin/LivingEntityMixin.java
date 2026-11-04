@@ -7,6 +7,8 @@ package buildcraft.platform.fabric.mixin;
 
 //? if fabric {
 /*import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -33,6 +35,7 @@ import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 
 import buildcraft.platform.FluidProperties;
+import buildcraft.platform.ThickFluidMotion;
 import buildcraft.platform.fabric.FabricFlowingFluids;
 import buildcraft.platform.fabric.FabricFluidPhysics;
 import buildcraft.platform.fabric.FabricGameHooks;
@@ -47,24 +50,61 @@ import buildcraft.platform.hook.PositionalSoundBlock;
  * {@code EntityMixin}, {@code EntityEquipmentMixin} and {@code InventoryMixin}, NeoForge's capture sites), shows them to
  * the listeners, then puts them in the level. And NeoForge's {@code onLivingBreathe} test for BuildCraft's fluids
  * and {@code travel} ({@link FabricFluidPhysics}): the entity drowns with its eyes in a fluid it can drown in, and
- * gets no movement step in one that is not water-like.
+ * wades through one that is not water-like by {@link ThickFluidMotion}, as the NeoForge fluid type's {@code move}.
  *^/
 @Mixin(LivingEntity.class)
 abstract class LivingEntityMixin {
 
-    /^* NeoForge's {@code travel}: in a BuildCraft fluid that is not water-like it takes {@code travelInFluid}, which then
-     *  moves the entity neither as in water nor as in lava, so not at all. *^/
-    @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
-    private void buildcraft$travelInFluidType(Vec3 input, CallbackInfo ci) {
+    @Shadow
+    protected boolean jumping;
+
+    @Shadow
+    protected abstract double getEffectiveGravity();
+
+    /^* The BuildCraft fluid that is not water-like this entity travels in this tick (NeoForge's {@code travel} takes
+     *  {@code travelInFluid} for it, which hands it to the type's {@code move}), or null. *^/
+    @Unique
+    private FluidProperties buildcraft$thickFluid() {
         LivingEntity self = (LivingEntity) (Object) this;
         FluidState state = self.level().getFluidState(self.blockPosition());
         FluidProperties declared = FabricFlowingFluids.declared(state.getType());
-        if (declared != null && !declared.waterLike() && !self.isInWater() && !self.isInLava()
+        if (declared != null && ThickFluidMotion.isThick(declared) && !self.isInWater() && !self.isInLava()
                 && self.isAffectedByFluids() && !self.canStandOnFluid(state)
                 && ((FabricFluidPhysics.Interaction) ((EntityAccessor) self).buildcraft$fluidInteraction())
                         .buildcraft$inKindOf(declared)) {
-            ci.cancel();
+            return declared;
         }
+        return null;
+    }
+
+    /^* NeoForge's {@code travel} in a BuildCraft fluid that is not water-like: the type's {@code move}, which is
+     *  {@link ThickFluidMotion}. A jumping entity off the ground first rises as NeoForge's {@code jumpInFluid} lifts it
+     *  (vanilla's {@code aiStep} jumps only from the ground in a fluid it does not know as water). *^/
+    @Inject(method = "travel", at = @At("HEAD"), cancellable = true)
+    private void buildcraft$travelInFluidType(Vec3 input, CallbackInfo ci) {
+        FluidProperties thick = buildcraft$thickFluid();
+        if (thick == null) {
+            return;
+        }
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (jumping && !self.onGround()) {
+            self.setDeltaMovement(self.getDeltaMovement().add(0.0, FabricFluidPhysics.FLUID_JUMP_SPEED, 0.0));
+        }
+        ThickFluidMotion.travel(self, thick, input, getEffectiveGravity());
+        ci.cancel();
+    }
+
+    /^* NeoForge's {@code aiStep} jump on the ground in a thick fluid deeper than the jump threshold: a
+     *  {@code jumpInFluid} lift rather than a jump from the ground. *^/
+    @WrapOperation(method = "aiStep", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;jumpFromGround()V"))
+    private void buildcraft$jumpInThickFluid(LivingEntity self, Operation<Void> original) {
+        if (buildcraft$thickFluid() != null
+                && self.getFluidHeight(FluidTags.WATER) > self.getFluidJumpThreshold()) {
+            self.setDeltaMovement(self.getDeltaMovement().add(0.0, FabricFluidPhysics.FLUID_JUMP_SPEED, 0.0));
+            return;
+        }
+        original.call(self);
     }
 
     @WrapOperation(method = "baseTick", at = @At(value = "INVOKE",

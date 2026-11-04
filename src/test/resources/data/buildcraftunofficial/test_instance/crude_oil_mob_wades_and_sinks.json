@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:function",
+    "function": "buildcraftunofficial:crude_oil_mob_wades_and_sinks",
+    "environment": "minecraft:default",
+    "structure": "minecraft:empty",
+    "max_ticks": 510,
+    "setup_ticks": 0,
+    "required": true
+}

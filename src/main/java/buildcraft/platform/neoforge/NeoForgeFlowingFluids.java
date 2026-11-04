@@ -34,6 +34,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import buildcraft.platform.FluidBehaviour;
 import buildcraft.platform.FluidFlow;
 import buildcraft.platform.FluidProperties;
+import buildcraft.platform.ThickFluidMotion;
 import buildcraft.platform.registry.BCFluidRegistrar;
 import buildcraft.platform.registry.BCHolder;
 import buildcraft.platform.registry.BCRegistrar;
@@ -116,10 +117,12 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
 
     /** The fluid type: the properties, plus a motion scale read on every use (it may follow a config value). */
     static final class Type extends FluidType {
+        private final FluidProperties properties;
         private final DoubleSupplier motionScale;
 
         Type(FluidProperties properties) {
             super(typeProperties(properties));
+            this.properties = properties;
             this.motionScale = properties.motionScale();
         }
 
@@ -127,6 +130,22 @@ public final class NeoForgeFlowingFluids implements BCFluidRegistrar {
         public double motionScale(Entity entity) {
             return motionScale.getAsDouble();
         }
+
+        //? if >=26.1.2 {
+        /** A fluid that is not water-like wades as {@link ThickFluidMotion}: since 26.1.2 NeoForge's
+         *  {@code travelInFluid} moves a modded type that implements no {@code move} neither as water nor as lava,
+         *  which held an entity in crude oil in place. Before 26.1.2 it fell back to the water or lava step (and ran
+         *  the lava step after a {@code move} that answered true), so those lines keep NeoForge's own. */
+        @Override
+        public boolean move(net.minecraft.world.entity.LivingEntity entity, net.minecraft.world.phys.Vec3 movementVector,
+                double gravity) {
+            if (!ThickFluidMotion.isThick(properties)) {
+                return false;
+            }
+            ThickFluidMotion.travel(entity, properties, movementVector, gravity);
+            return true;
+        }
+        //?}
     }
 
     /** The source form. Its body is the same as {@link Flowing}'s: the two extend different NeoForge classes. */

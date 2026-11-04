@@ -30,9 +30,10 @@ import buildcraft.platform.FluidProperties;
  * {@link FluidProperties#motionScale} rather than water's 0.014 (NeoForge's per-type current accumulators);</li>
  * <li>in a fluid that is not water-like, its fall distance is halved every tick (NeoForge's default
  * {@code fallDistanceModifier});</li>
- * <li>a living entity standing in a fluid that is not water-like gets no movement step, as NeoForge's
- * {@code travelInFluid} gives none to a type that implements no {@code FluidType.move} and is neither water nor lava
- * (so it is held where it is; mirrored, not endorsed).</li>
+ * <li>a living entity in a fluid that is not water-like (crude oil, residue) wades through it by
+ * {@link buildcraft.platform.ThickFluidMotion}, the movement step the NeoForge fluid type's {@code FluidType.move}
+ * takes, and a jumping one off the ground (or on the ground deeper than its jump threshold) rises by NeoForge's
+ * {@code jumpInFluid} lift of {@link #FLUID_JUMP_SPEED} a tick ({@code LivingEntityMixin}).</li>
  * </ul>
  * The rest of vanilla's tag queries ({@code getFluidHeight(WATER)}, {@code isEyeInFluid(WATER)} elsewhere) stay tag
  * based, as NeoForge's deprecated tag paths are. Extinguishing is the fluid's own {@code entityInside}.
@@ -40,6 +41,8 @@ import buildcraft.platform.FluidProperties;
 public final class FabricFluidPhysics {
     /^* NeoForge's default {@code FluidType.Properties.fallDistanceModifier}, which no BuildCraft fluid changes. *^/
     public static final float FALL_DISTANCE_MODIFIER = 0.5F;
+    /^* NeoForge's {@code jumpInFluid} lift per tick for a fluid that is not water (no swim-speed attribute). *^/
+    public static final double FLUID_JUMP_SPEED = 0.04F;
 
     private FabricFluidPhysics() {}
 

@@ -1,25 +1,69 @@
-# Handoff — 2026-11-02 (#81 + heat exchanger uniformity, both on main)
+# Handoff — 2026-11-04 (Fabric support, epic #98)
 
-## Done
-- #81 (plug/pipe baker caches reset before the atlas swap; dead PlugGateBaker cache) fixed in `0a654d481`, merged as `5c98b16ae`. It is on `origin/main` and GitHub closed #81.
-- Every model-derived sprite cache now resets on `ModelEvent.BakingCompleted` (after the atlas upload). The pipe and sprite-holder caches are generation-stamped against worker-thread races.
-- Smoke scenario `scripts/smoke/scenarios/sprite-reload.json` (High Contrast toggled twice) passed on 26.3 and 1.21.1: 37/37 steps, shots identical.
-- Heat exchanger matches the other BC machines: shell in the shared casing ramp (plate #cbcbcb, frame #a7a7a7), 1px casing frame on the shell edges, interior in the recess greys #2b2b2b/#363636, sight-slot bottom row I_BK so it no longer sits luma-equal on the seal. Commits `232f75b90`, `ba01a90c3`, `f95287a41`; review_fast approved the final sha; user approved the in-game look on 26.3 (2026-11-02). Merged from `claude/heat-exchanger-uniformity-130a0d`.
-- The 2026-10-23 release follow-ups this file used to track are finished. Release work stays user-gated (see memory `project_next_release_plan`).
+## Where the work is
+- Branch `worktree-bridge-cse_0142NTdi4TY4SQdY9huBdmxu`, pushed to `origin`. It is about 100 commits ahead of
+  `origin/main` and **not merged into `main`**. Merging and releasing are the owner's call.
+- To continue elsewhere: `git fetch origin worktree-bridge-cse_0142NTdi4TY4SQdY9huBdmxu`, then check it out (or
+  merge it into a fresh worktree branch). Re-run `bash scripts/neoforge-sources-sync.sh` there; `.neoforge-ref/` is
+  gitignored.
+- `wip/fabric-entity-item-fallback-test` (also pushed): one **unverified** game test for the living-entity
+  item-storage fallback (`EntityItemStorageTester`). Its agent was stopped before it compiled or ran it. Finish or
+  drop it; it is not on the main branch above.
 
-- Volume-marker distance readout (wrench right-click a marker; branch `claude/marker-distance-expansion-119343`). Delegations: impl built it first try, all six nodes compiled; reviewer (Haiku) pass with nits; review_fast glm-flash approve, deepseek-flash (standing in for busy shop26) comment, both low. The low findings were fixed or narrowed in the docs. CME lead filed as #93. User approved it in-client on 26.3 (2026-11-02).
-- Marker-area lift (#32) is Volume Wrench only now, main hand decides (`087770eb1`). Done by the orchestrator. Delegations: reviewer (Haiku) FAIL on an offhand bypass, which was fixed with a game-test assertion that failed first; review_fast round 1 (shop26, glm-flash) found docs only, which were fixed; final-sha review_fast approved (one low: an offhand-only lift can only be confirmed by an air click, pre-existing, left). User approved it in-client.
-
-- #95: the four asset/guide generators (`guide-to-guideme`, `guide-to-wiki`, `generate-heat-exchanger-assets`, `generate-gate-swap-recipes`) write through `scripts/gen_io.py`: an unchanged file is skipped modulo line endings, a changed one keeps its own endings, and only outputs no longer generated are pruned. A full guide export on this checkout now changes 0 files.
+## Done (all on the branch above)
+- **Phase 1, the platform layer (docs/platform-layer.md):** slices S2–S16 (#101–#111) are merged.
+  - The census is down from 785 live NeoForge references outside `platform/neoforge` to 4, all inside neoforge
+    arms, plus 8 allowlisted `ModConfigSpec` uses (Forge Config API Port supplies those on Fabric). Leaks: 0.
+  - Behaviour on NeoForge is unchanged. Golden save-format fixtures (S12) pass unmodified on all six nodes.
+- **Phase 2, the 26.3-fabric node:**
+  - It compiles all of BuildCraft and ships `BuildCraftRedux-<v>+mc26.3-fabric.jar`. Dependencies: Fabric API, Forge
+    Config API Port (config route, open question 1 decided), Common Protection API (MIT, jar-in-jar), Team Reborn
+    Energy (optional, compile-only).
+  - Supporting pieces: the class tweaker, `fabric.mod.json`, the Fabric data transform (`DataFabric.kt`), mixins for
+    every NeoForge patch BuildCraft relies on, and Gradle 9.8.2 with Loom 1.19.3 (#113).
+- **Verified:**
+  - Last full run, `fullTestSuite` plus `:26.3-fabric:runClientGameTest`, was green on all seven nodes:
+    - NeoForge: 926 game tests on 1.21.1, 927 on each other node.
+    - Fabric: 920 server game tests, plus the client game test, which runs the other 7 test bodies and takes 13
+      in-world screenshots (reviewed: pipes, engines, tank oil, bucket fluid colour, GUIs, guide). That is the same
+      927 as NeoForge 26.3.
+  - The shipped Fabric jar reached "Done" on a stock Fabric 26.3 server with no BuildCraft, mixin or class-tweaker
+    warnings.
+- **Bugs fixed on the way:**
+  - #117: entities were frozen in crude oil and residue on NeoForge 26.1.2+.
+  - The Fabric chunk-ticket release unforced chunks that other mods had forced.
+  - On Fabric, claim mods were never asked when a fake player clicked an entity.
+  - The test harness: #114, #118, #119 and `oil_bobbing_physics`.
+  - Machine models defined no `#top`, which produced "Unresolved texture" warnings.
+- **Tooling:**
+  - The Fabric node compiles with `-Xlint:deprecation,removal -Werror` (`checkDeprecations`, in `nodeVerification`).
+  - The version-check hook now tracks the Fabric Loader and Fabric API pins.
+  - README and AGENTS.md document the Fabric node.
 
 ## Next
-- Nothing queued here; planned work is in GitHub Issues (`issues.sh ready`).
+- **#112 (owner's machine):** the release harness `release/modules/BcRelease.psm1` must skip non-NeoForge nodes, or
+  the next release uploads the 26.3 NeoForge jar a second time. This must land before any release run.
+- **#120:** report the Fabric API client game-test runner race upstream (outward-facing, needs a human). The draft
+  text is in the issue. Remove `ClientGameTestThreadStartMixin` once it is fixed upstream.
+- Decide on merging into `main` and pushing. The issues closed by these commits (#99–#119) close when they reach
+  `main`.
+- Finish or drop the WIP branch above.
+- **An independent read-only review of `platform/fabric/**` was started and stopped before it reported.** Worth
+  re-running. Its brief: client classes on dedicated-server paths, thread safety, static maps keyed by level and
+  never cleared, conflict-prone mixins and fluid physics affecting other mods' fluids in the `minecraft:water` tag,
+  Transaction misuse, and droplet rounding.
+- Fabric gaps that remain (docs/platform-layer.md, the "As built" sections):
+  - No accessory slot for the goggles: no 26.3 Fabric Curios, Trinkets or Accessories build exists.
+  - Fluids move in whole millibuckets.
+  - Spawn data arrives one packet after the spawn.
+  - Creative tabs follow registration order.
+  - Minor event narrowings, all documented.
 
 ## Open questions / leads (unverified)
-- Keep the heat exchanger's dark-green seal as its accent? Recommended yes (the 1.12.2 exchanger's colour); alternative is an #a7a7a7 bezel with green only on the slot walls.
-- `EnumColor.brushSprites` looks like dead code.
-- The Guava `ModelCache` may have a similar reload window to the one #81 closed. Not checked.
-- Stale worktrees under `.claude/worktrees/` (merged `heat-exchanger-redesign-cc2297`, `heat-exchanger-uniformity-130a0d`, three `agent-*`, sixteen `wf_*`) can be cleaned up.
+- Placement on Fabric is put back after the block's own side effects run, unlike NeoForge's deferred capture.
+  Documented in `FabricProtection`.
+- `fabric.mod.json` dependency floors equal the pinned dev versions. They have not been bisected.
 
 ## Uncommitted changes
-- None.
+- None. Stray agent worktrees under `.claude/worktrees/agent-*` can be cleaned up; all their wanted work is merged
+  apart from the WIP branch above.

@@ -61,8 +61,6 @@ sourceSets {
 // its reason, and the manifests of tests not registered here are dropped from the resources (FabricGameTests).
 val fabricGameTestExcludes = listOf(
     "buildcraft/platform/neoforge/**",
-    // An IShearable block (Fabric has no shearable-block extension; FabricShearServices).
-    "buildcraft/lib/test/UnshearableBlock.java",
     // NeoForge's level-aware SavedDataType/SavedDataStorage API, driven directly (Fabric routes it through
     // SavedDataStorageMixin, which these do not reach).
     "buildcraft/lib/misc/LegacySavedDataTester.java",

@@ -17,24 +17,34 @@ import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.IShearable;
 
 import buildcraft.platform.ShearServices;
+import buildcraft.platform.hook.ShearableBlock;
 
-/** {@link ShearServices} on NeoForge: the {@link IShearable} block extension. */
+/**
+ * {@link ShearServices} on NeoForge: the {@link IShearable} block extension, then BuildCraft's own {@link ShearableBlock}
+ * (the loader-neutral hook; a block that is both answers as an {@code IShearable}).
+ */
 public final class NeoForgeShearServices implements ShearServices {
     @Override
     public boolean isShearableBlock(Block block) {
-        return block instanceof IShearable;
+        return block instanceof IShearable || block instanceof ShearableBlock;
     }
 
     @Override
     public boolean isShearableAt(Player player, ItemStack tool, Level level, BlockPos pos) {
-        return level.getBlockState(pos).getBlock() instanceof IShearable shearable
-            && shearable.isShearable(player, tool, level, pos);
+        Block block = level.getBlockState(pos).getBlock();
+        if (block instanceof IShearable shearable) {
+            return shearable.isShearable(player, tool, level, pos);
+        }
+        return block instanceof ShearableBlock shearable && shearable.isShearable(player, tool, level, pos);
     }
 
     @Override
     public List<ItemStack> shear(Player player, ItemStack tool, Level level, BlockPos pos) {
-        return level.getBlockState(pos).getBlock() instanceof IShearable shearable
-            ? shearable.onSheared(player, tool, level, pos) : List.of();
+        Block block = level.getBlockState(pos).getBlock();
+        if (block instanceof IShearable shearable) {
+            return shearable.onSheared(player, tool, level, pos);
+        }
+        return block instanceof ShearableBlock shearable ? shearable.onSheared(player, tool, level, pos) : List.of();
     }
 }
 //?}

@@ -223,11 +223,8 @@ public class BuildCraftGameTests {
         reg.accept("buildcraftunofficial:stripes_refused_soil_click_ends_seed_fallthrough", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedSoilClickEndsTheSeedFallthrough);
         reg.accept("buildcraftunofficial:stripes_refused_claim_stops_block_placement", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClaimStopsAStripesPipePlacingABlock);
         reg.accept("buildcraftunofficial:stripes_fire_needs_placement_ask_at_target", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testFireNeedsThePlacementAskAtTheTarget);
-        // Not on Fabric: Fabric has no shearable-block extension (FabricShearServices gap).
-        //? if neoforge {
         reg.accept("buildcraftunofficial:stripes_shears_ask_break_protection", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testShearsAskBreakProtectionBeforeCutting);
         reg.accept("buildcraftunofficial:stripes_refused_click_after_shears_pass_keeps_digging", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testRefusedClickAfterShearsPassDoesNotStopTheDig);
-        //?}
         reg.accept("buildcraftunofficial:stripes_air_use_asks_item_right_click", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseAsksTheItemRightClickEvent);
         reg.accept("buildcraftunofficial:stripes_air_use_bucket_asks_cells_it_touches", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseBucketAsksTheCellsItTouches);
         reg.accept("buildcraftunofficial:stripes_air_use_hands_product_back_down_pipe", () -> buildcraft.transport.pipe.behaviour.PipeBehaviourStripesDropTester::testAirUseHandsTheProductBackDownThePipe);

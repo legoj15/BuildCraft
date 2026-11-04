@@ -13,27 +13,45 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.SeagrassBlock;
+import net.minecraft.world.level.block.TallGrassBlock;
+import net.minecraft.world.level.block.VineBlock;
+import net.minecraft.world.level.block.WebBlock;
 
 import buildcraft.platform.ShearServices;
+import buildcraft.platform.hook.ShearableBlock;
 
 /^*
- * {@link ShearServices} on Fabric. Gap: Fabric has no shearable-block extension, so no block takes part in the protocol
- * and the stripes pipe's shears handler leaves every block alone.
+ * {@link ShearServices} on Fabric, which has no shearable-block extension: the blocks NeoForge marks {@code IShearable}
+ * (leaves, seagrass, tall grass, vines and cobwebs, with its defaults: always shearable, no drops of their own), and
+ * any {@link ShearableBlock}, BuildCraft's loader-neutral hook.
  *^/
 public final class FabricShearServices implements ShearServices {
     @Override
     public boolean isShearableBlock(Block block) {
-        return false;
+        return block instanceof ShearableBlock || isVanillaShearable(block);
     }
 
     @Override
     public boolean isShearableAt(Player player, ItemStack tool, Level level, BlockPos pos) {
-        return false;
+        Block block = level.getBlockState(pos).getBlock();
+        if (block instanceof ShearableBlock shearable) {
+            return shearable.isShearable(player, tool, level, pos);
+        }
+        return isVanillaShearable(block);
     }
 
     @Override
     public List<ItemStack> shear(Player player, ItemStack tool, Level level, BlockPos pos) {
-        return List.of();
+        return level.getBlockState(pos).getBlock() instanceof ShearableBlock shearable
+            ? shearable.onSheared(player, tool, level, pos) : List.of();
+    }
+
+    /^* The vanilla classes NeoForge patches {@code IShearable} onto (subclasses included, as there). *^/
+    private static boolean isVanillaShearable(Block block) {
+        return block instanceof LeavesBlock || block instanceof SeagrassBlock || block instanceof TallGrassBlock
+            || block instanceof VineBlock || block instanceof WebBlock;
     }
 }
 *///?}

@@ -5,8 +5,6 @@
  */
 package buildcraft.lib.test;
 
-import java.util.function.Function;
-
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -32,7 +30,7 @@ public final class TestOnlyBlocks {
      *  {@link WaterSensitiveBlock}. */
     public static final Identifier WET_FRAGILE_ID = Identifier.parse(NAMESPACE + ":wet_fragile");
 
-    /** A shearable block that is never ready for shears (NeoForge's {@code UnshearableBlock}). */
+    /** A shearable block that is never ready for shears; see {@link UnshearableBlock}. */
     public static final Identifier UNSHEARABLE_ID = Identifier.parse(NAMESPACE + ":unshearable");
 
     private TestOnlyBlocks() {}
@@ -55,7 +53,7 @@ public final class TestOnlyBlocks {
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, WET_FRAGILE_ID);
     }
 
-    /** The registered unshearable block (valid once registries are populated; NeoForge game-test runs only). */
+    /** The registered {@link UnshearableBlock} (valid once registries are populated). */
     public static Block unshearable() {
         return buildcraft.lib.misc.RegistryUtilBC.getValue(
                 net.minecraft.core.registries.BuiltInRegistries.BLOCK, UNSHEARABLE_ID);
@@ -72,17 +70,7 @@ public final class TestOnlyBlocks {
         blocks.registerBlock(REFUSING_SOURCE_ID.getPath(), RefusingSourceBlock::new, TestOnlyBlocks::properties);
         blocks.registerBlock(DRY_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, true), TestOnlyBlocks::properties);
         blocks.registerBlock(WET_FRAGILE_ID.getPath(), p -> new WaterSensitiveBlock(p, false), TestOnlyBlocks::properties);
-        blocks.subscribe();
-    }
-
-    /**
-     * Registers {@link #UNSHEARABLE_ID}, built by {@code factory}. That block implements NeoForge's
-     * {@code IShearable}, so only the NeoForge hook (which may name it) calls this: Fabric has no shearable-block
-     * extension to test (FabricShearServices).
-     */
-    public static void registerUnshearable(Function<BlockBehaviour.Properties, ? extends Block> factory) {
-        BCRegistrar.Blocks blocks = BCRegistrar.createBlocks(NAMESPACE);
-        blocks.registerBlock(UNSHEARABLE_ID.getPath(), factory, TestOnlyBlocks::properties);
+        blocks.registerBlock(UNSHEARABLE_ID.getPath(), UnshearableBlock::new, TestOnlyBlocks::properties);
         blocks.subscribe();
     }
 

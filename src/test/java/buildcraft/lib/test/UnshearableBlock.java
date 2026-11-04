@@ -12,15 +12,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
-import net.neoforged.neoforge.common.IShearable;
+import buildcraft.platform.hook.ShearableBlock;
 
 /**
- * A test-only {@link IShearable} block that is never ready for shears (a modded plant between harvests, say): the
+ * A test-only {@link ShearableBlock} (the loader-neutral twin of NeoForge's {@code IShearable}) block that is never ready for shears (a modded plant between harvests, say): the
  * interface says it can be sheared, and {@link #isShearable} always answers no. Every vanilla shearable block answers
  * yes, so this is the only way to a pair of shears meeting a shearable block that a stripes pipe's shears handler
  * then passes on, which is what lets the dispatch go on to the clicks after it. Registered by {@link TestOnlyBlocks}.
  */
-public final class UnshearableBlock extends Block implements IShearable {
+public final class UnshearableBlock extends Block implements ShearableBlock {
 
     public UnshearableBlock(BlockBehaviour.Properties properties) {
         super(properties);

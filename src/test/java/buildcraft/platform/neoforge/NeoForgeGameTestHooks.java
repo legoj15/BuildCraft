@@ -11,7 +11,6 @@ import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 
 import buildcraft.BuildCraftGameTests;
 import buildcraft.lib.test.TestOnlyBlocks;
-import buildcraft.lib.test.UnshearableBlock;
 
 /**
  * The NeoForge hook of {@link BuildCraftGameTests}: the test source set is part of BuildCraft's mod here, so this
@@ -37,17 +36,12 @@ public final class NeoForgeGameTestHooks {
     @SubscribeEvent
     public static void onConstruct(FMLConstructModEvent event) {
         BuildCraftGameTests.register(gameTestRun());
-        if (gameTestRun()) {
-            // NeoForge's IShearable: Fabric has no shearable-block extension (FabricShearServices).
-            TestOnlyBlocks.registerUnshearable(UnshearableBlock::new);
-        }
     }
     //?} else {
     /*@SubscribeEvent
     public static void onConstruct(FMLConstructModEvent event) {
         if (gameTestRun()) {
             TestOnlyBlocks.register();
-            TestOnlyBlocks.registerUnshearable(UnshearableBlock::new);
         }
     }
 

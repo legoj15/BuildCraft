@@ -265,7 +265,7 @@ No new behavioural test, since the slice is a neutral move, and no changelog ent
 2. All-node lines: the `net.neoforged` lines in commented arms. These are informational; 1.21.1-only arms are listed separately.
 3. Allowlisted references, each with a reason, kept in the script: `ModConfigSpec`/`ModConfig` pending the config decision, and `buildcraft/api/**` until S16. The allowlist should end empty.
 4. Patched overrides: NeoForge extension-method names harvested from `.neoforge-ref/<26.3 dir>/.../common/extensions/I*Extension.java`, matched against BC overrides, with tagged and untagged counts.
-5. Impl leaks: any common file naming `buildcraft.platform.neoforge` (other than the binder), and any `buildcraft.platform` contract file naming a loader or BC gameplay type. Any leak means a nonzero exit.
+5. Impl leaks: any common file naming `buildcraft.platform.neoforge` or `.fabric` (other than the binders), any loader impl package naming the other loader's package, and any `buildcraft.platform` contract file naming a loader or BC gameplay type. Any leak means a nonzero exit.
 6. Directive lines remaining in common code. This is the secondary payoff metric.
 7. Test-tree figures, informational only.
 

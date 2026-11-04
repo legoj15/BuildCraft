@@ -35,7 +35,7 @@ What it measures, all on the live view (the code the node actually compiles):
     from the vanilla type that carries the extension (IBlockExtension -> Block, found through class headers in the
     same sources), so a BC method that merely shares a name with an extension method is not mistaken for a patch.
  5. Implementation leaks (any one makes the exit code 1): a common file naming a loader impl package (buildcraft.platform.neoforge or .fabric) other than
-    the binders, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package.
+    the binders, a loader impl package naming the OTHER loader's package, or a buildcraft/platform contract file naming net.neoforged, net.fabricmc or a BC gameplay package.
  6. Stonecutter directive lines remaining in common code.
  7. Test-tree figures (src/test/java), informational.
 

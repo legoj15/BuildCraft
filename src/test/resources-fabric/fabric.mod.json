@@ -7,7 +7,8 @@
   "license": "MPL-2.0",
   "environment": "*",
   "entrypoints": {
-    "main": ["buildcraft.platform.fabric.BCFabricGameTestEntrypoint"]
+    "main": ["buildcraft.platform.fabric.BCFabricGameTestEntrypoint"],
+    "fabric-client-gametest": ["buildcraft.platform.fabric.BCFabricClientGameTest"]
   },
   "mixins": ["buildcraftunofficial_gametest.mixins.json"],
   "depends": {

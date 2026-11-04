@@ -30,9 +30,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.VanillaGameEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.core.BuildCraftAPI;
 
@@ -321,7 +318,7 @@ public class FakePlayerUtilTester {
             check(blocked.player() != leaked.player(), "precondition: the open lease reserves its player");
         }
 
-        FakePlayerUtil.onServerTickStart(new ServerTickEvent.Pre(() -> true, level.getServer()));
+        FakePlayerUtil.onServerTickStart(level.getServer());
 
         try (FakePlayerUtil.Lease fresh = FakePlayerUtil.lease(level, owner, null)) {
             check(fresh.player() == leaked.player(), "the tick-start sweep released the leaked lease");
@@ -414,7 +411,7 @@ public class FakePlayerUtilTester {
         GameProfile owner = uniqueProfile();
 
         ServerPlayer before = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
-        FakePlayerUtil.onLevelUnload(new LevelEvent.Unload(level));
+        FakePlayerUtil.onLevelUnload(level);
         ServerPlayer after = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(after != before, "the unloaded level's player is gone");
         check(after == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner), "the replacement is cached again");
@@ -439,13 +436,13 @@ public class FakePlayerUtilTester {
         ServerPlayer beforeLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         // Stands in for the owner's real ServerPlayer: the handlers only read the UUID.
         FakePlayer ownerSession = new FakePlayer(level, owner);
-        FakePlayerUtil.onPlayerLoggedOut(new PlayerEvent.PlayerLoggedOutEvent(ownerSession));
+        FakePlayerUtil.onPlayerLoggedOut(ownerSession);
         ServerPlayer afterLogout = BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner);
         check(afterLogout != beforeLogout, "the owner's logout evicts the owner's cached player");
         check(afterLogout == BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner),
                 "the rebuilt player is cached again");
 
-        FakePlayerUtil.onPlayerLoggedIn(new PlayerEvent.PlayerLoggedInEvent(ownerSession));
+        FakePlayerUtil.onPlayerLoggedIn(ownerSession);
         check(BuildCraftAPI.fakePlayerProvider.getFakePlayer(level, owner) != afterLogout,
                 "the owner's login evicts the owner's cached player too");
 

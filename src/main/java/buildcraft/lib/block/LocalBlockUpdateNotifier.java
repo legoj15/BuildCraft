@@ -10,13 +10,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.BlockEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.GameHooks;
+import buildcraft.platform.event.HookOrder;
 import buildcraft.platform.event.PlatformProtection;
 
 /**
@@ -26,14 +22,13 @@ import buildcraft.platform.event.PlatformProtection;
  *
  * The 1.12.2 version hooked {@code IWorldEventListener.notifyBlockUpdate} for
  * a single catch-all signal. That API was removed in MC 1.21+, so this version
- * hooks NeoForge's {@link BlockEvent.EntityPlaceEvent}, the block-break event
- * (via {@link PlatformProtection#onBreak}), and {@link BlockEvent.NeighborNotifyEvent}. Together
- * those cover player placements/breaks and any {@code setBlock} call that
+ * hooks the block-placement event ({@link GameHooks#onBlockPlace}), the block-break event
+ * (via {@link PlatformProtection#onBreak}), and the neighbour-notify event
+ * ({@link GameHooks#onNeighborNotify}). Together those cover player placements/breaks and any {@code setBlock} call that
  * propagates neighbor updates. Consumers (e.g. {@link buildcraft.silicon.tile.TileLaser})
  * should still maintain a periodic rescan as a safety net for sources that
  * skip these events.
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public class LocalBlockUpdateNotifier {
 
     private static final Map<Level, LocalBlockUpdateNotifier> instanceMap = new WeakHashMap<>();
@@ -72,29 +67,27 @@ public class LocalBlockUpdateNotifier {
      *  registered at shutdown never runs {@code setRemoved}, so nothing else ever dropped it. A server stop posts
      *  this event once per level, after the final save. Server levels only: the map is server-side state and is
      *  not synchronised, so the client thread's own level unload must not touch it. */
-    @SubscribeEvent
-    public static void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+    public static void onLevelUnload(LevelAccessor unloaded) {
+        if (unloaded instanceof Level level && !level.isClientSide()) {
             instanceMap.remove(level);
         }
     }
 
-    /** Last priority, so a placement a protection mod cancels (and NeoForge takes back) wakes nobody: a cancelled
-     *  event is not delivered here. */
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+    /** Registered last ({@link HookOrder#LATE}), so a placement a protection mod cancels (and the loader takes back)
+     *  wakes nobody: a cancelled placement is not delivered here. */
+    public static void onBlockPlaced(GameHooks.BlockPlace event) {
         // A machine's "may I place here?" probe (BlockUtil.canMachinePlace) places nothing; forwarding it would wake
         // nearby lasers once per Builder placement, as the break probe once did for every scanned block.
-        if (Platform.protection().isProbe(event)) {
+        if (event.isProbe()) {
             return;
         }
-        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
-            dispatch(level, event.getPos(), event.getPlacedAgainst(), event.getPlacedBlock());
+        if (event.level() instanceof Level level && !level.isClientSide()) {
+            dispatch(level, event.pos(), event.placedAgainst(), event.placedBlock());
         }
     }
 
-    // NOT @SubscribeEvent: the break-event class differs across 26.1.x, so this is registered through
-    // PlatformProtection#onBreak (see registerBreakListener).
+    // Registered through PlatformProtection#onBreak (see registerBreakListener): the break-event class differs
+    // across 26.1.x.
     public static void onBlockBroken(PlatformProtection.BlockBreak event) {
         // A machine's "may I break this?" probe (BlockUtil.canMachineBreak) is a real break event that breaks
         // nothing; forwarding it made every per-block check in a quarry/builder scan wake nearby lasers.
@@ -112,12 +105,17 @@ public class LocalBlockUpdateNotifier {
         Platform.protection().onBreak(LocalBlockUpdateNotifier::onBlockBroken);
     }
 
-    @SubscribeEvent
-    public static void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
-        if (event.getLevel() instanceof Level level && !level.isClientSide()) {
-            BlockState state = event.getState();
-            dispatch(level, event.getPos(), state, state);
+    public static void onNeighborNotify(Level level, BlockPos pos, BlockState state) {
+        if (!level.isClientSide()) {
+            dispatch(level, pos, state, state);
         }
+    }
+
+    /** Registers the unload, placement and neighbour-notify listeners. Called once from BCCore. */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onLevelUnload(LocalBlockUpdateNotifier::onLevelUnload);
+        hooks.onBlockPlace(HookOrder.LATE, false, LocalBlockUpdateNotifier::onBlockPlaced);
+        hooks.onNeighborNotify(LocalBlockUpdateNotifier::onNeighborNotify);
     }
 
     private static void dispatch(Level level, BlockPos pos, BlockState oldState, BlockState newState) {

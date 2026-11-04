@@ -7,12 +7,12 @@ package buildcraft.lib.marker;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
+import buildcraft.platform.event.GameHooks;
 
 /**
  * Wires {@link MarkerCache#onWorldUnload} and {@link MarkerCache#onPlayerJoinWorld}, the two halves of 1.12.2's
@@ -34,23 +34,25 @@ import net.neoforged.neoforge.event.level.LevelEvent;
  *     that was made before it arrived, and neither would a fresh client on a dedicated server.</li>
  * </ul>
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public final class MarkerCacheEvents {
 
     private MarkerCacheEvents() {
     }
 
-    @SubscribeEvent
-    public static void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof Level level) {
+    /** Registers the unload and join listeners. Called once from BCCore. */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onLevelUnload(MarkerCacheEvents::onLevelUnload);
+        hooks.onEntityJoinLevel(MarkerCacheEvents::onEntityJoinLevel);
+    }
+
+    public static void onLevelUnload(LevelAccessor unloaded) {
+        if (unloaded instanceof Level level) {
             MarkerCache.onWorldUnload(level);
         }
     }
 
-    @SubscribeEvent
-    public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
-        Level level = event.getLevel();
-        if (level.isClientSide() || !(event.getEntity() instanceof ServerPlayer player)) {
+    public static void onEntityJoinLevel(Entity entity, ServerLevel level, boolean loadedFromDisk) {
+        if (!(entity instanceof ServerPlayer player)) {
             return;
         }
         MinecraftServer server = level.getServer();

@@ -17,11 +17,11 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-
-import net.neoforged.neoforge.event.OnDatapackSyncEvent;
 
 import buildcraft.energy.BCEnergyBlocks;
 import buildcraft.energy.tile.TileEngineStone_BC8;
@@ -68,9 +68,9 @@ public record StirlingFuelSync(List<StirlingFuel> fuels) implements CustomPacket
     }
 
     /** Sends the list to the players a datapack sync is for (the one joining, or everyone on {@code /reload}). */
-    public static void onDatapackSync(OnDatapackSyncEvent event) {
-        StirlingFuelSync message = new StirlingFuelSync(compute(event.getPlayerList().getServer().overworld()));
-        event.getRelevantPlayers().forEach(player -> Platform.network().sendToPlayer(player, message));
+    public static void onDatapackSync(MinecraftServer server, List<ServerPlayer> players) {
+        StirlingFuelSync message = new StirlingFuelSync(compute(server.overworld()));
+        players.forEach(player -> Platform.network().sendToPlayer(player, message));
     }
 
     /** Every item with a cooking-fuel component that the Stirling engine would burn, with its burn time. */

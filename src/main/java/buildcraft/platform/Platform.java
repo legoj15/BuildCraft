@@ -8,6 +8,8 @@ package buildcraft.platform;
 import buildcraft.platform.config.BCConfigType;
 import buildcraft.platform.config.ConfigHooks;
 import buildcraft.platform.config.ConfigRegistrar;
+import buildcraft.platform.event.GameHooks;
+import buildcraft.platform.event.LifecycleHooks;
 import buildcraft.platform.event.PlatformProtection;
 import buildcraft.platform.menu.BCMenus;
 import buildcraft.platform.network.BCNetwork;
@@ -38,6 +40,16 @@ public final class Platform {
     /** Protection: the permission events a machine posts for its fake player (break, place, attack, clicks). */
     public static PlatformProtection protection() {
         return ProtectionHolder.INSTANCE;
+    }
+
+    /** Game events: ticks, levels and chunks, players, interaction, commands and datapack syncs. */
+    public static GameHooks gameHooks() {
+        return GameHooksHolder.INSTANCE;
+    }
+
+    /** Mod-loading and server lifecycle: setup, load complete, server start and stop, level saves. */
+    public static LifecycleHooks lifecycle() {
+        return LifecycleHolder.INSTANCE;
     }
 
     /** The loader's fake-player class. */
@@ -124,6 +136,30 @@ public final class Platform {
             return new buildcraft.platform.neoforge.NeoForgeProtection();
             //?} elif fabric {
             /*return new buildcraft.platform.fabric.FabricProtection();
+            *///?}
+        }
+    }
+
+    private static final class GameHooksHolder {
+        static final GameHooks INSTANCE = create();
+
+        private static GameHooks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeGameHooks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricGameHooks();
+            *///?}
+        }
+    }
+
+    private static final class LifecycleHolder {
+        static final LifecycleHooks INSTANCE = create();
+
+        private static LifecycleHooks create() {
+            //? if neoforge {
+            return new buildcraft.platform.neoforge.NeoForgeLifecycleHooks();
+            //?} elif fabric {
+            /*return new buildcraft.platform.fabric.FabricLifecycleHooks();
             *///?}
         }
     }

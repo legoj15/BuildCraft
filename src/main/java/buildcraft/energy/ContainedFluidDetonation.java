@@ -13,18 +13,17 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.level.ExplosionEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import buildcraft.energy.BCEnergyConfig.ContainedDetonation;
 import buildcraft.lib.misc.BlockUtil;
+import buildcraft.platform.Platform;
+import buildcraft.platform.event.HookOrder;
 
 /**
  * Gaseous fuel stored in a tank or fluid pipe exploding (issue #61), as the {@code containedFluidDetonation} config
@@ -91,11 +90,11 @@ public final class ContainedFluidDetonation {
 
     public static void init() {
         // Lowest, so claim and robot protection have already taken the blocks they keep out of the list
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ContainedFluidDetonation::onExplosionDetonate);
-        NeoForge.EVENT_BUS.addListener(ContainedFluidDetonation::onLevelTick);
+        Platform.gameHooks().onExplosionDetonate(HookOrder.LATE, ContainedFluidDetonation::onExplosionDetonate);
+        Platform.gameHooks().onLevelTickEnd(ContainedFluidDetonation::onLevelTick);
         // Server levels only: an integrated client's levels post the same event, on the client thread
-        NeoForge.EVENT_BUS.addListener((LevelEvent.Unload event) -> {
-            if (event.getLevel() instanceof Level level && !level.isClientSide()) {
+        Platform.gameHooks().onLevelUnload(unloaded -> {
+            if (unloaded instanceof Level level && !level.isClientSide()) {
                 PENDING.remove(level);
             }
         });
@@ -149,18 +148,18 @@ public final class ContainedFluidDetonation {
 
     /** The blast trigger: every container a block-breaking blast is about to destroy that holds gas goes off after
      *  it. */
-    private static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-        Level level = event.getLevel();
+    private static void onExplosionDetonate(Level level, Explosion explosion, List<BlockPos> affectedBlocks,
+            List<Entity> affectedEntities) {
         if (level.isClientSide() || BCEnergyConfig.containedDetonationMode() == ContainedDetonation.OFF) {
             return;
         }
         // The list is filled even for a blast that breaks nothing (a wind charge, a creeper with mobGriefing off)
-        Explosion.BlockInteraction interaction = event.getExplosion().getBlockInteraction();
+        Explosion.BlockInteraction interaction = explosion.getBlockInteraction();
         if (interaction != Explosion.BlockInteraction.DESTROY
                 && interaction != Explosion.BlockInteraction.DESTROY_WITH_DECAY) {
             return;
         }
-        for (BlockPos pos : event.getAffectedBlocks()) {
+        for (BlockPos pos : affectedBlocks) {
             if (level.getBlockEntity(pos) instanceof Container container) {
                 float power = powerOf(container);
                 if (power > 0) {
@@ -176,9 +175,8 @@ public final class ContainedFluidDetonation {
         PENDING.computeIfAbsent(level, l -> new ArrayList<>()).add(new Pending(pos.immutable(), power, fuse));
     }
 
-    private static void onLevelTick(LevelTickEvent.Post event) {
-        Level level = event.getLevel();
-        List<Pending> pending = level.isClientSide() ? null : PENDING.get(level);
+    private static void onLevelTick(ServerLevel level) {
+        List<Pending> pending = PENDING.get(level);
         if (pending == null || pending.isEmpty()) {
             return;
         }

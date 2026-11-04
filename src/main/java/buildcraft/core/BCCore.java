@@ -6,7 +6,6 @@
 package buildcraft.core;
 
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.bus.api.IEventBus;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
@@ -25,7 +24,6 @@ import net.minecraft.core.component.DataComponentType;
 import net.neoforged.neoforge.fluids.SimpleFluidContent;
 import java.util.function.Supplier;
 import com.mojang.serialization.Codec;
-import net.neoforged.neoforge.common.NeoForge;
 
 
 import buildcraft.lib.marker.MarkerCache;
@@ -121,9 +119,10 @@ public class BCCore {
             BCCoreClient.init(modContainer, modEventBus);
         }
 
-        modEventBus.addListener(this::preInit);
-        modEventBus.addListener(this::init);
-        modEventBus.addListener(this::postInit);
+        Platform.lifecycle().onCommonSetup(this::preInit);
+        Platform.lifecycle().onCommonSetup(this::init);
+        // Last, after every listener the other mods registered while loading: see the method's javadoc.
+        Platform.lifecycle().onLoadCompleteOnMain(buildcraft.lib.misc.MachineRefusals::registerRecorder);
         modEventBus.addListener(this::registerCapabilities);
         registerPayloads();
 
@@ -132,18 +131,17 @@ public class BCCore {
         buildcraft.lib.block.LocalBlockUpdateNotifier.registerBreakListener();
 
         // Vanilla Brush for cleaning pipes & painted blocks
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock.class,
-            interactEvent -> {
-                if (interactEvent.getItemStack().is(net.minecraft.world.item.Items.BRUSH)) {
+        Platform.gameHooks().onRightClickBlock(
+            (player, level, hand, hit, stack) -> {
+                if (stack.is(net.minecraft.world.item.Items.BRUSH)) {
                     // Try to un-paint
-                    net.minecraft.world.phys.Vec3 hitLoc = interactEvent.getHitVec().getLocation();
+                    net.minecraft.world.phys.Vec3 hitLoc = hit.getLocation();
+                    net.minecraft.core.BlockPos pos = hit.getBlockPos();
                     net.minecraft.world.InteractionResult result = buildcraft.api.blocks.CustomPaintHelper.INSTANCE.attemptPaintBlock(
-                        interactEvent.getLevel(), interactEvent.getPos(), interactEvent.getLevel().getBlockState(interactEvent.getPos()),
-                        hitLoc, interactEvent.getFace(), null);
-                    
+                        level, pos, level.getBlockState(pos), hitLoc, hit.getDirection(), null);
+
                     if (result == net.minecraft.world.InteractionResult.SUCCESS) {
-                        if (!interactEvent.getLevel().isClientSide()) {
+                        if (!level.isClientSide()) {
                             try {
                                 // Find any sweeping sound using reflection to be safe
                                 net.minecraft.sounds.SoundEvent sweep = null;
@@ -154,34 +152,27 @@ public class BCCore {
                                     }
                                 }
                                 if (sweep != null) {
-                                    interactEvent.getLevel().playSound(null, interactEvent.getPos(), sweep, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+                                    level.playSound(null, pos, sweep, net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
                                 }
                             } catch (Exception e) {}
-                            buildcraft.lib.misc.ParticleUtil.showChangeColour(interactEvent.getLevel(), hitLoc, null);
+                            buildcraft.lib.misc.ParticleUtil.showChangeColour(level, hitLoc, null);
                         }
-                        interactEvent.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-                        interactEvent.setCanceled(true);
+                        return net.minecraft.world.InteractionResult.SUCCESS;
                     }
                 }
+                return null;
             }
         );
 
         // Volume Box server tick (drives editing-state updates and lock expiry)
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.tick.LevelTickEvent.Post.class,
-            tickEvent -> {
-                if (tickEvent.getLevel() instanceof net.minecraft.server.level.ServerLevel sl) {
-                    buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl).tick();
-                }
-            }
+        Platform.gameHooks().onLevelTickEnd(
+            sl -> buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl).tick()
         );
 
         // Volume Box: send initial state to player on login
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent.class,
-            loginEvent -> {
-                if (loginEvent.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp
-                        && sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+        Platform.gameHooks().onPlayerLoggedIn(
+            sp -> {
+                if (sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
                     buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes data =
                         buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes.get(sl);
                     data.sendTo(sp);
@@ -190,11 +181,9 @@ public class BCCore {
         );
 
         // Volume Box: re-sync when the player switches dimension
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerChangedDimensionEvent.class,
-            dimEvent -> {
-                if (dimEvent.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp
-                        && sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+        Platform.gameHooks().onPlayerChangedDimension(
+            sp -> {
+                if (sp.level() instanceof net.minecraft.server.level.ServerLevel sl) {
                     buildcraft.core.marker.volume.LevelSavedDataVolumeBoxes
                         .get(sl)
                         .sendTo(sp);
@@ -207,16 +196,28 @@ public class BCCore {
         // syncing recipes to clients in 1.21.2, and the guide's old integrated-server lookup
         // was null in multiplayer). Received client-side via RecipesReceivedEvent — see
         // BCLibClient and ClientGuideRecipeCache. The 1.21.1 line still gets vanilla's own
-        // full sync, so this hook (and OnDatapackSyncEvent.sendRecipes) doesn't exist there.
-        //? if >=1.21.10 {
-        NeoForge.EVENT_BUS.addListener(
-            net.neoforged.neoforge.event.OnDatapackSyncEvent.class,
-            syncEvent -> syncEvent.sendRecipes(
-                net.minecraft.world.item.crafting.RecipeType.CRAFTING,
-                net.minecraft.world.item.crafting.RecipeType.SMELTING
-            )
-        );
-        //?}
+        // full sync, so there the request does nothing.
+        Platform.gameHooks().syncRecipeTypes(java.util.List.of(
+            net.minecraft.world.item.crafting.RecipeType.CRAFTING,
+            net.minecraft.world.item.crafting.RecipeType.SMELTING
+        ));
+
+        registerFormerSubscribers();
+    }
+
+    /**
+     * The listeners of the classes that were {@code @EventBusSubscriber}s. FML registered those after this constructor
+     * returned (FML 12 {@code FMLModContainer.constructMod}: the constructor, then {@code AutomaticEventSubscriber}),
+     * so they are registered last here, keeping each event's listener order.
+     */
+    private static void registerFormerSubscribers() {
+        buildcraft.platform.event.GameHooks hooks = Platform.gameHooks();
+        buildcraft.lib.block.LocalBlockUpdateNotifier.registerHooks(hooks);
+        buildcraft.lib.marker.MarkerCacheEvents.registerHooks(hooks);
+        buildcraft.lib.misc.FakePlayerUtil.registerHooks(hooks);
+        buildcraft.core.command.SoundTestCommand.registerHooks(hooks);
+        buildcraft.core.item.ZombieWrenches.registerHooks(hooks);
+        buildcraft.transport.stripes.PipeExtensionManager.registerHooks(hooks);
     }
 
     /**
@@ -229,7 +230,7 @@ public class BCCore {
         buildcraft.lib.misc.BlockUtil.miningMultiplier = BCCoreConfig.miningMultiplier.get();
     }
 
-    private void preInit(FMLCommonSetupEvent event) {
+    private void preInit() {
         // Fake players for every subsystem: cached per (level, profile) and reset on each fetch — see FakePlayerUtil.
         buildcraft.api.core.BuildCraftAPI.fakePlayerProvider = buildcraft.lib.misc.FakePlayerUtil.PROVIDER;
 
@@ -297,15 +298,10 @@ public class BCCore {
         BCCoreRecipes.fmlPreInit();
     }
 
-    private void init(FMLCommonSetupEvent event) {
+    private void init() {
         buildcraft.core.block.VanillaPaintHandlers.fmlInit();
         buildcraft.lib.block.VanillaRotationHandlers.fmlInit();
         buildcraft.lib.list.VanillaListHandlers.register();
-    }
-
-    private void postInit(net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent event) {
-        // Last, after every listener the other mods registered while loading: see the method's javadoc.
-        event.enqueueWork(buildcraft.lib.misc.MachineRefusals::registerRecorder);
     }
 
     private static void registerPayloads() {

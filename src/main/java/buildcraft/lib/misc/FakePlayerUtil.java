@@ -19,25 +19,22 @@ import com.mojang.authlib.GameProfile;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.phys.Vec3;
-
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.api.core.IFakePlayerProvider;
 
 import buildcraft.platform.FakePlayers;
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.GameHooks;
 
 /**
  * BuildCraft's fake players: one cached fake player (the loader's own class, from {@link Platform#fakePlayers()}) per
@@ -55,7 +52,8 @@ import buildcraft.platform.Platform;
  * fetch (a protection mod's break listener, another mod's placement hook) could mutate it mid-operation. Its key
  * is also the whole {@code GameProfile} — on 1.21.10+ a record whose equality includes the texture properties, so
  * a live owner profile and the same owner re-read from NBT would be two players. This cache is keyed on id + name,
- * is BuildCraft-only, and is emptied on {@link LevelEvent.Unload} exactly as the factory's own map is.
+ * is BuildCraft-only, and is emptied on a level unload ({@link GameHooks#onLevelUnload}) exactly as the factory's
+ * own map is.
  *
  * <h2>Fresh-equivalent on every fetch</h2>
  * A cached player is shared state, so every fetch first undoes whatever the previous caller left behind:
@@ -102,7 +100,6 @@ import buildcraft.platform.Platform;
  * and pipe-flow ticks). An off-thread fetch — only possible from a misbehaving addon — gets a detached player,
  * matching the old always-new behaviour, and is logged once.
  */
-@EventBusSubscriber(modid = "buildcraftunofficial")
 public final class FakePlayerUtil {
 
     /**
@@ -409,10 +406,20 @@ public final class FakePlayerUtil {
         player.getCooldowns().cooldowns.clear();
     }
 
+    /**
+     * Registers the cache's invalidation (level unload, owner login and logout) and the leaked-lease sweep at the start
+     * of each server tick. Called once from BCCore.
+     */
+    public static void registerHooks(GameHooks hooks) {
+        hooks.onLevelUnload(FakePlayerUtil::onLevelUnload);
+        hooks.onPlayerLoggedIn(FakePlayerUtil::onPlayerLoggedIn);
+        hooks.onPlayerLoggedOut(FakePlayerUtil::onPlayerLoggedOut);
+        hooks.onServerTickStart(FakePlayerUtil::onServerTickStart);
+    }
+
     /** Forgets every cached player of an unloading level, so none keeps the level alive. */
-    @SubscribeEvent
-    public static void onLevelUnload(LevelEvent.Unload event) {
-        if (event.getLevel() instanceof ServerLevel level) {
+    public static void onLevelUnload(LevelAccessor unloaded) {
+        if (unloaded instanceof ServerLevel level) {
             CACHE.keySet().removeIf(key -> key.level() == level);
         }
     }
@@ -425,15 +432,13 @@ public final class FakePlayerUtil {
      * through it (a stripes pipe or builder placing blocks, a list item's advancement) would be lost, or awarded to
      * the logged-out entity. The per-call players this cache replaced always looked the current tracker up.
      */
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        evictOwner(event.getEntity().getUUID());
+    public static void onPlayerLoggedIn(Player player) {
+        evictOwner(player.getUUID());
     }
 
     /** See {@link #onPlayerLoggedIn}: the tracker a cached player holds is discarded when its owner logs out. */
-    @SubscribeEvent
-    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        evictOwner(event.getEntity().getUUID());
+    public static void onPlayerLoggedOut(Player player) {
+        evictOwner(player.getUUID());
     }
 
     /**
@@ -441,8 +446,7 @@ public final class FakePlayerUtil {
      * Swept at the START of a tick, not the end: in the Post phase a lease another listener opened earlier in that
      * same phase can still be in use, and the sweep would release it from under that listener.
      */
-    @SubscribeEvent
-    public static void onServerTickStart(ServerTickEvent.Pre event) {
+    public static void onServerTickStart(MinecraftServer server) {
         if (!OPEN_LEASES.isEmpty()) {
             releaseLeakedLeases();
         }

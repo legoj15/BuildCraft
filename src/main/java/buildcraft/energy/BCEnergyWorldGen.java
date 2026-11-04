@@ -5,9 +5,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.resources.Identifier;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import buildcraft.api.core.BCLog;
 import buildcraft.core.BCCoreConfig;
@@ -38,7 +35,7 @@ public class BCEnergyWorldGen {
             BCLog.logger.info("[energy.oilgen] Oil generation is disabled by config.");
             return;
         }
-        NeoForge.EVENT_BUS.register(BCEnergyWorldGen.class);
+        buildcraft.platform.Platform.gameHooks().onPlayerTickEnd(BCEnergyWorldGen::onPlayerTick);
         BCLog.logger.info("[energy.oilgen] Registered the fine_riches oil-biome watcher.");
     }
 
@@ -93,9 +90,7 @@ public class BCEnergyWorldGen {
      * spills from a rich-biome origin into an adjacent non-rich chunk is
      * still valid evidence the player has found oil in their oil biome.
      */
-    @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+    public static void onPlayerTick(ServerPlayer player) {
         if (player.tickCount % FINE_RICHES_TICK_STRIDE != 0) return;
         // ServerPlayer is server-only by construction, so player.level() is a ServerLevel.
         if (!(player.level() instanceof ServerLevel level)) return;

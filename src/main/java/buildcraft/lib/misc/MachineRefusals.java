@@ -14,14 +14,12 @@ import java.util.function.BooleanSupplier;
 
 import javax.annotation.Nullable;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
-
 import buildcraft.platform.Platform;
+import buildcraft.platform.event.GameHooks;
+import buildcraft.platform.event.HookOrder;
 
 /**
  * How many clicks a machine's fake player has had refused, kept per player. A stripes pipe tries several handlers on
@@ -95,9 +93,9 @@ public final class MachineRefusals {
     }
 
     /**
-     * Registers {@link #onEntityInteract} and {@link #onEntityPlace} on the game bus, at last priority and even when cancelled. Called once
-     * mod loading is complete ({@code FMLLoadCompleteEvent}), not at construction: the bus runs one priority's
-     * listeners in registration order, so a recorder registered with the mod would miss a protection mod that also
+     * Registers {@link #onEntityInteract} and {@link #onEntityPlace} ({@link HookOrder#LATE}, and even when
+     * cancelled). Called once mod loading is complete ({@code FMLLoadCompleteEvent}), not at construction: the bus
+     * runs one priority's listeners in registration order, so a recorder registered with the mod would miss a protection mod that also
      * cancels at LOWEST and was registered after BuildCraft; registered last, it sees every listener any mod added
      * while loading. One added later still, at run time and at LOWEST, would go unseen; the stripes pipe would then
      * take that refused interaction for a mob that ignored the item. Repeat calls do nothing.
@@ -107,19 +105,17 @@ public final class MachineRefusals {
             return;
         }
         recorderRegistered = true;
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, PlayerInteractEvent.EntityInteract.class,
-                MachineRefusals::onEntityInteract);
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, true, BlockEvent.EntityPlaceEvent.class,
-                MachineRefusals::onEntityPlace);
+        GameHooks hooks = Platform.gameHooks();
+        hooks.onEntityInteract(HookOrder.LATE, true, MachineRefusals::onEntityInteract);
+        hooks.onBlockPlace(HookOrder.LATE, true, MachineRefusals::onEntityPlace);
     }
 
     /**
      * A protection mod cancelling a machine player's interaction with a mob, seen after every other listener (see
      * {@link #registerRecorder}); a real player's refused click needs no tally, nothing asks it.
      */
-    private static void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
-        Player machine = event.getEntity();
-        if (event.isCanceled() && Platform.fakePlayers().isFakePlayer(machine)) {
+    private static void onEntityInteract(Player machine, Entity target, boolean cancelled) {
+        if (cancelled && Platform.fakePlayers().isFakePlayer(machine)) {
             record(machine);
         }
     }
@@ -145,10 +141,9 @@ public final class MachineRefusals {
      * ({@link buildcraft.platform.event.PlatformProtection#canPlace}) places nothing and answers its own caller, so it
      * is not counted.
      */
-    private static void onEntityPlace(BlockEvent.EntityPlaceEvent event) {
+    private static void onEntityPlace(GameHooks.BlockPlace event) {
         Player counting = placingFor;
-        if (counting != null && event.isCanceled() && event.getEntity() == counting
-                && !Platform.protection().isProbe(event)) {
+        if (counting != null && event.isCancelled() && event.entity() == counting && !event.isProbe()) {
             record(counting);
         }
     }
